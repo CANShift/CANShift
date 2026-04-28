@@ -22,6 +22,7 @@ export type {
   BarWidgetConfig,
   GearWidgetConfig,
   ImageWidgetConfig,
+  SensorIconName,
 } from './types/dashboard'
 
 export type { SignalConfig, SignalDef } from './types/signal'

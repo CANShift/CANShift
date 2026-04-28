@@ -7,8 +7,11 @@ import ThemeRoute from './routes/ThemeRoute'
 import DeviceRoute from './routes/DeviceRoute'
 import TopBar from './components/shared/TopBar'
 import StatusBar from './components/shared/StatusBar'
+import { useMenuEvents } from './hooks/useMenuEvents'
 
 export default function App() {
+  useMenuEvents()
+
   return (
     <div
       style={{

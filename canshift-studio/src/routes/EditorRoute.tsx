@@ -1,16 +1,20 @@
-// EditorRoute.tsx — Dashboard layout editor (main editor view)
-//
-// TODO: Implement drag-drop canvas for 320×240 widget layout
-// TODO: Implement widget palette (drag widget types onto canvas)
-// TODO: Implement property panel (edit selected widget properties)
-// TODO: Implement page navigation (add/remove/reorder pages)
+// EditorRoute.tsx — Dashboard layout editor
 
 import { useDashboardStore } from '../stores/dashboard.store'
+import Canvas from '../components/editor/Canvas'
+import WidgetPalette from '../components/editor/WidgetPalette'
+import PropertyPanel from '../components/editor/PropertyPanel'
+
+function generateId(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}`
+}
 
 export default function EditorRoute() {
   const config = useDashboardStore((s) => s.config)
   const selectedPageId = useDashboardStore((s) => s.selectedPageId)
   const selectPage = useDashboardStore((s) => s.selectPage)
+  const addPage = useDashboardStore((s) => s.addPage)
+  const removePage = useDashboardStore((s) => s.removePage)
 
   if (!config) {
     return (
@@ -21,14 +25,15 @@ export default function EditorRoute() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 16,
+          gap: 12,
           color: '#555555',
         }}
       >
-        <p style={{ fontSize: 18 }}>No config loaded</p>
-        <p style={{ fontSize: 13 }}>File → Open Config to load a dashboard.json</p>
+        <div style={{ fontSize: 32, opacity: 0.3 }}>◫</div>
+        <p style={{ fontSize: 16, color: '#444444' }}>No config loaded</p>
+        <p style={{ fontSize: 12 }}>File → Open Config to load a dashboard.json</p>
         <p style={{ fontSize: 11, color: '#333333' }}>
-          Or open an example from: dash-firmware/data/config/dashboard.json
+          Example: canshift-firmware/data/config/dashboard.json
         </p>
       </div>
     )
@@ -38,101 +43,159 @@ export default function EditorRoute() {
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-      {/* Page list sidebar */}
+      {/* ── Left sidebar: pages + widget palette ─────────────────────────── */}
       <aside
         style={{
-          width: 160,
-          background: '#1A1A1A',
-          borderRight: '1px solid #2A2A2A',
-          padding: 8,
-          overflowY: 'auto',
+          width: 152,
+          background: '#161616',
+          borderRight: '1px solid #222222',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}
       >
-        <div
-          style={{ fontSize: 11, color: '#555555', marginBottom: 8, textTransform: 'uppercase' }}
-        >
-          Pages
-        </div>
-        {config.pages.map((page) => (
+        {/* Pages */}
+        <div style={{ padding: 8, borderBottom: '1px solid #222222' }}>
           <div
-            key={page.id}
-            onClick={() => {
-              selectPage(page.id)
-            }}
             style={{
-              padding: '6px 8px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 13,
-              background: page.id === selectedPageId ? '#2A2A2A' : 'transparent',
-              color: page.id === selectedPageId ? '#FFFFFF' : '#888888',
+              fontSize: 10,
+              color: '#555555',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: 6,
             }}
           >
-            {page.name}
+            Pages
           </div>
-        ))}
+          {config.pages.map((page) => (
+            <div
+              key={page.id}
+              onClick={() => {
+                selectPage(page.id)
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '5px 6px',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+                background: page.id === selectedPageId ? '#2A2A2A' : 'transparent',
+                color: page.id === selectedPageId ? '#FFFFFF' : '#777777',
+                marginBottom: 1,
+              }}
+            >
+              <span
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                }}
+              >
+                {page.name}
+              </span>
+              {config.pages.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removePage(page.id)
+                  }}
+                  title="Remove page"
+                  style={{
+                    marginLeft: 4,
+                    padding: '0 3px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#444444',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#AA3333'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#444444'
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              addPage({
+                id: generateId('page'),
+                name: `Page ${config.pages.length + 1}`,
+                backgroundImage: null,
+                backgroundColor: '#111111',
+                showTopBar: true,
+                widgets: [],
+              })
+            }}
+            style={{
+              marginTop: 4,
+              width: '100%',
+              padding: '4px 0',
+              background: 'transparent',
+              border: '1px dashed #333333',
+              borderRadius: 4,
+              color: '#555555',
+              cursor: 'pointer',
+              fontSize: 11,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#555555'
+              e.currentTarget.style.color = '#888888'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#333333'
+              e.currentTarget.style.color = '#555555'
+            }}
+          >
+            + Add page
+          </button>
+        </div>
+
+        {/* Widget palette */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {currentPage && <WidgetPalette pageId={currentPage.id} />}
+        </div>
       </aside>
 
-      {/* Canvas area — 320×240 preview */}
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#111111',
-          overflow: 'auto',
-        }}
-      >
+      {/* ── Canvas centre ────────────────────────────────────────────────── */}
+      {currentPage ? (
+        <Canvas page={currentPage} />
+      ) : (
         <div
           style={{
-            position: 'relative',
-            width: 320 * 2, // 2× zoom for comfort
-            height: 240 * 2,
-            background: currentPage?.backgroundColor ?? '#111111',
-            border: '1px solid #3A3A3A',
-            transform: 'scale(1)',
-            transformOrigin: 'top left',
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#333333',
           }}
         >
-          {/* TODO: Render widget previews here */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#333333',
-              fontSize: 12,
-            }}
-          >
-            Canvas — widget rendering TODO
-            <br />
-            Page: {currentPage?.name} ({currentPage?.widgets.length} widgets)
-          </div>
+          No page selected
         </div>
-      </main>
+      )}
 
-      {/* Property panel */}
+      {/* ── Right sidebar: property panel ────────────────────────────────── */}
       <aside
         style={{
-          width: 240,
-          background: '#1A1A1A',
-          borderLeft: '1px solid #2A2A2A',
-          padding: 12,
-          overflowY: 'auto',
+          width: 220,
+          background: '#161616',
+          borderLeft: '1px solid #222222',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}
       >
-        <div
-          style={{ fontSize: 11, color: '#555555', marginBottom: 8, textTransform: 'uppercase' }}
-        >
-          Properties
-        </div>
-        <p style={{ color: '#555555', fontSize: 12 }}>
-          Select a widget on the canvas to edit its properties.
-        </p>
-        {/* TODO: Render selected widget property form */}
+        {currentPage && <PropertyPanel pageId={currentPage.id} />}
       </aside>
     </div>
   )

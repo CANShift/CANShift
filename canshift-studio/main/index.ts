@@ -3,10 +3,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc/ipc-handlers'
-
-// ---------------------------------------------------------------------------
-// Window management
-// ---------------------------------------------------------------------------
+import { buildMenu } from './menu'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -15,10 +12,11 @@ function createWindow(): void {
     width: 1280,
     height: 800,
     minWidth: 1024,
-    minHeight: 600,
+    minHeight: 640,
     title: 'CANShift Studio',
     backgroundColor: '#111111',
     titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 14, y: 14 },
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -29,15 +27,14 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
+    buildMenu(mainWindow!)
   })
 
-  // Open external links in the system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
     return { action: 'deny' }
   })
 
-  // Load renderer
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
@@ -45,23 +42,15 @@ function createWindow(): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// App lifecycle
-// ---------------------------------------------------------------------------
-
 void app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  if (process.platform !== 'darwin') app.quit()
 })

@@ -41,12 +41,12 @@ export default tseslint.config(
     },
   },
   {
-    // Config file: relax deprecated-API rule (tseslint.config is still valid)
-    files: ['eslint.config.mjs'],
+    // Root config files: relax type-aware rules (no tsconfig covers them)
+    files: ['eslint.config.mjs', 'electron.vite.config.ts'],
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.mjs'],
+          allowDefaultProject: ['*.mjs', '*.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
