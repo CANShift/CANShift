@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { DashboardConfig } from '@tmbk/shared-core'
+import type { DashboardConfig } from '@tmbk/canshift-core'
 
 interface DashboardState {
   config: DashboardConfig | null
@@ -31,7 +31,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.config           = config
         s.filePath         = filePath ?? null
         s.isDirty          = false
-        s.selectedPageId   = config.defaultPageId ?? null
+        s.selectedPageId   = config.defaultPageId
         s.selectedWidgetId = null
       })
     },

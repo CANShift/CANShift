@@ -16,18 +16,25 @@ interface DeviceState {
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
-  connected:       false,
-  portPath:        null,
+  connected: false,
+  portPath: null,
   firmwareVersion: null,
-  lastSyncAt:      null,
-  syncing:         false,
+  lastSyncAt: null,
+  syncing: false,
 
-  setConnected: (connected, portPath) =>
-    set({ connected, portPath: portPath ?? null }),
+  setConnected: (connected, portPath) => {
+    set({ connected, portPath: portPath ?? null })
+  },
 
-  setSyncing: (syncing) => set({ syncing }),
+  setSyncing: (syncing) => {
+    set({ syncing })
+  },
 
-  setSyncComplete: (at) => set({ lastSyncAt: at, syncing: false }),
+  setSyncComplete: (at) => {
+    set({ lastSyncAt: at, syncing: false })
+  },
 
-  setFirmwareVersion: (version) => set({ firmwareVersion: version }),
+  setFirmwareVersion: (version) => {
+    set({ firmwareVersion: version })
+  },
 }))

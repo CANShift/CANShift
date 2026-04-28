@@ -1,0 +1,64 @@
+# Release — triggered by pushing a version tag (v*)
+# Builds the Electron desktop app, creates a GitHub Release with binaries
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  # Run CI checks first
+  ci-check:
+    name: CI checks
+    uses: ./.github/workflows/ci.yml
+
+  # Build and publish the Electron app
+  release:
+    name: Build & release
+    needs: ci-check
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: canshift-studio
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            canshift-core/package-lock.json
+            canshift-studio/package-lock.json
+
+      - name: Install core dependencies
+        run: npm ci
+        working-directory: canshift-core
+
+      - name: Build core
+        run: npm run build
+        working-directory: canshift-core
+
+      - name: Install studio dependencies
+        run: npm ci
+
+      - name: Package Electron app
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: canshift-studio/release/**/*.{dmg,exe,AppImage}
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

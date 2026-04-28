@@ -2,7 +2,6 @@
 
 import { dialog } from 'electron'
 import { readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
 
 interface OpenResult {
   success: boolean

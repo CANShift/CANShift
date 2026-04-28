@@ -11,7 +11,9 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -19,6 +21,14 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
       'prefer-const': 'error',
       'no-console': 'error',
+    },
+  },
+  {
+    // Config file itself: relax deprecated API rule (tseslint.config is the
+    // current recommended pattern despite a transitional deprecation notice)
+    files: ['eslint.config.mjs'],
+    rules: {
+      '@typescript-eslint/no-deprecated': 'off',
     },
   },
   {

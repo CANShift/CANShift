@@ -47,7 +47,7 @@ export function migrateConfig(
   config: Record<string, unknown>,
   targetVersion: string
 ): MigrationResult {
-  const currentVersion = (config['version'] as string | undefined) ?? '0.0.0'
+  const currentVersion = (config.version as string | undefined) ?? '0.0.0'
   let current = { ...config }
   const applied: string[] = []
 

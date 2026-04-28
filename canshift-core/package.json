@@ -17,6 +17,10 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "keywords": [

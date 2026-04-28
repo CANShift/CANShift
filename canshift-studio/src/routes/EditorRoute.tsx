@@ -50,7 +50,7 @@ export default function EditorRoute() {
         {config.pages.map((page) => (
           <div
             key={page.id}
-            onClick={() => selectPage(page.id)}
+            onClick={() => { selectPage(page.id) }}
             style={{
               padding: '6px 8px',
               borderRadius: 4,

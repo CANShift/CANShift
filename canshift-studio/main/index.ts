@@ -1,6 +1,6 @@
 // main/index.ts — Electron main process entry point
 
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc/ipc-handlers'
 
@@ -33,15 +33,15 @@ function createWindow(): void {
 
   // Open external links in the system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    void shell.openExternal(url)
     return { action: 'deny' }
   })
 
   // Load renderer
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
@@ -49,10 +49,8 @@ function createWindow(): void {
 // App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(async () => {
-  // Register all IPC handlers before creating the window
+void app.whenReady().then(() => {
   registerIpcHandlers()
-
   createWindow()
 
   app.on('activate', () => {

@@ -1,55 +1,68 @@
 // validate-dashboard.ts — Dashboard config validation
 
-import type { DashboardConfig } from '../types/dashboard'
-
 export interface ValidationResult {
   valid: boolean
   errors: string[]
+}
+
+type UnknownRecord = Record<string, unknown>
+
+const VALID_WIDGET_TYPES = [
+  'gauge',
+  'label',
+  'warning',
+  'button',
+  'timer',
+  'bar',
+  'gear',
+  'image',
+] as const
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null
+}
+
+function str(value: unknown): string {
+  return typeof value === 'string' ? value : ''
 }
 
 /** Validate a DashboardConfig object. Returns all errors found. */
 export function validateDashboard(config: unknown): ValidationResult {
   const errors: string[] = []
 
-  if (!config || typeof config !== 'object') {
+  if (!isRecord(config)) {
     return { valid: false, errors: ['Config must be an object'] }
   }
 
-  const c = config as Record<string, unknown>
-
-  if (typeof c['version'] !== 'string') {
+  if (typeof config.version !== 'string') {
     errors.push('Missing required field: version')
   }
 
-  if (typeof c['name'] !== 'string' || (c['name'] as string).length === 0) {
+  if (typeof config.name !== 'string' || config.name.length === 0) {
     errors.push('Missing required field: name')
   }
 
-  if (typeof c['defaultPageId'] !== 'string') {
+  if (typeof config.defaultPageId !== 'string') {
     errors.push('Missing required field: defaultPageId')
   }
 
-  if (typeof c['revLimitRpm'] !== 'number' || (c['revLimitRpm'] as number) <= 0) {
+  if (typeof config.revLimitRpm !== 'number' || config.revLimitRpm <= 0) {
     errors.push('revLimitRpm must be a positive number')
   }
 
-  if (!Array.isArray(c['pages']) || (c['pages'] as unknown[]).length === 0) {
+  if (!Array.isArray(config.pages) || config.pages.length === 0) {
     errors.push('pages must be a non-empty array')
   } else {
-    const pages = c['pages'] as unknown[]
-    pages.forEach((page, idx) => {
-      const pageErrors = validatePage(page, idx)
-      errors.push(...pageErrors)
+    config.pages.forEach((page: unknown, idx: number) => {
+      errors.push(...validatePage(page, idx))
     })
 
-    // Verify defaultPageId references an existing page
-    const pageIds = pages.map((p) =>
-      (p as Record<string, unknown>)['id'] as string
-    )
-    if (c['defaultPageId'] && !pageIds.includes(c['defaultPageId'] as string)) {
-      errors.push(
-        `defaultPageId "${c['defaultPageId']}" does not match any page id`
-      )
+    const pageIds = config.pages.map((p: unknown) => (isRecord(p) ? str(p.id) : ''))
+    if (
+      typeof config.defaultPageId === 'string' &&
+      !pageIds.includes(config.defaultPageId)
+    ) {
+      errors.push(`defaultPageId "${config.defaultPageId}" does not match any page id`)
     }
   }
 
@@ -58,27 +71,23 @@ export function validateDashboard(config: unknown): ValidationResult {
 
 function validatePage(page: unknown, idx: number): string[] {
   const errors: string[] = []
-  const prefix = `pages[${idx}]`
+  const prefix = `pages[${idx.toString()}]`
 
-  if (!page || typeof page !== 'object') {
+  if (!isRecord(page)) {
     return [`${prefix} must be an object`]
   }
 
-  const p = page as Record<string, unknown>
-
-  if (typeof p['id'] !== 'string' || (p['id'] as string).length === 0) {
+  if (typeof page.id !== 'string' || page.id.length === 0) {
     errors.push(`${prefix}.id is required`)
   }
-  if (typeof p['name'] !== 'string') {
+  if (typeof page.name !== 'string') {
     errors.push(`${prefix}.name is required`)
   }
-  if (!Array.isArray(p['widgets'])) {
+  if (!Array.isArray(page.widgets)) {
     errors.push(`${prefix}.widgets must be an array`)
   } else {
-    const widgets = p['widgets'] as unknown[]
-    widgets.forEach((w, wIdx) => {
-      const wErrors = validateWidget(w, idx, wIdx)
-      errors.push(...wErrors)
+    page.widgets.forEach((w: unknown, wIdx: number) => {
+      errors.push(...validateWidget(w, idx, wIdx))
     })
   }
 
@@ -87,20 +96,20 @@ function validatePage(page: unknown, idx: number): string[] {
 
 function validateWidget(widget: unknown, pageIdx: number, widgetIdx: number): string[] {
   const errors: string[] = []
-  const prefix = `pages[${pageIdx}].widgets[${widgetIdx}]`
+  const prefix = `pages[${pageIdx.toString()}].widgets[${widgetIdx.toString()}]`
 
-  if (!widget || typeof widget !== 'object') {
+  if (!isRecord(widget)) {
     return [`${prefix} must be an object`]
   }
 
-  const w = widget as Record<string, unknown>
+  if (typeof widget.id !== 'string') errors.push(`${prefix}.id is required`)
+  if (typeof widget.type !== 'string') errors.push(`${prefix}.type is required`)
 
-  if (typeof w['id'] !== 'string') errors.push(`${prefix}.id is required`)
-  if (typeof w['type'] !== 'string') errors.push(`${prefix}.type is required`)
-
-  const validTypes = ['gauge','label','warning','button','timer','bar','gear','image']
-  if (typeof w['type'] === 'string' && !validTypes.includes(w['type'])) {
-    errors.push(`${prefix}.type "${w['type']}" is not a valid widget type`)
+  if (
+    typeof widget.type === 'string' &&
+    !(VALID_WIDGET_TYPES as readonly string[]).includes(widget.type)
+  ) {
+    errors.push(`${prefix}.type "${widget.type}" is not a valid widget type`)
   }
 
   return errors

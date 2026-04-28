@@ -13,20 +13,19 @@ interface PortInfo {
 }
 
 export default function DeviceRoute() {
-  const [ports, setPorts]         = useState<PortInfo[]>([])
+  const [ports, setPorts] = useState<PortInfo[]>([])
   const [selectedPort, setSelectedPort] = useState<string>('')
   const [statusMsg, setStatusMsg] = useState<string>('')
 
-  const connected    = useDeviceStore((s) => s.connected)
-  const portPath     = useDeviceStore((s) => s.portPath)
-  const syncing      = useDeviceStore((s) => s.syncing)
+  const connected = useDeviceStore((s) => s.connected)
+  const syncing = useDeviceStore((s) => s.syncing)
   const setConnected = useDeviceStore((s) => s.setConnected)
-  const setSyncing   = useDeviceStore((s) => s.setSyncing)
+  const setSyncing = useDeviceStore((s) => s.setSyncing)
   const setSyncComplete = useDeviceStore((s) => s.setSyncComplete)
 
-  const config       = useDashboardStore((s) => s.config)
+  const config = useDashboardStore((s) => s.config)
 
-  const refreshPorts = async () => {
+  const refreshPorts = () => {
     // TODO: Call window.ipc.invoke(IpcChannels.USB_LIST_PORTS)
     setStatusMsg('Port listing — IPC bridge TODO')
     setPorts([
@@ -39,20 +38,20 @@ export default function DeviceRoute() {
     refreshPorts()
   }, [])
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     if (!selectedPort) return
     // TODO: window.ipc.invoke(IpcChannels.USB_CONNECT, selectedPort)
     setConnected(true, selectedPort)
     setStatusMsg(`Connected to ${selectedPort}`)
   }
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     // TODO: window.ipc.invoke(IpcChannels.USB_DISCONNECT)
     setConnected(false)
     setStatusMsg('Disconnected')
   }
 
-  const handlePushConfig = async () => {
+  const handlePushConfig = () => {
     if (!config || !connected) return
     setSyncing(true)
     setStatusMsg('Pushing config to device...')
@@ -75,10 +74,14 @@ export default function DeviceRoute() {
         <div style={{ display: 'flex', gap: 8 }}>
           <select
             value={selectedPort}
-            onChange={(e) => setSelectedPort(e.target.value)}
+            onChange={(e) => { setSelectedPort(e.target.value) }}
             style={{
-              flex: 1, padding: '6px 10px', background: '#1E1E1E',
-              border: '1px solid #333333', borderRadius: 4, color: '#FFFFFF',
+              flex: 1,
+              padding: '6px 10px',
+              background: '#1E1E1E',
+              border: '1px solid #333333',
+              borderRadius: 4,
+              color: '#FFFFFF',
             }}
           >
             <option value="">Select port...</option>
@@ -88,15 +91,20 @@ export default function DeviceRoute() {
               </option>
             ))}
           </select>
-          <button onClick={refreshPorts} style={btnStyle}>Refresh</button>
+          <button onClick={refreshPorts} style={btnStyle}>
+            Refresh
+          </button>
         </div>
       </section>
 
       {/* Connection controls */}
       <section style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {!connected ? (
-          <button onClick={handleConnect} disabled={!selectedPort}
-            style={{ ...btnStyle, background: '#FF4444', color: '#FFF' }}>
+          <button
+            onClick={handleConnect}
+            disabled={!selectedPort}
+            style={{ ...btnStyle, background: '#FF4444', color: '#FFF' }}
+          >
             Connect
           </button>
         ) : (
@@ -132,14 +140,13 @@ export default function DeviceRoute() {
 
       <section style={{ marginTop: 24, padding: 12, background: '#1A1A1A', borderRadius: 4 }}>
         <p style={{ fontSize: 11, color: '#555555', lineHeight: 1.6 }}>
-          Phase 1 USB workflow:
-          1. Connect the ESP32 via USB
-          2. Select the serial port (usually the Silicon Labs CP210x port)
-          3. Push config — the firmware reloads the config instantly
-          <br /><br />
-          Note: IPC bridge to Electron main process is not yet fully wired.
-          See <code>main/services/usb.service.ts</code> and
-          <code>main/ipc/ipc-handlers.ts</code>.
+          Phase 1 USB workflow: 1. Connect the ESP32 via USB 2. Select the serial port (usually
+          the Silicon Labs CP210x port) 3. Push config — the firmware reloads the config
+          instantly
+          <br />
+          <br />
+          Note: IPC bridge to Electron main process is not yet fully wired. See{' '}
+          <code>main/services/usb.service.ts</code> and <code>main/ipc/ipc-handlers.ts</code>.
         </p>
       </section>
     </div>

@@ -45,7 +45,7 @@ export function registerIpcHandlers(): void {
     return usbService.pushConfig(config)
   })
 
-  ipcMain.handle(IpcChannels.USB_GET_STATUS, async () => {
+  ipcMain.handle(IpcChannels.USB_GET_STATUS, () => {
     return usbService.getStatus()
   })
 

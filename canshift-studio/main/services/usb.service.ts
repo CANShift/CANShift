@@ -111,10 +111,10 @@ export class UsbService {
     })
   }
 
-  async getStatus(): Promise<ConnectionStatus> {
+  getStatus(): ConnectionStatus {
     return {
-      connected:  this.port?.isOpen ?? false,
-      portPath:   this.portPath ?? undefined,
+      connected: this.port?.isOpen ?? false,
+      portPath: this.portPath ?? undefined,
     }
   }
 

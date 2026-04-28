@@ -79,6 +79,30 @@ Rules:
 | `docs/overall-architecture.md` | Full system architecture |
 | `docs/roadmap.md` | Phase breakdown |
 
+## Pre-commit checks
+
+Before every commit that touches `canshift-core` or `canshift-studio`, run:
+```bash
+# canshift-core
+cd canshift-core && npm run lint && npm run format:check && npm run build
+
+# canshift-studio
+cd canshift-studio && npm run lint && npm run format:check && npm run typecheck
+```
+Do not commit if any check fails. Fix the errors first.
+
+## Releases
+
+Releases are version-tagged (`vX.Y.Z`) and trigger the GitHub Actions release workflow.
+The workflow builds the Electron app for macOS + Windows and creates a **draft** GitHub Release.
+
+To cut a release:
+1. Bump the version in `canshift-studio/package.json`
+2. Commit: `chore(studio): bump version to X.Y.Z`
+3. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+4. The GitHub Actions release workflow fires automatically
+5. Review the draft release on GitHub, add notes, publish
+
 ## .claude directories
 
 `.claude/` directories are local only (gitignored). Do not add `.gitkeep` to them.

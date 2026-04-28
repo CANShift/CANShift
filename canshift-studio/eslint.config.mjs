@@ -9,6 +9,8 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   prettierConfig,
   {
+    // Renderer process: Vite / React (tsconfig.json via project service)
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -16,21 +18,41 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Allow void returns for event handlers
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }],
-      // Allow explicit any in rare cases with a comment
       '@typescript-eslint/no-explicit-any': 'error',
-      // Prefer const
       'prefer-const': 'error',
-      // No console in production code — use proper logging
       'no-console': ['warn', { allow: ['error', 'warn'] }],
     },
   },
   {
-    // Relax rules for Electron main process (uses Node.js APIs)
+    // Electron main process: Node.js (tsconfig.main.json, explicit project path)
     files: ['main/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.main.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }],
+      '@typescript-eslint/no-explicit-any': 'error',
+      'prefer-const': 'error',
       'no-console': 'off',
+    },
+  },
+  {
+    // Config file: relax deprecated-API rule (tseslint.config is still valid)
+    files: ['eslint.config.mjs'],
+    languageOptions: {
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: ['*.mjs'],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-deprecated': 'off',
     },
   },
   {
