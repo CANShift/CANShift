@@ -39,11 +39,11 @@ export class UsbService {
   async listPorts(): Promise<PortInfo[]> {
     const ports = await SerialPort.list()
     return ports.map((p) => ({
-      path:         p.path,
+      path: p.path,
       manufacturer: p.manufacturer,
       serialNumber: p.serialNumber,
-      vendorId:     p.vendorId,
-      productId:    p.productId,
+      vendorId: p.vendorId,
+      productId: p.productId,
     }))
   }
 
@@ -54,7 +54,7 @@ export class UsbService {
 
     return new Promise((resolve) => {
       this.port = new SerialPort({
-        path:     portPath,
+        path: portPath,
         baudRate: 115200,
         autoOpen: false,
       })
@@ -79,8 +79,8 @@ export class UsbService {
 
     return new Promise((resolve) => {
       this.port?.close((err) => {
-        this.port     = null
-        this.parser   = null
+        this.port = null
+        this.parser = null
         this.portPath = null
         if (err) {
           resolve({ success: false, error: err.message })
@@ -123,7 +123,7 @@ export class UsbService {
       return { success: false, error: 'Not connected to device' }
     }
 
-    const payload = JSON.stringify({ cmd: 0xF0 }) + '\n'
+    const payload = JSON.stringify({ cmd: 0xf0 }) + '\n'
     return new Promise((resolve) => {
       this.port?.write(payload, (err) => {
         if (err) {

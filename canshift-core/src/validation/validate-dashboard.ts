@@ -58,10 +58,7 @@ export function validateDashboard(config: unknown): ValidationResult {
     })
 
     const pageIds = config.pages.map((p: unknown) => (isRecord(p) ? str(p.id) : ''))
-    if (
-      typeof config.defaultPageId === 'string' &&
-      !pageIds.includes(config.defaultPageId)
-    ) {
+    if (typeof config.defaultPageId === 'string' && !pageIds.includes(config.defaultPageId)) {
       errors.push(`defaultPageId "${config.defaultPageId}" does not match any page id`)
     }
   }

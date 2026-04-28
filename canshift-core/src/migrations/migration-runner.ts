@@ -14,8 +14,8 @@ export type MigrationFn = (config: Record<string, unknown>) => Record<string, un
 
 interface Migration {
   fromVersion: string
-  toVersion:   string
-  migrate:     MigrationFn
+  toVersion: string
+  migrate: MigrationFn
 }
 
 // ---------------------------------------------------------------------------
@@ -35,8 +35,8 @@ const MIGRATIONS: Migration[] = [
 ]
 
 export interface MigrationResult {
-  config:  Record<string, unknown>
-  applied: string[]   // List of migration steps applied
+  config: Record<string, unknown>
+  applied: string[] // List of migration steps applied
 }
 
 /**
@@ -76,7 +76,7 @@ function buildMigrationChain(fromVersion: string, toVersion: string): Migration[
     if (!next) {
       throw new Error(
         `No migration path from ${current} to ${toVersion}. ` +
-        `Available migrations: ${MIGRATIONS.map((m) => `${m.fromVersion}→${m.toVersion}`).join(', ')}`
+          `Available migrations: ${MIGRATIONS.map((m) => `${m.fromVersion}→${m.toVersion}`).join(', ')}`
       )
     }
     chain.push(next)

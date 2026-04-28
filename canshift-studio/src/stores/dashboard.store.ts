@@ -20,18 +20,18 @@ interface DashboardState {
 
 export const useDashboardStore = create<DashboardState>()(
   immer((set) => ({
-    config:            null,
-    filePath:          null,
-    isDirty:           false,
-    selectedPageId:    null,
-    selectedWidgetId:  null,
+    config: null,
+    filePath: null,
+    isDirty: false,
+    selectedPageId: null,
+    selectedWidgetId: null,
 
     setConfig: (config, filePath) => {
       set((s) => {
-        s.config           = config
-        s.filePath         = filePath ?? null
-        s.isDirty          = false
-        s.selectedPageId   = config.defaultPageId
+        s.config = config
+        s.filePath = filePath ?? null
+        s.isDirty = false
+        s.selectedPageId = config.defaultPageId
         s.selectedWidgetId = null
       })
     },
@@ -47,19 +47,21 @@ export const useDashboardStore = create<DashboardState>()(
     markSaved: (filePath) => {
       set((s) => {
         s.filePath = filePath
-        s.isDirty  = false
+        s.isDirty = false
       })
     },
 
     selectPage: (pageId) => {
       set((s) => {
-        s.selectedPageId   = pageId
+        s.selectedPageId = pageId
         s.selectedWidgetId = null
       })
     },
 
     selectWidget: (widgetId) => {
-      set((s) => { s.selectedWidgetId = widgetId })
+      set((s) => {
+        s.selectedWidgetId = widgetId
+      })
     },
   }))
 )

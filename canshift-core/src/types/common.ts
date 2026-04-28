@@ -25,12 +25,12 @@ export interface WidgetLayout {
 
 /** Widget visual style */
 export interface WidgetStyle {
-  primaryColor:   HexColor
+  primaryColor: HexColor
   secondaryColor: HexColor
-  warningColor:   HexColor
-  criticalColor:  HexColor
-  textColor:      HexColor
-  fontSize:       number
+  warningColor: HexColor
+  criticalColor: HexColor
+  textColor: HexColor
+  fontSize: number
 }
 
 /** Semantic version string — "MAJOR.MINOR.PATCH" */

@@ -74,7 +74,9 @@ export default function DeviceRoute() {
         <div style={{ display: 'flex', gap: 8 }}>
           <select
             value={selectedPort}
-            onChange={(e) => { setSelectedPort(e.target.value) }}
+            onChange={(e) => {
+              setSelectedPort(e.target.value)
+            }}
             style={{
               flex: 1,
               padding: '6px 10px',
@@ -134,15 +136,12 @@ export default function DeviceRoute() {
       )}
 
       {/* Status */}
-      {statusMsg && (
-        <p style={{ fontSize: 12, color: '#888888', padding: '8px 0' }}>{statusMsg}</p>
-      )}
+      {statusMsg && <p style={{ fontSize: 12, color: '#888888', padding: '8px 0' }}>{statusMsg}</p>}
 
       <section style={{ marginTop: 24, padding: 12, background: '#1A1A1A', borderRadius: 4 }}>
         <p style={{ fontSize: 11, color: '#555555', lineHeight: 1.6 }}>
-          Phase 1 USB workflow: 1. Connect the ESP32 via USB 2. Select the serial port (usually
-          the Silicon Labs CP210x port) 3. Push config — the firmware reloads the config
-          instantly
+          Phase 1 USB workflow: 1. Connect the ESP32 via USB 2. Select the serial port (usually the
+          Silicon Labs CP210x port) 3. Push config — the firmware reloads the config instantly
           <br />
           <br />
           Note: IPC bridge to Electron main process is not yet fully wired. See{' '}

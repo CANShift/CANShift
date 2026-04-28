@@ -24,18 +24,9 @@ export type {
   ImageWidgetConfig,
 } from './types/dashboard'
 
-export type {
-  SignalConfig,
-  SignalDef,
-} from './types/signal'
+export type { SignalConfig, SignalDef } from './types/signal'
 
-export type {
-  ThemeConfig,
-  Palette,
-  TopBarTheme,
-  GaugeTheme,
-  AlertTheme,
-} from './types/theme'
+export type { ThemeConfig, Palette, TopBarTheme, GaugeTheme, AlertTheme } from './types/theme'
 
 // ---------------------------------------------------------------------------
 // Validation

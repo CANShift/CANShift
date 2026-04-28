@@ -10,14 +10,16 @@ import StatusBar from './components/shared/StatusBar'
 
 export default function App() {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      background: '#111111',
-      color: '#FFFFFF',
-      fontFamily: 'system-ui, sans-serif',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        background: '#111111',
+        color: '#FFFFFF',
+        fontFamily: 'system-ui, sans-serif',
+      }}
+    >
       <TopBar />
 
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>

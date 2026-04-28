@@ -7,7 +7,7 @@ import { UsbService } from '../services/usb.service'
 
 export function registerIpcHandlers(): void {
   const configService = new ConfigFileService()
-  const usbService    = new UsbService()
+  const usbService = new UsbService()
 
   // ---------------------------------------------------------------------------
   // Config file operations

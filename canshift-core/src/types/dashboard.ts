@@ -78,12 +78,12 @@ export type WidgetConfig =
 // ---------------------------------------------------------------------------
 
 export interface Widget {
-  id:       string
-  type:     WidgetType
-  signal:   string        // Signal name key from signals.json
-  layout:   WidgetLayout
-  style:    WidgetStyle
-  config:   WidgetConfig
+  id: string
+  type: WidgetType
+  signal: string // Signal name key from signals.json
+  layout: WidgetLayout
+  style: WidgetStyle
+  config: WidgetConfig
 }
 
 // ---------------------------------------------------------------------------
@@ -91,12 +91,12 @@ export interface Widget {
 // ---------------------------------------------------------------------------
 
 export interface PageConfig {
-  id:              string
-  name:            string
+  id: string
+  name: string
   backgroundImage: string | null
   backgroundColor: HexColor
-  showTopBar:      boolean
-  widgets:         Widget[]
+  showTopBar: boolean
+  widgets: Widget[]
 }
 
 // ---------------------------------------------------------------------------
@@ -104,11 +104,11 @@ export interface PageConfig {
 // ---------------------------------------------------------------------------
 
 export interface TopBarConfig {
-  height:         number
-  showMapName:    boolean
+  height: number
+  showMapName: boolean
   showMapProfile: boolean
-  bgColor:        HexColor
-  textColor:      HexColor
+  bgColor: HexColor
+  textColor: HexColor
 }
 
 // ---------------------------------------------------------------------------
@@ -116,11 +116,11 @@ export interface TopBarConfig {
 // ---------------------------------------------------------------------------
 
 export interface DashboardConfig {
-  version:       SemVer
-  name:          string
-  description?:  string
+  version: SemVer
+  name: string
+  description?: string
   defaultPageId: string
-  revLimitRpm:   number
-  topBar:        TopBarConfig
-  pages:         PageConfig[]
+  revLimitRpm: number
+  topBar: TopBarConfig
+  pages: PageConfig[]
 }

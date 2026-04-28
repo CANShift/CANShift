@@ -65,9 +65,7 @@ export class ConfigFileService {
     const result = await dialog.showSaveDialog({
       title: 'Save Dashboard Config',
       defaultPath: this.currentFilePath ?? 'dashboard.json',
-      filters: [
-        { name: 'CANShift Config', extensions: ['json'] },
-      ],
+      filters: [{ name: 'CANShift Config', extensions: ['json'] }],
     })
 
     if (result.canceled || !result.filePath) {
