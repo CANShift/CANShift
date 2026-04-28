@@ -1,12 +1,13 @@
 // TopBar.tsx — Application top navigation bar
 
 import { NavLink } from 'react-router-dom'
+import csLogo from '../../assets/cs-logo.png'
 
 const navItems = [
-  { to: '/editor',  label: 'Editor' },
+  { to: '/editor', label: 'Editor' },
   { to: '/signals', label: 'Signals' },
-  { to: '/theme',   label: 'Theme' },
-  { to: '/device',  label: 'Device' },
+  { to: '/theme', label: 'Theme' },
+  { to: '/device', label: 'Device' },
 ]
 
 const styles = {
@@ -20,13 +21,23 @@ const styles = {
     gap: 8,
     WebkitAppRegion: 'drag' as const,
   } as React.CSSProperties,
-  logo: {
-    fontSize: 16,
+  logoWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginRight: 24,
+    WebkitAppRegion: 'no-drag' as const,
+  } as React.CSSProperties,
+  logoImg: {
+    height: 28,
+    width: 28,
+    objectFit: 'contain' as const,
+  } as React.CSSProperties,
+  logoText: {
+    fontSize: 14,
     fontWeight: 700,
     color: '#FF4444',
     letterSpacing: '0.05em',
-    marginRight: 24,
-    WebkitAppRegion: 'no-drag' as const,
   } as React.CSSProperties,
   nav: {
     display: 'flex',
@@ -38,7 +49,10 @@ const styles = {
 export default function TopBar() {
   return (
     <header style={styles.bar}>
-      <span style={styles.logo}>CANShift Studio</span>
+      <div style={styles.logoWrap}>
+        <img src={csLogo} alt="CANShift" style={styles.logoImg} />
+        <span style={styles.logoText}>CANShift Studio</span>
+      </div>
       <nav style={styles.nav}>
         {navItems.map(({ to, label }) => (
           <NavLink

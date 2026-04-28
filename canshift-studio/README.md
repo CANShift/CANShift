@@ -1,4 +1,6 @@
-# canshift-studio
+![CANShift](assets/canshift-banner.png)
+
+# CANShift Studio
 
 Desktop configuration studio for the automotive dashboard.
 

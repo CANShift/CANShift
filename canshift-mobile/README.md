@@ -1,4 +1,6 @@
-# canshift-mobile
+![CANShift](../logo/logo_1.png)
+
+# CANShift Mobile
 
 iPhone companion app for the automotive dashboard system.
 

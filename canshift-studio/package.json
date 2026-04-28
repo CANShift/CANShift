@@ -1,5 +1,5 @@
 {
-  "name": "canshift-config-studio",
+  "name": "canshift-studio",
   "version": "0.1.0",
   "description": "CANShift Desktop Configuration Studio — visual dashboard editor for CANShift firmware",
   "main": "dist/main/index.js",
@@ -7,34 +7,45 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist": "npm run build && electron-builder",
-    "lint": "eslint src main --ext .ts,.tsx",
+    "lint": "eslint src main",
+    "lint:fix": "eslint src main --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"main/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"main/**/*.ts\"",
     "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.main.json"
   },
-  "keywords": ["canshift", "dashboard", "esp32", "can-bus", "electron"],
+  "keywords": [
+    "canshift",
+    "dashboard",
+    "esp32",
+    "can-bus",
+    "electron"
+  ],
   "author": "TMBK",
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@tmbk/shared-core": "file:../canshift-core",
+    "@tmbk/canshift-core": "file:../canshift-core",
+    "immer": "^10.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
-    "zustand": "^5.0.0",
     "serialport": "^12.0.0",
-    "immer": "^10.1.1"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.14.0",
-    "@typescript-eslint/parser": "^7.14.0",
     "@vitejs/plugin-react": "^4.3.1",
     "electron": "^31.2.0",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
-    "eslint": "^9.6.0",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "prettier": "^3.3.3",
     "typescript": "^5.5.3",
+    "typescript-eslint": "^8.59.1",
     "vite": "^5.3.3"
   },
   "build": {
@@ -43,7 +54,9 @@
     "directories": {
       "output": "release"
     },
-    "files": ["dist/**/*"],
+    "files": [
+      "dist/**/*"
+    ],
     "mac": {
       "target": "dmg",
       "category": "public.app-category.developer-tools"
