@@ -1,8 +1,9 @@
+# Automotive CANbus Dashboard Workspace
 <p align="center">
   <img src="logo/logo_3.png" alt="Titre de l'image" width="300">
 </p>
 
-# Automotive CANbus Dashboard Workspace
+---
 
 Multi-project workspace for a configurable real-time automotive dashboard system.
 Built around a VW VR6 2.9 engine, MaxxECU Street ECU, and Elecrow CrowPanel 2.8" ESP32 display.
