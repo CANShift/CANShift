@@ -1,0 +1,41 @@
+/* CANShift Studio — global styles */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:         #111111;
+  --surface:    #1E1E1E;
+  --surface-2:  #2A2A2A;
+  --border:     #333333;
+  --primary:    #FF4444;
+  --accent:     #FF8800;
+  --text:       #FFFFFF;
+  --text-dim:   #888888;
+  --text-muted: #555555;
+  --warning:    #FF8800;
+  --danger:     #FF0000;
+  --success:    #00CC44;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border); }

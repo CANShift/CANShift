@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# React Native build artifacts
+ios/Pods/
+ios/build/
+android/app/build/
+android/build/
+android/.gradle/
+
+# Expo (if used later)
+.expo/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.*
+
+# Claude (local only)
+.claude/
