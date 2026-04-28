@@ -1,0 +1,27 @@
+{
+  "name": "@tmbk/shared-core",
+  "version": "1.0.0",
+  "description": "CANShift shared configuration domain types, schemas, and validation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "keywords": ["canshift", "dashboard", "can-bus", "config", "schema"],
+  "author": "TMBK",
+  "license": "UNLICENSED",
+  "private": false,
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {}
+}
