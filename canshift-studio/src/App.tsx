@@ -5,13 +5,19 @@ import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
 import ThemeRoute from './routes/ThemeRoute'
 import TopBar from './components/shared/TopBar'
+import ConnectScreen from './components/shared/ConnectScreen'
 import ConsolePanel from './components/shared/ConsolePanel'
 import StatusBar from './components/shared/StatusBar'
-import NoDeviceBanner from './components/shared/NoDeviceBanner'
 import { useMenuEvents } from './hooks/useMenuEvents'
+import { useDeviceStore } from './stores/device.store'
 
 export default function App() {
   useMenuEvents()
+
+  const connected = useDeviceStore((s) => s.connected)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+
+  const ready = connected || simulationMode
 
   return (
     <div
@@ -25,16 +31,19 @@ export default function App() {
       }}
     >
       <TopBar />
-      <NoDeviceBanner />
 
-      <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/editor" replace />} />
-          <Route path="/editor" element={<EditorRoute />} />
-          <Route path="/signals" element={<SignalRoute />} />
-          <Route path="/theme" element={<ThemeRoute />} />
-        </Routes>
-      </main>
+      {ready ? (
+        <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/editor" replace />} />
+            <Route path="/editor" element={<EditorRoute />} />
+            <Route path="/signals" element={<SignalRoute />} />
+            <Route path="/theme" element={<ThemeRoute />} />
+          </Routes>
+        </main>
+      ) : (
+        <ConnectScreen />
+      )}
 
       <ConsolePanel />
       <StatusBar />

@@ -15,6 +15,9 @@ interface DeviceState {
   connected: boolean
   syncing: boolean
 
+  // Simulation mode — behaves as connected without physical hardware
+  simulationMode: boolean
+
   setConnected: (portPath: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
@@ -22,6 +25,8 @@ interface DeviceState {
   setError: (message: string) => void
   clearError: () => void
   setFirmwareVersion: (version: string) => void
+  enterSimulation: () => void
+  exitSimulation: () => void
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -32,6 +37,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   errorMessage: null,
   connected: false,
   syncing: false,
+  simulationMode: false,
 
   setConnected: (portPath) => {
     set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
@@ -65,5 +71,13 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFirmwareVersion: (version) => {
     set({ firmwareVersion: version })
+  },
+
+  enterSimulation: () => {
+    set({ simulationMode: true, status: 'connected', connected: true, portPath: null })
+  },
+
+  exitSimulation: () => {
+    set({ simulationMode: false, status: 'disconnected', connected: false, portPath: null })
   },
 }))

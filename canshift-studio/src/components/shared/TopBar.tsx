@@ -5,6 +5,7 @@ import { NavLink } from 'react-router-dom'
 import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
+import { useLogStore } from '../../stores/log.store'
 
 const navItems = [
   { to: '/editor', label: 'Editor' },
@@ -44,11 +45,14 @@ const toolbarBtn: React.CSSProperties = {
 export default function TopBar() {
   const [modalOpen, setModalOpen] = useState(false)
   const status = useDeviceStore((s) => s.status)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const exitSimulation = useDeviceStore((s) => s.exitSimulation)
+  const log = useLogStore((s) => s.push)
 
   const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
 
-  const dotColor = DOT_COLOR[status] ?? '#444444'
-  const label = LABEL[status] ?? 'No Device'
+  const dotColor = simulationMode ? '#8844FF' : (DOT_COLOR[status] ?? '#444444')
+  const label = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
 
   const canSave = config !== null
   const canBurn = config !== null && connected && !syncing
@@ -167,15 +171,30 @@ export default function TopBar() {
           {/* Separator */}
           <div style={{ width: 1, height: 20, background: '#2A2A2A' }} />
 
+          {/* Exit simulation */}
+          {simulationMode && (
+            <button
+              onClick={() => {
+                exitSimulation()
+                log('info', 'Simulation mode exited')
+              }}
+              style={{ ...toolbarBtn, color: '#663399', borderColor: '#2A1A44', fontSize: 11 }}
+              title="Exit simulation mode"
+            >
+              Exit Sim
+            </button>
+          )}
+
           {/* Connect */}
           <button
             onClick={() => {
-              setModalOpen((o) => !o)
+              if (!simulationMode) setModalOpen((o) => !o)
             }}
             style={{
               ...toolbarBtn,
               background: modalOpen ? '#2A2A2A' : 'transparent',
-              borderColor: modalOpen ? '#3A3A3A' : '#2A2A2A',
+              borderColor: simulationMode ? '#2A1A44' : modalOpen ? '#3A3A3A' : '#2A2A2A',
+              cursor: simulationMode ? 'default' : 'pointer',
             }}
           >
             <span
