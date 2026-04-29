@@ -23,11 +23,7 @@ export default function StatusBar() {
       }}
     >
       <span>
-        {connected ? (
-          <span style={{ color: '#00CC44' }}>● Connected — {portPath}</span>
-        ) : (
-          <span style={{ color: '#555555' }}>○ Not connected</span>
-        )}
+        {connected && <span style={{ color: '#00CC44' }}>● Connected — {portPath}</span>}
       </span>
       <span>{isDirty && <span style={{ color: '#FF8800' }}>Unsaved changes</span>}</span>
       <span>CANShift Studio v0.1.0</span>
