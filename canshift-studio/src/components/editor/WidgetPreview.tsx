@@ -1157,13 +1157,17 @@ interface WidgetPreviewProps {
 
 export function WidgetPreview({
   widget,
-  displayW: w,
-  displayH: h,
+  displayW: rawW,
+  displayH: rawH,
   palette,
   revLimiting = false,
   buttonActive = false,
   noAnimate = false,
 }: WidgetPreviewProps) {
+  // Clamp to zero — SVG attributes reject negative values, which can occur
+  // transiently when the parent container hasn't laid out yet or scale is < 1.
+  const w = Math.max(0, rawW)
+  const h = Math.max(0, rawH)
   if (!noAnimate) ensureBlinkStyle()
 
   const resolved = palette ? applyPalette(widget, palette) : widget
