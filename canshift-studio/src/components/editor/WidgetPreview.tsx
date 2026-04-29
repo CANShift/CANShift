@@ -323,7 +323,7 @@ function GaugeBarPreview({
     const textY = (h - barH) / 2
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     const labelIsTop = labelPos.startsWith('top')
-    const sigFontSize = Math.max(5, Math.min(8, h * 0.22))
+    const sigFontSize = Math.max(6, Math.min(11, h * 0.26))
 
     return (
       <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
@@ -383,7 +383,7 @@ function GaugeBarPreview({
             textAnchor="middle"
             dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
             fill={valueColor}
-            fontSize={Math.max(7, Math.min(12, h * 0.32))}
+            fontSize={Math.max(8, Math.min(15, h * 0.38))}
             fontWeight="700"
             fontFamily="monospace"
             style={{ animation: danger ? BLINK_ANIM : undefined }}
@@ -860,7 +860,7 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
   const st = widget.style
   const iconName = cfg.iconName ?? 'warning'
   const signalLabel = formatSignalLabel(widget.signal)
-  const sigFontSize = Math.max(6, Math.min(h * 0.12, w * 0.1, 11))
+  const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
   const labelH = sigFontSize + 4
   const iconSize = Math.min(w * 0.55, h - labelH - 8, 64)
 
