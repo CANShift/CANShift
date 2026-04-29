@@ -10,7 +10,7 @@ import ScreenSettingsPanel from './ScreenSettingsPanel'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
 
-const SCALE = 2 // 320×240 → 640×480 on screen
+const SCALE = 1 // 1:1 with firmware pixels — zoom handles visual scaling
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
 const GRID = 10 // snap grid in firmware coordinates
@@ -479,7 +479,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               boxShadow: '0 8px 32px #00000088',
             }}
           >
-            {/* The 320×240 canvas at 2× zoom */}
+            {/* The 320×240 canvas — 1:1 firmware pixels, visually scaled by zoom */}
             <div
               style={{
                 display: 'flex',
