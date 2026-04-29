@@ -24,7 +24,7 @@ const thStyle: React.CSSProperties = {
   padding: '6px 8px',
   textAlign: 'left',
   fontSize: 10,
-  color: '#555555',
+  color: '#AAAAAA',
   textTransform: 'uppercase' as const,
   letterSpacing: '0.06em',
   fontWeight: 600,
@@ -146,7 +146,7 @@ export default function SignalRoute() {
             borderRadius: 10,
             padding: '1px 8px',
             fontSize: 11,
-            color: '#555555',
+            color: '#AAAAAA',
           }}
         >
           {signals.length}
@@ -491,7 +491,7 @@ function DeleteButton({ onDelete }: { onDelete: () => void }) {
       style={{
         background: 'transparent',
         border: 'none',
-        color: '#444444',
+        color: '#AAAAAA',
         fontSize: 14,
         cursor: 'pointer',
         padding: '2px 4px',
@@ -503,7 +503,7 @@ function DeleteButton({ onDelete }: { onDelete: () => void }) {
         e.currentTarget.style.color = '#CC3333'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.color = '#444444'
+        e.currentTarget.style.color = '#AAAAAA'
       }}
     >
       ×

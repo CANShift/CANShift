@@ -27,11 +27,11 @@ const TYPE_BORDER: Record<string, string> = {
   bar: '#336666',
   gear: '#993399',
   timer: '#226644',
-  image: '#555555',
+  image: '#AAAAAA',
 }
 
 function getBorderColor(type: string) {
-  return TYPE_BORDER[type] ?? '#444444'
+  return TYPE_BORDER[type] ?? '#AAAAAA'
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
   const px = Math.round(h * 0.4)
   const iconSz = Math.round(fs * 1.15)
 
-  const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#444444'
+  const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#AAAAAA'
 
   const handlePointerDown = (e: React.PointerEvent) => {
     swipeStartY.current = e.clientY
@@ -205,7 +205,7 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
           ECU
         </span>
         <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        <span style={{ fontSize: fs, color: '#444444', lineHeight: 1 }}>CAN</span>
+        <span style={{ fontSize: fs, color: '#AAAAAA', lineHeight: 1 }}>CAN</span>
         <span
           style={{
             display: 'inline-block',

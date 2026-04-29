@@ -155,7 +155,7 @@ export default function DeviceRoute() {
                 background: '#1A1A1A',
                 border: '1px solid #333333',
                 borderRadius: 4,
-                color: ports.length ? '#CCCCCC' : '#555555',
+                color: ports.length ? '#CCCCCC' : '#AAAAAA',
                 fontSize: 12,
               }}
             >
@@ -207,7 +207,7 @@ export default function DeviceRoute() {
         <section style={{ marginBottom: 20 }}>
           <h3 style={{ fontSize: 13, color: '#888888', marginBottom: 10 }}>Config Sync</h3>
           {!config && (
-            <p style={{ fontSize: 12, color: '#555555', marginBottom: 8 }}>
+            <p style={{ fontSize: 12, color: '#AAAAAA', marginBottom: 8 }}>
               No config loaded. File → Open Config first.
             </p>
           )}
@@ -238,14 +238,14 @@ export default function DeviceRoute() {
           background: '#141414',
           borderRadius: 6,
           fontSize: 11,
-          color: '#444444',
+          color: '#AAAAAA',
           lineHeight: 1.7,
         }}
       >
         USB: 115 200 baud · newline-delimited JSON
         <br />
-        Look for <strong style={{ color: '#555555' }}>CP210x</strong> or{' '}
-        <strong style={{ color: '#555555' }}>CH340</strong>.
+        Look for <strong style={{ color: '#AAAAAA' }}>CP210x</strong> or{' '}
+        <strong style={{ color: '#AAAAAA' }}>CH340</strong>.
       </div>
     </div>
   )

@@ -12,7 +12,7 @@ const DOT_COLOR: Record<string, string> = {
   connected: '#44CC44',
   burning: '#FF8800',
   error: '#CC3333',
-  disconnected: '#444444',
+  disconnected: '#AAAAAA',
 }
 
 const LABEL: Record<string, string> = {
@@ -46,7 +46,7 @@ export default function TopBar() {
 
   const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
 
-  const dotColor = simulationMode ? '#8844FF' : (DOT_COLOR[status] ?? '#444444')
+  const dotColor = simulationMode ? '#8844FF' : (DOT_COLOR[status] ?? '#AAAAAA')
   const label = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
 
   const canSave = config !== null
@@ -173,7 +173,7 @@ export default function TopBar() {
             />
             <span
               style={{
-                color: status === 'disconnected' && !simulationMode ? '#555555' : '#CCCCCC',
+                color: status === 'disconnected' && !simulationMode ? '#AAAAAA' : '#CCCCCC',
               }}
             >
               {label}

@@ -108,7 +108,7 @@ function IconPicker({
               justifyContent: 'center',
             }}
           >
-            <SensorIcon name={name} size={16} color={value === name ? '#7788CC' : '#555555'} />
+            <SensorIcon name={name} size={16} color={value === name ? '#7788CC' : '#AAAAAA'} />
           </button>
         ))}
       </div>
@@ -123,7 +123,7 @@ function IconPicker({
               marginLeft: 6,
               background: 'none',
               border: 'none',
-              color: '#444444',
+              color: '#AAAAAA',
               cursor: 'pointer',
               fontSize: 10,
             }}
@@ -213,7 +213,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                 background: style === value ? '#2A2A3A' : '#111111',
                 border: `1px solid ${style === value ? '#5566AA' : '#2A2A2A'}`,
                 borderRadius: 3,
-                color: style === value ? '#7788CC' : '#555555',
+                color: style === value ? '#7788CC' : '#AAAAAA',
                 cursor: 'pointer',
                 fontSize: 10,
                 textTransform: 'uppercase',
@@ -244,7 +244,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                   background: isActive ? '#1A2A1A' : '#111111',
                   border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
                   borderRadius: 3,
-                  color: isActive ? '#66AA66' : '#555555',
+                  color: isActive ? '#66AA66' : '#AAAAAA',
                   cursor: 'pointer',
                   fontSize: 10,
                   fontWeight: isActive ? 700 : 400,
@@ -277,7 +277,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                   background: isActive ? '#1A2A1A' : '#111111',
                   border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
                   borderRadius: 3,
-                  color: isActive ? '#66AA66' : '#555555',
+                  color: isActive ? '#66AA66' : '#AAAAAA',
                   cursor: 'pointer',
                 }}
               >
@@ -354,7 +354,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                     background: isActive ? '#2A2A3A' : '#111111',
                     border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#555555',
+                    color: isActive ? '#7788CC' : '#AAAAAA',
                     cursor: 'pointer',
                     fontSize: 10,
                     textTransform: 'uppercase',
@@ -505,7 +505,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                     background: isActive ? '#2A2A3A' : '#111111',
                     border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#555555',
+                    color: isActive ? '#7788CC' : '#AAAAAA',
                     cursor: 'pointer',
                   }}
                 >
@@ -635,7 +635,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
       {action.category === 'ecu' && action.type === 'can_raw' && (
         <div style={{ display: 'flex', gap: 6 }}>
           <div style={{ flex: '0 0 70px' }}>
-            <div style={{ fontSize: 9, color: '#555555', marginBottom: 2 }}>FRAME ID</div>
+            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>FRAME ID</div>
             <input
               style={{ ...inputStyle, fontSize: 10 }}
               placeholder="0x123"
@@ -647,7 +647,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color: '#555555', marginBottom: 2 }}>DATA (HEX)</div>
+            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>DATA (HEX)</div>
             <input
               style={{ ...inputStyle, fontSize: 10, fontFamily: 'monospace' }}
               placeholder="0102030405060708"
@@ -777,7 +777,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
               background: previewActive ? '#2A1A1A' : 'transparent',
               border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
               borderRadius: 3,
-              color: previewActive ? '#FF4444' : '#555555',
+              color: previewActive ? '#FF4444' : '#AAAAAA',
               cursor: 'pointer',
             }}
           >
@@ -859,7 +859,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
       <div
         style={{
           fontSize: 10,
-          color: '#444444',
+          color: '#AAAAAA',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
           marginBottom: 5,
@@ -870,7 +870,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
       </div>
 
       {cfg.actions.length === 0 && (
-        <div style={{ fontSize: 11, color: '#444444', marginBottom: 6 }}>No actions yet.</div>
+        <div style={{ fontSize: 11, color: '#AAAAAA', marginBottom: 6 }}>No actions yet.</div>
       )}
 
       {cfg.actions.map((action, idx) => (
@@ -914,7 +914,7 @@ function BarFields({ widget, onChange }: ConfigFieldsProps) {
                 background: cfg.suffix === u ? '#1A2A1A' : '#111111',
                 border: `1px solid ${cfg.suffix === u ? '#448844' : '#2A2A2A'}`,
                 borderRadius: 3,
-                color: cfg.suffix === u ? '#66AA66' : '#555555',
+                color: cfg.suffix === u ? '#66AA66' : '#AAAAAA',
                 cursor: 'pointer',
               }}
             >
@@ -980,7 +980,7 @@ function BarFields({ widget, onChange }: ConfigFieldsProps) {
                     background: isActive ? '#2A2A3A' : '#111111',
                     border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#555555',
+                    color: isActive ? '#7788CC' : '#AAAAAA',
                     cursor: 'pointer',
                   }}
                 >
@@ -1086,7 +1086,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         <div
           style={{
             fontSize: 10,
-            color: '#555555',
+            color: '#AAAAAA',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
             marginBottom: 10,
@@ -1120,7 +1120,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         <div
           style={{
             fontSize: 10,
-            color: '#444',
+            color: '#AAAAAA',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             marginBottom: 6,
@@ -1173,7 +1173,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         <div
           style={{
             fontSize: 10,
-            color: '#444',
+            color: '#AAAAAA',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             marginBottom: 6,
@@ -1260,7 +1260,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           <div
             style={{
               fontSize: 10,
-              color: '#555555',
+              color: '#AAAAAA',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
             }}
@@ -1296,7 +1296,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
 
       {/* ID (read-only) */}
       <Field label="ID">
-        <div style={{ fontSize: 10, color: '#444444', fontFamily: 'monospace', padding: '3px 0' }}>
+        <div style={{ fontSize: 10, color: '#AAAAAA', fontFamily: 'monospace', padding: '3px 0' }}>
           {widget.id}
         </div>
       </Field>
@@ -1325,7 +1325,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                     background: isActive ? '#1A2A1A' : '#111111',
                     border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: isActive ? '#66AA66' : '#555555',
+                    color: isActive ? '#66AA66' : '#AAAAAA',
                     cursor: 'pointer',
                     fontSize: 10,
                     fontWeight: isActive ? 700 : 400,
@@ -1394,7 +1394,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
       <div
         style={{
           fontSize: 10,
-          color: '#444444',
+          color: '#AAAAAA',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
           marginBottom: 6,
@@ -1447,7 +1447,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           <div
             style={{
               fontSize: 10,
-              color: '#444444',
+              color: '#AAAAAA',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               marginBottom: 6,

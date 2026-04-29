@@ -144,7 +144,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
                 background: sleepTimeoutS === v ? '#1A0A0A' : '#111111',
                 border: `1px solid ${sleepTimeoutS === v ? '#CC3333' : '#2A2A2A'}`,
                 borderRadius: 3,
-                color: sleepTimeoutS === v ? '#CC3333' : '#555555',
+                color: sleepTimeoutS === v ? '#CC3333' : '#AAAAAA',
                 fontSize: fs,
                 cursor: 'pointer',
                 lineHeight: 1,
@@ -171,7 +171,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
                 background: rotation === r ? '#1A0A0A' : '#111111',
                 border: `1px solid ${rotation === r ? '#CC3333' : '#2A2A2A'}`,
                 borderRadius: 3,
-                color: rotation === r ? '#CC3333' : '#555555',
+                color: rotation === r ? '#CC3333' : '#AAAAAA',
                 fontSize: fs,
                 cursor: 'pointer',
                 lineHeight: 1,
@@ -188,7 +188,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
         <span
           style={{
             fontSize: Math.round(scale * 5.5),
-            color: '#555555',
+            color: '#AAAAAA',
             letterSpacing: '0.06em',
             display: 'block',
             marginBottom: Math.round(scale * 3),
@@ -244,7 +244,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             background: 'transparent',
             border: '1px solid #2A2A2A',
             borderRadius: 4,
-            color: '#444444',
+            color: '#AAAAAA',
             fontSize: fs,
             cursor: 'pointer',
           }}
@@ -295,7 +295,7 @@ function SettingRow({
           marginBottom: Math.round(scale * 2.5),
         }}
       >
-        <span style={{ fontSize: fs, color: '#555555', letterSpacing: '0.06em' }}>{label}</span>
+        <span style={{ fontSize: fs, color: '#AAAAAA', letterSpacing: '0.06em' }}>{label}</span>
         <span style={{ fontSize: fs, color: '#888888' }}>{value}</span>
       </div>
       {children}

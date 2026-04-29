@@ -106,7 +106,7 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#555555',
+                color: '#AAAAAA',
                 cursor: 'pointer',
                 fontSize: 16,
                 lineHeight: 1,
@@ -157,7 +157,7 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                 <div
                   style={{
                     fontSize: 10,
-                    color: '#555555',
+                    color: '#AAAAAA',
                     marginBottom: 6,
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
@@ -209,7 +209,7 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                     gap: 6,
                     background: selectedPort && !loading ? '#CC3333' : '#1A1A1A',
                     borderColor: selectedPort && !loading ? '#CC3333' : '#333333',
-                    color: selectedPort && !loading ? '#FFFFFF' : '#555555',
+                    color: selectedPort && !loading ? '#FFFFFF' : '#AAAAAA',
                   }}
                 >
                   <IconUsb size={13} color="currentColor" />
@@ -259,7 +259,7 @@ function StatusDot({ status }: { status: string }) {
         ? '#FF8800'
         : status === 'error'
           ? '#CC3333'
-          : '#444444'
+          : '#AAAAAA'
 
   return (
     <span
@@ -280,7 +280,7 @@ function statusColor(status: string): string {
   if (status === 'connected') return '#55CC55'
   if (status === 'burning') return '#FF8800'
   if (status === 'error') return '#CC4444'
-  return '#555555'
+  return '#AAAAAA'
 }
 
 function statusLabel(status: string, portPath: string | null): string {

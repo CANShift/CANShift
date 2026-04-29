@@ -97,7 +97,7 @@ export default function UpdateRoute() {
         >
           Firmware Update
         </h2>
-        <p style={{ fontSize: 12, color: '#444444' }}>
+        <p style={{ fontSize: 12, color: '#AAAAAA' }}>
           Flash a new firmware binary to the connected CANShift device over USB.
         </p>
       </div>
@@ -116,12 +116,12 @@ export default function UpdateRoute() {
           gap: 10,
         }}
       >
-        <IconUsb size={16} color={connected || simulationMode ? '#55AA55' : '#444444'} />
+        <IconUsb size={16} color={connected || simulationMode ? '#55AA55' : '#AAAAAA'} />
         <div>
           <div
             style={{
               fontSize: 12,
-              color: connected || simulationMode ? '#AAAAAA' : '#555555',
+              color: connected || simulationMode ? '#AAAAAA' : '#AAAAAA',
               fontWeight: 600,
             }}
           >
@@ -132,12 +132,12 @@ export default function UpdateRoute() {
                 : 'No device connected'}
           </div>
           {firmwareVersion && (
-            <div style={{ fontSize: 11, color: '#555555', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#AAAAAA', marginTop: 2 }}>
               Current firmware: v{firmwareVersion}
             </div>
           )}
           {!connected && !simulationMode && (
-            <div style={{ fontSize: 11, color: '#444444', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#AAAAAA', marginTop: 2 }}>
               Connect via USB to enable flashing
             </div>
           )}
@@ -150,7 +150,7 @@ export default function UpdateRoute() {
           style={{
             display: 'block',
             fontSize: 10,
-            color: '#555555',
+            color: '#AAAAAA',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             marginBottom: 8,
@@ -176,7 +176,7 @@ export default function UpdateRoute() {
             background: '#161616',
             border: `1px dashed ${selectedFile ? '#336633' : '#2A2A2A'}`,
             borderRadius: 6,
-            color: selectedFile ? '#55AA55' : '#444444',
+            color: selectedFile ? '#55AA55' : '#AAAAAA',
             fontSize: 12,
             cursor: updateState === 'flashing' ? 'default' : 'pointer',
             textAlign: 'center',
@@ -184,7 +184,7 @@ export default function UpdateRoute() {
           }}
           onMouseEnter={(e) => {
             if (updateState !== 'flashing')
-              e.currentTarget.style.borderColor = selectedFile ? '#448844' : '#444444'
+              e.currentTarget.style.borderColor = selectedFile ? '#448844' : '#AAAAAA'
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = selectedFile ? '#336633' : '#2A2A2A'
@@ -219,7 +219,7 @@ export default function UpdateRoute() {
             style={{
               marginTop: 6,
               fontSize: 11,
-              color: '#555555',
+              color: '#AAAAAA',
               textAlign: 'right',
             }}
           >
@@ -283,7 +283,7 @@ export default function UpdateRoute() {
               background: 'transparent',
               border: '1px solid #2A2A2A',
               borderRadius: 5,
-              color: '#444444',
+              color: '#AAAAAA',
               fontSize: 12,
               cursor: updateState === 'flashing' ? 'default' : 'pointer',
             }}

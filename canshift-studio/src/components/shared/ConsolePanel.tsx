@@ -77,7 +77,7 @@ export default function ConsolePanel() {
         <span
           style={{
             fontSize: 10,
-            color: '#444444',
+            color: '#AAAAAA',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
           }}

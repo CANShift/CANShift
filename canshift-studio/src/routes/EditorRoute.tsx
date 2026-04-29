@@ -262,7 +262,7 @@ export default function EditorRoute() {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          color: '#555555',
+          color: '#AAAAAA',
         }}
       >
         <div style={{ fontSize: 32, opacity: 0.2 }}>◫</div>
@@ -311,7 +311,7 @@ export default function EditorRoute() {
           <div
             style={{
               fontSize: 10,
-              color: '#555555',
+              color: '#AAAAAA',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
               marginBottom: 6,
@@ -519,17 +519,17 @@ export default function EditorRoute() {
               background: 'transparent',
               border: '1px dashed #2A2A2A',
               borderRadius: 4,
-              color: '#444444',
+              color: '#AAAAAA',
               cursor: 'pointer',
               fontSize: 11,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#555555'
+              e.currentTarget.style.borderColor = '#AAAAAA'
               e.currentTarget.style.color = '#888888'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = '#2A2A2A'
-              e.currentTarget.style.color = '#444444'
+              e.currentTarget.style.color = '#AAAAAA'
             }}
           >
             + Page

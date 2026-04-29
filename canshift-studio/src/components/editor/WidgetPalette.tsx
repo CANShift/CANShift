@@ -144,7 +144,7 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
       <div
         style={{
           fontSize: 10,
-          color: '#555555',
+          color: '#AAAAAA',
           marginBottom: 8,
           textTransform: 'uppercase',
           letterSpacing: '0.08em',

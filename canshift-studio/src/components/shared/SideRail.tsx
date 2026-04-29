@@ -43,7 +43,7 @@ export default function SideRail() {
             fontWeight: 600,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            color: isActive ? '#FFFFFF' : '#444444',
+            color: isActive ? '#FFFFFF' : '#AAAAAA',
             background: isActive ? '#2A2A2A' : 'transparent',
             borderLeft: isActive ? '2px solid #FF4444' : '2px solid transparent',
             transition: 'all 0.1s',
@@ -51,7 +51,7 @@ export default function SideRail() {
         >
           {({ isActive }) => (
             <>
-              <Icon size={16} color={isActive ? '#FF4444' : '#444444'} />
+              <Icon size={16} color={isActive ? '#FF4444' : '#AAAAAA'} />
               {label}
             </>
           )}
