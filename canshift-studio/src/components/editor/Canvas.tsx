@@ -252,7 +252,7 @@ export default function Canvas({ page }: CanvasProps) {
                 linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
                 linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
               `,
-              backgroundSize: `${10 * SCALE}px ${10 * SCALE}px`,
+              backgroundSize: `${String(10 * SCALE)}px ${String(10 * SCALE)}px`,
               pointerEvents: 'none',
             }}
           />
@@ -262,7 +262,6 @@ export default function Canvas({ page }: CanvasProps) {
             <WidgetBox
               key={widget.id}
               widget={widget}
-              pageId={page.id}
               isSelected={widget.id === selectedWidgetId}
               onSelect={selectWidget}
               onDragStart={handleDragStart}

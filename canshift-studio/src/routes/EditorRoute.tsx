@@ -130,7 +130,7 @@ export default function EditorRoute() {
             onClick={() => {
               addPage({
                 id: generateId('page'),
-                name: `Page ${config.pages.length + 1}`,
+                name: `Page ${String(config.pages.length + 1)}`,
                 backgroundImage: null,
                 backgroundColor: '#111111',
                 showTopBar: true,

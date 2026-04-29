@@ -1,6 +1,7 @@
 // PropertyPanel.tsx — Editor for the selected widget's properties.
 // Layout (x, y, w, h), signal binding, style, and type-specific config.
 
+import React from 'react'
 import type { Widget, SensorIconName, WidgetType } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
@@ -180,7 +181,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
           value={cfg.iconName}
           onChange={(name) => {
             onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _i, ...r }) => r)(cfg),
+              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
             })
           }}
         />
@@ -237,7 +238,7 @@ function LabelFields({ widget, onChange }: ConfigFieldsProps) {
           value={cfg.iconName}
           onChange={(name) => {
             onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _i, ...r }) => r)(cfg),
+              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
             })
           }}
         />
@@ -299,7 +300,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
             value={cfg.iconName}
             onChange={(name) => {
               onChange({
-                config: name ? { ...cfg, iconName: name } : (({ iconName: _i, ...r }) => r)(cfg),
+                config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
               })
             }}
           />
@@ -345,7 +346,7 @@ function BarFields({ widget, onChange }: ConfigFieldsProps) {
           value={cfg.iconName}
           onChange={(name) => {
             onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _i, ...r }) => r)(cfg),
+              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
             })
           }}
         />
@@ -383,7 +384,7 @@ function WarningFields({ widget, onChange }: ConfigFieldsProps) {
           value={cfg.iconName}
           onChange={(name) => {
             onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _i, ...r }) => r)(cfg),
+              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
             })
           }}
         />
@@ -392,14 +393,15 @@ function WarningFields({ widget, onChange }: ConfigFieldsProps) {
   )
 }
 
-const CONFIG_FIELDS: Partial<Record<WidgetType, (props: ConfigFieldsProps) => JSX.Element | null>> =
-  {
-    gauge: GaugeFields,
-    label: LabelFields,
-    button: ButtonFields,
-    bar: BarFields,
-    warning: WarningFields,
-  }
+const CONFIG_FIELDS: Partial<
+  Record<WidgetType, (props: ConfigFieldsProps) => React.JSX.Element | null>
+> = {
+  gauge: GaugeFields,
+  label: LabelFields,
+  button: ButtonFields,
+  bar: BarFields,
+  warning: WarningFields,
+}
 
 // ---------------------------------------------------------------------------
 // Main panel

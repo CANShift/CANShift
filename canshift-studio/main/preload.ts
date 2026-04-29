@@ -12,7 +12,7 @@ const ipc = {
   },
   on: (channel: string, listener: (...args: unknown[]) => void): void => {
     ipcRenderer.on(channel, (_event, ...args) => {
-      listener(...args)
+      listener(...(args as unknown[]))
     })
   },
   off: (channel: string, listener: (...args: unknown[]) => void): void => {

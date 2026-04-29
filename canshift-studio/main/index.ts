@@ -27,7 +27,7 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
-    buildMenu(mainWindow!)
+    if (mainWindow) buildMenu(mainWindow)
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

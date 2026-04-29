@@ -70,25 +70,25 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
             warningLevel: 6000,
             dangerLevel: 7000,
             showArc: true,
-            iconName: item.icon as SensorIconName,
+            iconName: item.icon,
           }
         case 'label':
-          return { type: 'label' as const, decimalPlaces: 0, iconName: item.icon as SensorIconName }
+          return { type: 'label' as const, decimalPlaces: 0, iconName: item.icon }
         case 'bar':
-          return { type: 'bar' as const, decimalPlaces: 0, iconName: item.icon as SensorIconName }
+          return { type: 'bar' as const, decimalPlaces: 0, iconName: item.icon }
         case 'warning':
           return {
             type: 'warning' as const,
             threshold: 0,
             invertLogic: false,
-            iconName: item.icon as SensorIconName,
+            iconName: item.icon,
           }
         case 'button':
           return {
             type: 'button' as const,
             targetPageId: '',
             label: 'Button',
-            iconName: item.icon as SensorIconName,
+            iconName: item.icon,
             showLabel: true,
             showIcon: false,
           }
