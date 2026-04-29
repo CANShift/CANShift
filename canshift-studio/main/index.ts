@@ -7,19 +7,29 @@ import { buildMenu } from './menu'
 
 let mainWindow: BrowserWindow | null = null
 
-const appIcon = nativeImage.createFromPath(join(__dirname, '../../assets/icon.png'))
+function loadIcon(): Electron.NativeImage | undefined {
+  try {
+    const img = nativeImage.createFromPath(join(__dirname, '../../assets/icon.png'))
+    return img.isEmpty() ? undefined : img
+  } catch {
+    return undefined
+  }
+}
 
 function createWindow(): void {
+  const icon = loadIcon()
+
   mainWindow = new BrowserWindow({
-    icon: appIcon,
     width: 1280,
     height: 800,
     minWidth: 1024,
     minHeight: 640,
+    show: false,
     title: 'CANShift Studio',
     backgroundColor: '#111111',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -45,17 +55,25 @@ function createWindow(): void {
   }
 }
 
-void app.whenReady().then(() => {
-  if (process.platform === 'darwin') {
-    app.dock.setIcon(appIcon)
-  }
-  registerIpcHandlers()
-  createWindow()
+app
+  .whenReady()
+  .then(() => {
+    if (process.platform === 'darwin') {
+      const icon = loadIcon()
+      if (icon) app.dock.setIcon(icon)
+    }
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    registerIpcHandlers()
+    createWindow()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
   })
-})
+  .catch((err: unknown) => {
+    console.error('App failed to start:', err)
+    app.quit()
+  })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
