@@ -11,6 +11,7 @@ export type {
   // Dashboard
   DashboardConfig,
   PageConfig,
+  PagePalette,
   Widget,
   TopBarConfig,
   WidgetConfig,
@@ -29,14 +30,12 @@ export type {
   DashboardButtonAction,
   EcuButtonAction,
   NavigateAction,
-  SetThemeAction,
   MapSwitchAction,
   CanRawAction,
 } from './types/dashboard'
 
+export { DEFAULT_PAGE_PALETTE } from './types/dashboard'
 export type { SignalConfig, SignalDef } from './types/signal'
-
-export type { ThemeConfig, Palette, TopBarTheme, GaugeTheme, AlertTheme } from './types/theme'
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -55,7 +54,7 @@ export type { MigrationResult } from './migrations/migration-runner'
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.2.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.3.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const

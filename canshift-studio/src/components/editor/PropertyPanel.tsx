@@ -9,6 +9,7 @@ import type {
   ButtonAction,
   GaugeDisplayStyle,
   WidgetLabelPosition,
+  PagePalette,
 } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
@@ -544,9 +545,7 @@ interface ActionRowProps {
 function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
   const typeLabel =
     action.category === 'dashboard'
-      ? action.type === 'navigate'
-        ? 'Navigate'
-        : 'Set Theme'
+      ? 'Navigate'
       : action.type === 'map_switch'
         ? 'Map Switch'
         : 'CAN Raw'
@@ -600,7 +599,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
       </div>
 
       {/* Action-specific fields */}
-      {action.category === 'dashboard' && action.type === 'navigate' && (
+      {action.category === 'dashboard' && (
         <select
           style={{ ...inputStyle, fontSize: 11 }}
           value={action.pageId}
@@ -615,17 +614,6 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
             </option>
           ))}
         </select>
-      )}
-
-      {action.category === 'dashboard' && action.type === 'set_theme' && (
-        <input
-          style={{ ...inputStyle, fontSize: 11 }}
-          placeholder="theme ID"
-          value={action.themeId}
-          onChange={(e) => {
-            onUpdate({ ...action, themeId: e.target.value })
-          }}
-        />
       )}
 
       {action.category === 'ecu' && action.type === 'map_switch' && (
@@ -707,15 +695,6 @@ function AddActionMenu({
           label: 'CAN Raw',
           action: (): ButtonAction => ({ category: 'ecu', type: 'can_raw', frameId: 0, data: '' }),
           color: '#CC8800',
-        },
-        {
-          label: 'Set Theme',
-          action: (): ButtonAction => ({
-            category: 'dashboard',
-            type: 'set_theme',
-            themeId: '',
-          }),
-          color: '#5577CC',
         },
       ].map(({ label, action, color }) => (
         <button
@@ -1136,6 +1115,60 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             }}
           />
         </Field>
+
+        {/* Palette */}
+        <div
+          style={{
+            fontSize: 10,
+            color: '#444',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: 6,
+            marginTop: 8,
+          }}
+        >
+          Palette
+        </div>
+        {(
+          [
+            ['surface', 'Surface'],
+            ['primary', 'Primary'],
+            ['accent', 'Accent'],
+            ['text', 'Text'],
+            ['textDim', 'Text dim'],
+            ['warning', 'Warning'],
+            ['danger', 'Danger'],
+            ['success', 'Success'],
+          ] as [keyof PagePalette, string][]
+        ).map(([key, label]) => {
+          const palette: PagePalette = page.palette
+          return (
+            <Field key={key} label={label}>
+              <input
+                type="color"
+                value={palette[key]}
+                style={{
+                  width: '100%',
+                  height: 28,
+                  padding: 2,
+                  background: '#111',
+                  border: '1px solid #333',
+                  borderRadius: 3,
+                  cursor: 'pointer',
+                  boxSizing: 'border-box',
+                }}
+                onChange={(e) => {
+                  updatePage(pageId, {
+                    palette: {
+                      ...page.palette,
+                      [key]: e.target.value as `#${string}`,
+                    },
+                  })
+                }}
+              />
+            </Field>
+          )
+        })}
 
         <div
           style={{

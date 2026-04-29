@@ -2,9 +2,10 @@
 // Uses binary-halving size tokens (320×224 widget area, topBar = 16 px).
 
 import type { DashboardConfig } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 export const DEFAULT_SIM_CONFIG: DashboardConfig = {
-  version: '1.2.0',
+  version: '1.3.0',
   name: 'VR6 Main Dash',
   description: 'Default dashboard for VW VR6 2.9 / MaxxECU Street',
   defaultPageId: 'main',
@@ -23,6 +24,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
       backgroundImage: null,
       backgroundColor: '#111111',
       showTopBar: true,
+      palette: { ...DEFAULT_PAGE_PALETTE },
       widgets: [
         // RPM — arc gauge, XL = 160×112
         {
@@ -238,6 +240,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
       backgroundImage: null,
       backgroundColor: '#111111',
       showTopBar: true,
+      palette: { ...DEFAULT_PAGE_PALETTE },
       widgets: [
         // Boost — arc gauge, XL = 160×112
         {

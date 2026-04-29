@@ -105,13 +105,6 @@ export interface NavigateAction {
   pageId: string
 }
 
-/** Switch to a different UI theme */
-export interface SetThemeAction {
-  category: 'dashboard'
-  type: 'set_theme'
-  themeId: string
-}
-
 /**
  * Ask the ECU to switch to a specific map slot.
  * Requires a CAN output frame configured in MaxxECU.
@@ -136,7 +129,7 @@ export interface CanRawAction {
   data: string
 }
 
-export type DashboardButtonAction = NavigateAction | SetThemeAction
+export type DashboardButtonAction = NavigateAction
 export type EcuButtonAction = MapSwitchAction | CanRawAction
 export type ButtonAction = DashboardButtonAction | EcuButtonAction
 
@@ -230,11 +223,47 @@ export interface Widget {
 // Page definition
 // ---------------------------------------------------------------------------
 
+/**
+ * Per-page color palette.
+ * Widgets on this page inherit these colors unless they override individually.
+ */
+export interface PagePalette {
+  /** Widget surface / card background */
+  surface: HexColor
+  /** Primary accent — gauge arcs, bar fills, highlights */
+  primary: HexColor
+  /** Secondary accent */
+  accent: HexColor
+  /** Default widget text */
+  text: HexColor
+  /** Muted / secondary text */
+  textDim: HexColor
+  /** Warning threshold color */
+  warning: HexColor
+  /** Danger threshold color */
+  danger: HexColor
+  /** Normal / ok state color */
+  success: HexColor
+}
+
+export const DEFAULT_PAGE_PALETTE: PagePalette = {
+  surface: '#1E1E1E',
+  primary: '#FF4444',
+  accent: '#FF8800',
+  text: '#FFFFFF',
+  textDim: '#888888',
+  warning: '#FF8800',
+  danger: '#FF4444',
+  success: '#00CC44',
+}
+
 export interface PageConfig {
   id: string
   name: string
   backgroundImage: string | null
   backgroundColor: HexColor
+  /** Per-page color palette used by widgets */
+  palette: PagePalette
   showTopBar: boolean
   /** When false, the page is hidden on the device (still editable in studio). Defaults to true. */
   visible?: boolean

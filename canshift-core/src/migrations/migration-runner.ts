@@ -21,7 +21,35 @@ interface Migration {
 // ---------------------------------------------------------------------------
 // Registered migrations (add new migrations here as schema evolves)
 // ---------------------------------------------------------------------------
+const DEFAULT_PALETTE = {
+  surface: '#1E1E1E',
+  primary: '#FF4444',
+  accent: '#FF8800',
+  text: '#FFFFFF',
+  textDim: '#888888',
+  warning: '#FF8800',
+  danger: '#FF4444',
+  success: '#00CC44',
+}
+
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.2.0 → 1.3.0: PageConfig gains a `palette` field.
+    // Pages without one get the default CANShift palette.
+    fromVersion: '1.2.0',
+    toVersion: '1.3.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.3.0' }
+
+      const migratedPages = pages.map((page) => {
+        if (page.palette !== undefined) return page
+        return { ...page, palette: { ...DEFAULT_PALETTE } }
+      })
+
+      return { ...config, version: '1.3.0', pages: migratedPages }
+    },
+  },
   {
     // 1.1.0 → 1.2.0: LabelWidgetConfig removed; merged into GaugeWidgetConfig.
     //   label widgets → gauge { displayStyle: 'numeric', minValue: 0, maxValue: 100, ... }
