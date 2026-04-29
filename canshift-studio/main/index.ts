@@ -55,6 +55,9 @@ function createWindow(): void {
   }
 }
 
+// Short name used for dock/taskbar tooltip and About dialog
+app.setName('CS Studio')
+
 app
   .whenReady()
   .then(() => {
