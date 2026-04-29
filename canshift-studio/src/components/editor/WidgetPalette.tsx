@@ -29,7 +29,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
     icon: 'throttle',
     defaultSignal: 'tps',
     defaultW: 100,
-    defaultH: 24,
+    defaultH: 20,
   },
   {
     type: 'warning',
@@ -40,7 +40,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
     defaultH: 40,
   },
   { type: 'button', label: 'Button', icon: 'cog', defaultSignal: '', defaultW: 60, defaultH: 30 },
-  { type: 'gear', label: 'Gear', icon: 'gear', defaultSignal: 'gear', defaultW: 48, defaultH: 56 },
+  { type: 'gear', label: 'Gear', icon: 'gear', defaultSignal: 'gear', defaultW: 50, defaultH: 60 },
   { type: 'timer', label: 'Timer', icon: 'timer', defaultSignal: '', defaultW: 80, defaultH: 30 },
   { type: 'image', label: 'Image', icon: 'warning', defaultSignal: '', defaultW: 60, defaultH: 60 },
 ]

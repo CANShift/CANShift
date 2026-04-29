@@ -247,6 +247,24 @@ export const useDashboardStore = create<DashboardState>()(
           }
         }
 
+        // Verify the dropped widget no longer overlaps anything after cascade.
+        // If it does (crowded canvas / clamp edge case), relocate it via autoPlace.
+        const finalOthers = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)
+        const finalRect = toLayoutRect(page.widgets.find((w) => w.id === widgetId) ?? widget)
+        const stillOverlaps = finalOthers.some((o) => rectsOverlap(finalRect, o))
+        if (stillOverlaps) {
+          const fallback = autoPlace(
+            { w: widget.layout.w, h: widget.layout.h },
+            finalOthers,
+            320,
+            canvasH
+          )
+          if (fallback) {
+            widget.layout.x = fallback.x
+            widget.layout.y = fallback.y
+          }
+        }
+
         s.isDirty = true
       })
     },

@@ -10,7 +10,7 @@
 //   autoPlace(size, others, canvasW, canvasH) → first free grid position
 //   resolveCollisions(moved, newX, newY, others, canvasW, canvasH) → Map of id→pos
 
-export const LAYOUT_GAP = 4 // minimum space between widget edges (firmware px)
+export const LAYOUT_GAP = 10 // minimum space between widget edges — must equal SNAP_GRID
 export const SNAP_GRID = 10 // drag snap granularity (firmware px)
 
 // ---------------------------------------------------------------------------
@@ -35,6 +35,16 @@ function clamp(v: number, lo: number, hi: number): number {
 
 export function snapToGrid(v: number, grid = SNAP_GRID): number {
   return Math.round(v / grid) * grid
+}
+
+/** Snap up to the next grid line — ensures a minimum-gap push never lands short. */
+function ceilToGrid(v: number, grid = SNAP_GRID): number {
+  return Math.ceil(v / grid) * grid
+}
+
+/** Snap down to the previous grid line — for leftward/upward pushes. */
+function floorToGrid(v: number, grid = SNAP_GRID): number {
+  return Math.floor(v / grid) * grid
 }
 
 /** True when a and b overlap (or are closer than LAYOUT_GAP). */
@@ -69,20 +79,22 @@ function pushAway(
   let ny = victim.y
 
   if (minH <= minV) {
-    nx =
-      pushRight <= pushLeft
-        ? anchor.x + anchor.w + g // push right
-        : anchor.x - victim.w - g // push left
+    if (pushRight <= pushLeft) {
+      nx = ceilToGrid(anchor.x + anchor.w + g) // push right — ceil so gap ≥ g
+    } else {
+      nx = floorToGrid(anchor.x - victim.w - g) // push left — floor so gap ≥ g
+    }
   } else {
-    ny =
-      pushDown <= pushUp
-        ? anchor.y + anchor.h + g // push down
-        : anchor.y - victim.h - g // push up
+    if (pushDown <= pushUp) {
+      ny = ceilToGrid(anchor.y + anchor.h + g) // push down — ceil so gap ≥ g
+    } else {
+      ny = floorToGrid(anchor.y - victim.h - g) // push up — floor so gap ≥ g
+    }
   }
 
   return {
-    x: clamp(snapToGrid(nx), 0, canvasW - victim.w),
-    y: clamp(snapToGrid(ny), 0, canvasH - victim.h),
+    x: clamp(nx, 0, canvasW - victim.w),
+    y: clamp(ny, 0, canvasH - victim.h),
   }
 }
 
