@@ -43,7 +43,7 @@ export default function TopBar() {
             height: 48,
             background: '#0D0D0D',
             borderBottom: '1px solid #2A2A2A',
-            padding: '0 16px',
+            padding: '0 16px 0 80px',
             gap: 8,
             WebkitAppRegion: 'drag',
             flexShrink: 0,
