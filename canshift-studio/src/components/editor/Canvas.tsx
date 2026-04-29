@@ -427,14 +427,15 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           disabled={revLimiting}
           title="Simulate rev limiter (5s)"
           style={{
-            padding: '2px 8px',
+            padding: '3px 10px',
             fontSize: 10,
-            background: revLimiting ? '#3A0000' : 'transparent',
-            border: `1px solid ${revLimiting ? '#CC0000' : '#2A2A2A'}`,
+            fontWeight: 600,
+            background: revLimiting ? '#3A0000' : '#1E0A0A',
+            border: `1px solid ${revLimiting ? '#CC0000' : '#663333'}`,
             borderRadius: 3,
-            color: revLimiting ? '#FF4444' : '#444444',
+            color: revLimiting ? '#FF4444' : '#CC5555',
             cursor: revLimiting ? 'default' : 'pointer',
-            letterSpacing: '0.04em',
+            letterSpacing: '0.05em',
           }}
         >
           ⚡ Rev Limit
