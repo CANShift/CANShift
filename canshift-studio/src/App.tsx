@@ -5,6 +5,7 @@ import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
 import ThemeRoute from './routes/ThemeRoute'
 import TopBar from './components/shared/TopBar'
+import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
 import ConsolePanel from './components/shared/ConsolePanel'
 import StatusBar from './components/shared/StatusBar'
@@ -34,12 +35,15 @@ export default function App() {
 
       {ready ? (
         <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/editor" replace />} />
-            <Route path="/editor" element={<EditorRoute />} />
-            <Route path="/signals" element={<SignalRoute />} />
-            <Route path="/theme" element={<ThemeRoute />} />
-          </Routes>
+          <SideRail />
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/editor" replace />} />
+              <Route path="/editor" element={<EditorRoute />} />
+              <Route path="/signals" element={<SignalRoute />} />
+              <Route path="/theme" element={<ThemeRoute />} />
+            </Routes>
+          </div>
         </main>
       ) : (
         <ConnectScreen />

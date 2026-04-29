@@ -16,13 +16,16 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const log = useLogStore((s) => s.push)
 
-  const fs   = Math.round(scale * 6)
+  const fs = Math.round(scale * 6)
   const fsLg = Math.round(scale * 7)
-  const gap  = Math.round(scale * 6)
+  const gap = Math.round(scale * 6)
 
   const handleSave = () => {
     if (simulationMode) {
-      log('info', `Screen settings saved (sim) — brightness ${String(brightness)}% contrast ${String(contrast)}%`)
+      log(
+        'info',
+        `Screen settings saved (sim) — brightness ${String(brightness)}% contrast ${String(contrast)}%`
+      )
       return
     }
     if (!connected) {
@@ -30,7 +33,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
       return
     }
     // TODO: push via usbService when screen settings IPC channel is implemented
-    log('success', `Screen settings pushed — brightness ${String(brightness)}% contrast ${String(contrast)}% rotation ${String(rotation)}°`)
+    log(
+      'success',
+      `Screen settings pushed — brightness ${String(brightness)}% contrast ${String(contrast)}% rotation ${String(rotation)}°`
+    )
   }
 
   const canSave = connected || simulationMode
@@ -73,8 +79,15 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           min={10}
           max={100}
           value={brightness}
-          onChange={(e) => { set({ brightness: Number(e.target.value) }) }}
-          style={{ width: '100%', accentColor: '#CC3333', cursor: 'pointer', height: Math.round(scale * 3) }}
+          onChange={(e) => {
+            set({ brightness: Number(e.target.value) })
+          }}
+          style={{
+            width: '100%',
+            accentColor: '#CC3333',
+            cursor: 'pointer',
+            height: Math.round(scale * 3),
+          }}
         />
       </SettingRow>
 
@@ -85,18 +98,31 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           min={0}
           max={100}
           value={contrast}
-          onChange={(e) => { set({ contrast: Number(e.target.value) }) }}
-          style={{ width: '100%', accentColor: '#CC3333', cursor: 'pointer', height: Math.round(scale * 3) }}
+          onChange={(e) => {
+            set({ contrast: Number(e.target.value) })
+          }}
+          style={{
+            width: '100%',
+            accentColor: '#CC3333',
+            cursor: 'pointer',
+            height: Math.round(scale * 3),
+          }}
         />
       </SettingRow>
 
       {/* Sleep */}
-      <SettingRow label="SLEEP" value={sleepTimeoutS === 0 ? 'Off' : `${String(sleepTimeoutS)}s`} scale={scale}>
+      <SettingRow
+        label="SLEEP"
+        value={sleepTimeoutS === 0 ? 'Off' : `${String(sleepTimeoutS)}s`}
+        scale={scale}
+      >
         <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
           {([0, 30, 60, 300] as const).map((v) => (
             <button
               key={v}
-              onClick={() => { set({ sleepTimeoutS: v }) }}
+              onClick={() => {
+                set({ sleepTimeoutS: v })
+              }}
               style={{
                 flex: 1,
                 padding: `${String(Math.round(scale * 2))}px 0`,
@@ -121,7 +147,9 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           {([0, 90, 180, 270] as const).map((r) => (
             <button
               key={r}
-              onClick={() => { set({ rotation: r }) }}
+              onClick={() => {
+                set({ rotation: r })
+              }}
               style={{
                 flex: 1,
                 padding: `${String(Math.round(scale * 2))}px 0`,

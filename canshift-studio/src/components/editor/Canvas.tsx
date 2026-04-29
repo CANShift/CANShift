@@ -56,11 +56,19 @@ interface WidgetBoxProps {
   widget: Widget
   isSelected: boolean
   isOverlapping: boolean
+  revLimiting: boolean
   onSelect: (id: string) => void
   onDragStart: (e: React.MouseEvent, widget: Widget) => void
 }
 
-function WidgetBox({ widget, isSelected, isOverlapping, onSelect, onDragStart }: WidgetBoxProps) {
+function WidgetBox({
+  widget,
+  isSelected,
+  isOverlapping,
+  revLimiting,
+  onSelect,
+  onDragStart,
+}: WidgetBoxProps) {
   const { layout, type } = widget
   const typeColor = getBorderColor(type)
   const borderColor = isOverlapping ? '#FF2222' : isSelected ? '#FFFFFF' : typeColor
@@ -93,7 +101,12 @@ function WidgetBox({ widget, isSelected, isOverlapping, onSelect, onDragStart }:
             : `0 0 0 1px ${typeColor}22`,
       }}
     >
-      <WidgetPreview widget={widget} displayW={layout.w * SCALE} displayH={layout.h * SCALE} />
+      <WidgetPreview
+        widget={widget}
+        displayW={layout.w * SCALE}
+        displayH={layout.h * SCALE}
+        revLimiting={revLimiting}
+      />
       {isSelected && (
         <div
           style={{
@@ -260,6 +273,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [revLimiting, setRevLimiting] = useState(false)
 
   // Compute which widget ids currently overlap — shown with red border as feedback
   const overlappingIds = (() => {
@@ -429,6 +443,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 widget={widget}
                 isSelected={widget.id === selectedWidgetId}
                 isOverlapping={overlappingIds.has(widget.id)}
+                revLimiting={revLimiting}
                 onSelect={selectWidget}
                 onDragStart={handleDragStart}
               />
@@ -439,17 +454,37 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           </div>
         </div>
 
-        {/* Canvas label */}
+        {/* Canvas footer: label + rev-limit sim button */}
         <div
           style={{
-            textAlign: 'center',
-            fontSize: 10,
-            color: '#333333',
-            marginTop: 4,
-            letterSpacing: '0.05em',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            marginTop: 6,
           }}
         >
-          320 × 240 px — {SCALE}× preview
+          <span style={{ fontSize: 10, color: '#333333', letterSpacing: '0.05em' }}>
+            320 × 240 px — {SCALE}× preview
+          </span>
+          <button
+            onClick={() => {
+              setRevLimiting((v) => !v)
+            }}
+            title="Simulate rev limiter"
+            style={{
+              padding: '2px 8px',
+              fontSize: 10,
+              background: revLimiting ? '#3A0000' : 'transparent',
+              border: `1px solid ${revLimiting ? '#CC0000' : '#2A2A2A'}`,
+              borderRadius: 3,
+              color: revLimiting ? '#FF4444' : '#444444',
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+            }}
+          >
+            ⚡ Rev Limit
+          </button>
         </div>
       </div>
     </div>

@@ -1,27 +1,12 @@
 // TopBar.tsx — Application top navigation bar
 
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
 import logoUrl from '../../../assets/CANShift_studio_logo.png'
 import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
-import {
-  IconEditor,
-  IconSignals,
-  IconTheme,
-  IconLoad,
-  IconExport,
-  IconBurn,
-  IconExit,
-} from '../icons/Icon'
-
-const NAV_ITEMS = [
-  { to: '/editor', label: 'Editor', Icon: IconEditor },
-  { to: '/signals', label: 'Signals', Icon: IconSignals },
-  { to: '/theme', label: 'Theme', Icon: IconTheme },
-]
+import { IconLoad, IconExport, IconBurn, IconExit } from '../icons/Icon'
 
 const DOT_COLOR: Record<string, string> = {
   connected: '#44CC44',
@@ -97,35 +82,6 @@ export default function TopBar() {
             } as React.CSSProperties
           }
         />
-
-        {/* Nav links */}
-        <nav style={{ display: 'flex', gap: 2, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          {NAV_ITEMS.map(({ to, label: navLabel, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '4px 12px',
-                borderRadius: 4,
-                textDecoration: 'none',
-                fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#FFFFFF' : '#666666',
-                background: isActive ? '#2A2A2A' : 'transparent',
-              })}
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={13} color={isActive ? '#FFFFFF' : '#555555'} />
-                  {navLabel}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />

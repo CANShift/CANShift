@@ -3,8 +3,8 @@
 import { create } from 'zustand'
 
 export interface ScreenSettings {
-  brightness: number   // 0–100 %
-  contrast: number     // 0–100 %
+  brightness: number // 0–100 %
+  contrast: number // 0–100 %
   sleepTimeoutS: number // 0 = never, otherwise seconds before dimming
   rotation: 0 | 90 | 180 | 270
 }

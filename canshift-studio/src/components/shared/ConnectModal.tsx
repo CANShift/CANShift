@@ -187,7 +187,11 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                       </>
                     )}
                   </select>
-                  <button onClick={refreshPorts} disabled={loading} style={{ ...btnBase, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button
+                    onClick={refreshPorts}
+                    disabled={loading}
+                    style={{ ...btnBase, display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
                     <IconRefresh size={12} color="currentColor" />
                   </button>
                 </div>
@@ -222,7 +226,14 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                     disconnect()
                     onClose()
                   }}
-                  style={{ ...btnBase, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  style={{
+                    ...btnBase,
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
                 >
                   <IconDisconnect size={12} color="currentColor" />
                   Disconnect

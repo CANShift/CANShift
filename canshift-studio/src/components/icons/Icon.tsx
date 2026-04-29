@@ -19,7 +19,13 @@ function icon(path: string, viewBox = '0 0 16 16'): IconComponent {
         style={{ flexShrink: 0, ...style }}
         aria-hidden
       >
-        <path d={path} stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={path}
+          stroke={color}
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     )
   }
@@ -31,9 +37,15 @@ export const IconSignals = icon('M1 8c1-3 2-5 3-5s2 4 3 8 2 5 3 2 2-6 3-5')
 export const IconTheme = icon('M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM5 8a3 3 0 0 1 6 0')
 
 // File actions
-export const IconLoad = icon('M2 3.5A1.5 1.5 0 0 1 3.5 2h3.086a1.5 1.5 0 0 1 1.06.44l.915.914A1.5 1.5 0 0 0 9.62 3.8H12.5A1.5 1.5 0 0 1 14 5.3V12.5A1.5 1.5 0 0 1 12.5 14h-9A1.5 1.5 0 0 1 2 12.5v-9Z')
-export const IconExport = icon('M3 2h8l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1ZM5 2v4h6V2M5 15v-5h6v5')
-export const IconBurn = icon('M8 2C5 5 3 8 5 11c.8 1.5 2 2.5 3 3 1-.5 2.2-1.5 3-3 2-3 0-6-3-9ZM8 10c-.5-1-1-2-.5-3.5C8 8 9.5 8.5 9.5 10a1.5 1.5 0 0 1-3 0')
+export const IconLoad = icon(
+  'M2 3.5A1.5 1.5 0 0 1 3.5 2h3.086a1.5 1.5 0 0 1 1.06.44l.915.914A1.5 1.5 0 0 0 9.62 3.8H12.5A1.5 1.5 0 0 1 14 5.3V12.5A1.5 1.5 0 0 1 12.5 14h-9A1.5 1.5 0 0 1 2 12.5v-9Z'
+)
+export const IconExport = icon(
+  'M3 2h8l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1ZM5 2v4h6V2M5 15v-5h6v5'
+)
+export const IconBurn = icon(
+  'M8 2C5 5 3 8 5 11c.8 1.5 2 2.5 3 3 1-.5 2.2-1.5 3-3 2-3 0-6-3-9ZM8 10c-.5-1-1-2-.5-3.5C8 8 9.5 8.5 9.5 10a1.5 1.5 0 0 1-3 0'
+)
 
 // Device / connection
 export const IconUsb = icon('M8 2v8M5 7l3 3 3-3M4 10h8a2 2 0 0 1 0 4H4a2 2 0 0 1 0-4Z')

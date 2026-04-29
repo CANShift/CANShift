@@ -40,7 +40,17 @@ function gaugeArcD(cx: number, cy: number, r: number, fromPct: number, toPct: nu
 // Gauge — Arc style
 // ---------------------------------------------------------------------------
 
-function GaugeArcPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+function GaugeArcPreview({
+  widget,
+  w,
+  h,
+  revLimiting,
+}: {
+  widget: Widget
+  w: number
+  h: number
+  revLimiting: boolean
+}) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
@@ -68,10 +78,13 @@ function GaugeArcPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
 
   const needleTip = svgPt(cx, cy, r * 0.88, 135 + valuePct * 270)
   const revFlash = cfg.revFlash === true
+  const showRevFlash = revFlash && revLimiting
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
-      {/* Rev-flash indicator ring */}
+      {/* Rev-flash background fill when at rev limit */}
+      {showRevFlash && <rect x={0} y={0} width={w} height={h} fill="#FF000022" />}
+      {/* Rev-flash indicator ring (dashed = configured, solid = active) */}
       {revFlash && (
         <circle
           cx={cx}
@@ -79,9 +92,9 @@ function GaugeArcPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
           r={r + strokeW * 0.6}
           fill="none"
           stroke="#FF0000"
-          strokeWidth={2}
-          opacity={0.6}
-          strokeDasharray="4 3"
+          strokeWidth={showRevFlash ? 3 : 1.5}
+          opacity={showRevFlash ? 1 : 0.45}
+          strokeDasharray={showRevFlash ? undefined : '4 3'}
         />
       )}
       {/* Background arc */}
@@ -557,13 +570,21 @@ interface WidgetPreviewProps {
   displayW: number
   /** Display height in pixels (= layout.h × SCALE) */
   displayH: number
+  /** When true, rev-flash gauges show the activated (red) state */
+  revLimiting?: boolean
 }
 
-export function WidgetPreview({ widget, displayW: w, displayH: h }: WidgetPreviewProps) {
+export function WidgetPreview({
+  widget,
+  displayW: w,
+  displayH: h,
+  revLimiting = false,
+}: WidgetPreviewProps) {
   const { config } = widget
 
   if (config.type === 'gauge') {
-    if (config.displayStyle === 'arc') return <GaugeArcPreview widget={widget} w={w} h={h} />
+    if (config.displayStyle === 'arc')
+      return <GaugeArcPreview widget={widget} w={w} h={h} revLimiting={revLimiting} />
     if (config.displayStyle === 'bar') return <GaugeBarPreview widget={widget} w={w} h={h} />
     return <GaugeNumericPreview widget={widget} w={w} h={h} />
   }

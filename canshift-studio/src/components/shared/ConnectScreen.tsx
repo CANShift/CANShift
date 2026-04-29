@@ -51,7 +51,12 @@ export default function ConnectScreen() {
         {/* Icon */}
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" opacity={0.15}>
           <rect x="6" y="10" width="36" height="28" rx="3" stroke="#FFFFFF" strokeWidth="2" />
-          <path d="M16 38v4M32 38v4M12 42h24" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M16 38v4M32 38v4M12 42h24"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
           <circle cx="24" cy="24" r="6" stroke="#FFFFFF" strokeWidth="2" />
         </svg>
 
