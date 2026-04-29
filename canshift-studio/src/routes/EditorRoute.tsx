@@ -166,7 +166,7 @@ export default function EditorRoute() {
 
       {/* ── Canvas centre ────────────────────────────────────────────────── */}
       {currentPage ? (
-        <Canvas page={currentPage} />
+        <Canvas page={currentPage} topBar={config.topBar} />
       ) : (
         <div
           style={{

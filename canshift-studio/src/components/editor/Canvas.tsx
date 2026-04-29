@@ -2,7 +2,7 @@
 // Renders all widgets as interactive boxes; supports click-to-select and drag-to-move.
 
 import { useRef, useCallback, useEffect } from 'react'
-import type { PageConfig, Widget, SensorIconName } from '@tmbk/canshift-core'
+import type { PageConfig, TopBarConfig, Widget, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 
@@ -161,14 +161,116 @@ function WidgetBox({ widget, isSelected, onSelect, onDragStart }: WidgetBoxProps
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard top bar (rendered inside the canvas)
+// ---------------------------------------------------------------------------
+
+interface DashTopBarProps {
+  topBar: TopBarConfig
+  pageName: string
+}
+
+function DashTopBar({ topBar, pageName }: DashTopBarProps) {
+  const h = topBar.height * SCALE
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: h,
+        background: topBar.bgColor,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: `0 ${String(SCALE * 4)}px`,
+        zIndex: 10,
+        boxSizing: 'border-box',
+        borderBottom: '1px solid #1E1E1E',
+        userSelect: 'none',
+      }}
+    >
+      {/* Left — ECU connection status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: SCALE * 3 }}>
+        <span
+          style={{
+            display: 'inline-block',
+            width: SCALE * 4,
+            height: SCALE * 4,
+            borderRadius: '50%',
+            background: '#44CC44',
+            boxShadow: '0 0 4px #44CC4488',
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ fontSize: SCALE * 5.5, color: topBar.textColor, letterSpacing: '0.04em' }}>
+          ECU
+        </span>
+        <span
+          style={{
+            width: 1,
+            height: SCALE * 6,
+            background: '#2A2A2A',
+            margin: `0 ${String(SCALE)}px`,
+          }}
+        />
+        <span style={{ fontSize: SCALE * 5.5, color: '#444444' }}>CAN</span>
+        <span
+          style={{
+            display: 'inline-block',
+            width: SCALE * 4,
+            height: SCALE * 4,
+            borderRadius: '50%',
+            background: '#44CC44',
+            flexShrink: 0,
+          }}
+        />
+      </div>
+
+      {/* Center — page / map name */}
+      {topBar.showMapName && (
+        <span
+          style={{
+            fontSize: SCALE * 6,
+            color: topBar.textColor,
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+          }}
+        >
+          {pageName.toUpperCase()}
+        </span>
+      )}
+
+      {/* Right — battery + time */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: SCALE * 4 }}>
+        <span style={{ fontSize: SCALE * 5.5, color: '#888888' }}>12.4V</span>
+        <span
+          style={{
+            width: 1,
+            height: SCALE * 6,
+            background: '#2A2A2A',
+          }}
+        />
+        <span style={{ fontSize: SCALE * 5.5, color: '#555555' }}>SIM</span>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Canvas
 // ---------------------------------------------------------------------------
 
 interface CanvasProps {
   page: PageConfig
+  topBar: TopBarConfig
 }
 
-export default function Canvas({ page }: CanvasProps) {
+export default function Canvas({ page, topBar }: CanvasProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
   const moveWidget = useDashboardStore((s) => s.moveWidget)
@@ -274,6 +376,9 @@ export default function Canvas({ page }: CanvasProps) {
               pointerEvents: 'none',
             }}
           />
+
+          {/* Dashboard top bar */}
+          {page.showTopBar && <DashTopBar topBar={topBar} pageName={page.name} />}
 
           {/* Widgets */}
           {page.widgets.map((widget) => (
