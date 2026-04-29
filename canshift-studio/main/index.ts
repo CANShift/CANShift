@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 
 let mainWindow: BrowserWindow | null = null
+let splashWindow: BrowserWindow | null = null
 
 function loadIcon(): Electron.NativeImage | undefined {
   try {
@@ -14,6 +15,58 @@ function loadIcon(): Electron.NativeImage | undefined {
   } catch {
     return undefined
   }
+}
+
+function createSplash(): void {
+  splashWindow = new BrowserWindow({
+    width: 480,
+    height: 320,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    center: true,
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
+  })
+
+  const logoPath = join(__dirname, '../../assets/CANShift_studio_logo.png').replace(/\\/g, '/')
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 320px;
+    background: #0D0D0D;
+    border-radius: 12px;
+    border: 1px solid #2A2A2A;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    overflow: hidden;
+    -webkit-app-region: drag;
+  }
+  img { max-width: 320px; max-height: 160px; object-fit: contain; }
+  .label {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: #333333;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <img src="file://${logoPath}" alt="CS Studio" />
+  <span class="label">Loading…</span>
+</body>
+</html>`
+
+  void splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
 }
 
 function createWindow(): void {
@@ -25,7 +78,7 @@ function createWindow(): void {
     minWidth: 1024,
     minHeight: 640,
     show: false,
-    title: 'CANShift Studio',
+    title: 'CS Studio',
     backgroundColor: '#111111',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
@@ -39,6 +92,8 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    splashWindow?.close()
+    splashWindow = null
     mainWindow?.show()
     if (mainWindow) buildMenu(mainWindow)
   })
@@ -67,6 +122,7 @@ app
     }
 
     registerIpcHandlers()
+    createSplash()
     createWindow()
 
     app.on('activate', () => {

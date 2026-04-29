@@ -50,7 +50,7 @@
   },
   "build": {
     "appId": "ch.tmbk.canshift.studio",
-    "productName": "CANShift Studio",
+    "productName": "CS Studio",
     "icon": "assets/icon.png",
     "directories": {
       "output": "release"
