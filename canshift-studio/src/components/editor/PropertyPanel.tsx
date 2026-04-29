@@ -168,9 +168,9 @@ const GAUGE_SIZE_PRESETS: Record<GaugeDisplayStyle, SizePreset[]> = {
     { label: 'Full M', w: 30, h: 220 },
   ],
   numeric: [
-    { label: 'S', w: 80, h: 20 },
-    { label: 'M', w: 120, h: 30 },
-    { label: 'L', w: 160, h: 40 },
+    { label: 'S', w: 60, h: 30 },
+    { label: 'M', w: 80, h: 40 },
+    { label: 'L', w: 100, h: 50 },
   ],
 }
 
