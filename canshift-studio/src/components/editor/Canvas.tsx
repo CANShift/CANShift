@@ -1,7 +1,7 @@
 // Canvas.tsx — 320×240 widget layout editor.
 // Renders all widgets as interactive boxes; supports click-to-select and drag-to-move.
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import type { PageConfig, Widget, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
@@ -172,7 +172,25 @@ export default function Canvas({ page }: CanvasProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
   const moveWidget = useDashboardStore((s) => s.moveWidget)
+  const removeWidget = useDashboardStore((s) => s.removeWidget)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        return
+      if (!selectedWidgetId) return
+      e.preventDefault()
+      removeWidget(page.id, selectedWidgetId)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedWidgetId, page.id, removeWidget])
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent, widget: Widget) => {
