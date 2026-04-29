@@ -11,7 +11,10 @@
     "lint:fix": "eslint src main --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"main/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"main/**/*.ts\"",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.main.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.main.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "canshift",
@@ -39,15 +42,19 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/ui": "^4.1.5",
     "electron": "^31.2.0",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
     "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.0.0",
+    "jsdom": "^29.1.0",
     "prettier": "^3.3.3",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.59.1",
-    "vite": "^5.3.3"
+    "vite": "^5.3.3",
+    "vitest": "^4.1.5"
   },
   "build": {
     "appId": "ch.tmbk.canshift.studio",
@@ -61,11 +68,21 @@
       "assets/icon.png"
     ],
     "mac": {
-      "target": "dmg",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
       "category": "public.app-category.developer-tools"
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] }
+      ],
+      "category": "Development"
     },
     "publish": {
       "provider": "github",

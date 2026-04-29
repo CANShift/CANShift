@@ -58,7 +58,7 @@ export default tseslint.config(
   },
   {
     // Root config files: relax type-aware rules (no tsconfig covers them)
-    files: ['eslint.config.mjs', 'electron.vite.config.ts'],
+    files: ['eslint.config.mjs', 'electron.vite.config.ts', 'vitest.config.ts'],
     languageOptions: {
       parserOptions: {
         projectService: {
