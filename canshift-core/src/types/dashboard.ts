@@ -183,6 +183,12 @@ export interface BarWidgetConfig {
   /** Short label shown above or below the bar */
   label?: string
   labelPosition?: 'top-center' | 'bottom-center'
+  /** Range bounds — auto-filled from signal definition on signal selection */
+  minValue?: number
+  maxValue?: number
+  /** Optional thresholds — auto-filled from signal definition on signal selection */
+  warningLevel?: number
+  dangerLevel?: number
 }
 
 export interface GearWidgetConfig {

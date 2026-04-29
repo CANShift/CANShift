@@ -1329,8 +1329,19 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                     dangerLevel: signalDef.dangerLevel,
                   }),
                 }
-              } else if (signalDef?.unit && widget.config.type === 'bar') {
-                p.config = { ...widget.config, suffix: signalDef.unit }
+              } else if (signalDef && widget.config.type === 'bar') {
+                p.config = {
+                  ...widget.config,
+                  suffix: signalDef.unit,
+                  minValue: signalDef.min,
+                  maxValue: signalDef.max,
+                  ...(signalDef.warningLevel !== undefined && {
+                    warningLevel: signalDef.warningLevel,
+                  }),
+                  ...(signalDef.dangerLevel !== undefined && {
+                    dangerLevel: signalDef.dangerLevel,
+                  }),
+                }
               }
               patch(p)
             }}
