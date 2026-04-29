@@ -75,7 +75,12 @@ function WidgetBox({
 }: WidgetBoxProps) {
   const { layout, type } = widget
   const typeColor = getBorderColor(type)
-  const borderColor = isOverlapping ? '#FF2222' : isSelected ? '#FFFFFF' : typeColor
+  const configuredBorder = widget.style.borderColor
+  const borderColor = isOverlapping
+    ? '#FF2222'
+    : isSelected
+      ? '#FFFFFF'
+      : (configuredBorder ?? typeColor)
   const borderWidth = isSelected || isOverlapping ? 2 : 1
   const bgColor = isOverlapping ? '#2A0000' : palette.surface
 

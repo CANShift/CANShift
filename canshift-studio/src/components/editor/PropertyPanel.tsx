@@ -1441,6 +1441,47 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           />
         </Field>
       </Row>
+      <Row>
+        <Field label="Border">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={!!widget.style.borderColor}
+              onChange={(e) => {
+                patch({
+                  style: {
+                    ...widget.style,
+                    borderColor: e.target.checked ? '#FFFFFF' : null,
+                  },
+                })
+              }}
+            />
+            {widget.style.borderColor && (
+              <input
+                type="color"
+                value={widget.style.borderColor}
+                style={{
+                  flex: 1,
+                  height: 28,
+                  padding: 2,
+                  background: '#111',
+                  border: '1px solid #333',
+                  borderRadius: 3,
+                  cursor: 'pointer',
+                }}
+                onChange={(e) => {
+                  patch({
+                    style: {
+                      ...widget.style,
+                      borderColor: e.target.value as `#${string}`,
+                    },
+                  })
+                }}
+              />
+            )}
+          </div>
+        </Field>
+      </Row>
       {/* Type-specific config */}
       {ConfigFields && (
         <>

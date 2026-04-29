@@ -23,6 +23,8 @@ export interface WidgetStyle {
   criticalColor: HexColor
   textColor: HexColor
   fontSize: number
+  /** Optional border color — omit or set to null for no border */
+  borderColor?: HexColor | null
 }
 
 /** Semantic version string — "MAJOR.MINOR.PATCH" */
