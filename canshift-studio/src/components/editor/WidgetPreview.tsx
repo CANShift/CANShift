@@ -419,14 +419,14 @@ function GaugeBarPreview({
         ? st.warningColor
         : st.primaryColor
 
-  // Bar occupies 60 % of widget width, centered horizontally
+  // Bar track: 60 % of widget width, centered
   const bw = Math.max(10, w * 0.6)
   const padX = (w - bw) / 2
-  // Minimal top padding (signal label only); bottom sized for value + unit on 2 lines
-  const sigLabelH = Math.max(10, Math.min(h * 0.07, 16)) // signal name row
-  const padTop = sigLabelH + 2
-  const unitLineH = Math.max(8, Math.min(h * 0.07, 12))
-  const valLineH = Math.max(10, Math.min(h * 0.1, 18))
+  // Top: signal label; bottom: value + unit on two lines
+  const sigLabelH = Math.max(10, Math.min(h * 0.12, 14))
+  const padTop = sigLabelH + 3
+  const unitLineH = Math.max(8, Math.min(h * 0.09, 13))
+  const valLineH = Math.max(10, Math.min(h * 0.14, 22))
   const padBot = valLineH + unitLineH + 6
   const trackH = Math.max(4, h - padTop - padBot)
 
@@ -436,9 +436,19 @@ function GaugeBarPreview({
   const warnY = padTop + trackH * (1 - warnPct)
   const dangerY = padTop + trackH * (1 - dangerPct)
 
-  const sigFontSize = Math.max(5, Math.min(sigLabelH * 0.75, w * 0.18))
-  const valFontSize = Math.max(8, Math.min(valLineH * 0.9, w * 0.42))
-  const unitFontSize = Math.max(6, Math.min(unitLineH * 0.85, w * 0.28))
+  const sigFontSize = Math.max(6, Math.min(sigLabelH * 0.82, w * 0.12))
+  const valFontSize = Math.max(10, Math.min(valLineH * 0.9, w * 0.46))
+  const unitFontSize = Math.max(7, Math.min(unitLineH * 0.85, w * 0.3))
+
+  // Value always in white for readability; warning/danger state shown by fill color
+  const valTextColor =
+    valuePct >= dangerPct ? st.criticalColor : valuePct >= warnPct ? st.warningColor : '#FFFFFF'
+  const unitTextColor =
+    valuePct >= dangerPct
+      ? st.criticalColor + 'BB'
+      : valuePct >= warnPct
+        ? st.warningColor + 'BB'
+        : '#888888'
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
@@ -452,7 +462,7 @@ function GaugeBarPreview({
         fontSize={sigFontSize}
         fontFamily="sans-serif"
         fontWeight="600"
-        letterSpacing="0.05em"
+        letterSpacing="0.04em"
       >
         {signalLabel}
       </text>
@@ -496,16 +506,16 @@ function GaugeBarPreview({
         rx={3}
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
-      {/* Scale ticks */}
-      {padX >= 16 && (
+      {/* Scale ticks — min/max on sides when space allows */}
+      {padX >= 14 && (
         <>
           <text
             x={padX - 4}
             y={padTop + trackH}
             textAnchor="end"
             dominantBaseline="middle"
-            fill="#444444"
-            fontSize={Math.max(6, Math.min(8, w * 0.14))}
+            fill="#383838"
+            fontSize={Math.max(6, Math.min(8, w * 0.12))}
             fontFamily="monospace"
           >
             {cfg.minValue}
@@ -515,21 +525,21 @@ function GaugeBarPreview({
             y={padTop}
             textAnchor="end"
             dominantBaseline="middle"
-            fill="#444444"
-            fontSize={Math.max(6, Math.min(8, w * 0.14))}
+            fill="#383838"
+            fontSize={Math.max(6, Math.min(8, w * 0.12))}
             fontFamily="monospace"
           >
             {cfg.maxValue}
           </text>
         </>
       )}
-      {/* Value — always two-line: number on top, unit below */}
+      {/* Value — white for max readability, warning/danger state changes color */}
       <text
         x={w / 2}
-        y={h - padBot + valLineH * 0.85}
+        y={h - padBot + valLineH * 0.88}
         textAnchor="middle"
         dominantBaseline="auto"
-        fill={valueColor}
+        fill={valTextColor}
         fontSize={valFontSize}
         fontWeight="700"
         fontFamily="monospace"
@@ -543,7 +553,7 @@ function GaugeBarPreview({
           y={h - 3}
           textAnchor="middle"
           dominantBaseline="auto"
-          fill={valueColor + 'BB'}
+          fill={unitTextColor}
           fontSize={unitFontSize}
           fontFamily="sans-serif"
           fontWeight="600"

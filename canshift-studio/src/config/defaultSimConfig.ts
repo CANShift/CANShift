@@ -345,7 +345,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           id: 'lambda_num',
           type: 'gauge',
           signal: 'lambda_1',
-          layout: { x: 40, y: 112, w: 120, h: 56, zOrder: 0 },
+          layout: { x: 40, y: 112, w: 80, h: 56, zOrder: 0 },
           style: {
             textColor: '#44FF88',
             primaryColor: '#44FF88',
@@ -365,12 +365,12 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             suffix: 'λ',
           },
         },
-        // Battery — numeric
+        // Battery — numeric, S = 80×56
         {
           id: 'batt_num',
           type: 'gauge',
           signal: 'battery_volts',
-          layout: { x: 40, y: 168, w: 120, h: 56, zOrder: 0 },
+          layout: { x: 40, y: 168, w: 80, h: 56, zOrder: 0 },
           style: {
             textColor: '#AAAAAA',
             primaryColor: '#AAAAAA',

@@ -59,8 +59,10 @@ export function gaugeTokenIds(
   if (displayStyle === 'arc') return ['XL', 'XXL']
   if (displayStyle === 'numeric') return ['XL', 'L', 'M', 'S', 'XS']
   // bar — depends on orientation
-  if (barOrientation === 'horizontal') return ['H', 'H-FULL']
-  return ['V-S', 'V-M', 'V']
+  // H-FULL only for horizontal (full-width strip); V-S removed (too small)
+  if (barOrientation === 'horizontal') return ['H-FULL']
+  // Vertical: square/portrait tokens + narrow V tokens; V-S removed (too small)
+  return ['S', 'M', 'V-M', 'V']
 }
 
 /** Allowed size tokens for non-gauge widget types */
@@ -69,6 +71,6 @@ export const STANDARD_TOKEN_IDS: SizeTokenId[] = ['XL', 'L', 'M', 'S', 'XS']
 /** Default token when adding a new gauge by display style */
 export const GAUGE_DEFAULT_TOKEN: Record<GaugeDisplayStyle, SizeTokenId> = {
   arc: 'XL',
-  bar: 'V-S',
+  bar: 'S',
   numeric: 'L',
 }
