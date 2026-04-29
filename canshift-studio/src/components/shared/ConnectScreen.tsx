@@ -7,6 +7,7 @@ import { useLogStore } from '../../stores/log.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import { DEFAULT_SIM_CONFIG } from '../../config/defaultSimConfig'
 import ConnectModal from './ConnectModal'
+import { IconUsb, IconSimulation, IconLoad } from '../icons/Icon'
 
 export default function ConnectScreen() {
   const [modalOpen, setModalOpen] = useState(false)
@@ -68,6 +69,10 @@ export default function ConnectScreen() {
               setModalOpen(true)
             }}
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
               padding: '10px 0',
               background: '#CC3333',
               border: 'none',
@@ -78,6 +83,7 @@ export default function ConnectScreen() {
               cursor: 'pointer',
             }}
           >
+            <IconUsb size={15} color="#FFFFFF" />
             Connect Device
           </button>
 
@@ -86,6 +92,10 @@ export default function ConnectScreen() {
               onClick={handleSimulation}
               style={{
                 flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
                 padding: '8px 0',
                 background: 'transparent',
                 border: '1px solid #2A2A2A',
@@ -95,12 +105,17 @@ export default function ConnectScreen() {
                 cursor: 'pointer',
               }}
             >
+              <IconSimulation size={13} color="#666666" />
               Simulation
             </button>
             <button
               onClick={handleLoadAndSimulate}
               style={{
                 flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
                 padding: '8px 0',
                 background: 'transparent',
                 border: '1px solid #2A2A2A',
@@ -110,6 +125,7 @@ export default function ConnectScreen() {
                 cursor: 'pointer',
               }}
             >
+              <IconLoad size={13} color="#666666" />
               Load config…
             </button>
           </div>

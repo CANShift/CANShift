@@ -6,6 +6,7 @@ import type { Widget, SensorIconName, WidgetType } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
+import { IconTrash } from '../icons/Icon'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -479,8 +480,11 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           onClick={() => {
             removeWidget(pageId, widget.id)
           }}
-          title="Delete widget"
+          title="Delete widget (Del)"
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
             background: 'none',
             border: '1px solid #3A1A1A',
             borderRadius: 3,
@@ -490,6 +494,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             padding: '3px 7px',
           }}
         >
+          <IconTrash size={11} color="#AA3333" />
           Delete
         </button>
       </div>

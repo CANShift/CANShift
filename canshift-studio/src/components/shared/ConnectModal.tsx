@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 import { useUsbConnection } from '../../hooks/useUsbConnection'
+import { IconRefresh, IconDisconnect, IconUsb } from '../icons/Icon'
 
 interface ConnectModalProps {
   onClose: () => void
@@ -186,8 +187,8 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                       </>
                     )}
                   </select>
-                  <button onClick={refreshPorts} disabled={loading} style={btnBase}>
-                    {loading ? '…' : '↺'}
+                  <button onClick={refreshPorts} disabled={loading} style={{ ...btnBase, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <IconRefresh size={12} color="currentColor" />
                   </button>
                 </div>
 
@@ -198,12 +199,16 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                     ...btnBase,
                     width: '100%',
                     padding: '7px 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
                     background: selectedPort && !loading ? '#CC3333' : '#1A1A1A',
                     borderColor: selectedPort && !loading ? '#CC3333' : '#333333',
                     color: selectedPort && !loading ? '#FFFFFF' : '#555555',
-                    textAlign: 'center',
                   }}
                 >
+                  <IconUsb size={13} color="currentColor" />
                   {loading ? 'Connecting…' : 'Connect'}
                 </button>
               </>
@@ -217,8 +222,9 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                     disconnect()
                     onClose()
                   }}
-                  style={{ ...btnBase, flex: 1, textAlign: 'center' }}
+                  style={{ ...btnBase, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
+                  <IconDisconnect size={12} color="currentColor" />
                   Disconnect
                 </button>
               </div>

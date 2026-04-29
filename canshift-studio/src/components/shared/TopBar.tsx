@@ -6,24 +6,33 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
+import {
+  IconEditor,
+  IconSignals,
+  IconTheme,
+  IconLoad,
+  IconExport,
+  IconBurn,
+  IconExit,
+} from '../icons/Icon'
 
-const navItems = [
-  { to: '/editor', label: 'Editor' },
-  { to: '/signals', label: 'Signals' },
-  { to: '/theme', label: 'Theme' },
+const NAV_ITEMS = [
+  { to: '/editor',  label: 'Editor',  Icon: IconEditor  },
+  { to: '/signals', label: 'Signals', Icon: IconSignals },
+  { to: '/theme',   label: 'Theme',   Icon: IconTheme   },
 ]
 
 const DOT_COLOR: Record<string, string> = {
-  connected: '#44CC44',
-  burning: '#FF8800',
-  error: '#CC3333',
+  connected:    '#44CC44',
+  burning:      '#FF8800',
+  error:        '#CC3333',
   disconnected: '#444444',
 }
 
 const LABEL: Record<string, string> = {
-  connected: 'Connected',
-  burning: 'Burning…',
-  error: 'Error',
+  connected:    'Connected',
+  burning:      'Burning…',
+  error:        'Error',
   disconnected: 'No Device',
 }
 
@@ -52,7 +61,7 @@ export default function TopBar() {
   const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
 
   const dotColor = simulationMode ? '#8844FF' : (DOT_COLOR[status] ?? '#444444')
-  const label = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
+  const label    = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
 
   const canSave = config !== null
   const canBurn = config !== null && connected && !syncing
@@ -92,23 +101,31 @@ export default function TopBar() {
 
         {/* Nav links */}
         <nav
-          style={{ display: 'flex', gap: 4, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          style={{ display: 'flex', gap: 2, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          {navItems.map(({ to, label: navLabel }) => (
+          {NAV_ITEMS.map(({ to, label: navLabel, Icon }) => (
             <NavLink
               key={to}
               to={to}
               style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
                 padding: '4px 12px',
                 borderRadius: 4,
                 textDecoration: 'none',
                 fontSize: 13,
                 fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#FFFFFF' : '#888888',
+                color: isActive ? '#FFFFFF' : '#666666',
                 background: isActive ? '#2A2A2A' : 'transparent',
               })}
             >
-              {navLabel}
+              {({ isActive }) => (
+                <>
+                  <Icon size={13} color={isActive ? '#FFFFFF' : '#555555'} />
+                  {navLabel}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -129,23 +146,18 @@ export default function TopBar() {
         >
           {/* Load */}
           <button onClick={openConfig} style={toolbarBtn} title="Open config file">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h3.086a1.5 1.5 0 0 1 1.06.44l.915.914A1.5 1.5 0 0 0 9.62 3.8H12.5A1.5 1.5 0 0 1 14 5.3V12.5A1.5 1.5 0 0 1 12.5 14h-9A1.5 1.5 0 0 1 2 12.5v-9Z" stroke="currentColor" strokeWidth="1.3"/>
-            </svg>
+            <IconLoad size={13} />
             Load
           </button>
 
-          {/* Export / Save */}
+          {/* Export */}
           <button
             onClick={saveConfig}
             disabled={!canSave}
             style={{ ...toolbarBtn, opacity: canSave ? 1 : 0.35 }}
             title="Save config file"
           >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M3 2h8l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.3"/>
-              <path d="M5 2v4h6V2M5 15v-5h6v5" stroke="currentColor" strokeWidth="1.3"/>
-            </svg>
+            <IconExport size={13} />
             Export
           </button>
 
@@ -161,10 +173,7 @@ export default function TopBar() {
             }}
             title="Push config to device"
           >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2C5 5 3 8 5 11c.8 1.5 2 2.5 3 3 1-.5 2.2-1.5 3-3 2-3 0-6-3-9Z" stroke="currentColor" strokeWidth="1.3"/>
-              <path d="M8 10c-.6-1-1-2-.5-3.5C8 8 9.5 8.5 9.5 10a1.5 1.5 0 0 1-3 0" stroke="currentColor" strokeWidth="1.1"/>
-            </svg>
+            <IconBurn size={13} color={canBurn ? '#FF8800' : '#888888'} />
             {syncing ? 'Burning…' : 'Burn'}
           </button>
 
@@ -178,14 +187,15 @@ export default function TopBar() {
                 exitSimulation()
                 log('info', 'Simulation mode exited')
               }}
-              style={{ ...toolbarBtn, color: '#663399', borderColor: '#2A1A44', fontSize: 11 }}
+              style={{ ...toolbarBtn, color: '#663399', borderColor: '#2A1A44' }}
               title="Exit simulation mode"
             >
+              <IconExit size={13} color="#663399" />
               Exit Sim
             </button>
           )}
 
-          {/* Connect */}
+          {/* Connect / status */}
           <button
             onClick={() => {
               if (!simulationMode) setModalOpen((o) => !o)
@@ -208,7 +218,7 @@ export default function TopBar() {
                 flexShrink: 0,
               }}
             />
-            <span style={{ color: status === 'disconnected' ? '#555555' : '#CCCCCC' }}>
+            <span style={{ color: status === 'disconnected' && !simulationMode ? '#555555' : '#CCCCCC' }}>
               {label}
             </span>
           </button>

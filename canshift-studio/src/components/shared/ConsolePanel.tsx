@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useLogStore, type LogEntry } from '../../stores/log.store'
+import { IconClear } from '../icons/Icon'
 
 const LEVEL_COLOR: Record<string, string> = {
   info: '#888888',
@@ -85,7 +86,11 @@ export default function ConsolePanel() {
         </span>
         <button
           onClick={clear}
+          title="Clear console"
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
             background: 'none',
             border: 'none',
             color: '#3A3A3A',
@@ -94,6 +99,7 @@ export default function ConsolePanel() {
             padding: '0 2px',
           }}
         >
+          <IconClear size={10} color="#3A3A3A" />
           Clear
         </button>
       </div>
