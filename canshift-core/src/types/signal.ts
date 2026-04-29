@@ -16,6 +16,10 @@ export interface SignalDef {
   unit: string
   min: number
   max: number
+  /** Suggested warning threshold for gauge widgets — auto-filled on signal selection */
+  warningLevel?: number
+  /** Suggested danger threshold for gauge widgets — auto-filled on signal selection */
+  dangerLevel?: number
   timeoutMs: number
 }
 

@@ -402,20 +402,47 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
           </text>
         </>
       )}
-      {/* Value label */}
-      <text
-        x={w / 2}
-        y={h - padBot * 0.4}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={valueColor}
-        fontSize={Math.max(8, Math.min(14, h * 0.13))}
-        fontWeight="700"
-        fontFamily="monospace"
-      >
-        {valueStr}
-        {cfg.suffix ?? ''}
-      </text>
+      {/* Value label — split value and suffix onto 2 lines for narrow widgets */}
+      {cfg.suffix ? (
+        <>
+          <text
+            x={w / 2}
+            y={h - padBot * 0.55}
+            textAnchor="middle"
+            dominantBaseline="auto"
+            fill={valueColor}
+            fontSize={Math.max(8, Math.min(14, h * 0.13))}
+            fontWeight="700"
+            fontFamily="monospace"
+          >
+            {valueStr}
+          </text>
+          <text
+            x={w / 2}
+            y={h - padBot * 0.1}
+            textAnchor="middle"
+            dominantBaseline="auto"
+            fill={valueColor + 'AA'}
+            fontSize={Math.max(6, Math.min(10, h * 0.09))}
+            fontFamily="monospace"
+          >
+            {cfg.suffix}
+          </text>
+        </>
+      ) : (
+        <text
+          x={w / 2}
+          y={h - padBot * 0.4}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={valueColor}
+          fontSize={Math.max(8, Math.min(14, h * 0.13))}
+          fontWeight="700"
+          fontFamily="monospace"
+        >
+          {valueStr}
+        </text>
+      )}
       {/* Widget label */}
       {cfg.label &&
         (() => {

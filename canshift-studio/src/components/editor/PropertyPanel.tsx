@@ -135,6 +135,7 @@ function IconPicker({
 interface ConfigFieldsProps {
   widget: Widget
   onChange: (patch: Partial<Widget>) => void
+  widgetAreaH: number
 }
 
 const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
@@ -189,11 +190,14 @@ const GAUGE_LABEL_POSITIONS: { value: WidgetLabelPosition; label: string }[] = [
 // Default preset index when switching to a style (M = index 1)
 const DEFAULT_PRESET_INDEX = 1
 
-function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
+function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
   const style = cfg.displayStyle
-  const presets = GAUGE_SIZE_PRESETS[style]
+  // For bar style, override the 'Full' preset height with actual available canvas height
+  const presets = GAUGE_SIZE_PRESETS[style].map((p) =>
+    style === 'bar' && p.label === 'Full' ? { ...p, h: widgetAreaH } : p
+  )
   const { w, h } = widget.layout
   const activePresetIdx = presets.findIndex((p) => p.w === w && p.h === h)
 
@@ -1071,7 +1075,9 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const signals = useSignalStore((s) => s.signals)
 
+  const topBarHeight = config?.topBar.height ?? 20
   const page = config?.pages.find((p) => p.id === pageId)
+  const widgetAreaH = 240 - (page?.showTopBar ? topBarHeight : 0)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
 
   if (!widget) {
@@ -1167,11 +1173,20 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
               const newSignal = e.target.value
               const signalDef = signals.find((s) => s.name === newSignal)
               const p: Partial<Widget> = { signal: newSignal }
-              // Auto-fill unit suffix from signal definition
-              if (
-                signalDef?.unit &&
-                (widget.config.type === 'gauge' || widget.config.type === 'bar')
-              ) {
+              if (signalDef && widget.config.type === 'gauge') {
+                p.config = {
+                  ...widget.config,
+                  suffix: signalDef.unit,
+                  minValue: signalDef.min,
+                  maxValue: signalDef.max,
+                  ...(signalDef.warningLevel !== undefined && {
+                    warningLevel: signalDef.warningLevel,
+                  }),
+                  ...(signalDef.dangerLevel !== undefined && {
+                    dangerLevel: signalDef.dangerLevel,
+                  }),
+                }
+              } else if (signalDef?.unit && widget.config.type === 'bar') {
                 p.config = { ...widget.config, suffix: signalDef.unit }
               }
               patch(p)
@@ -1254,7 +1269,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           >
             {widget.type} config
           </div>
-          <ConfigFields widget={widget} onChange={patch} />
+          <ConfigFields widget={widget} onChange={patch} widgetAreaH={widgetAreaH} />
         </>
       )}
     </div>
