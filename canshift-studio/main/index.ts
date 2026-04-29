@@ -1,14 +1,17 @@
 // main/index.ts — Electron main process entry point
 
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, nativeImage } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 
 let mainWindow: BrowserWindow | null = null
 
+const appIcon = nativeImage.createFromPath(join(__dirname, '../../assets/icon.png'))
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
+    icon: appIcon,
     width: 1280,
     height: 800,
     minWidth: 1024,
@@ -43,6 +46,9 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    app.dock.setIcon(appIcon)
+  }
   registerIpcHandlers()
   createWindow()
 
