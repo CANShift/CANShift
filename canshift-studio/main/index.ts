@@ -2,6 +2,7 @@
 
 import { app, BrowserWindow, shell, nativeImage } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 import { registerIpcHandlers } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 
@@ -30,7 +31,16 @@ function createSplash(): void {
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   })
 
-  const logoPath = join(__dirname, '../../assets/CANShift_studio_logo.png').replace(/\\/g, '/')
+  // Read logo as base64 to avoid file:// CSP issues inside a data: page
+  let logoSrc = ''
+  try {
+    const logoPath = join(__dirname, '../../assets/CANShift_studio_logo.png')
+    const logoB64 = readFileSync(logoPath).toString('base64')
+    logoSrc = `data:image/png;base64,${logoB64}`
+  } catch {
+    // Logo not found — splash still shows without it
+  }
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -61,7 +71,7 @@ function createSplash(): void {
 </style>
 </head>
 <body>
-  <img src="file://${logoPath}" alt="CS Studio" />
+  ${logoSrc ? `<img src="${logoSrc}" alt="CS Studio" />` : ''}
   <span class="label">Loading…</span>
 </body>
 </html>`
