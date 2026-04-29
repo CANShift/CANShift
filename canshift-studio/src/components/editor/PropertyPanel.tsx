@@ -4,6 +4,7 @@
 import React from 'react'
 import type { Widget, SensorIconName, WidgetType } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
+import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
 
 // ---------------------------------------------------------------------------
@@ -416,6 +417,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
+  const signals = useSignalStore((s) => s.signals)
 
   const page = config?.pages.find((p) => p.id === pageId)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
@@ -501,14 +503,20 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
 
       {/* Signal binding */}
       <Field label="Signal">
-        <input
-          style={inputStyle}
+        <select
+          style={{ ...inputStyle, cursor: 'pointer' }}
           value={widget.signal}
-          placeholder="e.g. rpm, coolant_temp"
           onChange={(e) => {
             patch({ signal: e.target.value })
           }}
-        />
+        >
+          <option value="">— none —</option>
+          {signals.map((s) => (
+            <option key={s.name} value={s.name}>
+              {s.name}{s.unit ? ` (${s.unit})` : ''}
+            </option>
+          ))}
+        </select>
       </Field>
 
       {/* Layout */}
