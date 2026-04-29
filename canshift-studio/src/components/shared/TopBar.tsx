@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useDeviceStore } from '../../stores/device.store'
+import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 
 const navItems = [
@@ -11,7 +12,6 @@ const navItems = [
   { to: '/theme', label: 'Theme' },
 ]
 
-// Color per connection status
 const DOT_COLOR: Record<string, string> = {
   connected: '#44CC44',
   burning: '#FF8800',
@@ -26,12 +26,32 @@ const LABEL: Record<string, string> = {
   disconnected: 'No Device',
 }
 
+const toolbarBtn: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 5,
+  padding: '4px 10px',
+  background: 'transparent',
+  border: '1px solid #2A2A2A',
+  borderRadius: 5,
+  cursor: 'pointer',
+  fontSize: 12,
+  color: '#888888',
+  transition: 'all 0.1s',
+  WebkitAppRegion: 'no-drag',
+} as React.CSSProperties
+
 export default function TopBar() {
   const [modalOpen, setModalOpen] = useState(false)
   const status = useDeviceStore((s) => s.status)
 
+  const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
+
   const dotColor = DOT_COLOR[status] ?? '#444444'
   const label = LABEL[status] ?? 'No Device'
+
+  const canSave = config !== null
+  const canBurn = config !== null && connected && !syncing
 
   return (
     <>
@@ -50,7 +70,7 @@ export default function TopBar() {
           } as React.CSSProperties
         }
       >
-        {/* Logo */}
+        {/* App name */}
         <span
           style={
             {
@@ -67,7 +87,9 @@ export default function TopBar() {
         </span>
 
         {/* Nav links */}
-        <nav style={{ display: 'flex', gap: 4, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <nav
+          style={{ display: 'flex', gap: 4, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           {navItems.map(({ to, label: navLabel }) => (
             <NavLink
               key={to}
@@ -90,42 +112,77 @@ export default function TopBar() {
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Connect button */}
-        <button
-          onClick={() => {
-            setModalOpen((o) => !o)
-          }}
+        {/* Toolbar actions */}
+        <div
           style={
             {
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              padding: '4px 10px',
-              background: modalOpen ? '#2A2A2A' : 'transparent',
-              border: `1px solid ${modalOpen ? '#3A3A3A' : '#2A2A2A'}`,
-              borderRadius: 5,
-              cursor: 'pointer',
               WebkitAppRegion: 'no-drag',
-              transition: 'all 0.1s',
             } as React.CSSProperties
           }
         >
-          {/* Status dot */}
-          <span
+          {/* Load */}
+          <button onClick={openConfig} style={toolbarBtn} title="Open config file">
+            Load
+          </button>
+
+          {/* Export / Save */}
+          <button
+            onClick={saveConfig}
+            disabled={!canSave}
+            style={{ ...toolbarBtn, opacity: canSave ? 1 : 0.35 }}
+            title="Save config file"
+          >
+            Export
+          </button>
+
+          {/* Burn */}
+          <button
+            onClick={burnConfig}
+            disabled={!canBurn}
             style={{
-              display: 'inline-block',
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: dotColor,
-              boxShadow: status !== 'disconnected' ? `0 0 5px ${dotColor}99` : 'none',
-              flexShrink: 0,
+              ...toolbarBtn,
+              opacity: canBurn ? 1 : 0.35,
+              color: canBurn ? '#FF8800' : '#888888',
+              borderColor: canBurn ? '#3A2200' : '#2A2A2A',
             }}
-          />
-          <span style={{ fontSize: 12, color: status === 'disconnected' ? '#555555' : '#CCCCCC' }}>
-            {label}
-          </span>
-        </button>
+            title="Push config to device"
+          >
+            {syncing ? 'Burning…' : 'Burn'}
+          </button>
+
+          {/* Separator */}
+          <div style={{ width: 1, height: 20, background: '#2A2A2A' }} />
+
+          {/* Connect */}
+          <button
+            onClick={() => {
+              setModalOpen((o) => !o)
+            }}
+            style={{
+              ...toolbarBtn,
+              background: modalOpen ? '#2A2A2A' : 'transparent',
+              borderColor: modalOpen ? '#3A3A3A' : '#2A2A2A',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: dotColor,
+                boxShadow: status !== 'disconnected' ? `0 0 5px ${dotColor}99` : 'none',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ color: status === 'disconnected' ? '#555555' : '#CCCCCC' }}>
+              {label}
+            </span>
+          </button>
+        </div>
       </header>
 
       {modalOpen && (
