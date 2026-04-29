@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import csLogo from '../../assets/cs-logo.png'
 import { useDeviceStore } from '../../stores/device.store'
 import ConnectModal from './ConnectModal'
 
@@ -52,28 +51,20 @@ export default function TopBar() {
         }
       >
         {/* Logo */}
-        <div
+        <span
           style={
             {
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
+              fontSize: 14,
+              fontWeight: 700,
+              color: '#FF4444',
+              letterSpacing: '0.05em',
               marginRight: 24,
               WebkitAppRegion: 'no-drag',
             } as React.CSSProperties
           }
         >
-          <img
-            src={csLogo}
-            alt="CANShift"
-            style={{ height: 28, width: 28, objectFit: 'contain' }}
-          />
-          <span
-            style={{ fontSize: 14, fontWeight: 700, color: '#FF4444', letterSpacing: '0.05em' }}
-          >
-            CANShift Studio
-          </span>
-        </div>
+          CANShift Studio
+        </span>
 
         {/* Nav links */}
         <nav style={{ display: 'flex', gap: 4, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
