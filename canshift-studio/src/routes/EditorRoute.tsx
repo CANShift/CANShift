@@ -25,16 +25,13 @@ export default function EditorRoute() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 12,
+          gap: 8,
           color: '#555555',
         }}
       >
-        <div style={{ fontSize: 32, opacity: 0.3 }}>◫</div>
-        <p style={{ fontSize: 16, color: '#444444' }}>No config loaded</p>
-        <p style={{ fontSize: 12 }}>File → Open Config to load a dashboard.json</p>
-        <p style={{ fontSize: 11, color: '#333333' }}>
-          Example: canshift-firmware/data/config/dashboard.json
-        </p>
+        <div style={{ fontSize: 32, opacity: 0.2 }}>◫</div>
+        <p style={{ fontSize: 14, color: '#3A3A3A' }}>No config loaded</p>
+        <p style={{ fontSize: 11, color: '#2E2E2E' }}>Use the Load button in the toolbar</p>
       </div>
     )
   }
