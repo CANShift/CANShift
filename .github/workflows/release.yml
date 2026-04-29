@@ -1,7 +1,8 @@
 # Release — triggered by pushing a version tag (v*)
-# Builds the Electron desktop app and publishes to GitHub Releases (draft).
-# electron-builder handles artifact upload and generates latest-mac.yml / latest.yml
+# Builds the Electron desktop app and firmware, publishes both to GitHub Releases (draft).
+# electron-builder handles studio artifact upload and generates latest-mac.yml / latest.yml
 # which are required by electron-updater for auto-update.
+# Firmware .bin files are attached separately via gh release upload.
 
 name: Release
 
@@ -16,9 +17,9 @@ jobs:
     name: CI checks
     uses: ./.github/workflows/ci.yml
 
-  # Build and publish the Electron app
-  release:
-    name: Build & release
+  # Build and publish the Electron studio app
+  studio-release:
+    name: Studio — build & release
     needs: ci-check
     strategy:
       matrix:
@@ -57,3 +58,57 @@ jobs:
         run: npm run build && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build firmware and attach .bin files to the same GitHub Release draft
+  firmware-release:
+    name: Firmware — build & attach
+    needs: ci-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+          key: platformio-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: |
+            platformio-${{ runner.os }}-
+
+      - name: Install PlatformIO CLI
+        run: pip install platformio
+
+      - name: Build production firmware
+        run: platformio run -e crowpanel_28
+
+      - name: Rename firmware binary
+        run: |
+          TAG=${{ github.ref_name }}
+          cp .pio/build/crowpanel_28/firmware.bin \
+             canshift-firmware-${TAG}-crowpanel_28.bin
+
+      # Wait for the studio job to create the draft release, then attach the .bin.
+      # Uses gh CLI (pre-installed on GitHub-hosted runners) with GITHUB_TOKEN.
+      - name: Attach firmware to GitHub Release
+        run: |
+          TAG=${{ github.ref_name }}
+          BIN="canshift-firmware-${TAG}-crowpanel_28.bin"
+          # Retry up to 5 times — studio job may still be creating the release
+          for i in 1 2 3 4 5; do
+            gh release upload "${TAG}" "${BIN}" --clobber && break
+            echo "Attempt ${i}: release not ready yet, retrying in 30s..."
+            sleep 30
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
