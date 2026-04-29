@@ -17,6 +17,7 @@ import { IconTrash } from '../icons/Icon'
 import { WidgetPreview } from './WidgetPreview'
 import {
   SIZE_TOKENS,
+  STANDARD_TOKEN_IDS,
   gaugeTokenIds,
   GAUGE_DEFAULT_TOKEN,
   tokenFromDimensions,
@@ -1266,6 +1267,44 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           {widget.id}
         </div>
       </Field>
+
+      {/* Size tokens — gauge has its own picker inside GaugeFields */}
+      {widget.type !== 'gauge' && (
+        <Field label="Size">
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {STANDARD_TOKEN_IDS.map((tokenId) => {
+              const token = SIZE_TOKENS[tokenId]
+              const isActive =
+                tokenId ===
+                (tokenFromDimensions(widget.layout.w, widget.layout.h) ??
+                  STANDARD_TOKEN_IDS[0] ??
+                  null)
+              return (
+                <button
+                  key={tokenId}
+                  onClick={() => {
+                    patch({ layout: { ...widget.layout, w: token.w, h: token.h } })
+                  }}
+                  title={token.description}
+                  style={{
+                    flex: 1,
+                    padding: '3px 0',
+                    background: isActive ? '#1A2A1A' : '#111111',
+                    border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: isActive ? '#66AA66' : '#555555',
+                    cursor: 'pointer',
+                    fontSize: 10,
+                    fontWeight: isActive ? 700 : 400,
+                  }}
+                >
+                  {token.label}
+                </button>
+              )
+            })}
+          </div>
+        </Field>
+      )}
 
       {/* Signal binding — not applicable for button, timer, image */}
       {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (

@@ -422,10 +422,13 @@ function GaugeBarPreview({
   // Bar occupies 60 % of widget width, centered horizontally
   const bw = Math.max(10, w * 0.6)
   const padX = (w - bw) / 2
-  // Equal top/bottom padding keeps the track visually centered
-  const padTop = Math.max(12, h * 0.14) // signal name row
-  const padBot = Math.max(12, h * 0.2) // value text row
-  const trackH = h - padTop - padBot
+  // Minimal top padding (signal label only); bottom sized for value + unit on 2 lines
+  const sigLabelH = Math.max(10, Math.min(h * 0.07, 16)) // signal name row
+  const padTop = sigLabelH + 2
+  const unitLineH = Math.max(8, Math.min(h * 0.07, 12))
+  const valLineH = Math.max(10, Math.min(h * 0.1, 18))
+  const padBot = valLineH + unitLineH + 6
+  const trackH = Math.max(4, h - padTop - padBot)
 
   const fillY = padTop + trackH * (1 - valuePct)
   const fillH = trackH * valuePct
@@ -433,7 +436,9 @@ function GaugeBarPreview({
   const warnY = padTop + trackH * (1 - warnPct)
   const dangerY = padTop + trackH * (1 - dangerPct)
 
-  const sigFontSize = Math.max(5, Math.min(7, w * 0.18))
+  const sigFontSize = Math.max(5, Math.min(sigLabelH * 0.75, w * 0.18))
+  const valFontSize = Math.max(8, Math.min(valLineH * 0.9, w * 0.42))
+  const unitFontSize = Math.max(6, Math.min(unitLineH * 0.85, w * 0.28))
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
@@ -518,48 +523,34 @@ function GaugeBarPreview({
           </text>
         </>
       )}
-      {/* Value label */}
-      {cfg.suffix ? (
-        <>
-          <text
-            x={w / 2}
-            y={h - padBot * 0.55}
-            textAnchor="middle"
-            dominantBaseline="auto"
-            fill={valueColor}
-            fontSize={Math.max(8, Math.min(14, h * 0.13))}
-            fontWeight="700"
-            fontFamily="monospace"
-            style={{ animation: danger ? BLINK_ANIM : undefined }}
-          >
-            {valueStr}
-          </text>
-          <text
-            x={w / 2}
-            y={h - padBot * 0.1}
-            textAnchor="middle"
-            dominantBaseline="auto"
-            fill={valueColor + 'AA'}
-            fontSize={Math.max(6, Math.min(10, h * 0.09))}
-            fontFamily="monospace"
-            style={{ animation: danger ? BLINK_ANIM : undefined }}
-          >
-            {cfg.suffix}
-          </text>
-        </>
-      ) : (
+      {/* Value — always two-line: number on top, unit below */}
+      <text
+        x={w / 2}
+        y={h - padBot + valLineH * 0.85}
+        textAnchor="middle"
+        dominantBaseline="auto"
+        fill={valueColor}
+        fontSize={valFontSize}
+        fontWeight="700"
+        fontFamily="monospace"
+        style={{ animation: danger ? BLINK_ANIM : undefined }}
+      >
+        {valueStr}
+      </text>
+      {cfg.suffix && (
         <text
           x={w / 2}
-          y={h - padBot * 0.4}
+          y={h - 3}
           textAnchor="middle"
-          dominantBaseline="middle"
-          fill={valueColor}
-          fontSize={Math.max(8, Math.min(14, h * 0.13))}
-          fontWeight="700"
-          fontFamily="monospace"
+          dominantBaseline="auto"
+          fill={valueColor + 'BB'}
+          fontSize={unitFontSize}
+          fontFamily="sans-serif"
+          fontWeight="600"
+          letterSpacing="0.03em"
           style={{ animation: danger ? BLINK_ANIM : undefined }}
         >
-          {valueStr}
+          {cfg.suffix}
         </text>
       )}
       {/* Widget label */}
@@ -918,8 +909,9 @@ function ButtonPreview({
   const iconName = cfg.iconName ?? null
   const showIcon = cfg.showIcon === true && iconName !== null
   const showLabel = cfg.showLabel !== false
-  const iconSize = Math.min(h * 0.5, 18)
-  const fontSize = Math.max(8, Math.min(12, h * 0.36))
+  // Scale icon and label font to fill the assigned widget dimensions
+  const iconSize = Math.min(h * 0.48, w * 0.3)
+  const fontSize = Math.max(8, Math.min(h * 0.38, w * 0.28))
 
   const bgColor = active ? st.primaryColor + '55' : st.primaryColor + '18'
   const borderColor = active ? st.primaryColor : st.secondaryColor
@@ -971,8 +963,10 @@ function ButtonPreview({
 function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
   const st = widget.style
   const signalLabel = formatSignalLabel(widget.signal)
-  const fontSize = Math.min(w * 0.65, h * 0.68)
-  const sigFontSize = Math.max(5, Math.min(7, w * 0.12))
+  const sigHeaderH = Math.max(8, Math.min(h * 0.16, 13))
+  // Digit fills available height below signal label
+  const fontSize = Math.min(w * 0.72, (h - sigHeaderH) * 0.85)
+  const sigFontSize = Math.max(5, Math.min(sigHeaderH * 0.72, w * 0.12))
 
   return (
     <div
@@ -981,11 +975,31 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
         height: h,
         position: 'relative',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        paddingTop: sigHeaderH,
+        boxSizing: 'border-box',
         overflow: 'hidden',
       }}
     >
+      <span
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: sigFontSize,
+          fontFamily: 'sans-serif',
+          fontWeight: 600,
+          color: '#888888',
+          lineHeight: 1,
+          letterSpacing: '0.05em',
+        }}
+      >
+        {signalLabel}
+      </span>
       <span
         style={{
           color: st.primaryColor,
@@ -996,21 +1010,6 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
         }}
       >
         3
-      </span>
-      <span
-        style={{
-          position: 'absolute',
-          top: 2,
-          left: 3,
-          fontSize: sigFontSize,
-          fontFamily: 'sans-serif',
-          fontWeight: 600,
-          color: '#888888',
-          lineHeight: 1,
-          letterSpacing: '0.05em',
-        }}
-      >
-        {signalLabel}
       </span>
     </div>
   )
