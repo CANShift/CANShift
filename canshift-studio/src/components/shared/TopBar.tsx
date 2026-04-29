@@ -59,7 +59,7 @@ export default function TopBar() {
           {
             display: 'flex',
             alignItems: 'center',
-            height: 48,
+            height: 60,
             background: '#0D0D0D',
             borderBottom: '1px solid #2A2A2A',
             padding: '0 16px 0 80px',
@@ -75,7 +75,7 @@ export default function TopBar() {
           alt="CANShift Studio"
           style={
             {
-              height: 40,
+              height: 56,
               marginRight: 24,
               WebkitAppRegion: 'no-drag',
               display: 'block',

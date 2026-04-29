@@ -13,7 +13,8 @@ import { rectsOverlap } from '../../utils/layout'
 const SCALE = 1.5 // slightly larger than 1:1 for readability
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
-const GRID = 4 // snap grid in firmware coordinates — GCD of min token width (40) and height (28)
+const X_SNAP = 40 // firmware px — min token width, matches visible grid columns
+const Y_SNAP = 28 // firmware px — min token height, matches visible grid rows
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
@@ -368,11 +369,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         const effectiveScale = SCALE * zoomRef.current
         const dx = Math.round((ev.clientX - drag.startMouseX) / effectiveScale)
         const dy = Math.round((ev.clientY - drag.startMouseY) / effectiveScale)
-        // Snap to GRID, clamp to canvas bounds accounting for widget dimensions
+        // Snap to token grid, clamp to canvas bounds accounting for widget dimensions
         const rawX = drag.startWidgetX + dx
         const rawY = drag.startWidgetY + dy
-        const snappedX = Math.round(rawX / GRID) * GRID
-        const snappedY = Math.round(rawY / GRID) * GRID
+        const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
+        const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
         const newX = Math.max(0, Math.min(320 - widget.layout.w, snappedX))
         const newY = Math.max(0, Math.min(widgetAreaH - widget.layout.h, snappedY))
         moveWidget(drag.pageId, drag.widgetId, { x: newX, y: newY })
