@@ -163,13 +163,10 @@ const GAUGE_SIZE_PRESETS: Record<GaugeDisplayStyle, SizePreset[]> = {
     { label: 'M', w: 100, h: 100 },
     { label: 'L', w: 150, h: 150 },
   ],
-  // Bar: narrow fixed width, either full canvas height or half canvas height.
-  // Canvas widget area ≈ 220px (240 − topbar), rounded to grid.
+  // Bar: fixed width, either half or full canvas height.
   bar: [
-    { label: '½ S', w: 20, h: 110 },
-    { label: '½ M', w: 30, h: 110 },
-    { label: 'Full S', w: 20, h: 220 },
-    { label: 'Full M', w: 30, h: 220 },
+    { label: '½', w: 30, h: 110 },
+    { label: 'Full', w: 30, h: 220 },
   ],
   numeric: [
     { label: 'S', w: 100, h: 40 },
