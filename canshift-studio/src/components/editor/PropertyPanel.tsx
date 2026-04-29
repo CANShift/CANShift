@@ -506,23 +506,25 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       </Field>
 
-      {/* Signal binding */}
-      <Field label="Signal">
-        <select
-          style={{ ...inputStyle, cursor: 'pointer' }}
-          value={widget.signal}
-          onChange={(e) => {
-            patch({ signal: e.target.value })
-          }}
-        >
-          <option value="">— none —</option>
-          {signals.map((s) => (
-            <option key={s.name} value={s.name}>
-              {s.name}{s.unit ? ` (${s.unit})` : ''}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {/* Signal binding — not applicable for button / timer / image */}
+      {!['button', 'timer', 'image'].includes(widget.type) && (
+        <Field label="Signal">
+          <select
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            value={widget.signal}
+            onChange={(e) => {
+              patch({ signal: e.target.value })
+            }}
+          >
+            <option value="">— none —</option>
+            {signals.map((s) => (
+              <option key={s.name} value={s.name}>
+                {s.name}{s.unit ? ` (${s.unit})` : ''}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       {/* Layout */}
       <div
