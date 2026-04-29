@@ -26,7 +26,7 @@ export default function ConnectScreen() {
       // No config — load default then enter simulation
       setConfig(DEFAULT_SIM_CONFIG)
       enterSimulation()
-      log('info', 'Simulation mode — default VR6 config loaded')
+      log('info', 'Simulation mode — default config loaded')
     }
   }
 
