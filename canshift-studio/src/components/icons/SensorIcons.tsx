@@ -278,10 +278,189 @@ function WarningIcon({ size = 20, color = 'currentColor' }: IconProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Automotive control icons
+// ---------------------------------------------------------------------------
+
+function FlameIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Outer flame */}
+      <path d="M12 2C10 6 6 9 6 14a6 6 0 0 0 12 0c0-5-4-8-6-12Z" />
+      {/* Inner flicker */}
+      <path
+        d="M12 9C11 12 10.5 13 10.5 14.5a1.5 1.5 0 0 0 3 0C13.5 13 13 12 12 9Z"
+        strokeWidth={1.2}
+      />
+    </svg>
+  )
+}
+
+function TurboIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="2.5" />
+      {/* Swept impeller blades */}
+      <path d="M12 9.5Q15.5 8 15.5 12" />
+      <path d="M14.5 14.5Q13 18 9.5 17" strokeWidth={1.4} />
+      <path d="M9.5 14.5Q6 16 6 12" />
+      <path d="M9.5 9.5Q11 6 14.5 7" strokeWidth={1.4} />
+    </svg>
+  )
+}
+
+function EngineIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Engine block */}
+      <rect x="2" y="8" width="20" height="10" rx="2" />
+      {/* Pistons */}
+      <path d="M6 8V5h3v3M11 8V5h2v3M16 8V5h2v3" />
+      {/* Cylinder dividers */}
+      <path d="M9 8v10M15 8v10" strokeWidth={1} />
+    </svg>
+  )
+}
+
+function BrakeIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    >
+      {/* Disc */}
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      {/* Vents */}
+      <path d="M12 3v5M12 16v5M3 12h5M16 12h5" strokeWidth={1.2} />
+      <path
+        d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"
+        strokeWidth={1.2}
+      />
+    </svg>
+  )
+}
+
+function LaunchIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Rocket body */}
+      <path d="M12 2l4 8h-3v8H11v-8H8l4-8Z" />
+      {/* Exhaust flames */}
+      <path d="M10 18l-1.5 4M14 18l1.5 4" strokeWidth={1.4} />
+      {/* Start line */}
+      <path d="M4 21h4M16 21h4" />
+    </svg>
+  )
+}
+
+function TractionIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    >
+      {/* Tire outline */}
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      {/* Lock / slip mark */}
+      <path d="M9 9l6 6M15 9l-6 6" strokeWidth={2} />
+    </svg>
+  )
+}
+
+function MapIconIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Stacked map/tune layers */}
+      <path d="M4 7l8-4 8 4-8 4-8-4Z" />
+      <path d="M4 12l8 4 8-4" />
+      <path d="M4 17l8 4 8-4" />
+    </svg>
+  )
+}
+
+function ExhaustIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    >
+      {/* Exhaust pipe */}
+      <path d="M3 16h10" />
+      <path d="M13 16q3 0 3-4V8h2v4q0 6-5 6H3" />
+      {/* Heat waves rising */}
+      <path d="M7 12Q8 9 9 12Q10 15 11 12" strokeWidth={1.3} />
+      <path d="M10 9Q11 6 12 9Q13 12 14 9" strokeWidth={1} />
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Icon map
 // ---------------------------------------------------------------------------
 
 const ICON_MAP: Record<SensorIconName, (props: IconProps) => React.JSX.Element> = {
+  // Sensors
   rpm: RpmIcon,
   speed: SpeedIcon,
   coolant: CoolantIcon,
@@ -296,6 +475,15 @@ const ICON_MAP: Record<SensorIconName, (props: IconProps) => React.JSX.Element> 
   gear: GearIcon,
   timer: TimerIcon,
   warning: WarningIcon,
+  // Automotive controls
+  flame: FlameIcon,
+  turbo: TurboIcon,
+  engine: EngineIcon,
+  brake: BrakeIcon,
+  launch: LaunchIcon,
+  traction: TractionIcon,
+  map_icon: MapIconIcon,
+  exhaust: ExhaustIcon,
 }
 
 export const SENSOR_ICON_NAMES = Object.keys(ICON_MAP) as SensorIconName[]
@@ -325,4 +513,12 @@ export const SENSOR_ICON_LABELS: Record<SensorIconName, string> = {
   gear: 'Gear',
   timer: 'Timer',
   warning: 'Warning',
+  flame: 'Flame',
+  turbo: 'Turbo',
+  engine: 'Engine',
+  brake: 'Brake',
+  launch: 'Launch Control',
+  traction: 'Traction Control',
+  map_icon: 'Map / Tune',
+  exhaust: 'Exhaust / EGT',
 }

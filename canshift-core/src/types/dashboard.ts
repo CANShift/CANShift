@@ -8,6 +8,7 @@ import type { HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer } from './
 // ---------------------------------------------------------------------------
 
 export type SensorIconName =
+  // Existing sensors
   | 'rpm'
   | 'speed'
   | 'coolant'
@@ -22,6 +23,15 @@ export type SensorIconName =
   | 'gear'
   | 'timer'
   | 'warning'
+  // Automotive controls & indicators
+  | 'flame'
+  | 'turbo'
+  | 'engine'
+  | 'brake'
+  | 'launch'
+  | 'traction'
+  | 'map_icon'
+  | 'exhaust'
 
 // ---------------------------------------------------------------------------
 // Widget config variants (discriminated union on `type`)
