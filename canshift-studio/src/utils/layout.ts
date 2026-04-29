@@ -11,7 +11,7 @@
 //   resolveCollisions(moved, newX, newY, others, canvasW, canvasH) → Map of id→pos
 
 export const LAYOUT_GAP = 0 // widgets can touch — adjacent is allowed, not overlapping
-export const SNAP_GRID = 10 // drag snap granularity (firmware px)
+export const SNAP_GRID = 5 // drag snap granularity (firmware px) — base unit of size token grid
 
 // ---------------------------------------------------------------------------
 // Types

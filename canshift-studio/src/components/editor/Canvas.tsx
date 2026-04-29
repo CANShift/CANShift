@@ -5,7 +5,7 @@ import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, TopBarConfig, Widget } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
-import { IconSettings, IconClear, IconUsb } from '../icons/Icon'
+import { IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
@@ -13,7 +13,7 @@ import { rectsOverlap } from '../../utils/layout'
 const SCALE = 1.5 // slightly larger than 1:1 for readability
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
-const GRID = 10 // snap grid in firmware coordinates
+const GRID = 5 // snap grid in firmware coordinates — matches size token base unit
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
@@ -76,6 +76,7 @@ function WidgetBox({
 
   return (
     <div
+      data-widget="true"
       onMouseDown={(e) => {
         e.stopPropagation()
         onSelect(widget.id)
@@ -135,10 +136,13 @@ interface DashTopBarProps {
   onOpenSettings: () => void
 }
 
+// Swipe-down threshold in px (in SCALE coordinates) to trigger settings open
+const SWIPE_DOWN_THRESHOLD = 18
+
 function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopBarProps) {
   const status = useDeviceStore((s) => s.status)
+  const swipeStartY = useRef<number | null>(null)
 
-  // All sizes derived from bar height so content scales correctly at any height
   const h = topBar.height * SCALE
   const dot = Math.round(h * 0.3)
   const fs = Math.round(h * 0.45)
@@ -149,22 +153,36 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
 
   const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#444444'
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    swipeStartY.current = e.clientY
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (swipeStartY.current === null) return
+    const dy = e.clientY - swipeStartY.current
+    swipeStartY.current = null
+    if (dy > SWIPE_DOWN_THRESHOLD) onOpenSettings()
+    else if (dy < -SWIPE_DOWN_THRESHOLD && settingsOpen) onOpenSettings()
+  }
+
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       style={{
         height: h,
         flexShrink: 0,
-        background: topBar.bgColor,
+        background: settingsOpen ? topBar.bgColor + 'CC' : topBar.bgColor,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: `0 ${String(px)}px`,
         boxSizing: 'border-box',
-        borderBottom: '1px solid #1E1E1E',
+        borderBottom: `1px solid ${settingsOpen ? '#CC333333' : '#1E1E1E'}`,
         userSelect: 'none',
-        pointerEvents: 'none',
         position: 'relative',
         overflow: 'hidden',
+        cursor: 'default',
       }}
     >
       {/* Left — USB + ECU + CAN status */}
@@ -220,35 +238,27 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
         </span>
       )}
 
-      {/* Right — battery + settings button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap, pointerEvents: 'auto' }}>
+      {/* Right — battery + USB connection status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap }}>
         <span style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>12.4V</span>
         <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        {/* Settings button — gear when closed, X when open */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onOpenSettings()
-          }}
-          title={settingsOpen ? 'Close settings' : 'Screen settings'}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            color: settingsOpen ? '#CC3333' : '#555555',
-            lineHeight: 1,
-            transition: 'color 0.15s',
-          }}
-        >
-          {settingsOpen ? (
-            <IconClear size={iconSz} color="#CC3333" />
-          ) : (
-            <IconSettings size={iconSz} color="#555555" />
-          )}
-        </button>
+        <IconUsb size={iconSz} color={usbColor} />
+      </div>
+
+      {/* Swipe-down hint — subtle chevron */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 1,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: fs * 0.7,
+          color: '#FFFFFF22',
+          lineHeight: 1,
+          pointerEvents: 'none',
+        }}
+      >
+        ▾
       </div>
     </div>
   )
@@ -269,8 +279,12 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const moveWidget = useDashboardStore((s) => s.moveWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
+  const pages = useDashboardStore((s) => s.config?.pages ?? [])
+  const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<number>(1)
+  // Swipe left/right tracking (page navigation)
+  const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
 
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -476,8 +490,24 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               {/* Widget area — coordinate origin (0,0) is below the top bar */}
               <div
                 ref={containerRef}
-                onMouseDown={() => {
+                onPointerDown={(e) => {
+                  // Track swipe start — only on background clicks (no widget under cursor)
+                  const target = e.target as HTMLElement
+                  if (target === containerRef.current || target.closest('[data-widget]') === null) {
+                    swipeRef.current = { startX: e.clientX, startY: e.clientY }
+                  }
                   selectWidget(null)
+                }}
+                onPointerUp={(e) => {
+                  if (!swipeRef.current) return
+                  const dx = e.clientX - swipeRef.current.startX
+                  const dy = Math.abs(e.clientY - swipeRef.current.startY)
+                  swipeRef.current = null
+                  if (dy > 20 || Math.abs(dx) < 40) return // not a horizontal swipe
+                  const currentIdx = pages.findIndex((p) => p.id === page.id)
+                  const nextIdx = dx < 0 ? currentIdx + 1 : currentIdx - 1
+                  const nextPage = pages[nextIdx]
+                  if (nextPage) selectPage(nextPage.id)
                 }}
                 style={{
                   position: 'relative',

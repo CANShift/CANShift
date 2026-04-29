@@ -4,6 +4,7 @@
 import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
+import { SIZE_TOKENS } from '../../utils/sizeTokens'
 
 // 'bar' is not in the palette — it is a display style inside gauge
 type PaletteWidgetType = Exclude<WidgetType, 'bar'>
@@ -17,33 +18,55 @@ interface PaletteItem {
   defaultH: number
 }
 
+// Default sizes use size tokens (all multiples of 25px)
 const PALETTE_ITEMS: PaletteItem[] = [
   {
     type: 'gauge',
     label: 'Gauge',
     icon: 'rpm',
     defaultSignal: 'rpm',
-    defaultW: 100,
-    defaultH: 100,
+    defaultW: SIZE_TOKENS.M.w,
+    defaultH: SIZE_TOKENS.M.h,
   },
   {
     type: 'warning',
     label: 'Warning',
     icon: 'warning',
     defaultSignal: 'mil',
-    defaultW: 40,
-    defaultH: 40,
+    defaultW: SIZE_TOKENS.S.w,
+    defaultH: SIZE_TOKENS.S.h,
   },
-  { type: 'button', label: 'Button', icon: 'cog', defaultSignal: '', defaultW: 100, defaultH: 30 },
-  { type: 'gear', label: 'Gear', icon: 'gear', defaultSignal: 'gear', defaultW: 50, defaultH: 60 },
-  { type: 'timer', label: 'Timer', icon: 'timer', defaultSignal: '', defaultW: 100, defaultH: 30 },
+  {
+    type: 'button',
+    label: 'Button',
+    icon: 'cog',
+    defaultSignal: '',
+    defaultW: SIZE_TOKENS.M.w,
+    defaultH: SIZE_TOKENS.M.h,
+  },
+  {
+    type: 'gear',
+    label: 'Gear',
+    icon: 'gear',
+    defaultSignal: 'gear',
+    defaultW: SIZE_TOKENS.S.w,
+    defaultH: SIZE_TOKENS.S.h,
+  },
+  {
+    type: 'timer',
+    label: 'Timer',
+    icon: 'timer',
+    defaultSignal: '',
+    defaultW: SIZE_TOKENS.L.w,
+    defaultH: SIZE_TOKENS.L.h,
+  },
   {
     type: 'image',
     label: 'Image',
     icon: 'warning',
     defaultSignal: '',
-    defaultW: 100,
-    defaultH: 60,
+    defaultW: SIZE_TOKENS.L.w,
+    defaultH: SIZE_TOKENS.L.h,
   },
 ]
 

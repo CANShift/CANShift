@@ -2,7 +2,13 @@
 
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { DashboardConfig, PageConfig, Widget, WidgetLayout } from '@tmbk/canshift-core'
+import type {
+  DashboardConfig,
+  PageConfig,
+  TopBarConfig,
+  Widget,
+  WidgetLayout,
+} from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
 
 // ---------------------------------------------------------------------------
@@ -38,6 +44,9 @@ interface DashboardState {
   removePage: (pageId: string) => void
   renamePage: (pageId: string, name: string) => void
   setDefaultPage: (pageId: string) => void
+  updatePage: (pageId: string, patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
+  movePage: (fromIndex: number, toIndex: number) => void
+  updateTopBar: (patch: Partial<TopBarConfig>) => void
 
   // Widget operations
   selectWidget: (widgetId: string | null) => void
@@ -121,6 +130,36 @@ export const useDashboardStore = create<DashboardState>()(
       set((s) => {
         if (!s.config) return
         s.config.defaultPageId = pageId
+        s.isDirty = true
+      })
+    },
+
+    updatePage: (pageId, patch) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        Object.assign(page, patch)
+        s.isDirty = true
+      })
+    },
+
+    movePage: (fromIndex, toIndex) => {
+      set((s) => {
+        if (!s.config) return
+        const pages = s.config.pages
+        if (fromIndex < 0 || fromIndex >= pages.length) return
+        if (toIndex < 0 || toIndex >= pages.length) return
+        const [moved] = pages.splice(fromIndex, 1)
+        if (moved) pages.splice(toIndex, 0, moved)
+        s.isDirty = true
+      })
+    },
+
+    updateTopBar: (patch) => {
+      set((s) => {
+        if (!s.config) return
+        Object.assign(s.config.topBar, patch)
         s.isDirty = true
       })
     },

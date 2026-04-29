@@ -15,6 +15,12 @@ import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
 import { IconTrash } from '../icons/Icon'
 import { WidgetPreview } from './WidgetPreview'
+import {
+  SIZE_TOKENS,
+  gaugeTokenIds,
+  GAUGE_DEFAULT_TOKEN,
+  tokenFromDimensions,
+} from '../../utils/sizeTokens'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -135,7 +141,6 @@ function IconPicker({
 interface ConfigFieldsProps {
   widget: Widget
   onChange: (patch: Partial<Widget>) => void
-  widgetAreaH: number
 }
 
 const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
@@ -144,40 +149,23 @@ const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
   { value: 'numeric', label: 'Numeric' },
 ]
 
-interface SizePreset {
-  label: string
-  w: number
-  h: number
-}
+// All automotive units available as quick chips
+const ALL_UNITS = ['rpm', 'km/h', 'mph', '%', '°C', '°F', 'bar', 'psi', 'V', 'λ', 'AFR', 'kPa', 's']
 
-// Fixed size presets per display style — grid-aligned to SNAP_GRID (10px).
-//
-// Column system: 3 × 100px + 2 × 10px gap = 320px (exact canvas fill).
-//   1-col = 100px  |  2-col = 210px (100+10+100)  |  3-col = 320px
-//
-// Arc:     square — S=70, M=100 (3/row), L=150 (2/row)
-// Bar:     vertical thermometer — half or full canvas height
-// Numeric: flat wide — S=100 (3/row), M=210 (2-col), L=320 (full width)
-const GAUGE_SIZE_PRESETS: Record<GaugeDisplayStyle, SizePreset[]> = {
-  arc: [
-    { label: 'S', w: 70, h: 70 },
-    { label: 'M', w: 100, h: 100 },
-    { label: 'L', w: 150, h: 150 },
-  ],
-  // Bar: fixed width, either half or full canvas height.
-  bar: [
-    { label: '½', w: 30, h: 110 },
-    { label: 'Full', w: 30, h: 220 },
-  ],
-  numeric: [
-    { label: 'S', w: 100, h: 40 },
-    { label: 'M', w: 210, h: 40 },
-    { label: 'L', w: 320, h: 40 },
-  ],
+// Units relevant to each signal — restricts the chips shown when a signal is bound
+const SIGNAL_UNITS: Record<string, string[]> = {
+  rpm: ['rpm'],
+  throttle_pos: ['%'],
+  map_kpa: ['kPa', 'psi', 'bar'],
+  iat_c: ['°C', '°F'],
+  speed_kph: ['km/h', 'mph'],
+  lambda_1: ['λ', 'AFR'],
+  fuel_press_bar: ['bar', 'psi', 'kPa'],
+  coolant_temp_c: ['°C', '°F'],
+  oil_temp_c: ['°C', '°F'],
+  oil_press_bar: ['bar', 'psi', 'kPa'],
+  battery_volts: ['V'],
 }
-
-// Common automotive unit quick-select chips
-const COMMON_UNITS = ['rpm', 'km/h', '%', '°C', 'bar', 'V', 'λ', 'AFR', 'kPa', 'psi', 's']
 
 // Label position options for gauge widgets
 const GAUGE_LABEL_POSITIONS: { value: WidgetLabelPosition; label: string }[] = [
@@ -187,35 +175,32 @@ const GAUGE_LABEL_POSITIONS: { value: WidgetLabelPosition; label: string }[] = [
   { value: 'bottom-right', label: '↘ BR' },
 ]
 
-// Default preset index when switching to a style (M = index 1)
-const DEFAULT_PRESET_INDEX = 1
-
-function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
+function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
   const style = cfg.displayStyle
-  // For bar style, override the 'Full' preset height with actual available canvas height
-  const presets = GAUGE_SIZE_PRESETS[style].map((p) =>
-    style === 'bar' && p.label === 'Full' ? { ...p, h: widgetAreaH } : p
-  )
-  const { w, h } = widget.layout
-  const activePresetIdx = presets.findIndex((p) => p.w === w && p.h === h)
+  const barOrientation = cfg.barOrientation ?? 'vertical'
+  const allowedTokenIds = gaugeTokenIds(style, barOrientation)
+  const activeTokenId = tokenFromDimensions(widget.layout.w, widget.layout.h)
+
+  // Units filtered to what makes sense for the bound signal
+  const signalUnits = widget.signal ? SIGNAL_UNITS[widget.signal] : undefined
+  const unitList = signalUnits ?? ALL_UNITS
 
   return (
     <>
-      {/* Display style selector — switching also applies the default size */}
+      {/* Display style selector — switching also applies the default size token */}
       <Field label="Style">
         <div style={{ display: 'flex', gap: 4 }}>
           {GAUGE_STYLES.map(({ value, label }) => (
             <button
               key={value}
               onClick={() => {
-                const presetsForStyle = GAUGE_SIZE_PRESETS[value]
-                const defaultPreset = presetsForStyle[DEFAULT_PRESET_INDEX] ?? presetsForStyle[0]
-                if (!defaultPreset) return
+                const defaultTokenId = GAUGE_DEFAULT_TOKEN[value]
+                const defaultToken = SIZE_TOKENS[defaultTokenId]
                 onChange({
                   config: { ...cfg, displayStyle: value },
-                  layout: { ...widget.layout, w: defaultPreset.w, h: defaultPreset.h },
+                  layout: { ...widget.layout, w: defaultToken.w, h: defaultToken.h },
                 })
               }}
               style={{
@@ -236,18 +221,19 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
         </div>
       </Field>
 
-      {/* Size presets for the current style */}
+      {/* Size tokens for the current style */}
       <Field label="Size">
         <div style={{ display: 'flex', gap: 4 }}>
-          {presets.map((preset, idx) => {
-            const isActive = idx === activePresetIdx
+          {allowedTokenIds.map((tokenId) => {
+            const token = SIZE_TOKENS[tokenId]
+            const isActive = tokenId === activeTokenId
             return (
               <button
-                key={preset.label}
+                key={tokenId}
                 onClick={() => {
-                  onChange({ layout: { ...widget.layout, w: preset.w, h: preset.h } })
+                  onChange({ layout: { ...widget.layout, w: token.w, h: token.h } })
                 }}
-                title={`${String(preset.w)} × ${String(preset.h)} px`}
+                title={token.description}
                 style={{
                   flex: 1,
                   padding: '3px 0',
@@ -260,43 +246,46 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
                   fontWeight: isActive ? 700 : 400,
                 }}
               >
-                {preset.label}
+                {token.label}
               </button>
             )
           })}
         </div>
-        {activePresetIdx === -1 && (
+        {!activeTokenId && (
           <div style={{ fontSize: 9, color: '#444444', marginTop: 3 }}>
-            {String(w)} × {String(h)} px — custom
+            {String(widget.layout.w)} × {String(widget.layout.h)} — non-standard
           </div>
         )}
       </Field>
 
-      {/* Unit / suffix — shown for all styles */}
+      {/* Unit / suffix */}
       <Field label="Unit">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 }}>
-          {COMMON_UNITS.map((u) => (
-            <button
-              key={u}
-              onClick={() => {
-                const next = { ...cfg }
-                if (cfg.suffix === u) delete next.suffix
-                else next.suffix = u
-                onChange({ config: next })
-              }}
-              style={{
-                padding: '2px 6px',
-                fontSize: 10,
-                background: cfg.suffix === u ? '#1A2A1A' : '#111111',
-                border: `1px solid ${cfg.suffix === u ? '#448844' : '#2A2A2A'}`,
-                borderRadius: 3,
-                color: cfg.suffix === u ? '#66AA66' : '#555555',
-                cursor: 'pointer',
-              }}
-            >
-              {u}
-            </button>
-          ))}
+          {unitList.map((u) => {
+            const isActive = cfg.suffix === u
+            return (
+              <button
+                key={u}
+                onClick={() => {
+                  const next = { ...cfg }
+                  if (isActive) delete next.suffix
+                  else next.suffix = u
+                  onChange({ config: next })
+                }}
+                style={{
+                  padding: '2px 6px',
+                  fontSize: 10,
+                  background: isActive ? '#1A2A1A' : '#111111',
+                  border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
+                  borderRadius: 3,
+                  color: isActive ? '#66AA66' : '#555555',
+                  cursor: 'pointer',
+                }}
+              >
+                {u}
+              </button>
+            )
+          })}
         </div>
         <input
           style={inputStyle}
@@ -343,28 +332,21 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
         </>
       )}
 
-      {/* Bar orientation — vertical thermometer or horizontal progress */}
+      {/* Bar orientation — switches to the default token for the new orientation */}
       {style === 'bar' && (
         <Field label="Orientation">
           <div style={{ display: 'flex', gap: 4 }}>
             {(['vertical', 'horizontal'] as const).map((dir) => {
-              const isActive = (cfg.barOrientation ?? 'vertical') === dir
+              const isActive = barOrientation === dir
               return (
                 <button
                   key={dir}
                   onClick={() => {
-                    // Swap w/h when switching orientation to keep visual ratio sensible
-                    const currentH =
-                      cfg.barOrientation === 'horizontal' ? widget.layout.w : widget.layout.h
-                    const currentW =
-                      cfg.barOrientation === 'horizontal' ? widget.layout.h : widget.layout.w
-                    const newLayout =
-                      dir === 'horizontal'
-                        ? { ...widget.layout, w: currentH, h: currentW }
-                        : { ...widget.layout, w: currentW, h: currentH }
+                    const newTokenId = dir === 'horizontal' ? 'XS-H' : 'XS-V-1/2'
+                    const newToken = SIZE_TOKENS[newTokenId]
                     onChange({
                       config: { ...cfg, barOrientation: dir },
-                      layout: newLayout,
+                      layout: { ...widget.layout, w: newToken.w, h: newToken.h },
                     })
                   }}
                   style={{
@@ -379,7 +361,7 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
                     textTransform: 'uppercase',
                   }}
                 >
-                  {dir === 'vertical' ? '↕ Vertical' : '↔ Horizontal'}
+                  {dir === 'vertical' ? '↕ V' : '↔ H'}
                 </button>
               )
             })}
@@ -397,7 +379,15 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
                 style={numberInputStyle}
                 value={cfg.minValue}
                 onChange={(e) => {
-                  onChange({ config: { ...cfg, minValue: Number(e.target.value) } })
+                  const newMin = Number(e.target.value)
+                  onChange({
+                    config: {
+                      ...cfg,
+                      minValue: newMin,
+                      warningLevel: Math.max(cfg.warningLevel, newMin),
+                      dangerLevel: Math.max(cfg.dangerLevel, newMin),
+                    },
+                  })
                 }}
               />
             </Field>
@@ -407,7 +397,20 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
                 style={numberInputStyle}
                 value={cfg.maxValue}
                 onChange={(e) => {
-                  onChange({ config: { ...cfg, maxValue: Number(e.target.value) } })
+                  const newMax = Number(e.target.value)
+                  // Scale warn/danger proportionally when max changes
+                  const range = cfg.maxValue - cfg.minValue || 1
+                  const warnPct = (cfg.warningLevel - cfg.minValue) / range
+                  const dangerPct = (cfg.dangerLevel - cfg.minValue) / range
+                  const newRange = newMax - cfg.minValue || 1
+                  onChange({
+                    config: {
+                      ...cfg,
+                      maxValue: newMax,
+                      warningLevel: Math.round(cfg.minValue + warnPct * newRange),
+                      dangerLevel: Math.round(cfg.minValue + dangerPct * newRange),
+                    },
+                  })
                 }}
               />
             </Field>
@@ -419,7 +422,13 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
                 style={numberInputStyle}
                 value={cfg.warningLevel}
                 onChange={(e) => {
-                  onChange({ config: { ...cfg, warningLevel: Number(e.target.value) } })
+                  const v = Number(e.target.value)
+                  onChange({
+                    config: {
+                      ...cfg,
+                      warningLevel: Math.min(v, cfg.dangerLevel),
+                    },
+                  })
                 }}
               />
             </Field>
@@ -429,7 +438,13 @@ function GaugeFields({ widget, onChange, widgetAreaH }: ConfigFieldsProps) {
                 style={numberInputStyle}
                 value={cfg.dangerLevel}
                 onChange={(e) => {
-                  onChange({ config: { ...cfg, dangerLevel: Number(e.target.value) } })
+                  const v = Number(e.target.value)
+                  onChange({
+                    config: {
+                      ...cfg,
+                      dangerLevel: Math.max(v, cfg.warningLevel),
+                    },
+                  })
                 }}
               />
             </Field>
@@ -907,7 +922,7 @@ function BarFields({ widget, onChange }: ConfigFieldsProps) {
     <>
       <Field label="Unit">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 }}>
-          {COMMON_UNITS.map((u) => (
+          {ALL_UNITS.map((u) => (
             <button
               key={u}
               onClick={() => {
@@ -1073,30 +1088,136 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
+  const updatePage = useDashboardStore((s) => s.updatePage)
+  const updateTopBar = useDashboardStore((s) => s.updateTopBar)
   const signals = useSignalStore((s) => s.signals)
 
-  const topBarHeight = config?.topBar.height ?? 20
   const page = config?.pages.find((p) => p.id === pageId)
-  const widgetAreaH = 240 - (page?.showTopBar ? topBarHeight : 0)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
 
+  // No widget selected → show page/theme settings
   if (!widget) {
+    if (!page || !config) {
+      return (
+        <div style={{ padding: 12 }}>
+          <p style={{ color: '#333333', fontSize: 11 }}>No config loaded.</p>
+        </div>
+      )
+    }
     return (
-      <div style={{ padding: 12 }}>
+      <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
         <div
           style={{
             fontSize: 10,
             color: '#555555',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
-          Properties
+          Page — {page.name}
         </div>
-        <p style={{ color: '#444444', fontSize: 11, lineHeight: 1.6 }}>
-          Click a widget on the canvas to edit its properties.
-        </p>
+
+        {/* Background */}
+        <Field label="Background">
+          <input
+            type="color"
+            value={page.backgroundColor}
+            style={{
+              width: '100%',
+              height: 28,
+              padding: 2,
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: 3,
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+            }}
+            onChange={(e) => {
+              updatePage(pageId, { backgroundColor: e.target.value as `#${string}` })
+            }}
+          />
+        </Field>
+
+        <Field label="Show top bar">
+          <input
+            type="checkbox"
+            checked={page.showTopBar}
+            onChange={(e) => {
+              updatePage(pageId, { showTopBar: e.target.checked })
+            }}
+          />
+        </Field>
+
+        {page.showTopBar && (
+          <>
+            <div
+              style={{
+                fontSize: 10,
+                color: '#444',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: 6,
+                marginTop: 8,
+              }}
+            >
+              Top Bar
+            </div>
+            <Row>
+              <Field label="Bar color">
+                <input
+                  type="color"
+                  value={config.topBar.bgColor}
+                  style={{
+                    width: '100%',
+                    height: 28,
+                    padding: 2,
+                    background: '#111',
+                    border: '1px solid #333',
+                    borderRadius: 3,
+                    cursor: 'pointer',
+                    boxSizing: 'border-box',
+                  }}
+                  onChange={(e) => {
+                    updateTopBar({ bgColor: e.target.value as `#${string}` })
+                  }}
+                />
+              </Field>
+              <Field label="Text color">
+                <input
+                  type="color"
+                  value={config.topBar.textColor}
+                  style={{
+                    width: '100%',
+                    height: 28,
+                    padding: 2,
+                    background: '#111',
+                    border: '1px solid #333',
+                    borderRadius: 3,
+                    cursor: 'pointer',
+                    boxSizing: 'border-box',
+                  }}
+                  onChange={(e) => {
+                    updateTopBar({ textColor: e.target.value as `#${string}` })
+                  }}
+                />
+              </Field>
+            </Row>
+            <Field label="Show map name">
+              <input
+                type="checkbox"
+                checked={config.topBar.showMapName}
+                onChange={(e) => {
+                  updateTopBar({ showMapName: e.target.checked })
+                }}
+              />
+            </Field>
+          </>
+        )}
+
+        <div style={{ fontSize: 10, color: '#333', marginTop: 12 }}>
+          Select a widget to edit its properties.
+        </div>
       </div>
     )
   }
@@ -1269,7 +1390,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           >
             {widget.type} config
           </div>
-          <ConfigFields widget={widget} onChange={patch} widgetAreaH={widgetAreaH} />
+          <ConfigFields widget={widget} onChange={patch} />
         </>
       )}
     </div>
