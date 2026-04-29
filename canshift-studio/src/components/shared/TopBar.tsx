@@ -75,7 +75,7 @@ export default function TopBar() {
           alt="CANShift Studio"
           style={
             {
-              height: 30,
+              height: 40,
               marginRight: 24,
               WebkitAppRegion: 'no-drag',
               display: 'block',
