@@ -14,7 +14,7 @@ export default function StatusBar() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 24,
+        height: 18,
         background: '#0D0D0D',
         borderTop: '1px solid #2A2A2A',
         padding: '0 12px',
@@ -22,9 +22,7 @@ export default function StatusBar() {
         color: '#555555',
       }}
     >
-      <span>
-        {connected && <span style={{ color: '#00CC44' }}>● Connected — {portPath}</span>}
-      </span>
+      <span>{connected && <span style={{ color: '#00CC44' }}>● Connected — {portPath}</span>}</span>
       <span>{isDirty && <span style={{ color: '#FF8800' }}>Unsaved changes</span>}</span>
       <span>CANShift Studio v0.1.0</span>
     </footer>
