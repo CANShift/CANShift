@@ -86,11 +86,11 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
         case 'button':
           return {
             type: 'button' as const,
-            targetPageId: '',
             label: 'Button',
             iconName: item.icon,
             showLabel: true,
             showIcon: false,
+            actions: [],
           }
         case 'gear':
           return { type: 'gear' as const, decimalPlaces: 0 as const }

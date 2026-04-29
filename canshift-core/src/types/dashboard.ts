@@ -57,10 +57,59 @@ export interface WarningWidgetConfig {
   iconName?: SensorIconName
 }
 
+// ---------------------------------------------------------------------------
+// Button action types — discriminated by category + type
+// ---------------------------------------------------------------------------
+
+/** Navigate to another dashboard page */
+export interface NavigateAction {
+  category: 'dashboard'
+  type: 'navigate'
+  pageId: string
+}
+
+/** Switch to a different UI theme */
+export interface SetThemeAction {
+  category: 'dashboard'
+  type: 'set_theme'
+  themeId: string
+}
+
+/**
+ * Ask the ECU to switch to a specific map slot.
+ * Requires a CAN output frame configured in MaxxECU.
+ * Map index is 1-based (MaxxECU maps 1–8).
+ * NOTE: CAN frame ID / encoding is ECU-specific and unverified.
+ */
+export interface MapSwitchAction {
+  category: 'ecu'
+  type: 'map_switch'
+  mapIndex: number
+}
+
+/**
+ * Send a raw CAN frame.
+ * frameId: decimal or 0x-prefixed hex CAN ID
+ * data: hex-encoded payload bytes, e.g. "0102030405060708"
+ */
+export interface CanRawAction {
+  category: 'ecu'
+  type: 'can_raw'
+  frameId: number
+  data: string
+}
+
+export type DashboardButtonAction = NavigateAction | SetThemeAction
+export type EcuButtonAction = MapSwitchAction | CanRawAction
+export type ButtonAction = DashboardButtonAction | EcuButtonAction
+
+// ---------------------------------------------------------------------------
+// Button widget config
+// ---------------------------------------------------------------------------
+
 export interface ButtonWidgetConfig {
   type: 'button'
-  targetPageId: string
-  /** Text label shown on the button (can be combined with icon) */
+  /** Text label shown on the button */
   label: string
   /** Built-in sensor icon shown on the button */
   iconName?: SensorIconName
@@ -69,6 +118,11 @@ export interface ButtonWidgetConfig {
   /** Controls what is rendered: icon only, label only, or both */
   showIcon?: boolean
   showLabel?: boolean
+  /**
+   * Ordered list of actions to execute on press.
+   * A button can have one or more actions, mixing ECU and dashboard types.
+   */
+  actions: ButtonAction[]
 }
 
 export interface TimerWidgetConfig {

@@ -2,7 +2,7 @@
 // Layout (x, y, w, h), signal binding, style, and type-specific config.
 
 import React from 'react'
-import type { Widget, SensorIconName, WidgetType } from '@tmbk/canshift-core'
+import type { Widget, SensorIconName, WidgetType, ButtonAction } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
@@ -249,9 +249,240 @@ function LabelFields({ widget, onChange }: ConfigFieldsProps) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Action editor — one action row
+// ---------------------------------------------------------------------------
+
+interface ActionRowProps {
+  action: ButtonAction
+  pageIds: string[]
+  onUpdate: (updated: ButtonAction) => void
+  onRemove: () => void
+}
+
+function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
+  const typeLabel =
+    action.category === 'dashboard'
+      ? action.type === 'navigate'
+        ? 'Navigate'
+        : 'Set Theme'
+      : action.type === 'map_switch'
+        ? 'Map Switch'
+        : 'CAN Raw'
+
+  const categoryColor = action.category === 'ecu' ? '#CC8800' : '#5577CC'
+
+  return (
+    <div
+      style={{
+        background: '#111111',
+        border: '1px solid #2A2A2A',
+        borderRadius: 3,
+        padding: '6px 8px',
+        marginBottom: 5,
+      }}
+    >
+      {/* Row header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 5,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: categoryColor,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {action.category} — {typeLabel}
+        </span>
+        <button
+          onClick={onRemove}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#553333',
+            cursor: 'pointer',
+            padding: 0,
+            display: 'flex',
+          }}
+          title="Remove action"
+        >
+          <IconTrash size={11} color="#553333" />
+        </button>
+      </div>
+
+      {/* Action-specific fields */}
+      {action.category === 'dashboard' && action.type === 'navigate' && (
+        <select
+          style={{ ...inputStyle, fontSize: 11 }}
+          value={action.pageId}
+          onChange={(e) => {
+            onUpdate({ ...action, pageId: e.target.value })
+          }}
+        >
+          <option value="">— select page —</option>
+          {pageIds.map((id) => (
+            <option key={id} value={id}>
+              {id}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {action.category === 'dashboard' && action.type === 'set_theme' && (
+        <input
+          style={{ ...inputStyle, fontSize: 11 }}
+          placeholder="theme ID"
+          value={action.themeId}
+          onChange={(e) => {
+            onUpdate({ ...action, themeId: e.target.value })
+          }}
+        />
+      )}
+
+      {action.category === 'ecu' && action.type === 'map_switch' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: '#666666' }}>Map</span>
+          <input
+            type="number"
+            min={1}
+            max={8}
+            style={{ ...numberInputStyle, width: 50 }}
+            value={action.mapIndex}
+            onChange={(e) => {
+              onUpdate({ ...action, mapIndex: Number(e.target.value) })
+            }}
+          />
+        </div>
+      )}
+
+      {action.category === 'ecu' && action.type === 'can_raw' && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ flex: '0 0 70px' }}>
+            <div style={{ fontSize: 9, color: '#555555', marginBottom: 2 }}>FRAME ID</div>
+            <input
+              style={{ ...inputStyle, fontSize: 10 }}
+              placeholder="0x123"
+              value={`0x${action.frameId.toString(16).toUpperCase()}`}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 16)
+                if (!isNaN(v)) onUpdate({ ...action, frameId: v })
+              }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 9, color: '#555555', marginBottom: 2 }}>DATA (HEX)</div>
+            <input
+              style={{ ...inputStyle, fontSize: 10, fontFamily: 'monospace' }}
+              placeholder="0102030405060708"
+              value={action.data}
+              onChange={(e) => {
+                onUpdate({ ...action, data: e.target.value })
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Add action menu
+// ---------------------------------------------------------------------------
+
+function AddActionMenu({
+  pageIds,
+  onAdd,
+}: {
+  pageIds: string[]
+  onAdd: (a: ButtonAction) => void
+}) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
+      {[
+        {
+          label: 'Navigate',
+          action: (): ButtonAction => ({
+            category: 'dashboard',
+            type: 'navigate',
+            pageId: pageIds[0] ?? '',
+          }),
+          color: '#5577CC',
+        },
+        {
+          label: 'Map Switch',
+          action: (): ButtonAction => ({ category: 'ecu', type: 'map_switch', mapIndex: 1 }),
+          color: '#CC8800',
+        },
+        {
+          label: 'CAN Raw',
+          action: (): ButtonAction => ({ category: 'ecu', type: 'can_raw', frameId: 0, data: '' }),
+          color: '#CC8800',
+        },
+        {
+          label: 'Set Theme',
+          action: (): ButtonAction => ({
+            category: 'dashboard',
+            type: 'set_theme',
+            themeId: '',
+          }),
+          color: '#5577CC',
+        },
+      ].map(({ label, action, color }) => (
+        <button
+          key={label}
+          onClick={() => {
+            onAdd(action())
+          }}
+          style={{
+            fontSize: 10,
+            padding: '2px 7px',
+            background: 'transparent',
+            border: `1px solid ${color}44`,
+            borderRadius: 3,
+            color: color,
+            cursor: 'pointer',
+          }}
+        >
+          + {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Button widget fields
+// ---------------------------------------------------------------------------
+
 function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'button' ? widget.config : null
+  const pages = useDashboardStore((s) => s.config?.pages ?? [])
+  const pageIds = pages.map((p) => p.id)
+
   if (!cfg) return null
+
+  const updateAction = (idx: number, updated: ButtonAction) => {
+    const next = cfg.actions.map((a, i) => (i === idx ? updated : a))
+    onChange({ config: { ...cfg, actions: next } })
+  }
+
+  const removeAction = (idx: number) => {
+    onChange({ config: { ...cfg, actions: cfg.actions.filter((_, i) => i !== idx) } })
+  }
+
+  const addAction = (action: ButtonAction) => {
+    onChange({ config: { ...cfg, actions: [...cfg.actions, action] } })
+  }
+
   return (
     <>
       <Field label="Label">
@@ -263,15 +494,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
           }}
         />
       </Field>
-      <Field label="Target Page ID">
-        <input
-          style={inputStyle}
-          value={cfg.targetPageId}
-          onChange={(e) => {
-            onChange({ config: { ...cfg, targetPageId: e.target.value } })
-          }}
-        />
-      </Field>
+
       <Field label="Show">
         <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#AAAAAA' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
@@ -296,6 +519,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
           </label>
         </div>
       </Field>
+
       {(cfg.showIcon ?? false) && (
         <Field label="Icon">
           <IconPicker
@@ -308,6 +532,39 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
           />
         </Field>
       )}
+
+      <div
+        style={{
+          fontSize: 10,
+          color: '#444444',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          marginBottom: 5,
+          marginTop: 4,
+        }}
+      >
+        Actions
+      </div>
+
+      {cfg.actions.length === 0 && (
+        <div style={{ fontSize: 11, color: '#444444', marginBottom: 6 }}>No actions yet.</div>
+      )}
+
+      {cfg.actions.map((action, idx) => (
+        <ActionRow
+          key={idx}
+          action={action}
+          pageIds={pageIds}
+          onUpdate={(updated) => {
+            updateAction(idx, updated)
+          }}
+          onRemove={() => {
+            removeAction(idx)
+          }}
+        />
+      ))}
+
+      <AddActionMenu pageIds={pageIds} onAdd={addAction} />
     </>
   )
 }
@@ -519,7 +776,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             <option value="">— none —</option>
             {signals.map((s) => (
               <option key={s.name} value={s.name}>
-                {s.name}{s.unit ? ` (${s.unit})` : ''}
+                {s.name}
+                {s.unit ? ` (${s.unit})` : ''}
               </option>
             ))}
           </select>

@@ -23,6 +23,14 @@ export type {
   GearWidgetConfig,
   ImageWidgetConfig,
   SensorIconName,
+  // Button actions
+  ButtonAction,
+  DashboardButtonAction,
+  EcuButtonAction,
+  NavigateAction,
+  SetThemeAction,
+  MapSwitchAction,
+  CanRawAction,
 } from './types/dashboard'
 
 export type { SignalConfig, SignalDef } from './types/signal'
@@ -46,7 +54,7 @@ export type { MigrationResult } from './migrations/migration-runner'
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.0.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.1.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const

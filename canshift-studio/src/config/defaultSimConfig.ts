@@ -3,7 +3,7 @@
 import type { DashboardConfig } from '@tmbk/canshift-core'
 
 export const DEFAULT_SIM_CONFIG: DashboardConfig = {
-  version: '1.0.0',
+  version: '1.1.0',
   name: 'VR6 Main Dash',
   description: 'Default dashboard configuration for VW VR6 2.9 with MaxxECU Street',
   defaultPageId: 'main',
@@ -59,7 +59,13 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             criticalColor: '#FF0000',
             fontSize: 48,
           },
-          config: { type: 'label', decimalPlaces: 0, prefix: '', suffix: '', hideWhenInvalid: false },
+          config: {
+            type: 'label',
+            decimalPlaces: 0,
+            prefix: '',
+            suffix: '',
+            hideWhenInvalid: false,
+          },
         },
         {
           id: 'coolant_temp',
@@ -74,7 +80,13 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             criticalColor: '#FF0000',
             fontSize: 20,
           },
-          config: { type: 'label', decimalPlaces: 0, prefix: '', suffix: '°C', hideWhenInvalid: false },
+          config: {
+            type: 'label',
+            decimalPlaces: 0,
+            prefix: '',
+            suffix: '°C',
+            hideWhenInvalid: false,
+          },
         },
         {
           id: 'oil_temp',
@@ -89,7 +101,13 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             criticalColor: '#FF0000',
             fontSize: 20,
           },
-          config: { type: 'label', decimalPlaces: 0, prefix: '', suffix: '°', hideWhenInvalid: false },
+          config: {
+            type: 'label',
+            decimalPlaces: 0,
+            prefix: '',
+            suffix: '°',
+            hideWhenInvalid: false,
+          },
         },
       ],
     },
