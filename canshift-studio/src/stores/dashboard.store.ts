@@ -36,6 +36,8 @@ interface DashboardState {
   selectPage: (pageId: string | null) => void
   addPage: (page: PageConfig) => void
   removePage: (pageId: string) => void
+  renamePage: (pageId: string, name: string) => void
+  setDefaultPage: (pageId: string) => void
 
   // Widget operations
   selectWidget: (widgetId: string | null) => void
@@ -101,6 +103,24 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.selectedPageId === pageId) {
           s.selectedPageId = s.config.pages[0]?.id ?? null
         }
+        s.isDirty = true
+      })
+    },
+
+    renamePage: (pageId, name) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        page.name = name
+        s.isDirty = true
+      })
+    },
+
+    setDefaultPage: (pageId) => {
+      set((s) => {
+        if (!s.config) return
+        s.config.defaultPageId = pageId
         s.isDirty = true
       })
     },

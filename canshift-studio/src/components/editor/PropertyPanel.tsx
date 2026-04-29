@@ -2,7 +2,13 @@
 // Layout (x, y, w, h), signal binding, style, and type-specific config.
 
 import React from 'react'
-import type { Widget, SensorIconName, WidgetType, ButtonAction } from '@tmbk/canshift-core'
+import type {
+  Widget,
+  SensorIconName,
+  WidgetType,
+  ButtonAction,
+  GaugeDisplayStyle,
+} from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
@@ -129,112 +135,151 @@ interface ConfigFieldsProps {
   onChange: (patch: Partial<Widget>) => void
 }
 
+const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
+  { value: 'arc', label: 'Arc' },
+  { value: 'bar', label: 'Bar' },
+  { value: 'numeric', label: 'Numeric' },
+]
+
 function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
-  return (
-    <>
-      <Row>
-        <Field label="Min">
-          <input
-            type="number"
-            style={numberInputStyle}
-            value={cfg.minValue}
-            onChange={(e) => {
-              onChange({ config: { ...cfg, minValue: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-        <Field label="Max">
-          <input
-            type="number"
-            style={numberInputStyle}
-            value={cfg.maxValue}
-            onChange={(e) => {
-              onChange({ config: { ...cfg, maxValue: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-      </Row>
-      <Row>
-        <Field label="Warn">
-          <input
-            type="number"
-            style={numberInputStyle}
-            value={cfg.warningLevel}
-            onChange={(e) => {
-              onChange({ config: { ...cfg, warningLevel: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-        <Field label="Danger">
-          <input
-            type="number"
-            style={numberInputStyle}
-            value={cfg.dangerLevel}
-            onChange={(e) => {
-              onChange({ config: { ...cfg, dangerLevel: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-      </Row>
-      <Field label="Icon">
-        <IconPicker
-          value={cfg.iconName}
-          onChange={(name) => {
-            onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
-            })
-          }}
-        />
-      </Field>
-    </>
-  )
-}
+  const style = cfg.displayStyle
 
-function LabelFields({ widget, onChange }: ConfigFieldsProps) {
-  const cfg = widget.config.type === 'label' ? widget.config : null
-  if (!cfg) return null
   return (
     <>
-      <Row>
-        <Field label="Prefix">
-          <input
-            style={inputStyle}
-            value={cfg.prefix ?? ''}
-            onChange={(e) => {
-              const next = { ...cfg }
-              if (e.target.value) next.prefix = e.target.value
-              else delete next.prefix
-              onChange({ config: next })
-            }}
-          />
-        </Field>
-        <Field label="Suffix">
-          <input
-            style={inputStyle}
-            value={cfg.suffix ?? ''}
-            onChange={(e) => {
-              const next = { ...cfg }
-              if (e.target.value) next.suffix = e.target.value
-              else delete next.suffix
-              onChange({ config: next })
-            }}
-          />
-        </Field>
-      </Row>
-      <Field label="Decimals">
-        <input
-          type="number"
-          min={0}
-          max={4}
-          style={{ ...numberInputStyle, width: 60 }}
-          value={cfg.decimalPlaces}
-          onChange={(e) => {
-            onChange({ config: { ...cfg, decimalPlaces: Number(e.target.value) } })
-          }}
-        />
+      {/* Display style selector */}
+      <Field label="Style">
+        <div style={{ display: 'flex', gap: 4 }}>
+          {GAUGE_STYLES.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => {
+                onChange({ config: { ...cfg, displayStyle: value } })
+              }}
+              style={{
+                flex: 1,
+                padding: '3px 0',
+                background: style === value ? '#2A2A3A' : '#111111',
+                border: `1px solid ${style === value ? '#5566AA' : '#2A2A2A'}`,
+                borderRadius: 3,
+                color: style === value ? '#7788CC' : '#555555',
+                cursor: 'pointer',
+                fontSize: 10,
+                textTransform: 'uppercase',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </Field>
+
+      {/* Numeric-specific fields */}
+      {style === 'numeric' && (
+        <>
+          <Row>
+            <Field label="Prefix">
+              <input
+                style={inputStyle}
+                value={cfg.prefix ?? ''}
+                onChange={(e) => {
+                  const next = { ...cfg }
+                  if (e.target.value) next.prefix = e.target.value
+                  else delete next.prefix
+                  onChange({ config: next })
+                }}
+              />
+            </Field>
+            <Field label="Suffix">
+              <input
+                style={inputStyle}
+                value={cfg.suffix ?? ''}
+                onChange={(e) => {
+                  const next = { ...cfg }
+                  if (e.target.value) next.suffix = e.target.value
+                  else delete next.suffix
+                  onChange({ config: next })
+                }}
+              />
+            </Field>
+          </Row>
+          <Field label="Decimals">
+            <input
+              type="number"
+              min={0}
+              max={4}
+              style={{ ...numberInputStyle, width: 60 }}
+              value={cfg.decimalPlaces}
+              onChange={(e) => {
+                onChange({ config: { ...cfg, decimalPlaces: Number(e.target.value) } })
+              }}
+            />
+          </Field>
+        </>
+      )}
+
+      {/* Arc / bar shared range fields */}
+      {(style === 'arc' || style === 'bar') && (
+        <>
+          <Row>
+            <Field label="Min">
+              <input
+                type="number"
+                style={numberInputStyle}
+                value={cfg.minValue}
+                onChange={(e) => {
+                  onChange({ config: { ...cfg, minValue: Number(e.target.value) } })
+                }}
+              />
+            </Field>
+            <Field label="Max">
+              <input
+                type="number"
+                style={numberInputStyle}
+                value={cfg.maxValue}
+                onChange={(e) => {
+                  onChange({ config: { ...cfg, maxValue: Number(e.target.value) } })
+                }}
+              />
+            </Field>
+          </Row>
+          <Row>
+            <Field label="Warn">
+              <input
+                type="number"
+                style={numberInputStyle}
+                value={cfg.warningLevel}
+                onChange={(e) => {
+                  onChange({ config: { ...cfg, warningLevel: Number(e.target.value) } })
+                }}
+              />
+            </Field>
+            <Field label="Danger">
+              <input
+                type="number"
+                style={numberInputStyle}
+                value={cfg.dangerLevel}
+                onChange={(e) => {
+                  onChange({ config: { ...cfg, dangerLevel: Number(e.target.value) } })
+                }}
+              />
+            </Field>
+          </Row>
+          {style === 'arc' && (
+            <Field label="Needle">
+              <input
+                type="checkbox"
+                checked={cfg.showNeedle ?? false}
+                onChange={(e) => {
+                  onChange({ config: { ...cfg, showNeedle: e.target.checked } })
+                }}
+              />
+            </Field>
+          )}
+        </>
+      )}
+
       <Field label="Icon">
         <IconPicker
           value={cfg.iconName}
@@ -656,7 +701,6 @@ const CONFIG_FIELDS: Partial<
   Record<WidgetType, (props: ConfigFieldsProps) => React.JSX.Element | null>
 > = {
   gauge: GaugeFields,
-  label: LabelFields,
   button: ButtonFields,
   bar: BarFields,
   warning: WarningFields,
@@ -763,8 +807,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       </Field>
 
-      {/* Signal binding — not applicable for button / timer / image */}
-      {!['button', 'timer', 'image'].includes(widget.type) && (
+      {/* Signal binding — not applicable for button, timer, image */}
+      {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
         <Field label="Signal">
           <select
             style={{ ...inputStyle, cursor: 'pointer' }}

@@ -1,5 +1,6 @@
 // EditorRoute.tsx — Dashboard layout editor
 
+import { useState, useRef, useEffect } from 'react'
 import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
@@ -15,6 +16,27 @@ export default function EditorRoute() {
   const selectPage = useDashboardStore((s) => s.selectPage)
   const addPage = useDashboardStore((s) => s.addPage)
   const removePage = useDashboardStore((s) => s.removePage)
+  const renamePage = useDashboardStore((s) => s.renamePage)
+  const setDefaultPage = useDashboardStore((s) => s.setDefaultPage)
+
+  // Inline rename state: pageId being edited → draft name
+  const [editingPageId, setEditingPageId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingPageId && renameInputRef.current) renameInputRef.current.select()
+  }, [editingPageId])
+
+  const startRename = (pageId: string, currentName: string) => {
+    setEditingPageId(pageId)
+    setEditDraft(currentName)
+  }
+
+  const commitRename = () => {
+    if (editingPageId && editDraft.trim()) renamePage(editingPageId, editDraft.trim())
+    setEditingPageId(null)
+  }
 
   if (!config) {
     return (
@@ -64,65 +86,128 @@ export default function EditorRoute() {
           >
             Pages
           </div>
-          {config.pages.map((page) => (
-            <div
-              key={page.id}
-              onClick={() => {
-                selectPage(page.id)
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '5px 6px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 12,
-                background: page.id === selectedPageId ? '#2A2A2A' : 'transparent',
-                color: page.id === selectedPageId ? '#FFFFFF' : '#777777',
-                marginBottom: 1,
-              }}
-            >
-              <span
+          {config.pages.map((page) => {
+            const isDefault = page.id === config.defaultPageId
+            const isSelected = page.id === selectedPageId
+            const isEditing = editingPageId === page.id
+
+            return (
+              <div
+                key={page.id}
+                onClick={() => {
+                  if (!isEditing) selectPage(page.id)
+                }}
                 style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '4px 6px',
+                  borderRadius: 4,
+                  cursor: isEditing ? 'default' : 'pointer',
+                  fontSize: 12,
+                  background: isSelected ? '#2A2A2A' : 'transparent',
+                  color: isSelected ? '#FFFFFF' : '#777777',
+                  marginBottom: 1,
                 }}
               >
-                {page.name}
-              </span>
-              {config.pages.length > 1 && (
+                {/* Default page indicator — click to set as default */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    removePage(page.id)
+                    setDefaultPage(page.id)
                   }}
-                  title="Remove page"
+                  title={isDefault ? 'Default page' : 'Set as default page'}
                   style={{
-                    marginLeft: 4,
-                    padding: '0 3px',
                     background: 'none',
                     border: 'none',
-                    color: '#444444',
+                    padding: 0,
                     cursor: 'pointer',
-                    fontSize: 12,
+                    fontSize: 10,
                     lineHeight: 1,
+                    color: isDefault ? '#FF8800' : '#333333',
                     flexShrink: 0,
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#AA3333'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#444444'
-                  }}
                 >
-                  ×
+                  ◆
                 </button>
-              )}
-            </div>
-          ))}
+
+                {/* Page name — double-click to rename */}
+                {isEditing ? (
+                  <input
+                    ref={renameInputRef}
+                    value={editDraft}
+                    onChange={(e) => {
+                      setEditDraft(e.target.value)
+                    }}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename()
+                      if (e.key === 'Escape') setEditingPageId(null)
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    style={{
+                      flex: 1,
+                      background: '#111111',
+                      border: '1px solid #5566AA',
+                      borderRadius: 2,
+                      color: '#FFFFFF',
+                      fontSize: 12,
+                      padding: '1px 4px',
+                      outline: 'none',
+                      minWidth: 0,
+                    }}
+                  />
+                ) : (
+                  <span
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      startRename(page.id, page.name)
+                    }}
+                    title="Double-click to rename"
+                    style={{
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {page.name}
+                  </span>
+                )}
+
+                {/* Delete button */}
+                {config.pages.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removePage(page.id)
+                    }}
+                    title="Remove page"
+                    style={{
+                      padding: '0 2px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#444444',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      lineHeight: 1,
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#AA3333'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#444444'
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            )
+          })}
           <button
             onClick={() => {
               addPage({

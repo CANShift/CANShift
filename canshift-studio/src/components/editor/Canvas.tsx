@@ -8,6 +8,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { IconSettings, IconClear, IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
+import { rectsOverlap } from '../../utils/layout'
 
 const SCALE = 2 // 320×240 → 640×480 on screen
 const CANVAS_W = 320 * SCALE
@@ -65,17 +66,21 @@ function resolveIconName(widget: Widget): SensorIconName | null {
 interface WidgetBoxProps {
   widget: Widget
   isSelected: boolean
+  isOverlapping: boolean
   onSelect: (id: string) => void
   onDragStart: (e: React.MouseEvent, widget: Widget) => void
 }
 
-function WidgetBox({ widget, isSelected, onSelect, onDragStart }: WidgetBoxProps) {
+function WidgetBox({ widget, isSelected, isOverlapping, onSelect, onDragStart }: WidgetBoxProps) {
   const { layout, type, signal, config } = widget
   const colors = getColors(type)
   const iconName = resolveIconName(widget)
 
   const label =
     'label' in config && typeof config.label === 'string' ? config.label : signal || type
+
+  const borderColor = isOverlapping ? '#FF2222' : isSelected ? '#FFFFFF' : colors.border
+  const borderWidth = isSelected || isOverlapping ? 2 : 1
 
   return (
     <div
@@ -90,8 +95,8 @@ function WidgetBox({ widget, isSelected, onSelect, onDragStart }: WidgetBoxProps
         top: layout.y * SCALE,
         width: layout.w * SCALE,
         height: layout.h * SCALE,
-        background: colors.bg,
-        border: `${String(isSelected ? 2 : 1)}px solid ${isSelected ? '#FFFFFF' : colors.border}`,
+        background: isOverlapping ? '#2A0000' : colors.bg,
+        border: `${String(borderWidth)}px solid ${borderColor}`,
         borderRadius: 3,
         boxSizing: 'border-box',
         cursor: 'move',
@@ -102,7 +107,11 @@ function WidgetBox({ widget, isSelected, onSelect, onDragStart }: WidgetBoxProps
         justifyContent: 'center',
         gap: 2,
         userSelect: 'none',
-        boxShadow: isSelected ? `0 0 0 1px #FFFFFF44, 0 0 8px ${colors.border}88` : 'none',
+        boxShadow: isOverlapping
+          ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'
+          : isSelected
+            ? `0 0 0 1px #FFFFFF44, 0 0 8px ${colors.border}88`
+            : 'none',
       }}
     >
       {iconName && (
@@ -314,6 +323,34 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  // Compute which widget ids currently overlap — shown with red border as feedback
+  const overlappingIds = (() => {
+    const ids = new Set<string>()
+    const rects = page.widgets.map((w) => ({
+      id: w.id,
+      x: w.layout.x,
+      y: w.layout.y,
+      w: w.layout.w,
+      h: w.layout.h,
+    }))
+    for (let i = 0; i < rects.length; i++) {
+      for (let j = i + 1; j < rects.length; j++) {
+        const a = rects[i]
+        const b = rects[j]
+        if (!a || !b) continue
+        // Only flag non-warning widgets (warnings are allowed on top)
+        const wa = page.widgets[i]
+        const wb = page.widgets[j]
+        if (wa?.type === 'warning' || wb?.type === 'warning') continue
+        if (rectsOverlap(a, b)) {
+          ids.add(a.id)
+          ids.add(b.id)
+        }
+      }
+    }
+    return ids
+  })()
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
@@ -346,13 +383,13 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         if (!drag) return
         const dx = Math.round((ev.clientX - drag.startMouseX) / SCALE)
         const dy = Math.round((ev.clientY - drag.startMouseY) / SCALE)
-        // Snap to GRID
+        // Snap to GRID, clamp to canvas bounds accounting for widget dimensions
         const rawX = drag.startWidgetX + dx
         const rawY = drag.startWidgetY + dy
         const snappedX = Math.round(rawX / GRID) * GRID
         const snappedY = Math.round(rawY / GRID) * GRID
-        const newX = Math.max(0, Math.min(320 - 10, snappedX))
-        const newY = Math.max(0, Math.min(widgetAreaH - 10, snappedY))
+        const newX = Math.max(0, Math.min(320 - widget.layout.w, snappedX))
+        const newY = Math.max(0, Math.min(widgetAreaH - widget.layout.h, snappedY))
         moveWidget(drag.pageId, drag.widgetId, { x: newX, y: newY })
       }
 
@@ -453,6 +490,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 key={widget.id}
                 widget={widget}
                 isSelected={widget.id === selectedWidgetId}
+                isOverlapping={overlappingIds.has(widget.id)}
                 onSelect={selectWidget}
                 onDragStart={handleDragStart}
               />

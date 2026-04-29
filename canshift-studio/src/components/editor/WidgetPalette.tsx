@@ -1,7 +1,7 @@
 // WidgetPalette.tsx — Widget type picker.
 // Click a tile to add a new widget of that type to the current page.
 
-import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
+import type { WidgetType, SensorIconName, GaugeDisplayStyle } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 
@@ -12,17 +12,37 @@ interface PaletteItem {
   defaultSignal: string
   defaultW: number
   defaultH: number
+  /** Only for gauge: which display style to default to */
+  gaugeStyle?: GaugeDisplayStyle
 }
 
 const PALETTE_ITEMS: PaletteItem[] = [
-  { type: 'gauge', label: 'Gauge', icon: 'rpm', defaultSignal: 'rpm', defaultW: 80, defaultH: 80 },
   {
-    type: 'label',
-    label: 'Label',
+    type: 'gauge',
+    label: 'Gauge (arc)',
+    icon: 'rpm',
+    defaultSignal: 'rpm',
+    defaultW: 80,
+    defaultH: 80,
+    gaugeStyle: 'arc',
+  },
+  {
+    type: 'gauge',
+    label: 'Gauge (bar)',
+    icon: 'boost',
+    defaultSignal: 'boost_bar',
+    defaultW: 40,
+    defaultH: 80,
+    gaugeStyle: 'bar',
+  },
+  {
+    type: 'gauge',
+    label: 'Gauge (num)',
     icon: 'speed',
-    defaultSignal: 'speed',
+    defaultSignal: 'speed_kph',
     defaultW: 80,
     defaultH: 40,
+    gaugeStyle: 'numeric',
   },
   {
     type: 'bar',
@@ -40,7 +60,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
     defaultW: 40,
     defaultH: 40,
   },
-  { type: 'button', label: 'Button', icon: 'gear', defaultSignal: '', defaultW: 60, defaultH: 30 },
+  { type: 'button', label: 'Button', icon: 'cog', defaultSignal: '', defaultW: 60, defaultH: 30 },
   { type: 'gear', label: 'Gear', icon: 'gear', defaultSignal: 'gear', defaultW: 48, defaultH: 56 },
   { type: 'timer', label: 'Timer', icon: 'timer', defaultSignal: '', defaultW: 80, defaultH: 30 },
   { type: 'image', label: 'Image', icon: 'warning', defaultSignal: '', defaultW: 60, defaultH: 60 },
@@ -65,15 +85,14 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
         case 'gauge':
           return {
             type: 'gauge' as const,
+            displayStyle: item.gaugeStyle ?? 'arc',
             minValue: 0,
-            maxValue: 8000,
-            warningLevel: 6000,
-            dangerLevel: 7000,
-            showArc: true,
+            maxValue: item.gaugeStyle === 'numeric' ? 300 : 8000,
+            warningLevel: item.gaugeStyle === 'numeric' ? 240 : 6000,
+            dangerLevel: item.gaugeStyle === 'numeric' ? 280 : 7000,
+            decimalPlaces: 0,
             iconName: item.icon,
           }
-        case 'label':
-          return { type: 'label' as const, decimalPlaces: 0, iconName: item.icon }
         case 'bar':
           return { type: 'bar' as const, decimalPlaces: 0, iconName: item.icon }
         case 'warning':

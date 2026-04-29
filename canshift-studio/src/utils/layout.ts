@@ -38,7 +38,7 @@ export function snapToGrid(v: number, grid = SNAP_GRID): number {
 }
 
 /** True when a and b overlap (or are closer than LAYOUT_GAP). */
-function rectsOverlap(a: LayoutRect, b: LayoutRect): boolean {
+export function rectsOverlap(a: LayoutRect, b: LayoutRect): boolean {
   const g = LAYOUT_GAP
   return a.x < b.x + b.w + g && a.x + a.w + g > b.x && a.y < b.y + b.h + g && a.y + a.h + g > b.y
 }
