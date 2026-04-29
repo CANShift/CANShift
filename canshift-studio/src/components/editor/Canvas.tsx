@@ -13,7 +13,7 @@ import { rectsOverlap } from '../../utils/layout'
 const SCALE = 1.5 // slightly larger than 1:1 for readability
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
-const GRID = 5 // snap grid in firmware coordinates — matches size token base unit
+const GRID = 4 // snap grid in firmware coordinates — GCD of min token width (40) and height (28)
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
@@ -442,6 +442,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
       {/* Canvas area — scrollable if window is smaller than 320×240 */}
       <div
+        onMouseDown={(e) => {
+          // Deselect when clicking outside any widget (canvas surround, border, etc.)
+          const target = e.target as HTMLElement
+          if (target.closest('[data-widget]') === null) selectWidget(null)
+        }}
         style={{
           flex: 1,
           display: 'flex',
@@ -489,12 +494,14 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               <div
                 ref={containerRef}
                 onPointerDown={(e) => {
-                  // Track swipe start — only on background clicks (no widget under cursor)
+                  // Track swipe start and deselect — only on background clicks
                   const target = e.target as HTMLElement
-                  if (target === containerRef.current || target.closest('[data-widget]') === null) {
+                  const isBackground =
+                    target === containerRef.current || target.closest('[data-widget]') === null
+                  if (isBackground) {
                     swipeRef.current = { startX: e.clientX, startY: e.clientY }
+                    selectWidget(null)
                   }
-                  selectWidget(null)
                 }}
                 onPointerUp={(e) => {
                   if (!swipeRef.current) return
@@ -523,7 +530,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
                   linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
                 `,
-                    backgroundSize: `${String(10 * SCALE)}px ${String(10 * SCALE)}px`,
+                    backgroundSize: `${String(40 * SCALE)}px ${String(28 * SCALE)}px`,
                     pointerEvents: 'none',
                   }}
                 />

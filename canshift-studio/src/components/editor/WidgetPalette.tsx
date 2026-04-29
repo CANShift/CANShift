@@ -18,31 +18,31 @@ interface PaletteItem {
   defaultH: number
 }
 
-// Default sizes use size tokens (all multiples of 25px)
+// Default sizes use binary-halving size tokens
 const PALETTE_ITEMS: PaletteItem[] = [
   {
     type: 'gauge',
     label: 'Gauge',
     icon: 'rpm',
     defaultSignal: 'rpm',
-    defaultW: SIZE_TOKENS.M.w,
-    defaultH: SIZE_TOKENS.M.h,
+    defaultW: SIZE_TOKENS.XL.w,
+    defaultH: SIZE_TOKENS.XL.h,
   },
   {
     type: 'warning',
     label: 'Warning',
     icon: 'warning',
     defaultSignal: 'mil',
-    defaultW: SIZE_TOKENS.S.w,
-    defaultH: SIZE_TOKENS.S.h,
+    defaultW: SIZE_TOKENS.XS.w,
+    defaultH: SIZE_TOKENS.XS.h,
   },
   {
     type: 'button',
     label: 'Button',
     icon: 'cog',
     defaultSignal: '',
-    defaultW: SIZE_TOKENS.M.w,
-    defaultH: SIZE_TOKENS.M.h,
+    defaultW: SIZE_TOKENS.S.w,
+    defaultH: SIZE_TOKENS.S.h,
   },
   {
     type: 'gear',

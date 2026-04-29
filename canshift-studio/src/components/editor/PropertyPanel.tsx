@@ -339,7 +339,7 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                 <button
                   key={dir}
                   onClick={() => {
-                    const newTokenId = dir === 'horizontal' ? 'XS-H' : 'XS-V-1/2'
+                    const newTokenId = dir === 'horizontal' ? 'H' : 'V-S'
                     const newToken = SIZE_TOKENS[newTokenId]
                     onChange({
                       config: { ...cfg, barOrientation: dir },
