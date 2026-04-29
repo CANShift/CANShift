@@ -4,15 +4,7 @@
 export type HexColor = `#${string}`
 
 /** Widget type discriminant */
-export type WidgetType =
-  | 'gauge'
-  | 'label'
-  | 'warning'
-  | 'button'
-  | 'timer'
-  | 'bar'
-  | 'gear'
-  | 'image'
+export type WidgetType = 'gauge' | 'warning' | 'button' | 'timer' | 'bar' | 'gear' | 'image'
 
 /** Widget position and size in pixels on a 320×240 canvas */
 export interface WidgetLayout {

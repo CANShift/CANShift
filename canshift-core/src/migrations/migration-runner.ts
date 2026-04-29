@@ -23,6 +23,65 @@ interface Migration {
 // ---------------------------------------------------------------------------
 const MIGRATIONS: Migration[] = [
   {
+    // 1.1.0 → 1.2.0: LabelWidgetConfig removed; merged into GaugeWidgetConfig.
+    //   label widgets → gauge { displayStyle: 'numeric', minValue: 0, maxValue: 100, ... }
+    //   gauge widgets without displayStyle → gauge { displayStyle: 'arc' }
+    fromVersion: '1.1.0',
+    toVersion: '1.2.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.2.0' }
+
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+
+        const migratedWidgets = widgets.map((widget) => {
+          const cfg = widget.config as Record<string, unknown> | undefined
+          if (!cfg) return widget
+
+          if (widget.type === 'label') {
+            return {
+              ...widget,
+              type: 'gauge',
+              config: {
+                type: 'gauge',
+                displayStyle: 'numeric',
+                minValue: 0,
+                maxValue: 100,
+                warningLevel: 80,
+                dangerLevel: 95,
+                decimalPlaces: (cfg.decimalPlaces as number | undefined) ?? 0,
+                ...(cfg.prefix !== undefined && { prefix: cfg.prefix }),
+                ...(cfg.suffix !== undefined && { suffix: cfg.suffix }),
+                ...(cfg.hideWhenInvalid !== undefined && { hideWhenInvalid: cfg.hideWhenInvalid }),
+                ...(cfg.iconName !== undefined && { iconName: cfg.iconName }),
+              },
+            }
+          }
+
+          if (widget.type === 'gauge' && !cfg.displayStyle) {
+            return {
+              ...widget,
+              config: {
+                ...cfg,
+                type: 'gauge',
+                displayStyle: 'arc',
+                decimalPlaces: (cfg.decimalPlaces as number | undefined) ?? 0,
+              },
+            }
+          }
+
+          return widget
+        })
+
+        return { ...page, widgets: migratedWidgets }
+      })
+
+      return { ...config, version: '1.2.0', pages: migratedPages }
+    },
+  },
+  {
     // 1.0.0 → 1.1.0: ButtonWidgetConfig.targetPageId replaced by actions array.
     // Each button with a targetPageId becomes a single 'navigate' action.
     fromVersion: '1.0.0',

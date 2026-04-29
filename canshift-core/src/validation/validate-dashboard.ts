@@ -7,16 +7,7 @@ export interface ValidationResult {
 
 type UnknownRecord = Record<string, unknown>
 
-const VALID_WIDGET_TYPES = [
-  'gauge',
-  'label',
-  'warning',
-  'button',
-  'timer',
-  'bar',
-  'gear',
-  'image',
-] as const
+const VALID_WIDGET_TYPES = ['gauge', 'warning', 'button', 'timer', 'bar', 'gear', 'image'] as const
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null

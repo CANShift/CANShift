@@ -32,30 +32,32 @@ export type SensorIconName =
   | 'traction'
   | 'map_icon'
   | 'exhaust'
+  // Mechanical
+  | 'cog'
 
 // ---------------------------------------------------------------------------
 // Widget config variants (discriminated union on `type`)
 // ---------------------------------------------------------------------------
 
+/** Visual presentation of a gauge widget */
+export type GaugeDisplayStyle = 'numeric' | 'arc' | 'bar'
+
 export interface GaugeWidgetConfig {
   type: 'gauge'
+  /** How the value is rendered: plain number, semicircle arc, or vertical bar */
+  displayStyle: GaugeDisplayStyle
   minValue: number
   maxValue: number
   warningLevel: number
   dangerLevel: number
-  showNeedle?: boolean
-  showArc?: boolean
-  /** Built-in sensor icon shown in the centre of the arc */
-  iconName?: SensorIconName
-}
-
-export interface LabelWidgetConfig {
-  type: 'label'
+  /** Decimal places for the numeric readout (all styles) */
   decimalPlaces: number
   prefix?: string
   suffix?: string
   hideWhenInvalid?: boolean
-  /** Icon displayed to the left of the value */
+  /** Show needle pointer — arc style only */
+  showNeedle?: boolean
+  /** Icon shown in arc centre or beside numeric value */
   iconName?: SensorIconName
 }
 
@@ -165,7 +167,6 @@ export interface ImageWidgetConfig {
 
 export type WidgetConfig =
   | GaugeWidgetConfig
-  | LabelWidgetConfig
   | WarningWidgetConfig
   | ButtonWidgetConfig
   | TimerWidgetConfig
