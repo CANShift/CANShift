@@ -9,7 +9,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
   defaultPageId: 'main',
   revLimitRpm: 7200,
   topBar: {
-    height: 24,
+    height: 16,
     showMapName: true,
     showMapProfile: false,
     bgColor: '#0D0D0D',
