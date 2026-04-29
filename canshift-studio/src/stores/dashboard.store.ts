@@ -202,6 +202,10 @@ export const useDashboardStore = create<DashboardState>()(
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
         Object.assign(widget, patch)
+        // Clamp position so the widget never overflows the canvas after resize.
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        widget.layout.x = Math.max(0, Math.min(widget.layout.x, 320 - widget.layout.w))
+        widget.layout.y = Math.max(0, Math.min(widget.layout.y, canvasH - widget.layout.h))
         s.isDirty = true
       })
     },
