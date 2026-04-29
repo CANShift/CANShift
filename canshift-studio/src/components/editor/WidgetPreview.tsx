@@ -421,7 +421,17 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
 // Button widget
 // ---------------------------------------------------------------------------
 
-function ButtonPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+function ButtonPreview({
+  widget,
+  w,
+  h,
+  active,
+}: {
+  widget: Widget
+  w: number
+  h: number
+  active: boolean
+}) {
   if (widget.config.type !== 'button') return null
   const cfg = widget.config
   const st = widget.style
@@ -430,6 +440,10 @@ function ButtonPreview({ widget, w, h }: { widget: Widget; w: number; h: number 
   const showLabel = cfg.showLabel !== false
   const iconSize = Math.min(h * 0.5, 18)
   const fontSize = Math.max(8, Math.min(12, h * 0.36))
+
+  const bgColor = active ? st.primaryColor + '55' : st.primaryColor + '18'
+  const borderColor = active ? st.primaryColor : st.secondaryColor
+  const textColor = active ? st.primaryColor : st.textColor
 
   return (
     <div
@@ -443,16 +457,18 @@ function ButtonPreview({ widget, w, h }: { widget: Widget; w: number; h: number 
         gap: 4,
         padding: '0 6px',
         boxSizing: 'border-box',
-        background: st.primaryColor + '18',
+        background: bgColor,
+        border: `1px solid ${borderColor}`,
         borderRadius: 3,
         overflow: 'hidden',
+        transition: 'background 0.1s, border-color 0.1s',
       }}
     >
-      {showIcon && <SensorIcon name={iconName} size={iconSize} color={st.textColor + 'AA'} />}
+      {showIcon && <SensorIcon name={iconName} size={iconSize} color={textColor + 'CC'} />}
       {showLabel && (
         <span
           style={{
-            color: st.textColor,
+            color: textColor,
             fontSize,
             fontWeight: 600,
             whiteSpace: 'nowrap',
@@ -572,6 +588,8 @@ interface WidgetPreviewProps {
   displayH: number
   /** When true, rev-flash gauges show the activated (red) state */
   revLimiting?: boolean
+  /** When true, button widget renders in its active/pressed visual state */
+  buttonActive?: boolean
 }
 
 export function WidgetPreview({
@@ -579,6 +597,7 @@ export function WidgetPreview({
   displayW: w,
   displayH: h,
   revLimiting = false,
+  buttonActive = false,
 }: WidgetPreviewProps) {
   const { config } = widget
 
@@ -590,7 +609,8 @@ export function WidgetPreview({
   }
   if (config.type === 'bar') return <BarWidgetPreview widget={widget} w={w} h={h} />
   if (config.type === 'warning') return <WarningPreview widget={widget} w={w} h={h} />
-  if (config.type === 'button') return <ButtonPreview widget={widget} w={w} h={h} />
+  if (config.type === 'button')
+    return <ButtonPreview widget={widget} w={w} h={h} active={buttonActive} />
   if (config.type === 'gear') return <GearPreview widget={widget} w={w} h={h} />
   if (config.type === 'timer') return <TimerPreview widget={widget} w={w} h={h} />
   return <ImagePreview w={w} h={h} />

@@ -1,7 +1,7 @@
 // PropertyPanel.tsx — Editor for the selected widget's properties.
 // Layout (x, y, w, h), signal binding, style, and type-specific config.
 
-import React from 'react'
+import React, { useState } from 'react'
 import type {
   Widget,
   SensorIconName,
@@ -13,6 +13,7 @@ import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
 import { IconTrash } from '../icons/Icon'
+import { WidgetPreview } from './WidgetPreview'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,21 +142,65 @@ const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
   { value: 'numeric', label: 'Numeric' },
 ]
 
+interface SizePreset {
+  label: string
+  w: number
+  h: number
+}
+
+// Fixed size presets per display style — all multiples of SNAP_GRID (10px).
+// Arc: square shapes for the semicircle.
+// Bar: narrow + tall (vertical thermometer).
+// Numeric: flat row with just the number.
+const GAUGE_SIZE_PRESETS: Record<GaugeDisplayStyle, SizePreset[]> = {
+  arc: [
+    { label: 'S', w: 60, h: 60 },
+    { label: 'M', w: 80, h: 80 },
+    { label: 'L', w: 120, h: 120 },
+    { label: 'XL', w: 160, h: 160 },
+  ],
+  // Bar: narrow fixed width, either full canvas height or half canvas height.
+  // Canvas widget area = 228px (240 − 12px topbar), rounded to grid.
+  bar: [
+    { label: '½ S', w: 20, h: 110 },
+    { label: '½ M', w: 30, h: 110 },
+    { label: 'Full S', w: 20, h: 220 },
+    { label: 'Full M', w: 30, h: 220 },
+  ],
+  numeric: [
+    { label: 'S', w: 80, h: 20 },
+    { label: 'M', w: 120, h: 30 },
+    { label: 'L', w: 160, h: 40 },
+  ],
+}
+
+// Default preset index when switching to a style (M = index 1)
+const DEFAULT_PRESET_INDEX = 1
+
 function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
   const style = cfg.displayStyle
+  const presets = GAUGE_SIZE_PRESETS[style]
+  const { w, h } = widget.layout
+  const activePresetIdx = presets.findIndex((p) => p.w === w && p.h === h)
 
   return (
     <>
-      {/* Display style selector */}
+      {/* Display style selector — switching also applies the default size */}
       <Field label="Style">
         <div style={{ display: 'flex', gap: 4 }}>
           {GAUGE_STYLES.map(({ value, label }) => (
             <button
               key={value}
               onClick={() => {
-                onChange({ config: { ...cfg, displayStyle: value } })
+                const presetsForStyle = GAUGE_SIZE_PRESETS[value]
+                const defaultPreset = presetsForStyle[DEFAULT_PRESET_INDEX] ?? presetsForStyle[0]
+                if (!defaultPreset) return
+                onChange({
+                  config: { ...cfg, displayStyle: value },
+                  layout: { ...widget.layout, w: defaultPreset.w, h: defaultPreset.h },
+                })
               }}
               style={{
                 flex: 1,
@@ -173,6 +218,42 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
             </button>
           ))}
         </div>
+      </Field>
+
+      {/* Size presets for the current style */}
+      <Field label="Size">
+        <div style={{ display: 'flex', gap: 4 }}>
+          {presets.map((preset, idx) => {
+            const isActive = idx === activePresetIdx
+            return (
+              <button
+                key={preset.label}
+                onClick={() => {
+                  onChange({ layout: { ...widget.layout, w: preset.w, h: preset.h } })
+                }}
+                title={`${String(preset.w)} × ${String(preset.h)} px`}
+                style={{
+                  flex: 1,
+                  padding: '3px 0',
+                  background: isActive ? '#1A2A1A' : '#111111',
+                  border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
+                  borderRadius: 3,
+                  color: isActive ? '#66AA66' : '#555555',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  fontWeight: isActive ? 700 : 400,
+                }}
+              >
+                {preset.label}
+              </button>
+            )
+          })}
+        </div>
+        {activePresetIdx === -1 && (
+          <div style={{ fontSize: 9, color: '#444444', marginTop: 3 }}>
+            {String(w)} × {String(h)} px — custom
+          </div>
+        )}
       </Field>
 
       {/* Numeric-specific fields */}
@@ -523,6 +604,7 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'button' ? widget.config : null
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const pageIds = pages.map((p) => p.id)
+  const [previewActive, setPreviewActive] = useState(false)
 
   if (!cfg) return null
 
@@ -539,8 +621,70 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
     onChange({ config: { ...cfg, actions: [...cfg.actions, action] } })
   }
 
+  const { w, h } = widget.layout
+  const PREVIEW_SCALE = 2
+
   return (
     <>
+      {/* Active state preview */}
+      <Field label="Active state">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+          <div
+            style={{
+              border: `1px solid ${previewActive ? widget.style.primaryColor : '#2A2A2A'}`,
+              borderRadius: 3,
+              overflow: 'hidden',
+              display: 'inline-block',
+            }}
+          >
+            <WidgetPreview
+              widget={widget}
+              displayW={w * PREVIEW_SCALE}
+              displayH={h * PREVIEW_SCALE}
+              buttonActive={previewActive}
+            />
+          </div>
+          <button
+            onClick={() => {
+              setPreviewActive((v) => !v)
+            }}
+            style={{
+              fontSize: 10,
+              padding: '3px 8px',
+              background: previewActive ? '#2A1A1A' : 'transparent',
+              border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
+              borderRadius: 3,
+              color: previewActive ? '#FF4444' : '#555555',
+              cursor: 'pointer',
+            }}
+          >
+            {previewActive ? 'Active' : 'Idle'}
+          </button>
+        </div>
+      </Field>
+
+      <Field label="Mode">
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12,
+            color: '#AAAAAA',
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={cfg.isToggle === true}
+            onChange={(e) => {
+              onChange({ config: { ...cfg, isToggle: e.target.checked } })
+            }}
+          />
+          Toggle (stays active after press)
+        </label>
+      </Field>
+
       <Field label="Label">
         <input
           style={inputStyle}

@@ -136,6 +136,11 @@ export interface ButtonWidgetConfig {
   showIcon?: boolean
   showLabel?: boolean
   /**
+   * When true, the button behaves as a toggle (stays active after press).
+   * When false (default), it is momentary (active only while held).
+   */
+  isToggle?: boolean
+  /**
    * Ordered list of actions to execute on press.
    * A button can have one or more actions, mixing ECU and dashboard types.
    */
