@@ -1,6 +1,6 @@
 # Automotive CANbus Dashboard Workspace
 <p align="center">
-  <img src="logo/logo_3.png" alt="Titre de l'image" width="600">
+  <img src="logo/CANShift_logo.png" alt="Titre de l'image" width="600">
 </p>
 
 Multi-project workspace for a configurable real-time automotive dashboard system.

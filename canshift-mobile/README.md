@@ -1,6 +1,7 @@
-![CANShift](../logo/logo_1.png)
-
 # CANShift Mobile
+<p align="center">
+  <img src="../logo/CANShift_mobile_logo.png" alt="Mobile logo" width="600">
+</p>
 
 iPhone companion app for the automotive dashboard system.
 
