@@ -62,8 +62,7 @@ export default function ConsolePanel() {
 
   const unread = collapsed ? entries.length - seenCount : 0
   const hasError = collapsed && entries.slice(seenCount).some((e) => e.level === 'error')
-  const hasWarn =
-    collapsed && !hasError && entries.slice(seenCount).some((e) => e.level === 'warn')
+  const hasWarn = collapsed && !hasError && entries.slice(seenCount).some((e) => e.level === 'warn')
   const badgeColor = hasError ? '#CC3333' : hasWarn ? '#CC8800' : '#555555'
 
   return (

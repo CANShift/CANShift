@@ -2,8 +2,27 @@
 // Renders at the widget's display size (firmware px × SCALE).
 // All previews use a fixed demo value at ~65 % of range so the shape is clear.
 
-import type { Widget, WidgetLabelPosition } from '@tmbk/canshift-core'
+import type { Widget, WidgetLabelPosition, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
+
+// ---------------------------------------------------------------------------
+// Palette → widget style resolver
+// When a page palette is provided, its semantic colors override the per-widget
+// style defaults. This lets page-level color changes reflect on all widgets.
+// ---------------------------------------------------------------------------
+
+function applyPalette(widget: Widget, palette: PagePalette): Widget {
+  return {
+    ...widget,
+    style: {
+      ...widget.style,
+      primaryColor: palette.primary,
+      warningColor: palette.warning,
+      criticalColor: palette.danger,
+      textColor: palette.text,
+    },
+  }
+}
 
 const DEMO_PCT = 0.65 // fraction of range used for demo value
 
@@ -1126,6 +1145,8 @@ interface WidgetPreviewProps {
   displayW: number
   /** Display height in pixels (= layout.h × SCALE) */
   displayH: number
+  /** Page palette — when provided, overrides widget style semantic colors */
+  palette?: PagePalette
   /** When true, rev-flash gauges show the activated (red) state */
   revLimiting?: boolean
   /** When true, button widget renders in its active/pressed visual state */
@@ -1136,28 +1157,30 @@ export function WidgetPreview({
   widget,
   displayW: w,
   displayH: h,
+  palette,
   revLimiting = false,
   buttonActive = false,
 }: WidgetPreviewProps) {
   ensureBlinkStyle()
 
-  const { config } = widget
-  const danger = isDangerState(widget)
+  const resolved = palette ? applyPalette(widget, palette) : widget
+  const { config } = resolved
+  const danger = isDangerState(resolved)
 
   if (config.type === 'gauge') {
     if (config.displayStyle === 'arc')
       return (
-        <GaugeArcPreview widget={widget} w={w} h={h} revLimiting={revLimiting} danger={danger} />
+        <GaugeArcPreview widget={resolved} w={w} h={h} revLimiting={revLimiting} danger={danger} />
       )
     if (config.displayStyle === 'bar')
-      return <GaugeBarPreview widget={widget} w={w} h={h} danger={danger} />
-    return <GaugeNumericPreview widget={widget} w={w} h={h} danger={danger} />
+      return <GaugeBarPreview widget={resolved} w={w} h={h} danger={danger} />
+    return <GaugeNumericPreview widget={resolved} w={w} h={h} danger={danger} />
   }
-  if (config.type === 'bar') return <BarWidgetPreview widget={widget} w={w} h={h} />
-  if (config.type === 'warning') return <WarningPreview widget={widget} w={w} h={h} />
+  if (config.type === 'bar') return <BarWidgetPreview widget={resolved} w={w} h={h} />
+  if (config.type === 'warning') return <WarningPreview widget={resolved} w={w} h={h} />
   if (config.type === 'button')
-    return <ButtonPreview widget={widget} w={w} h={h} active={buttonActive} />
-  if (config.type === 'gear') return <GearPreview widget={widget} w={w} h={h} />
-  if (config.type === 'timer') return <TimerPreview widget={widget} w={w} h={h} />
+    return <ButtonPreview widget={resolved} w={w} h={h} active={buttonActive} />
+  if (config.type === 'gear') return <GearPreview widget={resolved} w={w} h={h} />
+  if (config.type === 'timer') return <TimerPreview widget={resolved} w={w} h={h} />
   return <ImagePreview w={w} h={h} />
 }

@@ -2,11 +2,12 @@
 // Renders all widgets as interactive boxes; supports click-to-select and drag-to-move.
 
 import { useRef, useCallback, useEffect, useState } from 'react'
-import type { PageConfig, TopBarConfig, Widget } from '@tmbk/canshift-core'
+import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
+import DiagnosticsPanel from './DiagnosticsPanel'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
 
@@ -55,6 +56,7 @@ let drag: DragState | null = null
 
 interface WidgetBoxProps {
   widget: Widget
+  palette: PagePalette
   isSelected: boolean
   isOverlapping: boolean
   revLimiting: boolean
@@ -64,6 +66,7 @@ interface WidgetBoxProps {
 
 function WidgetBox({
   widget,
+  palette,
   isSelected,
   isOverlapping,
   revLimiting,
@@ -74,6 +77,7 @@ function WidgetBox({
   const typeColor = getBorderColor(type)
   const borderColor = isOverlapping ? '#FF2222' : isSelected ? '#FFFFFF' : typeColor
   const borderWidth = isSelected || isOverlapping ? 2 : 1
+  const bgColor = isOverlapping ? '#2A0000' : palette.surface
 
   return (
     <div
@@ -89,7 +93,7 @@ function WidgetBox({
         top: layout.y * SCALE,
         width: layout.w * SCALE,
         height: layout.h * SCALE,
-        background: isOverlapping ? '#2A0000' : '#0D0D0D',
+        background: bgColor,
         border: `${String(borderWidth)}px solid ${borderColor}`,
         borderRadius: 3,
         boxSizing: 'border-box',
@@ -105,6 +109,7 @@ function WidgetBox({
     >
       <WidgetPreview
         widget={widget}
+        palette={palette}
         displayW={layout.w * SCALE}
         displayH={layout.h * SCALE}
         revLimiting={revLimiting}
@@ -286,7 +291,9 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
 
   const widgetAreaH = 240 - topBar.height
+  const palette: PagePalette = page.palette
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [diagOpen, setDiagOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
 
@@ -508,9 +515,19 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 onPointerUp={(e) => {
                   if (!swipeRef.current) return
                   const dx = e.clientX - swipeRef.current.startX
-                  const dy = Math.abs(e.clientY - swipeRef.current.startY)
+                  const dy = e.clientY - swipeRef.current.startY
                   swipeRef.current = null
-                  if (dy > 20 || Math.abs(dx) < 40) return // not a horizontal swipe
+
+                  // Vertical swipe takes priority over horizontal
+                  if (Math.abs(dy) > 28) {
+                    if (dy < 0 && !diagOpen && !settingsOpen) setDiagOpen(true) // swipe up → open diag
+                    if (dy > 0 && diagOpen) setDiagOpen(false) // swipe down → close diag
+                    return
+                  }
+
+                  // Horizontal swipe — page navigation (only when overlays are closed)
+                  if (diagOpen || settingsOpen) return
+                  if (Math.abs(dy) > 20 || Math.abs(dx) < 40) return
                   const currentIdx = pages.findIndex((p) => p.id === page.id)
                   const nextIdx = dx < 0 ? currentIdx + 1 : currentIdx - 1
                   const nextPage = pages[nextIdx]
@@ -545,6 +562,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   <WidgetBox
                     key={widget.id}
                     widget={widget}
+                    palette={palette}
                     isSelected={widget.id === selectedWidgetId}
                     isOverlapping={overlappingIds.has(widget.id)}
                     revLimiting={revLimiting}
@@ -553,8 +571,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   />
                 ))}
 
-                {/* Screen settings overlay page */}
+                {/* Screen settings overlay */}
                 {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
+
+                {/* Diagnostics overlay — swipe up to open, swipe down to close */}
+                {diagOpen && <DiagnosticsPanel scale={SCALE} />}
 
                 {/* Rev limit flash overlay — studio-only simulation */}
                 {revLimiting && (
