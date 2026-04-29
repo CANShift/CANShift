@@ -2,10 +2,36 @@
 // Renders at the widget's display size (firmware px × SCALE).
 // All previews use a fixed demo value at ~65 % of range so the shape is clear.
 
-import type { Widget } from '@tmbk/canshift-core'
+import type { Widget, WidgetLabelPosition } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 
 const DEMO_PCT = 0.65 // fraction of range used for demo value
+
+// ---------------------------------------------------------------------------
+// Label overlay helpers
+// ---------------------------------------------------------------------------
+
+function svgLabelAttrs(
+  pos: WidgetLabelPosition,
+  w: number,
+  h: number,
+  pad = 4
+): {
+  x: number
+  y: number
+  textAnchor: 'start' | 'middle' | 'end'
+  dominantBaseline: 'hanging' | 'auto'
+} {
+  const isTop = pos.startsWith('top')
+  const isCenter = pos.endsWith('center')
+  const isRight = pos.endsWith('right')
+  return {
+    x: isCenter ? w / 2 : isRight ? w - pad : pad,
+    y: isTop ? pad + 6 : h - pad - 1,
+    textAnchor: isCenter ? 'middle' : isRight ? 'end' : 'start',
+    dominantBaseline: isTop ? 'hanging' : 'auto',
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Arc-path helpers (SVG coordinate system: x→right, y→down)
@@ -159,7 +185,7 @@ function GaugeArcPreview({
       >
         {valueStr}
       </text>
-      {/* Suffix label */}
+      {/* Suffix / unit label below value */}
       {cfg.suffix && (
         <text
           x={cx}
@@ -173,18 +199,41 @@ function GaugeArcPreview({
           {cfg.suffix}
         </text>
       )}
+      {/* Widget label */}
+      {cfg.label &&
+        (() => {
+          const pos = cfg.labelPosition ?? 'top-left'
+          const lAttrs = svgLabelAttrs(pos, w, h)
+          return (
+            <text
+              x={lAttrs.x}
+              y={lAttrs.y}
+              textAnchor={lAttrs.textAnchor}
+              dominantBaseline={lAttrs.dominantBaseline}
+              fill={st.textColor + '77'}
+              fontSize={Math.max(6, Math.min(9, w * 0.1))}
+              fontFamily="sans-serif"
+              fontWeight="600"
+              letterSpacing="0.04em"
+            >
+              {cfg.label}
+            </text>
+          )
+        })()}
     </svg>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Gauge — Vertical bar style
+// Gauge — Vertical bar style (also renders horizontal when barOrientation='horizontal')
 // ---------------------------------------------------------------------------
 
 function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
+
+  const isHorizontal = cfg.barOrientation === 'horizontal'
 
   const range = cfg.maxValue - cfg.minValue || 1
   const warnPct = Math.max(0, Math.min(1, (cfg.warningLevel - cfg.minValue) / range))
@@ -193,6 +242,84 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
 
   const demoValue = cfg.minValue + range * valuePct
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
+
+  if (isHorizontal) {
+    const valueColor =
+      valuePct >= dangerPct
+        ? st.criticalColor
+        : valuePct >= warnPct
+          ? st.warningColor
+          : st.primaryColor
+    const barH = Math.max(4, h * 0.35)
+    const fillW = w * valuePct
+    const textY = (h - barH) / 2
+    const labelPos = cfg.labelPosition ?? 'bottom-left'
+    const labelIsTop = labelPos.startsWith('top')
+    return (
+      <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
+        <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
+        {dangerPct > warnPct && (
+          <rect
+            x={w * warnPct}
+            y={(h - barH) / 2}
+            width={(dangerPct - warnPct) * w}
+            height={barH}
+            fill={st.warningColor + '35'}
+          />
+        )}
+        <rect
+          x={w * dangerPct}
+          y={(h - barH) / 2}
+          width={(1 - dangerPct) * w}
+          height={barH}
+          fill={st.criticalColor + '35'}
+        />
+        <line
+          x1={w * dangerPct}
+          y1={(h - barH) / 2 - 2}
+          x2={w * dangerPct}
+          y2={(h + barH) / 2 + 2}
+          stroke={st.criticalColor}
+          strokeWidth={1}
+          strokeDasharray="2 2"
+        />
+        <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={valueColor} rx={2} />
+        {h > 18 && (
+          <text
+            x={w / 2}
+            y={textY > 10 ? textY - 2 : h - textY + 2}
+            textAnchor="middle"
+            dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
+            fill={valueColor}
+            fontSize={Math.max(7, Math.min(12, h * 0.32))}
+            fontWeight="700"
+            fontFamily="monospace"
+          >
+            {valueStr}
+            {cfg.suffix ?? ''}
+          </text>
+        )}
+        {cfg.label &&
+          (() => {
+            const lAttrs = svgLabelAttrs(labelPos, w, h)
+            return (
+              <text
+                x={lAttrs.x}
+                y={labelIsTop ? 8 : h - 3}
+                textAnchor={lAttrs.textAnchor}
+                dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
+                fill={st.textColor + '77'}
+                fontSize={Math.max(6, Math.min(9, h * 0.22))}
+                fontFamily="sans-serif"
+                fontWeight="600"
+              >
+                {cfg.label}
+              </text>
+            )
+          })()}
+      </svg>
+    )
+  }
 
   const valueColor =
     valuePct >= dangerPct
@@ -285,6 +412,26 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
         {valueStr}
         {cfg.suffix ?? ''}
       </text>
+      {/* Widget label */}
+      {cfg.label &&
+        (() => {
+          const pos = cfg.labelPosition ?? 'top-left'
+          const lAttrs = svgLabelAttrs(pos, w, h)
+          return (
+            <text
+              x={lAttrs.x}
+              y={lAttrs.y}
+              textAnchor={lAttrs.textAnchor}
+              dominantBaseline={lAttrs.dominantBaseline}
+              fill={st.textColor + '77'}
+              fontSize={Math.max(5, Math.min(8, w * 0.22))}
+              fontFamily="sans-serif"
+              fontWeight="600"
+            >
+              {cfg.label}
+            </text>
+          )
+        })()}
     </svg>
   )
 }
@@ -311,15 +458,25 @@ function GaugeNumericPreview({ widget, w, h }: { widget: Widget; w: number; h: n
     valuePct >= dangerPct ? st.criticalColor : valuePct >= warnPct ? st.warningColor : st.textColor
 
   const iconName = cfg.iconName ?? null
-  const fontSize = Math.max(10, Math.min(st.fontSize, h * 0.5, w * 0.35))
+  // Font auto-scales to widget dimensions — no manual cap
+  const fontSize = Math.max(10, Math.min(h * 0.5, w * 0.35))
   const hasIcon = iconName !== null
   const iconSize = Math.min(h * 0.38, w * 0.28, 24)
+  const labelText = cfg.label ?? null
+  const labelPos = cfg.labelPosition ?? 'top-left'
+
+  const isLabelTop = labelText !== null && labelPos.startsWith('top')
+  const isLabelRight = labelPos.endsWith('right')
+  const isLabelCenter = labelPos.endsWith('center')
+  const labelAlign = isLabelCenter ? 'center' : isLabelRight ? 'right' : 'left'
+  const labelFontSize = Math.max(6, Math.min(9, w * 0.1))
 
   return (
     <div
       style={{
         width: w,
         height: h,
+        position: 'relative',
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
@@ -330,6 +487,30 @@ function GaugeNumericPreview({ widget, w, h }: { widget: Widget; w: number; h: n
         overflow: 'hidden',
       }}
     >
+      {/* Widget label overlay */}
+      {labelText !== null && (
+        <span
+          style={{
+            position: 'absolute',
+            ...(isLabelTop ? { top: 2 } : { bottom: 2 }),
+            ...(isLabelCenter
+              ? { left: '50%', transform: 'translateX(-50%)' }
+              : isLabelRight
+                ? { right: 3 }
+                : { left: 3 }),
+            fontSize: labelFontSize,
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: st.textColor + '77',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.04em',
+            textAlign: labelAlign,
+          }}
+        >
+          {labelText}
+        </span>
+      )}
       {hasIcon && <SensorIcon name={iconName} size={iconSize} color={valueColor + 'AA'} />}
       <span
         style={{
@@ -364,6 +545,8 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
   const barH = Math.max(4, h * 0.35)
   const textY = (h - barH) / 2
   const valueStr = (cfg.prefix ?? '') + String(Math.round(DEMO_PCT * 100)) + (cfg.suffix ?? '')
+  const labelPos = cfg.labelPosition ?? 'bottom-center'
+  const labelIsTop = labelPos === 'top-center'
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
@@ -371,7 +554,7 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
       <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
       {/* Fill */}
       <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={st.primaryColor} rx={2} />
-      {/* Label */}
+      {/* Value readout */}
       {h > 18 && (
         <text
           x={w / 2}
@@ -383,6 +566,22 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
           fontFamily="monospace"
         >
           {valueStr}
+        </text>
+      )}
+      {/* Widget label */}
+      {cfg.label && (
+        <text
+          x={w / 2}
+          y={labelIsTop ? 8 : h - 3}
+          textAnchor="middle"
+          dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
+          fill={st.textColor + '77'}
+          fontSize={Math.max(6, Math.min(9, h * 0.22))}
+          fontFamily="sans-serif"
+          fontWeight="600"
+          letterSpacing="0.04em"
+        >
+          {cfg.label}
         </text>
       )}
     </svg>
@@ -526,7 +725,7 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
   const cfg = widget.config
   const st = widget.style
   const timeStr = cfg.format === 'ss.mmm' ? '12.847' : '01:23'
-  const fontSize = Math.max(9, Math.min(st.fontSize, h * 0.44, w * 0.22))
+  const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
 
   return (
     <div

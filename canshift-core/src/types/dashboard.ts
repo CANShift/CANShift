@@ -3,6 +3,18 @@
 import type { HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer } from './common'
 
 // ---------------------------------------------------------------------------
+// Label position — used by gauge and bar widgets
+// ---------------------------------------------------------------------------
+
+export type WidgetLabelPosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right'
+
+// ---------------------------------------------------------------------------
 // Known sensor icon identifiers (built-in icon set)
 // Studio renders these as SVGs; firmware uses matching bitmaps from SPIFFS.
 // ---------------------------------------------------------------------------
@@ -64,6 +76,14 @@ export interface GaugeWidgetConfig {
    * Firmware triggers a full-screen red blink; preview shows a red ring.
    */
   revFlash?: boolean
+  /**
+   * Orientation for the bar display style.
+   * 'vertical' (default) = thermometer, 'horizontal' = progress bar.
+   */
+  barOrientation?: 'vertical' | 'horizontal'
+  /** Short label shown at a fixed corner of the widget (e.g. "RPM", "Coolant") */
+  label?: string
+  labelPosition?: WidgetLabelPosition
 }
 
 export interface WarningWidgetConfig {
@@ -160,6 +180,9 @@ export interface BarWidgetConfig {
   suffix?: string
   /** Icon displayed at the start of the bar */
   iconName?: SensorIconName
+  /** Short label shown above or below the bar */
+  label?: string
+  labelPosition?: 'top-center' | 'bottom-center'
 }
 
 export interface GearWidgetConfig {

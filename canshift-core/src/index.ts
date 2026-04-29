@@ -23,6 +23,7 @@ export type {
   GearWidgetConfig,
   ImageWidgetConfig,
   SensorIconName,
+  WidgetLabelPosition,
   // Button actions
   ButtonAction,
   DashboardButtonAction,

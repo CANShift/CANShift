@@ -5,8 +5,11 @@ import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 
+// 'bar' is not in the palette — it is a display style inside gauge
+type PaletteWidgetType = Exclude<WidgetType, 'bar'>
+
 interface PaletteItem {
-  type: WidgetType
+  type: PaletteWidgetType
   label: string
   icon: SensorIconName
   defaultSignal: string
@@ -20,16 +23,8 @@ const PALETTE_ITEMS: PaletteItem[] = [
     label: 'Gauge',
     icon: 'rpm',
     defaultSignal: 'rpm',
-    defaultW: 80,
-    defaultH: 80,
-  },
-  {
-    type: 'bar',
-    label: 'Bar',
-    icon: 'throttle',
-    defaultSignal: 'tps',
     defaultW: 100,
-    defaultH: 20,
+    defaultH: 100,
   },
   {
     type: 'warning',
@@ -39,10 +34,17 @@ const PALETTE_ITEMS: PaletteItem[] = [
     defaultW: 40,
     defaultH: 40,
   },
-  { type: 'button', label: 'Button', icon: 'cog', defaultSignal: '', defaultW: 60, defaultH: 30 },
+  { type: 'button', label: 'Button', icon: 'cog', defaultSignal: '', defaultW: 100, defaultH: 30 },
   { type: 'gear', label: 'Gear', icon: 'gear', defaultSignal: 'gear', defaultW: 50, defaultH: 60 },
-  { type: 'timer', label: 'Timer', icon: 'timer', defaultSignal: '', defaultW: 80, defaultH: 30 },
-  { type: 'image', label: 'Image', icon: 'warning', defaultSignal: '', defaultW: 60, defaultH: 60 },
+  { type: 'timer', label: 'Timer', icon: 'timer', defaultSignal: '', defaultW: 100, defaultH: 30 },
+  {
+    type: 'image',
+    label: 'Image',
+    icon: 'warning',
+    defaultSignal: '',
+    defaultW: 100,
+    defaultH: 60,
+  },
 ]
 
 function generateId(type: string): string {
@@ -72,8 +74,6 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
             decimalPlaces: 0,
             iconName: item.icon,
           }
-        case 'bar':
-          return { type: 'bar' as const, decimalPlaces: 0, iconName: item.icon }
         case 'warning':
           return {
             type: 'warning' as const,

@@ -8,6 +8,7 @@ import type {
   WidgetType,
   ButtonAction,
   GaugeDisplayStyle,
+  WidgetLabelPosition,
 } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
@@ -148,19 +149,22 @@ interface SizePreset {
   h: number
 }
 
-// Fixed size presets per display style — all multiples of SNAP_GRID (10px).
-// Arc: square shapes for the semicircle.
-// Bar: narrow + tall (vertical thermometer).
-// Numeric: flat row with just the number.
+// Fixed size presets per display style — grid-aligned to SNAP_GRID (10px).
+//
+// Column system: 3 × 100px + 2 × 10px gap = 320px (exact canvas fill).
+//   1-col = 100px  |  2-col = 210px (100+10+100)  |  3-col = 320px
+//
+// Arc:     square — S=70, M=100 (3/row), L=150 (2/row)
+// Bar:     vertical thermometer — half or full canvas height
+// Numeric: flat wide — S=100 (3/row), M=210 (2-col), L=320 (full width)
 const GAUGE_SIZE_PRESETS: Record<GaugeDisplayStyle, SizePreset[]> = {
   arc: [
-    { label: 'S', w: 60, h: 60 },
-    { label: 'M', w: 80, h: 80 },
-    { label: 'L', w: 120, h: 120 },
-    { label: 'XL', w: 160, h: 160 },
+    { label: 'S', w: 70, h: 70 },
+    { label: 'M', w: 100, h: 100 },
+    { label: 'L', w: 150, h: 150 },
   ],
   // Bar: narrow fixed width, either full canvas height or half canvas height.
-  // Canvas widget area = 228px (240 − 12px topbar), rounded to grid.
+  // Canvas widget area ≈ 220px (240 − topbar), rounded to grid.
   bar: [
     { label: '½ S', w: 20, h: 110 },
     { label: '½ M', w: 30, h: 110 },
@@ -168,11 +172,22 @@ const GAUGE_SIZE_PRESETS: Record<GaugeDisplayStyle, SizePreset[]> = {
     { label: 'Full M', w: 30, h: 220 },
   ],
   numeric: [
-    { label: 'S', w: 60, h: 30 },
-    { label: 'M', w: 80, h: 40 },
-    { label: 'L', w: 100, h: 50 },
+    { label: 'S', w: 100, h: 40 },
+    { label: 'M', w: 210, h: 40 },
+    { label: 'L', w: 320, h: 40 },
   ],
 }
+
+// Common automotive unit quick-select chips
+const COMMON_UNITS = ['rpm', 'km/h', '%', '°C', 'bar', 'V', 'λ', 'AFR', 'kPa', 'psi', 's']
+
+// Label position options for gauge widgets
+const GAUGE_LABEL_POSITIONS: { value: WidgetLabelPosition; label: string }[] = [
+  { value: 'top-left', label: '↖ TL' },
+  { value: 'top-right', label: '↗ TR' },
+  { value: 'bottom-left', label: '↙ BL' },
+  { value: 'bottom-right', label: '↘ BR' },
+]
 
 // Default preset index when switching to a style (M = index 1)
 const DEFAULT_PRESET_INDEX = 1
@@ -256,7 +271,46 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
         )}
       </Field>
 
-      {/* Numeric-specific fields */}
+      {/* Unit / suffix — shown for all styles */}
+      <Field label="Unit">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 }}>
+          {COMMON_UNITS.map((u) => (
+            <button
+              key={u}
+              onClick={() => {
+                const next = { ...cfg }
+                if (cfg.suffix === u) delete next.suffix
+                else next.suffix = u
+                onChange({ config: next })
+              }}
+              style={{
+                padding: '2px 6px',
+                fontSize: 10,
+                background: cfg.suffix === u ? '#1A2A1A' : '#111111',
+                border: `1px solid ${cfg.suffix === u ? '#448844' : '#2A2A2A'}`,
+                borderRadius: 3,
+                color: cfg.suffix === u ? '#66AA66' : '#555555',
+                cursor: 'pointer',
+              }}
+            >
+              {u}
+            </button>
+          ))}
+        </div>
+        <input
+          style={inputStyle}
+          placeholder="custom…"
+          value={cfg.suffix ?? ''}
+          onChange={(e) => {
+            const next = { ...cfg }
+            if (e.target.value) next.suffix = e.target.value
+            else delete next.suffix
+            onChange({ config: next })
+          }}
+        />
+      </Field>
+
+      {/* Numeric-specific: prefix + decimals */}
       {style === 'numeric' && (
         <>
           <Row>
@@ -272,32 +326,64 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                 }}
               />
             </Field>
-            <Field label="Suffix">
+            <Field label="Decimals">
               <input
-                style={inputStyle}
-                value={cfg.suffix ?? ''}
+                type="number"
+                min={0}
+                max={4}
+                style={numberInputStyle}
+                value={cfg.decimalPlaces}
                 onChange={(e) => {
-                  const next = { ...cfg }
-                  if (e.target.value) next.suffix = e.target.value
-                  else delete next.suffix
-                  onChange({ config: next })
+                  onChange({ config: { ...cfg, decimalPlaces: Number(e.target.value) } })
                 }}
               />
             </Field>
           </Row>
-          <Field label="Decimals">
-            <input
-              type="number"
-              min={0}
-              max={4}
-              style={{ ...numberInputStyle, width: 60 }}
-              value={cfg.decimalPlaces}
-              onChange={(e) => {
-                onChange({ config: { ...cfg, decimalPlaces: Number(e.target.value) } })
-              }}
-            />
-          </Field>
         </>
+      )}
+
+      {/* Bar orientation — vertical thermometer or horizontal progress */}
+      {style === 'bar' && (
+        <Field label="Orientation">
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['vertical', 'horizontal'] as const).map((dir) => {
+              const isActive = (cfg.barOrientation ?? 'vertical') === dir
+              return (
+                <button
+                  key={dir}
+                  onClick={() => {
+                    // Swap w/h when switching orientation to keep visual ratio sensible
+                    const currentH =
+                      cfg.barOrientation === 'horizontal' ? widget.layout.w : widget.layout.h
+                    const currentW =
+                      cfg.barOrientation === 'horizontal' ? widget.layout.h : widget.layout.w
+                    const newLayout =
+                      dir === 'horizontal'
+                        ? { ...widget.layout, w: currentH, h: currentW }
+                        : { ...widget.layout, w: currentW, h: currentH }
+                    onChange({
+                      config: { ...cfg, barOrientation: dir },
+                      layout: newLayout,
+                    })
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '3px 0',
+                    background: isActive ? '#2A2A3A' : '#111111',
+                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: isActive ? '#7788CC' : '#555555',
+                    cursor: 'pointer',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {dir === 'vertical' ? '↕ Vertical' : '↔ Horizontal'}
+                </button>
+              )
+            })}
+          </div>
+        </Field>
       )}
 
       {/* Arc / bar shared range fields */}
@@ -370,6 +456,50 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
             </>
           )}
         </>
+      )}
+
+      {/* Widget label */}
+      <Field label="Label">
+        <input
+          style={inputStyle}
+          placeholder="e.g. RPM, Coolant…"
+          value={cfg.label ?? ''}
+          onChange={(e) => {
+            const next = { ...cfg }
+            if (e.target.value) next.label = e.target.value
+            else delete next.label
+            onChange({ config: next })
+          }}
+        />
+      </Field>
+      {cfg.label && (
+        <Field label="Label pos.">
+          <div style={{ display: 'flex', gap: 3 }}>
+            {GAUGE_LABEL_POSITIONS.map(({ value, label }) => {
+              const isActive = (cfg.labelPosition ?? 'top-left') === value
+              return (
+                <button
+                  key={value}
+                  onClick={() => {
+                    onChange({ config: { ...cfg, labelPosition: value } })
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '3px 0',
+                    fontSize: 9,
+                    background: isActive ? '#2A2A3A' : '#111111',
+                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: isActive ? '#7788CC' : '#555555',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </Field>
       )}
 
       <Field label="Icon">
@@ -774,32 +904,100 @@ function BarFields({ widget, onChange }: ConfigFieldsProps) {
   if (!cfg) return null
   return (
     <>
-      <Row>
-        <Field label="Prefix">
-          <input
-            style={inputStyle}
-            value={cfg.prefix ?? ''}
-            onChange={(e) => {
-              const next = { ...cfg }
-              if (e.target.value) next.prefix = e.target.value
-              else delete next.prefix
-              onChange({ config: next })
-            }}
-          />
+      <Field label="Unit">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 }}>
+          {COMMON_UNITS.map((u) => (
+            <button
+              key={u}
+              onClick={() => {
+                const next = { ...cfg }
+                if (cfg.suffix === u) delete next.suffix
+                else next.suffix = u
+                onChange({ config: next })
+              }}
+              style={{
+                padding: '2px 6px',
+                fontSize: 10,
+                background: cfg.suffix === u ? '#1A2A1A' : '#111111',
+                border: `1px solid ${cfg.suffix === u ? '#448844' : '#2A2A2A'}`,
+                borderRadius: 3,
+                color: cfg.suffix === u ? '#66AA66' : '#555555',
+                cursor: 'pointer',
+              }}
+            >
+              {u}
+            </button>
+          ))}
+        </div>
+        <Row>
+          <Field label="Prefix">
+            <input
+              style={inputStyle}
+              value={cfg.prefix ?? ''}
+              onChange={(e) => {
+                const next = { ...cfg }
+                if (e.target.value) next.prefix = e.target.value
+                else delete next.prefix
+                onChange({ config: next })
+              }}
+            />
+          </Field>
+          <Field label="Suffix">
+            <input
+              style={inputStyle}
+              value={cfg.suffix ?? ''}
+              onChange={(e) => {
+                const next = { ...cfg }
+                if (e.target.value) next.suffix = e.target.value
+                else delete next.suffix
+                onChange({ config: next })
+              }}
+            />
+          </Field>
+        </Row>
+      </Field>
+      <Field label="Label">
+        <input
+          style={inputStyle}
+          placeholder="e.g. TPS, Throttle…"
+          value={cfg.label ?? ''}
+          onChange={(e) => {
+            const next = { ...cfg }
+            if (e.target.value) next.label = e.target.value
+            else delete next.label
+            onChange({ config: next })
+          }}
+        />
+      </Field>
+      {cfg.label && (
+        <Field label="Label pos.">
+          <div style={{ display: 'flex', gap: 3 }}>
+            {(['top-center', 'bottom-center'] as const).map((pos) => {
+              const isActive = (cfg.labelPosition ?? 'bottom-center') === pos
+              return (
+                <button
+                  key={pos}
+                  onClick={() => {
+                    onChange({ config: { ...cfg, labelPosition: pos } })
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '3px 0',
+                    fontSize: 10,
+                    background: isActive ? '#2A2A3A' : '#111111',
+                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: isActive ? '#7788CC' : '#555555',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {pos === 'top-center' ? '↑ Top' : '↓ Bottom'}
+                </button>
+              )
+            })}
+          </div>
         </Field>
-        <Field label="Suffix">
-          <input
-            style={inputStyle}
-            value={cfg.suffix ?? ''}
-            onChange={(e) => {
-              const next = { ...cfg }
-              if (e.target.value) next.suffix = e.target.value
-              else delete next.suffix
-              onChange({ config: next })
-            }}
-          />
-        </Field>
-      </Row>
+      )}
       <Field label="Icon">
         <IconPicker
           value={cfg.iconName}
@@ -969,7 +1167,17 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             style={{ ...inputStyle, cursor: 'pointer' }}
             value={widget.signal}
             onChange={(e) => {
-              patch({ signal: e.target.value })
+              const newSignal = e.target.value
+              const signalDef = signals.find((s) => s.name === newSignal)
+              const p: Partial<Widget> = { signal: newSignal }
+              // Auto-fill unit suffix from signal definition
+              if (
+                signalDef?.unit &&
+                (widget.config.type === 'gauge' || widget.config.type === 'bar')
+              ) {
+                p.config = { ...widget.config, suffix: signalDef.unit }
+              }
+              patch(p)
             }}
           >
             <option value="">— none —</option>
@@ -982,66 +1190,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           </select>
         </Field>
       )}
-
-      {/* Layout */}
-      <div
-        style={{
-          fontSize: 10,
-          color: '#444444',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          marginBottom: 6,
-          marginTop: 2,
-        }}
-      >
-        Layout
-      </div>
-      <Row>
-        <Field label="X">
-          <input
-            type="number"
-            style={numberInputStyle}
-            value={widget.layout.x}
-            onChange={(e) => {
-              patch({ layout: { ...widget.layout, x: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-        <Field label="Y">
-          <input
-            type="number"
-            style={numberInputStyle}
-            value={widget.layout.y}
-            onChange={(e) => {
-              patch({ layout: { ...widget.layout, y: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-      </Row>
-      <Row>
-        <Field label="W">
-          <input
-            type="number"
-            min={8}
-            style={numberInputStyle}
-            value={widget.layout.w}
-            onChange={(e) => {
-              patch({ layout: { ...widget.layout, w: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-        <Field label="H">
-          <input
-            type="number"
-            min={8}
-            style={numberInputStyle}
-            value={widget.layout.h}
-            onChange={(e) => {
-              patch({ layout: { ...widget.layout, h: Number(e.target.value) } })
-            }}
-          />
-        </Field>
-      </Row>
 
       {/* Style */}
       <div
@@ -1094,19 +1242,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           />
         </Field>
       </Row>
-      <Field label="Font size">
-        <input
-          type="number"
-          min={8}
-          max={72}
-          style={{ ...numberInputStyle, width: 70 }}
-          value={widget.style.fontSize}
-          onChange={(e) => {
-            patch({ style: { ...widget.style, fontSize: Number(e.target.value) } })
-          }}
-        />
-      </Field>
-
       {/* Type-specific config */}
       {ConfigFields && (
         <>
