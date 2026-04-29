@@ -7,6 +7,7 @@ import ThemeRoute from './routes/ThemeRoute'
 import TopBar from './components/shared/TopBar'
 import ConsolePanel from './components/shared/ConsolePanel'
 import StatusBar from './components/shared/StatusBar'
+import NoDeviceBanner from './components/shared/NoDeviceBanner'
 import { useMenuEvents } from './hooks/useMenuEvents'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
       }}
     >
       <TopBar />
+      <NoDeviceBanner />
 
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         <Routes>
