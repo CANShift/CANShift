@@ -5,7 +5,7 @@ import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
 import ThemeRoute from './routes/ThemeRoute'
 import TopBar from './components/shared/TopBar'
-import StatusBar from './components/shared/StatusBar'
+import ConsolePanel from './components/shared/ConsolePanel'
 import { useMenuEvents } from './hooks/useMenuEvents'
 
 export default function App() {
@@ -33,7 +33,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <StatusBar />
+      <ConsolePanel />
     </div>
   )
 }

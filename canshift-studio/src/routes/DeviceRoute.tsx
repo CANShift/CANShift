@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useDashboardStore } from '../stores/dashboard.store'
+import { useLogStore } from '../stores/log.store'
 import { usbService } from '../services/ipc.service'
 import { useUsbConnection } from '../hooks/useUsbConnection'
 
@@ -35,6 +36,7 @@ export default function DeviceRoute() {
 
   const config = useDashboardStore((s) => s.config)
   const isDirty = useDashboardStore((s) => s.isDirty)
+  const log = useLogStore((s) => s.push)
 
   const {
     ports,
@@ -54,25 +56,32 @@ export default function DeviceRoute() {
   const handlePushConfig = () => {
     if (!config || !connected) return
     setSyncing(true)
+    log('info', 'Pushing config to device…')
     usbService
       .pushConfig(config)
       .then((result) => {
         if (result.success) {
           setSyncComplete(new Date())
+          log('success', 'Config pushed successfully')
         } else {
-          setError(result.error ?? 'Push failed')
+          const msg = result.error ?? 'Push failed'
+          setError(msg)
           setSyncing(false)
+          log('error', msg)
         }
       })
       .catch(() => {
         setError('Push error')
         setSyncing(false)
+        log('error', 'Config push error')
       })
   }
 
   const handleReboot = () => {
+    log('info', 'Rebooting device…')
     usbService.reboot().catch(() => {
       setError('Reboot failed')
+      log('error', 'Reboot failed')
     })
   }
 
