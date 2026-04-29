@@ -170,53 +170,55 @@ interface DashTopBarProps {
 }
 
 function DashTopBar({ topBar, pageName }: DashTopBarProps) {
+  // All sizes derived from bar height so content scales correctly at any height
+  const h       = topBar.height * SCALE
+  const dot     = Math.round(h * 0.30)
+  const fs      = Math.round(h * 0.45)
+  const sep     = Math.round(h * 0.55)
+  const gap     = Math.round(h * 0.25)
+  const px      = Math.round(h * 0.40)
+
   return (
     <div
       style={{
-        height: topBar.height * SCALE,
+        height: h,
         flexShrink: 0,
         background: topBar.bgColor,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: `0 ${String(SCALE * 4)}px`,
+        padding: `0 ${String(px)}px`,
         boxSizing: 'border-box',
         borderBottom: '1px solid #1E1E1E',
         userSelect: 'none',
         pointerEvents: 'none',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      {/* Left — ECU connection status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: SCALE * 3 }}>
+      {/* Left — ECU + CAN status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap }}>
         <span
           style={{
             display: 'inline-block',
-            width: SCALE * 4,
-            height: SCALE * 4,
+            width: dot,
+            height: dot,
             borderRadius: '50%',
             background: '#44CC44',
-            boxShadow: '0 0 4px #44CC4488',
+            boxShadow: '0 0 3px #44CC4488',
             flexShrink: 0,
           }}
         />
-        <span style={{ fontSize: SCALE * 5.5, color: topBar.textColor, letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: fs, color: topBar.textColor, letterSpacing: '0.04em', lineHeight: 1 }}>
           ECU
         </span>
-        <span
-          style={{
-            width: 1,
-            height: SCALE * 6,
-            background: '#2A2A2A',
-            margin: `0 ${String(SCALE)}px`,
-          }}
-        />
-        <span style={{ fontSize: SCALE * 5.5, color: '#444444' }}>CAN</span>
+        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
+        <span style={{ fontSize: fs, color: '#444444', lineHeight: 1 }}>CAN</span>
         <span
           style={{
             display: 'inline-block',
-            width: SCALE * 4,
-            height: SCALE * 4,
+            width: dot,
+            height: dot,
             borderRadius: '50%',
             background: '#44CC44',
             flexShrink: 0,
@@ -228,30 +230,26 @@ function DashTopBar({ topBar, pageName }: DashTopBarProps) {
       {topBar.showMapName && (
         <span
           style={{
-            fontSize: SCALE * 6,
+            fontSize: fs,
             color: topBar.textColor,
             fontWeight: 600,
             letterSpacing: '0.06em',
+            lineHeight: 1,
             position: 'absolute',
             left: '50%',
             transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap',
           }}
         >
           {pageName.toUpperCase()}
         </span>
       )}
 
-      {/* Right — battery + time */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: SCALE * 4 }}>
-        <span style={{ fontSize: SCALE * 5.5, color: '#888888' }}>12.4V</span>
-        <span
-          style={{
-            width: 1,
-            height: SCALE * 6,
-            background: '#2A2A2A',
-          }}
-        />
-        <span style={{ fontSize: SCALE * 5.5, color: '#555555' }}>SIM</span>
+      {/* Right — battery + mode */}
+      <div style={{ display: 'flex', alignItems: 'center', gap }}>
+        <span style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>12.4V</span>
+        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
+        <span style={{ fontSize: fs, color: '#444444', lineHeight: 1 }}>SIM</span>
       </div>
     </div>
   )
