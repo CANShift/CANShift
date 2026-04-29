@@ -28,6 +28,10 @@ export const IpcChannels = {
   ASSET_LIST: 'asset:list',
   ASSET_DELETE: 'asset:delete',
 
+  // Firmware OTA update
+  FIRMWARE_UPDATE_USB: 'firmware:update-usb',
+  FIRMWARE_UPDATE_WIFI: 'firmware:update-wifi',
+
   // App info
   APP_VERSION: 'app:version',
 } as const

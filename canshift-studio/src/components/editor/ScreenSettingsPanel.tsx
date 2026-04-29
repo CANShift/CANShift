@@ -1,7 +1,8 @@
 // ScreenSettingsPanel.tsx — Full-canvas overlay page for physical screen settings.
 // Rendered inside the 320×240 canvas widget area, simulating an on-device settings page.
-// Closed exclusively via the gear button in the top bar.
+// Closed exclusively via swipe-down gesture in the top bar.
 
+import { useState } from 'react'
 import { useScreenSettingsStore } from '../../stores/screenSettings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
@@ -15,6 +16,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const log = useLogStore((s) => s.push)
+  const [otaState, setOtaState] = useState<'idle' | 'pending'>('idle')
 
   const fs = Math.round(scale * 6)
   const fsLg = Math.round(scale * 7)
@@ -40,6 +42,19 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   }
 
   const canSave = connected || simulationMode
+
+  const handleOtaUsb = () => {
+    if (!connected) {
+      log('warn', 'Firmware update: no device connected')
+      return
+    }
+    setOtaState('pending')
+    // TODO: trigger firmware:update-usb IPC when OTA is implemented in main process
+    log('info', 'Firmware USB update initiated — not yet implemented')
+    setTimeout(() => {
+      setOtaState('idle')
+    }, 2000)
+  }
 
   return (
     <div
@@ -167,6 +182,57 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           ))}
         </div>
       </SettingRow>
+
+      {/* Firmware update */}
+      <div style={{ borderTop: '1px solid #1E1E1E', paddingTop: gap }}>
+        <span
+          style={{
+            fontSize: Math.round(scale * 5.5),
+            color: '#555555',
+            letterSpacing: '0.06em',
+            display: 'block',
+            marginBottom: Math.round(scale * 3),
+          }}
+        >
+          FIRMWARE
+        </span>
+        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+          <button
+            onClick={handleOtaUsb}
+            disabled={!connected || otaState === 'pending'}
+            style={{
+              flex: 1,
+              padding: `${String(Math.round(scale * 2.5))}px 0`,
+              background: connected ? '#111B11' : '#111111',
+              border: `1px solid ${connected ? '#2A4A2A' : '#1E1E1E'}`,
+              borderRadius: 3,
+              color: connected ? '#55AA55' : '#333333',
+              fontSize: fs,
+              cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
+              lineHeight: 1,
+            }}
+          >
+            {otaState === 'pending' ? '...' : 'USB'}
+          </button>
+          <button
+            disabled
+            title="Wi-Fi OTA — Phase 2"
+            style={{
+              flex: 1,
+              padding: `${String(Math.round(scale * 2.5))}px 0`,
+              background: '#111111',
+              border: '1px solid #1A1A1A',
+              borderRadius: 3,
+              color: '#2A2A2A',
+              fontSize: fs,
+              cursor: 'default',
+              lineHeight: 1,
+            }}
+          >
+            Wi-Fi
+          </button>
+        </div>
+      </div>
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: Math.round(scale * 3), marginTop: 'auto' }}>

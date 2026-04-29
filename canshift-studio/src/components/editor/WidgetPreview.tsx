@@ -8,6 +8,29 @@ import { SensorIcon } from '../icons/SensorIcons'
 const DEMO_PCT = 0.65 // fraction of range used for demo value
 
 // ---------------------------------------------------------------------------
+// Danger blink — inject keyframe once, use as CSS animation string
+// ---------------------------------------------------------------------------
+
+const BLINK_ANIM = 'canshift-blink 0.7s step-end infinite'
+
+let _blinkStyleInjected = false
+function ensureBlinkStyle(): void {
+  if (_blinkStyleInjected) return
+  _blinkStyleInjected = true
+  const el = document.createElement('style')
+  el.textContent = '@keyframes canshift-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }'
+  document.head.appendChild(el)
+}
+
+function isDangerState(widget: Widget): boolean {
+  const cfg = widget.config
+  if (cfg.type !== 'gauge') return false
+  const range = cfg.maxValue - cfg.minValue || 1
+  const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
+  return DEMO_PCT >= dangerPct
+}
+
+// ---------------------------------------------------------------------------
 // Label overlay helpers
 // ---------------------------------------------------------------------------
 
@@ -71,11 +94,13 @@ function GaugeArcPreview({
   w,
   h,
   revLimiting,
+  danger,
 }: {
   widget: Widget
   w: number
   h: number
   revLimiting: boolean
+  danger: boolean
 }) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -154,12 +179,13 @@ function GaugeArcPreview({
         stroke={valueColor}
         strokeWidth={strokeW}
         strokeLinecap="round"
+        style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
       {/* Inner circle */}
       <circle cx={cx} cy={cy} r={innerR} fill="#0D0D0D" />
       {/* Needle */}
       {cfg.showNeedle !== false && (
-        <>
+        <g style={{ animation: danger ? BLINK_ANIM : undefined }}>
           <line
             x1={cx}
             y1={cy}
@@ -170,7 +196,7 @@ function GaugeArcPreview({
             strokeLinecap="round"
           />
           <circle cx={cx} cy={cy} r={Math.max(2, strokeW * 0.3)} fill={valueColor} />
-        </>
+        </g>
       )}
       {/* Value text */}
       <text
@@ -182,6 +208,7 @@ function GaugeArcPreview({
         fontSize={Math.max(8, Math.min(r * 0.34, h * 0.18))}
         fontWeight="700"
         fontFamily="monospace"
+        style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
       </text>
@@ -228,7 +255,17 @@ function GaugeArcPreview({
 // Gauge — Vertical bar style (also renders horizontal when barOrientation='horizontal')
 // ---------------------------------------------------------------------------
 
-function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+function GaugeBarPreview({
+  widget,
+  w,
+  h,
+  danger,
+}: {
+  widget: Widget
+  w: number
+  h: number
+  danger: boolean
+}) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
@@ -283,7 +320,15 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
           strokeWidth={1}
           strokeDasharray="2 2"
         />
-        <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={valueColor} rx={2} />
+        <rect
+          x={0}
+          y={(h - barH) / 2}
+          width={fillW}
+          height={barH}
+          fill={valueColor}
+          rx={2}
+          style={{ animation: danger ? BLINK_ANIM : undefined }}
+        />
         {h > 18 && (
           <text
             x={w / 2}
@@ -294,6 +339,7 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
             fontSize={Math.max(7, Math.min(12, h * 0.32))}
             fontWeight="700"
             fontFamily="monospace"
+            style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {valueStr}
             {cfg.suffix ?? ''}
@@ -374,7 +420,15 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
         strokeDasharray="2 2"
       />
       {/* Value fill from bottom */}
-      <rect x={padX} y={fillY} width={bw} height={fillH} fill={valueColor} rx={3} />
+      <rect
+        x={padX}
+        y={fillY}
+        width={bw}
+        height={fillH}
+        fill={valueColor}
+        rx={3}
+        style={{ animation: danger ? BLINK_ANIM : undefined }}
+      />
       {/* Scale ticks — min and max (only when bar is wide enough to avoid clipping) */}
       {padX >= 16 && (
         <>
@@ -414,6 +468,7 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
             fontSize={Math.max(8, Math.min(14, h * 0.13))}
             fontWeight="700"
             fontFamily="monospace"
+            style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {valueStr}
           </text>
@@ -425,6 +480,7 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
             fill={valueColor + 'AA'}
             fontSize={Math.max(6, Math.min(10, h * 0.09))}
             fontFamily="monospace"
+            style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {cfg.suffix}
           </text>
@@ -439,6 +495,7 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
           fontSize={Math.max(8, Math.min(14, h * 0.13))}
           fontWeight="700"
           fontFamily="monospace"
+          style={{ animation: danger ? BLINK_ANIM : undefined }}
         >
           {valueStr}
         </text>
@@ -471,7 +528,17 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
 // Gauge — Numeric style
 // ---------------------------------------------------------------------------
 
-function GaugeNumericPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+function GaugeNumericPreview({
+  widget,
+  w,
+  h,
+  danger,
+}: {
+  widget: Widget
+  w: number
+  h: number
+  danger: boolean
+}) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
@@ -555,6 +622,7 @@ function GaugeNumericPreview({ widget, w, h }: { widget: Widget; w: number; h: n
           textOverflow: 'ellipsis',
           maxWidth: hasIcon ? `calc(100% - ${String(iconSize + 4)}px)` : '100%',
           textAlign: 'center',
+          animation: danger ? BLINK_ANIM : undefined,
         }}
       >
         {fullStr}
@@ -640,6 +708,7 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
         justifyContent: 'center',
         background: st.criticalColor + '22',
         borderRadius: 3,
+        animation: BLINK_ANIM,
       }}
     >
       <SensorIcon name={iconName} size={iconSize} color={st.criticalColor} />
@@ -829,13 +898,19 @@ export function WidgetPreview({
   revLimiting = false,
   buttonActive = false,
 }: WidgetPreviewProps) {
+  ensureBlinkStyle()
+
   const { config } = widget
+  const danger = isDangerState(widget)
 
   if (config.type === 'gauge') {
     if (config.displayStyle === 'arc')
-      return <GaugeArcPreview widget={widget} w={w} h={h} revLimiting={revLimiting} />
-    if (config.displayStyle === 'bar') return <GaugeBarPreview widget={widget} w={w} h={h} />
-    return <GaugeNumericPreview widget={widget} w={w} h={h} />
+      return (
+        <GaugeArcPreview widget={widget} w={w} h={h} revLimiting={revLimiting} danger={danger} />
+      )
+    if (config.displayStyle === 'bar')
+      return <GaugeBarPreview widget={widget} w={w} h={h} danger={danger} />
+    return <GaugeNumericPreview widget={widget} w={w} h={h} danger={danger} />
   }
   if (config.type === 'bar') return <BarWidgetPreview widget={widget} w={w} h={h} />
   if (config.type === 'warning') return <WarningPreview widget={widget} w={w} h={h} />

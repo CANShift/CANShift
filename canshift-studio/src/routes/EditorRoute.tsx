@@ -1,6 +1,6 @@
 // EditorRoute.tsx — Dashboard layout editor
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import type { PageConfig, TopBarConfig } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
@@ -76,6 +76,116 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Context menu
+// ---------------------------------------------------------------------------
+
+interface ContextMenuProps {
+  pageId: string
+  x: number
+  y: number
+  isDefault: boolean
+  isVisible: boolean
+  canDelete: boolean
+  onClose: () => void
+  onDuplicate: () => void
+  onSetDefault: () => void
+  onToggleVisible: () => void
+  onDelete: () => void
+}
+
+function PageContextMenu({
+  x,
+  y,
+  isDefault,
+  isVisible,
+  canDelete,
+  onClose,
+  onDuplicate,
+  onSetDefault,
+  onToggleVisible,
+  onDelete,
+}: ContextMenuProps) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+    }
+  }, [onClose])
+
+  const items: {
+    label: string
+    action: () => void
+    danger?: boolean
+    disabled?: boolean
+  }[] = [
+    { label: 'Duplicate', action: onDuplicate },
+    {
+      label: isDefault ? 'Default ◆' : 'Set as default',
+      action: onSetDefault,
+      disabled: isDefault,
+    },
+    { label: isVisible ? 'Hide page' : 'Show page', action: onToggleVisible },
+    { label: 'Delete', action: onDelete, danger: true, disabled: !canDelete },
+  ]
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: 'fixed',
+        top: y,
+        left: x,
+        zIndex: 9999,
+        background: '#1A1A1A',
+        border: '1px solid #2A2A2A',
+        borderRadius: 5,
+        padding: '3px 0',
+        minWidth: 140,
+        boxShadow: '0 4px 16px #00000066',
+      }}
+    >
+      {items.map((item) => (
+        <button
+          key={item.label}
+          disabled={item.disabled}
+          onClick={() => {
+            if (!item.disabled) {
+              item.action()
+              onClose()
+            }
+          }}
+          style={{
+            display: 'block',
+            width: '100%',
+            textAlign: 'left',
+            padding: '5px 12px',
+            background: 'none',
+            border: 'none',
+            fontSize: 12,
+            color: item.disabled ? '#333333' : item.danger ? '#CC4444' : '#CCCCCC',
+            cursor: item.disabled ? 'default' : 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            if (!item.disabled)
+              e.currentTarget.style.background = item.danger ? '#2A1111' : '#252525'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none'
+          }}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // ID generator
 // ---------------------------------------------------------------------------
 
@@ -95,10 +205,19 @@ export default function EditorRoute() {
   const removePage = useDashboardStore((s) => s.removePage)
   const renamePage = useDashboardStore((s) => s.renamePage)
   const setDefaultPage = useDashboardStore((s) => s.setDefaultPage)
+  const movePage = useDashboardStore((s) => s.movePage)
+  const updatePage = useDashboardStore((s) => s.updatePage)
 
   const [editingPageId, setEditingPageId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
+  const [contextMenu, setContextMenu] = useState<{
+    pageId: string
+    x: number
+    y: number
+  } | null>(null)
+
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const dragFromIndex = useRef<number | null>(null)
 
   useEffect(() => {
     if (editingPageId && renameInputRef.current) renameInputRef.current.select()
@@ -113,6 +232,24 @@ export default function EditorRoute() {
     if (editingPageId && editDraft.trim()) renamePage(editingPageId, editDraft.trim())
     setEditingPageId(null)
   }
+
+  // Keyboard: Delete key removes selected page
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      if (document.activeElement?.tagName === 'INPUT') return
+      if (!selectedPageId || !config || config.pages.length <= 1) return
+      removePage(selectedPageId)
+    },
+    [selectedPageId, config, removePage]
+  )
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [handleKeyDown])
 
   if (!config) {
     return (
@@ -135,6 +272,24 @@ export default function EditorRoute() {
   }
 
   const currentPage = config.pages.find((p) => p.id === selectedPageId) ?? config.pages[0]
+
+  const handleDuplicate = (pageId: string) => {
+    const page = config.pages.find((p) => p.id === pageId)
+    if (!page) return
+    const originalIndex = config.pages.findIndex((p) => p.id === pageId)
+    const newPage: PageConfig = {
+      ...page,
+      id: generateId('page'),
+      name: `${page.name} copy`,
+      widgets: page.widgets.map((w) => ({ ...w, id: generateId(w.type) })),
+    }
+    const originalLength = config.pages.length
+    addPage(newPage)
+    // Move new page (now at originalLength) to right after original
+    if (originalIndex + 1 < originalLength) {
+      movePage(originalLength, originalIndex + 1)
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -164,20 +319,42 @@ export default function EditorRoute() {
             Pages
           </div>
 
-          {config.pages.map((page) => {
+          {config.pages.map((page, index) => {
             const isDefault = page.id === config.defaultPageId
             const isSelected = page.id === (selectedPageId ?? config.pages[0]?.id)
             const isEditing = editingPageId === page.id
+            const isVisible = page.visible !== false
 
             return (
               <div
                 key={page.id}
+                draggable
+                onDragStart={() => {
+                  dragFromIndex.current = index
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                }}
+                onDrop={() => {
+                  if (dragFromIndex.current !== null && dragFromIndex.current !== index) {
+                    movePage(dragFromIndex.current, index)
+                  }
+                  dragFromIndex.current = null
+                }}
+                onDragEnd={() => {
+                  dragFromIndex.current = null
+                }}
                 onClick={() => {
                   if (!isEditing) selectPage(page.id)
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setContextMenu({ pageId: page.id, x: e.clientX, y: e.clientY })
                 }}
                 style={{
                   marginBottom: 8,
                   cursor: isEditing ? 'default' : 'pointer',
+                  opacity: isVisible ? 1 : 0.45,
                 }}
               >
                 {/* Thumbnail */}
@@ -188,9 +365,27 @@ export default function EditorRoute() {
                     overflow: 'hidden',
                     boxShadow: isSelected ? '0 0 0 1px #FFFFFF22' : 'none',
                     transition: 'border-color 0.1s',
+                    position: 'relative',
                   }}
                 >
                   <PageThumbnail page={page} topBar={config.topBar} />
+                  {/* Hidden badge */}
+                  {!isVisible && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#00000055',
+                        fontSize: 16,
+                        color: '#888888',
+                      }}
+                    >
+                      ◌
+                    </div>
+                  )}
                 </div>
 
                 {/* Page name row */}
@@ -311,6 +506,7 @@ export default function EditorRoute() {
                 backgroundImage: null,
                 backgroundColor: '#111111',
                 showTopBar: true,
+                visible: true,
                 widgets: [],
               })
             }}
@@ -377,6 +573,34 @@ export default function EditorRoute() {
       >
         {currentPage && <PropertyPanel pageId={currentPage.id} />}
       </aside>
+
+      {/* ── Context menu ─────────────────────────────────────────────────── */}
+      {contextMenu && (
+        <PageContextMenu
+          pageId={contextMenu.pageId}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isDefault={contextMenu.pageId === config.defaultPageId}
+          isVisible={config.pages.find((p) => p.id === contextMenu.pageId)?.visible ?? true}
+          canDelete={config.pages.length > 1}
+          onClose={() => {
+            setContextMenu(null)
+          }}
+          onDuplicate={() => {
+            handleDuplicate(contextMenu.pageId)
+          }}
+          onSetDefault={() => {
+            setDefaultPage(contextMenu.pageId)
+          }}
+          onToggleVisible={() => {
+            const page = config.pages.find((p) => p.id === contextMenu.pageId)
+            if (page) updatePage(contextMenu.pageId, { visible: !page.visible })
+          }}
+          onDelete={() => {
+            removePage(contextMenu.pageId)
+          }}
+        />
+      )}
     </div>
   )
 }

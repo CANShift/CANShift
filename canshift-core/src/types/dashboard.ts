@@ -230,6 +230,8 @@ export interface PageConfig {
   backgroundImage: string | null
   backgroundColor: HexColor
   showTopBar: boolean
+  /** When false, the page is hidden on the device (still editable in studio). Defaults to true. */
+  visible?: boolean
   widgets: Widget[]
 }
 
