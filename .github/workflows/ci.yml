@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: canshift-core/package-lock.json
 
@@ -60,7 +60,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: canshift-studio/package-lock.json
 
@@ -88,3 +88,22 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # ─── Firmware ───────────────────────────────────────────────────────────────
+  firmware:
+    name: firmware — clang-format check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          FILES=$(find src include -name "*.cpp" -o -name "*.h" | grep -v "lv_conf\.h")
+          clang-format --dry-run --Werror --style=file $FILES
