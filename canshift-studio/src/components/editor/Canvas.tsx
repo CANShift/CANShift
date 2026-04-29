@@ -444,10 +444,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
             {/* Screen settings overlay page */}
             {settingsOpen && (
-              <ScreenSettingsPanel
-                scale={SCALE}
-                onClose={() => { setSettingsOpen(false) }}
-              />
+              <ScreenSettingsPanel scale={SCALE} />
             )}
           </div>
         </div>
