@@ -181,7 +181,9 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
   const style = cfg.displayStyle
   const barOrientation = cfg.barOrientation ?? 'vertical'
   const allowedTokenIds = gaugeTokenIds(style, barOrientation)
-  const activeTokenId = tokenFromDimensions(widget.layout.w, widget.layout.h)
+  // If current dimensions don't match any token, fall back to the first available
+  const activeTokenId =
+    tokenFromDimensions(widget.layout.w, widget.layout.h) ?? allowedTokenIds[0] ?? null
 
   // Units filtered to what makes sense for the bound signal
   const signalUnits = widget.signal ? SIGNAL_UNITS[widget.signal] : undefined
@@ -251,11 +253,6 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
             )
           })}
         </div>
-        {!activeTokenId && (
-          <div style={{ fontSize: 9, color: '#444444', marginTop: 3 }}>
-            {String(widget.layout.w)} × {String(widget.layout.h)} — non-standard
-          </div>
-        )}
       </Field>
 
       {/* Unit / suffix */}
@@ -1139,81 +1136,67 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           />
         </Field>
 
-        <Field label="Show top bar">
+        <div
+          style={{
+            fontSize: 10,
+            color: '#444',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: 6,
+            marginTop: 8,
+          }}
+        >
+          Top Bar
+        </div>
+        <Row>
+          <Field label="Bar color">
+            <input
+              type="color"
+              value={config.topBar.bgColor}
+              style={{
+                width: '100%',
+                height: 28,
+                padding: 2,
+                background: '#111',
+                border: '1px solid #333',
+                borderRadius: 3,
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+              }}
+              onChange={(e) => {
+                updateTopBar({ bgColor: e.target.value as `#${string}` })
+              }}
+            />
+          </Field>
+          <Field label="Text color">
+            <input
+              type="color"
+              value={config.topBar.textColor}
+              style={{
+                width: '100%',
+                height: 28,
+                padding: 2,
+                background: '#111',
+                border: '1px solid #333',
+                borderRadius: 3,
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+              }}
+              onChange={(e) => {
+                updateTopBar({ textColor: e.target.value as `#${string}` })
+              }}
+            />
+          </Field>
+        </Row>
+        <Field label="Show map name">
           <input
             type="checkbox"
-            checked={page.showTopBar}
+            checked={config.topBar.showMapName}
             onChange={(e) => {
-              updatePage(pageId, { showTopBar: e.target.checked })
+              updateTopBar({ showMapName: e.target.checked })
             }}
           />
         </Field>
-
-        {page.showTopBar && (
-          <>
-            <div
-              style={{
-                fontSize: 10,
-                color: '#444',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 6,
-                marginTop: 8,
-              }}
-            >
-              Top Bar
-            </div>
-            <Row>
-              <Field label="Bar color">
-                <input
-                  type="color"
-                  value={config.topBar.bgColor}
-                  style={{
-                    width: '100%',
-                    height: 28,
-                    padding: 2,
-                    background: '#111',
-                    border: '1px solid #333',
-                    borderRadius: 3,
-                    cursor: 'pointer',
-                    boxSizing: 'border-box',
-                  }}
-                  onChange={(e) => {
-                    updateTopBar({ bgColor: e.target.value as `#${string}` })
-                  }}
-                />
-              </Field>
-              <Field label="Text color">
-                <input
-                  type="color"
-                  value={config.topBar.textColor}
-                  style={{
-                    width: '100%',
-                    height: 28,
-                    padding: 2,
-                    background: '#111',
-                    border: '1px solid #333',
-                    borderRadius: 3,
-                    cursor: 'pointer',
-                    boxSizing: 'border-box',
-                  }}
-                  onChange={(e) => {
-                    updateTopBar({ textColor: e.target.value as `#${string}` })
-                  }}
-                />
-              </Field>
-            </Row>
-            <Field label="Show map name">
-              <input
-                type="checkbox"
-                checked={config.topBar.showMapName}
-                onChange={(e) => {
-                  updateTopBar({ showMapName: e.target.checked })
-                }}
-              />
-            </Field>
-          </>
-        )}
 
         <div style={{ fontSize: 10, color: '#333', marginTop: 12 }}>
           Select a widget to edit its properties.

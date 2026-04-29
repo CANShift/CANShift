@@ -7,6 +7,7 @@ import type { GaugeDisplayStyle } from '@tmbk/canshift-core'
 export type SizeTokenId =
   | 'XL'
   | 'L'
+  | 'L3'
   | 'M'
   | 'S'
   | 'XS-H'
@@ -27,6 +28,8 @@ export interface SizeToken {
 export const SIZE_TOKENS: Record<SizeTokenId, SizeToken> = {
   XL: { id: 'XL', label: 'XL', description: '100×100', w: 100, h: 100 },
   L: { id: 'L', label: 'L', description: '100×50', w: 100, h: 50 },
+  // L3 = 3 rows of 25px — fits: XL(100) + L(50) + L3(75) = 225 (full widget area with 15px topbar)
+  L3: { id: 'L3', label: 'L3', description: '100×75', w: 100, h: 75 },
   M: { id: 'M', label: 'M', description: '50×50', w: 50, h: 50 },
   S: { id: 'S', label: 'S', description: '25×25', w: 25, h: 25 },
   'XS-H': { id: 'XS-H', label: 'H', description: '100×25', w: 100, h: 25 },
@@ -54,14 +57,14 @@ export function gaugeTokenIds(
   barOrientation?: 'horizontal' | 'vertical'
 ): SizeTokenId[] {
   if (displayStyle === 'arc') return ['M', 'XL']
-  if (displayStyle === 'numeric') return ['XL', 'L', 'M', 'S']
+  if (displayStyle === 'numeric') return ['XL', 'L', 'L3', 'M', 'S']
   // bar — depends on orientation
   if (barOrientation === 'horizontal') return ['XS-H', 'XS-H-1/2']
   return ['XS-V-1/2', 'XS-V', 'V-Full', 'V-Full-2']
 }
 
 /** Allowed size tokens for non-gauge widget types */
-export const STANDARD_TOKEN_IDS: SizeTokenId[] = ['XL', 'L', 'M', 'S']
+export const STANDARD_TOKEN_IDS: SizeTokenId[] = ['XL', 'L', 'L3', 'M', 'S']
 
 /** Default token when adding a new gauge by display style */
 export const GAUGE_DEFAULT_TOKEN: Record<GaugeDisplayStyle, SizeTokenId> = {

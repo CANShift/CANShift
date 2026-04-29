@@ -185,10 +185,8 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
         cursor: 'default',
       }}
     >
-      {/* Left — USB + ECU + CAN status */}
+      {/* Left — ECU + CAN status */}
       <div style={{ display: 'flex', alignItems: 'center', gap }}>
-        <IconUsb size={iconSz} color={usbColor} />
-        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
         <span
           style={{
             display: 'inline-block',
@@ -286,7 +284,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   // Swipe left/right tracking (page navigation)
   const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
 
-  const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
+  const widgetAreaH = 240 - topBar.height
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
