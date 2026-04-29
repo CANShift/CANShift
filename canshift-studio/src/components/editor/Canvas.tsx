@@ -170,25 +170,21 @@ interface DashTopBarProps {
 }
 
 function DashTopBar({ topBar, pageName }: DashTopBarProps) {
-  const h = topBar.height * SCALE
-
   return (
     <div
       style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: h,
+        height: topBar.height * SCALE,
+        flexShrink: 0,
         background: topBar.bgColor,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: `0 ${String(SCALE * 4)}px`,
-        zIndex: 10,
         boxSizing: 'border-box',
         borderBottom: '1px solid #1E1E1E',
         userSelect: 'none',
+        pointerEvents: 'none',
+        position: 'relative',
       }}
     >
       {/* Left — ECU connection status */}
@@ -277,6 +273,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const containerRef = useRef<HTMLDivElement>(null)
 
+  const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
@@ -310,7 +308,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         const dx = Math.round((ev.clientX - drag.startMouseX) / SCALE)
         const dy = Math.round((ev.clientY - drag.startMouseY) / SCALE)
         const newX = Math.max(0, Math.min(320 - 10, drag.startWidgetX + dx))
-        const newY = Math.max(0, Math.min(240 - 10, drag.startWidgetY + dy))
+        const newY = Math.max(0, Math.min(widgetAreaH - 10, drag.startWidgetY + dy))
         moveWidget(drag.pageId, drag.widgetId, { x: newX, y: newY })
       }
 
@@ -350,46 +348,56 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       >
         {/* The 320×240 canvas at 2× zoom */}
         <div
-          ref={containerRef}
-          onMouseDown={() => {
-            selectWidget(null)
-          }}
           style={{
-            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
             width: CANVAS_W,
             height: CANVAS_H,
             background: page.backgroundColor,
             overflow: 'hidden',
-            cursor: 'default',
           }}
         >
-          {/* Grid overlay — 10px grid (20px on screen at 2×) */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `
-                linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
-                linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
-              `,
-              backgroundSize: `${String(10 * SCALE)}px ${String(10 * SCALE)}px`,
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Dashboard top bar */}
+          {/* Dashboard top bar — fixed height, pushes widget area down */}
           {page.showTopBar && <DashTopBar topBar={topBar} pageName={page.name} />}
 
-          {/* Widgets */}
-          {page.widgets.map((widget) => (
-            <WidgetBox
-              key={widget.id}
-              widget={widget}
-              isSelected={widget.id === selectedWidgetId}
-              onSelect={selectWidget}
-              onDragStart={handleDragStart}
+          {/* Widget area — coordinate origin (0,0) is below the top bar */}
+          <div
+            ref={containerRef}
+            onMouseDown={() => {
+              selectWidget(null)
+            }}
+            style={{
+              position: 'relative',
+              flex: 1,
+              overflow: 'hidden',
+              cursor: 'default',
+            }}
+          >
+            {/* Grid overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `
+                  linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
+                  linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
+                `,
+                backgroundSize: `${String(10 * SCALE)}px ${String(10 * SCALE)}px`,
+                pointerEvents: 'none',
+              }}
             />
-          ))}
+
+            {/* Widgets */}
+            {page.widgets.map((widget) => (
+              <WidgetBox
+                key={widget.id}
+                widget={widget}
+                isSelected={widget.id === selectedWidgetId}
+                onSelect={selectWidget}
+                onDragStart={handleDragStart}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Canvas label */}
