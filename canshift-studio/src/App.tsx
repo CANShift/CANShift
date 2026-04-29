@@ -4,7 +4,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
 import ThemeRoute from './routes/ThemeRoute'
-import DeviceRoute from './routes/DeviceRoute'
 import TopBar from './components/shared/TopBar'
 import StatusBar from './components/shared/StatusBar'
 import { useMenuEvents } from './hooks/useMenuEvents'
@@ -31,7 +30,6 @@ export default function App() {
           <Route path="/editor" element={<EditorRoute />} />
           <Route path="/signals" element={<SignalRoute />} />
           <Route path="/theme" element={<ThemeRoute />} />
-          <Route path="/device" element={<DeviceRoute />} />
         </Routes>
       </main>
 

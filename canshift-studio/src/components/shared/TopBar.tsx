@@ -10,7 +10,6 @@ const navItems = [
   { to: '/editor', label: 'Editor' },
   { to: '/signals', label: 'Signals' },
   { to: '/theme', label: 'Theme' },
-  { to: '/device', label: 'Device' },
 ]
 
 // Color per connection status
