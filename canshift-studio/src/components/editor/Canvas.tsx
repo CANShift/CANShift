@@ -10,7 +10,7 @@ import ScreenSettingsPanel from './ScreenSettingsPanel'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
 
-const SCALE = 1 // 1:1 with firmware pixels — zoom handles visual scaling
+const SCALE = 1.5 // slightly larger than 1:1 for readability
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
 const GRID = 10 // snap grid in firmware coordinates
@@ -263,9 +263,6 @@ interface CanvasProps {
   topBar: TopBarConfig
 }
 
-// Outer frame dimensions (border 3px × 2 + padding 6px × 2)
-const FRAME_EXTRA = 2 * 3 + 2 * 6 // 18px each side
-
 export default function Canvas({ page, topBar }: CanvasProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
@@ -273,32 +270,12 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const containerRef = useRef<HTMLDivElement>(null)
-  const wrapperRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<number>(1)
 
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
-  const [zoom, setZoom] = useState(1)
-
-  // Dynamic scale: fill available space while preserving aspect ratio
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const ro = new ResizeObserver(([entry]) => {
-      if (!entry) return
-      const { width, height } = entry.contentRect
-      const z = Math.min(width / (CANVAS_W + FRAME_EXTRA), height / (CANVAS_H + FRAME_EXTRA))
-      const clamped = Math.max(0.5, Math.min(4, z))
-      zoomRef.current = clamped
-      setZoom(clamped)
-    })
-    ro.observe(el)
-    return () => {
-      ro.disconnect()
-    }
-  }, [])
 
   // Rev limit flash: alternates red overlay every 80ms, auto-stops after 5s
   useEffect(() => {
@@ -451,24 +428,18 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         </button>
       </div>
 
-      {/* Canvas area — fills all remaining space, frame is CSS-scaled to fit */}
+      {/* Canvas area — scrollable if window is smaller than 320×240 */}
       <div
-        ref={wrapperRef}
         style={{
           flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'hidden',
+          overflow: 'auto',
         }}
       >
-        {/* Outer frame — scaled to fill available space */}
-        <div
-          style={{
-            transform: `scale(${String(zoom)})`,
-            transformOrigin: 'center center',
-          }}
-        >
+        {/* 1:1 frame — no transform scaling */}
+        <div>
           {/* Physical screen border */}
           <div
             style={{

@@ -375,29 +375,33 @@ function GaugeBarPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
       />
       {/* Value fill from bottom */}
       <rect x={padX} y={fillY} width={bw} height={fillH} fill={valueColor} rx={3} />
-      {/* Scale ticks — min and max */}
-      <text
-        x={padX - 4}
-        y={padTop + trackH}
-        textAnchor="end"
-        dominantBaseline="middle"
-        fill="#444444"
-        fontSize={Math.max(6, Math.min(8, w * 0.14))}
-        fontFamily="monospace"
-      >
-        {cfg.minValue}
-      </text>
-      <text
-        x={padX - 4}
-        y={padTop}
-        textAnchor="end"
-        dominantBaseline="middle"
-        fill="#444444"
-        fontSize={Math.max(6, Math.min(8, w * 0.14))}
-        fontFamily="monospace"
-      >
-        {cfg.maxValue}
-      </text>
+      {/* Scale ticks — min and max (only when bar is wide enough to avoid clipping) */}
+      {padX >= 16 && (
+        <>
+          <text
+            x={padX - 4}
+            y={padTop + trackH}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fill="#444444"
+            fontSize={Math.max(6, Math.min(8, w * 0.14))}
+            fontFamily="monospace"
+          >
+            {cfg.minValue}
+          </text>
+          <text
+            x={padX - 4}
+            y={padTop}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fill="#444444"
+            fontSize={Math.max(6, Math.min(8, w * 0.14))}
+            fontFamily="monospace"
+          >
+            {cfg.maxValue}
+          </text>
+        </>
+      )}
       {/* Value label */}
       <text
         x={w / 2}
