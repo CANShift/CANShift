@@ -131,9 +131,9 @@ function GaugeArcPreview({
         : st.primaryColor
 
   const cx = w / 2
-  // Arc fits in top 85 % of height — leaves room below for value/suffix text
-  const r = Math.min(w * 0.45, h * 0.42)
-  const cy = r + Math.max(6, h * 0.06) // top pad + radius
+  // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
+  const r = Math.min(w * 0.45, h * 0.46)
+  const cy = h * 0.5 // true vertical center
   const strokeW = Math.max(3, r * 0.16)
   const innerR = r - strokeW / 2 - 2
 
@@ -143,8 +143,8 @@ function GaugeArcPreview({
 
   const signalLabel = formatSignalLabel(widget.signal)
   const valueFontSize = Math.max(9, Math.min(r * 0.38, h * 0.18, 28))
-  const unitFontSize = Math.max(6, r * 0.16)
-  const labelFontSize = Math.max(5, Math.min(8, r * 0.14))
+  const unitFontSize = Math.max(6, r * 0.17)
+  const labelFontSize = Math.max(6, Math.min(10, r * 0.17))
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
@@ -204,7 +204,7 @@ function GaugeArcPreview({
         y={cy - r * 0.28}
         textAnchor="middle"
         dominantBaseline="middle"
-        fill={st.textColor + '55'}
+        fill="#888888"
         fontSize={labelFontSize}
         fontFamily="sans-serif"
         fontWeight="600"
@@ -366,7 +366,7 @@ function GaugeBarPreview({
           y={labelIsTop ? h - 3 : 3}
           textAnchor="start"
           dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
-          fill={st.textColor + '55'}
+          fill="#888888"
           fontSize={sigFontSize}
           fontFamily="sans-serif"
           fontWeight="600"
@@ -419,10 +419,12 @@ function GaugeBarPreview({
         ? st.warningColor
         : st.primaryColor
 
-  const bw = Math.min(w * 0.35, 18)
+  // Bar occupies 60 % of widget width, centered horizontally
+  const bw = Math.max(10, w * 0.6)
   const padX = (w - bw) / 2
-  const padTop = 14 // room for signal name
-  const padBot = h * 0.28
+  // Equal top/bottom padding keeps the track visually centered
+  const padTop = Math.max(12, h * 0.14) // signal name row
+  const padBot = Math.max(12, h * 0.2) // value text row
   const trackH = h - padTop - padBot
 
   const fillY = padTop + trackH * (1 - valuePct)
@@ -441,7 +443,7 @@ function GaugeBarPreview({
         y={2}
         textAnchor="middle"
         dominantBaseline="hanging"
-        fill={st.textColor + '55'}
+        fill="#888888"
         fontSize={sigFontSize}
         fontFamily="sans-serif"
         fontWeight="600"
@@ -609,25 +611,34 @@ function GaugeNumericPreview({
   const valuePct = DEMO_PCT
 
   const demoValue = cfg.minValue + range * valuePct
-  const valueStr = demoValue.toFixed(cfg.decimalPlaces)
-  const fullStr = (cfg.prefix ?? '') + valueStr + (cfg.suffix ?? '')
+  const valueOnly = demoValue.toFixed(cfg.decimalPlaces)
+  const prefix = cfg.prefix ?? ''
+  const suffix = cfg.suffix ?? ''
 
   const valueColor =
     valuePct >= dangerPct ? st.criticalColor : valuePct >= warnPct ? st.warningColor : st.textColor
 
   const iconName = cfg.iconName ?? null
   const hasIcon = iconName !== null
-  const iconSize = Math.min(h * 0.38, w * 0.25, 22)
+  const iconSize = Math.min(h * 0.35, w * 0.22, 20)
   const labelText = cfg.label ?? null
   const labelPos = cfg.labelPosition ?? 'top-left'
+
+  const hasSuffix = suffix.length > 0
+  const hasPrefix = prefix.length > 0
+  const twoLine = hasSuffix || hasPrefix
 
   // Signal name shown at top when no custom label
   const showSignalHeader = labelText === null
   const signalLabel = formatSignalLabel(widget.signal)
-  const sigHeaderH = showSignalHeader ? Math.max(8, h * 0.22) : 0
-  // Font scales to available height after reserving signal header row
+  const sigHeaderH = showSignalHeader ? Math.max(8, Math.min(h * 0.18, 14)) : 0
   const availH = h - sigHeaderH
-  const fontSize = Math.max(8, Math.min(availH * 0.62, w * 0.38))
+
+  // Two-line: value gets most of height, unit/prefix gets ~22 %
+  const unitLineH = twoLine ? Math.max(8, availH * 0.24) : 0
+  const valueLineH = availH - unitLineH
+  const fontSize = Math.max(8, Math.min(valueLineH * 0.72, w * 0.52))
+  const unitFontSize = Math.max(7, Math.min(unitLineH * 0.72, w * 0.2))
 
   const isLabelTop = labelText !== null && labelPos.startsWith('top')
   const isLabelRight = labelPos.endsWith('right')
@@ -645,9 +656,10 @@ function GaugeNumericPreview({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: showSignalHeader ? `${String(sigHeaderH + 2)}px 4px 2px` : '0 4px',
+        padding: `${String(sigHeaderH + 2)}px 4px 2px`,
         boxSizing: 'border-box',
         overflow: 'hidden',
+        gap: twoLine ? 1 : 0,
       }}
     >
       {/* Signal name header */}
@@ -657,10 +669,10 @@ function GaugeNumericPreview({
             position: 'absolute',
             top: 2,
             left: 3,
-            fontSize: Math.max(5, Math.min(7, sigHeaderH * 0.72)),
+            fontSize: Math.max(5, Math.min(7, sigHeaderH * 0.75)),
             fontFamily: 'sans-serif',
             fontWeight: 600,
-            color: st.textColor + '44',
+            color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -686,7 +698,7 @@ function GaugeNumericPreview({
             fontSize: labelFontSize,
             fontFamily: 'sans-serif',
             fontWeight: 600,
-            color: st.textColor + '77',
+            color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
             letterSpacing: '0.04em',
@@ -694,6 +706,22 @@ function GaugeNumericPreview({
           }}
         >
           {labelText}
+        </span>
+      )}
+      {/* Prefix line (two-line layout) */}
+      {hasPrefix && (
+        <span
+          style={{
+            color: valueColor + 'BB',
+            fontSize: unitFontSize,
+            fontWeight: 600,
+            fontFamily: 'sans-serif',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.03em',
+          }}
+        >
+          {prefix}
         </span>
       )}
       {/* Value row */}
@@ -705,6 +733,7 @@ function GaugeNumericPreview({
           justifyContent: 'center',
           gap: 3,
           width: '100%',
+          flexShrink: 0,
         }}
       >
         {hasIcon && <SensorIcon name={iconName} size={iconSize} color={valueColor + 'AA'} />}
@@ -717,15 +746,32 @@ function GaugeNumericPreview({
             lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            textOverflow: 'clip',
             maxWidth: hasIcon ? `calc(100% - ${String(iconSize + 4)}px)` : '100%',
             textAlign: 'center',
             animation: danger ? BLINK_ANIM : undefined,
           }}
         >
-          {fullStr}
+          {twoLine ? valueOnly : prefix + valueOnly + suffix}
         </span>
       </div>
+      {/* Suffix / unit line (two-line layout) */}
+      {hasSuffix && (
+        <span
+          style={{
+            color: valueColor + 'BB',
+            fontSize: unitFontSize,
+            fontWeight: 600,
+            fontFamily: 'sans-serif',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.03em',
+            animation: danger ? BLINK_ANIM : undefined,
+          }}
+        >
+          {suffix}
+        </span>
+      )}
     </div>
   )
 }
@@ -759,7 +805,7 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
         y={labelIsTop ? h - 3 : 3}
         textAnchor="start"
         dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
-        fill={st.textColor + '44'}
+        fill="#888888"
         fontSize={Math.max(5, Math.min(7, h * 0.22))}
         fontFamily="sans-serif"
         fontWeight="600"
@@ -959,7 +1005,7 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
           fontSize: sigFontSize,
           fontFamily: 'sans-serif',
           fontWeight: 600,
-          color: st.textColor + '44',
+          color: '#888888',
           lineHeight: 1,
           letterSpacing: '0.05em',
         }}
@@ -1013,7 +1059,7 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
           fontSize: sigFontSize,
           fontFamily: 'sans-serif',
           fontWeight: 600,
-          color: st.textColor + '44',
+          color: '#888888',
           lineHeight: 1,
           letterSpacing: '0.05em',
         }}
