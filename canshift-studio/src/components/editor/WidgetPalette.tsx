@@ -1,7 +1,7 @@
 // WidgetPalette.tsx — Widget type picker.
 // Click a tile to add a new widget of that type to the current page.
 
-import type { WidgetType, SensorIconName, GaugeDisplayStyle } from '@tmbk/canshift-core'
+import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 
@@ -12,37 +12,16 @@ interface PaletteItem {
   defaultSignal: string
   defaultW: number
   defaultH: number
-  /** Only for gauge: which display style to default to */
-  gaugeStyle?: GaugeDisplayStyle
 }
 
 const PALETTE_ITEMS: PaletteItem[] = [
   {
     type: 'gauge',
-    label: 'Gauge (arc)',
+    label: 'Gauge',
     icon: 'rpm',
     defaultSignal: 'rpm',
     defaultW: 80,
     defaultH: 80,
-    gaugeStyle: 'arc',
-  },
-  {
-    type: 'gauge',
-    label: 'Gauge (bar)',
-    icon: 'boost',
-    defaultSignal: 'boost_bar',
-    defaultW: 40,
-    defaultH: 80,
-    gaugeStyle: 'bar',
-  },
-  {
-    type: 'gauge',
-    label: 'Gauge (num)',
-    icon: 'speed',
-    defaultSignal: 'speed_kph',
-    defaultW: 80,
-    defaultH: 40,
-    gaugeStyle: 'numeric',
   },
   {
     type: 'bar',
@@ -85,11 +64,11 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
         case 'gauge':
           return {
             type: 'gauge' as const,
-            displayStyle: item.gaugeStyle ?? 'arc',
+            displayStyle: 'arc' as const,
             minValue: 0,
-            maxValue: item.gaugeStyle === 'numeric' ? 300 : 8000,
-            warningLevel: item.gaugeStyle === 'numeric' ? 240 : 6000,
-            dangerLevel: item.gaugeStyle === 'numeric' ? 280 : 7000,
+            maxValue: 8000,
+            warningLevel: 6000,
+            dangerLevel: 7000,
             decimalPlaces: 0,
             iconName: item.icon,
           }
@@ -154,7 +133,7 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {PALETTE_ITEMS.map((item) => (
           <button
-            key={item.type}
+            key={item.label}
             onClick={() => {
               handleAdd(item)
             }}

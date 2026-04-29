@@ -3,7 +3,7 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { DashboardConfig, PageConfig, Widget, WidgetLayout } from '@tmbk/canshift-core'
-import { autoPlace, resolveCollisions } from '../utils/layout'
+import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -139,9 +139,39 @@ export const useDashboardStore = create<DashboardState>()(
 
         const canvasH = widgetAreaHeight(page, s.config.topBar.height)
         const others = page.widgets.map(toLayoutRect)
+        const nw = widget.layout.w
+        const nh = widget.layout.h
 
-        // Auto-place: find first free spot, default to (0,0) if canvas is full
-        const pos = autoPlace({ w: widget.layout.w, h: widget.layout.h }, others, 320, canvasH)
+        // Try to place adjacent to the currently selected widget (right, below, left, above)
+        let pos: { x: number; y: number } | null = null
+        const refWidget = s.selectedWidgetId
+          ? page.widgets.find((w) => w.id === s.selectedWidgetId)
+          : null
+
+        if (refWidget) {
+          const ref = toLayoutRect(refWidget)
+          const gap = LAYOUT_GAP
+          const adjacent = [
+            { x: ref.x + ref.w + gap, y: ref.y }, // right
+            { x: ref.x, y: ref.y + ref.h + gap }, // below
+            { x: ref.x - nw - gap, y: ref.y }, // left
+            { x: ref.x, y: ref.y - nh - gap }, // above
+          ]
+          for (const cand of adjacent) {
+            const sx = snapToGrid(cand.x)
+            const sy = snapToGrid(cand.y)
+            if (sx < 0 || sy < 0 || sx + nw > 320 || sy + nh > canvasH) continue
+            const rect = { id: '__new__', x: sx, y: sy, w: nw, h: nh }
+            if (!others.some((o) => rectsOverlap(rect, o))) {
+              pos = { x: sx, y: sy }
+              break
+            }
+          }
+        }
+
+        // Fallback: scan for first free position
+        pos ??= autoPlace({ w: nw, h: nh }, others, 320, canvasH)
+
         if (pos) {
           widget.layout.x = pos.x
           widget.layout.y = pos.y
