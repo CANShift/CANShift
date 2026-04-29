@@ -4,7 +4,9 @@
 import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, TopBarConfig, Widget, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
+import { useDeviceStore } from '../../stores/device.store'
 import { SensorIcon } from '../icons/SensorIcons'
+import { IconSettings, IconClear, IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 
 const SCALE = 2 // 320×240 → 640×480 on screen
@@ -168,10 +170,13 @@ function WidgetBox({ widget, isSelected, onSelect, onDragStart }: WidgetBoxProps
 interface DashTopBarProps {
   topBar: TopBarConfig
   pageName: string
+  settingsOpen: boolean
   onOpenSettings: () => void
 }
 
-function DashTopBar({ topBar, pageName, onOpenSettings }: DashTopBarProps) {
+function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopBarProps) {
+  const status = useDeviceStore((s) => s.status)
+
   // All sizes derived from bar height so content scales correctly at any height
   const h       = topBar.height * SCALE
   const dot     = Math.round(h * 0.30)
@@ -179,6 +184,12 @@ function DashTopBar({ topBar, pageName, onOpenSettings }: DashTopBarProps) {
   const sep     = Math.round(h * 0.55)
   const gap     = Math.round(h * 0.25)
   const px      = Math.round(h * 0.40)
+  const iconSz  = Math.round(fs * 1.15)
+
+  const usbColor =
+    status === 'connected' ? '#44CC44' :
+    status === 'error'     ? '#CC3333' :
+    '#444444'
 
   return (
     <div
@@ -198,8 +209,10 @@ function DashTopBar({ topBar, pageName, onOpenSettings }: DashTopBarProps) {
         overflow: 'hidden',
       }}
     >
-      {/* Left — ECU + CAN status */}
+      {/* Left — USB + ECU + CAN status */}
       <div style={{ display: 'flex', alignItems: 'center', gap }}>
+        <IconUsb size={iconSz} color={usbColor} />
+        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
         <span
           style={{
             display: 'inline-block',
@@ -251,13 +264,13 @@ function DashTopBar({ topBar, pageName, onOpenSettings }: DashTopBarProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap, pointerEvents: 'auto' }}>
         <span style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>12.4V</span>
         <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        {/* Settings gear button */}
+        {/* Settings button — gear when closed, X when open */}
         <button
           onClick={(e) => {
             e.stopPropagation()
             onOpenSettings()
           }}
-          title="Screen settings"
+          title={settingsOpen ? 'Close settings' : 'Screen settings'}
           style={{
             background: 'none',
             border: 'none',
@@ -265,24 +278,15 @@ function DashTopBar({ topBar, pageName, onOpenSettings }: DashTopBarProps) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            color: '#555555',
+            color: settingsOpen ? '#CC3333' : '#555555',
             lineHeight: 1,
+            transition: 'color 0.15s',
           }}
         >
-          <svg
-            width={Math.round(fs * 1.1)}
-            height={Math.round(fs * 1.1)}
-            viewBox="0 0 16 16"
-            fill="none"
-          >
-            <path
-              d="M6.5 2.5h3l.5 1.5a4 4 0 0 1 1.1.65l1.5-.4 1.5 2.6-1.1 1.1c.03.35.03.7 0 1.05l1.1 1.1-1.5 2.6-1.5-.4A4 4 0 0 1 10 12l-.5 1.5h-3L6 12a4 4 0 0 1-1.1-.65l-1.5.4-1.5-2.6 1.1-1.1a4 4 0 0 1 0-1.05L1.9 5.85l1.5-2.6 1.5.4A4 4 0 0 1 6 3.5L6.5 2.5Z"
-              stroke="currentColor"
-              strokeWidth="1.1"
-              strokeLinejoin="round"
-            />
-            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.1" />
-          </svg>
+          {settingsOpen
+            ? <IconClear size={iconSz} color="#CC3333" />
+            : <IconSettings size={iconSz} color="#555555" />
+          }
         </button>
       </div>
     </div>
@@ -395,7 +399,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
             <DashTopBar
               topBar={topBar}
               pageName={page.name}
-              onOpenSettings={() => { setSettingsOpen(true) }}
+              settingsOpen={settingsOpen}
+              onOpenSettings={() => { setSettingsOpen((o) => !o) }}
             />
           )}
 

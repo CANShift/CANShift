@@ -48,3 +48,25 @@ export const IconExit = icon('M10 3h3v10h-3M7 10l3-3-3-3M2 8h8')
 
 // Status
 export const IconCheck = icon('M3 8l4 4 6-7')
+
+// Settings gear — needs circle + path, so defined as a standalone component
+export function IconSettings({ size = 14, color = 'currentColor', style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      style={{ flexShrink: 0, ...style }}
+      aria-hidden
+    >
+      <path
+        d="M6.5 2.5h3l.5 1.5a4 4 0 0 1 1.1.65l1.5-.4 1.5 2.6-1.1 1.1c.03.35.03.7 0 1.05l1.1 1.1-1.5 2.6-1.5-.4A4 4 0 0 1 10 12l-.5 1.5h-3L6 12a4 4 0 0 1-1.1-.65l-1.5.4-1.5-2.6 1.1-1.1a4 4 0 0 1 0-1.05L1.9 5.85l1.5-2.6 1.5.4A4 4 0 0 1 6 3.5L6.5 2.5Z"
+        stroke={color}
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="2" stroke={color} strokeWidth="1.1" />
+    </svg>
+  )
+}
