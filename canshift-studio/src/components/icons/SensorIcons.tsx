@@ -225,6 +225,7 @@ function IatIcon({ size = 20, color = 'currentColor' }: IconProps) {
 }
 
 function GearIcon({ size = 20, color = 'currentColor' }: IconProps) {
+  // H-pattern gear selector: two rails (columns), three positions each
   return (
     <svg
       width={size}
@@ -232,11 +233,19 @@ function GearIcon({ size = 20, color = 'currentColor' }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
-      strokeWidth={1.6}
+      strokeWidth={1.8}
       strokeLinecap="round"
     >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2 L12 5 M12 19 L12 22 M2 12 L5 12 M19 12 L22 12 M4.9 4.9 L7.1 7.1 M16.9 16.9 L19.1 19.1 M19.1 4.9 L16.9 7.1 M7.1 16.9 L4.9 19.1" />
+      {/* Vertical rails */}
+      <line x1="8" y1="3" x2="8" y2="21" />
+      <line x1="16" y1="3" x2="16" y2="21" />
+      {/* Horizontal gate */}
+      <line x1="8" y1="12" x2="16" y2="12" />
+      {/* Gear positions: circles at 1,2,3,4,5,R */}
+      <circle cx="8" cy="5" r="1.6" fill={color} stroke="none" />
+      <circle cx="16" cy="5" r="1.6" stroke={color} strokeWidth={1.4} />
+      <circle cx="8" cy="19" r="1.6" stroke={color} strokeWidth={1.4} />
+      <circle cx="16" cy="19" r="1.6" stroke={color} strokeWidth={1.4} />
     </svg>
   )
 }
