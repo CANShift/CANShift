@@ -1,13 +1,23 @@
 // ipc-handlers.ts — Register all IPC handlers for the main process
 
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, BrowserWindow } from 'electron'
 import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 
-export function registerIpcHandlers(): void {
+export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
   const configService = new ConfigFileService()
   const usbService = new UsbService()
+
+  // Wire USB device events to the renderer window
+  usbService.setEventHandlers({
+    onConnectionChanged: (status) => {
+      getWindow()?.webContents.send(IpcChannels.USB_CONNECTION_CHANGED, status)
+    },
+    onError: (message) => {
+      getWindow()?.webContents.send(IpcChannels.USB_ERROR, message)
+    },
+  })
 
   // ---------------------------------------------------------------------------
   // Config file operations

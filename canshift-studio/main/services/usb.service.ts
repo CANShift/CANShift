@@ -31,10 +31,27 @@ interface UsbResult {
   data?: unknown
 }
 
+interface UsbEventHandlers {
+  onConnectionChanged?: (status: ConnectionStatus) => void
+  onError?: (message: string) => void
+}
+
+// Timeout in ms to wait for RSP_OK after pushConfig
+const PUSH_ACK_TIMEOUT_MS = 5_000
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 export class UsbService {
   private port: SerialPort | null = null
   private parser: ReadlineParser | null = null
   private portPath: string | null = null
+  private handlers: UsbEventHandlers = {}
+
+  setEventHandlers(handlers: UsbEventHandlers): void {
+    this.handlers = handlers
+  }
 
   async listPorts(): Promise<PortInfo[]> {
     const ports = await SerialPort.list()
@@ -61,6 +78,19 @@ export class UsbService {
 
       this.parser = this.port.pipe(new ReadlineParser({ delimiter: '\n' }))
 
+      // Detect unexpected disconnects (cable pulled, device reset)
+      this.port.on('close', () => {
+        const wasConnected = this.portPath !== null
+        this.portPath = null
+        if (wasConnected) {
+          this.handlers.onConnectionChanged?.({ connected: false })
+        }
+      })
+
+      this.port.on('error', (err: Error) => {
+        this.handlers.onError?.(err.message)
+      })
+
       this.port.open((err) => {
         if (err) {
           resolve({ success: false, error: err.message })
@@ -74,14 +104,15 @@ export class UsbService {
 
   async disconnect(): Promise<UsbResult> {
     if (!this.port?.isOpen) {
+      this.portPath = null
       return { success: true }
     }
 
     return new Promise((resolve) => {
       this.port?.close((err) => {
+        // 'close' event above will fire and notify the renderer
         this.port = null
         this.parser = null
-        this.portPath = null
         if (err) {
           resolve({ success: false, error: err.message })
         } else {
@@ -92,20 +123,50 @@ export class UsbService {
   }
 
   async pushConfig(config: unknown): Promise<UsbResult> {
-    if (!this.port?.isOpen) {
+    if (!this.port?.isOpen || !this.parser) {
       return { success: false, error: 'Not connected to device' }
     }
 
-    // TODO: Implement actual protocol — for now, write JSON + newline
     const payload = JSON.stringify({ cmd: 2, payload: config }) + '\n'
 
     return new Promise((resolve) => {
-      this.port?.write(payload, (err) => {
+      if (!this.parser || !this.port?.isOpen) {
+        resolve({ success: false, error: 'Not connected to device' })
+        return
+      }
+
+      const parser = this.parser
+
+      const onAck = (line: string) => {
+        clearTimeout(timer)
+        try {
+          const resp = JSON.parse(line) as unknown
+          if (isRecord(resp) && resp.status === 'ok') {
+            resolve({ success: true })
+          } else {
+            const msg =
+              isRecord(resp) && typeof resp.message === 'string'
+                ? resp.message
+                : 'Device returned error'
+            resolve({ success: false, error: msg })
+          }
+        } catch {
+          resolve({ success: false, error: 'Invalid response from device' })
+        }
+      }
+
+      const timer = setTimeout(() => {
+        parser.removeListener('data', onAck)
+        resolve({ success: false, error: 'Device did not acknowledge (timeout)' })
+      }, PUSH_ACK_TIMEOUT_MS)
+
+      parser.once('data', onAck)
+
+      this.port.write(payload, (err) => {
         if (err) {
+          clearTimeout(timer)
+          parser.removeListener('data', onAck)
           resolve({ success: false, error: err.message })
-        } else {
-          // TODO: Wait for RSP_OK response from device
-          resolve({ success: true })
         }
       })
     })

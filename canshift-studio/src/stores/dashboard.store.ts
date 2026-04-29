@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import { current } from 'immer'
 import type {
   DashboardConfig,
   PageConfig,
@@ -14,6 +15,8 @@ import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } fr
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const HISTORY_LIMIT = 50
 
 function widgetAreaHeight(page: PageConfig, topBarHeight: number): number {
   return page.showTopBar ? 240 - topBarHeight : 240
@@ -34,9 +37,18 @@ interface DashboardState {
   selectedPageId: string | null
   selectedWidgetId: string | null
 
+  /** Undo history — configs before the last N mutations. */
+  past: DashboardConfig[]
+  /** Redo stack — configs after the last undo. */
+  future: DashboardConfig[]
+
   // Config lifecycle
   setConfig: (config: DashboardConfig, filePath?: string) => void
   markSaved: (filePath: string) => void
+
+  // Edit history
+  undo: () => void
+  redo: () => void
 
   // Page operations
   selectPage: (pageId: string | null) => void
@@ -71,9 +83,13 @@ export const useDashboardStore = create<DashboardState>()(
     isDirty: false,
     selectedPageId: null,
     selectedWidgetId: null,
+    past: [],
+    future: [],
 
     setConfig: (config, filePath) => {
       set((s) => {
+        s.past = []
+        s.future = []
         s.config = config
         s.filePath = filePath ?? null
         s.isDirty = false
@@ -89,6 +105,38 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
+    undo: () => {
+      set((s) => {
+        if (s.past.length === 0 || !s.config) return
+        const prev = s.past[s.past.length - 1]
+        if (!prev) return
+        s.past.splice(s.past.length - 1, 1)
+        s.future.unshift(current(s.config))
+        if (s.future.length > HISTORY_LIMIT) s.future.pop()
+        s.config = prev
+        s.isDirty = true
+        s.selectedWidgetId = null
+        const pageStillExists = s.config.pages.some((p) => p.id === s.selectedPageId)
+        if (!pageStillExists) s.selectedPageId = s.config.pages[0]?.id ?? null
+      })
+    },
+
+    redo: () => {
+      set((s) => {
+        if (s.future.length === 0 || !s.config) return
+        const next = s.future[0]
+        if (!next) return
+        s.future.splice(0, 1)
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.config = next
+        s.isDirty = true
+        s.selectedWidgetId = null
+        const pageStillExists = s.config.pages.some((p) => p.id === s.selectedPageId)
+        if (!pageStillExists) s.selectedPageId = s.config.pages[0]?.id ?? null
+      })
+    },
+
     selectPage: (pageId) => {
       set((s) => {
         s.selectedPageId = pageId
@@ -99,6 +147,9 @@ export const useDashboardStore = create<DashboardState>()(
     addPage: (page) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         s.config.pages.push(page)
         s.selectedPageId = page.id
         s.isDirty = true
@@ -108,6 +159,9 @@ export const useDashboardStore = create<DashboardState>()(
     removePage: (pageId) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         s.config.pages = s.config.pages.filter((p) => p.id !== pageId)
         if (s.selectedPageId === pageId) {
           s.selectedPageId = s.config.pages[0]?.id ?? null
@@ -119,6 +173,9 @@ export const useDashboardStore = create<DashboardState>()(
     renamePage: (pageId, name) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
         page.name = name
@@ -129,6 +186,9 @@ export const useDashboardStore = create<DashboardState>()(
     setDefaultPage: (pageId) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         s.config.defaultPageId = pageId
         s.isDirty = true
       })
@@ -137,6 +197,9 @@ export const useDashboardStore = create<DashboardState>()(
     updatePage: (pageId, patch) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
         Object.assign(page, patch)
@@ -147,6 +210,9 @@ export const useDashboardStore = create<DashboardState>()(
     movePage: (fromIndex, toIndex) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         const pages = s.config.pages
         if (fromIndex < 0 || fromIndex >= pages.length) return
         if (toIndex < 0 || toIndex >= pages.length) return
@@ -159,6 +225,9 @@ export const useDashboardStore = create<DashboardState>()(
     updateTopBar: (patch) => {
       set((s) => {
         if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         Object.assign(s.config.topBar, patch)
         s.isDirty = true
       })
@@ -175,6 +244,10 @@ export const useDashboardStore = create<DashboardState>()(
         if (!s.config) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
+
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
 
         const canvasH = widgetAreaHeight(page, s.config.topBar.height)
         const others = page.widgets.map(toLayoutRect)
@@ -227,6 +300,9 @@ export const useDashboardStore = create<DashboardState>()(
         if (!s.config) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         page.widgets = page.widgets.filter((w) => w.id !== widgetId)
         if (s.selectedWidgetId === widgetId) s.selectedWidgetId = null
         s.isDirty = true
@@ -240,6 +316,9 @@ export const useDashboardStore = create<DashboardState>()(
         if (!page) return
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
         Object.assign(widget, patch)
         // Clamp position so the widget never overflows the canvas after resize.
         const canvasH = widgetAreaHeight(page, s.config.topBar.height)
@@ -249,6 +328,7 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
+    // moveWidget is NOT added to history — called 60fps during drag
     moveWidget: (pageId, widgetId, layout) => {
       set((s) => {
         if (!s.config) return
@@ -268,6 +348,11 @@ export const useDashboardStore = create<DashboardState>()(
         if (!page) return
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
+
+        // Snapshot taken here (drag-end) — not during the drag itself
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
 
         const canvasH = widgetAreaHeight(page, s.config.topBar.height)
         const others = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)

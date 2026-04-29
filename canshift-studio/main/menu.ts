@@ -61,8 +61,20 @@ export function buildMenu(win: BrowserWindow): void {
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' as const },
-        { role: 'redo' as const },
+        {
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => {
+            win.webContents.send(IpcChannels.HISTORY_UNDO)
+          },
+        },
+        {
+          label: 'Redo',
+          accelerator: isMac ? 'Cmd+Shift+Z' : 'Ctrl+Y',
+          click: () => {
+            win.webContents.send(IpcChannels.HISTORY_REDO)
+          },
+        },
         { type: 'separator' },
         { role: 'cut' as const },
         { role: 'copy' as const },

@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import type { DashboardConfig } from '@tmbk/canshift-core'
+import { validateDashboard } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
@@ -45,6 +46,17 @@ export function useConfigActions() {
 
   const burnConfig = useCallback(() => {
     if (!config || !connected || syncing) return
+
+    // Validate before pushing — refuse to burn an invalid config
+    const validation = validateDashboard(config)
+    if (!validation.valid) {
+      validation.errors.forEach((err) => {
+        log('error', `Validation: ${err}`)
+      })
+      log('error', `Burn aborted — ${String(validation.errors.length)} validation error(s)`)
+      return
+    }
+
     setSyncing(true)
     log('info', 'Burning config to device…')
     void usbService

@@ -32,6 +32,10 @@ export const IpcChannels = {
   FIRMWARE_UPDATE_USB: 'firmware:update-usb',
   FIRMWARE_UPDATE_WIFI: 'firmware:update-wifi',
 
+  // Edit history (main → renderer)
+  HISTORY_UNDO: 'history:undo',
+  HISTORY_REDO: 'history:redo',
+
   // App info
   APP_VERSION: 'app:version',
 } as const

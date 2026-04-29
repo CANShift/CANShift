@@ -131,7 +131,7 @@ app
       if (icon) app.dock.setIcon(icon)
     }
 
-    registerIpcHandlers()
+    registerIpcHandlers(() => mainWindow)
     createSplash()
     createWindow()
 

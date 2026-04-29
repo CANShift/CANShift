@@ -1,10 +1,17 @@
-// useUsbConnection.ts — Shared USB connect / disconnect / refresh logic
+// useUsbConnection.ts — Shared USB connect / disconnect / refresh logic.
+// Also listens for unsolicited device events (unexpected disconnect, errors).
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { usbService } from '../services/ipc.service'
+import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { PortInfo } from '../services/ipc.service'
+
+interface ConnectionChangedPayload {
+  connected: boolean
+  portPath?: string
+}
 
 export function useUsbConnection() {
   const [ports, setPorts] = useState<PortInfo[]>([])
@@ -17,6 +24,31 @@ export function useUsbConnection() {
   const setError = useDeviceStore((s) => s.setError)
   const clearError = useDeviceStore((s) => s.clearError)
   const log = useLogStore((s) => s.push)
+
+  // Listen for unsolicited device events (cable pulled, device reset, errors)
+  useEffect(() => {
+    const handleConnectionChanged = (payload: unknown) => {
+      const status = payload as ConnectionChangedPayload
+      if (!status.connected) {
+        setDisconnected()
+        log('warn', 'Device disconnected unexpectedly')
+      }
+    }
+
+    const handleError = (message: unknown) => {
+      const msg = typeof message === 'string' ? message : 'USB error'
+      setError(msg)
+      log('error', `USB: ${msg}`)
+    }
+
+    window.ipc.on(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
+    window.ipc.on(IpcChannels.USB_ERROR, handleError)
+
+    return () => {
+      window.ipc.off(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
+      window.ipc.off(IpcChannels.USB_ERROR, handleError)
+    }
+  }, [setDisconnected, setError, log])
 
   const refreshPorts = useCallback(() => {
     setLoading(true)
