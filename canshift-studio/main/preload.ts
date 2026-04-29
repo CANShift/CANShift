@@ -5,18 +5,36 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannels } from './ipc/ipc-channels'
 
+// Track wrapper functions so off() can remove the correct ipcRenderer listener
+// Map<listener, Map<channel, wrapper>>
+type IpcWrapper = (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+
+const wrapperRegistry = new WeakMap<(...args: unknown[]) => void, Map<string, IpcWrapper>>()
+
 // Type-safe IPC bridge exposed as window.ipc
 const ipc = {
   invoke: (channel: string, ...args: unknown[]): Promise<unknown> => {
     return ipcRenderer.invoke(channel, ...args)
   },
   on: (channel: string, listener: (...args: unknown[]) => void): void => {
-    ipcRenderer.on(channel, (_event, ...args) => {
-      listener(...(args as unknown[]))
-    })
+    const wrapper: IpcWrapper = (_event, ...args) => {
+      listener(...args)
+    }
+    let channelMap = wrapperRegistry.get(listener)
+    if (!channelMap) {
+      channelMap = new Map()
+      wrapperRegistry.set(listener, channelMap)
+    }
+    channelMap.set(channel, wrapper)
+    ipcRenderer.on(channel, wrapper)
   },
   off: (channel: string, listener: (...args: unknown[]) => void): void => {
-    ipcRenderer.removeListener(channel, listener)
+    const channelMap = wrapperRegistry.get(listener)
+    const wrapper = channelMap?.get(channel)
+    if (wrapper && channelMap) {
+      ipcRenderer.removeListener(channel, wrapper)
+      channelMap.delete(channel)
+    }
   },
   channels: IpcChannels,
 }
