@@ -2,6 +2,7 @@
   "name": "@tmbk/canshift-core",
   "version": "1.0.0",
   "description": "CANShift shared configuration domain types, schemas, and validation",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
