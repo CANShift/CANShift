@@ -31,6 +31,15 @@ function isDangerState(widget: Widget): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Signal label helper — converts "coolant_temp_c" → "COOLANT TEMP C"
+// ---------------------------------------------------------------------------
+
+function formatSignalLabel(signal: string): string {
+  if (!signal) return '—'
+  return signal.replace(/_+/g, ' ').toUpperCase().trim()
+}
+
+// ---------------------------------------------------------------------------
 // Label overlay helpers
 // ---------------------------------------------------------------------------
 
@@ -122,8 +131,9 @@ function GaugeArcPreview({
         : st.primaryColor
 
   const cx = w / 2
-  const cy = h * 0.65
-  const r = Math.min(w * 0.44, h * 0.62)
+  // Arc fits in top 85 % of height — leaves room below for value/suffix text
+  const r = Math.min(w * 0.45, h * 0.42)
+  const cy = r + Math.max(6, h * 0.06) // top pad + radius
   const strokeW = Math.max(3, r * 0.16)
   const innerR = r - strokeW / 2 - 2
 
@@ -131,11 +141,16 @@ function GaugeArcPreview({
   const revFlash = cfg.revFlash === true
   const showRevFlash = revFlash && revLimiting
 
+  const signalLabel = formatSignalLabel(widget.signal)
+  const valueFontSize = Math.max(9, Math.min(r * 0.38, h * 0.18, 28))
+  const unitFontSize = Math.max(6, r * 0.16)
+  const labelFontSize = Math.max(5, Math.min(8, r * 0.14))
+
   return (
-    <svg width={w} height={h} style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
-      {/* Rev-flash background fill when at rev limit */}
+    <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
+      {/* Rev-flash background fill */}
       {showRevFlash && <rect x={0} y={0} width={w} height={h} fill="#FF000022" />}
-      {/* Rev-flash indicator ring (dashed = configured, solid = active) */}
+      {/* Rev-flash indicator ring */}
       {revFlash && (
         <circle
           cx={cx}
@@ -183,6 +198,20 @@ function GaugeArcPreview({
       />
       {/* Inner circle */}
       <circle cx={cx} cy={cy} r={innerR} fill="#0D0D0D" />
+      {/* Signal name — inside arc, above center */}
+      <text
+        x={cx}
+        y={cy - r * 0.28}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={st.textColor + '55'}
+        fontSize={labelFontSize}
+        fontFamily="sans-serif"
+        fontWeight="600"
+        letterSpacing="0.06em"
+      >
+        {signalLabel}
+      </text>
       {/* Needle */}
       {cfg.showNeedle !== false && (
         <g style={{ animation: danger ? BLINK_ANIM : undefined }}>
@@ -198,35 +227,35 @@ function GaugeArcPreview({
           <circle cx={cx} cy={cy} r={Math.max(2, strokeW * 0.3)} fill={valueColor} />
         </g>
       )}
-      {/* Value text */}
+      {/* Value text — center of arc */}
       <text
         x={cx}
-        y={cy - r * 0.08}
+        y={cy}
         textAnchor="middle"
         dominantBaseline="middle"
         fill={valueColor}
-        fontSize={Math.max(8, Math.min(r * 0.34, h * 0.18))}
+        fontSize={valueFontSize}
         fontWeight="700"
         fontFamily="monospace"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
       </text>
-      {/* Suffix / unit label below value */}
+      {/* Suffix / unit */}
       {cfg.suffix && (
         <text
           x={cx}
-          y={cy + r * 0.22}
+          y={cy + r * 0.32}
           textAnchor="middle"
           dominantBaseline="middle"
-          fill={st.textColor + '88'}
-          fontSize={Math.max(6, r * 0.18)}
+          fill={st.textColor + '77'}
+          fontSize={unitFontSize}
           fontFamily="sans-serif"
         >
           {cfg.suffix}
         </text>
       )}
-      {/* Widget label */}
+      {/* Widget label (user-configured, shown at bottom when set) */}
       {cfg.label &&
         (() => {
           const pos = cfg.labelPosition ?? 'top-left'
@@ -279,6 +308,7 @@ function GaugeBarPreview({
 
   const demoValue = cfg.minValue + range * valuePct
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
+  const signalLabel = formatSignalLabel(widget.signal)
 
   if (isHorizontal) {
     const valueColor =
@@ -288,10 +318,11 @@ function GaugeBarPreview({
           ? st.warningColor
           : st.primaryColor
     const barH = Math.max(4, h * 0.35)
-    const fillW = w * valuePct
     const textY = (h - barH) / 2
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     const labelIsTop = labelPos.startsWith('top')
+    const sigFontSize = Math.max(5, Math.min(8, h * 0.22))
+
     return (
       <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
         <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
@@ -323,12 +354,26 @@ function GaugeBarPreview({
         <rect
           x={0}
           y={(h - barH) / 2}
-          width={fillW}
+          width={w * valuePct}
           height={barH}
           fill={valueColor}
           rx={2}
           style={{ animation: danger ? BLINK_ANIM : undefined }}
         />
+        {/* Signal name */}
+        <text
+          x={4}
+          y={labelIsTop ? h - 3 : 3}
+          textAnchor="start"
+          dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
+          fill={st.textColor + '55'}
+          fontSize={sigFontSize}
+          fontFamily="sans-serif"
+          fontWeight="600"
+          letterSpacing="0.05em"
+        >
+          {signalLabel}
+        </text>
         {h > 18 && (
           <text
             x={w / 2}
@@ -376,19 +421,34 @@ function GaugeBarPreview({
 
   const bw = Math.min(w * 0.35, 18)
   const padX = (w - bw) / 2
-  const padTop = 6
+  const padTop = 14 // room for signal name
   const padBot = h * 0.28
   const trackH = h - padTop - padBot
 
-  // SVG y: bottom of track = padTop + trackH, top = padTop
   const fillY = padTop + trackH * (1 - valuePct)
   const fillH = trackH * valuePct
 
   const warnY = padTop + trackH * (1 - warnPct)
   const dangerY = padTop + trackH * (1 - dangerPct)
 
+  const sigFontSize = Math.max(5, Math.min(7, w * 0.18))
+
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
+      {/* Signal name — top center */}
+      <text
+        x={w / 2}
+        y={2}
+        textAnchor="middle"
+        dominantBaseline="hanging"
+        fill={st.textColor + '55'}
+        fontSize={sigFontSize}
+        fontFamily="sans-serif"
+        fontWeight="600"
+        letterSpacing="0.05em"
+      >
+        {signalLabel}
+      </text>
       {/* Track background */}
       <rect x={padX} y={padTop} width={bw} height={trackH} fill="#1C1C1C" rx={3} />
       {/* Warning zone */}
@@ -429,7 +489,7 @@ function GaugeBarPreview({
         rx={3}
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
-      {/* Scale ticks — min and max (only when bar is wide enough to avoid clipping) */}
+      {/* Scale ticks */}
       {padX >= 16 && (
         <>
           <text
@@ -456,7 +516,7 @@ function GaugeBarPreview({
           </text>
         </>
       )}
-      {/* Value label — split value and suffix onto 2 lines for narrow widgets */}
+      {/* Value label */}
       {cfg.suffix ? (
         <>
           <text
@@ -556,12 +616,18 @@ function GaugeNumericPreview({
     valuePct >= dangerPct ? st.criticalColor : valuePct >= warnPct ? st.warningColor : st.textColor
 
   const iconName = cfg.iconName ?? null
-  // Font auto-scales to widget dimensions — no manual cap
-  const fontSize = Math.max(10, Math.min(h * 0.5, w * 0.35))
   const hasIcon = iconName !== null
-  const iconSize = Math.min(h * 0.38, w * 0.28, 24)
+  const iconSize = Math.min(h * 0.38, w * 0.25, 22)
   const labelText = cfg.label ?? null
   const labelPos = cfg.labelPosition ?? 'top-left'
+
+  // Signal name shown at top when no custom label
+  const showSignalHeader = labelText === null
+  const signalLabel = formatSignalLabel(widget.signal)
+  const sigHeaderH = showSignalHeader ? Math.max(8, h * 0.22) : 0
+  // Font scales to available height after reserving signal header row
+  const availH = h - sigHeaderH
+  const fontSize = Math.max(8, Math.min(availH * 0.62, w * 0.38))
 
   const isLabelTop = labelText !== null && labelPos.startsWith('top')
   const isLabelRight = labelPos.endsWith('right')
@@ -576,16 +642,37 @@ function GaugeNumericPreview({
         height: h,
         position: 'relative',
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        padding: '0 4px',
+        padding: showSignalHeader ? `${String(sigHeaderH + 2)}px 4px 2px` : '0 4px',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
     >
-      {/* Widget label overlay */}
+      {/* Signal name header */}
+      {showSignalHeader && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: 3,
+            fontSize: Math.max(5, Math.min(7, sigHeaderH * 0.72)),
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: st.textColor + '44',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: `calc(100% - 6px)`,
+            letterSpacing: '0.06em',
+          }}
+        >
+          {signalLabel}
+        </span>
+      )}
+      {/* Widget label overlay (user-configured) */}
       {labelText !== null && (
         <span
           style={{
@@ -609,24 +696,36 @@ function GaugeNumericPreview({
           {labelText}
         </span>
       )}
-      {hasIcon && <SensorIcon name={iconName} size={iconSize} color={valueColor + 'AA'} />}
-      <span
+      {/* Value row */}
+      <div
         style={{
-          color: valueColor,
-          fontSize,
-          fontWeight: 700,
-          fontFamily: 'monospace',
-          lineHeight: 1,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: hasIcon ? `calc(100% - ${String(iconSize + 4)}px)` : '100%',
-          textAlign: 'center',
-          animation: danger ? BLINK_ANIM : undefined,
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          width: '100%',
         }}
       >
-        {fullStr}
-      </span>
+        {hasIcon && <SensorIcon name={iconName} size={iconSize} color={valueColor + 'AA'} />}
+        <span
+          style={{
+            color: valueColor,
+            fontSize,
+            fontWeight: 700,
+            fontFamily: 'monospace',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: hasIcon ? `calc(100% - ${String(iconSize + 4)}px)` : '100%',
+            textAlign: 'center',
+            animation: danger ? BLINK_ANIM : undefined,
+          }}
+        >
+          {fullStr}
+        </span>
+      </div>
     </div>
   )
 }
@@ -646,6 +745,7 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
   const valueStr = (cfg.prefix ?? '') + String(Math.round(DEMO_PCT * 100)) + (cfg.suffix ?? '')
   const labelPos = cfg.labelPosition ?? 'bottom-center'
   const labelIsTop = labelPos === 'top-center'
+  const signalLabel = formatSignalLabel(widget.signal)
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
@@ -653,6 +753,20 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
       <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
       {/* Fill */}
       <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={st.primaryColor} rx={2} />
+      {/* Signal name */}
+      <text
+        x={4}
+        y={labelIsTop ? h - 3 : 3}
+        textAnchor="start"
+        dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
+        fill={st.textColor + '44'}
+        fontSize={Math.max(5, Math.min(7, h * 0.22))}
+        fontFamily="sans-serif"
+        fontWeight="600"
+        letterSpacing="0.05em"
+      >
+        {signalLabel}
+      </text>
       {/* Value readout */}
       {h > 18 && (
         <text
@@ -696,22 +810,43 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
   const cfg = widget.config
   const st = widget.style
   const iconName = cfg.iconName ?? 'warning'
-  const iconSize = Math.min(w, h) * 0.52
+  const iconSize = Math.min(w, h) * 0.48
+  const signalLabel = formatSignalLabel(widget.signal)
+  const sigFontSize = Math.max(5, Math.min(7, w * 0.1))
 
   return (
     <div
       style={{
         width: w,
         height: h,
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         background: st.criticalColor + '22',
         borderRadius: 3,
         animation: BLINK_ANIM,
+        overflow: 'hidden',
       }}
     >
       <SensorIcon name={iconName} size={iconSize} color={st.criticalColor} />
+      <span
+        style={{
+          position: 'absolute',
+          bottom: 2,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: sigFontSize,
+          fontFamily: 'sans-serif',
+          fontWeight: 600,
+          color: st.criticalColor + '88',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+          letterSpacing: '0.05em',
+        }}
+      >
+        {signalLabel}
+      </span>
     </div>
   )
 }
@@ -789,16 +924,20 @@ function ButtonPreview({
 
 function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
   const st = widget.style
-  const fontSize = Math.min(w * 0.7, h * 0.75)
+  const signalLabel = formatSignalLabel(widget.signal)
+  const fontSize = Math.min(w * 0.65, h * 0.68)
+  const sigFontSize = Math.max(5, Math.min(7, w * 0.12))
 
   return (
     <div
       style={{
         width: w,
         height: h,
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
       <span
@@ -811,6 +950,21 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
         }}
       >
         3
+      </span>
+      <span
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 3,
+          fontSize: sigFontSize,
+          fontFamily: 'sans-serif',
+          fontWeight: 600,
+          color: st.textColor + '44',
+          lineHeight: 1,
+          letterSpacing: '0.05em',
+        }}
+      >
+        {signalLabel}
       </span>
     </div>
   )
@@ -826,15 +980,18 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
   const st = widget.style
   const timeStr = cfg.format === 'ss.mmm' ? '12.847' : '01:23'
   const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
+  const sigFontSize = Math.max(5, Math.min(7, w * 0.07))
 
   return (
     <div
       style={{
         width: w,
         height: h,
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
       <span
@@ -847,6 +1004,21 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
         }}
       >
         {timeStr}
+      </span>
+      <span
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 3,
+          fontSize: sigFontSize,
+          fontFamily: 'sans-serif',
+          fontWeight: 600,
+          color: st.textColor + '44',
+          lineHeight: 1,
+          letterSpacing: '0.05em',
+        }}
+      >
+        TIMER
       </span>
     </div>
   )
@@ -871,6 +1043,19 @@ function ImagePreview({ w, h }: { w: number; h: number }) {
       {/* Mountain / photo icon */}
       <polyline points={pts} fill="none" stroke="#333333" strokeWidth={1.5} />
       <circle cx={w * 0.3} cy={h * 0.35} r={Math.min(w, h) * 0.06} fill="#333333" />
+      <text
+        x={w / 2}
+        y={h - 6}
+        textAnchor="middle"
+        dominantBaseline="auto"
+        fill="#2A2A2A"
+        fontSize={Math.max(5, Math.min(7, w * 0.07))}
+        fontFamily="sans-serif"
+        fontWeight="600"
+        letterSpacing="0.05em"
+      >
+        IMAGE
+      </text>
     </svg>
   )
 }
