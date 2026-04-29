@@ -35,6 +35,8 @@ function icon(path: string, viewBox = '0 0 16 16'): IconComponent {
 export const IconEditor = icon('M2 3h12M2 8h8M2 13h10')
 export const IconSignals = icon('M1 8c1-3 2-5 3-5s2 4 3 8 2 5 3 2 2-6 3-5')
 export const IconTheme = icon('M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM5 8a3 3 0 0 1 6 0')
+// Upload arrow + chip — firmware update
+export const IconFirmware = icon('M8 2v8M5 7l3-3 3 3M3 11v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2')
 
 // File actions
 export const IconLoad = icon(
