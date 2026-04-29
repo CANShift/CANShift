@@ -67,9 +67,23 @@ function GaugeArcPreview({ widget, w, h }: { widget: Widget; w: number; h: numbe
   const innerR = r - strokeW / 2 - 2
 
   const needleTip = svgPt(cx, cy, r * 0.88, 135 + valuePct * 270)
+  const revFlash = cfg.revFlash === true
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
+      {/* Rev-flash indicator ring */}
+      {revFlash && (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r + strokeW * 0.6}
+          fill="none"
+          stroke="#FF0000"
+          strokeWidth={2}
+          opacity={0.6}
+          strokeDasharray="4 3"
+        />
+      )}
       {/* Background arc */}
       <path
         d={gaugeArcD(cx, cy, r, 0, 1)}

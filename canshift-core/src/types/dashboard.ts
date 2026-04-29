@@ -59,6 +59,11 @@ export interface GaugeWidgetConfig {
   showNeedle?: boolean
   /** Icon shown in arc centre or beside numeric value */
   iconName?: SensorIconName
+  /**
+   * Flash the widget red when the signal value reaches revLimitRpm.
+   * Firmware triggers a full-screen red blink; preview shows a red ring.
+   */
+  revFlash?: boolean
 }
 
 export interface WarningWidgetConfig {

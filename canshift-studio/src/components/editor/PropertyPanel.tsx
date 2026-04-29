@@ -267,15 +267,26 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
             </Field>
           </Row>
           {style === 'arc' && (
-            <Field label="Needle">
-              <input
-                type="checkbox"
-                checked={cfg.showNeedle ?? false}
-                onChange={(e) => {
-                  onChange({ config: { ...cfg, showNeedle: e.target.checked } })
-                }}
-              />
-            </Field>
+            <>
+              <Field label="Needle">
+                <input
+                  type="checkbox"
+                  checked={cfg.showNeedle ?? false}
+                  onChange={(e) => {
+                    onChange({ config: { ...cfg, showNeedle: e.target.checked } })
+                  }}
+                />
+              </Field>
+              <Field label="Rev flash">
+                <input
+                  type="checkbox"
+                  checked={cfg.revFlash ?? false}
+                  onChange={(e) => {
+                    onChange({ config: { ...cfg, revFlash: e.target.checked } })
+                  }}
+                />
+              </Field>
+            </>
           )}
         </>
       )}

@@ -62,7 +62,8 @@ interface WidgetBoxProps {
 
 function WidgetBox({ widget, isSelected, isOverlapping, onSelect, onDragStart }: WidgetBoxProps) {
   const { layout, type } = widget
-  const borderColor = isOverlapping ? '#FF2222' : isSelected ? '#FFFFFF' : getBorderColor(type)
+  const typeColor = getBorderColor(type)
+  const borderColor = isOverlapping ? '#FF2222' : isSelected ? '#FFFFFF' : typeColor
   const borderWidth = isSelected || isOverlapping ? 2 : 1
 
   return (
@@ -88,8 +89,8 @@ function WidgetBox({ widget, isSelected, isOverlapping, onSelect, onDragStart }:
         boxShadow: isOverlapping
           ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'
           : isSelected
-            ? `0 0 0 1px #FFFFFF22, 0 0 6px ${getBorderColor(type)}66`
-            : 'none',
+            ? `0 0 0 1px #FFFFFF22, 0 0 6px ${typeColor}88`
+            : `0 0 0 1px ${typeColor}22`,
       }}
     >
       <WidgetPreview widget={widget} displayW={layout.w * SCALE} displayH={layout.h * SCALE} />
