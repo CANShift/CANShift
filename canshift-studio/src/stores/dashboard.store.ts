@@ -3,6 +3,23 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { DashboardConfig, PageConfig, Widget, WidgetLayout } from '@tmbk/canshift-core'
+import { autoPlace, resolveCollisions } from '../utils/layout'
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function widgetAreaHeight(page: PageConfig, topBarHeight: number): number {
+  return page.showTopBar ? 240 - topBarHeight : 240
+}
+
+function toLayoutRect(w: Widget): { id: string; x: number; y: number; w: number; h: number } {
+  return { id: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h }
+}
+
+// ---------------------------------------------------------------------------
+// Store types
+// ---------------------------------------------------------------------------
 
 interface DashboardState {
   config: DashboardConfig | null
@@ -22,11 +39,19 @@ interface DashboardState {
 
   // Widget operations
   selectWidget: (widgetId: string | null) => void
+  /** Add a widget; auto-places it in the first free spot. */
   addWidget: (pageId: string, widget: Widget) => void
   removeWidget: (pageId: string, widgetId: string) => void
   updateWidget: (pageId: string, widgetId: string, patch: Partial<Widget>) => void
+  /** Move during drag — does NOT resolve collisions (for smooth tracking). */
   moveWidget: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
+  /** Called on drag-end: resolves collisions and cascades pushed widgets. */
+  resolveWidgetCollisions: (pageId: string, widgetId: string) => void
 }
+
+// ---------------------------------------------------------------------------
+// Store implementation
+// ---------------------------------------------------------------------------
 
 export const useDashboardStore = create<DashboardState>()(
   immer((set) => ({
@@ -91,6 +116,17 @@ export const useDashboardStore = create<DashboardState>()(
         if (!s.config) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
+
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const others = page.widgets.map(toLayoutRect)
+
+        // Auto-place: find first free spot, default to (0,0) if canvas is full
+        const pos = autoPlace({ w: widget.layout.w, h: widget.layout.h }, others, 320, canvasH)
+        if (pos) {
+          widget.layout.x = pos.x
+          widget.layout.y = pos.y
+        }
+
         page.widgets.push(widget)
         s.selectedWidgetId = widget.id
         s.isDirty = true
@@ -128,6 +164,39 @@ export const useDashboardStore = create<DashboardState>()(
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
         Object.assign(widget.layout, layout)
+        s.isDirty = true
+      })
+    },
+
+    resolveWidgetCollisions: (pageId, widgetId) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        const widget = page.widgets.find((w) => w.id === widgetId)
+        if (!widget) return
+
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const others = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)
+        const moved = toLayoutRect(widget)
+
+        const changes = resolveCollisions(
+          moved,
+          widget.layout.x,
+          widget.layout.y,
+          others,
+          320,
+          canvasH
+        )
+
+        for (const w of page.widgets) {
+          const np = changes.get(w.id)
+          if (np) {
+            w.layout.x = np.x
+            w.layout.y = np.y
+          }
+        }
+
         s.isDirty = true
       })
     },

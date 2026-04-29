@@ -308,6 +308,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const selectWidget = useDashboardStore((s) => s.selectWidget)
   const moveWidget = useDashboardStore((s) => s.moveWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
+  const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
@@ -356,6 +357,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       }
 
       const handleMouseUp = () => {
+        if (drag) {
+          // Resolve overlaps after drop — cascade-push colliding widgets
+          resolveWidgetCollisions(drag.pageId, drag.widgetId)
+        }
         drag = null
         window.removeEventListener('mousemove', handleMouseMove)
         window.removeEventListener('mouseup', handleMouseUp)
@@ -364,7 +369,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
     },
-    [page.id, moveWidget]
+    [page.id, moveWidget, resolveWidgetCollisions]
   )
 
   return (
