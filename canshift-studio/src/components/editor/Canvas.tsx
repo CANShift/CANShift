@@ -1,10 +1,11 @@
 // Canvas.tsx — 320×240 widget layout editor.
 // Renders all widgets as interactive boxes; supports click-to-select and drag-to-move.
 
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, TopBarConfig, Widget, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
+import ScreenSettingsPanel from './ScreenSettingsPanel'
 
 const SCALE = 2 // 320×240 → 640×480 on screen
 const CANVAS_W = 320 * SCALE
@@ -167,9 +168,10 @@ function WidgetBox({ widget, isSelected, onSelect, onDragStart }: WidgetBoxProps
 interface DashTopBarProps {
   topBar: TopBarConfig
   pageName: string
+  onOpenSettings: () => void
 }
 
-function DashTopBar({ topBar, pageName }: DashTopBarProps) {
+function DashTopBar({ topBar, pageName, onOpenSettings }: DashTopBarProps) {
   // All sizes derived from bar height so content scales correctly at any height
   const h       = topBar.height * SCALE
   const dot     = Math.round(h * 0.30)
@@ -245,11 +247,47 @@ function DashTopBar({ topBar, pageName }: DashTopBarProps) {
         </span>
       )}
 
-      {/* Right — battery + mode */}
-      <div style={{ display: 'flex', alignItems: 'center', gap }}>
+      {/* Right — battery + settings button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap, pointerEvents: 'auto' }}>
         <span style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>12.4V</span>
         <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        <span style={{ fontSize: fs, color: '#444444', lineHeight: 1 }}>SIM</span>
+        {/* Settings gear button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenSettings()
+          }}
+          title="Screen settings"
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            color: '#555555',
+            lineHeight: 1,
+          }}
+        >
+          <svg
+            width={Math.round(fs * 1.1)}
+            height={Math.round(fs * 1.1)}
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <path
+              d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.5 3.5l1 1M11.5 11.5l1 1M12.5 3.5l-1 1M4.5 11.5l-1 1"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   )
@@ -272,6 +310,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -356,7 +395,13 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           }}
         >
           {/* Dashboard top bar — fixed height, pushes widget area down */}
-          {page.showTopBar && <DashTopBar topBar={topBar} pageName={page.name} />}
+          {page.showTopBar && (
+            <DashTopBar
+              topBar={topBar}
+              pageName={page.name}
+              onOpenSettings={() => { setSettingsOpen(true) }}
+            />
+          )}
 
           {/* Widget area — coordinate origin (0,0) is below the top bar */}
           <div
@@ -395,6 +440,14 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 onDragStart={handleDragStart}
               />
             ))}
+
+            {/* Screen settings overlay page */}
+            {settingsOpen && (
+              <ScreenSettingsPanel
+                scale={SCALE}
+                onClose={() => { setSettingsOpen(false) }}
+              />
+            )}
           </div>
         </div>
 
