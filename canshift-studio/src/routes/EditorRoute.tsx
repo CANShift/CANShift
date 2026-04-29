@@ -69,6 +69,7 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
             widget={widget}
             displayW={widget.layout.w * THUMB_SCALE}
             displayH={widget.layout.h * THUMB_SCALE}
+            noAnimate
           />
         </div>
       ))}

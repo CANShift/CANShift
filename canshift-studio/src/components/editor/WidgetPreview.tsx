@@ -1151,6 +1151,8 @@ interface WidgetPreviewProps {
   revLimiting?: boolean
   /** When true, button widget renders in its active/pressed visual state */
   buttonActive?: boolean
+  /** When true, suppresses all CSS animations (blink, flash). Use for thumbnails. */
+  noAnimate?: boolean
 }
 
 export function WidgetPreview({
@@ -1160,17 +1162,24 @@ export function WidgetPreview({
   palette,
   revLimiting = false,
   buttonActive = false,
+  noAnimate = false,
 }: WidgetPreviewProps) {
-  ensureBlinkStyle()
+  if (!noAnimate) ensureBlinkStyle()
 
   const resolved = palette ? applyPalette(widget, palette) : widget
   const { config } = resolved
-  const danger = isDangerState(resolved)
+  const danger = noAnimate ? false : isDangerState(resolved)
 
   if (config.type === 'gauge') {
     if (config.displayStyle === 'arc')
       return (
-        <GaugeArcPreview widget={resolved} w={w} h={h} revLimiting={revLimiting} danger={danger} />
+        <GaugeArcPreview
+          widget={resolved}
+          w={w}
+          h={h}
+          revLimiting={noAnimate ? false : revLimiting}
+          danger={danger}
+        />
       )
     if (config.displayStyle === 'bar')
       return <GaugeBarPreview widget={resolved} w={w} h={h} danger={danger} />
