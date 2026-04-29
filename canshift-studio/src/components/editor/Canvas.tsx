@@ -263,6 +263,9 @@ interface CanvasProps {
   topBar: TopBarConfig
 }
 
+// Outer frame dimensions (border 3px × 2 + padding 6px × 2)
+const FRAME_EXTRA = 2 * 3 + 2 * 6 // 18px each side
+
 export default function Canvas({ page, topBar }: CanvasProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
@@ -270,10 +273,50 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const containerRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const zoomRef = useRef<number>(1)
 
   const widgetAreaH = 240 - (page.showTopBar ? topBar.height : 0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
+  const [flashPhase, setFlashPhase] = useState(false)
+  const [zoom, setZoom] = useState(1)
+
+  // Dynamic scale: fill available space while preserving aspect ratio
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      const z = Math.min(width / (CANVAS_W + FRAME_EXTRA), height / (CANVAS_H + FRAME_EXTRA))
+      const clamped = Math.max(0.5, Math.min(4, z))
+      zoomRef.current = clamped
+      setZoom(clamped)
+    })
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+    }
+  }, [])
+
+  // Rev limit flash: alternates red overlay every 200ms, auto-stops after 5s
+  useEffect(() => {
+    if (!revLimiting) {
+      setFlashPhase(false)
+      return
+    }
+    const interval = setInterval(() => {
+      setFlashPhase((v) => !v)
+    }, 200)
+    const timeout = setTimeout(() => {
+      setRevLimiting(false)
+    }, 5000)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [revLimiting])
 
   // Compute which widget ids currently overlap — shown with red border as feedback
   const overlappingIds = (() => {
@@ -333,8 +376,9 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
       const handleMouseMove = (ev: MouseEvent) => {
         if (!drag) return
-        const dx = Math.round((ev.clientX - drag.startMouseX) / SCALE)
-        const dy = Math.round((ev.clientY - drag.startMouseY) / SCALE)
+        const effectiveScale = SCALE * zoomRef.current
+        const dx = Math.round((ev.clientX - drag.startMouseX) / effectiveScale)
+        const dy = Math.round((ev.clientY - drag.startMouseY) / effectiveScale)
         // Snap to GRID, clamp to canvas bounds accounting for widget dimensions
         const rawX = drag.startWidgetX + dx
         const rawY = drag.startWidgetY + dy
@@ -365,128 +409,166 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     <div
       style={{
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: 'column',
         flex: 1,
+        overflow: 'hidden',
         background: '#111111',
-        overflow: 'auto',
-        padding: 24,
       }}
     >
-      {/* Outer frame to mimic the physical screen border */}
+      {/* Studio toolbar — rev limit simulation (studio-only, not on device) */}
       <div
         style={{
-          background: '#000000',
-          border: '3px solid #2A2A2A',
-          borderRadius: 6,
-          padding: 6,
-          boxShadow: '0 8px 32px #00000088',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          padding: '4px 10px',
+          borderBottom: '1px solid #1A1A1A',
+          gap: 8,
+          flexShrink: 0,
         }}
       >
-        {/* The 320×240 canvas at 2× zoom */}
-        <div
+        <span style={{ fontSize: 9, color: '#333333', letterSpacing: '0.05em' }}>
+          PREVIEW — 320 × 240
+        </span>
+        <button
+          onClick={() => {
+            setRevLimiting(true)
+          }}
+          disabled={revLimiting}
+          title="Simulate rev limiter (5s)"
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            width: CANVAS_W,
-            height: CANVAS_H,
-            background: page.backgroundColor,
-            overflow: 'hidden',
+            padding: '2px 8px',
+            fontSize: 10,
+            background: revLimiting ? '#3A0000' : 'transparent',
+            border: `1px solid ${revLimiting ? '#CC0000' : '#2A2A2A'}`,
+            borderRadius: 3,
+            color: revLimiting ? '#FF4444' : '#444444',
+            cursor: revLimiting ? 'default' : 'pointer',
+            letterSpacing: '0.04em',
           }}
         >
-          {/* Dashboard top bar — fixed height, pushes widget area down */}
-          {page.showTopBar && (
-            <DashTopBar
-              topBar={topBar}
-              pageName={page.name}
-              settingsOpen={settingsOpen}
-              onOpenSettings={() => {
-                setSettingsOpen((o) => !o)
-              }}
-            />
-          )}
+          ⚡ Rev Limit
+        </button>
+      </div>
 
-          {/* Widget area — coordinate origin (0,0) is below the top bar */}
+      {/* Canvas area — fills all remaining space, frame is CSS-scaled to fit */}
+      <div
+        ref={wrapperRef}
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Outer frame — scaled to fill available space */}
+        <div
+          style={{
+            transform: `scale(${String(zoom)})`,
+            transformOrigin: 'center center',
+          }}
+        >
+          {/* Physical screen border */}
           <div
-            ref={containerRef}
-            onMouseDown={() => {
-              selectWidget(null)
-            }}
             style={{
-              position: 'relative',
-              flex: 1,
-              overflow: 'hidden',
-              cursor: 'default',
+              background: '#000000',
+              border: '3px solid #2A2A2A',
+              borderRadius: 6,
+              padding: 6,
+              boxShadow: '0 8px 32px #00000088',
             }}
           >
-            {/* Grid overlay */}
+            {/* The 320×240 canvas at 2× zoom */}
             <div
               style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: `
+                display: 'flex',
+                flexDirection: 'column',
+                width: CANVAS_W,
+                height: CANVAS_H,
+                background: page.backgroundColor,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Dashboard top bar — fixed height, pushes widget area down */}
+              {page.showTopBar && (
+                <DashTopBar
+                  topBar={topBar}
+                  pageName={page.name}
+                  settingsOpen={settingsOpen}
+                  onOpenSettings={() => {
+                    setSettingsOpen((o) => !o)
+                  }}
+                />
+              )}
+
+              {/* Widget area — coordinate origin (0,0) is below the top bar */}
+              <div
+                ref={containerRef}
+                onMouseDown={() => {
+                  selectWidget(null)
+                }}
+                style={{
+                  position: 'relative',
+                  flex: 1,
+                  overflow: 'hidden',
+                  cursor: 'default',
+                }}
+              >
+                {/* Grid overlay */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `
                   linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
                   linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
                 `,
-                backgroundSize: `${String(10 * SCALE)}px ${String(10 * SCALE)}px`,
-                pointerEvents: 'none',
-              }}
-            />
+                    backgroundSize: `${String(10 * SCALE)}px ${String(10 * SCALE)}px`,
+                    pointerEvents: 'none',
+                  }}
+                />
 
-            {/* Widgets — warnings always rendered last (on top) */}
-            {[
-              ...page.widgets.filter((w) => w.type !== 'warning'),
-              ...page.widgets.filter((w) => w.type === 'warning'),
-            ].map((widget) => (
-              <WidgetBox
-                key={widget.id}
-                widget={widget}
-                isSelected={widget.id === selectedWidgetId}
-                isOverlapping={overlappingIds.has(widget.id)}
-                revLimiting={revLimiting}
-                onSelect={selectWidget}
-                onDragStart={handleDragStart}
-              />
-            ))}
+                {/* Widgets — warnings always rendered last (on top) */}
+                {[
+                  ...page.widgets.filter((w) => w.type !== 'warning'),
+                  ...page.widgets.filter((w) => w.type === 'warning'),
+                ].map((widget) => (
+                  <WidgetBox
+                    key={widget.id}
+                    widget={widget}
+                    isSelected={widget.id === selectedWidgetId}
+                    isOverlapping={overlappingIds.has(widget.id)}
+                    revLimiting={revLimiting}
+                    onSelect={selectWidget}
+                    onDragStart={handleDragStart}
+                  />
+                ))}
 
-            {/* Screen settings overlay page */}
-            {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
+                {/* Screen settings overlay page */}
+                {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
+
+                {/* Rev limit flash overlay — studio-only simulation */}
+                {revLimiting && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: flashPhase ? '#FF000044' : 'transparent',
+                      transition: 'background 0.1s',
+                      pointerEvents: 'none',
+                      zIndex: 200,
+                    }}
+                  />
+                )}
+              </div>
+            </div>
           </div>
+          {/* end scale wrapper */}
         </div>
-
-        {/* Canvas footer: label + rev-limit sim button */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            marginTop: 6,
-          }}
-        >
-          <span style={{ fontSize: 10, color: '#333333', letterSpacing: '0.05em' }}>
-            320 × 240 px — {SCALE}× preview
-          </span>
-          <button
-            onClick={() => {
-              setRevLimiting((v) => !v)
-            }}
-            title="Simulate rev limiter"
-            style={{
-              padding: '2px 8px',
-              fontSize: 10,
-              background: revLimiting ? '#3A0000' : 'transparent',
-              border: `1px solid ${revLimiting ? '#CC0000' : '#2A2A2A'}`,
-              borderRadius: 3,
-              color: revLimiting ? '#FF4444' : '#444444',
-              cursor: 'pointer',
-              letterSpacing: '0.04em',
-            }}
-          >
-            ⚡ Rev Limit
-          </button>
-        </div>
+        {/* end screen border */}
       </div>
+      {/* end wrapperRef */}
     </div>
   )
 }
