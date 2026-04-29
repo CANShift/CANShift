@@ -318,6 +318,8 @@ function GaugeBarPreview({
           ? st.warningColor
           : st.primaryColor
     const barH = Math.max(4, h * 0.35)
+    const padX = 6 // equal left/right breathing room around the track
+    const trackW = w - padX * 2
     const textY = (h - barH) / 2
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     const labelIsTop = labelPos.startsWith('top')
@@ -325,36 +327,36 @@ function GaugeBarPreview({
 
     return (
       <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-        <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
+        <rect x={padX} y={(h - barH) / 2} width={trackW} height={barH} fill="#1C1C1C" rx={2} />
         {dangerPct > warnPct && (
           <rect
-            x={w * warnPct}
+            x={padX + trackW * warnPct}
             y={(h - barH) / 2}
-            width={(dangerPct - warnPct) * w}
+            width={(dangerPct - warnPct) * trackW}
             height={barH}
             fill={st.warningColor + '35'}
           />
         )}
         <rect
-          x={w * dangerPct}
+          x={padX + trackW * dangerPct}
           y={(h - barH) / 2}
-          width={(1 - dangerPct) * w}
+          width={(1 - dangerPct) * trackW}
           height={barH}
           fill={st.criticalColor + '35'}
         />
         <line
-          x1={w * dangerPct}
+          x1={padX + trackW * dangerPct}
           y1={(h - barH) / 2 - 2}
-          x2={w * dangerPct}
+          x2={padX + trackW * dangerPct}
           y2={(h + barH) / 2 + 2}
           stroke={st.criticalColor}
           strokeWidth={1}
           strokeDasharray="2 2"
         />
         <rect
-          x={0}
+          x={padX}
           y={(h - barH) / 2}
-          width={w * valuePct}
+          width={trackW * valuePct}
           height={barH}
           fill={valueColor}
           rx={2}
@@ -857,39 +859,38 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
   const cfg = widget.config
   const st = widget.style
   const iconName = cfg.iconName ?? 'warning'
-  const iconSize = Math.min(w, h) * 0.48
   const signalLabel = formatSignalLabel(widget.signal)
-  const sigFontSize = Math.max(5, Math.min(7, w * 0.1))
+  const sigFontSize = Math.max(6, Math.min(h * 0.12, w * 0.1, 11))
+  const labelH = sigFontSize + 4
+  const iconSize = Math.min(w * 0.55, h - labelH - 8, 64)
 
   return (
     <div
       style={{
         width: w,
         height: h,
-        position: 'relative',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 4,
         background: st.criticalColor + '22',
         borderRadius: 3,
         animation: BLINK_ANIM,
         overflow: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       <SensorIcon name={iconName} size={iconSize} color={st.criticalColor} />
       <span
         style={{
-          position: 'absolute',
-          bottom: 2,
-          left: '50%',
-          transform: 'translateX(-50%)',
           fontSize: sigFontSize,
           fontFamily: 'sans-serif',
           fontWeight: 600,
-          color: st.criticalColor + '88',
+          color: st.criticalColor + '99',
           lineHeight: 1,
           whiteSpace: 'nowrap',
-          letterSpacing: '0.05em',
+          letterSpacing: '0.06em',
         }}
       >
         {signalLabel}
