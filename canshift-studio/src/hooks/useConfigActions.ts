@@ -64,7 +64,11 @@ export function useConfigActions() {
       .then((result) => {
         if (result.success) {
           setSyncComplete(new Date())
-          log('success', 'Config burned successfully')
+          // The firmware reboots immediately after acknowledging the push.
+          // The USB disconnect event will fire in ~150ms and update the
+          // connection status automatically — no extra action needed here.
+          log('success', 'Config written to device')
+          log('info', 'Device is rebooting — reconnect in a few seconds')
         } else {
           const msg = result.error ?? 'Burn failed'
           setError(msg)
