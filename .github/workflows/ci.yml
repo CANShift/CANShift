@@ -89,7 +89,7 @@ jobs:
       - name: Build
         run: npm run build
 
-  # ─── Firmware ───────────────────────────────────────────────────────────────
+  # ─── Firmware — clang-format ────────────────────────────────────────────────
   firmware:
     name: firmware — clang-format check
     runs-on: ubuntu-latest
@@ -110,3 +110,40 @@ jobs:
         run: |
           FILES=$(find src include -name "*.cpp" -o -name "*.h" | grep -v "lv_conf\.h")
           clang-format --dry-run --Werror --style=file $FILES
+
+  # ─── Firmware — PlatformIO compile ──────────────────────────────────────────
+  firmware-build:
+    name: firmware — PlatformIO build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+          key: platformio-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: |
+            platformio-${{ runner.os }}-
+
+      - name: Install PlatformIO CLI
+        run: pip install platformio
+
+      - name: Build sim environment
+        # Compiles all firmware code in simulation mode (no CAN hardware required).
+        # This is the primary compile check — same toolchain as the real target.
+        run: platformio run -e sim
+
+      - name: Build production environment
+        # Compiles the production target to catch any #if branch divergence.
+        run: platformio run -e crowpanel_28
