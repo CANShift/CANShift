@@ -61,11 +61,20 @@ export const configService = {
 // USB device operations
 // ---------------------------------------------------------------------------
 
+export interface ScreenSettingsPayload {
+  brightness: number
+  contrast: number
+  sleep: number
+  rotation: number
+}
+
 export const usbService = {
   listPorts: () => invoke<PortInfo[]>(IpcChannels.USB_LIST_PORTS),
   connect: (portPath: string) => invoke<UsbResult>(IpcChannels.USB_CONNECT, portPath),
   disconnect: () => invoke<UsbResult>(IpcChannels.USB_DISCONNECT),
   pushConfig: (config: DashboardConfig) => invoke<UsbResult>(IpcChannels.USB_PUSH_CONFIG, config),
+  pushScreenSettings: (settings: ScreenSettingsPayload) =>
+    invoke<UsbResult>(IpcChannels.USB_SCREEN_SETTINGS, settings),
   getStatus: () => invoke<ConnectionStatus>(IpcChannels.USB_GET_STATUS),
   reboot: () => invoke<UsbResult>(IpcChannels.USB_REBOOT),
 }

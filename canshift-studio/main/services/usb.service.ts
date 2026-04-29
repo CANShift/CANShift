@@ -179,6 +179,35 @@ export class UsbService {
     }
   }
 
+  async pushScreenSettings(settings: {
+    brightness: number
+    contrast: number
+    sleep: number
+    rotation: number
+  }): Promise<UsbResult> {
+    if (!this.port?.isOpen) {
+      return { success: false, error: 'Not connected to device' }
+    }
+
+    // CMD_SCREEN_SETTINGS = 0x05
+    const payload = JSON.stringify({ cmd: 0x05, ...settings }) + '\n'
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        resolve({ success: false, error: 'Device did not acknowledge (timeout)' })
+      }, PUSH_ACK_TIMEOUT_MS)
+
+      this.port?.write(payload, (err) => {
+        clearTimeout(timer)
+        if (err) {
+          resolve({ success: false, error: err.message })
+        } else {
+          resolve({ success: true })
+        }
+      })
+    })
+  }
+
   async rebootDevice(): Promise<UsbResult> {
     if (!this.port?.isOpen) {
       return { success: false, error: 'Not connected to device' }

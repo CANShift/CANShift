@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useScreenSettingsStore } from '../../stores/screenSettings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
+import { usbService } from '../../services/ipc.service'
 
 interface ScreenSettingsPanelProps {
   scale: number
@@ -22,7 +23,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const fsLg = Math.round(scale * 7)
   const gap = Math.round(scale * 6)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (simulationMode) {
       log(
         'info',
@@ -34,11 +35,20 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
       log('warn', 'Screen settings: no device connected')
       return
     }
-    // TODO: push via usbService when screen settings IPC channel is implemented
-    log(
-      'success',
-      `Screen settings pushed — brightness ${String(brightness)}% contrast ${String(contrast)}% rotation ${String(rotation)}°`
-    )
+    const result = await usbService.pushScreenSettings({
+      brightness,
+      contrast,
+      sleep: sleepTimeoutS,
+      rotation,
+    })
+    if (result.success) {
+      log(
+        'success',
+        `Screen settings pushed — brightness ${String(brightness)}% contrast ${String(contrast)}% rotation ${String(rotation)}°`
+      )
+    } else {
+      log('error', `Screen settings push failed: ${result.error ?? 'unknown error'}`)
+    }
   }
 
   const canSave = connected || simulationMode

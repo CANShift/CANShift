@@ -15,6 +15,7 @@ export const IpcChannels = {
   USB_CONNECT: 'usb:connect',
   USB_DISCONNECT: 'usb:disconnect',
   USB_PUSH_CONFIG: 'usb:push-config',
+  USB_SCREEN_SETTINGS: 'usb:screen-settings',
   USB_GET_STATUS: 'usb:get-status',
   USB_REBOOT: 'usb:reboot',
 

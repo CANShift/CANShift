@@ -56,6 +56,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return usbService.pushConfig(config)
   })
 
+  ipcMain.handle(IpcChannels.USB_SCREEN_SETTINGS, async (_event, settings: unknown) => {
+    return usbService.pushScreenSettings(
+      settings as { brightness: number; contrast: number; sleep: number; rotation: number }
+    )
+  })
+
   ipcMain.handle(IpcChannels.USB_GET_STATUS, () => {
     return usbService.getStatus()
   })
