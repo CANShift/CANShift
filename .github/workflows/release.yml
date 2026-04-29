@@ -1,5 +1,7 @@
 # Release — triggered by pushing a version tag (v*)
-# Builds the Electron desktop app, creates a GitHub Release with binaries
+# Builds the Electron desktop app and publishes to GitHub Releases (draft).
+# electron-builder handles artifact upload and generates latest-mac.yml / latest.yml
+# which are required by electron-updater for auto-update.
 
 name: Release
 
@@ -49,16 +51,9 @@ jobs:
       - name: Install studio dependencies
         run: npm ci
 
-      - name: Package Electron app
-        run: npm run dist
+      # electron-builder publishes directly to GitHub Releases when GH_TOKEN is set.
+      # It uploads the installer + the latest-*.yml manifest used by electron-updater.
+      - name: Build and publish
+        run: npm run build && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          files: canshift-studio/release/**/*.{dmg,exe,AppImage}
-          generate_release_notes: true
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

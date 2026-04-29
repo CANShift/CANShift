@@ -4,6 +4,7 @@ import { ipcMain, app, BrowserWindow } from 'electron'
 import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
+import { checkForUpdates, installUpdate } from '../services/updater.service'
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
   const configService = new ConfigFileService()
@@ -68,4 +69,16 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.APP_VERSION, () => app.getVersion())
+
+  // ---------------------------------------------------------------------------
+  // Auto-update
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.UPDATE_CHECK, () => {
+    checkForUpdates()
+  })
+
+  ipcMain.handle(IpcChannels.UPDATE_INSTALL, () => {
+    installUpdate()
+  })
 }

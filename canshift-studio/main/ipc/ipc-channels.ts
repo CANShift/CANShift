@@ -38,6 +38,14 @@ export const IpcChannels = {
 
   // App info
   APP_VERSION: 'app:version',
+
+  // Auto-update (main → renderer)
+  UPDATE_AVAILABLE: 'update:available',
+  UPDATE_DOWNLOADED: 'update:downloaded',
+  UPDATE_ERROR: 'update:error',
+  // Auto-update (renderer → main)
+  UPDATE_CHECK: 'update:check',
+  UPDATE_INSTALL: 'update:install',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

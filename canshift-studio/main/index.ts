@@ -5,6 +5,7 @@ import { join } from 'path'
 import { readFileSync } from 'fs'
 import { registerIpcHandlers } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
+import { initUpdater } from './services/updater.service'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
@@ -132,6 +133,7 @@ app
     }
 
     registerIpcHandlers(() => mainWindow)
+    initUpdater(() => mainWindow)
     createSplash()
     createWindow()
 

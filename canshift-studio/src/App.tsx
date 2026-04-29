@@ -10,6 +10,7 @@ import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
 import ConsolePanel from './components/shared/ConsolePanel'
 import StatusBar from './components/shared/StatusBar'
+import UpdateBanner from './components/shared/UpdateBanner'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useDeviceStore } from './stores/device.store'
 
@@ -53,6 +54,7 @@ export default function App() {
 
       <ConsolePanel />
       <StatusBar />
+      <UpdateBanner />
     </div>
   )
 }
