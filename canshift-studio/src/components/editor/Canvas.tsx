@@ -12,6 +12,7 @@ import ScreenSettingsPanel from './ScreenSettingsPanel'
 const SCALE = 2 // 320×240 → 640×480 on screen
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
+const GRID = 10 // snap grid in firmware coordinates
 
 // ---------------------------------------------------------------------------
 // Widget type → color mapping
@@ -178,18 +179,15 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
   const status = useDeviceStore((s) => s.status)
 
   // All sizes derived from bar height so content scales correctly at any height
-  const h       = topBar.height * SCALE
-  const dot     = Math.round(h * 0.30)
-  const fs      = Math.round(h * 0.45)
-  const sep     = Math.round(h * 0.55)
-  const gap     = Math.round(h * 0.25)
-  const px      = Math.round(h * 0.40)
-  const iconSz  = Math.round(fs * 1.15)
+  const h = topBar.height * SCALE
+  const dot = Math.round(h * 0.3)
+  const fs = Math.round(h * 0.45)
+  const sep = Math.round(h * 0.55)
+  const gap = Math.round(h * 0.25)
+  const px = Math.round(h * 0.4)
+  const iconSz = Math.round(fs * 1.15)
 
-  const usbColor =
-    status === 'connected' ? '#44CC44' :
-    status === 'error'     ? '#CC3333' :
-    '#444444'
+  const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#444444'
 
   return (
     <div
@@ -224,7 +222,9 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
             flexShrink: 0,
           }}
         />
-        <span style={{ fontSize: fs, color: topBar.textColor, letterSpacing: '0.04em', lineHeight: 1 }}>
+        <span
+          style={{ fontSize: fs, color: topBar.textColor, letterSpacing: '0.04em', lineHeight: 1 }}
+        >
           ECU
         </span>
         <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
@@ -283,10 +283,11 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
             transition: 'color 0.15s',
           }}
         >
-          {settingsOpen
-            ? <IconClear size={iconSz} color="#CC3333" />
-            : <IconSettings size={iconSz} color="#555555" />
-          }
+          {settingsOpen ? (
+            <IconClear size={iconSz} color="#CC3333" />
+          ) : (
+            <IconSettings size={iconSz} color="#555555" />
+          )}
         </button>
       </div>
     </div>
@@ -344,8 +345,13 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         if (!drag) return
         const dx = Math.round((ev.clientX - drag.startMouseX) / SCALE)
         const dy = Math.round((ev.clientY - drag.startMouseY) / SCALE)
-        const newX = Math.max(0, Math.min(320 - 10, drag.startWidgetX + dx))
-        const newY = Math.max(0, Math.min(widgetAreaH - 10, drag.startWidgetY + dy))
+        // Snap to GRID
+        const rawX = drag.startWidgetX + dx
+        const rawY = drag.startWidgetY + dy
+        const snappedX = Math.round(rawX / GRID) * GRID
+        const snappedY = Math.round(rawY / GRID) * GRID
+        const newX = Math.max(0, Math.min(320 - 10, snappedX))
+        const newY = Math.max(0, Math.min(widgetAreaH - 10, snappedY))
         moveWidget(drag.pageId, drag.widgetId, { x: newX, y: newY })
       }
 
@@ -400,7 +406,9 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               topBar={topBar}
               pageName={page.name}
               settingsOpen={settingsOpen}
-              onOpenSettings={() => { setSettingsOpen((o) => !o) }}
+              onOpenSettings={() => {
+                setSettingsOpen((o) => !o)
+              }}
             />
           )}
 
@@ -431,8 +439,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               }}
             />
 
-            {/* Widgets */}
-            {page.widgets.map((widget) => (
+            {/* Widgets — warnings always rendered last (on top) */}
+            {[
+              ...page.widgets.filter((w) => w.type !== 'warning'),
+              ...page.widgets.filter((w) => w.type === 'warning'),
+            ].map((widget) => (
               <WidgetBox
                 key={widget.id}
                 widget={widget}
@@ -443,9 +454,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
             ))}
 
             {/* Screen settings overlay page */}
-            {settingsOpen && (
-              <ScreenSettingsPanel scale={SCALE} />
-            )}
+            {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
           </div>
         </div>
 
