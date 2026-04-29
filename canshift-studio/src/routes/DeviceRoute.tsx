@@ -1,10 +1,10 @@
 // DeviceRoute.tsx — USB device connection and config sync
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { usbService } from '../services/ipc.service'
-import type { PortInfo } from '../services/ipc.service'
+import { useUsbConnection } from '../hooks/useUsbConnection'
 
 const btn: React.CSSProperties = {
   padding: '6px 14px',
@@ -24,134 +24,103 @@ const primaryBtn: React.CSSProperties = {
 }
 
 export default function DeviceRoute() {
-  const [ports, setPorts] = useState<PortInfo[]>([])
-  const [selectedPort, setSelectedPort] = useState<string>('')
-  const [statusMsg, setStatusMsg] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-
-  const connected = useDeviceStore((s) => s.connected)
+  const status = useDeviceStore((s) => s.status)
   const portPath = useDeviceStore((s) => s.portPath)
   const syncing = useDeviceStore((s) => s.syncing)
+  const errorMessage = useDeviceStore((s) => s.errorMessage)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
-  const setConnected = useDeviceStore((s) => s.setConnected)
   const setSyncing = useDeviceStore((s) => s.setSyncing)
   const setSyncComplete = useDeviceStore((s) => s.setSyncComplete)
+  const setError = useDeviceStore((s) => s.setError)
 
   const config = useDashboardStore((s) => s.config)
   const isDirty = useDashboardStore((s) => s.isDirty)
 
-  const refreshPorts = useCallback(() => {
-    setLoading(true)
-    usbService
-      .listPorts()
-      .then((list) => {
-        setPorts(list)
-        if (list.length === 1 && list[0]) setSelectedPort(list[0].path)
-        if (list.length === 0) setStatusMsg('No serial ports found')
-        else setStatusMsg(`${list.length.toString()} port${list.length > 1 ? 's' : ''} found`)
-      })
-      .catch(() => {
-        setStatusMsg('Failed to list ports')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
+  const {
+    ports,
+    selectedPort,
+    setSelectedPort,
+    loading,
+    connected,
+    refreshPorts,
+    connect,
+    disconnect,
+  } = useUsbConnection()
 
   useEffect(() => {
-    refreshPorts()
-  }, [refreshPorts])
-
-  const handleConnect = () => {
-    if (!selectedPort) return
-    setLoading(true)
-    usbService
-      .connect(selectedPort)
-      .then((result) => {
-        if (result.success) {
-          setConnected(true, selectedPort)
-          setStatusMsg(`Connected to ${selectedPort}`)
-        } else {
-          setStatusMsg(`Connect failed: ${result.error ?? 'unknown error'}`)
-        }
-      })
-      .catch(() => {
-        setStatusMsg('Connection error')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }
-
-  const handleDisconnect = () => {
-    usbService
-      .disconnect()
-      .then(() => {
-        setConnected(false)
-        setStatusMsg('Disconnected')
-      })
-      .catch(() => {
-        setConnected(false)
-      })
-  }
+    if (!connected) refreshPorts()
+  }, [connected, refreshPorts])
 
   const handlePushConfig = () => {
     if (!config || !connected) return
     setSyncing(true)
-    setStatusMsg('Pushing config to device…')
     usbService
       .pushConfig(config)
       .then((result) => {
         if (result.success) {
           setSyncComplete(new Date())
-          setStatusMsg('Config pushed — device reloading')
         } else {
+          setError(result.error ?? 'Push failed')
           setSyncing(false)
-          setStatusMsg(`Push failed: ${result.error ?? 'unknown error'}`)
         }
       })
       .catch(() => {
+        setError('Push error')
         setSyncing(false)
-        setStatusMsg('Push error')
       })
   }
 
   const handleReboot = () => {
-    usbService
-      .reboot()
-      .then(() => {
-        setStatusMsg('Reboot command sent')
-      })
-      .catch(() => {
-        setStatusMsg('Reboot failed')
-      })
+    usbService.reboot().catch(() => {
+      setError('Reboot failed')
+    })
   }
 
   return (
     <div style={{ flex: 1, padding: 28, maxWidth: 560, overflowY: 'auto' }}>
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 24, color: '#CCCCCC' }}>
-        Device Connection
-      </h2>
+      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 24, color: '#CCCCCC' }}>Device</h2>
 
-      {/* Connection status banner */}
+      {/* Status banner */}
       <div
         style={{
           padding: '10px 14px',
           marginBottom: 20,
           background: connected ? '#0A1A0A' : '#1A1A1A',
-          border: `1px solid ${connected ? '#335533' : '#2A2A2A'}`,
+          border: `1px solid ${connected ? '#335533' : status === 'error' ? '#552222' : '#2A2A2A'}`,
           borderRadius: 6,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
         }}
       >
-        <span style={{ fontSize: 16, color: connected ? '#44AA44' : '#444444' }}>
-          {connected ? '●' : '○'}
-        </span>
+        <span
+          style={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background:
+              status === 'connected'
+                ? '#44CC44'
+                : status === 'burning'
+                  ? '#FF8800'
+                  : status === 'error'
+                    ? '#CC3333'
+                    : '#333333',
+          }}
+        />
         <div>
-          <div style={{ fontSize: 13, color: connected ? '#55CC55' : '#666666' }}>
-            {connected ? `Connected — ${portPath ?? ''}` : 'Not connected'}
+          <div
+            style={{
+              fontSize: 13,
+              color: connected ? '#55CC55' : status === 'error' ? '#CC4444' : '#666666',
+            }}
+          >
+            {status === 'connected' && `Connected — ${portPath ?? ''}`}
+            {status === 'burning' && 'Syncing config to device…'}
+            {status === 'error' && `Error — ${errorMessage ?? 'unknown'}`}
+            {status === 'disconnected' && 'Not connected'}
           </div>
           {firmwareVersion && (
             <div style={{ fontSize: 11, color: '#445544' }}>Firmware {firmwareVersion}</div>
@@ -159,7 +128,7 @@ export default function DeviceRoute() {
         </div>
       </div>
 
-      {/* Port selection */}
+      {/* Port selection (disconnected) */}
       {!connected && (
         <section style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 11, color: '#666666', marginBottom: 6 }}>
@@ -206,15 +175,15 @@ export default function DeviceRoute() {
       <section style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {!connected ? (
           <button
-            onClick={handleConnect}
+            onClick={connect}
             disabled={!selectedPort || loading}
             style={{ ...primaryBtn, opacity: !selectedPort || loading ? 0.4 : 1 }}
           >
-            Connect
+            {loading ? 'Connecting…' : 'Connect'}
           </button>
         ) : (
           <>
-            <button onClick={handleDisconnect} style={btn}>
+            <button onClick={disconnect} style={btn}>
               Disconnect
             </button>
             <button onClick={handleReboot} style={btn}>
@@ -253,14 +222,6 @@ export default function DeviceRoute() {
         </section>
       )}
 
-      {/* Status message */}
-      {statusMsg && (
-        <p style={{ fontSize: 12, color: '#666666', marginTop: 12, fontStyle: 'italic' }}>
-          {statusMsg}
-        </p>
-      )}
-
-      {/* Info */}
       <div
         style={{
           marginTop: 28,
@@ -272,12 +233,10 @@ export default function DeviceRoute() {
           lineHeight: 1.7,
         }}
       >
-        USB protocol: 115 200 baud · newline-delimited JSON
+        USB: 115 200 baud · newline-delimited JSON
         <br />
-        Look for the <strong style={{ color: '#555555' }}>Silicon Labs CP210x</strong> or{' '}
-        <strong style={{ color: '#555555' }}>CH340</strong> port.
-        <br />
-        The firmware reloads the config immediately on receive.
+        Look for <strong style={{ color: '#555555' }}>CP210x</strong> or{' '}
+        <strong style={{ color: '#555555' }}>CH340</strong>.
       </div>
     </div>
   )
