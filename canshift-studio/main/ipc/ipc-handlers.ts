@@ -18,6 +18,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     onError: (message) => {
       getWindow()?.webContents.send(IpcChannels.USB_ERROR, message)
     },
+    onTelemetry: (values) => {
+      getWindow()?.webContents.send(IpcChannels.USB_DATA_RECEIVED, values)
+    },
   })
 
   // ---------------------------------------------------------------------------

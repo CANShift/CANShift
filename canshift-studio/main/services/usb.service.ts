@@ -1,11 +1,13 @@
 // usb.service.ts — USB serial communication with CANShift firmware
 //
-// Phase 1 protocol: JSON-framed commands over USB serial (115200 baud).
-// Each command is a JSON object followed by \n.
-// Each response is a JSON object followed by \n.
+// Protocol: JSON lines at 115200 baud.
+// Commands: desktop → device, one JSON object per line ending with \n.
+// Responses: device → desktop, {"status":"ok"} or {"status":"error",...}
+// Telemetry: device → desktop proactively, {"tele":1,"v":{"rpm":...}}
 //
-// TODO: Implement binary framing protocol (see dash-firmware/src/hal/usb/usb_comm.h)
-//       once both sides converge on the final protocol spec.
+// A single persistent data listener dispatches incoming lines:
+//   - lines with "tele" field → telemetry handler (→ renderer via USB_DATA_RECEIVED)
+//   - all other lines → pending command ack resolver (one at a time)
 
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
@@ -21,26 +23,36 @@ interface PortInfo {
 interface ConnectionStatus {
   connected: boolean
   portPath?: string
-  firmwareVersion?: string
-  uptime?: number
 }
 
 interface UsbResult {
   success: boolean
   error?: string
-  data?: unknown
 }
 
 interface UsbEventHandlers {
   onConnectionChanged?: (status: ConnectionStatus) => void
   onError?: (message: string) => void
+  onTelemetry?: (values: Record<string, number>) => void
 }
 
-// Timeout in ms to wait for RSP_OK after pushConfig
-const PUSH_ACK_TIMEOUT_MS = 5_000
+interface PendingAck {
+  resolve: (result: UsbResult) => void
+  timer: ReturnType<typeof setTimeout>
+}
+
+const ACK_TIMEOUT_MS = 5_000
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function safeJsonParse(line: string): unknown {
+  try {
+    return JSON.parse(line) as unknown
+  } catch {
+    return null
+  }
 }
 
 export class UsbService {
@@ -48,6 +60,7 @@ export class UsbService {
   private parser: ReadlineParser | null = null
   private portPath: string | null = null
   private handlers: UsbEventHandlers = {}
+  private pendingAck: PendingAck | null = null
 
   setEventHandlers(handlers: UsbEventHandlers): void {
     this.handlers = handlers
@@ -78,7 +91,11 @@ export class UsbService {
 
       this.parser = this.port.pipe(new ReadlineParser({ delimiter: '\n' }))
 
-      // Detect unexpected disconnects (cable pulled, device reset)
+      // Single persistent dispatcher — routes all incoming lines
+      this.parser.on('data', (line: string) => {
+        this.onData(line)
+      })
+
       this.port.on('close', () => {
         const wasConnected = this.portPath !== null
         this.portPath = null
@@ -97,6 +114,7 @@ export class UsbService {
           return
         }
         this.portPath = portPath
+        this.handlers.onConnectionChanged?.({ connected: true, portPath })
         resolve({ success: true })
       })
     })
@@ -110,7 +128,6 @@ export class UsbService {
 
     return new Promise((resolve) => {
       this.port?.close((err) => {
-        // 'close' event above will fire and notify the renderer
         this.port = null
         this.parser = null
         if (err) {
@@ -123,60 +140,8 @@ export class UsbService {
   }
 
   async pushConfig(config: unknown): Promise<UsbResult> {
-    if (!this.port?.isOpen || !this.parser) {
-      return { success: false, error: 'Not connected to device' }
-    }
-
     const payload = JSON.stringify({ cmd: 2, payload: config }) + '\n'
-
-    return new Promise((resolve) => {
-      if (!this.parser || !this.port?.isOpen) {
-        resolve({ success: false, error: 'Not connected to device' })
-        return
-      }
-
-      const parser = this.parser
-
-      const onAck = (line: string) => {
-        clearTimeout(timer)
-        try {
-          const resp = JSON.parse(line) as unknown
-          if (isRecord(resp) && resp.status === 'ok') {
-            resolve({ success: true })
-          } else {
-            const msg =
-              isRecord(resp) && typeof resp.message === 'string'
-                ? resp.message
-                : 'Device returned error'
-            resolve({ success: false, error: msg })
-          }
-        } catch {
-          resolve({ success: false, error: 'Invalid response from device' })
-        }
-      }
-
-      const timer = setTimeout(() => {
-        parser.removeListener('data', onAck)
-        resolve({ success: false, error: 'Device did not acknowledge (timeout)' })
-      }, PUSH_ACK_TIMEOUT_MS)
-
-      parser.once('data', onAck)
-
-      this.port.write(payload, (err) => {
-        if (err) {
-          clearTimeout(timer)
-          parser.removeListener('data', onAck)
-          resolve({ success: false, error: err.message })
-        }
-      })
-    })
-  }
-
-  getStatus(): ConnectionStatus {
-    return {
-      connected: this.port?.isOpen ?? false,
-      portPath: this.portPath ?? undefined,
-    }
+    return this.sendCommand(payload)
   }
 
   async pushScreenSettings(settings: {
@@ -185,27 +150,9 @@ export class UsbService {
     sleep: number
     rotation: number
   }): Promise<UsbResult> {
-    if (!this.port?.isOpen) {
-      return { success: false, error: 'Not connected to device' }
-    }
-
     // CMD_SCREEN_SETTINGS = 0x05
     const payload = JSON.stringify({ cmd: 0x05, ...settings }) + '\n'
-
-    return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        resolve({ success: false, error: 'Device did not acknowledge (timeout)' })
-      }, PUSH_ACK_TIMEOUT_MS)
-
-      this.port?.write(payload, (err) => {
-        clearTimeout(timer)
-        if (err) {
-          resolve({ success: false, error: err.message })
-        } else {
-          resolve({ success: true })
-        }
-      })
-    })
+    return this.sendCommand(payload)
   }
 
   async rebootDevice(): Promise<UsbResult> {
@@ -223,5 +170,83 @@ export class UsbService {
         }
       })
     })
+  }
+
+  getStatus(): ConnectionStatus {
+    return {
+      connected: this.port?.isOpen ?? false,
+      portPath: this.portPath ?? undefined,
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Internals
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Send a command line and wait for the firmware ack.
+   * At most one command is in-flight at a time — concurrent callers wait.
+   */
+  private sendCommand(payload: string): Promise<UsbResult> {
+    if (!this.port?.isOpen) {
+      return Promise.resolve({ success: false, error: 'Not connected to device' })
+    }
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.pendingAck = null
+        resolve({ success: false, error: 'Device did not acknowledge (timeout)' })
+      }, ACK_TIMEOUT_MS)
+
+      this.pendingAck = { resolve, timer }
+
+      this.port?.write(payload, (err) => {
+        if (err) {
+          clearTimeout(timer)
+          this.pendingAck = null
+          resolve({ success: false, error: err.message })
+        }
+      })
+    })
+  }
+
+  /**
+   * Dispatch an incoming line from the firmware.
+   * Telemetry lines go to the telemetry handler.
+   * Everything else resolves the pending command ack.
+   */
+  private onData(line: string): void {
+    const trimmed = line.trim()
+    if (!trimmed) return
+
+    const parsed = safeJsonParse(trimmed)
+    if (!isRecord(parsed)) return
+
+    // Telemetry push — field "tele" present
+    if ('tele' in parsed) {
+      const values = (parsed as { v?: unknown }).v
+      if (isRecord(values)) {
+        const flat: Record<string, number> = {}
+        for (const [k, v] of Object.entries(values)) {
+          if (typeof v === 'number') flat[k] = v
+        }
+        this.handlers.onTelemetry?.(flat)
+      }
+      return
+    }
+
+    // Command response — resolve pending ack
+    if (this.pendingAck) {
+      const ack = this.pendingAck
+      this.pendingAck = null
+      clearTimeout(ack.timer)
+
+      const r = parsed as { status?: string; message?: string }
+      if (r.status === 'ok') {
+        ack.resolve({ success: true })
+      } else {
+        ack.resolve({ success: false, error: r.message ?? 'Device returned error' })
+      }
+    }
   }
 }
