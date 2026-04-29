@@ -300,7 +300,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
   }, [])
 
-  // Rev limit flash: alternates red overlay every 200ms, auto-stops after 5s
+  // Rev limit flash: alternates red overlay every 80ms, auto-stops after 5s
   useEffect(() => {
     if (!revLimiting) {
       setFlashPhase(false)
@@ -308,7 +308,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
     const interval = setInterval(() => {
       setFlashPhase((v) => !v)
-    }, 200)
+    }, 80)
     const timeout = setTimeout(() => {
       setRevLimiting(false)
     }, 5000)
@@ -554,12 +554,42 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      background: flashPhase ? '#FF000044' : 'transparent',
-                      transition: 'background 0.1s',
+                      background: flashPhase ? '#FF0000CC' : '#FF000011',
+                      transition: 'background 0.04s',
                       pointerEvents: 'none',
                       zIndex: 200,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
-                  />
+                  >
+                    {/* Warning triangle */}
+                    <svg
+                      width={CANVAS_W * 0.28}
+                      height={CANVAS_W * 0.28}
+                      viewBox="0 0 100 100"
+                      style={{ opacity: flashPhase ? 1 : 0.15, transition: 'opacity 0.04s' }}
+                    >
+                      <polygon
+                        points="50,8 96,90 4,90"
+                        fill="none"
+                        stroke="#FFFFFF"
+                        strokeWidth="7"
+                        strokeLinejoin="round"
+                      />
+                      <text
+                        x="50"
+                        y="80"
+                        textAnchor="middle"
+                        fill="#FFFFFF"
+                        fontSize="52"
+                        fontWeight="900"
+                        fontFamily="monospace"
+                      >
+                        !
+                      </text>
+                    </svg>
+                  </div>
                 )}
               </div>
             </div>
