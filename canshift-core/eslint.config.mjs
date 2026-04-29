@@ -12,7 +12,7 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.mjs'],
+          allowDefaultProject: ['*.mjs', 'jest.config.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -29,6 +29,14 @@ export default tseslint.config(
     files: ['eslint.config.mjs'],
     rules: {
       '@typescript-eslint/no-deprecated': 'off',
+    },
+  },
+  {
+    // Test files: relax rules that are overly strict for test-specific data access
+    files: ['src/__tests__/**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/dot-notation': 'off',
     },
   },
   {
