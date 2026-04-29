@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import logoUrl from '../../../assets/CANShift_studio_logo.png'
 import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
@@ -17,22 +18,22 @@ import {
 } from '../icons/Icon'
 
 const NAV_ITEMS = [
-  { to: '/editor',  label: 'Editor',  Icon: IconEditor  },
+  { to: '/editor', label: 'Editor', Icon: IconEditor },
   { to: '/signals', label: 'Signals', Icon: IconSignals },
-  { to: '/theme',   label: 'Theme',   Icon: IconTheme   },
+  { to: '/theme', label: 'Theme', Icon: IconTheme },
 ]
 
 const DOT_COLOR: Record<string, string> = {
-  connected:    '#44CC44',
-  burning:      '#FF8800',
-  error:        '#CC3333',
+  connected: '#44CC44',
+  burning: '#FF8800',
+  error: '#CC3333',
   disconnected: '#444444',
 }
 
 const LABEL: Record<string, string> = {
-  connected:    'Connected',
-  burning:      'Burning…',
-  error:        'Error',
+  connected: 'Connected',
+  burning: 'Burning…',
+  error: 'Error',
   disconnected: 'No Device',
 }
 
@@ -61,7 +62,7 @@ export default function TopBar() {
   const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
 
   const dotColor = simulationMode ? '#8844FF' : (DOT_COLOR[status] ?? '#444444')
-  const label    = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
+  const label = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
 
   const canSave = config !== null
   const canBurn = config !== null && connected && !syncing
@@ -83,26 +84,22 @@ export default function TopBar() {
           } as React.CSSProperties
         }
       >
-        {/* App name */}
-        <span
+        {/* App logo */}
+        <img
+          src={logoUrl}
+          alt="CANShift Studio"
           style={
             {
-              fontSize: 14,
-              fontWeight: 700,
-              color: '#FF4444',
-              letterSpacing: '0.05em',
+              height: 22,
               marginRight: 24,
               WebkitAppRegion: 'no-drag',
+              display: 'block',
             } as React.CSSProperties
           }
-        >
-          CANShift Studio
-        </span>
+        />
 
         {/* Nav links */}
-        <nav
-          style={{ display: 'flex', gap: 2, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
+        <nav style={{ display: 'flex', gap: 2, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           {NAV_ITEMS.map(({ to, label: navLabel, Icon }) => (
             <NavLink
               key={to}
@@ -218,7 +215,11 @@ export default function TopBar() {
                 flexShrink: 0,
               }}
             />
-            <span style={{ color: status === 'disconnected' && !simulationMode ? '#555555' : '#CCCCCC' }}>
+            <span
+              style={{
+                color: status === 'disconnected' && !simulationMode ? '#555555' : '#CCCCCC',
+              }}
+            >
               {label}
             </span>
           </button>
