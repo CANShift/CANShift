@@ -3,7 +3,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
-import ThemeRoute from './routes/ThemeRoute'
 import UpdateRoute from './routes/UpdateRoute'
 import TopBar from './components/shared/TopBar'
 import SideRail from './components/shared/SideRail'
@@ -43,7 +42,6 @@ export default function App() {
               <Route path="/" element={<Navigate to="/editor" replace />} />
               <Route path="/editor" element={<EditorRoute />} />
               <Route path="/signals" element={<SignalRoute />} />
-              <Route path="/theme" element={<ThemeRoute />} />
               <Route path="/update" element={<UpdateRoute />} />
             </Routes>
           </div>

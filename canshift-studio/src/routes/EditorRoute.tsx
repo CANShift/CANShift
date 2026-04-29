@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { PageConfig, TopBarConfig } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
@@ -505,6 +506,7 @@ export default function EditorRoute() {
                 name: `Page ${String(config.pages.length + 1)}`,
                 backgroundImage: null,
                 backgroundColor: '#111111',
+                palette: { ...DEFAULT_PAGE_PALETTE },
                 showTopBar: true,
                 visible: true,
                 widgets: [],
