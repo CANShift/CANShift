@@ -38,11 +38,17 @@ export interface CanFrame {
   data: number[]
 }
 
+export interface CanHealth {
+  fps: number
+  errors: number
+}
+
 interface UsbEventHandlers {
   onConnectionChanged?: (status: ConnectionStatus) => void
   onError?: (message: string) => void
   onTelemetry?: (values: Record<string, number>) => void
   onCanFrame?: (frame: CanFrame) => void
+  onCanHealth?: (health: CanHealth) => void
 }
 
 interface PendingAck {
@@ -265,6 +271,16 @@ export class UsbService {
         }
         this.handlers.onTelemetry?.(flat)
       }
+      return
+    }
+
+    // CAN health stats — field "can_stat" present
+    // Format: {"can_stat":1,"fps":12.5,"errors":0}
+    if ('can_stat' in parsed) {
+      const s = parsed as { fps?: unknown; errors?: unknown }
+      const fps = typeof s.fps === 'number' ? s.fps : 0
+      const errors = typeof s.errors === 'number' ? s.errors : 0
+      this.handlers.onCanHealth?.({ fps, errors })
       return
     }
 

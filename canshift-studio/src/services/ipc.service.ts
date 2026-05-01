@@ -4,9 +4,9 @@
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
-import type { CanFrame } from '../../main/services/usb.service'
+import type { CanFrame, CanHealth } from '../../main/services/usb.service'
 
-export type { FirmwareRelease, CanFrame }
+export type { FirmwareRelease, CanFrame, CanHealth }
 
 // ---------------------------------------------------------------------------
 // Response shapes (must mirror main/services/* return types)
@@ -57,8 +57,17 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 export const configService = {
   open: () => invoke<OpenResult>(IpcChannels.CONFIG_OPEN),
+  openPath: (filePath: string) => invoke<OpenResult>(IpcChannels.CONFIG_OPEN_PATH, filePath),
   save: (config: DashboardConfig) => invoke<SaveResult>(IpcChannels.CONFIG_SAVE, config),
   saveAs: (config: DashboardConfig) => invoke<SaveResult>(IpcChannels.CONFIG_SAVE_AS, config),
+}
+
+// ---------------------------------------------------------------------------
+// Session persistence
+// ---------------------------------------------------------------------------
+
+export const sessionIpc = {
+  getLastFilePath: () => invoke<string | null>(IpcChannels.SESSION_GET_LAST_FILE),
 }
 
 // ---------------------------------------------------------------------------

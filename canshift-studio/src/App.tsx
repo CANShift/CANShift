@@ -13,12 +13,15 @@ import StatusBar from './components/shared/StatusBar'
 import UpdateBanner from './components/shared/UpdateBanner'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useFirmwareCheck } from './hooks/useFirmwareCheck'
+import { useSessionRestore } from './hooks/useSessionRestore'
 import { useDeviceStore } from './stores/device.store'
 import FirmwareDialog from './components/shared/FirmwareDialog'
+import PushDiffDialog from './components/shared/PushDiffDialog'
 
 export default function App() {
   useMenuEvents()
   useFirmwareCheck()
+  useSessionRestore()
 
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -59,6 +62,7 @@ export default function App() {
       <StatusBar />
       <UpdateBanner />
       <FirmwareDialog />
+      <PushDiffDialog />
     </div>
   )
 }

@@ -48,6 +48,15 @@ export const IpcChannels = {
   HISTORY_UNDO: 'history:undo',
   HISTORY_REDO: 'history:redo',
 
+  // Session persistence
+  SESSION_GET_LAST_FILE: 'session:get-last-file',
+
+  // Config file — open by path (no dialog)
+  CONFIG_OPEN_PATH: 'config:open-path',
+
+  // CAN health (main → renderer)
+  CAN_HEALTH_UPDATE: 'can:health-update',
+
   // App info
   APP_VERSION: 'app:version',
 

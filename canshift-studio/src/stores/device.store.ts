@@ -1,6 +1,7 @@
 // device.store.ts — USB device connection state
 
 import { create } from 'zustand'
+import type { DashboardConfig } from '@tmbk/canshift-core'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
 
@@ -38,6 +39,10 @@ interface DeviceState {
   setFirmwareDialog: (state: FirmwareDialogState) => void
   enterSimulation: () => void
   exitSimulation: () => void
+
+  // Last config successfully pushed to the device (for diff before next burn)
+  lastPushedConfig: DashboardConfig | null
+  setLastPushedConfig: (config: DashboardConfig) => void
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -50,6 +55,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   syncing: false,
   simulationMode: false,
   firmwareDialog: { visible: false, mode: null },
+  lastPushedConfig: null,
 
   setConnected: (portPath) => {
     set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
@@ -95,5 +101,9 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   exitSimulation: () => {
     set({ simulationMode: false, status: 'disconnected', connected: false, portPath: null })
+  },
+
+  setLastPushedConfig: (config) => {
+    set({ lastPushedConfig: config })
   },
 }))

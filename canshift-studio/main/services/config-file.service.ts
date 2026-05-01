@@ -61,6 +61,18 @@ export class ConfigFileService {
     }
   }
 
+  async openFilePath(filePath: string): Promise<OpenResult> {
+    try {
+      const raw = await readFile(filePath, 'utf-8')
+      const content: unknown = JSON.parse(raw)
+      this.currentFilePath = filePath
+      return { success: true, filePath, content }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { success: false, error: `Failed to read config: ${message}` }
+    }
+  }
+
   async saveFileAs(config: unknown): Promise<SaveResult> {
     const result = await dialog.showSaveDialog({
       title: 'Save Dashboard Config',

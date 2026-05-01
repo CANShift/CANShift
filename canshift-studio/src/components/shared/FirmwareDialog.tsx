@@ -196,10 +196,7 @@ export default function FirmwareDialog() {
       appendLog('Port open at 115200 baud')
 
       // 4. Flash with esptool-js.
-      // ESLint cannot resolve the esptool-js type definitions at analysis time;
-      // disable the unsafe-call rules for the duration of this block.
       setFlashState('flashing')
-      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
       const transport = new Transport(port, false)
       const loader = new ESPLoader({
         transport,
@@ -237,8 +234,6 @@ export default function FirmwareDialog() {
 
       await loader.hardReset()
       await transport.disconnect()
-      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-
       await port.close()
       appendLog('Device rebooting…')
 

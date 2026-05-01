@@ -6,6 +6,7 @@ import { validateDashboard } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
+import { usePushDiffStore } from '../stores/pushDiff.store'
 import { configService, usbService } from '../services/ipc.service'
 
 export function useConfigActions() {
@@ -18,6 +19,10 @@ export function useConfigActions() {
   const setSyncing = useDeviceStore((s) => s.setSyncing)
   const setSyncComplete = useDeviceStore((s) => s.setSyncComplete)
   const setError = useDeviceStore((s) => s.setError)
+  const lastPushedConfig = useDeviceStore((s) => s.lastPushedConfig)
+  const setLastPushedConfig = useDeviceStore((s) => s.setLastPushedConfig)
+
+  const showDiff = usePushDiffStore((s) => s.show)
 
   const log = useLogStore((s) => s.push)
 
@@ -57,31 +62,48 @@ export function useConfigActions() {
       return
     }
 
-    setSyncing(true)
-    log('info', 'Burning config to device…')
-    void usbService
-      .pushConfig(config)
-      .then((result) => {
-        if (result.success) {
-          setSyncComplete(new Date())
-          // The firmware reboots immediately after acknowledging the push.
-          // The USB disconnect event will fire in ~150ms and update the
-          // connection status automatically — no extra action needed here.
-          log('success', 'Config written to device')
-          log('info', 'Device is rebooting — reconnect in a few seconds')
-        } else {
-          const msg = result.error ?? 'Burn failed'
-          setError(msg)
+    const doBurn = () => {
+      setSyncing(true)
+      log('info', 'Burning config to device…')
+      void usbService
+        .pushConfig(config)
+        .then((result) => {
+          if (result.success) {
+            setSyncComplete(new Date())
+            setLastPushedConfig(config)
+            // The firmware reboots immediately after acknowledging the push.
+            // The USB disconnect event will fire in ~150ms and update the
+            // connection status automatically — no extra action needed here.
+            log('success', 'Config written to device')
+            log('info', 'Device is rebooting — reconnect in a few seconds')
+          } else {
+            const msg = result.error ?? 'Burn failed'
+            setError(msg)
+            setSyncing(false)
+            log('error', msg)
+          }
+        })
+        .catch(() => {
+          setError('Burn error')
           setSyncing(false)
-          log('error', msg)
-        }
-      })
-      .catch(() => {
-        setError('Burn error')
-        setSyncing(false)
-        log('error', 'Config burn error')
-      })
-  }, [config, connected, syncing, setSyncing, setSyncComplete, setError, log])
+          log('error', 'Config burn error')
+        })
+    }
+
+    // Show diff dialog if there's a previous push to compare against
+    showDiff(config, lastPushedConfig, doBurn)
+  }, [
+    config,
+    connected,
+    syncing,
+    setSyncing,
+    setSyncComplete,
+    setError,
+    log,
+    lastPushedConfig,
+    setLastPushedConfig,
+    showDiff,
+  ])
 
   return { openConfig, saveConfig, burnConfig, config, connected, syncing }
 }

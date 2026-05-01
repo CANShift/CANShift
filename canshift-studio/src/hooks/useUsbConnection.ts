@@ -4,9 +4,10 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
+import { useCanHealthStore } from '../stores/canHealth.store'
 import { usbService } from '../services/ipc.service'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
-import type { PortInfo } from '../services/ipc.service'
+import type { PortInfo, CanHealth } from '../services/ipc.service'
 
 interface ConnectionChangedPayload {
   connected: boolean
@@ -24,6 +25,7 @@ export function useUsbConnection() {
   const setError = useDeviceStore((s) => s.setError)
   const clearError = useDeviceStore((s) => s.clearError)
   const log = useLogStore((s) => s.push)
+  const updateCanHealth = useCanHealthStore((s) => s.update)
 
   // Listen for unsolicited device events (cable pulled, device reset, errors)
   useEffect(() => {
@@ -41,14 +43,21 @@ export function useUsbConnection() {
       log('error', `USB: ${msg}`)
     }
 
+    const handleCanHealth = (payload: unknown) => {
+      const h = payload as CanHealth
+      updateCanHealth(h.fps, h.errors)
+    }
+
     window.ipc.on(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
     window.ipc.on(IpcChannels.USB_ERROR, handleError)
+    window.ipc.on(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
 
     return () => {
       window.ipc.off(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
       window.ipc.off(IpcChannels.USB_ERROR, handleError)
+      window.ipc.off(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
     }
-  }, [setDisconnected, setError, log])
+  }, [setDisconnected, setError, log, updateCanHealth])
 
   const refreshPorts = useCallback(() => {
     setLoading(true)

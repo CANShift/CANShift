@@ -6,6 +6,7 @@ import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
+import { sessionService } from '../services/session.service'
 import type { FirmwareRelease } from '../services/firmware.service'
 import type { CanFrame } from '../services/usb.service'
 
@@ -37,6 +38,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     onCanFrame: (frame) => {
       canFrameBatch.push(frame)
     },
+    onCanHealth: (health) => {
+      getWindow()?.webContents.send(IpcChannels.CAN_HEALTH_UPDATE, health)
+    },
   })
 
   // ---------------------------------------------------------------------------
@@ -44,15 +48,31 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.CONFIG_OPEN, async () => {
-    return configService.openFile()
+    const result = await configService.openFile()
+    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    return result
+  })
+
+  ipcMain.handle(IpcChannels.CONFIG_OPEN_PATH, async (_event, filePath: string) => {
+    const result = await configService.openFilePath(filePath)
+    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    return result
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE, async (_event, config: unknown) => {
-    return configService.saveFile(config)
+    const result = await configService.saveFile(config)
+    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    return result
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE_AS, async (_event, config: unknown) => {
-    return configService.saveFileAs(config)
+    const result = await configService.saveFileAs(config)
+    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    return result
+  })
+
+  ipcMain.handle(IpcChannels.SESSION_GET_LAST_FILE, () => {
+    return sessionService.getLastFilePath()
   })
 
   // ---------------------------------------------------------------------------
