@@ -18,6 +18,8 @@ import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } fr
 
 const HISTORY_LIMIT = 50
 
+export type AlignDirection = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v'
+
 function widgetAreaHeight(page: PageConfig, topBarHeight: number): number {
   return page.showTopBar ? 240 - topBarHeight : 240
 }
@@ -36,6 +38,8 @@ interface DashboardState {
   isDirty: boolean
   selectedPageId: string | null
   selectedWidgetId: string | null
+  /** All currently selected widget ids (superset of selectedWidgetId). */
+  selectedWidgetIds: string[]
 
   /** Undo history — configs before the last N mutations. */
   past: DashboardConfig[]
@@ -62,14 +66,26 @@ interface DashboardState {
 
   // Widget operations
   selectWidget: (widgetId: string | null) => void
+  /** Set the full multi-selection (replaces current selection). */
+  selectWidgets: (widgetIds: string[]) => void
+  /** Toggle a single widget in/out of the current multi-selection (Shift+click). */
+  toggleWidgetSelection: (widgetId: string) => void
   /** Add a widget; auto-places it in the first free spot. */
   addWidget: (pageId: string, widget: Widget) => void
   removeWidget: (pageId: string, widgetId: string) => void
   updateWidget: (pageId: string, widgetId: string, patch: Partial<Widget>) => void
   /** Move during drag — does NOT resolve collisions (for smooth tracking). */
   moveWidget: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
+  /** Move multiple widgets simultaneously during a multi-drag — no history. */
+  moveWidgets: (pageId: string, moves: { id: string; x: number; y: number }[]) => void
   /** Called on drag-end: resolves collisions and cascades pushed widgets. */
   resolveWidgetCollisions: (pageId: string, widgetId: string) => void
+  /** Called on multi-widget drag-end: commits positions to history (no collision resolution). */
+  commitDrag: () => void
+  /** Align selected widgets along the given axis. */
+  alignWidgets: (pageId: string, widgetIds: string[], direction: AlignDirection) => void
+  /** Distribute selected widgets evenly along the given axis. */
+  distributeWidgets: (pageId: string, widgetIds: string[], axis: 'h' | 'v') => void
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +99,7 @@ export const useDashboardStore = create<DashboardState>()(
     isDirty: false,
     selectedPageId: null,
     selectedWidgetId: null,
+    selectedWidgetIds: [],
     past: [],
     future: [],
 
@@ -95,6 +112,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.isDirty = false
         s.selectedPageId = config.defaultPageId
         s.selectedWidgetId = null
+        s.selectedWidgetIds = []
       })
     },
 
@@ -116,6 +134,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.config = prev
         s.isDirty = true
         s.selectedWidgetId = null
+        s.selectedWidgetIds = []
         const pageStillExists = s.config.pages.some((p) => p.id === s.selectedPageId)
         if (!pageStillExists) s.selectedPageId = s.config.pages[0]?.id ?? null
       })
@@ -132,6 +151,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.config = next
         s.isDirty = true
         s.selectedWidgetId = null
+        s.selectedWidgetIds = []
         const pageStillExists = s.config.pages.some((p) => p.id === s.selectedPageId)
         if (!pageStillExists) s.selectedPageId = s.config.pages[0]?.id ?? null
       })
@@ -141,6 +161,7 @@ export const useDashboardStore = create<DashboardState>()(
       set((s) => {
         s.selectedPageId = pageId
         s.selectedWidgetId = null
+        s.selectedWidgetIds = []
       })
     },
 
@@ -236,6 +257,27 @@ export const useDashboardStore = create<DashboardState>()(
     selectWidget: (widgetId) => {
       set((s) => {
         s.selectedWidgetId = widgetId
+        s.selectedWidgetIds = widgetId ? [widgetId] : []
+      })
+    },
+
+    selectWidgets: (widgetIds) => {
+      set((s) => {
+        s.selectedWidgetIds = widgetIds
+        s.selectedWidgetId = widgetIds[widgetIds.length - 1] ?? null
+      })
+    },
+
+    toggleWidgetSelection: (widgetId) => {
+      set((s) => {
+        const idx = s.selectedWidgetIds.indexOf(widgetId)
+        if (idx === -1) {
+          s.selectedWidgetIds.push(widgetId)
+          s.selectedWidgetId = widgetId
+        } else {
+          s.selectedWidgetIds.splice(idx, 1)
+          s.selectedWidgetId = s.selectedWidgetIds[s.selectedWidgetIds.length - 1] ?? null
+        }
       })
     },
 
@@ -291,6 +333,7 @@ export const useDashboardStore = create<DashboardState>()(
 
         page.widgets.push(widget)
         s.selectedWidgetId = widget.id
+        s.selectedWidgetIds = [widget.id]
         s.isDirty = true
       })
     },
@@ -305,6 +348,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.future = []
         page.widgets = page.widgets.filter((w) => w.id !== widgetId)
         if (s.selectedWidgetId === widgetId) s.selectedWidgetId = null
+        s.selectedWidgetIds = s.selectedWidgetIds.filter((id) => id !== widgetId)
         s.isDirty = true
       })
     },
@@ -337,6 +381,23 @@ export const useDashboardStore = create<DashboardState>()(
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
         Object.assign(widget.layout, layout)
+        s.isDirty = true
+      })
+    },
+
+    // moveWidgets is NOT added to history — called 60fps during multi-drag
+    moveWidgets: (pageId, moves) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        for (const move of moves) {
+          const widget = page.widgets.find((w) => w.id === move.id)
+          if (widget) {
+            widget.layout.x = move.x
+            widget.layout.y = move.y
+          }
+        }
         s.isDirty = true
       })
     },
@@ -393,6 +454,104 @@ export const useDashboardStore = create<DashboardState>()(
           }
         }
 
+        s.isDirty = true
+      })
+    },
+
+    // Called on multi-widget drag-end: commits current positions to history without
+    // collision resolution (widgets may overlap — user chose these positions).
+    commitDrag: () => {
+      set((s) => {
+        if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        s.isDirty = true
+      })
+    },
+
+    alignWidgets: (pageId, widgetIds, direction) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
+        if (targets.length < 2) return
+
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+
+        const minX = Math.min(...targets.map((w) => w.layout.x))
+        const maxX = Math.max(...targets.map((w) => w.layout.x + w.layout.w))
+        const minY = Math.min(...targets.map((w) => w.layout.y))
+        const maxY = Math.max(...targets.map((w) => w.layout.y + w.layout.h))
+
+        for (const w of targets) {
+          switch (direction) {
+            case 'left':
+              w.layout.x = minX
+              break
+            case 'right':
+              w.layout.x = maxX - w.layout.w
+              break
+            case 'top':
+              w.layout.y = minY
+              break
+            case 'bottom':
+              w.layout.y = maxY - w.layout.h
+              break
+            case 'center-h':
+              w.layout.x = Math.round((minX + maxX) / 2 - w.layout.w / 2)
+              break
+            case 'center-v':
+              w.layout.y = Math.round((minY + maxY) / 2 - w.layout.h / 2)
+              break
+          }
+        }
+        s.isDirty = true
+      })
+    },
+
+    distributeWidgets: (pageId, widgetIds, axis) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
+        if (targets.length < 3) return
+
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+
+        if (axis === 'h') {
+          const sorted = [...targets].sort((a, b) => a.layout.x - b.layout.x)
+          const first = sorted[0]
+          const last = sorted[sorted.length - 1]
+          if (!first || !last) return
+          const totalSpan = last.layout.x + last.layout.w - first.layout.x
+          const totalWidgetW = sorted.reduce((sum, w) => sum + w.layout.w, 0)
+          const gap = (totalSpan - totalWidgetW) / (sorted.length - 1)
+          let curX = first.layout.x
+          for (const w of sorted) {
+            w.layout.x = Math.round(curX)
+            curX += w.layout.w + gap
+          }
+        } else {
+          const sorted = [...targets].sort((a, b) => a.layout.y - b.layout.y)
+          const first = sorted[0]
+          const last = sorted[sorted.length - 1]
+          if (!first || !last) return
+          const totalSpan = last.layout.y + last.layout.h - first.layout.y
+          const totalWidgetH = sorted.reduce((sum, w) => sum + w.layout.h, 0)
+          const gap = (totalSpan - totalWidgetH) / (sorted.length - 1)
+          let curY = first.layout.y
+          for (const w of sorted) {
+            w.layout.y = Math.round(curY)
+            curY += w.layout.h + gap
+          }
+        }
         s.isDirty = true
       })
     },

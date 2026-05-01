@@ -1,9 +1,11 @@
 // Canvas.tsx — 320×240 widget layout editor.
-// Renders all widgets as interactive boxes; supports click-to-select and drag-to-move.
+// Supports click/Shift+click selection, rubber-band multi-select, drag-to-move,
+// alignment tools, and swipe gestures for page navigation.
 
 import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
+import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
@@ -16,6 +18,9 @@ const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
 const X_SNAP = 40 // firmware px — min token width, matches visible grid columns
 const Y_SNAP = 28 // firmware px — min token height, matches visible grid rows
+
+// Minimum rubber-band drag distance (firmware px) before activating selection
+const RB_THRESHOLD = 4
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
@@ -36,19 +41,226 @@ function getBorderColor(type: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Drag state (module-level, not React state — avoids re-renders during drag)
+// Drag state (module-level — avoids re-renders during drag)
 // ---------------------------------------------------------------------------
 
+interface DraggingWidget {
+  id: string
+  startX: number
+  startY: number
+  w: number
+  h: number
+}
+
 interface DragState {
-  widgetId: string
+  primaryId: string
   pageId: string
   startMouseX: number
   startMouseY: number
-  startWidgetX: number
-  startWidgetY: number
+  widgets: DraggingWidget[]
+  isMulti: boolean
 }
 
 let drag: DragState | null = null
+
+// ---------------------------------------------------------------------------
+// Alignment toolbar
+// ---------------------------------------------------------------------------
+
+interface AlignToolbarProps {
+  pageId: string
+  widgetIds: string[]
+  canDistribute: boolean
+}
+
+const ALIGN_BUTTONS: { dir: AlignDirection; label: string; title: string }[] = [
+  { dir: 'left', label: '⬤⬜⬜', title: 'Align left edges' },
+  { dir: 'center-h', label: '⬜⬤⬜', title: 'Center horizontally' },
+  { dir: 'right', label: '⬜⬜⬤', title: 'Align right edges' },
+  { dir: 'top', label: '⬤⬜⬜', title: 'Align top edges' },
+  { dir: 'center-v', label: '⬜⬤⬜', title: 'Center vertically' },
+  { dir: 'bottom', label: '⬜⬜⬤', title: 'Align bottom edges' },
+]
+
+function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarProps) {
+  const alignWidgets = useDashboardStore((s) => s.alignWidgets)
+  const distributeWidgets = useDashboardStore((s) => s.distributeWidgets)
+
+  const btnStyle: React.CSSProperties = {
+    padding: '2px 7px',
+    fontSize: 10,
+    background: '#1A1A1A',
+    border: '1px solid #2A2A2A',
+    borderRadius: 3,
+    color: '#888888',
+    cursor: 'pointer',
+    letterSpacing: '0.03em',
+    fontFamily: 'monospace',
+    lineHeight: 1.2,
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9,
+    color: '#555555',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    alignSelf: 'center',
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={labelStyle}>Align</span>
+      {/* Horizontal */}
+      <button
+        style={btnStyle}
+        title="Align left edges"
+        onClick={() => {
+          alignWidgets(pageId, widgetIds, 'left')
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#555555'
+          e.currentTarget.style.color = '#CCCCCC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2A2A2A'
+          e.currentTarget.style.color = '#888888'
+        }}
+      >
+        ←
+      </button>
+      <button
+        style={btnStyle}
+        title="Center horizontally"
+        onClick={() => {
+          alignWidgets(pageId, widgetIds, 'center-h')
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#555555'
+          e.currentTarget.style.color = '#CCCCCC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2A2A2A'
+          e.currentTarget.style.color = '#888888'
+        }}
+      >
+        ↔
+      </button>
+      <button
+        style={btnStyle}
+        title="Align right edges"
+        onClick={() => {
+          alignWidgets(pageId, widgetIds, 'right')
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#555555'
+          e.currentTarget.style.color = '#CCCCCC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2A2A2A'
+          e.currentTarget.style.color = '#888888'
+        }}
+      >
+        →
+      </button>
+      {/* Vertical */}
+      <button
+        style={btnStyle}
+        title="Align top edges"
+        onClick={() => {
+          alignWidgets(pageId, widgetIds, 'top')
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#555555'
+          e.currentTarget.style.color = '#CCCCCC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2A2A2A'
+          e.currentTarget.style.color = '#888888'
+        }}
+      >
+        ↑
+      </button>
+      <button
+        style={btnStyle}
+        title="Center vertically"
+        onClick={() => {
+          alignWidgets(pageId, widgetIds, 'center-v')
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#555555'
+          e.currentTarget.style.color = '#CCCCCC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2A2A2A'
+          e.currentTarget.style.color = '#888888'
+        }}
+      >
+        ↕
+      </button>
+      <button
+        style={btnStyle}
+        title="Align bottom edges"
+        onClick={() => {
+          alignWidgets(pageId, widgetIds, 'bottom')
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#555555'
+          e.currentTarget.style.color = '#CCCCCC'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2A2A2A'
+          e.currentTarget.style.color = '#888888'
+        }}
+      >
+        ↓
+      </button>
+      {/* Distribute (only enabled when 3+ widgets selected) */}
+      {canDistribute && (
+        <>
+          <div style={{ width: 1, height: 14, background: '#2A2A2A', margin: '0 2px' }} />
+          <span style={labelStyle}>Dist</span>
+          <button
+            style={btnStyle}
+            title="Distribute horizontally"
+            onClick={() => {
+              distributeWidgets(pageId, widgetIds, 'h')
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#555555'
+              e.currentTarget.style.color = '#CCCCCC'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#2A2A2A'
+              e.currentTarget.style.color = '#888888'
+            }}
+          >
+            ⇔
+          </button>
+          <button
+            style={btnStyle}
+            title="Distribute vertically"
+            onClick={() => {
+              distributeWidgets(pageId, widgetIds, 'v')
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#555555'
+              e.currentTarget.style.color = '#CCCCCC'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#2A2A2A'
+              e.currentTarget.style.color = '#888888'
+            }}
+          >
+            ⇕
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Suppress unused-import warning for ALIGN_BUTTONS
+void ALIGN_BUTTONS
 
 // ---------------------------------------------------------------------------
 // Single widget renderer
@@ -58,9 +270,11 @@ interface WidgetBoxProps {
   widget: Widget
   palette: PagePalette
   isSelected: boolean
+  isInMultiSelection: boolean
   isOverlapping: boolean
   revLimiting: boolean
   onSelect: (id: string) => void
+  onShiftSelect: (id: string) => void
   onDragStart: (e: React.MouseEvent, widget: Widget) => void
 }
 
@@ -68,9 +282,11 @@ function WidgetBox({
   widget,
   palette,
   isSelected,
+  isInMultiSelection,
   isOverlapping,
   revLimiting,
   onSelect,
+  onShiftSelect,
   onDragStart,
 }: WidgetBoxProps) {
   const { layout, type } = widget
@@ -80,17 +296,23 @@ function WidgetBox({
     ? '#FF2222'
     : isSelected
       ? '#FFFFFF'
-      : (configuredBorder ?? typeColor)
-  const borderWidth = isSelected || isOverlapping ? 2 : 1
-  const bgColor = isOverlapping ? '#2A0000' : palette.surface
+      : isInMultiSelection
+        ? '#AAAAFF'
+        : (configuredBorder ?? typeColor)
+  const borderWidth = isSelected || isOverlapping || isInMultiSelection ? 2 : 1
+  const bgColor = isOverlapping ? '#2A0000' : isInMultiSelection ? '#0A0A1E' : palette.surface
 
   return (
     <div
       data-widget="true"
       onMouseDown={(e) => {
         e.stopPropagation()
-        onSelect(widget.id)
-        onDragStart(e, widget)
+        if (e.shiftKey) {
+          onShiftSelect(widget.id)
+        } else {
+          onSelect(widget.id)
+          onDragStart(e, widget)
+        }
       }}
       style={{
         position: 'absolute',
@@ -109,7 +331,9 @@ function WidgetBox({
           ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'
           : isSelected
             ? `0 0 0 1px #FFFFFF22, 0 0 6px ${typeColor}88`
-            : `0 0 0 1px ${typeColor}22`,
+            : isInMultiSelection
+              ? '0 0 0 1px #AAAAFF22, 0 0 4px #AAAAFF44'
+              : `0 0 0 1px ${typeColor}22`,
       }}
     >
       <WidgetPreview
@@ -284,16 +508,29 @@ interface CanvasProps {
 
 export default function Canvas({ page, topBar }: CanvasProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
+  const selectedWidgetIds = useDashboardStore((s) => s.selectedWidgetIds)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
+  const selectWidgets = useDashboardStore((s) => s.selectWidgets)
+  const toggleWidgetSelection = useDashboardStore((s) => s.toggleWidgetSelection)
   const moveWidget = useDashboardStore((s) => s.moveWidget)
+  const moveWidgets = useDashboardStore((s) => s.moveWidgets)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
+  const commitDrag = useDashboardStore((s) => s.commitDrag)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<number>(1)
   // Swipe left/right tracking (page navigation)
   const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
+  // Rubber-band selection
+  const rubberBandRef = useRef<{ startFwX: number; startFwY: number } | null>(null)
+  const [rubberBand, setRubberBand] = useState<{
+    x: number
+    y: number
+    w: number
+    h: number
+  } | null>(null)
 
   const widgetAreaH = 240 - topBar.height
   const palette: PagePalette = page.palette
@@ -335,7 +572,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         const a = rects[i]
         const b = rects[j]
         if (!a || !b) continue
-        // Only flag non-warning widgets (warnings are allowed on top)
         const wa = page.widgets[i]
         const wb = page.widgets[j]
         if (wa?.type === 'warning' || wb?.type === 'warning') continue
@@ -367,13 +603,37 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent, widget: Widget) => {
+      // Gather all widgets to drag: if the widget is part of multi-selection, drag all.
+      // Otherwise drag only this widget (and set it as sole selection).
+      const isMulti = selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
+
+      const dragging: DraggingWidget[] = isMulti
+        ? page.widgets
+            .filter((w) => selectedWidgetIds.includes(w.id))
+            .map((w) => ({
+              id: w.id,
+              startX: w.layout.x,
+              startY: w.layout.y,
+              w: w.layout.w,
+              h: w.layout.h,
+            }))
+        : [
+            {
+              id: widget.id,
+              startX: widget.layout.x,
+              startY: widget.layout.y,
+              w: widget.layout.w,
+              h: widget.layout.h,
+            },
+          ]
+
       drag = {
-        widgetId: widget.id,
+        primaryId: widget.id,
         pageId: page.id,
         startMouseX: e.clientX,
         startMouseY: e.clientY,
-        startWidgetX: widget.layout.x,
-        startWidgetY: widget.layout.y,
+        widgets: dragging,
+        isMulti,
       }
 
       const handleMouseMove = (ev: MouseEvent) => {
@@ -381,20 +641,40 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         const effectiveScale = SCALE * zoomRef.current
         const dx = Math.round((ev.clientX - drag.startMouseX) / effectiveScale)
         const dy = Math.round((ev.clientY - drag.startMouseY) / effectiveScale)
-        // Snap to token grid, clamp to canvas bounds accounting for widget dimensions
-        const rawX = drag.startWidgetX + dx
-        const rawY = drag.startWidgetY + dy
-        const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
-        const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
-        const newX = Math.max(0, Math.min(320 - widget.layout.w, snappedX))
-        const newY = Math.max(0, Math.min(widgetAreaH - widget.layout.h, snappedY))
-        moveWidget(drag.pageId, drag.widgetId, { x: newX, y: newY })
+
+        if (drag.isMulti) {
+          const moves = drag.widgets.map((dw) => {
+            const rawX = dw.startX + dx
+            const rawY = dw.startY + dy
+            const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
+            const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
+            return {
+              id: dw.id,
+              x: Math.max(0, Math.min(320 - dw.w, snappedX)),
+              y: Math.max(0, Math.min(widgetAreaH - dw.h, snappedY)),
+            }
+          })
+          moveWidgets(drag.pageId, moves)
+        } else {
+          const dw = drag.widgets[0]
+          if (!dw) return
+          const rawX = dw.startX + dx
+          const rawY = dw.startY + dy
+          const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
+          const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
+          const newX = Math.max(0, Math.min(320 - dw.w, snappedX))
+          const newY = Math.max(0, Math.min(widgetAreaH - dw.h, snappedY))
+          moveWidget(drag.pageId, drag.primaryId, { x: newX, y: newY })
+        }
       }
 
       const handleMouseUp = () => {
         if (drag) {
-          // Resolve overlaps after drop — cascade-push colliding widgets
-          resolveWidgetCollisions(drag.pageId, drag.widgetId)
+          if (drag.isMulti) {
+            commitDrag()
+          } else {
+            resolveWidgetCollisions(drag.pageId, drag.primaryId)
+          }
         }
         drag = null
         window.removeEventListener('mousemove', handleMouseMove)
@@ -404,7 +684,90 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
     },
-    [page.id, moveWidget, resolveWidgetCollisions]
+    [
+      page.id,
+      page.widgets,
+      selectedWidgetIds,
+      moveWidget,
+      moveWidgets,
+      resolveWidgetCollisions,
+      commitDrag,
+      widgetAreaH,
+    ]
+  )
+
+  // Rubber-band: starts on background mousedown, selects widgets on mouseup
+  const startRubberBand = useCallback(
+    (e: React.PointerEvent) => {
+      if (!containerRef.current) return
+      const cr = containerRef.current.getBoundingClientRect()
+      const startFwX = (e.clientX - cr.left) / SCALE
+      const startFwY = (e.clientY - cr.top) / SCALE
+      rubberBandRef.current = { startFwX, startFwY }
+
+      const handleMove = (ev: MouseEvent) => {
+        if (!rubberBandRef.current || !containerRef.current) return
+        const r = containerRef.current.getBoundingClientRect()
+        const curFwX = (ev.clientX - r.left) / SCALE
+        const curFwY = (ev.clientY - r.top) / SCALE
+        const { startFwX: sx, startFwY: sy } = rubberBandRef.current
+        setRubberBand({
+          x: Math.min(sx, curFwX),
+          y: Math.min(sy, curFwY),
+          w: Math.abs(curFwX - sx),
+          h: Math.abs(curFwY - sy),
+        })
+      }
+
+      // Capture page.widgets at drag-start time (closure)
+      const widgets = page.widgets
+
+      const handleUp = (ev: MouseEvent) => {
+        document.removeEventListener('mousemove', handleMove)
+        document.removeEventListener('mouseup', handleUp)
+
+        if (!rubberBandRef.current || !containerRef.current) {
+          rubberBandRef.current = null
+          setRubberBand(null)
+          return
+        }
+
+        const r = containerRef.current.getBoundingClientRect()
+        const curFwX = (ev.clientX - r.left) / SCALE
+        const curFwY = (ev.clientY - r.top) / SCALE
+        const { startFwX: sx, startFwY: sy } = rubberBandRef.current
+        const rbX = Math.min(sx, curFwX)
+        const rbY = Math.min(sy, curFwY)
+        const rbW = Math.abs(curFwX - sx)
+        const rbH = Math.abs(curFwY - sy)
+
+        rubberBandRef.current = null
+        setRubberBand(null)
+
+        if (rbW > RB_THRESHOLD || rbH > RB_THRESHOLD) {
+          // Select all widgets that intersect the rubber-band rect
+          const rb = { id: '', x: rbX, y: rbY, w: rbW, h: rbH }
+          const ids = widgets
+            .filter((w) =>
+              rectsOverlap(rb, {
+                id: '',
+                x: w.layout.x,
+                y: w.layout.y,
+                w: w.layout.w,
+                h: w.layout.h,
+              })
+            )
+            .map((w) => w.id)
+          if (ids.length > 0) selectWidgets(ids)
+          // else: already deselected on pointerDown
+        }
+        // Small movement → treat as tap (already deselected on pointerDown), no-op here
+      }
+
+      document.addEventListener('mousemove', handleMove)
+      document.addEventListener('mouseup', handleUp)
+    },
+    [page.widgets, selectWidgets]
   )
 
   return (
@@ -417,21 +780,40 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         background: '#111111',
       }}
     >
-      {/* Studio toolbar — rev limit simulation (studio-only, not on device) */}
+      {/* Studio toolbar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
           padding: '4px 10px',
           borderBottom: '1px solid #1A1A1A',
           gap: 8,
           flexShrink: 0,
+          minHeight: 28,
         }}
       >
-        <span style={{ fontSize: 9, color: '#333333', letterSpacing: '0.05em' }}>
-          PREVIEW — 320 × 240
-        </span>
+        {/* Alignment tools — shown when 2+ widgets selected */}
+        {selectedWidgetIds.length >= 2 ? (
+          <AlignToolbar
+            pageId={page.id}
+            widgetIds={selectedWidgetIds}
+            canDistribute={selectedWidgetIds.length >= 3}
+          />
+        ) : (
+          <span style={{ fontSize: 9, color: '#333333', letterSpacing: '0.05em' }}>
+            PREVIEW — 320 × 240
+          </span>
+        )}
+
+        <div style={{ flex: 1 }} />
+
+        {/* Multi-selection badge */}
+        {selectedWidgetIds.length >= 2 && (
+          <span style={{ fontSize: 9, color: '#666666', letterSpacing: '0.04em' }}>
+            {String(selectedWidgetIds.length)} selected
+          </span>
+        )}
+
         <button
           onClick={() => {
             setRevLimiting(true)
@@ -508,16 +890,22 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               <div
                 ref={containerRef}
                 onPointerDown={(e) => {
-                  // Track swipe start and deselect — only on background clicks
                   const target = e.target as HTMLElement
                   const isBackground =
                     target === containerRef.current || target.closest('[data-widget]') === null
-                  if (isBackground) {
-                    swipeRef.current = { startX: e.clientX, startY: e.clientY }
-                    selectWidget(null)
-                  }
+                  if (!isBackground) return
+                  // Track swipe start (horizontal page nav)
+                  swipeRef.current = { startX: e.clientX, startY: e.clientY }
+                  // Deselect and start rubber-band
+                  selectWidget(null)
+                  startRubberBand(e)
                 }}
                 onPointerUp={(e) => {
+                  // Suppress swipe if rubber-band just finished a real drag
+                  if (rubberBand && (rubberBand.w > RB_THRESHOLD || rubberBand.h > RB_THRESHOLD)) {
+                    swipeRef.current = null
+                    return
+                  }
                   if (!swipeRef.current) return
                   const dx = e.clientX - swipeRef.current.startX
                   const dy = e.clientY - swipeRef.current.startY
@@ -525,8 +913,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
                   // Vertical swipe takes priority over horizontal
                   if (Math.abs(dy) > 28) {
-                    if (dy < 0 && !diagOpen && !settingsOpen) setDiagOpen(true) // swipe up → open diag
-                    if (dy > 0 && diagOpen) setDiagOpen(false) // swipe down → close diag
+                    if (dy < 0 && !diagOpen && !settingsOpen) setDiagOpen(true)
+                    if (dy > 0 && diagOpen) setDiagOpen(false)
                     return
                   }
 
@@ -569,12 +957,33 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                     widget={widget}
                     palette={palette}
                     isSelected={widget.id === selectedWidgetId}
+                    isInMultiSelection={
+                      selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
+                    }
                     isOverlapping={overlappingIds.has(widget.id)}
                     revLimiting={revLimiting}
                     onSelect={selectWidget}
+                    onShiftSelect={toggleWidgetSelection}
                     onDragStart={handleDragStart}
                   />
                 ))}
+
+                {/* Rubber-band selection rect */}
+                {rubberBand && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: rubberBand.x * SCALE,
+                      top: rubberBand.y * SCALE,
+                      width: Math.max(0, rubberBand.w * SCALE),
+                      height: Math.max(0, rubberBand.h * SCALE),
+                      border: '1px solid #6688FF',
+                      background: '#3344FF18',
+                      pointerEvents: 'none',
+                      zIndex: 100,
+                    }}
+                  />
+                )}
 
                 {/* Screen settings overlay */}
                 {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
