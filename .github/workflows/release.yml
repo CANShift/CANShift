@@ -91,18 +91,24 @@ jobs:
       - name: Build production firmware
         run: platformio run -e crowpanel_28
 
-      - name: Rename firmware binary
+      - name: Create merged firmware binary
+        # Merges bootloader + partition table + app into a single binary starting at 0x1000.
+        # The studio flashes this at address 0x1000 for both initial flash and updates.
         run: |
           TAG=${{ github.ref_name }}
-          cp .pio/build/crowpanel_28/firmware.bin \
-             canshift-firmware-${TAG}-crowpanel_28.bin
+          pip install esptool
+          python -m esptool --chip esp32 merge_bin \
+            -o canshift-firmware-${TAG}-crowpanel_28-merged.bin \
+            0x1000 .pio/build/crowpanel_28/bootloader.bin \
+            0x8000 .pio/build/crowpanel_28/partitions.bin \
+            0x10000 .pio/build/crowpanel_28/firmware.bin
 
       # Wait for the studio job to create the draft release, then attach the .bin.
       # Uses gh CLI (pre-installed on GitHub-hosted runners) with GITHUB_TOKEN.
       - name: Attach firmware to GitHub Release
         run: |
           TAG=${{ github.ref_name }}
-          BIN="canshift-firmware-${TAG}-crowpanel_28.bin"
+          BIN="canshift-firmware-${TAG}-crowpanel_28-merged.bin"
           # Retry up to 5 times — studio job may still be creating the release
           for i in 1 2 3 4 5; do
             gh release upload "${TAG}" "${BIN}" --clobber && break
