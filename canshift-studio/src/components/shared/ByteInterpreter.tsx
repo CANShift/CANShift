@@ -4,8 +4,12 @@
 // Highlights bytes that changed since the previous render batch.
 // Shows uint16 and int16 BE + LE interpretations for each adjacent pair —
 // useful for reverse-engineering MaxxECU signals (typically uint16 big-endian).
+//
+// Clicking a byte → triggers onDefineSignal pre-filled for 1-byte unsigned.
+// Clicking "Define" on a 16-bit pair row → pre-fills 2-byte uint16 BE.
 
 import type { CanFrameEntry } from '../../stores/canScanner.store'
+import type { SignalDefPreFill } from './SignalDefDialog'
 
 // ---------------------------------------------------------------------------
 // Byte-level helpers
@@ -74,9 +78,21 @@ const BYTE_CELL_NORMAL: React.CSSProperties = {
   borderRadius: 3,
 }
 
-function ByteCell({ index, value, changed }: { index: number; value: number; changed: boolean }) {
+function ByteCell({
+  index,
+  value,
+  changed,
+  onClick,
+}: {
+  index: number
+  value: number
+  changed: boolean
+  onClick?: (() => void) | undefined
+}) {
   return (
     <div
+      onClick={onClick}
+      title={onClick ? 'Click to define signal' : undefined}
       style={{
         ...(changed ? BYTE_CELL_CHANGED : BYTE_CELL_NORMAL),
         display: 'flex',
@@ -85,6 +101,7 @@ function ByteCell({ index, value, changed }: { index: number; value: number; cha
         padding: '6px 8px',
         minWidth: 52,
         gap: 2,
+        cursor: onClick ? 'pointer' : 'default',
       }}
     >
       <span style={{ fontSize: 9, color: '#444', fontFamily: 'monospace' }}>[{index}]</span>
@@ -115,6 +132,7 @@ function ByteCell({ index, value, changed }: { index: number; value: number; cha
 
 interface Interpretation {
   bytes: string
+  startByte: number
   uintBE: number
   intBE: number
   uintLE: number
@@ -126,6 +144,7 @@ function buildInterpretations(data: number[]): Interpretation[] {
   for (let i = 0; i + 1 < data.length; i++) {
     pairs.push({
       bytes: `${String(i)}–${String(i + 1)}`,
+      startByte: i,
       uintBE: readUint16BE(data, i),
       intBE: readInt16BE(data, i),
       uintLE: readUint16LE(data, i),
@@ -165,9 +184,24 @@ const TD_BYTES: React.CSSProperties = {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function ByteInterpreter({ entry }: { entry: CanFrameEntry }) {
+interface ByteInterpreterProps {
+  entry: CanFrameEntry
+  frameId: number
+  onDefineSignal?: (prefill: SignalDefPreFill) => void
+}
+
+function toHexId(id: number): string {
+  return `0x${id.toString(16).toUpperCase()}`
+}
+
+export default function ByteInterpreter({
+  entry,
+  frameId,
+  onDefineSignal,
+}: ByteInterpreterProps): React.ReactElement {
   const { data, prevData } = entry
   const interps = buildInterpretations(data)
+  const canFrameId = toHexId(frameId)
 
   // For DLC=0, show a placeholder
   if (data.length === 0) {
@@ -204,7 +238,7 @@ export default function ByteInterpreter({ entry }: { entry: CanFrameEntry }) {
             fontWeight: 600,
           }}
         >
-          Bytes
+          Bytes {onDefineSignal && <span style={{ color: '#333' }}>(click to define)</span>}
         </span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {data.map((byte, i) => (
@@ -213,6 +247,20 @@ export default function ByteInterpreter({ entry }: { entry: CanFrameEntry }) {
               index={i}
               value={byte}
               changed={prevData.length > 0 && prevData[i] !== byte}
+              onClick={
+                onDefineSignal
+                  ? () => {
+                      onDefineSignal({
+                        canFrameId,
+                        startByte: i,
+                        byteLength: 1,
+                        bigEndian: true,
+                        signed: false,
+                        frameData: data,
+                      })
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -244,6 +292,7 @@ export default function ByteInterpreter({ entry }: { entry: CanFrameEntry }) {
               <th style={TH}>int BE</th>
               <th style={TH}>uint LE</th>
               <th style={TH}>int LE</th>
+              {onDefineSignal && <th style={TH}></th>}
             </tr>
           </thead>
           <tbody>
@@ -254,6 +303,33 @@ export default function ByteInterpreter({ entry }: { entry: CanFrameEntry }) {
                 <td style={{ ...TD, color: row.intBE < 0 ? '#FF8888' : '#AAAAAA' }}>{row.intBE}</td>
                 <td style={{ ...TD, color: '#777' }}>{row.uintLE}</td>
                 <td style={{ ...TD, color: row.intLE < 0 ? '#CC6666' : '#777' }}>{row.intLE}</td>
+                {onDefineSignal && (
+                  <td style={{ ...TD, paddingRight: 4 }}>
+                    <button
+                      onClick={() => {
+                        onDefineSignal({
+                          canFrameId,
+                          startByte: row.startByte,
+                          byteLength: 2,
+                          bigEndian: true,
+                          signed: false,
+                          frameData: data,
+                        })
+                      }}
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 3,
+                        fontSize: 9,
+                        cursor: 'pointer',
+                        border: '1px solid #2A2A2A',
+                        background: 'transparent',
+                        color: '#555',
+                      }}
+                    >
+                      Define
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -279,17 +355,46 @@ export default function ByteInterpreter({ entry }: { entry: CanFrameEntry }) {
               <tr>
                 <th style={{ ...TH, textAlign: 'left' }}>Type</th>
                 <th style={TH}>Value</th>
+                {onDefineSignal && <th style={TH}></th>}
               </tr>
             </thead>
             <tbody>
               <tr style={{ borderTop: '1px solid #161616' }}>
                 <td style={TD_BYTES}>uint32 BE</td>
                 <td style={TD}>{uint32BE}</td>
+                {onDefineSignal && (
+                  <td style={{ ...TD, paddingRight: 4 }}>
+                    <button
+                      onClick={() => {
+                        onDefineSignal({
+                          canFrameId,
+                          startByte: 0,
+                          byteLength: 4,
+                          bigEndian: true,
+                          signed: false,
+                          frameData: data,
+                        })
+                      }}
+                      style={{
+                        padding: '2px 7px',
+                        borderRadius: 3,
+                        fontSize: 9,
+                        cursor: 'pointer',
+                        border: '1px solid #2A2A2A',
+                        background: 'transparent',
+                        color: '#555',
+                      }}
+                    >
+                      Define
+                    </button>
+                  </td>
+                )}
               </tr>
               {float32Valid && (
                 <tr style={{ borderTop: '1px solid #161616' }}>
                   <td style={TD_BYTES}>float32 BE</td>
                   <td style={TD}>{float32.toFixed(4)}</td>
+                  {onDefineSignal && <td />}
                 </tr>
               )}
             </tbody>

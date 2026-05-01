@@ -1,6 +1,7 @@
 // ipc-handlers.ts — Register all IPC handlers for the main process
 
-import { ipcMain, app, BrowserWindow } from 'electron'
+import { ipcMain, app, BrowserWindow, dialog } from 'electron'
+import { writeFile } from 'node:fs/promises'
 import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
@@ -144,6 +145,25 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.FIRMWARE_EXIT_FLASH, () => {
     firmwareService.setFlashPort(null)
     return { success: true }
+  })
+
+  // ---------------------------------------------------------------------------
+  // Signal export
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.SIGNAL_EXPORT, async (_event, config: unknown) => {
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Export signals.json',
+      defaultPath: 'signals.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (canceled || !filePath) return { success: false }
+    try {
+      await writeFile(filePath, JSON.stringify(config, null, 2), 'utf-8')
+      return { success: true, filePath }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   // ---------------------------------------------------------------------------

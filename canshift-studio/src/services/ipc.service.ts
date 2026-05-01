@@ -1,7 +1,7 @@
 // ipc.service.ts — Type-safe wrapper around the Electron IPC bridge.
 // All renderer → main communication goes through here.
 
-import type { DashboardConfig } from '@tmbk/canshift-core'
+import type { DashboardConfig, SignalConfig } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
 import type { CanFrame, CanHealth } from '../../main/services/usb.service'
@@ -103,6 +103,22 @@ export const usbService = {
 export const canScannerIpc = {
   start: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_START),
   stop: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_STOP),
+}
+
+// ---------------------------------------------------------------------------
+// Firmware management
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Signal mapping
+// ---------------------------------------------------------------------------
+
+export const signalIpc = {
+  export: (config: SignalConfig) =>
+    invoke<{ success: boolean; filePath?: string; error?: string }>(
+      IpcChannels.SIGNAL_EXPORT,
+      config
+    ),
 }
 
 // ---------------------------------------------------------------------------
