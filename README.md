@@ -1,157 +1,176 @@
-# Automotive CANbus Dashboard Workspace
+# CANShift
 <p align="center">
-  <img src="logo/CANShift_logo.png" alt="Titre de l'image" width="600">
+  <img src="logo/CANShift_logo.png" alt="CANShift logo" width="600">
 </p>
 
-Multi-project workspace for a configurable real-time automotive dashboard system.
-Built around a VW VR6 2.9 engine, MaxxECU Street ECU, and Elecrow CrowPanel 2.8" ESP32 display.
+Configurable real-time automotive dashboard for the VW VR6 2.9 / MaxxECU Street.
+Built on an Elecrow CrowPanel 2.8" (ESP32, 320×240).
 
 ---
 
-## Workspace Architecture
+## Workspace Layout
 
 ```
-dashboard_canBus/
-├── canshift-firmware/   # ESP32 embedded dashboard firmware (PlatformIO / C++ / LVGL)
-├── canshift-studio/     # Desktop configuration editor (Electron + React + TypeScript)
-├── canshift-mobile/     # iPhone companion app — PLANNED, NOT BUILT YET
-├── canshift-core/       # Shared JSON schemas, TypeScript types, validation, versioning
-└── docs/                # Architecture docs, roadmap, CAN notes, config contract
+CANshift/
+├── canshift-firmware/   # ESP32 firmware — PlatformIO / C++ / LVGL 8.3
+├── canshift-studio/     # Desktop config editor — Electron + React 18 + TypeScript
+├── canshift-core/       # Shared types, schemas, validation — TypeScript
+├── canshift-mobile/     # iPhone app — PLANNED, docs only
+└── docs/                # Architecture, roadmap, CAN notes
 ```
-
-Each folder is designed to become its own independent Git repository with minimal refactoring.
 
 ---
 
 ## Phase Status
 
-| Project                  | Phase 1 Status      | Notes                                  |
-|--------------------------|---------------------|----------------------------------------|
-| `canshift-firmware`          | Active — build now  | Core firmware architecture scaffolded |
-| `canshift-studio`  | Active — build now  | Desktop editor foundation scaffolded  |
-| `canshift-core`            | Active — build now  | Schemas and types scaffolded           |
-| `canshift-mobile`   | Not started         | Documentation + planning only          |
-| `docs/`                  | Active              | Architecture docs included             |
+| Project             | Status              |
+|---------------------|---------------------|
+| `canshift-firmware` | Working             |
+| `canshift-studio`   | Working             |
+| `canshift-core`     | Working             |
+| `canshift-mobile`   | Not started — docs only |
 
-**Phase 1 is USB-first.**
-The firmware and desktop app communicate over USB.
-Wi-Fi and Bluetooth are planned for a later phase.
-The iPhone app is not being built now.
+**Current phase: USB first.**
+All config editing and device communication goes through the desktop app over USB serial.
+Wi-Fi, BLE, and the mobile app are Phase 2+.
 
 ---
 
-## Active Projects (Phase 1)
-
-### `canshift-firmware/`
-ESP32 embedded firmware. Runs on the Elecrow CrowPanel 2.8".
-- LVGL 8.3 UI
-- CAN bus data ingestion via TWAI + Adafruit CAN Pal (TJA1051T/3)
-- Data-driven pages and widgets, loaded from JSON config on SD/SPIFFS
-- Simulation mode for UI development without live ECU
-- USB communication stub for config sync with desktop app
-
-### `canshift-studio/`
-Electron + React + TypeScript desktop application.
-- Visual dashboard layout editor (pages, widgets, positions, styles)
-- Signal binding editor
-- Theme editor
-- JSON import/export
-- USB communication layer to flash/sync config to the ESP32
-- Preview/simulation mode
-
-### `canshift-core/`
-TypeScript-first shared domain logic.
-- JSON schemas for all config entities (dashboard, page, widget, signal, theme, asset)
-- Shared TypeScript types and interfaces
-- Configuration validation
-- Schema versioning and migration utilities
-- Used by `canshift-studio` and eventually `canshift-mobile`
-
----
-
-## Planned Project (Phase 2+)
-
-### `canshift-mobile/`
-React Native iOS application.
-- **NOT being built now**
-- Wi-Fi / BLE configuration connection to the dash
-- Profile selection, quick settings, basic diagnostics
-- Will reuse types and schemas from `canshift-core`
-- See `canshift-mobile/README.md` for the full planning document
-
----
-
-## How Projects Interact
+## How It Works
 
 ```
-MaxxECU → CAN Bus → [canshift-firmware ESP32] ← USB ← [canshift-studio]
-                          |                              |
-                     reads config JSON            reads/writes config JSON
-                          |                              |
-                    [canshift-core schemas]         [canshift-core types]
-
-                    (future Phase 2)
-                    [canshift-mobile] → Wi-Fi/BLE → [canshift-firmware ESP32]
+MaxxECU ──CAN 500kbps──► ESP32 TWAI ──► CAN parser ──► Signal store ──► LVGL UI
+                              │
+                         USB serial (115200 baud, JSON lines)
+                              │
+                         canshift-studio
+                    (config editor, CAN scanner,
+                     firmware updater, live telemetry)
 ```
 
-- The firmware is **autonomous**: it runs without the desktop or mobile app connected.
-- The desktop app edits a JSON config and sends it to the device over USB.
-- `canshift-core` is the contract layer — it defines what a valid config looks like.
+The firmware is **autonomous** — it runs without any laptop connected.
+The desktop app is used to push a new config, scan the CAN bus, update firmware, and watch live telemetry.
 
 ---
 
-## Splitting Into Separate Git Repositories
+## What Is Working
 
-Each folder is designed for clean repo separation:
+### Firmware
+- LVGL 8.3 UI — gauge, bar, warning, button, gear, image, timer widgets
+- ESP32 TWAI CAN reception at 500 kbps
+- MaxxECU CAN frame parsing (RPM, throttle, temps, pressures, lambda, speed, gear, …)
+- Config loaded from SPIFFS JSON (`dashboard.json`, `signals.json`) at boot
+- USB serial protocol — push config, query version, screen settings, CAN scan, reboot
+- CAN scan mode — forwards raw frames to the desktop app in real time
+- CAN health stats — emits fps and error count every 2 s over USB
+- Simulation mode — generates realistic VR6 data without live ECU (`[env:sim]`)
+- DMA-heap LVGL draw buffers — avoids DRAM overflow on PSRAM-equipped boards
 
-1. **No cross-folder imports.** Each project only references `canshift-core` via its published package (npm) or a local path install during development.
-2. **Independent manifests.** Each folder has its own `package.json` / `platformio.ini` / `CMakeLists.txt` as applicable.
-3. **Independent CI ready.** Each project can have its own `.github/` or `.gitlab-ci.yml`.
-4. **No shared build output.** No cross-project build artifacts.
+### Studio
+- Visual dashboard editor — pages, widgets, positions, sizes, styles, signal bindings
+- Signal editor — bind widgets to MaxxECU CAN signals
+- USB device connection — list ports, connect, push config, reboot
+- Config diff before push — shows added / removed / modified widgets
+- Session restore — reopens last file on launch
+- CAN bus scanner — live table of all frame IDs, data, count, fps
+- CAN health indicator — live fps and error count in the status bar
+- Firmware update — download release from GitHub and flash via esptool-js (Web Serial)
+- Auto-update for the Studio app itself (electron-updater)
+- Simulation mode — work without physical hardware
 
-**Steps to split a folder into its own repo:**
+---
+
+## Toolchain
+
+| Tool              | Purpose                         |
+|-------------------|---------------------------------|
+| PlatformIO        | ESP32 build and flash           |
+| C++ / Arduino     | Firmware language               |
+| LVGL 8.3          | Embedded UI framework           |
+| ArduinoJson 7     | JSON parsing on ESP32           |
+| FreeRTOS          | Task scheduling (4 tasks)       |
+| Electron 32       | Desktop app shell               |
+| React 18          | Desktop app UI                  |
+| TypeScript 5      | Desktop + core language         |
+| Zustand           | Renderer state management       |
+| electron-vite     | Dev server + bundler            |
+| node-serialport   | USB serial in Electron main     |
+| esptool-js        | Web Serial API firmware flash   |
+
+---
+
+## Getting Started
+
+### Firmware
 ```bash
-# Example: splitting canshift-firmware
-cd /path/to/workspace
-git subtree split --prefix=canshift-firmware -b split/canshift-firmware
-# Then push to a new remote repo
+cd canshift-firmware
+
+# Build and flash
+pio run --target upload
+
+# Upload SPIFFS filesystem (config JSON)
+pio run --target uploadfs
+
+# Serial monitor
+pio device monitor
+
+# Simulation mode (no hardware required)
+pio run -e sim --target upload
 ```
 
-Or simply `cp -r canshift-firmware /path/to/new-repo` and `git init`.
+Verify pin assignments in `include/board_config.h` before first flash.
+
+### Studio
+```bash
+# Build canshift-core first (required by studio)
+cd canshift-core && npm install && npm run build
+
+# Then start the studio
+cd canshift-studio && npm install && npm run dev
+```
+
+1. Launch the app — it restores the last opened config automatically
+2. File → Open Config to load a `dashboard.json`
+3. Edit pages and widgets in the editor
+4. Connect the device (USB) → push config
+5. Use the CAN Scanner tab to inspect live bus traffic
 
 ---
 
-## Toolchain Summary
+## Hardware
 
-| Tool          | Purpose                                |
-|---------------|----------------------------------------|
-| PlatformIO    | ESP32 firmware build/flash             |
-| C++ / Arduino | Embedded firmware language             |
-| LVGL 8.3      | Embedded UI framework                  |
-| Electron      | Desktop app shell                      |
-| React 18      | Desktop app UI                         |
-| TypeScript    | Desktop, canshift-core, mobile           |
-| JSON Schema   | Config validation contracts            |
-| ArduinoJson   | JSON parsing on ESP32                  |
+| Component          | Part                                  |
+|--------------------|---------------------------------------|
+| Display / MCU      | Elecrow CrowPanel 2.8" (ESP32-S3)     |
+| ECU                | MaxxECU Street                        |
+| Engine             | VW VR6 2.9                            |
+| CAN transceiver    | Adafruit CAN Pal (TJA1051T/3)         |
+
+**CAN wiring:**
+```
+CAN Pal CANH ── MaxxECU CAN H
+CAN Pal CANL ── MaxxECU CAN L
+CAN Pal CTX  ── ESP32 GPIO 22 (TWAI TX)
+CAN Pal CRX  ── ESP32 GPIO 21 (TWAI RX)
+CAN Pal VCC  ── 5 V
+CAN Pal GND  ── GND
+```
+
+MaxxECU has internal termination — do not add a second 120 Ω terminator.
+
+See `canshift-firmware/include/board_config.h` for all GPIO assignments.
 
 ---
 
-## Resume Work From Here
+## Key Assumptions (verify before first flash)
 
-1. Open `canshift-firmware/` in PlatformIO — verify board, compile, flash
-2. Open `canshift-studio/` — `npm install && npm run dev`
-3. Verify `canshift-core` builds: `cd canshift-core && npm install && npm run build`
-4. Read `docs/overall-architecture.md` for full system context
-5. Read `docs/roadmap.md` for phase breakdown
+- CAN speed: 500 kbps (must match MaxxECU CAN output settings)
+- MaxxECU CAN frame IDs in `signals.json` are unverified — confirm in MaxxECU software
+- All GPIO assignments are assumed — verify against CrowPanel 2.8" schematic
+- Config storage: SPIFFS (no SD card support yet)
 
 ---
 
-## Key Assumptions
+## Releases
 
-- ECU: MaxxECU Street — CAN protocol v1.2/v1.3 assumed (verify with MaxxECU CAN output settings)
-- Display: Elecrow CrowPanel 2.8" — ILI9341 + XPT2046 assumed (verify pinout before first flash)
-- CAN transceiver: Adafruit CAN Pal (TJA1051T/3) — 5V tolerant, 500kbps default
-- Config storage: SPIFFS on ESP32 (SD card support planned)
-- Phase 1: USB serial for config sync, not OTA
-
-See `canshift-firmware/include/board_config.h` for all hardware pin assumptions.
+Tagged releases (`vX.Y.Z`) trigger a GitHub Actions workflow that builds the Studio as `.dmg` (macOS) and `.exe` (Windows) and creates a draft GitHub Release. See `CLAUDE.md` for the release process.

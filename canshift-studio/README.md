@@ -3,144 +3,28 @@
   <img src="../logo/CANShift_studio_logo.png" alt="Studio logo" width="600">
 </p>
 
-Desktop configuration studio for the automotive dashboard.
+Desktop configuration and management application for the CANShift dashboard.
 
-**This is the primary configuration tool in Phase 1.**
-
-**Stack:** Electron + React 18 + TypeScript
-**Phase 1 focus:** USB-first config editing and sync to the ESP32 dashboard
+**Stack:** Electron 32 + React 18 + TypeScript 5
+**Communication:** USB serial (JSON lines, 115200 baud)
 
 ---
 
-## Phase 1 Strategy: USB First
+## What It Does
 
-The desktop application is the **only** configuration tool in Phase 1.
-The iPhone mobile app is not being built now.
-
-The configuration workflow in Phase 1:
-1. Open the dashboard config JSON in the desktop editor
-2. Edit pages, widgets, signal bindings, themes visually
-3. Connect the ESP32 via USB
-4. Push the updated config to the device over USB serial
-5. The dashboard firmware reloads the config
-
-There is no OTA, no Wi-Fi, no Bluetooth in Phase 1.
-All configuration changes go through this desktop application.
-
----
-
-## Current Status
-
-Foundation scaffolded. The following is in place:
-- Electron + React + TypeScript project structure
-- Main process (`main/`) and renderer process (`renderer/`) separation
-- IPC bridge for main ↔ renderer communication
-- USB communication service stub (`src/usb/`)
-- Config file service stub (open/save JSON)
-- React app shell with routing placeholders
-- `canshift-core` integration plan (via local path dependency)
-- Component placeholders for editor, preview, signal binding
-- `package.json` with all key dependencies declared
-
-**Not yet implemented:**
-- Actual visual drag-drop widget editor
-- Real USB serial protocol (pending firmware USB protocol spec)
-- Asset import UI
-- Live preview rendering
-
----
-
-## Folder Structure
-
-```
-canshift-studio/
-├── package.json
-├── tsconfig.json
-├── tsconfig.main.json          # TypeScript config for Electron main process
-├── electron.vite.config.ts     # Vite + electron-vite build config
-├── .eslintrc.json
-├── main/                       # Electron main process (Node.js context)
-│   ├── index.ts                # Main process entry point
-│   ├── ipc/
-│   │   ├── ipc-handlers.ts     # IPC handler registration
-│   │   └── ipc-channels.ts     # Channel name constants
-│   ├── services/
-│   │   ├── config-file.service.ts  # Open/save config JSON files
-│   │   ├── usb.service.ts          # USB serial communication (node-serialport)
-│   │   └── asset.service.ts        # Asset file management
-│   └── menu.ts                 # Application menu
-├── src/                        # Renderer process (React)
-│   ├── main.tsx                # React entry point
-│   ├── App.tsx                 # Root component, router
-│   ├── routes/
-│   │   ├── EditorRoute.tsx     # Dashboard layout editor
-│   │   ├── SignalRoute.tsx     # Signal binding editor
-│   │   ├── ThemeRoute.tsx      # Theme editor
-│   │   └── DeviceRoute.tsx     # USB device connection and sync
-│   ├── components/
-│   │   ├── editor/
-│   │   │   ├── Canvas.tsx      # Widget drag-drop canvas (320×240 preview)
-│   │   │   ├── WidgetPalette.tsx# Widget type selector
-│   │   │   ├── PropertyPanel.tsx# Widget property editor
-│   │   │   └── PageNav.tsx     # Page list and add/remove
-│   │   ├── signal/
-│   │   │   ├── SignalList.tsx  # List of defined CAN signals
-│   │   │   ├── FrameEditor.tsx # CAN frame definition editor
-│   │   │   └── SignalBinder.tsx# Bind widget → signal
-│   │   ├── theme/
-│   │   │   ├── ThemeEditor.tsx # Color/style theme editor
-│   │   │   └── ColorPicker.tsx # Color selection component
-│   │   ├── device/
-│   │   │   ├── DevicePanel.tsx # USB connection status and controls
-│   │   │   └── SyncControls.tsx# Push config to device
-│   │   └── shared/
-│   │       ├── TopBar.tsx      # App top bar
-│   │       └── StatusBar.tsx   # Bottom status (connection, save state)
-│   ├── stores/                 # Zustand state stores
-│   │   ├── dashboard.store.ts  # Dashboard config state
-│   │   ├── device.store.ts     # USB device connection state
-│   │   └── ui.store.ts         # Editor UI state (selection, etc.)
-│   ├── services/               # Renderer-side services
-│   │   ├── ipc.service.ts      # Type-safe IPC bridge calls
-│   │   └── validation.service.ts# Config validation (uses canshift-core)
-│   ├── hooks/
-│   │   ├── useDashboard.ts     # Dashboard state access
-│   │   └── useDevice.ts        # USB device state access
-│   └── types/
-│       └── ipc.types.ts        # IPC message type definitions
-├── shared/                     # Code shared between main and renderer
-│   └── constants.ts            # Shared constants
-└── assets/                     # App-level static assets
-    └── icons/
-```
-
----
-
-## Technology Choices
-
-### Why Electron?
-- Cross-platform (macOS, Windows, Linux) from a single codebase
-- Direct access to USB serial via `node-serialport` in the main process
-- Full filesystem access for opening/saving config files and assets
-- Long-lived tooling choice — no vendor lock-in
-- Large ecosystem, well-documented, actively maintained
-
-### Why not Tauri?
-Tauri is a valid alternative (smaller bundle, Rust backend).
-Chosen Electron because:
-- `node-serialport` has excellent Node.js support
-- React + TypeScript familiarity
-- Easier onboarding for JS/TS developers
-
-### Why Vite + electron-vite?
-- Fast HMR in development
-- Clean separation of main/renderer bundles
-- TypeScript everywhere
-
-### State: Zustand
-- Lightweight, no boilerplate
-- React 18 compatible
-- Easy to split stores by concern
+| Feature | Status |
+|---------|--------|
+| Visual dashboard editor (pages, widgets, layout, styles) | Working |
+| Signal binding editor | Working |
+| USB device connection (list ports, connect, disconnect) | Working |
+| Push config to device with diff preview | Working |
+| Session restore (reopens last file on launch) | Working |
+| CAN bus scanner (live frame table with fps) | Working |
+| CAN health indicator in status bar | Working |
+| Live telemetry display | Working |
+| Firmware update via esptool-js (Web Serial) | Working |
+| Studio auto-update (electron-updater) | Working |
+| Simulation mode (no hardware required) | Working |
 
 ---
 
@@ -148,86 +32,151 @@ Chosen Electron because:
 
 ### Prerequisites
 - Node.js 20+
-- npm 10+
-- (macOS) Xcode Command Line Tools for native modules
+- `canshift-core` built (`cd ../canshift-core && npm install && npm run build`)
 
-### Install and Run
+### Install and run
 ```bash
 cd canshift-studio
 npm install
-npm run dev          # Development mode (hot reload)
+npm run dev          # Dev mode with hot reload
 npm run build        # Production build
-npm run dist         # Package for distribution
+npm run dist         # Package (creates .dmg / .exe)
 ```
 
-### First Run
-1. `npm install` — installs all dependencies
-2. `npm run dev` — opens the Electron app in dev mode
-3. Use File → Open Config to load a `dashboard.json` from `canshift-firmware/data/config/`
-4. Edit pages and widgets in the canvas view
-5. File → Save Config to write changes back
+### Pre-commit checks (must all pass before committing)
+```bash
+npm run lint          # ESLint (zero errors)
+npm run format:check  # Prettier
+npm run typecheck     # tsc --noEmit (both tsconfig.json and tsconfig.main.json)
+```
 
 ---
 
-## USB Communication (Phase 1)
+## Architecture
 
-The USB communication protocol between the desktop app and the ESP32 firmware is defined in:
-- `docs/usb-first-strategy.md` (architecture)
-- Firmware side: `canshift-firmware/src/hal/usb/usb_comm.h`
-- Desktop side: `main/services/usb.service.ts`
-
-**Current status:** Both sides have stubs. The wire protocol needs to be finalized
-once the firmware's USB serial task is implemented.
-
-Planned protocol:
-- USB serial at 115200 baud
-- JSON-framed messages (length-prefixed or newline-delimited)
-- Commands: GET_CONFIG, PUT_CONFIG, GET_STATUS, REBOOT
-- The firmware acknowledges each command
+```
+canshift-studio/
+├── main/                        # Electron main process (Node.js)
+│   ├── index.ts                 # Entry point, window creation, auto-update
+│   ├── menu.ts                  # Application menu
+│   ├── preload.ts               # Context bridge (exposes window.ipc)
+│   ├── ipc/
+│   │   ├── ipc-channels.ts      # Channel name constants (single source of truth)
+│   │   └── ipc-handlers.ts      # All IPC handler registrations
+│   └── services/
+│       ├── config-file.service.ts   # Open / save config JSON (with dialog)
+│       ├── usb.service.ts           # USB serial — connect, push config, CAN scan
+│       ├── firmware.service.ts      # GitHub release fetching, flash port management
+│       ├── session.service.ts       # Persist last opened file path across sessions
+│       └── updater.service.ts       # electron-updater auto-update
+└── src/                         # Renderer process (React 18 + Vite)
+    ├── App.tsx                  # Root component, routes, global hooks
+    ├── routes/
+    │   ├── EditorRoute.tsx      # Dashboard layout editor
+    │   ├── SignalRoute.tsx      # Signal binding editor
+    │   ├── CanScannerRoute.tsx  # Live CAN frame scanner
+    │   └── UpdateRoute.tsx      # Firmware update UI
+    ├── components/shared/
+    │   ├── TopBar.tsx           # Top navigation bar
+    │   ├── SideRail.tsx         # Tab navigation (editor / signals / scanner / update)
+    │   ├── StatusBar.tsx        # Bottom bar (connection, CAN health, dirty state)
+    │   ├── ConnectScreen.tsx    # USB port selector shown when disconnected
+    │   ├── ConsolePanel.tsx     # Collapsible log console
+    │   ├── UpdateBanner.tsx     # Auto-update notification banner
+    │   ├── FirmwareDialog.tsx   # Firmware flash / update modal
+    │   └── PushDiffDialog.tsx   # Config diff confirmation before burn
+    ├── hooks/
+    │   ├── useConfigActions.ts  # open / save / burn with diff
+    │   ├── useMenuEvents.ts     # Electron menu event bridge
+    │   ├── useUsbConnection.ts  # USB connect / disconnect, CAN health listener
+    │   ├── useSessionRestore.ts # Restore last file on app launch
+    │   ├── useLiveSignals.ts    # Telemetry subscription
+    │   ├── useFirmwareCheck.ts  # Version check on connect
+    │   └── useUpdater.ts        # App auto-update
+    ├── stores/
+    │   ├── dashboard.store.ts   # Config state (current config, dirty flag, file path)
+    │   ├── device.store.ts      # USB connection state, last pushed config
+    │   ├── canScanner.store.ts  # CAN scanner frame table with rate tracking
+    │   ├── canHealth.store.ts   # CAN health stats (fps, errors)
+    │   ├── pushDiff.store.ts    # Push diff dialog state
+    │   └── log.store.ts         # Console log entries
+    └── services/
+        └── ipc.service.ts       # Type-safe wrappers for all IPC calls
+```
 
 ---
 
-## canshift-core Integration
+## USB Protocol
 
-`canshift-core` is the source of truth for config schemas and TypeScript types.
-It is consumed here as a local npm dependency:
+Communication with the firmware uses **JSON lines over USB serial at 115200 baud**.
+Each message is one JSON object followed by `\n`.
+
+### Desktop → Device (commands)
+
+| Command | JSON | Description |
+|---------|------|-------------|
+| `CMD_PUT_CONFIG` (0x02) | `{"cmd":2,"payload":{...}}` | Push new `dashboard.json` content — device reboots after ack |
+| `CMD_SCREEN_SETTINGS` (0x05) | `{"cmd":5,"brightness":80,...}` | Push display settings |
+| `CMD_GET_STATUS` (0x10) | `{"cmd":16}` | Query firmware version |
+| `CMD_CAN_SCAN_START` (0x20) | `{"cmd":32}` | Start forwarding raw CAN frames |
+| `CMD_CAN_SCAN_STOP` (0x21) | `{"cmd":33}` | Stop CAN scan |
+| `CMD_REBOOT` (0xF0) | `{"cmd":240}` | Soft reboot |
+
+### Device → Desktop (unsolicited)
+
+| Packet | JSON | Description |
+|--------|------|-------------|
+| Telemetry | `{"tele":1,"v":{"rpm":3500,"coolant_temp_c":89.2,...}}` | All live signal values, every ~200 ms |
+| CAN frame | `{"can":1,"id":888,"len":8,"d":[0,1,2,3,4,5,6,7]}` | Raw frame when scan mode active |
+| CAN health | `{"can_stat":1,"fps":125.0,"errors":0}` | Frame rate and error count, every ~2 s |
+
+### Device → Desktop (command responses)
 
 ```json
-// package.json
-"dependencies": {
-  "@tmbk/canshift-core": "file:../canshift-core"
-}
+{"status":"ok"}
+{"status":"error","message":"reason"}
 ```
 
-When `canshift-core` is published to npm, this reference is updated to a version range.
-This is the only coupling between this project and any other project in the workspace.
+---
+
+## IPC Channel Convention
+
+All renderer ↔ main communication goes through `main/ipc/ipc-channels.ts`.
+This file is the single source of truth for channel names — never hardcode strings.
 
 ---
 
-## Connections to Other Projects
+## State Management
 
-- **canshift-core** → source of config types and validation used in this app
-- **canshift-firmware** → target device; config is pushed to it over USB
-- **canshift-mobile** (future) → will share the same `canshift-core` types
+Each concern has its own Zustand store:
 
----
-
-## Immediate Next Steps (Phase 1)
-
-1. [ ] Implement `main/services/usb.service.ts` — list ports, connect, send/receive
-2. [ ] Finalize USB wire protocol with firmware team
-3. [ ] Implement canvas drag-drop with 320×240 viewport constraints
-4. [ ] Implement `PropertyPanel.tsx` — edit widget position, size, style, signal
-5. [ ] Implement `SignalList.tsx` and `FrameEditor.tsx` for CAN signal definitions
-6. [ ] Implement `SyncControls.tsx` — push config to device and confirm receipt
-7. [ ] Add config validation feedback using `canshift-core` validators
+| Store | What it holds |
+|-------|---------------|
+| `dashboard.store` | Current `DashboardConfig`, dirty flag, file path |
+| `device.store` | Connection status, port path, firmware version, last pushed config |
+| `canScanner.store` | Live CAN frame table (id → entry with rate, count, data) |
+| `canHealth.store` | Latest fps / error count from the firmware |
+| `pushDiff.store` | Pending burn callback + configs for the diff dialog |
+| `log.store` | Console log entries (info, success, warn, error) |
 
 ---
 
-## Resume Work From Here
+## Firmware Update Flow
 
-1. `cd canshift-studio && npm install && npm run dev`
-2. The app should open; an empty editor canvas should be visible
-3. Load `canshift-firmware/data/config/dashboard.json` via File → Open
-4. Focus first on the USB service — this is the critical Phase 1 deliverable
-5. Then focus on the canvas editor and widget property panel
+1. User clicks "Check for updates" in the Update tab
+2. Studio fetches releases from the GitHub API via `firmware.service.ts`
+3. User selects a release — firmware `.bin` is downloaded in the renderer
+4. Studio calls `FIRMWARE_ENTER_FLASH` → main process disconnects the Node.js serial port
+5. Renderer opens the same port via the **Web Serial API** (browser API available in Electron)
+6. `esptool-js` flashes the binary at 921600 baud with progress reporting
+7. Device reboots, Studio reconnects and queries the new version
+
+---
+
+## canshift-core Dependency
+
+```json
+"@tmbk/canshift-core": "file:../canshift-core"
+```
+
+All config types (`DashboardConfig`, `Widget`, `PageConfig`, …) and the `validateDashboard()` function come from `canshift-core`. Always run `npm run build` in `canshift-core/` before starting the studio in development.
