@@ -10,7 +10,7 @@
 //   3. esptool-js opens the port via Web Serial API and flashes.
 //   4. Device reboots; studio reconnects automatically.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ESPLoader, Transport } from 'esptool-js'
 import SparkMD5 from 'spark-md5'
 import { useDeviceStore } from '../../stores/device.store'
@@ -126,6 +126,11 @@ export default function FirmwareDialog() {
   const [flashState, setFlashState] = useState<FlashState>('idle')
   const [progress, setProgress] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
+  const [logs, setLogs] = useState<string[]>([])
+
+  const appendLog = useCallback((text: string) => {
+    setLogs((prev) => [...prev, text])
+  }, [])
 
   const { visible, mode } = firmwareDialog
 
@@ -158,6 +163,7 @@ export default function FirmwareDialog() {
     setFlashState('idle')
     setProgress(0)
     setErrorMsg('')
+    setLogs([])
   }, [flashState, setFirmwareDialog])
 
   const handleFlash = useCallback(async () => {
@@ -166,22 +172,28 @@ export default function FirmwareDialog() {
     setFlashState('downloading')
     setProgress(0)
     setErrorMsg('')
+    setLogs([])
 
     try {
       // 1. Enter flash mode — main closes USB serial, enables Web Serial auto-select
+      appendLog(`Flashing ${selectedRelease.tag} to ${portPath}…`)
       await firmwareIpc.enterFlash(portPath)
       setDisconnected()
 
       // 2. Download merged firmware binary
+      appendLog(`Downloading ${selectedRelease.downloadUrl}`)
       const binBuffer = await downloadBinary(selectedRelease.downloadUrl, (pct) => {
         setProgress(Math.round(pct * 0.4)) // 0-40% = download
       })
+      appendLog(`Download complete (${(binBuffer.byteLength / 1024).toFixed(1)} KB)`)
       const binString = bufferToString(binBuffer)
 
       // 3. Open Web Serial port (main auto-selects via select-serial-port handler)
       setFlashState('connecting')
+      appendLog('Opening serial port…')
       const port = await navigator.serial.requestPort()
       await port.open({ baudRate: 115200 })
+      appendLog('Port open at 115200 baud')
 
       // 4. Flash with esptool-js.
       // ESLint cannot resolve the esptool-js type definitions at analysis time;
@@ -194,6 +206,17 @@ export default function FirmwareDialog() {
         baudrate: 921600,
         romBaudrate: 115200,
         enableTracing: false,
+        terminal: {
+          write: (text: string) => {
+            appendLog(text)
+          },
+          writeLine: (line: string) => {
+            appendLog(line)
+          },
+          clean: () => {
+            setLogs([])
+          },
+        },
       })
 
       await loader.main()
@@ -217,6 +240,7 @@ export default function FirmwareDialog() {
       /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
       await port.close()
+      appendLog('Device rebooting…')
 
       setProgress(100)
       setFlashState('done')
@@ -307,7 +331,7 @@ export default function FirmwareDialog() {
               }}
             />
           ) : isFlashing ? (
-            <ProgressPanel state={flashState} progress={progress} />
+            <ProgressPanel state={flashState} progress={progress} logs={logs} />
           ) : (
             <>
               {/* Channel picker */}
@@ -499,13 +523,27 @@ export default function FirmwareDialog() {
 // Sub-panels
 // ---------------------------------------------------------------------------
 
-function ProgressPanel({ state, progress }: { state: FlashState; progress: number }) {
+function ProgressPanel({
+  state,
+  progress,
+  logs,
+}: {
+  state: FlashState
+  progress: number
+  logs: string[]
+}) {
   const label =
     state === 'downloading'
       ? 'Downloading firmware…'
       : state === 'connecting'
         ? 'Connecting to device…'
         : 'Flashing…'
+
+  const logEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [logs])
 
   return (
     <div style={{ padding: '8px 0' }}>
@@ -529,7 +567,30 @@ function ProgressPanel({ state, progress }: { state: FlashState; progress: numbe
           }}
         />
       </div>
-      <div style={{ fontSize: 11, color: '#555555', textAlign: 'right' }}>{progress}%</div>
+      <div style={{ fontSize: 11, color: '#555555', textAlign: 'right', marginBottom: 12 }}>
+        {progress}%
+      </div>
+      {logs.length > 0 && (
+        <div
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: '#666666',
+            background: '#0D0D0D',
+            border: '1px solid #1E1E1E',
+            borderRadius: 4,
+            padding: '8px 10px',
+            maxHeight: 140,
+            overflowY: 'auto',
+            lineHeight: 1.6,
+          }}
+        >
+          {logs.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+          <div ref={logEndRef} />
+        </div>
+      )}
     </div>
   )
 }
