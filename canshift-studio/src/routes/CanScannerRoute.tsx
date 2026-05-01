@@ -166,15 +166,15 @@ export default function CanScannerRoute() {
       </div>
 
       {/* Table */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {sorted.length === 0 ? (
           <div
             style={{
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '100%',
               color: '#333333',
               fontSize: 13,
               gap: 8,
