@@ -3,13 +3,17 @@
 // Sends CMD_CAN_SCAN_START (0x20) to the device, listens for raw frame batches
 // over IPC, and displays a live table of discovered frame IDs with their
 // last-seen bytes, frame count, and receive rate.
+//
+// Clicking a row expands a ByteInterpreter panel showing per-byte breakdown
+// and multi-byte (uint16/int16 BE + LE) interpretations.
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useCanScannerStore } from '../stores/canScanner.store'
 import { canScannerIpc } from '../services/ipc.service'
 import type { CanFrame } from '../services/ipc.service'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import { IconRefresh, IconClear } from '../components/icons/Icon'
+import ByteInterpreter from '../components/shared/ByteInterpreter'
 
 // ---------------------------------------------------------------------------
 // Hex helpers
@@ -20,7 +24,7 @@ function toHex(n: number, width: number): string {
 }
 
 function bytesToHex(bytes: number[]): string {
-  return bytes.map((b) => toHex(b, 2)).join(' ')
+  return bytes.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')
 }
 
 // ---------------------------------------------------------------------------
@@ -33,6 +37,8 @@ export default function CanScannerRoute() {
   const setScanningState = useCanScannerStore((s) => s.setScanningState)
   const ingestBatch = useCanScannerStore((s) => s.ingestBatch)
   const clearFrames = useCanScannerStore((s) => s.clearFrames)
+
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const sorted = Object.values(frames).sort((a, b) => a.id - b.id)
 
@@ -53,10 +59,16 @@ export default function CanScannerRoute() {
       setScanningState(false)
     } else {
       clearFrames()
+      setSelectedId(null)
       const result = await canScannerIpc.start()
       if (result.success) setScanningState(true)
     }
   }, [scanning, setScanningState, clearFrames])
+
+  const handleClear = useCallback(() => {
+    clearFrames()
+    setSelectedId(null)
+  }, [clearFrames])
 
   // Stop scan on unmount
   useEffect(() => {
@@ -108,9 +120,7 @@ export default function CanScannerRoute() {
         </button>
 
         <button
-          onClick={() => {
-            clearFrames()
-          }}
+          onClick={handleClear}
           disabled={scanning || sorted.length === 0}
           title="Clear"
           style={{
@@ -147,11 +157,9 @@ export default function CanScannerRoute() {
             {sorted.length} frame ID{sorted.length !== 1 ? 's' : ''} discovered
           </span>
           <button
-            onClick={() => {
-              clearFrames()
-            }}
+            onClick={handleClear}
             disabled={scanning || sorted.length === 0}
-            title="Refresh — clear and restart"
+            title="Clear"
             style={{
               padding: 4,
               borderRadius: 4,
@@ -203,6 +211,7 @@ export default function CanScannerRoute() {
                   borderBottom: '1px solid #1E1E1E',
                   position: 'sticky',
                   top: 0,
+                  zIndex: 1,
                 }}
               >
                 {['ID (hex)', 'DLC', 'Data', 'Count', 'Rate (fps)', 'Last seen'].map((h) => (
@@ -224,43 +233,65 @@ export default function CanScannerRoute() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((entry) => (
-                <tr
-                  key={entry.id}
-                  style={{
-                    borderBottom: '1px solid #161616',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#1A1A1A'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent'
-                  }}
-                >
-                  <td style={{ padding: '5px 12px', color: '#FF8888', fontWeight: 700 }}>
-                    {toHex(entry.id, entry.id > 0x7ff ? 8 : 3)}
-                  </td>
-                  <td style={{ padding: '5px 12px', color: '#888888' }}>{entry.dlc}</td>
-                  <td style={{ padding: '5px 12px', color: '#CCCCCC', letterSpacing: '0.1em' }}>
-                    {bytesToHex(entry.data)}
-                  </td>
-                  <td style={{ padding: '5px 12px', color: '#666666' }}>
-                    {entry.count.toLocaleString()}
-                  </td>
-                  <td
-                    style={{
-                      padding: '5px 12px',
-                      color: entry.rate > 100 ? '#FFAA00' : '#666666',
-                    }}
-                  >
-                    {entry.rate}
-                  </td>
-                  <td style={{ padding: '5px 12px', color: '#444444' }}>
-                    {new Date(entry.lastSeen).toLocaleTimeString()}
-                  </td>
-                </tr>
-              ))}
+              {sorted.map((entry) => {
+                const isSelected = selectedId === entry.id
+                return (
+                  <>
+                    <tr
+                      key={entry.id}
+                      onClick={() => {
+                        setSelectedId(isSelected ? null : entry.id)
+                      }}
+                      style={{
+                        borderBottom: isSelected ? 'none' : '1px solid #161616',
+                        background: isSelected ? '#161616' : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = '#1A1A1A'
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = 'transparent'
+                      }}
+                    >
+                      <td style={{ padding: '5px 12px', color: '#FF8888', fontWeight: 700 }}>
+                        {isSelected ? '▾ ' : ''}
+                        {toHex(entry.id, entry.id > 0x7ff ? 8 : 3)}
+                      </td>
+                      <td style={{ padding: '5px 12px', color: '#888888' }}>{entry.dlc}</td>
+                      <td style={{ padding: '5px 12px', color: '#CCCCCC', letterSpacing: '0.1em' }}>
+                        {bytesToHex(entry.data)}
+                      </td>
+                      <td style={{ padding: '5px 12px', color: '#666666' }}>
+                        {entry.count.toLocaleString()}
+                      </td>
+                      <td
+                        style={{
+                          padding: '5px 12px',
+                          color: entry.rate > 100 ? '#FFAA00' : '#666666',
+                        }}
+                      >
+                        {entry.rate}
+                      </td>
+                      <td style={{ padding: '5px 12px', color: '#444444' }}>
+                        {new Date(entry.lastSeen).toLocaleTimeString()}
+                      </td>
+                    </tr>
+
+                    {isSelected && (
+                      <tr
+                        key={String(entry.id) + '_detail'}
+                        style={{ borderBottom: '1px solid #222' }}
+                      >
+                        <td colSpan={6} style={{ padding: 0 }}>
+                          <ByteInterpreter entry={entry} />
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )
+              })}
             </tbody>
           </table>
         )}

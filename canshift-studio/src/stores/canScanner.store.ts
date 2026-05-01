@@ -18,6 +18,11 @@ export interface CanFrameEntry {
   dlc: number
   /** Last received byte payload */
   data: number[]
+  /**
+   * Byte payload from before the last render batch.
+   * Used by the byte interpreter to highlight bytes that changed.
+   */
+  prevData: number[]
   /** Total frames received for this ID since scan started */
   count: number
   /** Epoch ms of first received frame */
@@ -71,6 +76,9 @@ export const useCanScannerStore = create<CanScannerState>((set) => ({
 
     set((state) => {
       const next = { ...state.frames }
+      // Snapshot prevData per ID from before this batch so the interpreter
+      // shows what changed between render cycles, not within a single batch.
+      const prevDataSnapshot = new Map<number, number[]>()
 
       for (const frame of batch) {
         // Append timestamp to ring buffer
@@ -79,11 +87,17 @@ export const useCanScannerStore = create<CanScannerState>((set) => ({
         frameTimes.set(frame.id, times)
 
         const existing = next[frame.id]
+
+        if (!prevDataSnapshot.has(frame.id)) {
+          prevDataSnapshot.set(frame.id, existing?.data ?? [])
+        }
+
         if (existing) {
           next[frame.id] = {
             ...existing,
             dlc: frame.len,
             data: frame.data,
+            prevData: prevDataSnapshot.get(frame.id) ?? [],
             count: existing.count + 1,
             lastSeen: now,
             rate: computeRate(frame.id, now),
@@ -93,6 +107,7 @@ export const useCanScannerStore = create<CanScannerState>((set) => ({
             id: frame.id,
             dlc: frame.len,
             data: frame.data,
+            prevData: [],
             count: 1,
             firstSeen: now,
             lastSeen: now,
