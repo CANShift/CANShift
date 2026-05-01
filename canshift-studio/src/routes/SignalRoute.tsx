@@ -1,8 +1,10 @@
 // src/routes/SignalRoute.tsx — CAN signal mapping editor
 
-import { useRef } from 'react'
-import type { SignalDef } from '@tmbk/canshift-core'
+import { useRef, useCallback } from 'react'
+import type { SignalDef, SignalConfig } from '@tmbk/canshift-core'
+import { CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
+import { signalIpc } from '../services/ipc.service'
 
 const inputStyle: React.CSSProperties = {
   background: '#111111',
@@ -76,6 +78,17 @@ function omitKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K
 export default function SignalRoute() {
   const { signals, setSignals } = useSignalStore()
   const tableEndRef = useRef<HTMLDivElement>(null)
+
+  const handleExport = useCallback(async () => {
+    if (signals.length === 0) return
+    const config: SignalConfig = {
+      version: CURRENT_SCHEMA_VERSION,
+      protocol: 'maxxecu_v1.2',
+      canSpeedKbps: 500,
+      signals,
+    }
+    await signalIpc.export(config)
+  }, [signals])
 
   function updateSignal(index: number, patch: Partial<SignalDef>): void {
     const updated = signals.map((s, i) => (i === index ? { ...s, ...patch } : s))
@@ -152,6 +165,23 @@ export default function SignalRoute() {
           {signals.length}
         </span>
         <div style={{ flex: 1 }} />
+        <button
+          onClick={() => {
+            void handleExport()
+          }}
+          disabled={signals.length === 0}
+          style={{
+            background: 'transparent',
+            border: '1px solid #2A2A2A',
+            borderRadius: 4,
+            color: signals.length > 0 ? '#888888' : '#333333',
+            fontSize: 12,
+            padding: '5px 12px',
+            cursor: signals.length > 0 ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Export signals.json
+        </button>
         <button
           onClick={addSignal}
           style={{

@@ -110,6 +110,26 @@ export const canScannerIpc = {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
+// Asset management
+// ---------------------------------------------------------------------------
+
+export interface AssetFile {
+  name: string
+  spiffsPath: string // e.g. "/images/bg.bmp"
+}
+
+export const assetIpc = {
+  list: () =>
+    invoke<{ success: boolean; files: AssetFile[]; error?: string }>(IpcChannels.ASSET_LIST),
+  importImage: () =>
+    invoke<{ success: boolean; name?: string; spiffsPath?: string; error?: string }>(
+      IpcChannels.ASSET_IMPORT_IMAGE
+    ),
+  delete: (name: string) =>
+    invoke<{ success: boolean; error?: string }>(IpcChannels.ASSET_DELETE, name),
+}
+
+// ---------------------------------------------------------------------------
 // Signal mapping
 // ---------------------------------------------------------------------------
 

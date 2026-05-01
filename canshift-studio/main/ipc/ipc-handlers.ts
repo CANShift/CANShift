@@ -1,7 +1,8 @@
 // ipc-handlers.ts — Register all IPC handlers for the main process
 
 import { ipcMain, app, BrowserWindow, dialog } from 'electron'
-import { writeFile } from 'node:fs/promises'
+import { writeFile, readdir, unlink, copyFile, mkdir } from 'node:fs/promises'
+import { join, basename, extname } from 'node:path'
 import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
@@ -145,6 +146,54 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.FIRMWARE_EXIT_FLASH, () => {
     firmwareService.setFlashPort(null)
     return { success: true }
+  })
+
+  // ---------------------------------------------------------------------------
+  // Asset management (local image library → SPIFFS via pio uploadfs)
+  // ---------------------------------------------------------------------------
+
+  // Assets are stored in <userData>/assets/ and referenced by SPIFFS path
+  // (e.g. "/images/bg.bmp"). The user uploads them to the device via PlatformIO.
+  const assetsDir = join(app.getPath('userData'), 'assets')
+
+  // Ensure the assets directory exists on first use
+  ipcMain.handle(IpcChannels.ASSET_LIST, async () => {
+    try {
+      await mkdir(assetsDir, { recursive: true })
+      const files = await readdir(assetsDir)
+      const images = files.filter((f) => ['.bmp', '.bin'].includes(extname(f).toLowerCase()))
+      return { success: true, files: images.map((f) => ({ name: f, spiffsPath: `/images/${f}` })) }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err), files: [] }
+    }
+  })
+
+  ipcMain.handle(IpcChannels.ASSET_IMPORT_IMAGE, async () => {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: 'Import image (BMP)',
+      filters: [{ name: 'BMP Images', extensions: ['bmp'] }],
+      properties: ['openFile'],
+    })
+    if (canceled || filePaths.length === 0) return { success: false }
+    const src = filePaths[0] ?? ''
+    const name = basename(src)
+    try {
+      await mkdir(assetsDir, { recursive: true })
+      const dest = join(assetsDir, name)
+      await copyFile(src, dest)
+      return { success: true, name, spiffsPath: `/images/${name}` }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle(IpcChannels.ASSET_DELETE, async (_event, name: string) => {
+    try {
+      await unlink(join(assetsDir, name))
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   // ---------------------------------------------------------------------------
