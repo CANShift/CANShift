@@ -71,6 +71,7 @@ export default function CanScannerRoute() {
   return (
     <div
       style={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -170,18 +171,20 @@ export default function CanScannerRoute() {
         {sorted.length === 0 ? (
           <div
             style={{
-              flex: 1,
+              position: 'absolute',
+              inset: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#333333',
-              fontSize: 13,
-              gap: 8,
+              gap: 10,
+              pointerEvents: 'none',
             }}
           >
-            <span style={{ fontSize: 28 }}>📡</span>
-            {scanning ? 'Listening for CAN frames…' : 'Press Start scan to begin'}
+            <span style={{ fontSize: 32, opacity: 0.4 }}>📡</span>
+            <span style={{ fontSize: 13, color: '#888888' }}>
+              {scanning ? 'Listening for CAN frames…' : 'Press Start scan to begin'}
+            </span>
           </div>
         ) : (
           <table
