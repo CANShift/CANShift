@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import type { DashboardConfig } from '@tmbk/canshift-core'
-import { validateDashboard } from '@tmbk/canshift-core'
+import { validateDashboard, migrateConfig, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
@@ -29,7 +29,20 @@ export function useConfigActions() {
   const openConfig = useCallback(() => {
     void configService.open().then((result) => {
       if (result.success && result.content) {
-        setConfig(result.content as DashboardConfig, result.filePath)
+        let config = result.content as DashboardConfig
+        try {
+          const { config: migrated, applied } = migrateConfig(
+            config as unknown as Record<string, unknown>,
+            CURRENT_SCHEMA_VERSION
+          )
+          config = migrated as unknown as DashboardConfig
+          if (applied.length > 0) {
+            log('info', `Config migrated: ${applied.join(', ')}`)
+          }
+        } catch (err) {
+          log('error', `Migration failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        setConfig(config, result.filePath)
         log('info', `Opened ${result.filePath ?? 'config'}`)
       } else if (!result.success && result.error) {
         log('error', `Open failed: ${result.error}`)
