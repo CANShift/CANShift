@@ -6,6 +6,7 @@ import { current } from 'immer'
 import type {
   DashboardConfig,
   PageConfig,
+  PagePalette,
   TopBarConfig,
   Widget,
   WidgetLayout,
@@ -86,6 +87,8 @@ interface DashboardState {
   alignWidgets: (pageId: string, widgetIds: string[], direction: AlignDirection) => void
   /** Distribute selected widgets evenly along the given axis. */
   distributeWidgets: (pageId: string, widgetIds: string[], axis: 'h' | 'v') => void
+  /** Apply backgroundColor + palette to every page in the dashboard at once. */
+  applyTheme: (bgColor: string, palette: PagePalette) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -551,6 +554,20 @@ export const useDashboardStore = create<DashboardState>()(
             w.layout.y = Math.round(curY)
             curY += w.layout.h + gap
           }
+        }
+        s.isDirty = true
+      })
+    },
+
+    applyTheme: (bgColor, palette) => {
+      set((s) => {
+        if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        for (const page of s.config.pages) {
+          page.backgroundColor = bgColor as `#${string}`
+          page.palette = { ...palette }
         }
         s.isDirty = true
       })

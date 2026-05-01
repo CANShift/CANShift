@@ -4,6 +4,7 @@
 
 import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -21,6 +22,35 @@ const Y_SNAP = 28 // firmware px — min token height, matches visible grid rows
 
 // Minimum rubber-band drag distance (firmware px) before activating selection
 const RB_THRESHOLD = 4
+
+// ---------------------------------------------------------------------------
+// Day / Night theme presets (mirrors PropertyPanel presets)
+// ---------------------------------------------------------------------------
+
+const DAY_PALETTE: PagePalette = {
+  surface: '#F0F0F0',
+  primary: '#CC0000',
+  accent: '#E06000',
+  text: '#000000',
+  textDim: '#444444',
+  warning: '#CC6600',
+  danger: '#CC0000',
+  success: '#006622',
+}
+const DAY_BG = '#DDDDDD' as const
+
+const NIGHT_PALETTE: PagePalette = { ...DEFAULT_PAGE_PALETTE }
+const NIGHT_BG = '#111111' as const
+
+/** Detect day mode: if the palette text color is dark, we're in day mode. */
+function isDayPalette(palette: PagePalette): boolean {
+  const hex = palette.text.replace('#', '')
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  // Perceived brightness — dark text (#000 → 0) means day mode
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128
+}
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
@@ -368,13 +398,22 @@ interface DashTopBarProps {
   topBar: TopBarConfig
   pageName: string
   settingsOpen: boolean
+  isDayMode: boolean
   onOpenSettings: () => void
+  onToggleTheme: () => void
 }
 
 // Swipe-down threshold in px (in SCALE coordinates) to trigger settings open
 const SWIPE_DOWN_THRESHOLD = 18
 
-function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopBarProps) {
+function DashTopBar({
+  topBar,
+  pageName,
+  settingsOpen,
+  isDayMode,
+  onOpenSettings,
+  onToggleTheme,
+}: DashTopBarProps) {
   const status = useDeviceStore((s) => s.status)
   const swipeStartY = useRef<number | null>(null)
 
@@ -471,11 +510,38 @@ function DashTopBar({ topBar, pageName, settingsOpen, onOpenSettings }: DashTopB
         </span>
       )}
 
-      {/* Right — battery + USB connection status */}
+      {/* Right — battery + USB + day/night toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap }}>
         <span style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>12.4V</span>
         <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
         <IconUsb size={iconSz} color={usbColor} />
+        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
+        {/* Day / Night toggle — stops pointer propagation so swipe-down isn't triggered */}
+        <button
+          onPointerDown={(e) => {
+            e.stopPropagation()
+          }}
+          onPointerUp={(e) => {
+            e.stopPropagation()
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleTheme()
+          }}
+          title={isDayMode ? 'Switch to night mode' : 'Switch to day mode'}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: fs + 1,
+            lineHeight: 1,
+            color: topBar.textColor,
+            flexShrink: 0,
+          }}
+        >
+          {isDayMode ? '☾' : '☀'}
+        </button>
       </div>
 
       {/* Swipe-down hint — subtle chevron */}
@@ -517,6 +583,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const commitDrag = useDashboardStore((s) => s.commitDrag)
+  const applyTheme = useDashboardStore((s) => s.applyTheme)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -534,6 +601,16 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const widgetAreaH = 240 - topBar.height
   const palette: PagePalette = page.palette
+  const isDayMode = isDayPalette(palette)
+
+  const handleToggleTheme = useCallback(() => {
+    if (isDayMode) {
+      applyTheme(NIGHT_BG, NIGHT_PALETTE)
+    } else {
+      applyTheme(DAY_BG, DAY_PALETTE)
+    }
+  }, [isDayMode, applyTheme])
+
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [diagOpen, setDiagOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
@@ -880,9 +957,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   topBar={topBar}
                   pageName={page.name}
                   settingsOpen={settingsOpen}
+                  isDayMode={isDayMode}
                   onOpenSettings={() => {
                     setSettingsOpen((o) => !o)
                   }}
+                  onToggleTheme={handleToggleTheme}
                 />
               )}
 
