@@ -41,7 +41,7 @@ export default function App() {
       {ready ? (
         <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
           <SideRail />
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
             <Routes>
               <Route path="/" element={<Navigate to="/editor" replace />} />
               <Route path="/editor" element={<EditorRoute />} />

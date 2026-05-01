@@ -74,6 +74,7 @@ export default function CanScannerRoute() {
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
+        width: '100%',
         height: '100%',
         background: '#111111',
         overflow: 'hidden',
