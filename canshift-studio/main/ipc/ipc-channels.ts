@@ -48,6 +48,9 @@ export const IpcChannels = {
   HISTORY_UNDO: 'history:undo',
   HISTORY_REDO: 'history:redo',
 
+  // Signal mapping
+  SIGNAL_EXPORT: 'signal:export',
+
   // Session persistence
   SESSION_GET_LAST_FILE: 'session:get-last-file',
 
