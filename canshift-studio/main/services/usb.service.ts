@@ -32,10 +32,17 @@ interface UsbResult {
   data?: Record<string, unknown>
 }
 
+export interface CanFrame {
+  id: number
+  len: number
+  data: number[]
+}
+
 interface UsbEventHandlers {
   onConnectionChanged?: (status: ConnectionStatus) => void
   onError?: (message: string) => void
   onTelemetry?: (values: Record<string, number>) => void
+  onCanFrame?: (frame: CanFrame) => void
 }
 
 interface PendingAck {
@@ -171,6 +178,16 @@ export class UsbService {
     return { version: typeof v === 'string' ? v : null }
   }
 
+  async startCanScan(): Promise<UsbResult> {
+    const payload = JSON.stringify({ cmd: 0x20 }) + '\n'
+    return this.sendCommand(payload)
+  }
+
+  async stopCanScan(): Promise<UsbResult> {
+    const payload = JSON.stringify({ cmd: 0x21 }) + '\n'
+    return this.sendCommand(payload)
+  }
+
   async rebootDevice(): Promise<UsbResult> {
     if (!this.port?.isOpen) {
       return { success: false, error: 'Not connected to device' }
@@ -189,10 +206,9 @@ export class UsbService {
   }
 
   getStatus(): ConnectionStatus {
-    return {
-      connected: this.port?.isOpen ?? false,
-      portPath: this.portPath ?? undefined,
-    }
+    const status: ConnectionStatus = { connected: this.port?.isOpen ?? false }
+    if (this.portPath) status.portPath = this.portPath
+    return status
   }
 
   // ---------------------------------------------------------------------------
@@ -248,6 +264,17 @@ export class UsbService {
           if (typeof v === 'number') flat[k] = v
         }
         this.handlers.onTelemetry?.(flat)
+      }
+      return
+    }
+
+    // CAN scan frame — field "can" present
+    // Format: {"can":1,"id":<n>,"len":<n>,"d":[...]}
+    if ('can' in parsed) {
+      const f = parsed as { id?: unknown; len?: unknown; d?: unknown }
+      if (typeof f.id === 'number' && typeof f.len === 'number' && Array.isArray(f.d)) {
+        const data = (f.d as unknown[]).filter((b): b is number => typeof b === 'number')
+        this.handlers.onCanFrame?.({ id: f.id, len: f.len, data })
       }
       return
     }

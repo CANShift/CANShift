@@ -37,6 +37,11 @@ export const IconSignals = icon('M1 8c1-3 2-5 3-5s2 4 3 8 2 5 3 2 2-6 3-5')
 export const IconTheme = icon('M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM5 8a3 3 0 0 1 6 0')
 // Upload arrow + chip — firmware update
 export const IconFirmware = icon('M8 2v8M5 7l3-3 3 3M3 11v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2')
+// CAN bus scanner — two nodes connected by a bus line
+export const IconCanScanner = icon(
+  'M3 5h2M11 5h2M3 11h2M11 11h2M5 5h6M5 11h6M5 5v6M11 5v6M2 3h3v4H2zM11 3h3v4h-3zM2 9h3v4H2zM11 9h3v4h-3z',
+  '0 0 16 16'
+)
 
 // File actions
 export const IconLoad = icon(

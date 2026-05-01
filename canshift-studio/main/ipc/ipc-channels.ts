@@ -29,6 +29,12 @@ export const IpcChannels = {
   ASSET_LIST: 'asset:list',
   ASSET_DELETE: 'asset:delete',
 
+  // CAN scanner
+  CAN_SCAN_START: 'can:scan-start',
+  CAN_SCAN_STOP: 'can:scan-stop',
+  // Main → renderer (batched frame array)
+  CAN_FRAME_BATCH: 'can:frame-batch',
+
   // Firmware management
   FIRMWARE_QUERY_VERSION: 'firmware:query-version',
   FIRMWARE_LIST_RELEASES: 'firmware:list-releases',

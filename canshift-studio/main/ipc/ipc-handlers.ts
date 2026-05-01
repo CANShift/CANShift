@@ -7,10 +7,21 @@ import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
 import type { FirmwareRelease } from '../services/firmware.service'
+import type { CanFrame } from '../services/usb.service'
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
   const configService = new ConfigFileService()
   const usbService = new UsbService()
+
+  // Batch CAN frames: accumulate for 100ms then push to renderer in one IPC call.
+  // Avoids per-frame IPC overhead on busy CAN buses.
+  let canFrameBatch: CanFrame[] = []
+  const flushCanBatch = (): void => {
+    if (canFrameBatch.length === 0) return
+    getWindow()?.webContents.send(IpcChannels.CAN_FRAME_BATCH, canFrameBatch)
+    canFrameBatch = []
+  }
+  setInterval(flushCanBatch, 100)
 
   // Wire USB device events to the renderer window
   usbService.setEventHandlers({
@@ -22,6 +33,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     },
     onTelemetry: (values) => {
       getWindow()?.webContents.send(IpcChannels.USB_DATA_RECEIVED, values)
+    },
+    onCanFrame: (frame) => {
+      canFrameBatch.push(frame)
     },
   })
 
@@ -73,6 +87,18 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   ipcMain.handle(IpcChannels.USB_REBOOT, async () => {
     return usbService.rebootDevice()
+  })
+
+  // ---------------------------------------------------------------------------
+  // CAN scanner
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.CAN_SCAN_START, async () => {
+    return usbService.startCanScan()
+  })
+
+  ipcMain.handle(IpcChannels.CAN_SCAN_STOP, async () => {
+    return usbService.stopCanScan()
   })
 
   // ---------------------------------------------------------------------------

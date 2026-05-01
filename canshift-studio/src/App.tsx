@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
 import UpdateRoute from './routes/UpdateRoute'
+import CanScannerRoute from './routes/CanScannerRoute'
 import TopBar from './components/shared/TopBar'
 import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/" element={<Navigate to="/editor" replace />} />
               <Route path="/editor" element={<EditorRoute />} />
               <Route path="/signals" element={<SignalRoute />} />
+              <Route path="/scanner" element={<CanScannerRoute />} />
               <Route path="/update" element={<UpdateRoute />} />
             </Routes>
           </div>

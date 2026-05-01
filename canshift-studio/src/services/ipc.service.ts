@@ -4,8 +4,9 @@
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
+import type { CanFrame } from '../../main/services/usb.service'
 
-export type { FirmwareRelease }
+export type { FirmwareRelease, CanFrame }
 
 // ---------------------------------------------------------------------------
 // Response shapes (must mirror main/services/* return types)
@@ -80,6 +81,19 @@ export const usbService = {
     invoke<UsbResult>(IpcChannels.USB_SCREEN_SETTINGS, settings),
   getStatus: () => invoke<ConnectionStatus>(IpcChannels.USB_GET_STATUS),
   reboot: () => invoke<UsbResult>(IpcChannels.USB_REBOOT),
+}
+
+// ---------------------------------------------------------------------------
+// Firmware management
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// CAN scanner
+// ---------------------------------------------------------------------------
+
+export const canScannerIpc = {
+  start: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_START),
+  stop: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_STOP),
 }
 
 // ---------------------------------------------------------------------------
