@@ -11,6 +11,7 @@ import type {
   WidgetLabelPosition,
   PagePalette,
 } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
@@ -1093,6 +1094,66 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           }}
         >
           Page — {page.name}
+        </div>
+
+        {/* Day / Night preset buttons */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {(
+            [
+              {
+                label: '☀ Day',
+                title: 'High-contrast palette for sunlight readability',
+                bgColor: '#DDDDDD' as `#${string}`,
+                palette: {
+                  surface: '#F0F0F0',
+                  primary: '#CC0000',
+                  accent: '#E06000',
+                  text: '#000000',
+                  textDim: '#444444',
+                  warning: '#CC6600',
+                  danger: '#CC0000',
+                  success: '#006622',
+                } satisfies PagePalette,
+              },
+              {
+                label: '☾ Night',
+                title: 'Dark palette for low-light visibility',
+                bgColor: '#111111' as `#${string}`,
+                palette: { ...DEFAULT_PAGE_PALETTE },
+              },
+            ] as const
+          ).map((preset) => (
+            <button
+              key={preset.label}
+              title={preset.title}
+              onClick={() => {
+                updatePage(pageId, {
+                  backgroundColor: preset.bgColor,
+                  palette: preset.palette,
+                })
+              }}
+              style={{
+                flex: 1,
+                padding: '5px 0',
+                fontSize: 11,
+                background: '#1A1A1A',
+                border: '1px solid #2A2A2A',
+                borderRadius: 3,
+                color: '#888888',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#555555'
+                e.currentTarget.style.color = '#CCCCCC'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#2A2A2A'
+                e.currentTarget.style.color = '#888888'
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
         </div>
 
         {/* Background */}
