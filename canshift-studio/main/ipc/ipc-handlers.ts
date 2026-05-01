@@ -5,6 +5,8 @@ import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
+import { firmwareService } from '../services/firmware.service'
+import type { FirmwareRelease } from '../services/firmware.service'
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
   const configService = new ConfigFileService()
@@ -71,6 +73,31 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   ipcMain.handle(IpcChannels.USB_REBOOT, async () => {
     return usbService.rebootDevice()
+  })
+
+  // ---------------------------------------------------------------------------
+  // Firmware management
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.FIRMWARE_QUERY_VERSION, async () => {
+    return usbService.queryVersion()
+  })
+
+  ipcMain.handle(IpcChannels.FIRMWARE_LIST_RELEASES, async (_event, channel: 'stable' | 'beta') => {
+    const releases: FirmwareRelease[] = await firmwareService.listReleases(channel)
+    return releases
+  })
+
+  ipcMain.handle(IpcChannels.FIRMWARE_ENTER_FLASH, async (_event, portPath: string) => {
+    // Disconnect the Node.js serial port so the renderer can use Web Serial API on the same port
+    await usbService.disconnect()
+    firmwareService.setFlashPort(portPath)
+    return { success: true }
+  })
+
+  ipcMain.handle(IpcChannels.FIRMWARE_EXIT_FLASH, () => {
+    firmwareService.setFlashPort(null)
+    return { success: true }
   })
 
   // ---------------------------------------------------------------------------

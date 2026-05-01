@@ -3,6 +3,9 @@
 
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
+import type { FirmwareRelease } from '../../main/services/firmware.service'
+
+export type { FirmwareRelease }
 
 // ---------------------------------------------------------------------------
 // Response shapes (must mirror main/services/* return types)
@@ -77,4 +80,17 @@ export const usbService = {
     invoke<UsbResult>(IpcChannels.USB_SCREEN_SETTINGS, settings),
   getStatus: () => invoke<ConnectionStatus>(IpcChannels.USB_GET_STATUS),
   reboot: () => invoke<UsbResult>(IpcChannels.USB_REBOOT),
+}
+
+// ---------------------------------------------------------------------------
+// Firmware management
+// ---------------------------------------------------------------------------
+
+export const firmwareIpc = {
+  queryVersion: () => invoke<{ version: string | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
+  listReleases: (channel: 'stable' | 'beta') =>
+    invoke<FirmwareRelease[]>(IpcChannels.FIRMWARE_LIST_RELEASES, channel),
+  enterFlash: (portPath: string) =>
+    invoke<{ success: boolean }>(IpcChannels.FIRMWARE_ENTER_FLASH, portPath),
+  exitFlash: () => invoke<{ success: boolean }>(IpcChannels.FIRMWARE_EXIT_FLASH),
 }

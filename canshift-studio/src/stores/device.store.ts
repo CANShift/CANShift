@@ -4,6 +4,13 @@ import { create } from 'zustand'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
 
+/** Controls the firmware flash / update dialog. */
+export interface FirmwareDialogState {
+  visible: boolean
+  /** 'flash' = device has no firmware; 'update' = outdated firmware. */
+  mode: 'flash' | 'update' | null
+}
+
 interface DeviceState {
   status: ConnectionStatus
   portPath: string | null
@@ -18,13 +25,17 @@ interface DeviceState {
   // Simulation mode — behaves as connected without physical hardware
   simulationMode: boolean
 
+  // Firmware dialog
+  firmwareDialog: FirmwareDialogState
+
   setConnected: (portPath: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
   setSyncComplete: (at: Date) => void
   setError: (message: string) => void
   clearError: () => void
-  setFirmwareVersion: (version: string) => void
+  setFirmwareVersion: (version: string | null) => void
+  setFirmwareDialog: (state: FirmwareDialogState) => void
   enterSimulation: () => void
   exitSimulation: () => void
 }
@@ -38,6 +49,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   connected: false,
   syncing: false,
   simulationMode: false,
+  firmwareDialog: { visible: false, mode: null },
 
   setConnected: (portPath) => {
     set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
@@ -71,6 +83,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFirmwareVersion: (version) => {
     set({ firmwareVersion: version })
+  },
+
+  setFirmwareDialog: (state) => {
+    set({ firmwareDialog: state })
   },
 
   enterSimulation: () => {

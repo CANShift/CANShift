@@ -29,9 +29,14 @@ export const IpcChannels = {
   ASSET_LIST: 'asset:list',
   ASSET_DELETE: 'asset:delete',
 
-  // Firmware OTA update
-  FIRMWARE_UPDATE_USB: 'firmware:update-usb',
+  // Firmware management
+  FIRMWARE_QUERY_VERSION: 'firmware:query-version',
+  FIRMWARE_LIST_RELEASES: 'firmware:list-releases',
+  FIRMWARE_ENTER_FLASH: 'firmware:enter-flash',
+  FIRMWARE_EXIT_FLASH: 'firmware:exit-flash',
   FIRMWARE_UPDATE_WIFI: 'firmware:update-wifi',
+  // Main → renderer
+  FIRMWARE_PROGRESS: 'firmware:progress',
 
   // Edit history (main → renderer)
   HISTORY_UNDO: 'history:undo',

@@ -28,6 +28,8 @@ interface ConnectionStatus {
 interface UsbResult {
   success: boolean
   error?: string
+  /** Full parsed JSON response from the device (for commands that return extra fields). */
+  data?: Record<string, unknown>
 }
 
 interface UsbEventHandlers {
@@ -155,6 +157,20 @@ export class UsbService {
     return this.sendCommand(payload)
   }
 
+  /**
+   * Query the device firmware version.
+   * Returns { version: string } if the device responds, or { version: null } on timeout
+   * (device has no CANShift firmware, or pre-v0.2 firmware without CMD_GET_STATUS support).
+   */
+  async queryVersion(): Promise<{ version: string | null }> {
+    // CMD_GET_STATUS = 0x10 — response: {"status":"ok","version":"x.y.z","protocol":N}
+    const payload = JSON.stringify({ cmd: 0x10 }) + '\n'
+    const result = await this.sendCommand(payload, 2_000) // shorter timeout for probe
+    if (!result.success || !result.data) return { version: null }
+    const v = result.data.version
+    return { version: typeof v === 'string' ? v : null }
+  }
+
   async rebootDevice(): Promise<UsbResult> {
     if (!this.port?.isOpen) {
       return { success: false, error: 'Not connected to device' }
@@ -186,8 +202,9 @@ export class UsbService {
   /**
    * Send a command line and wait for the firmware ack.
    * At most one command is in-flight at a time — concurrent callers wait.
+   * Pass a custom timeoutMs for commands that probe for device presence (e.g. queryVersion).
    */
-  private sendCommand(payload: string): Promise<UsbResult> {
+  private sendCommand(payload: string, timeoutMs: number = ACK_TIMEOUT_MS): Promise<UsbResult> {
     if (!this.port?.isOpen) {
       return Promise.resolve({ success: false, error: 'Not connected to device' })
     }
@@ -196,7 +213,7 @@ export class UsbService {
       const timer = setTimeout(() => {
         this.pendingAck = null
         resolve({ success: false, error: 'Device did not acknowledge (timeout)' })
-      }, ACK_TIMEOUT_MS)
+      }, timeoutMs)
 
       this.pendingAck = { resolve, timer }
 
@@ -243,7 +260,7 @@ export class UsbService {
 
       const r = parsed as { status?: string; message?: string }
       if (r.status === 'ok') {
-        ack.resolve({ success: true })
+        ack.resolve({ success: true, data: parsed })
       } else {
         ack.resolve({ success: false, error: r.message ?? 'Device returned error' })
       }

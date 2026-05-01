@@ -1,11 +1,12 @@
 // main/index.ts — Electron main process entry point
 
 import { app, BrowserWindow, shell, nativeImage } from 'electron'
-import { join } from 'path'
+import { join, basename } from 'path'
 import { readFileSync } from 'fs'
 import { registerIpcHandlers } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
+import { firmwareService } from './services/firmware.service'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
@@ -102,6 +103,28 @@ function createWindow(): void {
     },
   })
 
+  // Web Serial API — grant blanket serial permission to the app and auto-select the flash port.
+  // The renderer uses navigator.serial (Web Serial) only during firmware flashing.
+  mainWindow.webContents.session.setPermissionCheckHandler((_wc, permission) => {
+    return permission === 'serial'
+  })
+  mainWindow.webContents.session.setDevicePermissionHandler((details) => {
+    return details.deviceType === 'serial'
+  })
+  mainWindow.webContents.session.on('select-serial-port', (event, portList, _wc, callback) => {
+    event.preventDefault()
+    const target = firmwareService.getFlashPort()
+    if (!target) {
+      callback('') // no flash in progress — deny
+      return
+    }
+    // Match on exact portId or basename (macOS: /dev/tty.usbserial-XXX)
+    const found = portList.find(
+      (p) => p.portId === target || basename(p.portId) === basename(target)
+    )
+    callback(found?.portId ?? '')
+  })
+
   mainWindow.on('ready-to-show', () => {
     splashWindow?.close()
     splashWindow = null
@@ -129,7 +152,7 @@ app
   .then(() => {
     if (process.platform === 'darwin') {
       const icon = loadIcon()
-      if (icon) app.dock.setIcon(icon)
+      if (icon) app.dock?.setIcon(icon)
     }
 
     registerIpcHandlers(() => mainWindow)
