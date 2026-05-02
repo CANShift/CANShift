@@ -359,6 +359,7 @@ export default function UpdateRoute() {
         {releases.slice(0, 1).map((release) => {
           const isActive = activeTag === release.tag
           const rowState = isActive ? flashState : 'idle'
+          const hasBinary = !!release.downloadUrl
           return (
             <div
               style={{
@@ -508,20 +509,27 @@ export default function UpdateRoute() {
                   onClick={() => {
                     void handleFlashRelease(release)
                   }}
-                  disabled={!canFlashAny || flashBusy || (isActive && rowState === 'done')}
+                  disabled={
+                    !canFlashAny || !hasBinary || flashBusy || (isActive && rowState === 'done')
+                  }
+                  title={!hasBinary ? 'No firmware binary attached to this release' : undefined}
                   style={{
                     flex: 1,
                     padding: '5px 0',
                     background:
-                      canFlashAny && !(isActive && rowState === 'done') ? '#1A1A0D' : '#111111',
-                    border: `1px solid ${canFlashAny && !(isActive && rowState === 'done') ? '#CC8800' : '#1E1E1E'}`,
+                      canFlashAny && hasBinary && !(isActive && rowState === 'done')
+                        ? '#1A1A0D'
+                        : '#111111',
+                    border: `1px solid ${canFlashAny && hasBinary && !(isActive && rowState === 'done') ? '#CC8800' : '#1E1E1E'}`,
                     borderRadius: 4,
                     color:
-                      canFlashAny && !(isActive && rowState === 'done') ? '#CCAA33' : '#333333',
+                      canFlashAny && hasBinary && !(isActive && rowState === 'done')
+                        ? '#CCAA33'
+                        : '#333333',
                     fontSize: 11,
                     fontWeight: 600,
                     cursor:
-                      canFlashAny && !flashBusy && !(isActive && rowState === 'done')
+                      canFlashAny && hasBinary && !flashBusy && !(isActive && rowState === 'done')
                         ? 'pointer'
                         : 'default',
                     letterSpacing: '0.03em',
@@ -531,7 +539,9 @@ export default function UpdateRoute() {
                     ? 'Downloading…'
                     : isActive && rowState === 'flashing'
                       ? 'Flashing…'
-                      : 'Flash Latest'}
+                      : hasBinary
+                        ? 'Flash Latest'
+                        : 'No binary'}
                 </button>
               </div>
             </div>
@@ -544,6 +554,7 @@ export default function UpdateRoute() {
             const older = releases.slice(1)
             const selectedRelease = older.find((r) => r.tag === selectedOlderTag) ?? null
             const isActive = selectedRelease !== null && activeTag === selectedRelease.tag
+            const olderHasBinary = !!selectedRelease?.downloadUrl
             const rowState = isActive ? flashState : 'idle'
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -709,23 +720,33 @@ export default function UpdateRoute() {
                         onClick={() => {
                           void handleFlashRelease(selectedRelease)
                         }}
-                        disabled={!canFlashAny || flashBusy || (isActive && rowState === 'done')}
+                        disabled={
+                          !canFlashAny ||
+                          !olderHasBinary ||
+                          flashBusy ||
+                          (isActive && rowState === 'done')
+                        }
+                        title={
+                          !olderHasBinary
+                            ? 'No firmware binary attached to this release'
+                            : undefined
+                        }
                         style={{
                           flex: 1,
                           padding: '5px 0',
-                          background:
-                            canFlashAny && !(isActive && rowState === 'done')
-                              ? '#111111'
-                              : '#111111',
-                          border: `1px solid ${canFlashAny && !(isActive && rowState === 'done') ? '#2A2A2A' : '#1E1E1E'}`,
+                          background: '#111111',
+                          border: `1px solid ${canFlashAny && olderHasBinary && !(isActive && rowState === 'done') ? '#2A2A2A' : '#1E1E1E'}`,
                           borderRadius: 4,
                           color:
-                            canFlashAny && !(isActive && rowState === 'done')
+                            canFlashAny && olderHasBinary && !(isActive && rowState === 'done')
                               ? '#AAAAAA'
                               : '#333333',
                           fontSize: 11,
                           cursor:
-                            canFlashAny && !flashBusy && !(isActive && rowState === 'done')
+                            canFlashAny &&
+                            olderHasBinary &&
+                            !flashBusy &&
+                            !(isActive && rowState === 'done')
                               ? 'pointer'
                               : 'default',
                           letterSpacing: '0.03em',
@@ -735,7 +756,9 @@ export default function UpdateRoute() {
                           ? 'Downloading…'
                           : isActive && rowState === 'flashing'
                             ? 'Flashing…'
-                            : 'Flash'}
+                            : olderHasBinary
+                              ? 'Flash'
+                              : 'No binary'}
                       </button>
                     </div>
                   </div>

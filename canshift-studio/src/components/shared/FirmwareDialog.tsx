@@ -167,7 +167,7 @@ export default function FirmwareDialog() {
   }, [flashState, setFirmwareDialog])
 
   const handleFlash = useCallback(async () => {
-    if (!selectedRelease || !portPath) return
+    if (!selectedRelease?.downloadUrl || !portPath) return
 
     setFlashState('downloading')
     setProgress(0)

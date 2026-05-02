@@ -15,7 +15,8 @@ const FIRMWARE_ASSET_RE = /canshift-firmware-.*-crowpanel_28-merged\.bin$/
 export interface FirmwareRelease {
   version: string
   tag: string
-  downloadUrl: string
+  /** Undefined when the firmware binary asset is absent from this release. */
+  downloadUrl?: string
   publishedAt: string
   prerelease: boolean
   notes: string
@@ -94,12 +95,11 @@ export class FirmwareService {
       if (channel === 'stable' && item.prerelease) continue
 
       const asset = item.assets.filter(isAsset).find((a) => FIRMWARE_ASSET_RE.test(a.name))
-      if (!asset) continue
 
       releases.push({
         version: item.tag_name.replace(/^v/, ''),
         tag: item.tag_name,
-        downloadUrl: asset.browser_download_url,
+        ...(asset ? { downloadUrl: asset.browser_download_url } : {}),
         publishedAt: item.published_at,
         prerelease: item.prerelease,
         notes: item.body ?? '',

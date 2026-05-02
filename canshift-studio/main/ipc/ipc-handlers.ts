@@ -340,6 +340,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       }
       const latest = releases[0]
       if (!latest) return { success: false, error: 'No releases found for this channel' }
+      if (!latest.downloadUrl)
+        return { success: false, error: 'Latest release has no firmware binary attached' }
       const result = await downloadAndFlash(latest.downloadUrl, portPath, latest.tag)
       return { ...result, version: latest.version }
     }
@@ -348,7 +350,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // Flash a specific release by download URL (used when user picks from the release list).
   ipcMain.handle(
     IpcChannels.FIRMWARE_FLASH_URL,
-    async (_event, downloadUrl: string, tag: string, portPath: string) => {
+    async (_event, downloadUrl: string | undefined, tag: string, portPath: string) => {
+      if (!downloadUrl)
+        return { success: false, error: 'No firmware binary attached to this release' }
       return downloadAndFlash(downloadUrl, portPath, tag)
     }
   )
