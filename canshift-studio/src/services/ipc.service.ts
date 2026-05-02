@@ -164,4 +164,10 @@ export const firmwareIpc = {
       portPath,
       filePath
     ),
+  flashLatest: (channel: 'stable' | 'beta', portPath: string) =>
+    invoke<{ success: boolean; version?: string; error?: string }>(
+      IpcChannels.FIRMWARE_FLASH_LATEST,
+      channel,
+      portPath
+    ),
 }

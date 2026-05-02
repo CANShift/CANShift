@@ -42,6 +42,7 @@ export const IpcChannels = {
   FIRMWARE_EXIT_FLASH: 'firmware:exit-flash',
   FIRMWARE_UPDATE_WIFI: 'firmware:update-wifi',
   FIRMWARE_UPDATE_USB: 'firmware:update-usb',
+  FIRMWARE_FLASH_LATEST: 'firmware:flash-latest',
   // Main → renderer
   FIRMWARE_PROGRESS: 'firmware:progress',
 

@@ -1,10 +1,10 @@
 // ipc-handlers.ts — Register all IPC handlers for the main process
 
-import { ipcMain, app, BrowserWindow, dialog } from 'electron'
+import { ipcMain, app, BrowserWindow, dialog, net } from 'electron'
 import { writeFile, readdir, unlink, copyFile, mkdir, access } from 'node:fs/promises'
 import { join, basename, extname } from 'node:path'
 import { spawn } from 'node:child_process'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
@@ -194,85 +194,158 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return null
   }
 
-  ipcMain.handle(
-    IpcChannels.FIRMWARE_UPDATE_USB,
-    async (_event, portPath: string, filePath: string) => {
-      const win = getWindow()
+  // Shared helper — run esptool against a local .bin file and stream progress events.
+  async function runEsptoolFlash(
+    portPath: string,
+    filePath: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const win = getWindow()
 
-      const tool = await findEsptool()
-      if (!tool) {
-        return {
-          success: false,
-          error:
-            'esptool not found. Install PlatformIO or run: pip install esptool. ' +
-            'PlatformIO path checked: ~/.platformio/packages/tool-esptoolpy/esptool.py',
+    const tool = await findEsptool()
+    if (!tool) {
+      return {
+        success: false,
+        error:
+          'esptool not found. Install PlatformIO or run: pip install esptool. ' +
+          'PlatformIO path checked: ~/.platformio/packages/tool-esptoolpy/esptool.py',
+      }
+    }
+
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const args = [
+        ...tool.args,
+        '--chip',
+        'esp32',
+        '--port',
+        portPath,
+        '--baud',
+        '460800',
+        'write_flash',
+        '--flash_mode',
+        'dio',
+        '--flash_freq',
+        '40m',
+        '--flash_size',
+        'detect',
+        '0x10000',
+        filePath,
+      ]
+
+      const proc = spawn(tool.cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+      const progressRe = /\((\d+)\s*%\)/
+      let stdout = ''
+      let stderr = ''
+
+      const onLine = (line: string): void => {
+        const m = progressRe.exec(line)
+        if (m) {
+          const pct = parseInt(m[1] ?? '0', 10)
+          win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct })
         }
       }
 
+      proc.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString()
+        for (const line of stdout.split('\n')) onLine(line)
+      })
+
+      proc.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString()
+        for (const line of stderr.split('\n')) onLine(line)
+      })
+
+      proc.on('close', (code) => {
+        if (code === 0) {
+          win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 100 })
+          resolve({ success: true })
+        } else {
+          const errLine =
+            stderr.split('\n').find((l) => l.includes('error') || l.includes('Error')) ??
+            'Flash failed'
+          resolve({ success: false, error: errLine.trim() })
+        }
+      })
+
+      proc.on('error', (err: Error) => {
+        resolve({ success: false, error: err.message })
+      })
+    })
+  }
+
+  ipcMain.handle(
+    IpcChannels.FIRMWARE_UPDATE_USB,
+    async (_event, portPath: string, filePath: string) => {
       // Disconnect serial — esptool needs exclusive port access
       await usbService.disconnect()
+      return runEsptoolFlash(portPath, filePath)
+    }
+  )
 
-      return new Promise<{ success: boolean; error?: string }>((resolve) => {
-        const args = [
-          ...tool.args,
-          '--chip',
-          'esp32',
-          '--port',
-          portPath,
-          '--baud',
-          '460800',
-          'write_flash',
-          '--flash_mode',
-          'dio',
-          '--flash_freq',
-          '40m',
-          '--flash_size',
-          'detect',
-          '0x10000',
-          filePath,
-        ]
+  // ---------------------------------------------------------------------------
+  // Download latest firmware release from GitHub and flash via esptool.
+  //
+  // Steps:
+  //   1. Fetch release list (stable or beta channel)
+  //   2. Download the .bin asset to a temp file
+  //   3. Disconnect serial and run esptool — same flow as FIRMWARE_UPDATE_USB
+  //
+  // Progress events: { pct: number, phase: 'downloading' | 'flashing' }
+  // pct 0–100 for download, then 0–100 again for flash.
+  // ---------------------------------------------------------------------------
 
-        const proc = spawn(tool.cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+  ipcMain.handle(
+    IpcChannels.FIRMWARE_FLASH_LATEST,
+    async (_event, channel: 'stable' | 'beta', portPath: string) => {
+      const win = getWindow()
 
-        const progressRe = /\((\d+)\s*%\)/
+      // 1. Fetch release list
+      let releases: Awaited<ReturnType<typeof firmwareService.listReleases>>
+      try {
+        releases = await firmwareService.listReleases(channel)
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to fetch releases: ${err instanceof Error ? err.message : String(err)}`,
+        }
+      }
 
-        const onLine = (line: string): void => {
-          const m = progressRe.exec(line)
-          if (m) {
-            const pct = parseInt(m[1] ?? '0', 10)
-            win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct })
+      const latest = releases[0]
+      if (!latest) {
+        return { success: false, error: 'No releases found for this channel' }
+      }
+
+      // 2. Download binary to a temp file
+      win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 0, phase: 'downloading' })
+
+      let binData: Buffer
+      try {
+        const response = await net.fetch(latest.downloadUrl, {
+          headers: { 'User-Agent': 'CANShift-Studio' },
+        })
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `Download failed: HTTP ${String(response.status)}`,
           }
         }
+        const arrayBuffer = await response.arrayBuffer()
+        binData = Buffer.from(arrayBuffer)
+      } catch (err) {
+        return {
+          success: false,
+          error: `Download error: ${err instanceof Error ? err.message : String(err)}`,
+        }
+      }
 
-        let stdout = ''
-        let stderr = ''
+      const tmpPath = join(tmpdir(), `canshift-${latest.tag}.bin`)
+      await writeFile(tmpPath, binData)
 
-        proc.stdout.on('data', (chunk: Buffer) => {
-          stdout += chunk.toString()
-          for (const line of stdout.split('\n')) onLine(line)
-        })
+      win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 100, phase: 'downloading' })
 
-        proc.stderr.on('data', (chunk: Buffer) => {
-          stderr += chunk.toString()
-          for (const line of stderr.split('\n')) onLine(line)
-        })
-
-        proc.on('close', (code) => {
-          if (code === 0) {
-            win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 100 })
-            resolve({ success: true })
-          } else {
-            const errLine =
-              stderr.split('\n').find((l) => l.includes('error') || l.includes('Error')) ??
-              'Flash failed'
-            resolve({ success: false, error: errLine.trim() })
-          }
-        })
-
-        proc.on('error', (err: Error) => {
-          resolve({ success: false, error: err.message })
-        })
-      })
+      // 3. Disconnect serial and flash
+      await usbService.disconnect()
+      const result = await runEsptoolFlash(portPath, tmpPath)
+      return { ...result, version: latest.version }
     }
   )
 
