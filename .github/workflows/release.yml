@@ -21,6 +21,8 @@ jobs:
   studio-release:
     name: Studio — build & release
     needs: ci-check
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
@@ -67,6 +69,8 @@ jobs:
   firmware-release:
     name: Firmware — build & attach
     needs: ci-check
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     defaults:
       run:
