@@ -195,9 +195,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   }
 
   // Shared helper — run esptool against a local .bin file and stream progress events.
+  // flashAddress: '0x10000' for app-only binary, '0x1000' for merged (bootloader+ptable+app).
   async function runEsptoolFlash(
     portPath: string,
-    filePath: string
+    filePath: string,
+    flashAddress = '0x10000'
   ): Promise<{ success: boolean; error?: string }> {
     const win = getWindow()
 
@@ -227,7 +229,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
         '40m',
         '--flash_size',
         'detect',
-        '0x10000',
+        flashAddress,
         filePath,
       ]
 
@@ -344,7 +346,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
       // 3. Disconnect serial and flash
       await usbService.disconnect()
-      const result = await runEsptoolFlash(portPath, tmpPath)
+      // Merged binary (bootloader + partition table + app) starts at 0x1000
+      const result = await runEsptoolFlash(portPath, tmpPath, '0x1000')
       return { ...result, version: latest.version }
     }
   )

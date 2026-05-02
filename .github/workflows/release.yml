@@ -23,7 +23,7 @@ jobs:
     needs: ci-check
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -48,6 +48,10 @@ jobs:
       - name: Build core
         run: npm run build
         working-directory: canshift-core
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm libfuse2
 
       - name: Install studio dependencies
         run: npm ci
