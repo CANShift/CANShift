@@ -4,7 +4,6 @@
 
 import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -24,10 +23,10 @@ const Y_SNAP = 28 // firmware px — min token height, matches visible grid rows
 const RB_THRESHOLD = 4
 
 // ---------------------------------------------------------------------------
-// Day / Night theme presets (mirrors PropertyPanel presets)
+// Built-in day/night fallback presets (used when config.dayTheme isn't configured yet)
 // ---------------------------------------------------------------------------
 
-const DAY_PALETTE: PagePalette = {
+const DAY_PALETTE_DEFAULT: PagePalette = {
   surface: '#F0F0F0',
   primary: '#CC0000',
   accent: '#E06000',
@@ -37,20 +36,7 @@ const DAY_PALETTE: PagePalette = {
   danger: '#CC0000',
   success: '#006622',
 }
-const DAY_BG = '#DDDDDD' as const
-
-const NIGHT_PALETTE: PagePalette = { ...DEFAULT_PAGE_PALETTE }
-const NIGHT_BG = '#111111' as const
-
-/** Detect day mode: if the palette text color is dark, we're in day mode. */
-function isDayPalette(palette: PagePalette): boolean {
-  const hex = palette.text.replace('#', '')
-  const r = parseInt(hex.slice(0, 2), 16)
-  const g = parseInt(hex.slice(2, 4), 16)
-  const b = parseInt(hex.slice(4, 6), 16)
-  // Perceived brightness — dark text (#000 → 0) means day mode
-  return (r * 299 + g * 587 + b * 114) / 1000 < 128
-}
+const DAY_BG_DEFAULT = '#DDDDDD' as const
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
@@ -583,7 +569,9 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const commitDrag = useDashboardStore((s) => s.commitDrag)
-  const applyTheme = useDashboardStore((s) => s.applyTheme)
+  const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
+  const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
+  const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -600,16 +588,19 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   } | null>(null)
 
   const widgetAreaH = 240 - topBar.height
-  const palette: PagePalette = page.palette
-  const isDayMode = isDayPalette(palette)
+
+  // Effective palette and background — follow the preview day/night toggle.
+  // Falls back to built-in defaults when config.dayTheme hasn't been configured yet.
+  const effectivePalette: PagePalette = isPreviewDayMode
+    ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT)
+    : page.palette
+  const effectiveBgColor: string = isPreviewDayMode
+    ? (dayTheme?.bgColor ?? DAY_BG_DEFAULT)
+    : page.backgroundColor
 
   const handleToggleTheme = useCallback(() => {
-    if (isDayMode) {
-      applyTheme(NIGHT_BG, NIGHT_PALETTE)
-    } else {
-      applyTheme(DAY_BG, DAY_PALETTE)
-    }
-  }, [isDayMode, applyTheme])
+    togglePreviewTheme()
+  }, [togglePreviewTheme])
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [diagOpen, setDiagOpen] = useState(false)
@@ -947,7 +938,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 flexDirection: 'column',
                 width: CANVAS_W,
                 height: CANVAS_H,
-                background: page.backgroundColor,
+                background: effectiveBgColor,
                 overflow: 'hidden',
               }}
             >
@@ -957,7 +948,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   topBar={topBar}
                   pageName={page.name}
                   settingsOpen={settingsOpen}
-                  isDayMode={isDayMode}
+                  isDayMode={isPreviewDayMode}
                   onOpenSettings={() => {
                     setSettingsOpen((o) => !o)
                   }}
@@ -1034,7 +1025,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   <WidgetBox
                     key={widget.id}
                     widget={widget}
-                    palette={palette}
+                    palette={effectivePalette}
                     isSelected={widget.id === selectedWidgetId}
                     isInMultiSelection={
                       selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)

@@ -6,7 +6,7 @@ import { current } from 'immer'
 import type {
   DashboardConfig,
   PageConfig,
-  PagePalette,
+  ThemePreset,
   TopBarConfig,
   Widget,
   WidgetLayout,
@@ -47,6 +47,13 @@ interface DashboardState {
   /** Redo stack — configs after the last undo. */
   future: DashboardConfig[]
 
+  /**
+   * Studio-only preview flag — true = render canvas using config.dayTheme
+   * (or the built-in day defaults if dayTheme isn't set yet).
+   * Does NOT mutate the config; does NOT go through history.
+   */
+  isPreviewDayMode: boolean
+
   // Config lifecycle
   setConfig: (config: DashboardConfig, filePath?: string) => void
   markSaved: (filePath: string) => void
@@ -62,8 +69,16 @@ interface DashboardState {
   renamePage: (pageId: string, name: string) => void
   setDefaultPage: (pageId: string) => void
   updatePage: (pageId: string, patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
+  /** Apply a patch to every page simultaneously (single undo entry). */
+  updateAllPages: (patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
   movePage: (fromIndex: number, toIndex: number) => void
   updateTopBar: (patch: Partial<TopBarConfig>) => void
+
+  // Theme
+  /** Toggle the studio day/night preview without touching the config. */
+  togglePreviewTheme: () => void
+  /** Save (or clear) the day theme in the config. Goes through undo history. */
+  setDayTheme: (theme: ThemePreset | null) => void
 
   // Widget operations
   selectWidget: (widgetId: string | null) => void
@@ -87,8 +102,6 @@ interface DashboardState {
   alignWidgets: (pageId: string, widgetIds: string[], direction: AlignDirection) => void
   /** Distribute selected widgets evenly along the given axis. */
   distributeWidgets: (pageId: string, widgetIds: string[], axis: 'h' | 'v') => void
-  /** Apply backgroundColor + palette to every page in the dashboard at once. */
-  applyTheme: (bgColor: string, palette: PagePalette) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +118,7 @@ export const useDashboardStore = create<DashboardState>()(
     selectedWidgetIds: [],
     past: [],
     future: [],
+    isPreviewDayMode: false,
 
     setConfig: (config, filePath) => {
       set((s) => {
@@ -227,6 +241,40 @@ export const useDashboardStore = create<DashboardState>()(
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
         Object.assign(page, patch)
+        s.isDirty = true
+      })
+    },
+
+    updateAllPages: (patch) => {
+      set((s) => {
+        if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        for (const page of s.config.pages) {
+          Object.assign(page, patch)
+        }
+        s.isDirty = true
+      })
+    },
+
+    togglePreviewTheme: () => {
+      set((s) => {
+        s.isPreviewDayMode = !s.isPreviewDayMode
+      })
+    },
+
+    setDayTheme: (theme) => {
+      set((s) => {
+        if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        if (theme === null) {
+          delete s.config.dayTheme
+        } else {
+          s.config.dayTheme = theme
+        }
         s.isDirty = true
       })
     },
@@ -554,20 +602,6 @@ export const useDashboardStore = create<DashboardState>()(
             w.layout.y = Math.round(curY)
             curY += w.layout.h + gap
           }
-        }
-        s.isDirty = true
-      })
-    },
-
-    applyTheme: (bgColor, palette) => {
-      set((s) => {
-        if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
-        for (const page of s.config.pages) {
-          page.backgroundColor = bgColor as `#${string}`
-          page.palette = { ...palette }
         }
         s.isDirty = true
       })
