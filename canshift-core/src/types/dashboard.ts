@@ -257,6 +257,20 @@ export const DEFAULT_PAGE_PALETTE: PagePalette = {
   success: '#00CC44',
 }
 
+// ---------------------------------------------------------------------------
+// Theme preset — background color + widget palette for a complete theme
+// ---------------------------------------------------------------------------
+
+/**
+ * A complete theme preset used for day/night mode.
+ * Stored at the dashboard root so the device can switch modes without
+ * re-burning the config.
+ */
+export interface ThemePreset {
+  bgColor: HexColor
+  palette: PagePalette
+}
+
 export interface PageConfig {
   id: string
   name: string
@@ -293,5 +307,11 @@ export interface DashboardConfig {
   defaultPageId: string
   revLimitRpm: number
   topBar: TopBarConfig
+  /**
+   * Optional day-mode theme. When present, the device top bar shows a ☀/☾
+   * toggle that switches between this theme and the per-page night palette.
+   * The active mode is persisted in NVS and survives power cycles.
+   */
+  dayTheme?: ThemePreset
   pages: PageConfig[]
 }

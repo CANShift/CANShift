@@ -34,6 +34,13 @@ const DEFAULT_PALETTE = {
 
 const MIGRATIONS: Migration[] = [
   {
+    // 1.3.0 → 1.4.0: DashboardConfig gains an optional `dayTheme` field.
+    // No data transformation needed — existing configs remain valid as-is.
+    fromVersion: '1.3.0',
+    toVersion: '1.4.0',
+    migrate: (config) => ({ ...config, version: '1.4.0' }),
+  },
+  {
     // 1.2.0 → 1.3.0: PageConfig gains a `palette` field.
     // Pages without one get the default CANShift palette.
     fromVersion: '1.2.0',

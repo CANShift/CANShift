@@ -25,6 +25,7 @@ export type {
   ImageWidgetConfig,
   SensorIconName,
   WidgetLabelPosition,
+  ThemePreset,
   // Button actions
   ButtonAction,
   DashboardButtonAction,
@@ -54,7 +55,7 @@ export type { MigrationResult } from './migrations/migration-runner'
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.3.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.4.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const
