@@ -8,7 +8,8 @@ import { firmwareIpc } from '../services/ipc.service'
 import type { FirmwareRelease } from '../services/ipc.service'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 
-type UpdateState = 'idle' | 'ready' | 'downloading' | 'flashing' | 'done' | 'error'
+type ManualState = 'idle' | 'ready' | 'flashing' | 'done' | 'error'
+type ReleaseFlashState = 'idle' | 'downloading' | 'flashing' | 'done' | 'error'
 type FlashChannel = 'stable' | 'beta'
 
 export default function UpdateRoute() {
@@ -18,70 +19,70 @@ export default function UpdateRoute() {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const log = useLogStore((s) => s.push)
 
-  // Manual file flash state
-  const [updateState, setUpdateState] = useState<UpdateState>('idle')
+  // ---- Release list state ----
+  const [channel, setChannel] = useState<FlashChannel>('stable')
+  const [releases, setReleases] = useState<FirmwareRelease[]>([])
+  const [releasesLoading, setReleasesLoading] = useState(false)
+  const [releasesError, setReleasesError] = useState<string | null>(null)
+  const [expandedTag, setExpandedTag] = useState<string | null>(null)
+
+  // Which release is currently being flashed (by tag), and its progress
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [flashState, setFlashState] = useState<ReleaseFlashState>('idle')
+  const [flashProgress, setFlashProgress] = useState(0)
+  const [flashPhase, setFlashPhase] = useState<'downloading' | 'flashing'>('downloading')
+  const [flashError, setFlashError] = useState<string | null>(null)
+
+  // ---- Manual file flash state ----
+  const [manualState, setManualState] = useState<ManualState>('idle')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [progress, setProgress] = useState(0)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [manualProgress, setManualProgress] = useState(0)
+  const [manualError, setManualError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Flash-latest state
-  const [channel, setChannel] = useState<FlashChannel>('stable')
-  const [latestRelease, setLatestRelease] = useState<FirmwareRelease | null>(null)
-  const [latestLoading, setLatestLoading] = useState(false)
-  const [latestError, setLatestError] = useState<string | null>(null)
-  const [latestState, setLatestState] = useState<
-    'idle' | 'downloading' | 'flashing' | 'done' | 'error'
-  >('idle')
-  const [latestProgress, setLatestProgress] = useState(0)
-  const [latestPhase, setLatestPhase] = useState<'downloading' | 'flashing'>('downloading')
-
-  // Fetch latest release on mount and when channel changes
+  // Fetch releases when channel changes
   useEffect(() => {
     let cancelled = false
-    setLatestLoading(true)
-    setLatestError(null)
-    setLatestRelease(null)
+    setReleasesLoading(true)
+    setReleasesError(null)
+    setReleases([])
     firmwareIpc
       .listReleases(channel)
-      .then((releases) => {
-        if (cancelled) return
-        setLatestRelease(releases[0] ?? null)
-        if (!releases[0]) setLatestError('No releases found for this channel')
+      .then((list) => {
+        if (!cancelled) setReleases(list)
       })
       .catch((err: unknown) => {
-        if (cancelled) return
-        setLatestError(err instanceof Error ? err.message : 'Failed to fetch releases')
+        if (!cancelled)
+          setReleasesError(err instanceof Error ? err.message : 'Failed to fetch releases')
       })
       .finally(() => {
-        if (!cancelled) setLatestLoading(false)
+        if (!cancelled) setReleasesLoading(false)
       })
     return () => {
       cancelled = true
     }
   }, [channel])
 
-  // Subscribe to flash/download progress events from the main process.
-  // Phase 'downloading' → latestProgress; phase absent or 'flashing' → updateState/latestState progress.
+  // Progress events from main process
   useEffect(() => {
     const handler = (payload: unknown) => {
       if (typeof payload !== 'object' || payload === null || !('pct' in payload)) return
       const { pct, phase } = payload as { pct: number; phase?: string }
 
       if (phase === 'downloading') {
-        setLatestPhase('downloading')
-        setLatestProgress(pct)
+        setFlashPhase('downloading')
+        setFlashProgress(pct)
         return
       }
 
-      // Flash progress — applies to whichever operation is active
-      setLatestPhase('flashing')
-      setLatestProgress(pct)
-      setProgress(pct)
+      // Flash phase — applies to both release flash and manual flash
+      setFlashPhase('flashing')
+      setFlashProgress(pct)
+      setManualProgress(pct)
 
       if (pct >= 100) {
-        setUpdateState((s) => (s === 'flashing' ? 'done' : s))
-        setLatestState((s) => (s === 'flashing' ? 'done' : s))
+        setFlashState((s) => (s === 'flashing' ? 'done' : s))
+        setManualState((s) => (s === 'flashing' ? 'done' : s))
         log('success', 'Firmware flashed successfully — reboot the device')
       }
     }
@@ -91,132 +92,131 @@ export default function UpdateRoute() {
     }
   }, [log])
 
-  // ---- Manual file flash ----
+  // ---- Release flash handlers ----
 
-  const canFlash = (connected || simulationMode) && selectedFile !== null
+  const flashBusy = flashState === 'downloading' || flashState === 'flashing'
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    if (!file) return
-    if (!file.name.endsWith('.bin')) {
-      setErrorMsg('Invalid file — expected a .bin firmware image')
-      setUpdateState('error')
-      return
-    }
-    setSelectedFile(file)
-    setUpdateState('ready')
-    setErrorMsg(null)
-  }
-
-  const handleFlash = async () => {
-    if (!connected && !simulationMode) return
-    if (!selectedFile) return
+  const handleFlashRelease = async (release: FirmwareRelease) => {
+    if (flashBusy) return
     if (simulationMode) {
-      log('info', `Firmware update (sim) — ${selectedFile.name}`)
-      setUpdateState('flashing')
-      setProgress(0)
-      let p = 0
-      const id = setInterval(() => {
-        p += Math.random() * 12
-        if (p >= 100) {
-          p = 100
-          clearInterval(id)
-          setProgress(100)
-          setUpdateState('done')
-          log('success', 'Firmware update complete (simulated)')
-        } else {
-          setProgress(p)
-        }
-      }, 120)
-      return
-    }
-    if (!portPath) {
-      setErrorMsg('No port path available — reconnect the device')
-      setUpdateState('error')
-      return
-    }
-    setUpdateState('flashing')
-    setProgress(0)
-    log('info', `Flashing ${selectedFile.name} to ${portPath}…`)
-    const filePath = (selectedFile as File & { path: string }).path
-    const result = await firmwareIpc.updateViaUsb(portPath, filePath)
-    if (!result.success) {
-      setUpdateState('error')
-      setErrorMsg(result.error ?? 'Flash failed — check the device is in normal boot mode')
-      log('error', `Firmware flash failed: ${result.error ?? 'unknown'}`)
-    }
-  }
-
-  const handleReset = () => {
-    setUpdateState('idle')
-    setSelectedFile(null)
-    setProgress(0)
-    setErrorMsg(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  // ---- Flash latest ----
-
-  const canFlashLatest = (connected || simulationMode) && latestRelease !== null
-
-  const handleFlashLatest = async () => {
-    if (!latestRelease) return
-    if (simulationMode) {
-      log('info', `Flash latest (sim) — v${latestRelease.version}`)
-      setLatestState('downloading')
-      setLatestProgress(0)
-      setLatestPhase('downloading')
-      await new Promise<void>((r) => setTimeout(r, 800))
-      setLatestProgress(100)
-      setLatestPhase('flashing')
-      setLatestState('flashing')
+      setActiveTag(release.tag)
+      setFlashState('downloading')
+      setFlashProgress(0)
+      setFlashPhase('downloading')
+      log('info', `Downloading firmware v${release.version} (sim)…`)
+      await new Promise<void>((r) => setTimeout(r, 700))
+      setFlashProgress(100)
+      setFlashPhase('flashing')
+      setFlashState('flashing')
       let p = 0
       await new Promise<void>((r) => {
         const id = setInterval(() => {
           p += Math.random() * 12
           if (p >= 100) {
-            p = 100
             clearInterval(id)
-            setLatestProgress(100)
-            setLatestState('done')
-            log('success', `Flash latest complete (sim) — v${latestRelease.version}`)
+            setFlashProgress(100)
+            setFlashState('done')
+            log('success', `Firmware v${release.version} flashed (sim) — reboot the device`)
             r()
           } else {
-            setLatestProgress(p)
+            setFlashProgress(p)
           }
         }, 120)
       })
       return
     }
     if (!portPath) {
-      setLatestError('No port path available — reconnect the device')
-      setLatestState('error')
+      setFlashError('No port path available — reconnect the device')
+      setFlashState('error')
       return
     }
-    setLatestState('downloading')
-    setLatestProgress(0)
-    setLatestPhase('downloading')
-    log('info', `Downloading firmware v${latestRelease.version}…`)
-    const result = await firmwareIpc.flashLatest(channel, portPath)
+    setActiveTag(release.tag)
+    setFlashState('downloading')
+    setFlashProgress(0)
+    setFlashPhase('downloading')
+    setFlashError(null)
+    log('info', `Downloading firmware v${release.version}…`)
+    const result = await firmwareIpc.flashFromUrl(release.downloadUrl, release.tag, portPath)
     if (!result.success) {
-      setLatestState('error')
-      setLatestError(result.error ?? 'Flash failed')
-      log('error', `Flash latest failed: ${result.error ?? 'unknown'}`)
+      setFlashState('error')
+      setFlashError(result.error ?? 'Flash failed')
+      log('error', `Firmware flash failed: ${result.error ?? 'unknown'}`)
     } else {
-      log(
-        'success',
-        `Firmware v${result.version ?? latestRelease.version} flashed — reboot the device`
-      )
+      log('success', `Firmware v${release.version} flashed — reboot the device`)
     }
   }
 
-  const handleLatestReset = () => {
-    setLatestState('idle')
-    setLatestProgress(0)
-    setLatestError(null)
+  const handleFlashReset = () => {
+    setActiveTag(null)
+    setFlashState('idle')
+    setFlashProgress(0)
+    setFlashError(null)
   }
 
-  const latestBusy = latestState === 'downloading' || latestState === 'flashing'
+  // ---- Manual flash handlers ----
+
+  const canManualFlash = (connected || simulationMode) && selectedFile !== null
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    if (!file) return
+    if (!file.name.endsWith('.bin')) {
+      setManualError('Invalid file — expected a .bin firmware image')
+      setManualState('error')
+      return
+    }
+    setSelectedFile(file)
+    setManualState('ready')
+    setManualError(null)
+  }
+
+  const handleManualFlash = async () => {
+    if (!connected && !simulationMode) return
+    if (!selectedFile) return
+    if (simulationMode) {
+      log('info', `Firmware update (sim) — ${selectedFile.name}`)
+      setManualState('flashing')
+      setManualProgress(0)
+      let p = 0
+      const id = setInterval(() => {
+        p += Math.random() * 12
+        if (p >= 100) {
+          clearInterval(id)
+          setManualProgress(100)
+          setManualState('done')
+          log('success', 'Firmware update complete (simulated)')
+        } else {
+          setManualProgress(p)
+        }
+      }, 120)
+      return
+    }
+    if (!portPath) {
+      setManualError('No port path available — reconnect the device')
+      setManualState('error')
+      return
+    }
+    setManualState('flashing')
+    setManualProgress(0)
+    log('info', `Flashing ${selectedFile.name} to ${portPath}…`)
+    const filePath = (selectedFile as File & { path: string }).path
+    const result = await firmwareIpc.updateViaUsb(portPath, filePath)
+    if (!result.success) {
+      setManualState('error')
+      setManualError(result.error ?? 'Flash failed — check the device is in normal boot mode')
+      log('error', `Firmware flash failed: ${result.error ?? 'unknown'}`)
+    }
+  }
+
+  const handleManualReset = () => {
+    setManualState('idle')
+    setSelectedFile(null)
+    setManualProgress(0)
+    setManualError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const canFlashAny = connected || simulationMode
 
   return (
     <div
@@ -263,7 +263,7 @@ export default function UpdateRoute() {
           gap: 10,
         }}
       >
-        <IconUsb size={16} color={connected || simulationMode ? '#55AA55' : '#AAAAAA'} />
+        <IconUsb size={16} color={canFlashAny ? '#55AA55' : '#AAAAAA'} />
         <div>
           <div style={{ fontSize: 12, color: '#AAAAAA', fontWeight: 600 }}>
             {simulationMode
@@ -273,12 +273,12 @@ export default function UpdateRoute() {
                 : 'No device connected'}
           </div>
           {firmwareVersion && (
-            <div style={{ fontSize: 11, color: '#AAAAAA', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#555555', marginTop: 2 }}>
               Current firmware: v{firmwareVersion}
             </div>
           )}
           {!connected && !simulationMode && (
-            <div style={{ fontSize: 11, color: '#AAAAAA', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#555555', marginTop: 2 }}>
               Connect via USB to enable flashing
             </div>
           )}
@@ -286,33 +286,23 @@ export default function UpdateRoute() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Flash Latest                                                         */}
+      {/* Release list                                                         */}
       {/* ------------------------------------------------------------------ */}
       <div
-        style={{
-          width: '100%',
-          maxWidth: 480,
-          background: '#161616',
-          border: '1px solid #222222',
-          borderRadius: 6,
-          padding: '14px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
+        style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 10 }}
       >
-        {/* Section title + channel toggle */}
+        {/* Channel toggle + title */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 700,
-              color: '#CCCCCC',
-              letterSpacing: '0.06em',
+              color: '#888888',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
             }}
           >
-            Flash Latest
+            GitHub Releases
           </span>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['stable', 'beta'] as const).map((ch) => (
@@ -320,17 +310,17 @@ export default function UpdateRoute() {
                 key={ch}
                 onClick={() => {
                   setChannel(ch)
-                  handleLatestReset()
+                  handleFlashReset()
                 }}
-                disabled={latestBusy}
+                disabled={flashBusy}
                 style={{
-                  padding: '2px 8px',
+                  padding: '2px 10px',
                   background: channel === ch ? '#1A1A2A' : 'transparent',
                   border: `1px solid ${channel === ch ? '#4455AA' : '#2A2A2A'}`,
                   borderRadius: 3,
-                  color: channel === ch ? '#7788CC' : '#555555',
+                  color: channel === ch ? '#7788CC' : '#444444',
                   fontSize: 10,
-                  cursor: latestBusy ? 'default' : 'pointer',
+                  cursor: flashBusy ? 'default' : 'pointer',
                   letterSpacing: '0.04em',
                 }}
               >
@@ -340,122 +330,238 @@ export default function UpdateRoute() {
           </div>
         </div>
 
-        {/* Release info */}
-        {latestLoading && (
-          <div style={{ fontSize: 11, color: '#555555' }}>Fetching latest release…</div>
-        )}
-        {!latestLoading && latestRelease && (
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#CCCCCC' }}>
-              v{latestRelease.version}
-            </span>
-            <span style={{ fontSize: 10, color: '#555555' }}>
-              {new Date(latestRelease.publishedAt).toLocaleDateString()}
-            </span>
-            {latestRelease.prerelease && (
-              <span
-                style={{
-                  fontSize: 9,
-                  color: '#AA7733',
-                  border: '1px solid #553311',
-                  borderRadius: 3,
-                  padding: '1px 4px',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                PRE-RELEASE
-              </span>
-            )}
-          </div>
-        )}
-        {!latestLoading && latestError && latestState !== 'error' && (
-          <div style={{ fontSize: 11, color: '#884444' }}>{latestError}</div>
+        {/* Loading */}
+        {releasesLoading && (
+          <div style={{ fontSize: 11, color: '#444444', padding: '8px 0' }}>Fetching releases…</div>
         )}
 
-        {/* Download/flash progress */}
-        {latestBusy && (
-          <div>
-            <div style={{ height: 3, background: '#1C1C1C', borderRadius: 2, overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${String(Math.round(latestProgress))}%`,
-                  background: latestPhase === 'downloading' ? '#4477CC' : '#FF4444',
-                  borderRadius: 2,
-                  transition: 'width 0.15s',
-                }}
-              />
-            </div>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 10,
-                color: '#555555',
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>{latestPhase === 'downloading' ? 'Downloading…' : 'Flashing…'}</span>
-              <span>{Math.round(latestProgress)}%</span>
-            </div>
-          </div>
-        )}
-
-        {/* Done */}
-        {latestState === 'done' && (
-          <div style={{ fontSize: 11, color: '#55AA55' }}>
-            ✓ Flashed successfully. Reboot the device to apply.
-          </div>
-        )}
-
-        {/* Error */}
-        {latestState === 'error' && latestError && (
-          <div style={{ fontSize: 11, color: '#CC4444' }}>{latestError}</div>
-        )}
-
-        {/* Action row */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(latestState === 'done' || latestState === 'error') && (
-            <button
-              onClick={handleLatestReset}
-              style={{
-                flex: 1,
-                padding: '7px 0',
-                background: 'transparent',
-                border: '1px solid #2A2A2A',
-                borderRadius: 5,
-                color: '#AAAAAA',
-                fontSize: 11,
-                cursor: 'pointer',
-              }}
-            >
-              Reset
-            </button>
-          )}
-          <button
-            onClick={handleFlashLatest}
-            disabled={!canFlashLatest || latestBusy || latestState === 'done'}
+        {/* Error fetching */}
+        {releasesError && (
+          <div
             style={{
-              flex: 3,
-              padding: '7px 0',
-              background: canFlashLatest && latestState !== 'done' ? '#1A1A0D' : '#111111',
-              border: `1px solid ${canFlashLatest && latestState !== 'done' ? '#CC8800' : '#222222'}`,
-              borderRadius: 5,
-              color: canFlashLatest && latestState !== 'done' ? '#CCAA33' : '#333333',
               fontSize: 11,
-              fontWeight: 600,
-              cursor:
-                canFlashLatest && !latestBusy && latestState !== 'done' ? 'pointer' : 'default',
-              letterSpacing: '0.04em',
+              color: '#884444',
+              padding: '8px 12px',
+              background: '#1A0D0D',
+              border: '1px solid #552222',
+              borderRadius: 5,
             }}
           >
-            {latestBusy
-              ? latestPhase === 'downloading'
-                ? 'Downloading…'
-                : 'Flashing…'
-              : 'Flash Latest'}
-          </button>
-        </div>
+            {releasesError}
+          </div>
+        )}
+
+        {/* Release rows */}
+        {releases.map((release, i) => {
+          const isActive = activeTag === release.tag
+          const rowState = isActive ? flashState : 'idle'
+          const isLatest = i === 0
+
+          return (
+            <div
+              key={release.tag}
+              style={{
+                background: '#161616',
+                border: `1px solid ${isActive && flashState !== 'idle' ? '#333333' : '#1E1E1E'}`,
+                borderRadius: 6,
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              {/* Version row — click to toggle release notes */}
+              <div
+                onClick={() => {
+                  setExpandedTag((t) => (t === release.tag ? null : release.tag))
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#CCCCCC' }}>
+                  v{release.version}
+                </span>
+                {isLatest && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: '#55AA55',
+                      border: '1px solid #225522',
+                      borderRadius: 3,
+                      padding: '1px 5px',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    LATEST
+                  </span>
+                )}
+                {release.prerelease && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: '#AA7733',
+                      border: '1px solid #553311',
+                      borderRadius: 3,
+                      padding: '1px 5px',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    PRE-RELEASE
+                  </span>
+                )}
+                <span style={{ fontSize: 10, color: '#444444', marginLeft: 'auto' }}>
+                  {new Date(release.publishedAt).toLocaleDateString()}
+                </span>
+                <span style={{ fontSize: 10, color: '#333333' }}>
+                  {expandedTag === release.tag ? '▲' : '▼'}
+                </span>
+              </div>
+
+              {/* Release notes (expanded) */}
+              {expandedTag === release.tag && release.notes && (
+                <div
+                  style={{
+                    borderTop: '1px solid #1E1E1E',
+                    paddingTop: 8,
+                    fontSize: 11,
+                    color: '#888888',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                    maxHeight: 180,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {release.notes}
+                </div>
+              )}
+              {expandedTag === release.tag && !release.notes && (
+                <div
+                  style={{
+                    borderTop: '1px solid #1E1E1E',
+                    paddingTop: 8,
+                    fontSize: 11,
+                    color: '#444444',
+                  }}
+                >
+                  No release notes.
+                </div>
+              )}
+
+              {/* Progress (active flash) */}
+              {isActive && (rowState === 'downloading' || rowState === 'flashing') && (
+                <div>
+                  <div
+                    style={{
+                      height: 3,
+                      background: '#1C1C1C',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${String(Math.round(flashProgress))}%`,
+                        background: flashPhase === 'downloading' ? '#4477CC' : '#FF4444',
+                        borderRadius: 2,
+                        transition: 'width 0.15s',
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 10,
+                      color: '#555555',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>{flashPhase === 'downloading' ? 'Downloading…' : 'Flashing…'}</span>
+                    <span>{Math.round(flashProgress)}%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Done */}
+              {isActive && rowState === 'done' && (
+                <div style={{ fontSize: 11, color: '#55AA55' }}>
+                  ✓ Flashed successfully — reboot the device
+                </div>
+              )}
+
+              {/* Error */}
+              {isActive && rowState === 'error' && flashError && (
+                <div style={{ fontSize: 11, color: '#CC4444' }}>{flashError}</div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {isActive && (rowState === 'done' || rowState === 'error') && (
+                  <button
+                    onClick={handleFlashReset}
+                    style={{
+                      padding: '5px 12px',
+                      background: 'transparent',
+                      border: '1px solid #2A2A2A',
+                      borderRadius: 4,
+                      color: '#888888',
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    void handleFlashRelease(release)
+                  }}
+                  disabled={!canFlashAny || flashBusy || (isActive && rowState === 'done')}
+                  style={{
+                    flex: 1,
+                    padding: '5px 0',
+                    background:
+                      canFlashAny && !(isActive && rowState === 'done')
+                        ? isLatest
+                          ? '#1A1A0D'
+                          : '#111111'
+                        : '#111111',
+                    border: `1px solid ${canFlashAny && !(isActive && rowState === 'done') ? (isLatest ? '#CC8800' : '#2A2A2A') : '#1E1E1E'}`,
+                    borderRadius: 4,
+                    color:
+                      canFlashAny && !(isActive && rowState === 'done')
+                        ? isLatest
+                          ? '#CCAA33'
+                          : '#AAAAAA'
+                        : '#333333',
+                    fontSize: 11,
+                    fontWeight: isLatest ? 600 : 400,
+                    cursor:
+                      canFlashAny && !flashBusy && !(isActive && rowState === 'done')
+                        ? 'pointer'
+                        : 'default',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  {isActive && rowState === 'downloading'
+                    ? 'Downloading…'
+                    : isActive && rowState === 'flashing'
+                      ? 'Flashing…'
+                      : isLatest
+                        ? 'Flash Latest'
+                        : 'Flash'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Empty state */}
+        {!releasesLoading && !releasesError && releases.length === 0 && (
+          <div style={{ fontSize: 11, color: '#444444', padding: '8px 0' }}>
+            No releases found for this channel.
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
@@ -466,7 +572,7 @@ export default function UpdateRoute() {
           style={{
             display: 'block',
             fontSize: 10,
-            color: '#555555',
+            color: '#444444',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             marginBottom: 8,
@@ -485,21 +591,21 @@ export default function UpdateRoute() {
           onClick={() => {
             fileInputRef.current?.click()
           }}
-          disabled={updateState === 'flashing'}
+          disabled={manualState === 'flashing'}
           style={{
             width: '100%',
             padding: '10px 16px',
             background: '#161616',
             border: `1px dashed ${selectedFile ? '#336633' : '#2A2A2A'}`,
             borderRadius: 6,
-            color: selectedFile ? '#55AA55' : '#AAAAAA',
+            color: selectedFile ? '#55AA55' : '#555555',
             fontSize: 12,
-            cursor: updateState === 'flashing' ? 'default' : 'pointer',
+            cursor: manualState === 'flashing' ? 'default' : 'pointer',
             textAlign: 'center',
             transition: 'border-color 0.1s, color 0.1s',
           }}
           onMouseEnter={(e) => {
-            if (updateState !== 'flashing')
+            if (manualState !== 'flashing')
               e.currentTarget.style.borderColor = selectedFile ? '#448844' : '#AAAAAA'
           }}
           onMouseLeave={(e) => {
@@ -510,28 +616,27 @@ export default function UpdateRoute() {
         </button>
       </div>
 
-      {/* Progress bar (manual flash) */}
-      {updateState === 'flashing' && (
+      {/* Manual flash progress */}
+      {manualState === 'flashing' && (
         <div style={{ width: '100%', maxWidth: 480 }}>
           <div style={{ height: 4, background: '#1C1C1C', borderRadius: 2, overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
-                width: `${String(Math.round(progress))}%`,
+                width: `${String(Math.round(manualProgress))}%`,
                 background: '#FF4444',
                 borderRadius: 2,
                 transition: 'width 0.1s',
               }}
             />
           </div>
-          <div style={{ marginTop: 6, fontSize: 11, color: '#AAAAAA', textAlign: 'right' }}>
-            {Math.round(progress)}%
+          <div style={{ marginTop: 6, fontSize: 11, color: '#555555', textAlign: 'right' }}>
+            {Math.round(manualProgress)}%
           </div>
         </div>
       )}
 
-      {/* Done state (manual flash) */}
-      {updateState === 'done' && (
+      {manualState === 'done' && (
         <div
           style={{
             width: '100%',
@@ -548,8 +653,7 @@ export default function UpdateRoute() {
         </div>
       )}
 
-      {/* Error state (manual flash) */}
-      {(updateState === 'error' || errorMsg) && (
+      {(manualState === 'error' || manualError) && (
         <div
           style={{
             width: '100%',
@@ -562,50 +666,49 @@ export default function UpdateRoute() {
             color: '#CC4444',
           }}
         >
-          {errorMsg ?? 'An unknown error occurred'}
+          {manualError ?? 'An unknown error occurred'}
         </div>
       )}
 
-      {/* Actions (manual flash) */}
       <div style={{ width: '100%', maxWidth: 480, display: 'flex', gap: 10 }}>
-        {updateState !== 'idle' && (
+        {manualState !== 'idle' && (
           <button
-            onClick={handleReset}
-            disabled={updateState === 'flashing'}
+            onClick={handleManualReset}
+            disabled={manualState === 'flashing'}
             style={{
               flex: 1,
               padding: '8px 0',
               background: 'transparent',
               border: '1px solid #2A2A2A',
               borderRadius: 5,
-              color: '#AAAAAA',
+              color: '#888888',
               fontSize: 12,
-              cursor: updateState === 'flashing' ? 'default' : 'pointer',
+              cursor: manualState === 'flashing' ? 'default' : 'pointer',
             }}
           >
             Reset
           </button>
         )}
         <button
-          onClick={handleFlash}
-          disabled={!canFlash || updateState === 'flashing' || updateState === 'done'}
+          onClick={handleManualFlash}
+          disabled={!canManualFlash || manualState === 'flashing' || manualState === 'done'}
           style={{
             flex: 3,
             padding: '8px 0',
-            background: canFlash && updateState !== 'done' ? '#1A0D0D' : '#111111',
-            border: `1px solid ${canFlash && updateState !== 'done' ? '#CC3333' : '#222222'}`,
+            background: canManualFlash && manualState !== 'done' ? '#1A0D0D' : '#111111',
+            border: `1px solid ${canManualFlash && manualState !== 'done' ? '#CC3333' : '#222222'}`,
             borderRadius: 5,
-            color: canFlash && updateState !== 'done' ? '#CC4444' : '#333333',
+            color: canManualFlash && manualState !== 'done' ? '#CC4444' : '#333333',
             fontSize: 12,
             fontWeight: 600,
             cursor:
-              canFlash && updateState !== 'flashing' && updateState !== 'done'
+              canManualFlash && manualState !== 'flashing' && manualState !== 'done'
                 ? 'pointer'
                 : 'default',
             letterSpacing: '0.04em',
           }}
         >
-          {updateState === 'flashing' ? 'Flashing…' : 'Flash Firmware'}
+          {manualState === 'flashing' ? 'Flashing…' : 'Flash Firmware'}
         </button>
       </div>
 
@@ -619,7 +722,7 @@ export default function UpdateRoute() {
           border: '1px solid #1A1A1A',
           borderRadius: 5,
           fontSize: 11,
-          color: '#333333',
+          color: '#2A2A2A',
         }}
       >
         Wi-Fi OTA — Phase 2

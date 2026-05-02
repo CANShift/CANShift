@@ -284,23 +284,51 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   )
 
   // ---------------------------------------------------------------------------
-  // Download latest firmware release from GitHub and flash via esptool.
+  // Shared download-and-flash helper.
   //
-  // Steps:
-  //   1. Fetch release list (stable or beta channel)
-  //   2. Download the .bin asset to a temp file
-  //   3. Disconnect serial and run esptool — same flow as FIRMWARE_UPDATE_USB
-  //
-  // Progress events: { pct: number, phase: 'downloading' | 'flashing' }
-  // pct 0–100 for download, then 0–100 again for flash.
+  // Downloads a .bin from downloadUrl to a temp file, then runs esptool.
+  // Merged binaries (from GitHub releases) are flashed at 0x1000.
+  // Progress events: { pct, phase: 'downloading' | 'flashing' }
   // ---------------------------------------------------------------------------
 
+  async function downloadAndFlash(
+    downloadUrl: string,
+    portPath: string,
+    tag: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const win = getWindow()
+
+    win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 0, phase: 'downloading' })
+
+    let binData: Buffer
+    try {
+      const response = await net.fetch(downloadUrl, {
+        headers: { 'User-Agent': 'CANShift-Studio' },
+      })
+      if (!response.ok) {
+        return { success: false, error: `Download failed: HTTP ${String(response.status)}` }
+      }
+      binData = Buffer.from(await response.arrayBuffer())
+    } catch (err) {
+      return {
+        success: false,
+        error: `Download error: ${err instanceof Error ? err.message : String(err)}`,
+      }
+    }
+
+    const tmpPath = join(tmpdir(), `canshift-${tag}.bin`)
+    await writeFile(tmpPath, binData)
+    win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 100, phase: 'downloading' })
+
+    await usbService.disconnect()
+    // Merged binary (bootloader + partition table + app) starts at 0x1000
+    return runEsptoolFlash(portPath, tmpPath, '0x1000')
+  }
+
+  // Flash the latest release for a given channel (stable | beta).
   ipcMain.handle(
     IpcChannels.FIRMWARE_FLASH_LATEST,
     async (_event, channel: 'stable' | 'beta', portPath: string) => {
-      const win = getWindow()
-
-      // 1. Fetch release list
       let releases: Awaited<ReturnType<typeof firmwareService.listReleases>>
       try {
         releases = await firmwareService.listReleases(channel)
@@ -310,45 +338,18 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
           error: `Failed to fetch releases: ${err instanceof Error ? err.message : String(err)}`,
         }
       }
-
       const latest = releases[0]
-      if (!latest) {
-        return { success: false, error: 'No releases found for this channel' }
-      }
-
-      // 2. Download binary to a temp file
-      win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 0, phase: 'downloading' })
-
-      let binData: Buffer
-      try {
-        const response = await net.fetch(latest.downloadUrl, {
-          headers: { 'User-Agent': 'CANShift-Studio' },
-        })
-        if (!response.ok) {
-          return {
-            success: false,
-            error: `Download failed: HTTP ${String(response.status)}`,
-          }
-        }
-        const arrayBuffer = await response.arrayBuffer()
-        binData = Buffer.from(arrayBuffer)
-      } catch (err) {
-        return {
-          success: false,
-          error: `Download error: ${err instanceof Error ? err.message : String(err)}`,
-        }
-      }
-
-      const tmpPath = join(tmpdir(), `canshift-${latest.tag}.bin`)
-      await writeFile(tmpPath, binData)
-
-      win?.webContents.send(IpcChannels.FIRMWARE_PROGRESS, { pct: 100, phase: 'downloading' })
-
-      // 3. Disconnect serial and flash
-      await usbService.disconnect()
-      // Merged binary (bootloader + partition table + app) starts at 0x1000
-      const result = await runEsptoolFlash(portPath, tmpPath, '0x1000')
+      if (!latest) return { success: false, error: 'No releases found for this channel' }
+      const result = await downloadAndFlash(latest.downloadUrl, portPath, latest.tag)
       return { ...result, version: latest.version }
+    }
+  )
+
+  // Flash a specific release by download URL (used when user picks from the release list).
+  ipcMain.handle(
+    IpcChannels.FIRMWARE_FLASH_URL,
+    async (_event, downloadUrl: string, tag: string, portPath: string) => {
+      return downloadAndFlash(downloadUrl, portPath, tag)
     }
   )
 

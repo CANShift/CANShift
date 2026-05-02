@@ -170,4 +170,11 @@ export const firmwareIpc = {
       channel,
       portPath
     ),
+  flashFromUrl: (downloadUrl: string, tag: string, portPath: string) =>
+    invoke<{ success: boolean; error?: string }>(
+      IpcChannels.FIRMWARE_FLASH_URL,
+      downloadUrl,
+      tag,
+      portPath
+    ),
 }
