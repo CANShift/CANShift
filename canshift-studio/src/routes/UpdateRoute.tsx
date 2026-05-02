@@ -1,14 +1,17 @@
 // UpdateRoute.tsx — Firmware update panel (USB OTA, Phase 1)
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { IconUsb } from '../components/icons/Icon'
+import { firmwareIpc } from '../services/ipc.service'
+import { IpcChannels } from '../../main/ipc/ipc-channels'
 
 type UpdateState = 'idle' | 'selecting' | 'ready' | 'flashing' | 'done' | 'error'
 
 export default function UpdateRoute() {
   const connected = useDeviceStore((s) => s.connected)
+  const portPath = useDeviceStore((s) => s.portPath)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const log = useLogStore((s) => s.push)
@@ -18,6 +21,24 @@ export default function UpdateRoute() {
   const [progress, setProgress] = useState(0)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Subscribe to flash progress events from the main process
+  useEffect(() => {
+    const handler = (payload: unknown) => {
+      if (typeof payload === 'object' && payload !== null && 'pct' in payload) {
+        const pct = (payload as { pct: number }).pct
+        setProgress(pct)
+        if (pct >= 100) {
+          setUpdateState('done')
+          log('success', 'Firmware flashed successfully — reboot the device')
+        }
+      }
+    }
+    window.ipc.on(IpcChannels.FIRMWARE_PROGRESS, handler)
+    return () => {
+      window.ipc.off(IpcChannels.FIRMWARE_PROGRESS, handler)
+    }
+  }, [log])
 
   const canFlash = (connected || simulationMode) && selectedFile !== null
 
@@ -34,14 +55,13 @@ export default function UpdateRoute() {
     setErrorMsg(null)
   }
 
-  const handleFlash = () => {
+  const handleFlash = async () => {
     if (!connected && !simulationMode) return
     if (!selectedFile) return
     if (simulationMode) {
       log('info', `Firmware update (sim) — ${selectedFile.name}`)
       setUpdateState('flashing')
       setProgress(0)
-      // Simulate progress
       let p = 0
       const id = setInterval(() => {
         p += Math.random() * 12
@@ -57,10 +77,26 @@ export default function UpdateRoute() {
       }, 120)
       return
     }
-    // TODO: send file over USB via firmware:update-usb IPC channel
-    log('warn', `USB firmware flash not yet implemented — ${selectedFile.name}`)
-    setUpdateState('error')
-    setErrorMsg('USB OTA not yet implemented in this build')
+
+    if (!portPath) {
+      setErrorMsg('No port path available — reconnect the device')
+      setUpdateState('error')
+      return
+    }
+
+    setUpdateState('flashing')
+    setProgress(0)
+    log('info', `Flashing ${selectedFile.name} to ${portPath}…`)
+
+    // Electron extends File with a `path` property for local files
+    const filePath = (selectedFile as File & { path: string }).path
+    const result = await firmwareIpc.updateViaUsb(portPath, filePath)
+
+    if (!result.success) {
+      setUpdateState('error')
+      setErrorMsg(result.error ?? 'Flash failed — check the device is in normal boot mode')
+      log('error', `Firmware flash failed: ${result.error ?? 'unknown'}`)
+    }
   }
 
   const handleReset = () => {

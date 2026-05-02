@@ -3,6 +3,7 @@
 // Closed exclusively via swipe-down gesture in the top bar.
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useScreenSettingsStore } from '../../stores/screenSettings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
@@ -13,6 +14,7 @@ interface ScreenSettingsPanelProps {
 }
 
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
+  const navigate = useNavigate()
   const { brightness, contrast, sleepTimeoutS, rotation, set, reset } = useScreenSettingsStore()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -59,11 +61,11 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
       return
     }
     setOtaState('pending')
-    // TODO: trigger firmware:update-usb IPC when OTA is implemented in main process
-    log('info', 'Firmware USB update initiated — not yet implemented')
+    // Navigate to the Firmware Update tab — the full flash UI lives there
     setTimeout(() => {
       setOtaState('idle')
-    }, 2000)
+      navigate('/update')
+    }, 200)
   }
 
   return (
