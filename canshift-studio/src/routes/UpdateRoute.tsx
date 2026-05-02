@@ -24,7 +24,9 @@ export default function UpdateRoute() {
   const [releases, setReleases] = useState<FirmwareRelease[]>([])
   const [releasesLoading, setReleasesLoading] = useState(false)
   const [releasesError, setReleasesError] = useState<string | null>(null)
-  const [expandedTag, setExpandedTag] = useState<string | null>(null)
+  const [latestNotesOpen, setLatestNotesOpen] = useState(false)
+  const [selectedOlderTag, setSelectedOlderTag] = useState<string>('')
+  const [olderNotesOpen, setOlderNotesOpen] = useState(false)
 
   // Which release is currently being flashed (by tag), and its progress
   const [activeTag, setActiveTag] = useState<string | null>(null)
@@ -40,7 +42,9 @@ export default function UpdateRoute() {
   const [manualError, setManualError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Fetch releases when channel changes
+  // Fetch GitHub releases on mount and when channel changes.
+  // Works regardless of simulation mode — releases are fetched from the internet,
+  // not from the connected device.
   useEffect(() => {
     let cancelled = false
     setReleasesLoading(true)
@@ -351,15 +355,12 @@ export default function UpdateRoute() {
           </div>
         )}
 
-        {/* Release rows */}
-        {releases.map((release, i) => {
+        {/* Latest release card — always expanded */}
+        {releases.slice(0, 1).map((release) => {
           const isActive = activeTag === release.tag
           const rowState = isActive ? flashState : 'idle'
-          const isLatest = i === 0
-
           return (
             <div
-              key={release.tag}
               style={{
                 background: '#161616',
                 border: `1px solid ${isActive && flashState !== 'idle' ? '#333333' : '#1E1E1E'}`,
@@ -370,30 +371,23 @@ export default function UpdateRoute() {
                 gap: 8,
               }}
             >
-              {/* Version row — click to toggle release notes */}
-              <div
-                onClick={() => {
-                  setExpandedTag((t) => (t === release.tag ? null : release.tag))
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-              >
+              {/* Version row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#CCCCCC' }}>
                   v{release.version}
                 </span>
-                {isLatest && (
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: '#55AA55',
-                      border: '1px solid #225522',
-                      borderRadius: 3,
-                      padding: '1px 5px',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    LATEST
-                  </span>
-                )}
+                <span
+                  style={{
+                    fontSize: 9,
+                    color: '#55AA55',
+                    border: '1px solid #225522',
+                    borderRadius: 3,
+                    padding: '1px 5px',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  LATEST
+                </span>
                 {release.prerelease && (
                   <span
                     style={{
@@ -411,13 +405,27 @@ export default function UpdateRoute() {
                 <span style={{ fontSize: 10, color: '#444444', marginLeft: 'auto' }}>
                   {new Date(release.publishedAt).toLocaleDateString()}
                 </span>
-                <span style={{ fontSize: 10, color: '#333333' }}>
-                  {expandedTag === release.tag ? '▲' : '▼'}
-                </span>
+                {release.notes && (
+                  <button
+                    onClick={() => {
+                      setLatestNotesOpen((o) => !o)
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: 10,
+                      color: '#333333',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {latestNotesOpen ? '▲' : '▼'}
+                  </button>
+                )}
               </div>
 
-              {/* Release notes (expanded) */}
-              {expandedTag === release.tag && release.notes && (
+              {/* Release notes toggle */}
+              {latestNotesOpen && (
                 <div
                   style={{
                     borderTop: '1px solid #1E1E1E',
@@ -433,20 +441,8 @@ export default function UpdateRoute() {
                   {release.notes}
                 </div>
               )}
-              {expandedTag === release.tag && !release.notes && (
-                <div
-                  style={{
-                    borderTop: '1px solid #1E1E1E',
-                    paddingTop: 8,
-                    fontSize: 11,
-                    color: '#444444',
-                  }}
-                >
-                  No release notes.
-                </div>
-              )}
 
-              {/* Progress (active flash) */}
+              {/* Progress */}
               {isActive && (rowState === 'downloading' || rowState === 'flashing') && (
                 <div>
                   <div
@@ -482,19 +478,15 @@ export default function UpdateRoute() {
                 </div>
               )}
 
-              {/* Done */}
               {isActive && rowState === 'done' && (
                 <div style={{ fontSize: 11, color: '#55AA55' }}>
                   ✓ Flashed successfully — reboot the device
                 </div>
               )}
-
-              {/* Error */}
               {isActive && rowState === 'error' && flashError && (
                 <div style={{ fontSize: 11, color: '#CC4444' }}>{flashError}</div>
               )}
 
-              {/* Action buttons */}
               <div style={{ display: 'flex', gap: 6 }}>
                 {isActive && (rowState === 'done' || rowState === 'error') && (
                   <button
@@ -521,21 +513,13 @@ export default function UpdateRoute() {
                     flex: 1,
                     padding: '5px 0',
                     background:
-                      canFlashAny && !(isActive && rowState === 'done')
-                        ? isLatest
-                          ? '#1A1A0D'
-                          : '#111111'
-                        : '#111111',
-                    border: `1px solid ${canFlashAny && !(isActive && rowState === 'done') ? (isLatest ? '#CC8800' : '#2A2A2A') : '#1E1E1E'}`,
+                      canFlashAny && !(isActive && rowState === 'done') ? '#1A1A0D' : '#111111',
+                    border: `1px solid ${canFlashAny && !(isActive && rowState === 'done') ? '#CC8800' : '#1E1E1E'}`,
                     borderRadius: 4,
                     color:
-                      canFlashAny && !(isActive && rowState === 'done')
-                        ? isLatest
-                          ? '#CCAA33'
-                          : '#AAAAAA'
-                        : '#333333',
+                      canFlashAny && !(isActive && rowState === 'done') ? '#CCAA33' : '#333333',
                     fontSize: 11,
-                    fontWeight: isLatest ? 600 : 400,
+                    fontWeight: 600,
                     cursor:
                       canFlashAny && !flashBusy && !(isActive && rowState === 'done')
                         ? 'pointer'
@@ -547,14 +531,218 @@ export default function UpdateRoute() {
                     ? 'Downloading…'
                     : isActive && rowState === 'flashing'
                       ? 'Flashing…'
-                      : isLatest
-                        ? 'Flash Latest'
-                        : 'Flash'}
+                      : 'Flash Latest'}
                 </button>
               </div>
             </div>
           )
         })}
+
+        {/* Older releases — scrollable select */}
+        {releases.length > 1 &&
+          (() => {
+            const older = releases.slice(1)
+            const selectedRelease = older.find((r) => r.tag === selectedOlderTag) ?? null
+            const isActive = selectedRelease !== null && activeTag === selectedRelease.tag
+            const rowState = isActive ? flashState : 'idle'
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <select
+                  value={selectedOlderTag}
+                  onChange={(e) => {
+                    setSelectedOlderTag(e.target.value)
+                    setOlderNotesOpen(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '7px 10px',
+                    background: '#111111',
+                    border: '1px solid #222222',
+                    borderRadius: 5,
+                    color: selectedOlderTag ? '#AAAAAA' : '#444444',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    appearance: 'none',
+                  }}
+                >
+                  <option value="">Older releases…</option>
+                  {older.map((r) => (
+                    <option key={r.tag} value={r.tag}>
+                      v{r.version} — {new Date(r.publishedAt).toLocaleDateString()}
+                      {r.prerelease ? ' (pre-release)' : ''}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Detail card for selected older release */}
+                {selectedRelease && (
+                  <div
+                    style={{
+                      background: '#161616',
+                      border: `1px solid ${isActive && flashState !== 'idle' ? '#333333' : '#1E1E1E'}`,
+                      borderRadius: 6,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#CCCCCC' }}>
+                        v{selectedRelease.version}
+                      </span>
+                      {selectedRelease.prerelease && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            color: '#AA7733',
+                            border: '1px solid #553311',
+                            borderRadius: 3,
+                            padding: '1px 5px',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          PRE-RELEASE
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: '#444444', marginLeft: 'auto' }}>
+                        {new Date(selectedRelease.publishedAt).toLocaleDateString()}
+                      </span>
+                      {selectedRelease.notes && (
+                        <button
+                          onClick={() => {
+                            setOlderNotesOpen((o) => !o)
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            fontSize: 10,
+                            color: '#333333',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {olderNotesOpen ? '▲' : '▼'}
+                        </button>
+                      )}
+                    </div>
+
+                    {olderNotesOpen && (
+                      <div
+                        style={{
+                          borderTop: '1px solid #1E1E1E',
+                          paddingTop: 8,
+                          fontSize: 11,
+                          color: '#888888',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: 180,
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {selectedRelease.notes}
+                      </div>
+                    )}
+
+                    {isActive && (rowState === 'downloading' || rowState === 'flashing') && (
+                      <div>
+                        <div
+                          style={{
+                            height: 3,
+                            background: '#1C1C1C',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: '100%',
+                              width: `${String(Math.round(flashProgress))}%`,
+                              background: flashPhase === 'downloading' ? '#4477CC' : '#FF4444',
+                              borderRadius: 2,
+                              transition: 'width 0.15s',
+                            }}
+                          />
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: 10,
+                            color: '#555555',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <span>{flashPhase === 'downloading' ? 'Downloading…' : 'Flashing…'}</span>
+                          <span>{Math.round(flashProgress)}%</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isActive && rowState === 'done' && (
+                      <div style={{ fontSize: 11, color: '#55AA55' }}>
+                        ✓ Flashed successfully — reboot the device
+                      </div>
+                    )}
+                    {isActive && rowState === 'error' && flashError && (
+                      <div style={{ fontSize: 11, color: '#CC4444' }}>{flashError}</div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {isActive && (rowState === 'done' || rowState === 'error') && (
+                        <button
+                          onClick={handleFlashReset}
+                          style={{
+                            padding: '5px 12px',
+                            background: 'transparent',
+                            border: '1px solid #2A2A2A',
+                            borderRadius: 4,
+                            color: '#888888',
+                            fontSize: 11,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          void handleFlashRelease(selectedRelease)
+                        }}
+                        disabled={!canFlashAny || flashBusy || (isActive && rowState === 'done')}
+                        style={{
+                          flex: 1,
+                          padding: '5px 0',
+                          background:
+                            canFlashAny && !(isActive && rowState === 'done')
+                              ? '#111111'
+                              : '#111111',
+                          border: `1px solid ${canFlashAny && !(isActive && rowState === 'done') ? '#2A2A2A' : '#1E1E1E'}`,
+                          borderRadius: 4,
+                          color:
+                            canFlashAny && !(isActive && rowState === 'done')
+                              ? '#AAAAAA'
+                              : '#333333',
+                          fontSize: 11,
+                          cursor:
+                            canFlashAny && !flashBusy && !(isActive && rowState === 'done')
+                              ? 'pointer'
+                              : 'default',
+                          letterSpacing: '0.03em',
+                        }}
+                      >
+                        {isActive && rowState === 'downloading'
+                          ? 'Downloading…'
+                          : isActive && rowState === 'flashing'
+                            ? 'Flashing…'
+                            : 'Flash'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
         {/* Empty state */}
         {!releasesLoading && !releasesError && releases.length === 0 && (
