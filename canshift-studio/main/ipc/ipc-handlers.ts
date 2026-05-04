@@ -265,4 +265,14 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.UPDATE_INSTALL, () => {
     installUpdate()
   })
+
+  // ---------------------------------------------------------------------------
+  // SD card preparation
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.SD_LIST_VOLUMES, () => sdService.listVolumes())
+
+  ipcMain.handle(IpcChannels.SD_PREPARE, (_event, volumePath: string) =>
+    sdService.prepareSD(volumePath)
+  )
 }

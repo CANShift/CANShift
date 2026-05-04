@@ -1,6 +1,8 @@
 // FirmwareDialog.tsx — Modal for initial firmware flash and firmware updates.
 //
-// Flow: select version → (optional) prepare SD card → flash firmware.
+// Shown automatically when:
+//   - Device connects but doesn't respond to version probe ('flash' mode)
+//   - Device firmware is outdated compared to latest GitHub release ('update' mode)
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
@@ -22,7 +24,7 @@ const overlay: React.CSSProperties = {
   justifyContent: 'center',
 }
 
-const dialogBox: React.CSSProperties = {
+const dialog: React.CSSProperties = {
   width: 460,
   maxHeight: '80vh',
   background: '#1A1A1A',
@@ -34,32 +36,16 @@ const dialogBox: React.CSSProperties = {
   overflow: 'hidden',
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type DialogPhase = 'setup' | 'sd-copying' | 'sd-error' | 'flash'
-
-interface SdCopyResult {
-  copied: number
-  skipped: number
+const sectionLabel: React.CSSProperties = {
+  fontSize: 10,
+  color: '#555555',
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  marginBottom: 6,
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function flashButtonLabel(mode: 'flash' | 'update' | null, withSd: boolean): string {
-  if (mode === 'update') return withSd ? 'Update SD + Firmware' : 'Update'
-  return withSd ? 'Flash SD + Firmware' : 'Flash Firmware'
-}
-
-function autoSelectVolume(volumes: SdVolume[]): string {
-  return volumes.length === 1 && volumes[0] ? volumes[0].path : ''
-}
-
-// ---------------------------------------------------------------------------
-// Main component
+// Component
 // ---------------------------------------------------------------------------
 
 export default function FirmwareDialog() {
@@ -71,25 +57,19 @@ export default function FirmwareDialog() {
   const [channel, setChannel] = useState<'stable' | 'beta'>('stable')
   const [releases, setReleases] = useState<FirmwareRelease[]>([])
   const [selectedTag, setSelectedTag] = useState<string>('')
-  const [loadingReleases, setLoadingReleases] = useState(false)
+  const [loading, setLoading] = useState(false)
 
+  // SD card state — shown after a successful flash
   const [sdVolumes, setSdVolumes] = useState<SdVolume[]>([])
   const [selectedVolume, setSelectedVolume] = useState<string>('')
   const [loadingVolumes, setLoadingVolumes] = useState(false)
-
-  const [dialogPhase, setDialogPhase] = useState<DialogPhase>('setup')
-  const [sdCopyResult, setSdCopyResult] = useState<SdCopyResult | null>(null)
+  const [sdState, setSdState] = useState<'idle' | 'copying' | 'done' | 'error'>('idle')
   const [sdError, setSdError] = useState<string>('')
+  const [sdCopied, setSdCopied] = useState<{ copied: number; skipped: number } | null>(null)
 
   const { state, phase, progress, logs, error, flash, reset } = useFirmwareFlash()
 
   const { visible, mode } = firmwareDialog
-
-  const isFlashing = state === 'downloading' || state === 'connecting' || state === 'flashing'
-  const isBusy = dialogPhase === 'sd-copying' || isFlashing
-
-  const selectedRelease = releases.find((r) => r.tag === selectedTag)
-  const canFlash = Boolean(selectedRelease?.downloadUrl && portPath && !loadingReleases)
 
   const scanVolumes = useCallback(() => {
     setLoadingVolumes(true)
@@ -97,7 +77,8 @@ export default function FirmwareDialog() {
       .listVolumes()
       .then((vols) => {
         setSdVolumes(vols)
-        setSelectedVolume(autoSelectVolume(vols))
+        if (vols.length === 1 && vols[0]) setSelectedVolume(vols[0].path)
+        else setSelectedVolume('')
       })
       .catch(() => {
         setSdVolumes([])
@@ -109,18 +90,13 @@ export default function FirmwareDialog() {
 
   useEffect(() => {
     if (!visible) return
-    setDialogPhase('setup')
-    setSdCopyResult(null)
-    setSdError('')
-    reset()
-    scanVolumes()
-  }, [visible]) // intentional: reset and scanVolumes are stable; visible is the only trigger
-
-  useEffect(() => {
-    if (!visible) return
-    setLoadingReleases(true)
+    setLoading(true)
     setReleases([])
     setSelectedTag('')
+    setSdState('idle')
+    setSdError('')
+    setSdCopied(null)
+    reset()
     firmwareIpc
       .listReleases(channel)
       .then((list) => {
@@ -131,511 +107,322 @@ export default function FirmwareDialog() {
         /* error shown inline */
       })
       .finally(() => {
-        setLoadingReleases(false)
+        setLoading(false)
       })
-  }, [visible, channel])
+  }, [visible, channel]) // intentional: reset/scanVolumes are stable refs
 
-  const copyToSelectedVolume = useCallback(async (): Promise<boolean> => {
-    setDialogPhase('sd-copying')
-    const result = await sdIpc.prepare(selectedVolume)
-    if (!result.success) {
-      setSdError(result.error ?? 'Failed to copy SD contents')
-      setDialogPhase('sd-error')
-      return false
-    }
-    setSdCopyResult({ copied: result.copied.length, skipped: result.skipped.length })
-    return true
-  }, [selectedVolume])
+  const selectedRelease: FirmwareRelease | undefined = releases.find((r) => r.tag === selectedTag)
 
-  const handleFlash = useCallback(async () => {
-    if (!selectedRelease?.downloadUrl || !portPath) return
-
-    if (selectedVolume) {
-      const sdOk = await copyToSelectedVolume()
-      if (!sdOk) return
-    }
-
-    setDialogPhase('flash')
-    await flash({ type: 'url', url: selectedRelease.downloadUrl }, portPath, selectedRelease.tag)
-  }, [selectedRelease, portPath, flash, selectedVolume, copyToSelectedVolume])
-
-  const handleReset = useCallback(() => {
-    setDialogPhase('setup')
-    setSdError('')
-    setSdCopyResult(null)
-    reset()
-  }, [reset])
+  const isFlashing = state === 'downloading' || state === 'connecting' || state === 'flashing'
+  const isBusy = isFlashing || sdState === 'copying'
 
   const handleClose = useCallback(() => {
     if (isBusy) return
     setFirmwareDialog({ visible: false, mode: null })
-    handleReset()
-  }, [isBusy, setFirmwareDialog, handleReset])
+    reset()
+  }, [isBusy, setFirmwareDialog, reset])
+
+  const handleFlash = useCallback(async () => {
+    if (!selectedRelease?.downloadUrl || !portPath) return
+    await flash(
+      { type: 'url', url: selectedRelease.downloadUrl },
+      portPath,
+      selectedRelease.tag,
+      selectedRelease.spiffsUrl
+    )
+  }, [selectedRelease, portPath, flash])
+
+  const handlePrepareSD = useCallback(async () => {
+    if (!selectedVolume) return
+    setSdState('copying')
+    const result = await sdIpc.prepare(selectedVolume)
+    if (result.success) {
+      setSdCopied({ copied: result.copied.length, skipped: result.skipped.length })
+      setSdState('done')
+    } else {
+      setSdError(result.error ?? 'Failed to copy SD contents')
+      setSdState('error')
+    }
+  }, [selectedVolume])
+
+  const handleScanAndPrepare = useCallback(() => {
+    scanVolumes()
+    setSdState('idle')
+    setSdError('')
+    setSdCopied(null)
+  }, [scanVolumes])
 
   if (!visible) return null
 
   return (
     <div style={overlay} onClick={handleClose}>
       <div
-        style={dialogBox}
+        style={dialog}
         onClick={(e) => {
           e.stopPropagation()
         }}
       >
-        <DialogHeader
-          mode={mode}
-          firmwareVersion={firmwareVersion}
-          isBusy={isBusy}
-          onClose={handleClose}
-        />
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-          {dialogPhase === 'sd-copying' && <SdCopyingPanel />}
-
-          {dialogPhase === 'sd-error' && (
-            <ErrorPanel message={sdError} onRetry={handleReset} label="SD copy failed" />
-          )}
-
-          {dialogPhase === 'flash' && state === 'done' && (
-            <DonePanel onClose={handleClose} sdCopyResult={sdCopyResult} />
-          )}
-          {dialogPhase === 'flash' && state === 'error' && (
-            <ErrorPanel message={error ?? 'Flash failed'} onRetry={handleReset} />
-          )}
-          {dialogPhase === 'flash' && isFlashing && (
-            <ProgressPanel phase={phase} progress={progress} logs={logs} />
-          )}
-
-          {dialogPhase === 'setup' && (
-            <SetupPanel
-              channel={channel}
-              onChannelChange={setChannel}
-              releases={releases}
-              loadingReleases={loadingReleases}
-              selectedTag={selectedTag}
-              onTagSelect={setSelectedTag}
-              sdVolumes={sdVolumes}
-              loadingVolumes={loadingVolumes}
-              selectedVolume={selectedVolume}
-              onVolumeSelect={setSelectedVolume}
-              onScanVolumes={scanVolumes}
-            />
-          )}
-        </div>
-
-        {dialogPhase === 'setup' && (
-          <DialogFooter
-            mode={mode}
-            canFlash={canFlash}
-            withSd={Boolean(selectedVolume)}
-            onClose={handleClose}
-            onFlash={() => void handleFlash()}
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Layout sub-components
-// ---------------------------------------------------------------------------
-
-function DialogHeader({
-  mode,
-  firmwareVersion,
-  isBusy,
-  onClose,
-}: {
-  mode: 'flash' | 'update' | null
-  firmwareVersion: string | null
-  isBusy: boolean
-  onClose: () => void
-}) {
-  return (
-    <div
-      style={{
-        padding: '16px 20px',
-        borderBottom: '1px solid #222222',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}
-    >
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 2 }}>
-          {mode === 'flash' ? 'Flash Firmware' : 'Firmware Update Available'}
-        </div>
-        <div style={{ fontSize: 11, color: '#555555' }}>
-          {mode === 'flash'
-            ? 'No CANShift firmware detected on this device'
-            : `Device firmware: v${firmwareVersion ?? '?'}`}
-        </div>
-      </div>
-      <button
-        onClick={onClose}
-        disabled={isBusy}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: '#555555',
-          cursor: isBusy ? 'not-allowed' : 'pointer',
-          fontSize: 18,
-          lineHeight: 1,
-          padding: 4,
-        }}
-      >
-        ×
-      </button>
-    </div>
-  )
-}
-
-function DialogFooter({
-  mode,
-  canFlash,
-  withSd,
-  onClose,
-  onFlash,
-}: {
-  mode: 'flash' | 'update' | null
-  canFlash: boolean
-  withSd: boolean
-  onClose: () => void
-  onFlash: () => void
-}) {
-  return (
-    <div
-      style={{
-        padding: '12px 20px',
-        borderTop: '1px solid #222222',
-        display: 'flex',
-        gap: 8,
-        justifyContent: 'flex-end',
-      }}
-    >
-      <button
-        onClick={onClose}
-        style={{
-          padding: '7px 16px',
-          borderRadius: 4,
-          fontSize: 12,
-          cursor: 'pointer',
-          border: '1px solid #333333',
-          background: 'transparent',
-          color: '#888888',
-        }}
-      >
-        {mode === 'update' ? 'Skip' : 'Cancel'}
-      </button>
-      <button
-        onClick={onFlash}
-        disabled={!canFlash}
-        style={{
-          padding: '7px 20px',
-          borderRadius: 4,
-          fontSize: 12,
-          fontWeight: 600,
-          cursor: canFlash ? 'pointer' : 'not-allowed',
-          border: 'none',
-          background: canFlash ? '#CC3333' : '#332222',
-          color: canFlash ? '#FFFFFF' : '#666666',
-        }}
-      >
-        {flashButtonLabel(mode, withSd)}
-      </button>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Setup panel — version + SD volume selection
-// ---------------------------------------------------------------------------
-
-const sectionLabel: React.CSSProperties = {
-  fontSize: 10,
-  color: '#555555',
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
-  marginBottom: 6,
-}
-
-function SetupPanel({
-  channel,
-  onChannelChange,
-  releases,
-  loadingReleases,
-  selectedTag,
-  onTagSelect,
-  sdVolumes,
-  loadingVolumes,
-  selectedVolume,
-  onVolumeSelect,
-  onScanVolumes,
-}: {
-  channel: 'stable' | 'beta'
-  onChannelChange: (ch: 'stable' | 'beta') => void
-  releases: FirmwareRelease[]
-  loadingReleases: boolean
-  selectedTag: string
-  onTagSelect: (tag: string) => void
-  sdVolumes: SdVolume[]
-  loadingVolumes: boolean
-  selectedVolume: string
-  onVolumeSelect: (path: string) => void
-  onScanVolumes: () => void
-}) {
-  const selectedRelease = releases.find((r) => r.tag === selectedTag)
-
-  return (
-    <>
-      <ChannelPicker channel={channel} onChange={onChannelChange} />
-
-      <VersionList
-        releases={releases}
-        loading={loadingReleases}
-        selectedTag={selectedTag}
-        onSelect={onTagSelect}
-      />
-
-      {selectedRelease?.notes && <ReleaseNotes notes={selectedRelease.notes} />}
-
-      <SdVolumePicker
-        volumes={sdVolumes}
-        loading={loadingVolumes}
-        selectedVolume={selectedVolume}
-        onSelect={onVolumeSelect}
-        onRefresh={onScanVolumes}
-      />
-    </>
-  )
-}
-
-function ChannelPicker({
-  channel,
-  onChange,
-}: {
-  channel: 'stable' | 'beta'
-  onChange: (ch: 'stable' | 'beta') => void
-}) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={sectionLabel}>Release channel</div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {(['stable', 'beta'] as const).map((ch) => (
-          <button
-            key={ch}
-            onClick={() => {
-              onChange(ch)
-            }}
-            style={{
-              padding: '5px 14px',
-              borderRadius: 4,
-              fontSize: 12,
-              cursor: 'pointer',
-              border: channel === ch ? '1px solid #CC3333' : '1px solid #333333',
-              background: channel === ch ? '#CC3333' : 'transparent',
-              color: channel === ch ? '#FFFFFF' : '#888888',
-            }}
-          >
-            {ch === 'stable' ? 'Stable' : 'Beta'}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function VersionList({
-  releases,
-  loading,
-  selectedTag,
-  onSelect,
-}: {
-  releases: FirmwareRelease[]
-  loading: boolean
-  selectedTag: string
-  onSelect: (tag: string) => void
-}) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={sectionLabel}>Version</div>
-      {loading && (
-        <div style={{ fontSize: 12, color: '#555555', padding: '8px 0' }}>Loading releases…</div>
-      )}
-      {!loading && releases.length === 0 && (
-        <div style={{ fontSize: 12, color: '#555555', padding: '8px 0' }}>
-          No releases found for this channel
-        </div>
-      )}
-      {!loading && releases.length > 0 && (
+        {/* Header */}
         <div
           style={{
-            border: '1px solid #2A2A2A',
-            borderRadius: 6,
-            overflow: 'hidden',
-            maxHeight: 160,
-            overflowY: 'auto',
+            padding: '16px 20px',
+            borderBottom: '1px solid #222222',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          {releases.map((r) => (
-            <div
-              key={r.tag}
-              onClick={() => {
-                onSelect(r.tag)
-              }}
-              style={{
-                padding: '8px 12px',
-                cursor: 'pointer',
-                borderBottom: '1px solid #222222',
-                background: selectedTag === r.tag ? '#CC333322' : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span style={{ fontSize: 13, color: '#CCCCCC', fontWeight: 500 }}>
-                v{r.version}
-                {!r.downloadUrl && (
-                  <span style={{ fontSize: 10, color: '#554444', marginLeft: 6 }}>(no binary)</span>
-                )}
-              </span>
-              <span style={{ fontSize: 10, color: '#555555' }}>
-                {new Date(r.publishedAt).toLocaleDateString()}
-                {r.prerelease && (
-                  <span
-                    style={{
-                      marginLeft: 6,
-                      color: '#CC8800',
-                      border: '1px solid #CC880044',
-                      borderRadius: 3,
-                      padding: '1px 4px',
-                    }}
-                  >
-                    beta
-                  </span>
-                )}
-              </span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 2 }}>
+              {mode === 'flash' ? 'Flash Firmware' : 'Firmware Update Available'}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ReleaseNotes({ notes }: { notes: string }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={sectionLabel}>Release notes</div>
-      <div
-        style={{
-          fontSize: 11,
-          color: '#666666',
-          lineHeight: 1.6,
-          maxHeight: 80,
-          overflowY: 'auto',
-          background: '#111111',
-          border: '1px solid #222222',
-          borderRadius: 4,
-          padding: '8px 10px',
-          whiteSpace: 'pre-wrap',
-        }}
-      >
-        {notes}
-      </div>
-    </div>
-  )
-}
-
-function SdVolumePicker({
-  volumes,
-  loading,
-  selectedVolume,
-  onSelect,
-  onRefresh,
-}: {
-  volumes: SdVolume[]
-  loading: boolean
-  selectedVolume: string
-  onSelect: (path: string) => void
-  onRefresh: () => void
-}) {
-  return (
-    <div style={{ marginBottom: 4 }}>
-      <div style={sectionLabel}>SD card</div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {loading && (
-          <span style={{ fontSize: 12, color: '#555555', flex: 1 }}>Detecting volumes…</span>
-        )}
-        {!loading && volumes.length === 0 && (
-          <span style={{ fontSize: 12, color: '#555555', flex: 1 }}>
-            No SD card detected — insert SD into your computer
-          </span>
-        )}
-        {!loading && volumes.length > 0 && (
-          <select
-            value={selectedVolume}
-            onChange={(e) => {
-              onSelect(e.target.value)
-            }}
+            <div style={{ fontSize: 11, color: '#555555' }}>
+              {mode === 'flash'
+                ? 'No CANShift firmware detected on this device'
+                : `Device firmware: v${firmwareVersion ?? '?'}`}
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            disabled={isBusy}
             style={{
-              flex: 1,
-              padding: '5px 8px',
-              borderRadius: 4,
-              fontSize: 12,
-              background: '#111111',
-              border: '1px solid #333333',
-              color: selectedVolume ? '#CCCCCC' : '#666666',
-              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              color: '#555555',
+              cursor: isBusy ? 'not-allowed' : 'pointer',
+              fontSize: 18,
+              lineHeight: 1,
+              padding: 4,
             }}
           >
-            <option value="">Skip SD prep</option>
-            {volumes.map((v) => (
-              <option key={v.path} value={v.path}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-        )}
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          title="Refresh volumes"
-          style={{
-            padding: '5px 8px',
-            borderRadius: 4,
-            fontSize: 12,
-            cursor: loading ? 'default' : 'pointer',
-            border: '1px solid #333333',
-            background: 'transparent',
-            color: '#666666',
-          }}
-        >
-          ↺
-        </button>
-      </div>
-      {selectedVolume && (
-        <div style={{ fontSize: 10, color: '#444444', marginTop: 4 }}>
-          Fonts overwrite. Config files are skipped if already present.
+            ×
+          </button>
         </div>
-      )}
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+          {state === 'done' &&
+          sdState !== 'copying' &&
+          sdState !== 'done' &&
+          sdState !== 'error' ? (
+            <DonePanel
+              onClose={handleClose}
+              onPrepareSD={handleScanAndPrepare}
+              sdVolumes={sdVolumes}
+              selectedVolume={selectedVolume}
+              onSelectVolume={setSelectedVolume}
+              loadingVolumes={loadingVolumes}
+              onConfirmSD={handlePrepareSD}
+            />
+          ) : sdState === 'copying' ? (
+            <SdCopyingPanel />
+          ) : sdState === 'done' ? (
+            <SdDonePanel copied={sdCopied} onClose={handleClose} />
+          ) : sdState === 'error' ? (
+            <ErrorPanel message={sdError} onRetry={handleScanAndPrepare} />
+          ) : state === 'error' ? (
+            <ErrorPanel message={error ?? 'Flash failed'} onRetry={reset} />
+          ) : isFlashing ? (
+            <ProgressPanel phase={phase} progress={progress} logs={logs} />
+          ) : (
+            <>
+              {/* Channel picker */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={sectionLabel}>Release channel</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {(['stable', 'beta'] as const).map((ch) => (
+                    <button
+                      key={ch}
+                      onClick={() => {
+                        setChannel(ch)
+                      }}
+                      style={{
+                        padding: '5px 14px',
+                        borderRadius: 4,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        border: channel === ch ? '1px solid #CC3333' : '1px solid #333333',
+                        background: channel === ch ? '#CC3333' : 'transparent',
+                        color: channel === ch ? '#FFFFFF' : '#888888',
+                      }}
+                    >
+                      {ch === 'stable' ? 'Stable' : 'Beta'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Version list */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={sectionLabel}>Version</div>
+                {loading ? (
+                  <div style={{ fontSize: 12, color: '#555555', padding: '8px 0' }}>
+                    Loading releases…
+                  </div>
+                ) : releases.length === 0 ? (
+                  <div style={{ fontSize: 12, color: '#555555', padding: '8px 0' }}>
+                    No releases found for this channel
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      border: '1px solid #2A2A2A',
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      maxHeight: 160,
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {releases.map((r) => (
+                      <div
+                        key={r.tag}
+                        onClick={() => {
+                          setSelectedTag(r.tag)
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #222222',
+                          background: selectedTag === r.tag ? '#CC333322' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <span style={{ fontSize: 13, color: '#CCCCCC', fontWeight: 500 }}>
+                          v{r.version}
+                          {!r.downloadUrl && (
+                            <span style={{ fontSize: 10, color: '#554444', marginLeft: 6 }}>
+                              (no binary)
+                            </span>
+                          )}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#555555' }}>
+                          {new Date(r.publishedAt).toLocaleDateString()}
+                          {r.prerelease && (
+                            <span
+                              style={{
+                                marginLeft: 6,
+                                color: '#CC8800',
+                                border: '1px solid #CC880044',
+                                borderRadius: 3,
+                                padding: '1px 4px',
+                              }}
+                            >
+                              beta
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Release notes */}
+              {selectedRelease?.notes && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={sectionLabel}>Release notes</div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: '#666666',
+                      lineHeight: 1.6,
+                      maxHeight: 80,
+                      overflowY: 'auto',
+                      background: '#111111',
+                      border: '1px solid #222222',
+                      borderRadius: 4,
+                      padding: '8px 10px',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {selectedRelease.notes}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!isBusy && state !== 'done' && sdState === 'idle' && (
+          <div
+            style={{
+              padding: '12px 20px',
+              borderTop: '1px solid #222222',
+              display: 'flex',
+              gap: 8,
+              justifyContent: 'flex-end',
+            }}
+          >
+            {state !== 'error' && (
+              <button
+                onClick={handleClose}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  border: '1px solid #333333',
+                  background: 'transparent',
+                  color: '#888888',
+                }}
+              >
+                {mode === 'update' ? 'Skip' : 'Cancel'}
+              </button>
+            )}
+            {state !== 'error' && (
+              <button
+                onClick={() => {
+                  void handleFlash()
+                }}
+                disabled={!selectedRelease?.downloadUrl || !portPath || loading}
+                style={{
+                  padding: '7px 20px',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor:
+                    selectedRelease?.downloadUrl && portPath && !loading
+                      ? 'pointer'
+                      : 'not-allowed',
+                  border: 'none',
+                  background:
+                    selectedRelease?.downloadUrl && portPath && !loading ? '#CC3333' : '#332222',
+                  color:
+                    selectedRelease?.downloadUrl && portPath && !loading ? '#FFFFFF' : '#666666',
+                }}
+              >
+                {mode === 'flash' ? 'Flash Firmware' : 'Update'}
+              </button>
+            )}
+            {state === 'error' && (
+              <button
+                onClick={reset}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  border: '1px solid #333333',
+                  background: '#222222',
+                  color: '#CCCCCC',
+                }}
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Progress panels
+// Sub-panels
 // ---------------------------------------------------------------------------
-
-function SdCopyingPanel() {
-  return (
-    <div style={{ textAlign: 'center', padding: '24px 0' }}>
-      <div style={{ fontSize: 13, color: '#CCCCCC', marginBottom: 8 }}>Copying to SD card…</div>
-      <div style={{ fontSize: 11, color: '#555555' }}>This may take a few seconds</div>
-    </div>
-  )
-}
 
 function ProgressPanel({
   phase,
@@ -646,20 +433,22 @@ function ProgressPanel({
   progress: number
   logs: string[]
 }) {
-  const phaseLabel: Record<typeof phase, string> = {
-    downloading: 'Downloading firmware…',
-    connecting: 'Connecting to device…',
-    flashing: 'Flashing…',
-  }
+  const label =
+    phase === 'downloading'
+      ? 'Downloading firmware…'
+      : phase === 'connecting'
+        ? 'Connecting to device…'
+        : 'Flashing…'
 
   const logEndRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [logs])
 
   return (
     <div style={{ padding: '8px 0' }}>
-      <div style={{ fontSize: 13, color: '#CCCCCC', marginBottom: 12 }}>{phaseLabel[phase]}</div>
+      <div style={{ fontSize: 13, color: '#CCCCCC', marginBottom: 12 }}>{label}</div>
       <div
         style={{
           height: 6,
@@ -709,32 +498,201 @@ function ProgressPanel({
 
 function DonePanel({
   onClose,
-  sdCopyResult,
+  onPrepareSD,
+  sdVolumes,
+  selectedVolume,
+  onSelectVolume,
+  loadingVolumes,
+  onConfirmSD,
 }: {
   onClose: () => void
-  sdCopyResult: SdCopyResult | null
+  onPrepareSD: () => void
+  sdVolumes: SdVolume[]
+  selectedVolume: string
+  onSelectVolume: (v: string) => void
+  loadingVolumes: boolean
+  onConfirmSD: () => Promise<void>
 }) {
-  const sdSummary =
-    sdCopyResult &&
-    [
-      `${String(sdCopyResult.copied)} file${sdCopyResult.copied !== 1 ? 's' : ''} copied`,
-      sdCopyResult.skipped > 0 ? `${String(sdCopyResult.skipped)} skipped` : '',
-    ]
-      .filter(Boolean)
-      .join(', ')
+  const [sdExpanded, setSdExpanded] = useState(false)
 
   return (
-    <div style={{ textAlign: 'center', padding: '16px 0' }}>
-      <div style={{ fontSize: 28, marginBottom: 12 }}>✓</div>
-      <div style={{ fontSize: 14, color: '#44CC44', fontWeight: 600, marginBottom: 6 }}>
-        Flash complete
+    <div style={{ padding: '8px 0' }}>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
+        <div style={{ fontSize: 14, color: '#44CC44', fontWeight: 600, marginBottom: 4 }}>
+          Flash complete
+        </div>
+        <div style={{ fontSize: 12, color: '#555555' }}>
+          Device is rebooting — reconnecting automatically…
+        </div>
       </div>
-      {sdSummary && (
-        <div style={{ fontSize: 11, color: '#555555', marginBottom: 4 }}>SD: {sdSummary}</div>
+
+      {/* SD card proposal */}
+      {!sdExpanded ? (
+        <div
+          style={{
+            border: '1px solid #2A2A2A',
+            borderRadius: 6,
+            padding: '12px 14px',
+            marginBottom: 12,
+          }}
+        >
+          <div style={{ fontSize: 12, color: '#AAAAAA', marginBottom: 8 }}>
+            Also prepare an SD card?
+          </div>
+          <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
+            Copies fonts, assets and default configs to your SD card — required for the display to
+            work.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => {
+                onPrepareSD()
+                setSdExpanded(true)
+              }}
+              style={{
+                flex: 1,
+                padding: '7px 0',
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: 'none',
+                background: '#CC3333',
+                color: '#FFFFFF',
+              }}
+            >
+              Prepare SD card
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '7px 16px',
+                borderRadius: 4,
+                fontSize: 12,
+                cursor: 'pointer',
+                border: '1px solid #333333',
+                background: 'transparent',
+                color: '#888888',
+              }}
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            border: '1px solid #2A2A2A',
+            borderRadius: 6,
+            padding: '12px 14px',
+            marginBottom: 12,
+          }}
+        >
+          <div style={{ fontSize: 12, color: '#AAAAAA', marginBottom: 10 }}>Select SD card</div>
+          {loadingVolumes ? (
+            <div style={{ fontSize: 11, color: '#555555' }}>Scanning volumes…</div>
+          ) : sdVolumes.length === 0 ? (
+            <div style={{ fontSize: 11, color: '#555555' }}>
+              No external volumes found — insert SD card then{' '}
+              <span style={{ color: '#CC3333', cursor: 'pointer' }} onClick={onPrepareSD}>
+                refresh
+              </span>
+            </div>
+          ) : (
+            <select
+              value={selectedVolume}
+              onChange={(e) => {
+                onSelectVolume(e.target.value)
+              }}
+              style={{
+                width: '100%',
+                padding: '6px 8px',
+                borderRadius: 4,
+                border: '1px solid #333333',
+                background: '#111111',
+                color: '#CCCCCC',
+                fontSize: 12,
+                marginBottom: 10,
+              }}
+            >
+              <option value="">— choose a volume —</option>
+              {sdVolumes.map((v) => (
+                <option key={v.path} value={v.path}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => {
+                void onConfirmSD()
+              }}
+              disabled={!selectedVolume}
+              style={{
+                flex: 1,
+                padding: '7px 0',
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: selectedVolume ? 'pointer' : 'not-allowed',
+                border: 'none',
+                background: selectedVolume ? '#CC3333' : '#332222',
+                color: selectedVolume ? '#FFFFFF' : '#666666',
+              }}
+            >
+              Copy to SD
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '7px 16px',
+                borderRadius: 4,
+                fontSize: 12,
+                cursor: 'pointer',
+                border: '1px solid #333333',
+                background: 'transparent',
+                color: '#888888',
+              }}
+            >
+              Skip
+            </button>
+          </div>
+        </div>
       )}
-      <div style={{ fontSize: 12, color: '#555555', marginBottom: 20 }}>
-        Device is rebooting — reconnecting automatically…
+    </div>
+  )
+}
+
+function SdCopyingPanel() {
+  return (
+    <div style={{ textAlign: 'center', padding: '24px 0' }}>
+      <div style={{ fontSize: 13, color: '#CCCCCC', marginBottom: 8 }}>Copying to SD card…</div>
+      <div style={{ fontSize: 11, color: '#555555' }}>Do not eject the card</div>
+    </div>
+  )
+}
+
+function SdDonePanel({
+  copied,
+  onClose,
+}: {
+  copied: { copied: number; skipped: number } | null
+  onClose: () => void
+}) {
+  return (
+    <div style={{ textAlign: 'center', padding: '16px 0' }}>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
+      <div style={{ fontSize: 14, color: '#44CC44', fontWeight: 600, marginBottom: 4 }}>
+        SD card ready
       </div>
+      {copied && (
+        <div style={{ fontSize: 11, color: '#555555', marginBottom: 20 }}>
+          {copied.copied} file{copied.copied !== 1 ? 's' : ''} copied
+          {copied.skipped > 0 ? `, ${String(copied.skipped)} skipped (user data preserved)` : ''}
+        </div>
+      )}
       <button
         onClick={onClose}
         style={{
@@ -753,19 +711,11 @@ function DonePanel({
   )
 }
 
-function ErrorPanel({
-  message,
-  onRetry,
-  label = 'Flash failed',
-}: {
-  message: string
-  onRetry: () => void
-  label?: string
-}) {
+function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: '16px 0' }}>
       <div style={{ fontSize: 14, color: '#CC3333', fontWeight: 600, marginBottom: 8 }}>
-        {label}
+        Flash failed
       </div>
       <div
         style={{

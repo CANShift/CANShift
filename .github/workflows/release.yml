@@ -130,6 +130,9 @@ jobs:
       - name: Build production firmware
         run: platformio run -e crowpanel_28
 
+      - name: Build SPIFFS image
+        run: platformio run --target buildfs -e crowpanel_28
+
       - name: Create merged firmware binary
         run: |
           TAG=${{ needs.check-version.outputs.tag }}
@@ -139,13 +142,15 @@ jobs:
             0x1000 .pio/build/crowpanel_28/bootloader.bin \
             0x8000 .pio/build/crowpanel_28/partitions.bin \
             0x10000 .pio/build/crowpanel_28/firmware.bin
+          cp .pio/build/crowpanel_28/spiffs.bin canshift-spiffs-${TAG}-crowpanel_28.bin
 
-      - name: Attach firmware to GitHub Release
+      - name: Attach firmware and SPIFFS to GitHub Release
         run: |
           TAG=${{ needs.check-version.outputs.tag }}
-          BIN="canshift-firmware-${TAG}-crowpanel_28-merged.bin"
+          FW="canshift-firmware-${TAG}-crowpanel_28-merged.bin"
+          FS="canshift-spiffs-${TAG}-crowpanel_28.bin"
           for i in 1 2 3 4 5; do
-            gh release upload "${TAG}" "${BIN}" --clobber && break
+            gh release upload "${TAG}" "${FW}" "${FS}" --clobber && break
             echo "Attempt ${i}: release not ready, retrying in 30s..."
             sleep 30
           done

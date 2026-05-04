@@ -52,6 +52,7 @@ async function downloadBinary(
 
 async function simulateFlash(
   label: string,
+  withSpiffs: boolean,
   onState: (s: FlashState) => void,
   onPhase: (p: FlashPhase) => void,
   onProgress: (pct: number) => void,
@@ -61,8 +62,15 @@ async function simulateFlash(
   onPhase('downloading')
   onLog(`[sim] Simulating download: ${label}`)
   for (let pct = 0; pct <= 100; pct += 10) {
-    onProgress(Math.round(pct * 0.4))
+    onProgress(Math.round(pct * (withSpiffs ? 0.3 : 0.4)))
     await new Promise<void>((r) => setTimeout(r, 60))
+  }
+  if (withSpiffs) {
+    onLog('[sim] Simulating SPIFFS download…')
+    for (let pct = 0; pct <= 100; pct += 20) {
+      onProgress(30 + Math.round(pct * 0.1))
+      await new Promise<void>((r) => setTimeout(r, 40))
+    }
   }
   onState('flashing')
   onPhase('flashing')
@@ -103,7 +111,8 @@ export function useFirmwareFlash() {
     async (
       source: FlashSource,
       portPath: string,
-      label?: string
+      label?: string,
+      spiffsUrl?: string
     ): Promise<{ success: boolean; error?: string }> => {
       const displayLabel = label ?? (source.type === 'url' ? source.url : source.file.name)
 
@@ -114,7 +123,14 @@ export function useFirmwareFlash() {
       setError(null)
 
       if (simulationMode) {
-        await simulateFlash(displayLabel, setState, setPhase, setProgress, appendLog)
+        await simulateFlash(
+          displayLabel,
+          Boolean(spiffsUrl),
+          setState,
+          setPhase,
+          setProgress,
+          appendLog
+        )
         return { success: true }
       }
 
@@ -123,19 +139,30 @@ export function useFirmwareFlash() {
         await firmwareIpc.enterFlash(portPath)
         setDisconnected()
 
-        let binBuffer: ArrayBuffer
+        // Download firmware binary (0–30% if SPIFFS present, 0–40% otherwise)
+        let fwBuffer: ArrayBuffer
+        const fwCeiling = spiffsUrl ? 30 : 40
         if (source.type === 'url') {
-          appendLog('Downloading binary…')
-          binBuffer = await downloadBinary(source.url, (pct) => {
-            setProgress(Math.round(pct * 0.4)) // 0–40 %
+          appendLog('Downloading firmware…')
+          fwBuffer = await downloadBinary(source.url, (pct) => {
+            setProgress(Math.round((pct / 100) * fwCeiling))
           })
-          appendLog(`Download complete (${(binBuffer.byteLength / 1024).toFixed(1)} KB)`)
+          appendLog(`Firmware ready (${(fwBuffer.byteLength / 1024).toFixed(1)} KB)`)
         } else {
           appendLog(`Reading ${source.file.name} (${(source.file.size / 1024).toFixed(1)} KB)`)
-          binBuffer = await source.file.arrayBuffer()
-          setProgress(40)
+          fwBuffer = await source.file.arrayBuffer()
+          setProgress(fwCeiling)
         }
-        const binString = bufferToString(binBuffer)
+
+        // Download SPIFFS image (30–40%) if provided
+        let spiffsBuffer: ArrayBuffer | null = null
+        if (spiffsUrl) {
+          appendLog('Downloading SPIFFS…')
+          spiffsBuffer = await downloadBinary(spiffsUrl, (pct) => {
+            setProgress(30 + Math.round((pct / 100) * 10))
+          })
+          appendLog(`SPIFFS ready (${(spiffsBuffer.byteLength / 1024).toFixed(1)} KB)`)
+        }
 
         setState('connecting')
         setPhase('connecting')
@@ -166,8 +193,17 @@ export function useFirmwareFlash() {
         })
 
         await loader.main()
+
+        const fileArray: { data: string; address: number }[] = [
+          { data: bufferToString(fwBuffer), address: 0x1000 },
+        ]
+        if (spiffsBuffer) {
+          // SPIFFS partition offset per ota_4mb.csv
+          fileArray.push({ data: bufferToString(spiffsBuffer), address: 0x310000 })
+        }
+
         await loader.writeFlash({
-          fileArray: [{ data: binString, address: 0x1000 }],
+          fileArray,
           flashSize: 'keep',
           flashMode: 'keep',
           flashFreq: 'keep',

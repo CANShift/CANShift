@@ -85,7 +85,8 @@ export default function UpdateRoute() {
     const result = await flash(
       { type: 'url', url: release.downloadUrl ?? '' },
       portPath ?? '',
-      `v${release.version}`
+      `v${release.version}`,
+      release.spiffsUrl
     )
     if (result.success) {
       log('success', `Firmware v${release.version} flashed — reboot the device`)
