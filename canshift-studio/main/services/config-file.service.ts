@@ -47,14 +47,22 @@ export class ConfigFileService {
     }
   }
 
-  async saveFile(config: unknown): Promise<SaveResult> {
-    if (!this.currentFilePath) {
+  /**
+   * Save config to disk.
+   * @param config  The dashboard config to serialise.
+   * @param filePath  Explicit destination path. Falls back to `currentFilePath`;
+   *                  if neither is set, delegates to `saveFileAs` (shows a dialog).
+   */
+  async saveFile(config: unknown, filePath?: string): Promise<SaveResult> {
+    const targetPath = filePath ?? this.currentFilePath
+    if (!targetPath) {
       return this.saveFileAs(config)
     }
 
     try {
-      await writeFile(this.currentFilePath, JSON.stringify(config, null, 2), 'utf-8')
-      return { success: true, filePath: this.currentFilePath }
+      await writeFile(targetPath, JSON.stringify(config, null, 2), 'utf-8')
+      this.currentFilePath = targetPath
+      return { success: true, filePath: targetPath }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       return { success: false, error: `Failed to save config: ${message}` }

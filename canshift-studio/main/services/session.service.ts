@@ -39,7 +39,14 @@ function write(data: SessionData): void {
   }
 }
 
-export const sessionService = {
+export const sessionService: {
+  getLastFilePath: () => string | null
+  setLastFilePath: (filePath: string) => void
+  getRecentFiles: () => string[]
+  addRecentFile: (filePath: string) => void
+  clearRecentFiles: () => void
+  clear: () => void
+} = {
   getLastFilePath: (): string | null => read().lastFilePath,
 
   setLastFilePath: (filePath: string): void => {

@@ -90,8 +90,17 @@ interface DashboardState {
   addWidget: (pageId: string, widget: Widget) => void
   removeWidget: (pageId: string, widgetId: string) => void
   updateWidget: (pageId: string, widgetId: string, patch: Partial<Widget>) => void
-  /** Move during drag — does NOT resolve collisions (for smooth tracking). */
+  /**
+   * Preview a widget move during drag — updates position but does NOT push to undo
+   * history. Call this on every mousemove event for smooth tracking.
+   */
   moveWidget: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
+  /**
+   * Commit a widget move on drag-end — updates position AND pushes to undo history.
+   * Call this on mouseup after a single-widget drag instead of resolveWidgetCollisions
+   * when you want to skip collision cascading.
+   */
+  commitWidgetMove: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
   /** Move multiple widgets simultaneously during a multi-drag — no history. */
   moveWidgets: (pageId: string, moves: { id: string; x: number; y: number }[]) => void
   /** Called on drag-end: resolves collisions and cascades pushed widgets. */
@@ -238,9 +247,11 @@ export const useDashboardStore = create<DashboardState>()(
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
-        const page = s.config.pages.find((p) => p.id === pageId)
-        if (!page) return
-        Object.assign(page, patch)
+        const idx = s.config.pages.findIndex((p) => p.id === pageId)
+        if (idx === -1) return
+        const existing = s.config.pages[idx]
+        if (!existing) return
+        s.config.pages[idx] = { ...existing, ...patch }
         s.isDirty = true
       })
     },
@@ -251,9 +262,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
-        for (const page of s.config.pages) {
-          Object.assign(page, patch)
-        }
+        s.config.pages = s.config.pages.map((page) => ({ ...page, ...patch }))
         s.isDirty = true
       })
     },
@@ -300,7 +309,7 @@ export const useDashboardStore = create<DashboardState>()(
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
-        Object.assign(s.config.topBar, patch)
+        s.config.topBar = { ...s.config.topBar, ...patch }
         s.isDirty = true
       })
     },
@@ -409,29 +418,55 @@ export const useDashboardStore = create<DashboardState>()(
         if (!s.config) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
-        const widget = page.widgets.find((w) => w.id === widgetId)
-        if (!widget) return
+        const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
+        if (widgetIdx === -1) return
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
-        Object.assign(widget, patch)
+        const existing = page.widgets[widgetIdx]
+        if (!existing) return
+        const merged = { ...existing, ...patch }
         // Clamp position so the widget never overflows the canvas after resize.
         const canvasH = widgetAreaHeight(page, s.config.topBar.height)
-        widget.layout.x = Math.max(0, Math.min(widget.layout.x, 320 - widget.layout.w))
-        widget.layout.y = Math.max(0, Math.min(widget.layout.y, canvasH - widget.layout.h))
+        merged.layout = {
+          ...merged.layout,
+          x: Math.max(0, Math.min(merged.layout.x, 320 - merged.layout.w)),
+          y: Math.max(0, Math.min(merged.layout.y, canvasH - merged.layout.h)),
+        }
+        page.widgets[widgetIdx] = merged
         s.isDirty = true
       })
     },
 
-    // moveWidget is NOT added to history — called 60fps during drag
+    // previewWidgetMove — called at 60fps during drag; does NOT push to undo history.
     moveWidget: (pageId, widgetId, layout) => {
       set((s) => {
         if (!s.config) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
-        const widget = page.widgets.find((w) => w.id === widgetId)
-        if (!widget) return
-        Object.assign(widget.layout, layout)
+        const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
+        if (widgetIdx === -1) return
+        const w = page.widgets[widgetIdx]
+        if (!w) return
+        page.widgets[widgetIdx] = { ...w, layout: { ...w.layout, ...layout } }
+        s.isDirty = true
+      })
+    },
+
+    // commitWidgetMove — called on mouseup for a single-widget drag; pushes to history.
+    commitWidgetMove: (pageId, widgetId, layout) => {
+      set((s) => {
+        if (!s.config) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+        const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
+        if (widgetIdx === -1) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        const w = page.widgets[widgetIdx]
+        if (!w) return
+        page.widgets[widgetIdx] = { ...w, layout: { ...w.layout, ...layout } }
         s.isDirty = true
       })
     },

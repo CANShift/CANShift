@@ -3,13 +3,32 @@
 import { app, BrowserWindow, shell, nativeImage } from 'electron'
 import { join, basename } from 'path'
 import { readFileSync } from 'fs'
-import { registerIpcHandlers } from './ipc/ipc-handlers'
+import { registerIpcHandlers, usbService } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
+import { IpcChannels } from './ipc/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
+
+// ---------------------------------------------------------------------------
+// Structured logging — forwards main-process messages to the renderer console
+// ---------------------------------------------------------------------------
+
+function logMain(level: 'info' | 'warn' | 'error', message: string): void {
+  const now = new Date()
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const ss = String(now.getSeconds()).padStart(2, '0')
+  const prefix = `[${hh}:${mm}:${ss}] [${level.toUpperCase()}]`
+  if (level === 'error') {
+    console.error(`${prefix} ${message}`)
+  } else {
+    console.log(`${prefix} ${message}`)
+  }
+  mainWindow?.webContents.send(IpcChannels.APP_LOG, { level, message, ts: Date.now() })
+}
 
 function loadIcon(): Electron.NativeImage | undefined {
   try {
@@ -165,9 +184,18 @@ app
     })
   })
   .catch((err: unknown) => {
-    console.error('App failed to start:', err)
+    logMain('error', `App failed to start: ${err instanceof Error ? err.message : String(err)}`)
     app.quit()
   })
+
+app.on('before-quit', () => {
+  // Close USB port if open — best-effort, errors are intentionally swallowed
+  usbService.disconnect().catch(() => {
+    /* best-effort */
+  })
+  // Clear flash port so Web Serial auto-select is reset on next launch
+  firmwareService.setFlashPort(null)
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

@@ -78,7 +78,7 @@ export class UsbService {
   private pendingAck: PendingAck | null = null
 
   setEventHandlers(handlers: UsbEventHandlers): void {
-    this.handlers = handlers
+    this.handlers = { ...handlers }
   }
 
   async listPorts(): Promise<PortInfo[]> {

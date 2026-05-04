@@ -10,23 +10,8 @@ import type {
   GaugeDisplayStyle,
   WidgetLabelPosition,
   PagePalette,
-  ThemePreset,
 } from '@tmbk/canshift-core'
-
-// Built-in day theme defaults — same values as Canvas.tsx fallbacks
-const DAY_PRESET: ThemePreset = {
-  bgColor: '#DDDDDD',
-  palette: {
-    surface: '#F0F0F0',
-    primary: '#CC0000',
-    accent: '#E06000',
-    text: '#000000',
-    textDim: '#444444',
-    warning: '#CC6600',
-    danger: '#CC0000',
-    success: '#006622',
-  },
-}
+import { DAY_THEME_PRESET } from '../../constants/theme'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
@@ -1245,7 +1230,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           ) : (
             <button
               onClick={() => {
-                setDayTheme(DAY_PRESET)
+                setDayTheme(DAY_THEME_PRESET)
               }}
               title="Enable day mode toggle on device"
               style={{

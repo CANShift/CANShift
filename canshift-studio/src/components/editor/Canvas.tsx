@@ -12,31 +12,25 @@ import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
+import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 
-const SCALE = 1.5 // slightly larger than 1:1 for readability
+// ---------------------------------------------------------------------------
+// Canvas layout constants
+// ---------------------------------------------------------------------------
+
+// Display scale factor: the firmware renders at 320×240; we show it at 1.5× for
+// readability. All firmware-pixel values are multiplied by SCALE before rendering.
+const SCALE = 1.5
 const CANVAS_W = 320 * SCALE
 const CANVAS_H = 240 * SCALE
-const X_SNAP = 40 // firmware px — min token width, matches visible grid columns
-const Y_SNAP = 28 // firmware px — min token height, matches visible grid rows
+
+// Snap grid in firmware pixels — match the firmware's minimum token dimensions.
+// X_SNAP = 40 px wide (narrowest visible column), Y_SNAP = 28 px tall (narrowest row).
+const X_SNAP = 40
+const Y_SNAP = 28
 
 // Minimum rubber-band drag distance (firmware px) before activating selection
 const RB_THRESHOLD = 4
-
-// ---------------------------------------------------------------------------
-// Built-in day/night fallback presets (used when config.dayTheme isn't configured yet)
-// ---------------------------------------------------------------------------
-
-const DAY_PALETTE_DEFAULT: PagePalette = {
-  surface: '#F0F0F0',
-  primary: '#CC0000',
-  accent: '#E06000',
-  text: '#000000',
-  textDim: '#444444',
-  warning: '#CC6600',
-  danger: '#CC0000',
-  success: '#006622',
-}
-const DAY_BG_DEFAULT = '#DDDDDD' as const
 
 // ---------------------------------------------------------------------------
 // Widget type → border color (used only for selection/type indication)
