@@ -71,11 +71,10 @@ export default function ScanScreen({ navigation }: Props) {
       <View style={styles.center}>
         <Image
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('../../assets/icon.png')}
+          source={require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.title}>CANShift</Text>
         <Text style={styles.subtitle}>Connect to your dashboard</Text>
 
         <TouchableOpacity
@@ -145,16 +144,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 22,
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    fontSize: Typography.xxl,
-    fontWeight: '700',
-    color: Colors.accent,
-    letterSpacing: 2,
+    width: '75%',
+    height: 120,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize: Typography.sm,
