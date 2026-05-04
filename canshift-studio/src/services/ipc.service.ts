@@ -96,6 +96,15 @@ export const usbService = {
 // Firmware management
 // ---------------------------------------------------------------------------
 
+export const firmwareIpc = {
+  queryVersion: () => invoke<{ version: string | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
+  listReleases: (channel: 'stable' | 'beta') =>
+    invoke<FirmwareRelease[]>(IpcChannels.FIRMWARE_LIST_RELEASES, channel),
+  enterFlash: (portPath: string) =>
+    invoke<{ success: boolean }>(IpcChannels.FIRMWARE_ENTER_FLASH, portPath),
+  exitFlash: () => invoke<{ success: boolean }>(IpcChannels.FIRMWARE_EXIT_FLASH),
+}
+
 // ---------------------------------------------------------------------------
 // CAN scanner
 // ---------------------------------------------------------------------------
@@ -104,10 +113,6 @@ export const canScannerIpc = {
   start: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_START),
   stop: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_STOP),
 }
-
-// ---------------------------------------------------------------------------
-// Firmware management
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Asset management
@@ -139,17 +144,4 @@ export const signalIpc = {
       IpcChannels.SIGNAL_EXPORT,
       config
     ),
-}
-
-// ---------------------------------------------------------------------------
-// Firmware management
-// ---------------------------------------------------------------------------
-
-export const firmwareIpc = {
-  queryVersion: () => invoke<{ version: string | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
-  listReleases: (channel: 'stable' | 'beta') =>
-    invoke<FirmwareRelease[]>(IpcChannels.FIRMWARE_LIST_RELEASES, channel),
-  enterFlash: (portPath: string) =>
-    invoke<{ success: boolean }>(IpcChannels.FIRMWARE_ENTER_FLASH, portPath),
-  exitFlash: () => invoke<{ success: boolean }>(IpcChannels.FIRMWARE_EXIT_FLASH),
 }
