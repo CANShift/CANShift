@@ -1,7 +1,16 @@
 // DashScreen.tsx — Live dashboard via BLE telemetry
 
-import React, { useCallback } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'
+import React, { useCallback, useState } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  Pressable,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
@@ -14,10 +23,9 @@ import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Dash'>
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Connected'>
 }
 
-// Signal display order — top (primary) then grid
 const PRIMARY_SIGNALS = ['r', 's', 'g']
 const GRID_SIGNALS = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
 
@@ -25,8 +33,9 @@ export default function DashScreen({ navigation }: Props) {
   const { deviceName, firmwareVersion, canHealthy } = useDeviceStore()
   const isSim = SimService.isRunning()
   const { values, isLive } = useSignalsStore()
+  const [menuVisible, setMenuVisible] = useState(false)
 
-  const handleDisconnect = useCallback(async () => {
+  const handleDisconnect = useCallback(() => {
     Alert.alert('Disconnect', 'Disconnect from the dashboard?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -69,20 +78,11 @@ export default function DashScreen({ navigation }: Props) {
               <Text style={styles.staleText}>NO DATA</Text>
             </View>
           )}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Settings')}
-            style={styles.iconBtn}
-          >
-            <Text style={styles.iconBtnText}>⚙</Text>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.iconBtn}>
+            <Text style={styles.iconBtnText}>☰</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Update')}
-            style={styles.iconBtn}
-          >
-            <Text style={styles.iconBtnText}>↑</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => void handleDisconnect()} style={styles.iconBtn}>
-            <Text style={[styles.iconBtnText, { color: Colors.accent }]}>✕</Text>
+          <TouchableOpacity onPress={handleDisconnect} style={styles.iconBtn}>
+            <Text style={[styles.iconBtnText, { color: Colors.accent }]}>⏻</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -125,6 +125,42 @@ export default function DashScreen({ navigation }: Props) {
           })}
         </View>
       </ScrollView>
+
+      {/* Burger menu modal */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={styles.menuSheet}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false)
+                navigation.navigate('Settings')
+              }}
+            >
+              <Text style={styles.menuItemText}>Settings</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false)
+                navigation.navigate('Update')
+              }}
+            >
+              <Text style={styles.menuItemText}>Firmware Update</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.menuItem} onPress={() => setMenuVisible(false)}>
+              <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -164,10 +200,7 @@ const styles = StyleSheet.create({
   iconBtn: { padding: Spacing.xs },
   iconBtnText: { fontSize: Typography.lg, color: Colors.textDim },
   scroll: { padding: Spacing.lg, gap: Spacing.lg },
-  primaryRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
+  primaryRow: { flexDirection: 'row', gap: Spacing.md },
   primaryCard: {
     flex: 1,
     backgroundColor: Colors.surface,
@@ -183,20 +216,28 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: Spacing.xs,
   },
-  primaryValue: {
-    fontSize: Typography.xxl,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  primaryUnit: {
-    fontSize: Typography.sm,
-    color: Colors.textDim,
-    marginTop: 2,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
+  primaryValue: { fontSize: Typography.xxl, fontWeight: '700', color: Colors.text },
+  primaryUnit: { fontSize: Typography.sm, color: Colors.textDim, marginTop: 2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   dim: { color: Colors.textMuted },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  menuSheet: {
+    backgroundColor: Colors.surfaceHigh,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingBottom: Spacing.xl,
+  },
+  menuItem: {
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+  },
+  menuItemText: { fontSize: Typography.md, color: Colors.text },
+  menuDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: Spacing.lg },
 })

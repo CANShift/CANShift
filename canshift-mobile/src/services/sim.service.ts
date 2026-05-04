@@ -5,6 +5,7 @@
 
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalsStore } from '../stores/signals.store'
+import { log } from '../stores/log.store'
 
 let tickInterval: ReturnType<typeof setInterval> | null = null
 let elapsed = 0 // seconds since sim start
@@ -25,6 +26,7 @@ export function start() {
   const { setDevice, setFirmwareStatus } = useDeviceStore.getState()
   setDevice('SIM', 'CANShift (sim)')
   setFirmwareStatus('sim', true)
+  log('info', 'Simulation mode started')
 
   elapsed = 0
   tickInterval = setInterval(() => {
@@ -57,6 +59,7 @@ export function stop() {
   }
   useDeviceStore.getState().disconnect()
   useSignalsStore.getState().markStale()
+  log('info', 'Simulation mode stopped')
 }
 
 export function isRunning() {

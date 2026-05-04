@@ -54,7 +54,7 @@ export default function ScanScreen({ navigation }: Props) {
       setScanning(false)
       try {
         await BleService.connect(device.id)
-        navigation.replace('Dash')
+        navigation.replace('Connected')
       } catch (err) {
         Alert.alert('Connection failed', err instanceof Error ? err.message : 'Unknown error')
       }
@@ -64,7 +64,7 @@ export default function ScanScreen({ navigation }: Props) {
 
   const startDemo = useCallback(() => {
     SimService.start()
-    navigation.replace('Dash')
+    navigation.replace('Connected')
   }, [navigation])
 
   return (

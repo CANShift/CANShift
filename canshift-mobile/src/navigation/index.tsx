@@ -1,14 +1,16 @@
+// navigation/index.tsx — Root stack navigator
+
 import React from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import ScanScreen from '../screens/ScanScreen'
-import DashScreen from '../screens/DashScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import UpdateScreen from '../screens/UpdateScreen'
+import ConnectedNavigator from './ConnectedNavigator'
 
 export type RootStackParamList = {
   Scan: undefined
-  Dash: undefined
+  Connected: undefined
   Settings: undefined
   Update: undefined
 }
@@ -20,7 +22,7 @@ export default function Navigation() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Scan">
         <Stack.Screen name="Scan" component={ScanScreen} />
-        <Stack.Screen name="Dash" component={DashScreen} />
+        <Stack.Screen name="Connected" component={ConnectedNavigator} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Update" component={UpdateScreen} />
       </Stack.Navigator>

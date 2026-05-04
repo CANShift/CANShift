@@ -12,6 +12,7 @@ import {
 } from '../constants/ble'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalsStore } from '../stores/signals.store'
+import { log } from '../stores/log.store'
 
 // ---------------------------------------------------------------------------
 // Singleton BleManager
@@ -105,6 +106,7 @@ export async function connect(deviceId: string): Promise<void> {
     useDeviceStore.getState()
 
   setConnectionState('connecting')
+  log('info', `Connecting to device ${deviceId}`)
 
   try {
     const device = await manager.connectToDevice(deviceId, { autoConnect: false })
@@ -125,6 +127,7 @@ export async function connect(deviceId: string): Promise<void> {
     }
 
     setDevice(deviceId, device.name ?? BLE_DEVICE_NAME)
+    log('info', `Connected to ${device.name ?? BLE_DEVICE_NAME} (${deviceId})`)
 
     // Subscribe to TELE notifications
     device.monitorCharacteristicForService(
@@ -142,6 +145,7 @@ export async function connect(deviceId: string): Promise<void> {
       connectedDevice = null
       stopStalenessTimer()
       useDeviceStore.getState().disconnect()
+      log('warn', `Device ${deviceId} disconnected unexpectedly`)
     })
 
     startStalenesTimer()
@@ -149,6 +153,7 @@ export async function connect(deviceId: string): Promise<void> {
     connectedDevice = null
     const msg = err instanceof Error ? err.message : 'Connection failed'
     setError(msg)
+    log('error', `Connection failed: ${msg}`)
     throw err
   }
 }
@@ -157,8 +162,10 @@ export async function connect(deviceId: string): Promise<void> {
 export async function disconnect(): Promise<void> {
   stopStalenessTimer()
   if (connectedDevice) {
+    const id = connectedDevice.id
     await connectedDevice.cancelConnection()
     connectedDevice = null
+    log('info', `Disconnected from ${id}`)
   }
   useDeviceStore.getState().disconnect()
 }
