@@ -161,9 +161,47 @@ export interface MigrationResult {
   applied: string[] // List of migration steps applied
 }
 
+/** A registry of available migrations, keyed by fromVersion. */
+export type MigrationRegistry = Migration[]
+
+/**
+ * Validates that a complete migration chain exists from fromVersion to toVersion.
+ * Returns an array of missing step strings (e.g. ["1.2.0→1.3.0"]).
+ * An empty array means the chain is complete.
+ */
+export function validateMigrationChain(
+  fromVersion: string,
+  toVersion: string,
+  registry: MigrationRegistry
+): string[] {
+  const missing: string[] = []
+  let current = fromVersion
+
+  while (current !== toVersion) {
+    const next = registry.find((m) => m.fromVersion === current)
+    if (!next) {
+      // Determine what the expected next version would be for a useful message
+      missing.push(`${current}→${toVersion}`)
+      break
+    }
+    // Check the migration step explicitly exists
+    const stepExists = registry.some(
+      (m) => m.fromVersion === current && m.toVersion === next.toVersion
+    )
+    if (!stepExists) {
+      missing.push(`${current}→${next.toVersion}`)
+    }
+    current = next.toVersion
+  }
+
+  return missing
+}
+
 /**
  * Apply all migrations to bring config from its current version to targetVersion.
  * Returns the migrated config and the list of migrations applied.
+ *
+ * Throws if the migration chain has gaps — prevents partial migration.
  */
 export function migrateConfig(
   config: Record<string, unknown>,
@@ -175,6 +213,12 @@ export function migrateConfig(
 
   if (currentVersion === targetVersion) {
     return { config: current, applied }
+  }
+
+  // Validate the chain is complete before applying any migration
+  const missing = validateMigrationChain(currentVersion, targetVersion, MIGRATIONS)
+  if (missing.length > 0) {
+    throw new Error(`Migration chain incomplete: missing steps [${missing.join(', ')}]`)
   }
 
   // Find applicable migrations in order

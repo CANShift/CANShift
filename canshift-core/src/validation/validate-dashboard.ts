@@ -3,6 +3,7 @@
 export interface ValidationResult {
   valid: boolean
   errors: string[]
+  warnings: string[]
 }
 
 type UnknownRecord = Record<string, unknown>
@@ -20,9 +21,10 @@ function str(value: unknown): string {
 /** Validate a DashboardConfig object. Returns all errors found. */
 export function validateDashboard(config: unknown): ValidationResult {
   const errors: string[] = []
+  const warnings: string[] = []
 
   if (!isRecord(config)) {
-    return { valid: false, errors: ['Config must be an object'] }
+    return { valid: false, errors: ['Config must be an object'], warnings }
   }
 
   if (typeof config.version !== 'string') {
@@ -41,11 +43,22 @@ export function validateDashboard(config: unknown): ValidationResult {
     errors.push('revLimitRpm must be a positive number')
   }
 
+  if (isRecord(config.topBar)) {
+    if (typeof config.topBar.height !== 'number' || config.topBar.height <= 0) {
+      errors.push('topBar.height must be a positive number')
+    }
+  }
+
+  // Collect known signal ids for cross-reference checks
+  const knownSignalIds = collectSignalIds(config)
+
   if (!Array.isArray(config.pages) || config.pages.length === 0) {
     errors.push('pages must be a non-empty array')
   } else {
     config.pages.forEach((page: unknown, idx: number) => {
-      errors.push(...validatePage(page, idx))
+      const { errors: pageErrors, warnings: pageWarnings } = validatePage(page, idx, knownSignalIds)
+      errors.push(...pageErrors)
+      warnings.push(...pageWarnings)
     })
 
     const pageIds = config.pages.map((p: unknown) => (isRecord(p) ? str(p.id) : ''))
@@ -54,15 +67,32 @@ export function validateDashboard(config: unknown): ValidationResult {
     }
   }
 
-  return { valid: errors.length === 0, errors }
+  return { valid: errors.length === 0, errors, warnings }
 }
 
-function validatePage(page: unknown, idx: number): string[] {
+/** Extract signal ids from config.signals if present */
+function collectSignalIds(config: UnknownRecord): Set<string> | null {
+  if (!Array.isArray(config.signals)) return null
+  const ids = new Set<string>()
+  for (const sig of config.signals) {
+    if (isRecord(sig) && typeof sig.name === 'string') {
+      ids.add(sig.name)
+    }
+  }
+  return ids
+}
+
+function validatePage(
+  page: unknown,
+  idx: number,
+  knownSignalIds: Set<string> | null
+): { errors: string[]; warnings: string[] } {
   const errors: string[] = []
+  const warnings: string[] = []
   const prefix = `pages[${idx.toString()}]`
 
   if (!isRecord(page)) {
-    return [`${prefix} must be an object`]
+    return { errors: [`${prefix} must be an object`], warnings }
   }
 
   if (typeof page.id !== 'string' || page.id.length === 0) {
@@ -75,19 +105,27 @@ function validatePage(page: unknown, idx: number): string[] {
     errors.push(`${prefix}.widgets must be an array`)
   } else {
     page.widgets.forEach((w: unknown, wIdx: number) => {
-      errors.push(...validateWidget(w, idx, wIdx))
+      const { errors: wErrors, warnings: wWarnings } = validateWidget(w, idx, wIdx, knownSignalIds)
+      errors.push(...wErrors)
+      warnings.push(...wWarnings)
     })
   }
 
-  return errors
+  return { errors, warnings }
 }
 
-function validateWidget(widget: unknown, pageIdx: number, widgetIdx: number): string[] {
+function validateWidget(
+  widget: unknown,
+  pageIdx: number,
+  widgetIdx: number,
+  knownSignalIds: Set<string> | null
+): { errors: string[]; warnings: string[] } {
   const errors: string[] = []
+  const warnings: string[] = []
   const prefix = `pages[${pageIdx.toString()}].widgets[${widgetIdx.toString()}]`
 
   if (!isRecord(widget)) {
-    return [`${prefix} must be an object`]
+    return { errors: [`${prefix} must be an object`], warnings }
   }
 
   if (typeof widget.id !== 'string') errors.push(`${prefix}.id is required`)
@@ -98,6 +136,94 @@ function validateWidget(widget: unknown, pageIdx: number, widgetIdx: number): st
     !(VALID_WIDGET_TYPES as readonly string[]).includes(widget.type)
   ) {
     errors.push(`${prefix}.type "${widget.type}" is not a valid widget type`)
+  }
+
+  // Widget-type-specific validation — operates on the config sub-object when
+  // present, but also accepts flat widget objects for backwards compatibility.
+  const cfg = isRecord(widget.config) ? widget.config : widget
+
+  if (typeof widget.type === 'string') {
+    errors.push(...validateWidgetTypeFields(widget.type, cfg, prefix))
+  }
+
+  // Signal cross-reference warning
+  if (knownSignalIds !== null) {
+    const signalId =
+      typeof widget.signalId === 'string'
+        ? widget.signalId
+        : isRecord(widget.config) && typeof widget.config.signalId === 'string'
+          ? widget.config.signalId
+          : null
+
+    if (signalId !== null && !knownSignalIds.has(signalId)) {
+      warnings.push(
+        `${prefix} references signalId "${signalId}" which is not defined in config.signals`
+      )
+    }
+  }
+
+  return { errors, warnings }
+}
+
+function validateWidgetTypeFields(type: string, cfg: UnknownRecord, prefix: string): string[] {
+  const errors: string[] = []
+
+  switch (type) {
+    case 'gauge': {
+      if (typeof cfg.minValue !== 'number') {
+        errors.push(`${prefix} (gauge): minValue must be a number`)
+      }
+      if (typeof cfg.maxValue !== 'number') {
+        errors.push(`${prefix} (gauge): maxValue must be a number`)
+      }
+      if (
+        typeof cfg.minValue === 'number' &&
+        typeof cfg.maxValue === 'number' &&
+        cfg.minValue >= cfg.maxValue
+      ) {
+        errors.push(`${prefix} (gauge): minValue must be less than maxValue`)
+      }
+      break
+    }
+
+    case 'warning': {
+      if (typeof cfg.threshold !== 'number') {
+        errors.push(`${prefix} (warning): threshold must be a number`)
+      }
+      if (typeof cfg.signalId !== 'string' || cfg.signalId.length === 0) {
+        errors.push(`${prefix} (warning): signalId must be a non-empty string`)
+      }
+      break
+    }
+
+    case 'button': {
+      if (typeof cfg.targetPageId !== 'undefined') {
+        // Legacy field — validated as non-empty string if present
+        if (typeof cfg.targetPageId !== 'string' || cfg.targetPageId.length === 0) {
+          errors.push(`${prefix} (button): targetPageId must be a non-empty string`)
+        }
+      } else if (!Array.isArray(cfg.actions)) {
+        errors.push(`${prefix} (button): targetPageId must be a non-empty string`)
+      }
+      break
+    }
+
+    case 'bar': {
+      if (typeof cfg.minValue !== 'number') {
+        errors.push(`${prefix} (bar): minValue must be a number`)
+      }
+      if (typeof cfg.maxValue !== 'number') {
+        errors.push(`${prefix} (bar): maxValue must be a number`)
+      }
+      if (
+        typeof cfg.minValue === 'number' &&
+        typeof cfg.maxValue === 'number' &&
+        cfg.minValue >= cfg.maxValue
+      ) {
+        errors.push(`${prefix} (bar): minValue must be less than maxValue`)
+      }
+      break
+    }
   }
 
   return errors

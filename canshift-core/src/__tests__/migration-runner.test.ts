@@ -1,6 +1,7 @@
 // migration-runner.test.ts
 
-import { migrateConfig } from '../migrations/migration-runner.js'
+import { migrateConfig, validateMigrationChain } from '../migrations/migration-runner.js'
+import type { MigrationRegistry } from '../migrations/migration-runner.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -206,6 +207,55 @@ describe('migrateConfig — multi-step chain (1.0.0 → 1.2.0)', () => {
 describe('migrateConfig — error cases', () => {
   it('throws when no migration path exists', () => {
     const config = { version: '0.5.0' }
-    expect(() => migrateConfig(config, '1.2.0')).toThrow(/No migration path/)
+    expect(() => migrateConfig(config, '1.2.0')).toThrow()
+  })
+
+  it('throws with "Migration chain incomplete" when chain has gaps', () => {
+    const config = { version: '0.5.0' }
+    expect(() => migrateConfig(config, '1.2.0')).toThrow(/Migration chain incomplete/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// validateMigrationChain
+// ---------------------------------------------------------------------------
+
+describe('validateMigrationChain', () => {
+  const identity = (c: Record<string, unknown>): Record<string, unknown> => c
+
+  it('returns empty array when the full chain is present', () => {
+    const registry: MigrationRegistry = [
+      { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
+      { fromVersion: '1.1.0', toVersion: '1.2.0', migrate: identity },
+    ]
+    expect(validateMigrationChain('1.0.0', '1.2.0', registry)).toEqual([])
+  })
+
+  it('returns empty array when fromVersion equals toVersion', () => {
+    const registry: MigrationRegistry = []
+    expect(validateMigrationChain('1.0.0', '1.0.0', registry)).toEqual([])
+  })
+
+  it('returns missing step when a single step is absent', () => {
+    const registry: MigrationRegistry = [
+      { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
+      // 1.1.0 → 1.2.0 is missing
+    ]
+    const missing = validateMigrationChain('1.0.0', '1.2.0', registry)
+    expect(missing.length).toBeGreaterThan(0)
+    expect(missing.some((s) => s.includes('1.1.0'))).toBe(true)
+  })
+
+  it('returns a missing step when registry is empty', () => {
+    const registry: MigrationRegistry = []
+    const missing = validateMigrationChain('1.0.0', '1.2.0', registry)
+    expect(missing.length).toBeGreaterThan(0)
+  })
+
+  it('works with a single-step chain', () => {
+    const registry: MigrationRegistry = [
+      { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
+    ]
+    expect(validateMigrationChain('1.0.0', '1.1.0', registry)).toEqual([])
   })
 })

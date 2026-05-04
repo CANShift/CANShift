@@ -7,7 +7,7 @@ import { validateDashboard } from '../validation/validate-dashboard.js'
 // ---------------------------------------------------------------------------
 
 function minimalWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return { id: 'w1', type: 'gauge', ...overrides }
+  return { id: 'w1', type: 'gauge', minValue: 0, maxValue: 8000, ...overrides }
 }
 
 function minimalPage(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -96,6 +96,72 @@ describe('validateDashboard — top-level fields', () => {
 })
 
 // ---------------------------------------------------------------------------
+// TopBar validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — topBar validation', () => {
+  it('accepts topBar with a positive height', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 30,
+          showMapName: true,
+          showMapProfile: false,
+          bgColor: '#000',
+          textColor: '#fff',
+        },
+      })
+    )
+    expect(result.errors.some((e) => e.includes('topBar.height'))).toBe(false)
+  })
+
+  it('rejects topBar.height of zero', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 0,
+          showMapName: false,
+          showMapProfile: false,
+          bgColor: '#000',
+          textColor: '#fff',
+        },
+      })
+    )
+    expect(result.errors).toContain('topBar.height must be a positive number')
+  })
+
+  it('rejects topBar.height that is negative', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: -5,
+          showMapName: false,
+          showMapProfile: false,
+          bgColor: '#000',
+          textColor: '#fff',
+        },
+      })
+    )
+    expect(result.errors).toContain('topBar.height must be a positive number')
+  })
+
+  it('rejects topBar.height that is not a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: '30',
+          showMapName: false,
+          showMapProfile: false,
+          bgColor: '#000',
+          textColor: '#fff',
+        },
+      })
+    )
+    expect(result.errors).toContain('topBar.height must be a positive number')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Page validation
 // ---------------------------------------------------------------------------
 
@@ -168,5 +234,282 @@ describe('validateDashboard — widget validation', () => {
       minimalConfig({ pages: [minimalPage({ widgets: ['not-a-widget'] })] })
     )
     expect(result.errors.some((e) => e.includes('must be an object'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Gauge widget validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — gauge widget type fields', () => {
+  function gaugeWidget(cfg: Record<string, unknown>): Record<string, unknown> {
+    return { id: 'w1', type: 'gauge', ...cfg }
+  }
+
+  it('accepts a valid gauge widget', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [gaugeWidget({ minValue: 0, maxValue: 8000 })] })],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('(gauge)'))).toHaveLength(0)
+  })
+
+  it('requires minValue to be a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [gaugeWidget({ maxValue: 8000 })] })],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(gauge): minValue must be a number'))).toBe(true)
+  })
+
+  it('requires maxValue to be a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [gaugeWidget({ minValue: 0 })] })],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(gauge): maxValue must be a number'))).toBe(true)
+  })
+
+  it('rejects minValue >= maxValue', () => {
+    const equal = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [gaugeWidget({ minValue: 100, maxValue: 100 })] })],
+      })
+    )
+    expect(
+      equal.errors.some((e) => e.includes('(gauge): minValue must be less than maxValue'))
+    ).toBe(true)
+
+    const inverted = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [gaugeWidget({ minValue: 200, maxValue: 100 })] })],
+      })
+    )
+    expect(
+      inverted.errors.some((e) => e.includes('(gauge): minValue must be less than maxValue'))
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Warning widget validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — warning widget type fields', () => {
+  function warningWidget(cfg: Record<string, unknown>): Record<string, unknown> {
+    return { id: 'w1', type: 'warning', ...cfg }
+  }
+
+  it('accepts a valid warning widget', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({ widgets: [warningWidget({ threshold: 95, signalId: 'oil_pressure' })] }),
+        ],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('(warning)'))).toHaveLength(0)
+  })
+
+  it('requires threshold to be a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [warningWidget({ signalId: 'oil_pressure' })] })],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(warning): threshold must be a number'))).toBe(
+      true
+    )
+  })
+
+  it('requires signalId to be a non-empty string', () => {
+    const missing = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [warningWidget({ threshold: 95 })] })],
+      })
+    )
+    expect(
+      missing.errors.some((e) => e.includes('(warning): signalId must be a non-empty string'))
+    ).toBe(true)
+
+    const empty = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [warningWidget({ threshold: 95, signalId: '' })] })],
+      })
+    )
+    expect(
+      empty.errors.some((e) => e.includes('(warning): signalId must be a non-empty string'))
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Button widget validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — button widget type fields', () => {
+  function buttonWidget(cfg: Record<string, unknown>): Record<string, unknown> {
+    return { id: 'w1', type: 'button', ...cfg }
+  }
+
+  it('accepts a button with a valid targetPageId', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [buttonWidget({ targetPageId: 'p2' })] })],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('(button)'))).toHaveLength(0)
+  })
+
+  it('accepts a button with an actions array', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              buttonWidget({
+                actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p2' }],
+              }),
+            ],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('(button)'))).toHaveLength(0)
+  })
+
+  it('rejects a button with an empty targetPageId string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [buttonWidget({ targetPageId: '' })] })],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('(button): targetPageId must be a non-empty string'))
+    ).toBe(true)
+  })
+
+  it('rejects a button with neither targetPageId nor actions', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [buttonWidget({})] })],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('(button): targetPageId must be a non-empty string'))
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Bar widget validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — bar widget type fields', () => {
+  function barWidget(cfg: Record<string, unknown>): Record<string, unknown> {
+    return { id: 'w1', type: 'bar', ...cfg }
+  }
+
+  it('accepts a valid bar widget', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [barWidget({ minValue: 0, maxValue: 100 })] })],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('(bar)'))).toHaveLength(0)
+  })
+
+  it('requires minValue to be a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [barWidget({ maxValue: 100 })] })],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(bar): minValue must be a number'))).toBe(true)
+  })
+
+  it('requires maxValue to be a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [barWidget({ minValue: 0 })] })],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(bar): maxValue must be a number'))).toBe(true)
+  })
+
+  it('rejects minValue >= maxValue', () => {
+    const equal = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [barWidget({ minValue: 50, maxValue: 50 })] })],
+      })
+    )
+    expect(equal.errors.some((e) => e.includes('(bar): minValue must be less than maxValue'))).toBe(
+      true
+    )
+
+    const inverted = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [barWidget({ minValue: 100, maxValue: 0 })] })],
+      })
+    )
+    expect(
+      inverted.errors.some((e) => e.includes('(bar): minValue must be less than maxValue'))
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Signal cross-reference warnings
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — signal cross-reference', () => {
+  it('emits no warning when signals catalog is absent', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              { id: 'w1', type: 'gauge', signalId: 'unknown_signal', minValue: 0, maxValue: 100 },
+            ],
+          }),
+        ],
+      })
+    )
+    expect(result.warnings).toHaveLength(0)
+  })
+
+  it('emits no warning when signalId is found in catalog', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        signals: [{ name: 'rpm' }],
+        pages: [
+          minimalPage({
+            widgets: [{ id: 'w1', type: 'gauge', signalId: 'rpm', minValue: 0, maxValue: 8000 }],
+          }),
+        ],
+      })
+    )
+    expect(result.warnings.filter((w) => w.includes('signalId'))).toHaveLength(0)
+  })
+
+  it('warns when signalId is not in the catalog', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        signals: [{ name: 'rpm' }],
+        pages: [
+          minimalPage({
+            widgets: [{ id: 'w1', type: 'gauge', signalId: 'boost', minValue: 0, maxValue: 300 }],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.warnings.some(
+        (w) => w.includes('"boost"') && w.includes('not defined in config.signals')
+      )
+    ).toBe(true)
   })
 })
