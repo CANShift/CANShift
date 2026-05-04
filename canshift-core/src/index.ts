@@ -37,6 +37,8 @@ export type {
 
 export { DEFAULT_PAGE_PALETTE } from './types/dashboard'
 export type { SignalConfig, SignalDef } from './types/signal'
+export type { DeviceConfig, CanSpeedKbps } from './types/device'
+export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
 
 // ---------------------------------------------------------------------------
 // Validation

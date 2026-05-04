@@ -73,6 +73,11 @@ export const IpcChannels = {
   // SD card preparation (renderer → main)
   SD_LIST_VOLUMES: 'sd:list-volumes',
   SD_PREPARE: 'sd:prepare',
+
+  // Device hardware config (renderer → main)
+  DEVICE_CONFIG_READ: 'device:read',
+  DEVICE_CONFIG_WRITE: 'device:write',
+  DEVICE_CONFIG_WRITE_TO_SD: 'device:write-to-sd',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

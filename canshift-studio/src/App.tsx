@@ -5,6 +5,7 @@ import EditorRoute from './routes/EditorRoute'
 import SignalRoute from './routes/SignalRoute'
 import UpdateRoute from './routes/UpdateRoute'
 import CanScannerRoute from './routes/CanScannerRoute'
+import DeviceConfigRoute from './routes/DeviceConfigRoute'
 import TopBar from './components/shared/TopBar'
 import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
@@ -78,6 +79,14 @@ export default function App() {
                 element={
                   <ErrorBoundary>
                     <UpdateRoute />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/device-config"
+                element={
+                  <ErrorBoundary>
+                    <DeviceConfigRoute />
                   </ErrorBoundary>
                 }
               />
