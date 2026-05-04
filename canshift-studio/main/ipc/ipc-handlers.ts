@@ -267,16 +267,6 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   // ---------------------------------------------------------------------------
-  // SD card preparation
-  // ---------------------------------------------------------------------------
-
-  ipcMain.handle(IpcChannels.SD_LIST_VOLUMES, () => sdService.listVolumes())
-
-  ipcMain.handle(IpcChannels.SD_PREPARE, (_event, volumePath: string) =>
-    sdService.prepareSD(volumePath)
-  )
-
-  // ---------------------------------------------------------------------------
   // Device hardware config — persisted in userData/device.json
   // ---------------------------------------------------------------------------
 
