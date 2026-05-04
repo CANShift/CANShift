@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "CANShift",
+    "slug": "canshift-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D0D0D"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ch.tmbk.canshift",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "CANShift uses Bluetooth to connect to the dashboard device for live data and configuration.",
+        "NSBluetoothPeripheralUsageDescription": "CANShift uses Bluetooth to connect to the dashboard device."
+      }
+    },
+    "android": {
+      "package": "ch.tmbk.canshift",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D0D0D"
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["peripheral", "central"],
+          "bluetoothAlwaysPermission": "CANShift uses Bluetooth to connect to the dashboard device."
+        }
+      ]
+    ]
+  }
+}
