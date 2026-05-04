@@ -1,14 +1,12 @@
-# CI — runs on every push to main and on every pull request
-# Checks: lint, typecheck, build for canshift-core, canshift-studio, and canshift-mobile
+# CI — runs on every pull request targeting main.
+# Checks: lint, typecheck, build for canshift-core, canshift-studio, and canshift-mobile.
+# No deployment happens here — releases are triggered by merging to main (see release.yml).
 
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
-  workflow_call:
 
 jobs:
   # ─── Shared core ────────────────────────────────────────────────────────────

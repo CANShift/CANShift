@@ -1,29 +1,56 @@
-# Release — triggered by pushing a version tag (v*)
-# Builds the Electron desktop app and firmware, publishes both to GitHub Releases (draft).
-# electron-builder handles studio artifact upload and generates latest-mac.yml / latest.yml
-# which are required by electron-updater for auto-update.
-# Firmware .bin files are attached separately via gh release upload.
+# Release — triggered by every merge to main.
+# A release is only created when canshift-studio/package.json version is new.
+# If the version already has a GitHub Release, the workflow exits silently.
+#
+# To ship a release: bump the version in canshift-studio/package.json in your PR.
+# When that PR merges, this workflow fires and creates the GitHub Release automatically.
 
 name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  # Run CI checks first
-  ci-check:
-    name: CI checks
-    uses: ./.github/workflows/ci.yml
+  # Detect whether this push introduces a new studio version
+  check-version:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      should_release: ${{ steps.check.outputs.should_release }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read studio version
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./canshift-studio/package.json').version")
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Check if release already exists
+        id: check
+        run: |
+          if gh release view "${{ steps.ver.outputs.tag }}" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.ver.outputs.tag }} already exists — skipping."
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "New version ${{ steps.ver.outputs.tag }} — will release."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Build and publish the Electron studio app
   studio-release:
-    name: Studio — build & release
-    needs: ci-check
+    name: Studio — build & release (${{ matrix.os }})
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     permissions:
       contents: write
     strategy:
@@ -62,16 +89,17 @@ jobs:
         run: npm ci
 
       # electron-builder publishes directly to GitHub Releases when GH_TOKEN is set.
-      # It uploads the installer + the latest-*.yml manifest used by electron-updater.
+      # Creates a draft release tagged with the studio package version.
       - name: Build and publish
         run: npm run build && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Build firmware and attach .bin files to the same GitHub Release draft
+  # Build firmware and attach .bin files to the same GitHub Release
   firmware-release:
     name: Firmware — build & attach
-    needs: ci-check
+    needs: [check-version, studio-release]
+    if: needs.check-version.outputs.should_release == 'true'
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -103,10 +131,8 @@ jobs:
         run: platformio run -e crowpanel_28
 
       - name: Create merged firmware binary
-        # Merges bootloader + partition table + app into a single binary starting at 0x1000.
-        # The studio flashes this at address 0x1000 for both initial flash and updates.
         run: |
-          TAG=${{ github.ref_name }}
+          TAG=${{ needs.check-version.outputs.tag }}
           pip install esptool
           python -m esptool --chip esp32 merge_bin \
             -o canshift-firmware-${TAG}-crowpanel_28-merged.bin \
@@ -114,16 +140,13 @@ jobs:
             0x8000 .pio/build/crowpanel_28/partitions.bin \
             0x10000 .pio/build/crowpanel_28/firmware.bin
 
-      # Wait for the studio job to create the draft release, then attach the .bin.
-      # Uses gh CLI (pre-installed on GitHub-hosted runners) with GITHUB_TOKEN.
       - name: Attach firmware to GitHub Release
         run: |
-          TAG=${{ github.ref_name }}
+          TAG=${{ needs.check-version.outputs.tag }}
           BIN="canshift-firmware-${TAG}-crowpanel_28-merged.bin"
-          # Retry up to 5 times — studio job may still be creating the release
           for i in 1 2 3 4 5; do
             gh release upload "${TAG}" "${BIN}" --clobber && break
-            echo "Attempt ${i}: release not ready yet, retrying in 30s..."
+            echo "Attempt ${i}: release not ready, retrying in 30s..."
             sleep 30
           done
         env:
