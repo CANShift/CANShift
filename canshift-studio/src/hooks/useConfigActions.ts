@@ -100,6 +100,11 @@ export function useConfigActions() {
       return
     }
 
+    // Surface warnings even when valid
+    validation.warnings.forEach((w) => {
+      log('warn', `Validation: ${w}`)
+    })
+
     const doBurn = () => {
       setSyncing(true)
       log('info', 'Burning config to device…')
