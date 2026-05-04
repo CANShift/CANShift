@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -35,16 +36,13 @@ export default function ScanScreen({ navigation }: Props) {
       Alert.alert('Bluetooth', 'Please enable Bluetooth and try again.')
       return
     }
-
     setDevices([])
     setScanning(true)
-
     await BleService.scan((device) => {
       setDevices((prev) =>
         prev.find((d) => d.id === device.id) ? prev : [...prev, device]
       )
     }, 10000)
-
     setScanning(false)
   }, [])
 
@@ -69,66 +67,65 @@ export default function ScanScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.logo}>CANShift</Text>
+      {/* Centered main content */}
+      <View style={styles.center}>
+        <Image
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          source={require('../../assets/icon.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.title}>CANShift</Text>
         <Text style={styles.subtitle}>Connect to your dashboard</Text>
+
+        <TouchableOpacity
+          style={[styles.scanBtn, scanning && styles.scanBtnActive]}
+          onPress={startScan}
+          disabled={scanning || connectionState === 'connecting'}
+        >
+          {scanning ? (
+            <ActivityIndicator color={Colors.accent} size="small" />
+          ) : (
+            <Text style={styles.scanBtnText}>
+              {devices.length > 0 ? 'Scan again' : 'Scan for devices'}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {scanning && <Text style={styles.scanHint}>Searching for CANShift devices…</Text>}
+
+        {/* Device list — only rendered when results exist */}
+        {devices.length > 0 && (
+          <View style={styles.listWrapper}>
+            <FlatList
+              data={devices}
+              keyExtractor={(d) => d.id}
+              contentContainerStyle={styles.list}
+              scrollEnabled={devices.length > 3}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.deviceRow}
+                  onPress={() => void connectTo(item)}
+                  disabled={connectionState === 'connecting'}
+                >
+                  <View style={styles.deviceDot} />
+                  <View style={styles.deviceInfo}>
+                    <Text style={styles.deviceName}>{item.name}</Text>
+                    <Text style={styles.deviceId}>{item.id}</Text>
+                  </View>
+                  {connectionState === 'connecting' ? (
+                    <ActivityIndicator color={Colors.accent} size="small" />
+                  ) : (
+                    <Text style={styles.arrow}>›</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
       </View>
 
-      {/* Scan button */}
-      <TouchableOpacity
-        style={[styles.scanBtn, scanning && styles.scanBtnActive]}
-        onPress={startScan}
-        disabled={scanning || connectionState === 'connecting'}
-      >
-        {scanning ? (
-          <ActivityIndicator color={Colors.accent} size="small" />
-        ) : (
-          <Text style={styles.scanBtnText}>
-            {devices.length > 0 ? 'Scan again' : 'Scan for devices'}
-          </Text>
-        )}
-      </TouchableOpacity>
-
-      {scanning && (
-        <Text style={styles.scanHint}>Searching for CANShift devices…</Text>
-      )}
-
-      {/* Device list */}
-      <FlatList
-        data={devices}
-        keyExtractor={(d) => d.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.deviceRow}
-            onPress={() => void connectTo(item)}
-            disabled={connectionState === 'connecting'}
-          >
-            <View style={styles.deviceDot} />
-            <View>
-              <Text style={styles.deviceName}>{item.name}</Text>
-              <Text style={styles.deviceId}>{item.id}</Text>
-            </View>
-            {connectionState === 'connecting' ? (
-              <ActivityIndicator color={Colors.accent} size="small" style={styles.deviceArrow} />
-            ) : (
-              <Text style={[styles.deviceArrow, styles.arrow]}>›</Text>
-            )}
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          !scanning ? (
-            <Text style={styles.emptyText}>
-              {devices.length === 0
-                ? 'No devices found.\nMake sure the dashboard is powered on.'
-                : ''}
-            </Text>
-          ) : null
-        }
-      />
-
-      {/* Demo mode */}
+      {/* Demo mode — pinned to bottom */}
       <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
         <Text style={styles.demoBtnText}>Demo mode</Text>
       </TouchableOpacity>
@@ -142,12 +139,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
     paddingHorizontal: Spacing.lg,
   },
-  header: {
-    paddingTop: Spacing.xxl,
-    paddingBottom: Spacing.xl,
+  center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   logo: {
+    width: 100,
+    height: 100,
+    borderRadius: 22,
+    marginBottom: Spacing.lg,
+  },
+  title: {
     fontSize: Typography.xxl,
     fontWeight: '700',
     color: Colors.accent,
@@ -157,32 +160,30 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     color: Colors.textMuted,
     marginTop: Spacing.xs,
+    marginBottom: Spacing.xl,
   },
   scanBtn: {
+    width: '100%',
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     alignItems: 'center',
-    marginBottom: Spacing.sm,
   },
-  scanBtnActive: {
-    borderColor: Colors.accent,
-  },
-  scanBtnText: {
-    fontSize: Typography.md,
-    color: Colors.text,
-  },
+  scanBtnActive: { borderColor: Colors.accent },
+  scanBtnText: { fontSize: Typography.md, color: Colors.text },
   scanHint: {
     fontSize: Typography.xs,
     color: Colors.textMuted,
     textAlign: 'center',
-    marginBottom: Spacing.md,
+    marginTop: Spacing.sm,
   },
-  list: {
-    paddingTop: Spacing.md,
-    gap: Spacing.sm,
+  listWrapper: {
+    width: '100%',
+    maxHeight: 220,
+    marginTop: Spacing.lg,
   },
+  list: { gap: Spacing.sm },
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,36 +200,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: Colors.accent,
   },
-  deviceName: {
-    fontSize: Typography.md,
-    color: Colors.text,
-    fontWeight: '600',
-  },
-  deviceId: {
-    fontSize: Typography.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  deviceArrow: {
-    marginLeft: 'auto',
-  },
-  arrow: {
-    fontSize: Typography.xl,
-    color: Colors.textMuted,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: Colors.textMuted,
-    fontSize: Typography.sm,
-    lineHeight: 22,
-    paddingTop: Spacing.xl,
-  },
-  demoBtn: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-  },
-  demoBtnText: {
-    fontSize: Typography.sm,
-    color: Colors.textDim,
-  },
+  deviceInfo: { flex: 1 },
+  deviceName: { fontSize: Typography.md, color: Colors.text, fontWeight: '600' },
+  deviceId: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
+  arrow: { fontSize: Typography.xl, color: Colors.textMuted },
+  demoBtn: { paddingVertical: Spacing.lg, alignItems: 'center' },
+  demoBtnText: { fontSize: Typography.sm, color: Colors.textDim },
 })

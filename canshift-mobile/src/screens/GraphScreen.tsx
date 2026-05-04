@@ -1,4 +1,5 @@
 // GraphScreen.tsx — Real-time telemetry graph (MTune-style)
+// Portrait: tabbed chart. Landscape: full-screen modal (auto, no button needed).
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
@@ -8,6 +9,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   LayoutChangeEvent,
+  Modal,
+  useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
@@ -52,8 +55,8 @@ const SIGNAL_RANGE: Record<string, { min: number; max: number }> = {
 }
 
 const WINDOW_OPTIONS = [
-  { label: '30s', value: 30 },
-  { label: '1m',  value: 60 },
+  { label: '30s', value: 30  },
+  { label: '1m',  value: 60  },
   { label: '2m',  value: 120 },
 ]
 
@@ -61,7 +64,7 @@ const DEFAULT_SIGNALS = ['r', 'lam']
 const ALL_SIGNALS = Object.keys(SIGNAL_META)
 
 // ---------------------------------------------------------------------------
-// Chart math
+// Chart math helpers
 // ---------------------------------------------------------------------------
 
 function buildPoints(
@@ -74,23 +77,19 @@ function buildPoints(
 ): string {
   const range = SIGNAL_RANGE[key]
   if (!range) return ''
-
   const span = windowEnd - windowStart
   const valueSpan = range.max - range.min
   const pts: string[] = []
-
   for (const s of buffer) {
     if (s.t < windowStart || s.v[key] === undefined) continue
     const x = ((s.t - windowStart) / span) * w
     const norm = Math.max(0, Math.min(1, (s.v[key] - range.min) / valueSpan))
-    const y = (1 - norm) * h
-    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`)
+    pts.push(`${x.toFixed(1)},${((1 - norm) * h).toFixed(1)}`)
   }
-
   return pts.join(' ')
 }
 
-function formatTimestamp(ms: number): string {
+function formatTime(ms: number): string {
   const d = new Date(ms)
   return d.toLocaleTimeString('en-US', { hour12: false })
 }
@@ -105,70 +104,75 @@ function formatValue(key: string, val: number | undefined): string {
 }
 
 // ---------------------------------------------------------------------------
-// Component
+// Inner chart panel — shared between portrait and landscape
 // ---------------------------------------------------------------------------
 
-export default function GraphScreen() {
-  const [tick, setTick] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const [pausedAt, setPausedAt] = useState<number>(0)
-  const [windowSecs, setWindowSecs] = useState(30)
-  const [visibleSignals, setVisibleSignals] = useState<string[]>(DEFAULT_SIGNALS)
-  const [chartSize, setChartSize] = useState({ width: 300, height: 200 })
+interface ChartPanelProps {
+  visibleSignals: string[]
+  windowSecs: number
+  paused: boolean
+  pausedAt: number
+  onTogglePause: () => void
+  onSetWindow: (s: number) => void
+  onClear: () => void
+  onToggleSignal: (key: string) => void
+  compact: boolean // true in landscape → tighter spacing
+}
 
-  // Drive re-renders at 10 fps when live
+function ChartPanel({
+  visibleSignals,
+  windowSecs,
+  paused,
+  pausedAt,
+  onTogglePause,
+  onSetWindow,
+  onClear,
+  onToggleSignal,
+  compact,
+}: ChartPanelProps) {
+  const [tick, setTick] = useState(0)
+  const [chartSize, setChartSize] = useState({ width: 300, height: 160 })
+
   useEffect(() => {
     if (paused) return
     const id = setInterval(() => setTick((n) => n + 1), 100)
     return () => clearInterval(id)
   }, [paused])
 
-  const togglePause = useCallback(() => {
-    setPaused((p) => {
-      if (!p) setPausedAt(Date.now())
-      return !p
-    })
-  }, [])
-
-  const toggleSignal = useCallback((key: string) => {
-    setVisibleSignals((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    )
-  }, [])
-
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout
     setChartSize({ width, height })
   }, [])
 
-  // Compute chart data each tick
   const chartData = useMemo(() => {
     const now = paused ? pausedAt : Date.now()
     const windowStart = now - windowSecs * 1000
-    const buffer = getBuffer()
-    const visibleBuffer = buffer.filter((s) => s.t >= windowStart)
-
-    // Latest values for labels
-    const latest = visibleBuffer.length > 0 ? visibleBuffer[visibleBuffer.length - 1].v : {}
-
+    const buf = getBuffer().filter((s) => s.t >= windowStart)
+    const latest = buf.length > 0 ? buf[buf.length - 1].v : {}
     const lines = visibleSignals.map((key) => ({
       key,
       color: SIGNAL_COLOR[key] ?? '#888',
-      points: buildPoints(visibleBuffer, key, windowStart, now, chartSize.width, chartSize.height),
+      points: buildPoints(buf, key, windowStart, now, chartSize.width, chartSize.height),
       latestValue: latest[key],
     }))
-
-    return { lines, windowStart: now - windowSecs * 1000, windowEnd: now, hasData: visibleBuffer.length > 1 }
+    return {
+      lines,
+      windowStart: now - windowSecs * 1000,
+      windowEnd: now,
+      hasData: buf.length > 1,
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, visibleSignals, windowSecs, paused, pausedAt, chartSize])
 
+  const vGap = compact ? 2 : Spacing.xs
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Signal selector */}
+    <>
+      {/* Signal pills */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pillRow}
+        contentContainerStyle={[styles.pillRow, { paddingVertical: vGap }]}
         style={styles.pillBar}
       >
         {ALL_SIGNALS.map((key) => {
@@ -178,7 +182,7 @@ export default function GraphScreen() {
             <TouchableOpacity
               key={key}
               style={[styles.pill, active && { borderColor: color, backgroundColor: `${color}22` }]}
-              onPress={() => toggleSignal(key)}
+              onPress={() => onToggleSignal(key)}
             >
               <View style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]} />
               <Text style={[styles.pillLabel, active && { color }]}>
@@ -190,8 +194,8 @@ export default function GraphScreen() {
       </ScrollView>
 
       {/* Controls */}
-      <View style={styles.controls}>
-        <TouchableOpacity style={styles.pauseBtn} onPress={togglePause}>
+      <View style={[styles.controls, { paddingVertical: vGap }]}>
+        <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause}>
           <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
         </TouchableOpacity>
         <View style={styles.windowRow}>
@@ -199,17 +203,15 @@ export default function GraphScreen() {
             <TouchableOpacity
               key={opt.value}
               style={[styles.windowBtn, windowSecs === opt.value && styles.windowBtnActive]}
-              onPress={() => setWindowSecs(opt.value)}
+              onPress={() => onSetWindow(opt.value)}
             >
-              <Text
-                style={[styles.windowBtnText, windowSecs === opt.value && styles.windowBtnTextActive]}
-              >
+              <Text style={[styles.windowBtnText, windowSecs === opt.value && styles.windowBtnTextActive]}>
                 {opt.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity onPress={clearBuffer}>
+        <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={onClear}>
           <Text style={styles.clearText}>Clear</Text>
         </TouchableOpacity>
       </View>
@@ -218,24 +220,19 @@ export default function GraphScreen() {
       <View style={styles.chartContainer} onLayout={onChartLayout}>
         {!chartData.hasData ? (
           <View style={styles.noDataOverlay}>
-            <Text style={styles.noDataText}>No telemetry data</Text>
+            <Text style={styles.noDataText}>No telemetry data yet</Text>
           </View>
         ) : (
           <Svg width={chartSize.width} height={chartSize.height}>
-            {/* Horizontal grid lines at 25%, 50%, 75% */}
             {[0.25, 0.5, 0.75].map((f) => (
               <Line
                 key={f}
-                x1={0}
-                y1={chartSize.height * f}
-                x2={chartSize.width}
-                y2={chartSize.height * f}
+                x1={0} y1={chartSize.height * f}
+                x2={chartSize.width} y2={chartSize.height * f}
                 stroke={Colors.border}
                 strokeWidth={1}
               />
             ))}
-
-            {/* Signal lines */}
             {chartData.lines.map((line) =>
               line.points ? (
                 <Polyline
@@ -249,9 +246,8 @@ export default function GraphScreen() {
                 />
               ) : null
             )}
-
-            {/* Current value labels — right edge */}
-            {chartData.lines.map((line, i) => {
+            {/* Value labels at right edge, Y-positioned by signal value */}
+            {chartData.lines.map((line) => {
               const range = SIGNAL_RANGE[line.key]
               if (!range || line.latestValue === undefined) return null
               const norm = Math.max(0, Math.min(1, (line.latestValue - range.min) / (range.max - range.min)))
@@ -276,11 +272,9 @@ export default function GraphScreen() {
 
       {/* Time axis */}
       <View style={styles.timeAxis}>
-        <Text style={styles.timeLabel}>{formatTimestamp(chartData.windowStart)}</Text>
-        <Text style={styles.timeLabel}>
-          {formatTimestamp((chartData.windowStart + chartData.windowEnd) / 2)}
-        </Text>
-        <Text style={styles.timeLabel}>{formatTimestamp(chartData.windowEnd)}</Text>
+        <Text style={styles.timeLabel}>{formatTime(chartData.windowStart)}</Text>
+        <Text style={styles.timeLabel}>{formatTime((chartData.windowStart + chartData.windowEnd) / 2)}</Text>
+        <Text style={styles.timeLabel}>{formatTime(chartData.windowEnd)}</Text>
       </View>
 
       {/* Live values strip */}
@@ -288,7 +282,7 @@ export default function GraphScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.valuesStrip}
+          contentContainerStyle={[styles.valuesStrip, { paddingVertical: vGap + 2 }]}
         >
           {chartData.lines.map((line) => (
             <View key={line.key} style={styles.valueChip}>
@@ -302,6 +296,61 @@ export default function GraphScreen() {
           ))}
         </ScrollView>
       )}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Screen — portrait + auto landscape modal
+// ---------------------------------------------------------------------------
+
+export default function GraphScreen() {
+  const { width, height } = useWindowDimensions()
+  const isLandscape = width > height
+
+  const [paused, setPaused] = useState(false)
+  const [pausedAt, setPausedAt] = useState(0)
+  const [windowSecs, setWindowSecs] = useState(30)
+  const [visibleSignals, setVisibleSignals] = useState<string[]>(DEFAULT_SIGNALS)
+
+  const handleTogglePause = useCallback(() => {
+    setPaused((p) => {
+      if (!p) setPausedAt(Date.now())
+      return !p
+    })
+  }, [])
+
+  const handleToggleSignal = useCallback((key: string) => {
+    setVisibleSignals((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    )
+  }, [])
+
+  const panelProps: ChartPanelProps = {
+    visibleSignals,
+    windowSecs,
+    paused,
+    pausedAt,
+    onTogglePause: handleTogglePause,
+    onSetWindow: setWindowSecs,
+    onClear: clearBuffer,
+    onToggleSignal: handleToggleSignal,
+    compact: isLandscape,
+  }
+
+  if (isLandscape) {
+    return (
+      <Modal visible animationType="none" statusBarTranslucent supportedOrientations={['landscape']}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+          <ChartPanel {...panelProps} />
+        </SafeAreaView>
+      </Modal>
+    )
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ChartPanel {...panelProps} />
     </SafeAreaView>
   )
 }
@@ -313,17 +362,12 @@ export default function GraphScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
 
-  pillBar: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    maxHeight: 48,
-  },
+  pillBar: { borderBottomWidth: 1, borderBottomColor: Colors.border, maxHeight: 46 },
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
     gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
   },
   pill: {
     flexDirection: 'row',
@@ -343,7 +387,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     gap: Spacing.sm,
@@ -367,11 +410,11 @@ const styles = StyleSheet.create({
   windowBtnActive: { borderColor: Colors.accent, backgroundColor: Colors.accentDim },
   windowBtnText: { fontSize: Typography.xs, color: Colors.textMuted },
   windowBtnTextActive: { color: Colors.accent, fontWeight: '700' },
-  clearText: { fontSize: Typography.xs, color: Colors.textMuted, marginLeft: 'auto' },
+  clearText: { fontSize: Typography.xs, color: Colors.textMuted },
 
   chartContainer: {
     flex: 1,
-    backgroundColor: '#090909',
+    backgroundColor: '#080808',
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -386,12 +429,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  timeLabel: { fontSize: 9, color: Colors.textMuted },
+  timeLabel: { fontSize: 9, color: Colors.textMuted, fontVariant: ['tabular-nums'] },
 
   valuesStrip: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
     gap: Spacing.md,
     alignItems: 'center',
   },
