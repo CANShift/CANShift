@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
 import * as BleService from '../services/ble.service'
+import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 
 type Props = {
@@ -60,6 +61,11 @@ export default function ScanScreen({ navigation }: Props) {
     },
     [navigation]
   )
+
+  const startDemo = useCallback(() => {
+    SimService.start()
+    navigation.replace('Dash')
+  }, [navigation])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -121,6 +127,11 @@ export default function ScanScreen({ navigation }: Props) {
           ) : null
         }
       />
+
+      {/* Demo mode */}
+      <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
+        <Text style={styles.demoBtnText}>Demo mode</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   )
 }
@@ -211,5 +222,13 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     lineHeight: 22,
     paddingTop: Spacing.xl,
+  },
+  demoBtn: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+  },
+  demoBtnText: {
+    fontSize: Typography.sm,
+    color: Colors.textDim,
   },
 })

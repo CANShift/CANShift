@@ -10,6 +10,7 @@ import { useSignalsStore } from '../stores/signals.store'
 import { SIGNAL_META } from '../constants/ble'
 import SignalCard from '../components/SignalCard'
 import * as BleService from '../services/ble.service'
+import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 
 type Props = {
@@ -22,6 +23,7 @@ const GRID_SIGNALS = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
 
 export default function DashScreen({ navigation }: Props) {
   const { deviceName, firmwareVersion, canHealthy } = useDeviceStore()
+  const isSim = SimService.isRunning()
   const { values, isLive } = useSignalsStore()
 
   const handleDisconnect = useCallback(async () => {
@@ -31,7 +33,11 @@ export default function DashScreen({ navigation }: Props) {
         text: 'Disconnect',
         style: 'destructive',
         onPress: async () => {
-          await BleService.disconnect()
+          if (SimService.isRunning()) {
+            SimService.stop()
+          } else {
+            await BleService.disconnect()
+          }
           navigation.replace('Scan')
         },
       },
@@ -53,7 +59,12 @@ export default function DashScreen({ navigation }: Props) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
-          {!isLive && (
+          {isSim && (
+            <View style={styles.simBadge}>
+              <Text style={styles.simText}>SIM</Text>
+            </View>
+          )}
+          {!isLive && !isSim && (
             <View style={styles.staleBadge}>
               <Text style={styles.staleText}>NO DATA</Text>
             </View>
@@ -132,6 +143,15 @@ const styles = StyleSheet.create({
   deviceName: { fontSize: Typography.md, fontWeight: '600', color: Colors.text },
   version: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  simBadge: {
+    backgroundColor: '#1a1a2e',
+    borderWidth: 1,
+    borderColor: '#4a4aff',
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
+  simText: { fontSize: Typography.xs, color: '#7a7aff', fontWeight: '700' },
   staleBadge: {
     backgroundColor: Colors.accentDim,
     borderWidth: 1,
