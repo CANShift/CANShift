@@ -12,6 +12,7 @@ import {
 } from '../constants/ble'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalsStore } from '../stores/signals.store'
+import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
 
 // ---------------------------------------------------------------------------
@@ -167,6 +168,7 @@ export async function disconnect(): Promise<void> {
     connectedDevice = null
     log('info', `Disconnected from ${id}`)
   }
+  clearBuffer()
   useDeviceStore.getState().disconnect()
 }
 

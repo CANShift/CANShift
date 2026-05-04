@@ -5,7 +5,7 @@ import { Text } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import DashScreen from '../screens/DashScreen'
-import LogScreen from '../screens/LogScreen'
+import GraphScreen from '../screens/GraphScreen'
 import { Colors, Typography } from '../theme'
 import type { RootStackParamList } from './index'
 
@@ -51,10 +51,10 @@ export default function ConnectedNavigator({ navigation }: Props) {
       </Tab.Screen>
       <Tab.Screen
         name="Log"
-        component={LogScreen}
+        component={GraphScreen}
         options={{
-          tabBarLabel: 'Log',
-          tabBarIcon: ({ focused }) => <TabIcon icon="≡" focused={focused} />,
+          tabBarLabel: 'Graph',
+          tabBarIcon: ({ focused }) => <TabIcon icon="∿" focused={focused} />,
         }}
       />
     </Tab.Navigator>

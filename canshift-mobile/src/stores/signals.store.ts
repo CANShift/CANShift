@@ -1,6 +1,7 @@
 // signals.store.ts — Live signal values from BLE telemetry
 
 import { create } from 'zustand'
+import { pushSample } from './telemetry.store'
 
 // Raw telemetry payload from firmware (compact keys)
 export type TelemetryPayload = Partial<Record<string, number>>
@@ -19,12 +20,10 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
   lastUpdateMs: 0,
   isLive: false,
 
-  update: (payload) =>
-    set({
-      values: payload,
-      lastUpdateMs: Date.now(),
-      isLive: true,
-    }),
+  update: (payload) => {
+    pushSample(payload as Record<string, number>)
+    set({ values: payload, lastUpdateMs: Date.now(), isLive: true })
+  },
 
   markStale: () => set({ isLive: false }),
 }))
