@@ -5,8 +5,9 @@ import type { DashboardConfig, SignalConfig } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
 import type { CanFrame, CanHealth } from '../../main/services/usb.service'
+import type { SdVolume, SdPrepareResult } from '../../main/services/sd.service'
 
-export type { FirmwareRelease, CanFrame, CanHealth }
+export type { FirmwareRelease, CanFrame, CanHealth, SdVolume, SdPrepareResult }
 
 // ---------------------------------------------------------------------------
 // Response shapes (must mirror main/services/* return types)
@@ -131,6 +132,15 @@ export const assetIpc = {
     ),
   delete: (name: string) =>
     invoke<{ success: boolean; error?: string }>(IpcChannels.ASSET_DELETE, name),
+}
+
+// ---------------------------------------------------------------------------
+// SD card preparation
+// ---------------------------------------------------------------------------
+
+export const sdIpc = {
+  listVolumes: () => invoke<SdVolume[]>(IpcChannels.SD_LIST_VOLUMES),
+  prepare: (volumePath: string) => invoke<SdPrepareResult>(IpcChannels.SD_PREPARE, volumePath),
 }
 
 // ---------------------------------------------------------------------------

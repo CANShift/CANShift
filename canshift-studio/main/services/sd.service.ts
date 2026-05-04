@@ -1,0 +1,128 @@
+import { readdir, copyFile, access, mkdir } from 'node:fs/promises'
+import { join, dirname, relative } from 'node:path'
+import { platform } from 'node:os'
+import { app } from 'electron'
+
+export interface SdVolume {
+  path: string
+  label: string
+}
+
+export interface SdPrepareResult {
+  success: boolean
+  copied: string[]
+  skipped: string[]
+  error?: string
+}
+
+// Files under config/ belong to the user (dashboard, signals). Never overwrite.
+// Everything else (fonts, assets) is app-managed and always refreshed.
+function isUserData(relativePath: string): boolean {
+  return relativePath.startsWith('config/')
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  return access(filePath)
+    .then(() => true)
+    .catch(() => false)
+}
+
+function toUnixRelativePath(from: string, to: string): string {
+  return relative(from, to).replace(/\\/g, '/')
+}
+
+// sd_contents/ lives next to the firmware project in dev, bundled in resources when packaged.
+function sdContentsPath(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'sd_contents')
+    : join(app.getAppPath(), '../canshift-firmware/sd_contents')
+}
+
+async function walkDirectory(
+  dir: string,
+  baseDir: string
+): Promise<{ src: string; rel: string }[]> {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const results: { src: string; rel: string }[] = []
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      results.push(...(await walkDirectory(fullPath, baseDir)))
+    } else {
+      results.push({ src: fullPath, rel: toUnixRelativePath(baseDir, fullPath) })
+    }
+  }
+
+  return results
+}
+
+const MACOS_SYSTEM_VOLUMES = new Set([
+  'Macintosh HD',
+  'Macintosh HD - Data',
+  'Recovery',
+  'VM',
+  'Preboot',
+  'Update',
+])
+
+async function listMacOsVolumes(): Promise<SdVolume[]> {
+  const entries = await readdir('/Volumes')
+  return entries
+    .filter((name) => !MACOS_SYSTEM_VOLUMES.has(name) && !name.startsWith('.'))
+    .map((name) => ({ path: join('/Volumes', name), label: name }))
+}
+
+async function listWindowsVolumes(): Promise<SdVolume[]> {
+  const volumes: SdVolume[] = []
+  for (const letter of 'DEFGHIJKLMNOPQRSTUVWXYZ') {
+    const drivePath = `${letter}:\\`
+    if (await fileExists(drivePath)) {
+      volumes.push({ path: drivePath, label: `${letter}:` })
+    }
+  }
+  return volumes
+}
+
+async function listVolumes(): Promise<SdVolume[]> {
+  try {
+    if (platform() === 'darwin') return await listMacOsVolumes()
+    if (platform() === 'win32') return await listWindowsVolumes()
+    return []
+  } catch {
+    return []
+  }
+}
+
+async function prepareSD(volumePath: string): Promise<SdPrepareResult> {
+  const copied: string[] = []
+  const skipped: string[] = []
+
+  try {
+    const files = await walkDirectory(sdContentsPath(), sdContentsPath())
+
+    for (const { src, rel } of files) {
+      const dest = join(volumePath, rel)
+      await mkdir(dirname(dest), { recursive: true })
+
+      if (isUserData(rel) && (await fileExists(dest))) {
+        skipped.push(rel)
+        continue
+      }
+
+      await copyFile(src, dest)
+      copied.push(rel)
+    }
+
+    return { success: true, copied, skipped }
+  } catch (err) {
+    return {
+      success: false,
+      copied,
+      skipped,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+}
+
+export const sdService = { listVolumes, prepareSD }
