@@ -152,29 +152,4 @@ export const firmwareIpc = {
   enterFlash: (portPath: string) =>
     invoke<{ success: boolean }>(IpcChannels.FIRMWARE_ENTER_FLASH, portPath),
   exitFlash: () => invoke<{ success: boolean }>(IpcChannels.FIRMWARE_EXIT_FLASH),
-  /**
-   * Flash a firmware .bin to the connected ESP32 via esptool.
-   * portPath: serial port (e.g. /dev/tty.usbserial-XXX)
-   * filePath: absolute path to the .bin file (use `(file as File & { path: string }).path`)
-   * Progress events arrive via IpcChannels.FIRMWARE_PROGRESS as { pct: number }.
-   */
-  updateViaUsb: (portPath: string, filePath: string) =>
-    invoke<{ success: boolean; error?: string }>(
-      IpcChannels.FIRMWARE_UPDATE_USB,
-      portPath,
-      filePath
-    ),
-  flashLatest: (channel: 'stable' | 'beta', portPath: string) =>
-    invoke<{ success: boolean; version?: string; error?: string }>(
-      IpcChannels.FIRMWARE_FLASH_LATEST,
-      channel,
-      portPath
-    ),
-  flashFromUrl: (downloadUrl: string | undefined, tag: string, portPath: string) =>
-    invoke<{ success: boolean; error?: string }>(
-      IpcChannels.FIRMWARE_FLASH_URL,
-      downloadUrl,
-      tag,
-      portPath
-    ),
 }

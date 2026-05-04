@@ -8,7 +8,6 @@ export const IpcChannels = {
   CONFIG_OPEN: 'config:open',
   CONFIG_SAVE: 'config:save',
   CONFIG_SAVE_AS: 'config:save-as',
-  CONFIG_RECENT: 'config:recent',
 
   // USB device operations
   USB_LIST_PORTS: 'usb:list-ports',
@@ -40,12 +39,6 @@ export const IpcChannels = {
   FIRMWARE_LIST_RELEASES: 'firmware:list-releases',
   FIRMWARE_ENTER_FLASH: 'firmware:enter-flash',
   FIRMWARE_EXIT_FLASH: 'firmware:exit-flash',
-  FIRMWARE_UPDATE_WIFI: 'firmware:update-wifi',
-  FIRMWARE_UPDATE_USB: 'firmware:update-usb',
-  FIRMWARE_FLASH_LATEST: 'firmware:flash-latest',
-  FIRMWARE_FLASH_URL: 'firmware:flash-url',
-  // Main → renderer
-  FIRMWARE_PROGRESS: 'firmware:progress',
 
   // Edit history (main → renderer)
   HISTORY_UNDO: 'history:undo',
@@ -65,6 +58,9 @@ export const IpcChannels = {
 
   // App info
   APP_VERSION: 'app:version',
+
+  // Main process log forwarding (main → renderer)
+  APP_LOG: 'app:log',
 
   // Auto-update (main → renderer)
   UPDATE_AVAILABLE: 'update:available',
