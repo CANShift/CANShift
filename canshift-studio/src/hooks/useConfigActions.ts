@@ -6,6 +6,7 @@ import { validateDashboard, migrateConfig, CURRENT_SCHEMA_VERSION } from '@tmbk/
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
+import { useErrorStore } from '../stores/error.store'
 import { usePushDiffStore } from '../stores/pushDiff.store'
 import { configService, usbService } from '../services/ipc.service'
 
@@ -25,6 +26,7 @@ export function useConfigActions() {
   const showDiff = usePushDiffStore((s) => s.show)
 
   const log = useLogStore((s) => s.push)
+  const pushError = useErrorStore((s) => s.push)
 
   const applyOpenResult = useCallback(
     (result: Awaited<ReturnType<typeof configService.open>>) => {
@@ -40,15 +42,18 @@ export function useConfigActions() {
             log('info', `Config migrated: ${applied.join(', ')}`)
           }
         } catch (err) {
-          log('error', `Migration failed: ${err instanceof Error ? err.message : String(err)}`)
+          const msg = err instanceof Error ? err.message : String(err)
+          log('error', `Migration failed: ${msg}`)
+          pushError({ source: 'config', code: 'MIGRATION_FAILED', message: msg })
         }
         setConfig(config, result.filePath)
         log('info', `Opened ${result.filePath ?? 'config'}`)
       } else if (!result.success && result.error) {
         log('error', `Open failed: ${result.error}`)
+        pushError({ source: 'config', code: 'OPEN_FAILED', message: result.error })
       }
     },
-    [setConfig, log]
+    [setConfig, log, pushError]
   )
 
   const openConfig = useCallback(() => {
@@ -70,9 +75,10 @@ export function useConfigActions() {
         log('success', `Saved to ${result.filePath}`)
       } else if (!result.success && result.error) {
         log('error', `Save failed: ${result.error}`)
+        pushError({ source: 'config', code: 'SAVE_FAILED', message: result.error })
       }
     })
-  }, [config, markSaved, log])
+  }, [config, markSaved, log, pushError])
 
   const burnConfig = useCallback(() => {
     if (!config || !connected || syncing) return
@@ -83,7 +89,14 @@ export function useConfigActions() {
       validation.errors.forEach((err) => {
         log('error', `Validation: ${err}`)
       })
-      log('error', `Burn aborted — ${String(validation.errors.length)} validation error(s)`)
+      const summary = `Burn aborted — ${String(validation.errors.length)} validation error(s)`
+      log('error', summary)
+      pushError({
+        source: 'config',
+        code: 'VALIDATION_FAILED',
+        message: summary,
+        detail: validation.errors.join('\n'),
+      })
       return
     }
 
@@ -96,9 +109,6 @@ export function useConfigActions() {
           if (result.success) {
             setSyncComplete(new Date())
             setLastPushedConfig(config)
-            // The firmware reboots immediately after acknowledging the push.
-            // The USB disconnect event will fire in ~150ms and update the
-            // connection status automatically — no extra action needed here.
             log('success', 'Config written to device')
             log('info', 'Device is rebooting — reconnect in a few seconds')
           } else {
@@ -106,12 +116,15 @@ export function useConfigActions() {
             setError(msg)
             setSyncing(false)
             log('error', msg)
+            pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
           }
         })
         .catch(() => {
-          setError('Burn error')
+          const msg = 'Config burn error'
+          setError(msg)
           setSyncing(false)
-          log('error', 'Config burn error')
+          log('error', msg)
+          pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
         })
     }
 
@@ -125,6 +138,7 @@ export function useConfigActions() {
     setSyncComplete,
     setError,
     log,
+    pushError,
     lastPushedConfig,
     setLastPushedConfig,
     showDiff,

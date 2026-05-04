@@ -10,7 +10,9 @@ import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
 import ConsolePanel from './components/shared/ConsolePanel'
 import StatusBar from './components/shared/StatusBar'
+import ErrorBar from './components/shared/ErrorBar'
 import UpdateBanner from './components/shared/UpdateBanner'
+import ErrorBoundary from './components/shared/ErrorBoundary'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useFirmwareCheck } from './hooks/useFirmwareCheck'
 import { useSessionRestore } from './hooks/useSessionRestore'
@@ -47,10 +49,38 @@ export default function App() {
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
             <Routes>
               <Route path="/" element={<Navigate to="/editor" replace />} />
-              <Route path="/editor" element={<EditorRoute />} />
-              <Route path="/signals" element={<SignalRoute />} />
-              <Route path="/scanner" element={<CanScannerRoute />} />
-              <Route path="/update" element={<UpdateRoute />} />
+              <Route
+                path="/editor"
+                element={
+                  <ErrorBoundary>
+                    <EditorRoute />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/signals"
+                element={
+                  <ErrorBoundary>
+                    <SignalRoute />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/scanner"
+                element={
+                  <ErrorBoundary>
+                    <CanScannerRoute />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/update"
+                element={
+                  <ErrorBoundary>
+                    <UpdateRoute />
+                  </ErrorBoundary>
+                }
+              />
             </Routes>
           </div>
         </main>
@@ -59,6 +89,7 @@ export default function App() {
       )}
 
       <ConsolePanel />
+      <ErrorBar />
       <StatusBar />
       <UpdateBanner />
       <FirmwareDialog />
