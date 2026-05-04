@@ -3,75 +3,12 @@
 // Shown automatically when:
 //   - Device connects but doesn't respond to version probe ('flash' mode)
 //   - Device firmware is outdated compared to latest GitHub release ('update' mode)
-//
-// Flash process:
-//   1. Main process disconnects Node.js serial port and registers Web Serial auto-select.
-//   2. Renderer downloads the merged binary from GitHub.
-//   3. esptool-js opens the port via Web Serial API and flashes.
-//   4. Device reboots; studio reconnects automatically.
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ESPLoader, Transport } from 'esptool-js'
-import SparkMD5 from 'spark-md5'
 import { useDeviceStore } from '../../stores/device.store'
-import { firmwareIpc, usbService } from '../../services/ipc.service'
+import { firmwareIpc } from '../../services/ipc.service'
+import { useFirmwareFlash } from '../../hooks/useFirmwareFlash'
 import type { FirmwareRelease } from '../../services/ipc.service'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type FlashState = 'idle' | 'downloading' | 'connecting' | 'flashing' | 'done' | 'error'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Convert a binary ArrayBuffer to the Latin-1 string that esptool-js expects. */
-function bufferToString(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf)
-  let str = ''
-  for (const byte of bytes) {
-    str += String.fromCharCode(byte)
-  }
-  return str
-}
-
-/** Download a URL and return its content as an ArrayBuffer, reporting progress. */
-async function downloadBinary(
-  url: string,
-  onProgress: (pct: number) => void
-): Promise<ArrayBuffer> {
-  const response = await fetch(url)
-  if (!response.ok) throw new Error('Download failed: ' + String(response.status))
-
-  const total = parseInt(response.headers.get('content-length') ?? '0', 10)
-  const { body } = response
-  if (!body) throw new Error('No response body')
-  const reader = body.getReader()
-
-  const chunks: Uint8Array[] = []
-  let received = 0
-
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    received += value.length
-    if (total > 0) onProgress(Math.min(99, Math.round((received / total) * 100)))
-  }
-
-  const total2 = chunks.reduce((acc, c) => acc + c.length, 0)
-  const merged = new Uint8Array(total2)
-  let offset = 0
-  for (const chunk of chunks) {
-    merged.set(chunk, offset)
-    offset += chunk.length
-  }
-
-  onProgress(100)
-  return merged.buffer
-}
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -116,25 +53,16 @@ export default function FirmwareDialog() {
   const setFirmwareDialog = useDeviceStore((s) => s.setFirmwareDialog)
   const portPath = useDeviceStore((s) => s.portPath)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
-  const setConnected = useDeviceStore((s) => s.setConnected)
-  const setDisconnected = useDeviceStore((s) => s.setDisconnected)
 
   const [channel, setChannel] = useState<'stable' | 'beta'>('stable')
   const [releases, setReleases] = useState<FirmwareRelease[]>([])
   const [selectedTag, setSelectedTag] = useState<string>('')
   const [loading, setLoading] = useState(false)
-  const [flashState, setFlashState] = useState<FlashState>('idle')
-  const [progress, setProgress] = useState(0)
-  const [errorMsg, setErrorMsg] = useState('')
-  const [logs, setLogs] = useState<string[]>([])
 
-  const appendLog = useCallback((text: string) => {
-    setLogs((prev) => [...prev, text])
-  }, [])
+  const { state, phase, progress, logs, error, flash, reset } = useFirmwareFlash()
 
   const { visible, mode } = firmwareDialog
 
-  // Fetch release list whenever the dialog opens or channel changes
   useEffect(() => {
     if (!visible) return
     setLoading(true)
@@ -147,7 +75,7 @@ export default function FirmwareDialog() {
         if (list.length > 0 && list[0]) setSelectedTag(list[0].tag)
       })
       .catch(() => {
-        setErrorMsg('Could not fetch releases — check internet connection')
+        /* error shown inline */
       })
       .finally(() => {
         setLoading(false)
@@ -156,118 +84,20 @@ export default function FirmwareDialog() {
 
   const selectedRelease: FirmwareRelease | undefined = releases.find((r) => r.tag === selectedTag)
 
+  const isFlashing = state === 'downloading' || state === 'connecting' || state === 'flashing'
+
   const handleClose = useCallback(() => {
-    if (flashState === 'flashing' || flashState === 'downloading' || flashState === 'connecting')
-      return
+    if (isFlashing) return
     setFirmwareDialog({ visible: false, mode: null })
-    setFlashState('idle')
-    setProgress(0)
-    setErrorMsg('')
-    setLogs([])
-  }, [flashState, setFirmwareDialog])
+    reset()
+  }, [isFlashing, setFirmwareDialog, reset])
 
   const handleFlash = useCallback(async () => {
     if (!selectedRelease?.downloadUrl || !portPath) return
-
-    setFlashState('downloading')
-    setProgress(0)
-    setErrorMsg('')
-    setLogs([])
-
-    try {
-      // 1. Enter flash mode — main closes USB serial, enables Web Serial auto-select
-      appendLog(`Flashing ${selectedRelease.tag} to ${portPath}…`)
-      await firmwareIpc.enterFlash(portPath)
-      setDisconnected()
-
-      // 2. Download merged firmware binary
-      appendLog(`Downloading ${selectedRelease.downloadUrl}`)
-      const binBuffer = await downloadBinary(selectedRelease.downloadUrl, (pct) => {
-        setProgress(Math.round(pct * 0.4)) // 0-40% = download
-      })
-      appendLog(`Download complete (${(binBuffer.byteLength / 1024).toFixed(1)} KB)`)
-      const binString = bufferToString(binBuffer)
-
-      // 3. Open Web Serial port (main auto-selects via select-serial-port handler)
-      setFlashState('connecting')
-      appendLog('Opening serial port…')
-      const port = await navigator.serial.requestPort()
-      await port.open({ baudRate: 115200 })
-      appendLog('Port open at 115200 baud')
-
-      // 4. Flash with esptool-js.
-      setFlashState('flashing')
-      const transport = new Transport(port, false)
-      const loader = new ESPLoader({
-        transport,
-        baudrate: 921600,
-        romBaudrate: 115200,
-        enableTracing: false,
-        terminal: {
-          write: (text: string) => {
-            appendLog(text)
-          },
-          writeLine: (line: string) => {
-            appendLog(line)
-          },
-          clean: () => {
-            setLogs([])
-          },
-        },
-      })
-
-      await loader.main()
-
-      await loader.writeFlash({
-        fileArray: [{ data: binString, address: 0x1000 }],
-        flashSize: 'keep',
-        flashMode: 'keep',
-        flashFreq: 'keep',
-        eraseAll: false,
-        compress: true,
-        reportProgress: (_idx: number, written: number, total: number) => {
-          const pct = 40 + Math.round((written / total) * 55) // 40-95%
-          setProgress(pct)
-        },
-        calculateMD5Hash: (image: string) => SparkMD5.hashBinary(image),
-      })
-
-      await loader.hardReset()
-      await transport.disconnect()
-      await port.close()
-      appendLog('Device rebooting…')
-
-      setProgress(100)
-      setFlashState('done')
-
-      // Exit flash mode
-      await firmwareIpc.exitFlash()
-
-      // Auto-reconnect after device reboots (~3s)
-      setTimeout(() => {
-        usbService
-          .connect(portPath)
-          .then((result) => {
-            if (result.success) setConnected(portPath)
-          })
-          .catch(() => {
-            /* reconnect is best-effort */
-          })
-      }, 3_500)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setErrorMsg(msg)
-      setFlashState('error')
-      await firmwareIpc.exitFlash().catch((_err: unknown) => {
-        /* best-effort cleanup */
-      })
-    }
-  }, [selectedRelease, portPath, setDisconnected, setConnected])
+    await flash({ type: 'url', url: selectedRelease.downloadUrl }, portPath, selectedRelease.tag)
+  }, [selectedRelease, portPath, flash])
 
   if (!visible) return null
-
-  const isFlashing =
-    flashState === 'downloading' || flashState === 'connecting' || flashState === 'flashing'
 
   return (
     <div style={overlay} onClick={handleClose}>
@@ -316,17 +146,12 @@ export default function FirmwareDialog() {
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-          {flashState === 'done' ? (
+          {state === 'done' ? (
             <DonePanel onClose={handleClose} />
-          ) : flashState === 'error' ? (
-            <ErrorPanel
-              message={errorMsg}
-              onRetry={() => {
-                setFlashState('idle')
-              }}
-            />
+          ) : state === 'error' ? (
+            <ErrorPanel message={error ?? 'Flash failed'} onRetry={reset} />
           ) : isFlashing ? (
-            <ProgressPanel state={flashState} progress={progress} logs={logs} />
+            <ProgressPanel phase={phase} progress={progress} logs={logs} />
           ) : (
             <>
               {/* Channel picker */}
@@ -364,7 +189,7 @@ export default function FirmwareDialog() {
                   </div>
                 ) : releases.length === 0 ? (
                   <div style={{ fontSize: 12, color: '#555555', padding: '8px 0' }}>
-                    {errorMsg || 'No releases found for this channel'}
+                    No releases found for this channel
                   </div>
                 ) : (
                   <div
@@ -394,6 +219,11 @@ export default function FirmwareDialog() {
                       >
                         <span style={{ fontSize: 13, color: '#CCCCCC', fontWeight: 500 }}>
                           v{r.version}
+                          {!r.downloadUrl && (
+                            <span style={{ fontSize: 10, color: '#554444', marginLeft: 6 }}>
+                              (no binary)
+                            </span>
+                          )}
                         </span>
                         <span style={{ fontSize: 10, color: '#555555' }}>
                           {new Date(r.publishedAt).toLocaleDateString()}
@@ -444,7 +274,7 @@ export default function FirmwareDialog() {
         </div>
 
         {/* Footer */}
-        {!isFlashing && flashState !== 'done' && (
+        {!isFlashing && state !== 'done' && (
           <div
             style={{
               padding: '12px 20px',
@@ -454,7 +284,7 @@ export default function FirmwareDialog() {
               justifyContent: 'flex-end',
             }}
           >
-            {flashState !== 'error' && (
+            {state !== 'error' && (
               <button
                 onClick={handleClose}
                 style={{
@@ -470,30 +300,34 @@ export default function FirmwareDialog() {
                 {mode === 'update' ? 'Skip' : 'Cancel'}
               </button>
             )}
-            {flashState !== 'error' && (
+            {state !== 'error' && (
               <button
-                onClick={() => void handleFlash()}
-                disabled={!selectedRelease || !portPath || loading}
+                onClick={() => {
+                  void handleFlash()
+                }}
+                disabled={!selectedRelease?.downloadUrl || !portPath || loading}
                 style={{
                   padding: '7px 20px',
                   borderRadius: 4,
                   fontSize: 12,
                   fontWeight: 600,
-                  cursor: selectedRelease && portPath && !loading ? 'pointer' : 'not-allowed',
+                  cursor:
+                    selectedRelease?.downloadUrl && portPath && !loading
+                      ? 'pointer'
+                      : 'not-allowed',
                   border: 'none',
-                  background: selectedRelease && portPath && !loading ? '#CC3333' : '#332222',
-                  color: selectedRelease && portPath && !loading ? '#FFFFFF' : '#666666',
+                  background:
+                    selectedRelease?.downloadUrl && portPath && !loading ? '#CC3333' : '#332222',
+                  color:
+                    selectedRelease?.downloadUrl && portPath && !loading ? '#FFFFFF' : '#666666',
                 }}
               >
                 {mode === 'flash' ? 'Flash Firmware' : 'Update'}
               </button>
             )}
-            {flashState === 'error' && (
+            {state === 'error' && (
               <button
-                onClick={() => {
-                  setFlashState('idle')
-                  setErrorMsg('')
-                }}
+                onClick={reset}
                 style={{
                   padding: '7px 16px',
                   borderRadius: 4,
@@ -519,18 +353,18 @@ export default function FirmwareDialog() {
 // ---------------------------------------------------------------------------
 
 function ProgressPanel({
-  state,
+  phase,
   progress,
   logs,
 }: {
-  state: FlashState
+  phase: 'downloading' | 'connecting' | 'flashing'
   progress: number
   logs: string[]
 }) {
   const label =
-    state === 'downloading'
+    phase === 'downloading'
       ? 'Downloading firmware…'
-      : state === 'connecting'
+      : phase === 'connecting'
         ? 'Connecting to device…'
         : 'Flashing…'
 

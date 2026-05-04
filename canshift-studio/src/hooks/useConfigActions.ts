@@ -26,8 +26,8 @@ export function useConfigActions() {
 
   const log = useLogStore((s) => s.push)
 
-  const openConfig = useCallback(() => {
-    void configService.open().then((result) => {
+  const applyOpenResult = useCallback(
+    (result: Awaited<ReturnType<typeof configService.open>>) => {
       if (result.success && result.content) {
         let config = result.content as DashboardConfig
         try {
@@ -47,8 +47,20 @@ export function useConfigActions() {
       } else if (!result.success && result.error) {
         log('error', `Open failed: ${result.error}`)
       }
-    })
-  }, [setConfig, log])
+    },
+    [setConfig, log]
+  )
+
+  const openConfig = useCallback(() => {
+    void configService.open().then(applyOpenResult)
+  }, [applyOpenResult])
+
+  const openConfigPath = useCallback(
+    (filePath: string) => {
+      void configService.openPath(filePath).then(applyOpenResult)
+    },
+    [applyOpenResult]
+  )
 
   const saveConfig = useCallback(() => {
     if (!config) return
@@ -118,5 +130,5 @@ export function useConfigActions() {
     showDiff,
   ])
 
-  return { openConfig, saveConfig, burnConfig, config, connected, syncing }
+  return { openConfig, openConfigPath, saveConfig, burnConfig, config, connected, syncing }
 }

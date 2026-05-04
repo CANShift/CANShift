@@ -2,10 +2,33 @@
 // File operations dispatch IPC events that the renderer listens for.
 
 import { Menu, BrowserWindow, app } from 'electron'
+import { basename } from 'node:path'
 import { IpcChannels } from './ipc/ipc-channels'
+import { sessionService } from './services/session.service'
 
 export function buildMenu(win: BrowserWindow): void {
   const isMac = process.platform === 'darwin'
+  const recentFiles = sessionService.getRecentFiles()
+
+  const recentSubmenu: Electron.MenuItemConstructorOptions[] =
+    recentFiles.length > 0
+      ? [
+          ...recentFiles.map((filePath) => ({
+            label: basename(filePath),
+            click: () => {
+              win.webContents.send(IpcChannels.CONFIG_OPEN_PATH, filePath)
+            },
+          })),
+          { type: 'separator' as const },
+          {
+            label: 'Clear Recent Files',
+            click: () => {
+              sessionService.clearRecentFiles()
+              buildMenu(win)
+            },
+          },
+        ]
+      : [{ label: 'No recent files', enabled: false }]
 
   const template: Electron.MenuItemConstructorOptions[] = [
     // macOS app menu
@@ -36,6 +59,10 @@ export function buildMenu(win: BrowserWindow): void {
           click: () => {
             win.webContents.send(IpcChannels.CONFIG_OPEN)
           },
+        },
+        {
+          label: 'Open Recent',
+          submenu: recentSubmenu,
         },
         { type: 'separator' },
         {

@@ -11,10 +11,15 @@ import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
 import { sessionService } from '../services/session.service'
+import { buildMenu } from '../menu'
 import type { FirmwareRelease } from '../services/firmware.service'
 import type { CanFrame } from '../services/usb.service'
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
+  const rebuildMenu = (): void => {
+    const win = getWindow()
+    if (win) buildMenu(win)
+  }
   const configService = new ConfigFileService()
   const usbService = new UsbService()
 
@@ -53,25 +58,37 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   ipcMain.handle(IpcChannels.CONFIG_OPEN, async () => {
     const result = await configService.openFile()
-    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    if (result.success && result.filePath) {
+      sessionService.addRecentFile(result.filePath)
+      rebuildMenu()
+    }
     return result
   })
 
   ipcMain.handle(IpcChannels.CONFIG_OPEN_PATH, async (_event, filePath: string) => {
     const result = await configService.openFilePath(filePath)
-    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    if (result.success && result.filePath) {
+      sessionService.addRecentFile(result.filePath)
+      rebuildMenu()
+    }
     return result
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE, async (_event, config: unknown) => {
     const result = await configService.saveFile(config)
-    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    if (result.success && result.filePath) {
+      sessionService.addRecentFile(result.filePath)
+      rebuildMenu()
+    }
     return result
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE_AS, async (_event, config: unknown) => {
     const result = await configService.saveFileAs(config)
-    if (result.success && result.filePath) sessionService.setLastFilePath(result.filePath)
+    if (result.success && result.filePath) {
+      sessionService.addRecentFile(result.filePath)
+      rebuildMenu()
+    }
     return result
   })
 

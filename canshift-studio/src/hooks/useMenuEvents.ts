@@ -12,28 +12,32 @@ export function useMenuEvents() {
   const markSaved = useDashboardStore((s) => s.markSaved)
   const undo = useDashboardStore((s) => s.undo)
   const redo = useDashboardStore((s) => s.redo)
-  const { openConfig, saveConfig } = useConfigActions()
+  const { openConfig, openConfigPath, saveConfig } = useConfigActions()
 
   // Keep refs current without triggering effect re-registration
   const openConfigRef = useRef(openConfig)
+  const openConfigPathRef = useRef(openConfigPath)
   const saveConfigRef = useRef(saveConfig)
   const markSavedRef = useRef(markSaved)
   const undoRef = useRef(undo)
   const redoRef = useRef(redo)
   openConfigRef.current = openConfig
+  openConfigPathRef.current = openConfigPath
   saveConfigRef.current = saveConfig
   markSavedRef.current = markSaved
   undoRef.current = undo
   redoRef.current = redo
 
   useEffect(() => {
-    // Sync config ref when store changes
     const unsub = useDashboardStore.subscribe((s) => {
       configRef.current = s.config
     })
 
     const handleOpen = () => {
       openConfigRef.current()
+    }
+    const handleOpenPath = (filePath: unknown) => {
+      if (typeof filePath === 'string') openConfigPathRef.current(filePath)
     }
     const handleSave = () => {
       saveConfigRef.current()
@@ -53,6 +57,7 @@ export function useMenuEvents() {
     }
 
     window.ipc.on(IpcChannels.CONFIG_OPEN, handleOpen)
+    window.ipc.on(IpcChannels.CONFIG_OPEN_PATH, handleOpenPath)
     window.ipc.on(IpcChannels.CONFIG_SAVE, handleSave)
     window.ipc.on(IpcChannels.CONFIG_SAVE_AS, handleSaveAs)
     window.ipc.on(IpcChannels.HISTORY_UNDO, handleUndo)
@@ -60,6 +65,7 @@ export function useMenuEvents() {
 
     return () => {
       window.ipc.off(IpcChannels.CONFIG_OPEN, handleOpen)
+      window.ipc.off(IpcChannels.CONFIG_OPEN_PATH, handleOpenPath)
       window.ipc.off(IpcChannels.CONFIG_SAVE, handleSave)
       window.ipc.off(IpcChannels.CONFIG_SAVE_AS, handleSaveAs)
       window.ipc.off(IpcChannels.HISTORY_UNDO, handleUndo)
