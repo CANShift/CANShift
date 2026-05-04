@@ -1,5 +1,5 @@
 # CI — runs on every push to main and on every pull request
-# Checks: lint, typecheck, build for canshift-core and canshift-studio
+# Checks: lint, typecheck, build for canshift-core, canshift-studio, and canshift-mobile
 
 name: CI
 
@@ -92,6 +92,35 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # ─── Mobile app ─────────────────────────────────────────────────────────────
+  mobile:
+    name: mobile — lint + typecheck + bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: canshift-mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Bundle check (iOS)
+        run: npx expo export --platform ios --output-dir /tmp/expo-bundle
 
   # ─── Firmware — clang-format ────────────────────────────────────────────────
   firmware:

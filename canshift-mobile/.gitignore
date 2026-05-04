@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# React Native native projects (regenerated via expo prebuild)
+ios/
+android/
+
 # React Native build artifacts
 ios/Pods/
 ios/build/
