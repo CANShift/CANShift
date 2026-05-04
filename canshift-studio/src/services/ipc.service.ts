@@ -76,7 +76,6 @@ export const sessionIpc = {
 
 export interface ScreenSettingsPayload {
   brightness: number
-  contrast: number
   sleep: number
   rotation: number
 }

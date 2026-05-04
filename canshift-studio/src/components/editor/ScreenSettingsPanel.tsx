@@ -15,7 +15,7 @@ interface ScreenSettingsPanelProps {
 
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
   const navigate = useNavigate()
-  const { brightness, contrast, sleepTimeoutS, rotation, set, reset } = useScreenSettingsStore()
+  const { brightness, sleepTimeoutS, rotation, set, reset } = useScreenSettingsStore()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const log = useLogStore((s) => s.push)
@@ -27,10 +27,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
 
   const handleSave = async () => {
     if (simulationMode) {
-      log(
-        'info',
-        `Screen settings saved (sim) — brightness ${String(brightness)}% contrast ${String(contrast)}%`
-      )
+      log('info', `Screen settings saved (sim) — brightness ${String(brightness)}%`)
       return
     }
     if (!connected) {
@@ -39,14 +36,13 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     }
     const result = await usbService.pushScreenSettings({
       brightness,
-      contrast,
       sleep: sleepTimeoutS,
       rotation,
     })
     if (result.success) {
       log(
         'success',
-        `Screen settings pushed — brightness ${String(brightness)}% contrast ${String(contrast)}% rotation ${String(rotation)}°`
+        `Screen settings pushed — brightness ${String(brightness)}% rotation ${String(rotation)}°`
       )
     } else {
       log('error', `Screen settings push failed: ${result.error ?? 'unknown error'}`)
@@ -108,25 +104,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           value={brightness}
           onChange={(e) => {
             set({ brightness: Number(e.target.value) })
-          }}
-          style={{
-            width: '100%',
-            accentColor: '#CC3333',
-            cursor: 'pointer',
-            height: Math.round(scale * 3),
-          }}
-        />
-      </SettingRow>
-
-      {/* Contrast */}
-      <SettingRow label="CONTRAST" value={`${String(contrast)}%`} scale={scale}>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={contrast}
-          onChange={(e) => {
-            set({ contrast: Number(e.target.value) })
           }}
           style={{
             width: '100%',

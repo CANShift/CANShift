@@ -161,7 +161,6 @@ export class UsbService {
 
   async pushScreenSettings(settings: {
     brightness: number
-    contrast: number
     sleep: number
     rotation: number
   }): Promise<UsbResult> {
