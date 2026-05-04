@@ -1,7 +1,7 @@
 // ipc-handlers.ts — Register all IPC handlers for the main process
 
 import { ipcMain, app, BrowserWindow, dialog } from 'electron'
-import { writeFile, readdir, unlink, copyFile, mkdir } from 'node:fs/promises'
+import { writeFile, readFile, readdir, unlink, copyFile, mkdir } from 'node:fs/promises'
 import { join, basename, extname } from 'node:path'
 import { IpcChannels } from './ipc-channels'
 import { ConfigFileService } from '../services/config-file.service'
@@ -274,5 +274,43 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   ipcMain.handle(IpcChannels.SD_PREPARE, (_event, volumePath: string) =>
     sdService.prepareSD(volumePath)
+  )
+
+  // ---------------------------------------------------------------------------
+  // Device hardware config — persisted in userData/device.json
+  // ---------------------------------------------------------------------------
+
+  const deviceConfigPath = join(app.getPath('userData'), 'device.json')
+
+  ipcMain.handle(IpcChannels.DEVICE_CONFIG_READ, async () => {
+    try {
+      const raw = await readFile(deviceConfigPath, 'utf-8')
+      return { success: true, config: JSON.parse(raw) as unknown }
+    } catch {
+      return { success: false, config: null }
+    }
+  })
+
+  ipcMain.handle(IpcChannels.DEVICE_CONFIG_WRITE, async (_event, config: unknown) => {
+    try {
+      await writeFile(deviceConfigPath, JSON.stringify(config, null, 2), 'utf-8')
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle(
+    IpcChannels.DEVICE_CONFIG_WRITE_TO_SD,
+    async (_event, volumePath: string, config: unknown) => {
+      try {
+        const destDir = join(volumePath, 'config')
+        await mkdir(destDir, { recursive: true })
+        await writeFile(join(destDir, 'device.json'), JSON.stringify(config, null, 2), 'utf-8')
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    }
   )
 }

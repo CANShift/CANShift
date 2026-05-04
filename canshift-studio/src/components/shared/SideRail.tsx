@@ -1,13 +1,14 @@
 // SideRail.tsx — Vertical icon navigation rail (Editor / Signals / Update)
 
 import { NavLink } from 'react-router-dom'
-import { IconEditor, IconSignals, IconFirmware, IconCanScanner } from '../icons/Icon'
+import { IconEditor, IconSignals, IconFirmware, IconCanScanner, IconSettings } from '../icons/Icon'
 
 const NAV_ITEMS = [
   { to: '/editor', label: 'Editor', Icon: IconEditor },
   { to: '/signals', label: 'Signals', Icon: IconSignals },
   { to: '/scanner', label: 'CAN', Icon: IconCanScanner },
   { to: '/update', label: 'Update', Icon: IconFirmware },
+  { to: '/device-config', label: 'Device', Icon: IconSettings },
 ]
 
 export default function SideRail() {

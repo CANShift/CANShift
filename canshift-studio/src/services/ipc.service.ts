@@ -1,7 +1,7 @@
 // ipc.service.ts — Type-safe wrapper around the Electron IPC bridge.
 // All renderer → main communication goes through here.
 
-import type { DashboardConfig, SignalConfig } from '@tmbk/canshift-core'
+import type { DashboardConfig, SignalConfig, DeviceConfig } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
 import type { CanFrame, CanHealth } from '../../main/services/usb.service'
@@ -141,6 +141,23 @@ export const assetIpc = {
 export const sdIpc = {
   listVolumes: () => invoke<SdVolume[]>(IpcChannels.SD_LIST_VOLUMES),
   prepare: (volumePath: string) => invoke<SdPrepareResult>(IpcChannels.SD_PREPARE, volumePath),
+}
+
+// ---------------------------------------------------------------------------
+// Device hardware config
+// ---------------------------------------------------------------------------
+
+export const deviceConfigIpc = {
+  read: () =>
+    invoke<{ success: boolean; config: DeviceConfig | null }>(IpcChannels.DEVICE_CONFIG_READ),
+  write: (config: DeviceConfig) =>
+    invoke<{ success: boolean; error?: string }>(IpcChannels.DEVICE_CONFIG_WRITE, config),
+  writeToSD: (volumePath: string, config: DeviceConfig) =>
+    invoke<{ success: boolean; error?: string }>(
+      IpcChannels.DEVICE_CONFIG_WRITE_TO_SD,
+      volumePath,
+      config
+    ),
 }
 
 // ---------------------------------------------------------------------------
