@@ -92,12 +92,6 @@ export async function pushFirmware(
   localPath: string,
   onProgress?: (progress: number) => void
 ): Promise<void> {
-  // Read the binary file
-  const base64 = await FileSystem.readAsStringAsync(localPath, {
-    encoding: FileSystem.EncodingType.Base64,
-  })
-
-  // Build FormData with the binary
   const formData = new FormData()
   formData.append('firmware', {
     uri: localPath,
@@ -105,7 +99,6 @@ export async function pushFirmware(
     name: 'firmware.bin',
   } as unknown as Blob)
 
-  // POST to ESP32 OTA endpoint
   const xhr = new XMLHttpRequest()
   await new Promise<void>((resolve, reject) => {
     xhr.upload.onprogress = (e) => {
@@ -122,7 +115,4 @@ export async function pushFirmware(
     xhr.open('POST', ESP32_OTA_URL)
     xhr.send(formData)
   })
-
-  // Suppress unused variable lint warning
-  void base64
 }

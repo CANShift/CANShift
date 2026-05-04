@@ -141,6 +141,24 @@ export async function connect(deviceId: string): Promise<void> {
       }
     )
 
+    // Subscribe to STATUS notifications — receives ap_ssid when WiFi AP activates
+    device.monitorCharacteristicForService(
+      BLE_SERVICE_UUID,
+      BLE_CHAR_STATUS,
+      (error: Error | null, char: Characteristic | null) => {
+        if (error || !char?.value) return
+        try {
+          const s = JSON.parse(decodeBase64(char.value)) as {
+            ver?: string
+            can?: number
+            ap_ssid?: string
+          }
+          useDeviceStore.getState().setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
+          useDeviceStore.getState().setWifiAp(s.ap_ssid ?? null)
+        } catch {}
+      }
+    )
+
     // Handle unexpected disconnection
     device.onDisconnected(() => {
       connectedDevice = null

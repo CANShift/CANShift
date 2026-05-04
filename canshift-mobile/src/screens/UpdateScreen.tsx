@@ -31,7 +31,7 @@ type Props = {
 type Step = 'releases' | 'downloading' | 'wifi_wait' | 'pushing' | 'done'
 
 export default function UpdateScreen({ navigation }: Props) {
-  const { firmwareVersion } = useDeviceStore()
+  const { firmwareVersion, wifiApSsid } = useDeviceStore()
   const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('releases')
@@ -57,15 +57,9 @@ export default function UpdateScreen({ navigation }: Props) {
       const path = await OtaService.downloadFirmware(release, setProgress)
       setLocalPath(path)
 
-      // Tell device to start WiFi AP
+      // Tell device to start WiFi AP — firmware will push SSID via STATUS notification
       await BleService.sendCmd('start_wifi_ap')
       setStep('wifi_wait')
-
-      Alert.alert(
-        'Connect to CANShift WiFi',
-        'Go to Settings → Wi-Fi and connect to "CANShift-XXXX" (password: canshift).\n\nThen come back here and tap Push.',
-        [{ text: 'OK' }]
-      )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Download failed')
       setStep('releases')
@@ -158,10 +152,23 @@ export default function UpdateScreen({ navigation }: Props) {
       {step === 'wifi_wait' && (
         <View style={styles.center}>
           <Text style={styles.stepLabel}>Connect to CANShift WiFi</Text>
-          <Text style={styles.hint}>
-            {'Settings → Wi-Fi → CANShift-XXXX\nPassword: canshift'}
-          </Text>
-          <TouchableOpacity style={styles.pushBtn} onPress={() => void handlePush()}>
+          {wifiApSsid ? (
+            <>
+              <View style={styles.ssidBox}>
+                <Text style={styles.ssidLabel}>NETWORK</Text>
+                <Text style={styles.ssidValue}>{wifiApSsid}</Text>
+                <Text style={styles.ssidPwd}>Password: canshift</Text>
+              </View>
+              <Text style={styles.hint}>{'Settings → Wi-Fi → select the network above\nthen come back and tap Push'}</Text>
+            </>
+          ) : (
+            <Text style={styles.hint}>{'Starting WiFi AP…\nThe network name will appear shortly.'}</Text>
+          )}
+          <TouchableOpacity
+            style={[styles.pushBtn, !wifiApSsid && styles.pushBtnDisabled]}
+            onPress={() => void handlePush()}
+            disabled={!wifiApSsid}
+          >
             <Text style={styles.pushBtnText}>Push firmware</Text>
           </TouchableOpacity>
         </View>
@@ -241,6 +248,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: Colors.accent },
+  ssidBox: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: 4,
+  },
+  ssidLabel: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 1 },
+  ssidValue: { fontSize: Typography.lg, fontWeight: '700', color: Colors.text },
+  ssidPwd: { fontSize: Typography.xs, color: Colors.textMuted },
   pushBtn: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
@@ -250,6 +270,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     marginTop: Spacing.md,
   },
+  pushBtnDisabled: { opacity: 0.4 },
   pushBtnText: { fontSize: Typography.md, color: Colors.text, fontWeight: '600' },
   doneText: { fontSize: 64, color: Colors.success },
 })
