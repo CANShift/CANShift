@@ -156,7 +156,12 @@ export default function FirmwareDialog() {
     }
 
     setDialogPhase('flash')
-    await flash({ type: 'url', url: selectedRelease.downloadUrl }, portPath, selectedRelease.tag)
+    await flash(
+      { type: 'url', url: selectedRelease.downloadUrl },
+      portPath,
+      selectedRelease.tag,
+      selectedRelease.spiffsUrl
+    )
   }, [selectedRelease, portPath, flash, selectedVolume, copyToSelectedVolume])
 
   const handleReset = useCallback(() => {

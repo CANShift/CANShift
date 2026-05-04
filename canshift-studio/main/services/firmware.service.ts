@@ -11,12 +11,15 @@ import { net } from 'electron'
 const GITHUB_OWNER = 'tburkhalterr'
 const GITHUB_REPO = 'CANShift'
 const FIRMWARE_ASSET_RE = /canshift-firmware-.*-crowpanel_28-merged\.bin$/
+const SPIFFS_ASSET_RE = /canshift-spiffs-.*-crowpanel_28\.bin$/
 
 export interface FirmwareRelease {
   version: string
   tag: string
   /** Undefined when the firmware binary asset is absent from this release. */
   downloadUrl?: string
+  /** Undefined when the SPIFFS image asset is absent from this release. */
+  spiffsUrl?: string
   publishedAt: string
   prerelease: boolean
   notes: string
@@ -94,12 +97,15 @@ export class FirmwareService {
       if (!isRelease(item)) continue
       if (channel === 'stable' && item.prerelease) continue
 
-      const asset = item.assets.filter(isAsset).find((a) => FIRMWARE_ASSET_RE.test(a.name))
+      const assets = item.assets.filter(isAsset)
+      const fwAsset = assets.find((a) => FIRMWARE_ASSET_RE.test(a.name))
+      const spiffsAsset = assets.find((a) => SPIFFS_ASSET_RE.test(a.name))
 
       releases.push({
         version: item.tag_name.replace(/^v/, ''),
         tag: item.tag_name,
-        ...(asset ? { downloadUrl: asset.browser_download_url } : {}),
+        ...(fwAsset ? { downloadUrl: fwAsset.browser_download_url } : {}),
+        ...(spiffsAsset ? { spiffsUrl: spiffsAsset.browser_download_url } : {}),
         publishedAt: item.published_at,
         prerelease: item.prerelease,
         notes: item.body ?? '',
