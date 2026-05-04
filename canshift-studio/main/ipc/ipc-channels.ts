@@ -69,6 +69,10 @@ export const IpcChannels = {
   // Auto-update (renderer → main)
   UPDATE_CHECK: 'update:check',
   UPDATE_INSTALL: 'update:install',
+
+  // SD card preparation (renderer → main)
+  SD_LIST_VOLUMES: 'sd:list-volumes',
+  SD_PREPARE: 'sd:prepare',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]
