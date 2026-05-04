@@ -15,6 +15,7 @@
 #include "runtime/alert_engine.h"
 #include "ui/page_manager.h"
 #include "ui/theme_manager.h"
+#include "ui/font_manager.h"
 
 #if !APP_SIMULATION_MODE
     #include "can/can_manager.h"
@@ -59,14 +60,14 @@ static void showSplash() {
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text(title, "CANShift");
     lv_obj_set_style_text_color(title, lv_color_hex(0xFF4444), 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_32, 0);
+    lv_obj_set_style_text_font(title, FontManager::get(32), 0);
     lv_obj_align(title, LV_ALIGN_CENTER, 0, -30);
 
     // Version — dim grey, right below the title
     lv_obj_t *ver = lv_label_create(scr);
     lv_label_set_text(ver, "v" APP_VERSION_STR);
     lv_obj_set_style_text_color(ver, lv_color_hex(0x444444), 0);
-    lv_obj_set_style_text_font(ver, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(ver, FontManager::get(12), 0);
     lv_obj_align(ver, LV_ALIGN_CENTER, 0, 4);
 
     // Progress bar — 280 px wide, 4 px tall, below center
@@ -93,7 +94,7 @@ static void showSplash() {
     lv_obj_t *status = lv_label_create(scr);
     lv_label_set_text(status, "Starting…");
     lv_obj_set_style_text_color(status, lv_color_hex(0x444444), 0);
-    lv_obj_set_style_text_font(status, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(status, FontManager::get(12), 0);
     lv_obj_align(status, LV_ALIGN_CENTER, 0, 66);
 
     s_splashBar = bar;
@@ -117,8 +118,9 @@ static void initStorage() {
         LOG_ERROR("BOOT", "Storage init failed — no config will be loaded");
         // Non-fatal: firmware can run with defaults
     }
-    // Register LVGL FS driver so image widgets can load BMPs from SPIFFS
+    // Register LVGL FS driver (drive 'S:' → SPIFFS) for images and fonts
     LvglFsDriver::init();
+    FontManager::init();
 }
 
 static void loadConfig() {
