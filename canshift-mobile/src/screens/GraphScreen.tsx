@@ -276,13 +276,9 @@ function ChartPanel({
         <Text style={styles.timeLabel}>{formatTime(chartData.windowEnd)}</Text>
       </View>
 
-      {/* Live values strip */}
+      {/* Live values grid — 2 rows, fixed-width cells */}
       {chartData.hasData && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.valuesStrip, { paddingVertical: vGap + 2 }]}
-        >
+        <View style={[styles.valuesGrid, { paddingVertical: vGap + 2 }]}>
           {chartData.lines.map((line) => (
             <View key={line.key} style={styles.valueChip}>
               <Text style={[styles.valueKey, { color: line.color }]}>
@@ -293,7 +289,7 @@ function ChartPanel({
               </Text>
             </View>
           ))}
-        </ScrollView>
+        </View>
       )}
     </>
   )
@@ -421,13 +417,16 @@ const styles = StyleSheet.create({
   },
   timeLabel: { fontSize: 9, color: Colors.textMuted, fontVariant: ['tabular-nums'] },
 
-  valuesStrip: {
+  valuesGrid: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.md,
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    paddingHorizontal: Spacing.sm,
   },
-  valueChip: { alignItems: 'center' },
-  valueKey: { fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
-  valueNum: { fontSize: Typography.sm, fontWeight: '700' },
+  valueChip: {
+    width: '20%',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  valueKey: { fontSize: 10, fontWeight: '600', letterSpacing: 0.3 },
+  valueNum: { fontSize: 15, fontWeight: '700' },
 })
