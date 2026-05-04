@@ -1,7 +1,7 @@
 // ConnectedNavigator.tsx — Bottom tab navigator shown after device connect
 
 import React from 'react'
-import { Text } from 'react-native'
+import { Text, useWindowDimensions } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import DashScreen from '../screens/DashScreen'
@@ -29,14 +29,28 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
 }
 
 export default function ConnectedNavigator({ navigation }: Props) {
+  const { width, height } = useWindowDimensions()
+  const isLandscape = width > height
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: Colors.surface, borderTopColor: Colors.border },
+        tabBarStyle: isLandscape
+          ? {
+              backgroundColor: Colors.surface,
+              borderTopColor: Colors.border,
+              height: 36,
+              paddingBottom: 0,
+              paddingTop: 0,
+            }
+          : { backgroundColor: Colors.surface, borderTopColor: Colors.border },
         tabBarActiveTintColor: Colors.accent,
         tabBarInactiveTintColor: Colors.textMuted,
-        tabBarLabelStyle: { fontSize: Typography.xs },
+        tabBarLabelStyle: isLandscape
+          ? { fontSize: 9, marginBottom: 2 }
+          : { fontSize: Typography.xs },
+        tabBarIconStyle: isLandscape ? { marginTop: 2 } : undefined,
       }}
     >
       <Tab.Screen
@@ -46,7 +60,6 @@ export default function ConnectedNavigator({ navigation }: Props) {
           tabBarIcon: ({ focused }) => <TabIcon icon="◉" focused={focused} />,
         }}
       >
-        {/* Pass parent stack navigation so DashScreen can push Settings/Update */}
         {() => <DashScreen navigation={navigation} />}
       </Tab.Screen>
       <Tab.Screen

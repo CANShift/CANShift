@@ -1,5 +1,4 @@
 // GraphScreen.tsx — Real-time telemetry graph (MTune-style)
-// Portrait: tabbed chart. Landscape: full-screen modal (auto, no button needed).
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
@@ -9,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   LayoutChangeEvent,
-  Modal,
   useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -17,6 +15,7 @@ import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { getBuffer, clearBuffer } from '../stores/telemetry.store'
 import { SIGNAL_META } from '../constants/ble'
+import DashTopBar from '../components/DashTopBar'
 
 // ---------------------------------------------------------------------------
 // Signal config
@@ -301,7 +300,7 @@ function ChartPanel({
 }
 
 // ---------------------------------------------------------------------------
-// Screen — portrait + auto landscape modal
+// Screen
 // ---------------------------------------------------------------------------
 
 export default function GraphScreen() {
@@ -338,18 +337,9 @@ export default function GraphScreen() {
     compact: isLandscape,
   }
 
-  if (isLandscape) {
-    return (
-      <Modal visible animationType="none" statusBarTranslucent supportedOrientations={['landscape']}>
-        <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
-          <ChartPanel {...panelProps} />
-        </SafeAreaView>
-      </Modal>
-    )
-  }
-
   return (
     <SafeAreaView style={styles.container}>
+      <DashTopBar />
       <ChartPanel {...panelProps} />
     </SafeAreaView>
   )
