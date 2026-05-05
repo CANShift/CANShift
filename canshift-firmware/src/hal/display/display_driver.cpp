@@ -65,6 +65,20 @@ void DisplayDriver::init() {
     s_tft.init();
     s_tft.setRotation(HW_DISPLAY_ROTATION);
 
+    // Diagnostic readback (issue #40):
+    // 0xD3 (RDID4) on ILI9341 returns 0x00, 0x93, 0x41 at indices 1/2/3.
+    // 0x04 (RDDID) returns manufacturer / version / driver id.
+    // Garbage / 0x00 / 0xFF on all → SPI not reaching controller (pinout/cs/miso).
+    // Different signature → controller is not ILI9341 (e.g. ST7789).
+    const uint8_t id1 = s_tft.readcommand8(0xD3, 1);
+    const uint8_t id2 = s_tft.readcommand8(0xD3, 2);
+    const uint8_t id3 = s_tft.readcommand8(0xD3, 3);
+    const uint8_t rd_mfg = s_tft.readcommand8(0x04, 1);
+    const uint8_t rd_ver = s_tft.readcommand8(0x04, 2);
+    const uint8_t rd_drv = s_tft.readcommand8(0x04, 3);
+    LOG_INFO("DISP", "RDID4 (0xD3): %02X %02X %02X (expect 00 93 41 for ILI9341)", id1, id2, id3);
+    LOG_INFO("DISP", "RDDID (0x04): mfg=%02X ver=%02X drv=%02X", rd_mfg, rd_ver, rd_drv);
+
     // Backlight ON before any pixel push so the panel is observable
     // and not still in reset when fillScreen runs.
     ledcSetup(BL_PWM_CHANNEL, BL_PWM_FREQ_HZ, BL_PWM_BITS);
