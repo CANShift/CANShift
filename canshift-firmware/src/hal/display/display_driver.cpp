@@ -41,7 +41,9 @@ void DisplayDriver::flushCallback(lv_disp_drv_t *disp, const lv_area_t *area,
 
     s_tft.startWrite();
     s_tft.setAddrWindow(area->x1, area->y1, w, h);
-    s_tft.pushPixels(reinterpret_cast<uint16_t *>(colorMap), w * h);
+    // pushColors with byte-swap mirrors Elecrow's reference flush — required for
+    // the panel byte order on this board even though LV_COLOR_16_SWAP=1.
+    s_tft.pushColors(reinterpret_cast<uint16_t *>(colorMap), w * h, true);
     s_tft.endWrite();
 
     lv_disp_flush_ready(disp);
@@ -64,6 +66,8 @@ void DisplayDriver::init() {
 
     s_tft.init();
     s_tft.setRotation(HW_DISPLAY_ROTATION);
+    LOG_INFO("DISP", "After setRotation(%d): tft.width=%d tft.height=%d",
+             HW_DISPLAY_ROTATION, s_tft.width(), s_tft.height());
 
     // Diagnostic readback (issue #40):
     // 0xD3 (RDID4) on ILI9341 returns 0x00, 0x93, 0x41 at indices 1/2/3.
