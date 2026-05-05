@@ -1,10 +1,11 @@
-// StatusBar.tsx — Bottom status bar showing connection and save state
+// StatusBar.tsx — Bottom status bar
 
+import { useState, useEffect } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useCanHealthStore } from '../../stores/canHealth.store'
+import { appIpc } from '../../services/ipc.service'
 
-// A stat older than 6s is considered stale (firmware emits every ~2s).
 const HEALTH_STALE_MS = 6_000
 
 export default function StatusBar() {
@@ -15,34 +16,52 @@ export default function StatusBar() {
   const canErrors = useCanHealthStore((s) => s.errors)
   const canUpdatedAt = useCanHealthStore((s) => s.updatedAt)
 
+  const [version, setVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    void appIpc.version().then(setVersion)
+  }, [])
+
+  const canFresh =
+    canFps !== null && canUpdatedAt !== null && Date.now() - canUpdatedAt < HEALTH_STALE_MS
+  const canFpsStr = canFresh ? `${canFps.toFixed(1)}/s` : null
+
   return (
     <footer
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 18,
-        background: '#0D0D0D',
-        borderTop: '1px solid #2A2A2A',
+        height: 20,
+        background: '#080808',
+        borderTop: '1px solid #181818',
         padding: '0 12px',
-        fontSize: 11,
-        color: '#555555',
+        fontSize: 10,
+        color: '#3A3A3A',
+        letterSpacing: '0.03em',
+        flexShrink: 0,
       }}
     >
-      <span>{connected && <span style={{ color: '#00CC44' }}>● Connected — {portPath}</span>}</span>
-
-      <span style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        {canFps !== null &&
-          canUpdatedAt !== null &&
-          Date.now() - canUpdatedAt < HEALTH_STALE_MS && (
-            <span style={{ color: canErrors ? '#FF8800' : '#556655' }}>
-              CAN {canFps.toFixed(1)}/s{canErrors ? ` · ${String(canErrors)} err` : ''}
-            </span>
-          )}
-        {isDirty && <span style={{ color: '#FF8800' }}>Unsaved changes</span>}
+      {/* Left — connection */}
+      <span style={{ minWidth: 140 }}>
+        {connected && <span style={{ color: '#3D7A4A' }}>● {portPath ?? 'connected'}</span>}
       </span>
 
-      <span>CANShift Studio v0.1.0</span>
+      {/* Center — CAN health + dirty flag */}
+      <span style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        {canFpsStr !== null && (
+          <span style={{ color: canErrors ? '#7A4A20' : '#3A4A3A' }}>
+            CAN {canFpsStr}
+            {canErrors ? ` · ${String(canErrors)} err` : ''}
+          </span>
+        )}
+        {isDirty && <span style={{ color: '#6A4A1A' }}>unsaved</span>}
+      </span>
+
+      {/* Right — version */}
+      <span style={{ minWidth: 140, textAlign: 'right' }}>
+        {version != null ? `CANShift Studio v${version}` : 'CANShift Studio'}
+      </span>
     </footer>
   )
 }
