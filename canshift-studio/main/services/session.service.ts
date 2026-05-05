@@ -10,6 +10,7 @@ import * as path from 'path'
 interface SessionData {
   lastFilePath: string | null
   recentFiles: string[]
+  lastPortPath: string | null
 }
 
 const MAX_RECENT = 10
@@ -25,9 +26,10 @@ function read(): SessionData {
     return {
       lastFilePath: data.lastFilePath ?? null,
       recentFiles: Array.isArray(data.recentFiles) ? data.recentFiles : [],
+      lastPortPath: data.lastPortPath ?? null,
     }
   } catch {
-    return { lastFilePath: null, recentFiles: [] }
+    return { lastFilePath: null, recentFiles: [], lastPortPath: null }
   }
 }
 
@@ -45,6 +47,8 @@ export const sessionService: {
   getRecentFiles: () => string[]
   addRecentFile: (filePath: string) => void
   clearRecentFiles: () => void
+  getLastPortPath: () => string | null
+  setLastPortPath: (portPath: string | null) => void
   clear: () => void
 } = {
   getLastFilePath: (): string | null => read().lastFilePath,
@@ -59,7 +63,11 @@ export const sessionService: {
   addRecentFile: (filePath: string): void => {
     const data = read()
     const deduped = data.recentFiles.filter((f) => f !== filePath)
-    write({ lastFilePath: filePath, recentFiles: [filePath, ...deduped].slice(0, MAX_RECENT) })
+    write({
+      ...data,
+      lastFilePath: filePath,
+      recentFiles: [filePath, ...deduped].slice(0, MAX_RECENT),
+    })
   },
 
   clearRecentFiles: (): void => {
@@ -67,7 +75,14 @@ export const sessionService: {
     write({ ...data, recentFiles: [] })
   },
 
+  getLastPortPath: (): string | null => read().lastPortPath,
+
+  setLastPortPath: (portPath: string | null): void => {
+    const data = read()
+    write({ ...data, lastPortPath: portPath })
+  },
+
   clear: (): void => {
-    write({ lastFilePath: null, recentFiles: [] })
+    write({ lastFilePath: null, recentFiles: [], lastPortPath: null })
   },
 }
