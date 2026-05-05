@@ -123,8 +123,12 @@ export async function connect(deviceId: string): Promise<void> {
       const status = JSON.parse(decodeBase64(statusChar.value)) as {
         ver?: string
         can?: number
+        is_day?: number
       }
       setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
+      if (status.is_day !== undefined) {
+        useDeviceStore.getState().setIsDayMode(status.is_day === 1)
+      }
     }
 
     setDevice(deviceId, device.name ?? BLE_DEVICE_NAME)
@@ -141,7 +145,7 @@ export async function connect(deviceId: string): Promise<void> {
       }
     )
 
-    // Subscribe to STATUS notifications — receives ap_ssid when WiFi AP activates
+    // Subscribe to STATUS notifications
     device.monitorCharacteristicForService(
       BLE_SERVICE_UUID,
       BLE_CHAR_STATUS,
@@ -152,9 +156,12 @@ export async function connect(deviceId: string): Promise<void> {
             ver?: string
             can?: number
             ap_ssid?: string
+            is_day?: number
           }
-          useDeviceStore.getState().setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
-          useDeviceStore.getState().setWifiAp(s.ap_ssid ?? null)
+          const store = useDeviceStore.getState()
+          store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
+          store.setWifiAp(s.ap_ssid ?? null)
+          if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
         } catch {}
       }
     )

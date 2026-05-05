@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
+import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
 
 type Props = {
@@ -28,10 +29,12 @@ const ROTATION_OPTIONS: Array<{ label: string; value: 0 | 90 | 180 | 270 }> = [
 ]
 
 export default function SettingsScreen({ navigation }: Props) {
+  const isDayMode = useDeviceStore((s) => s.isDayMode)
   const [brightness, setBrightness] = useState(80)
   const [sleep, setSleep] = useState(0)
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0)
   const [saving, setSaving] = useState(false)
+  const [calibrating, setCalibrating] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
@@ -44,6 +47,37 @@ export default function SettingsScreen({ navigation }: Props) {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleToggleDayNight = async () => {
+    try {
+      await BleService.sendCmd('toggle_day_night')
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
+    }
+  }
+
+  const handleCalibrate = () => {
+    Alert.alert(
+      'Calibrate Touch',
+      'The dashboard screen will display calibration crosshairs. Tap each point accurately.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start',
+          onPress: async () => {
+            setCalibrating(true)
+            try {
+              await BleService.sendCmd('start_calibration')
+            } catch (err) {
+              Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
+            } finally {
+              setCalibrating(false)
+            }
+          },
+        },
+      ]
+    )
   }
 
   return (
@@ -86,9 +120,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={[styles.segBtn, sleep === opt.value && styles.segBtnActive]}
                 onPress={() => setSleep(opt.value)}
               >
-                <Text
-                  style={[styles.segLabel, sleep === opt.value && styles.segLabelActive]}
-                >
+                <Text style={[styles.segLabel, sleep === opt.value && styles.segLabelActive]}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
@@ -106,14 +138,49 @@ export default function SettingsScreen({ navigation }: Props) {
                 style={[styles.segBtn, rotation === opt.value && styles.segBtnActive]}
                 onPress={() => setRotation(opt.value)}
               >
-                <Text
-                  style={[styles.segLabel, rotation === opt.value && styles.segLabelActive]}
-                >
+                <Text style={[styles.segLabel, rotation === opt.value && styles.segLabelActive]}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Day / Night */}
+        <View style={styles.section}>
+          <Text style={styles.label}>THEME</Text>
+          <View style={styles.segRow}>
+            <TouchableOpacity
+              style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
+              onPress={() => void handleToggleDayNight()}
+            >
+              <Text style={[styles.segLabel, isDayMode === false && styles.segLabelActive]}>
+                Night
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segBtn, isDayMode === true && styles.segBtnActive]}
+              onPress={() => void handleToggleDayNight()}
+            >
+              <Text style={[styles.segLabel, isDayMode === true && styles.segLabelActive]}>
+                Day
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Touch calibration */}
+        <View style={styles.section}>
+          <Text style={styles.label}>TOUCH</Text>
+          <TouchableOpacity
+            style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
+            onPress={handleCalibrate}
+            disabled={calibrating}
+          >
+            <Text style={styles.actionBtnText}>
+              {calibrating ? 'Calibrating…' : 'Calibrate Touch Screen'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -163,6 +230,16 @@ const styles = StyleSheet.create({
   segBtnActive: { backgroundColor: Colors.accentDim, borderColor: Colors.accent },
   segLabel: { fontSize: Typography.sm, color: Colors.textMuted },
   segLabelActive: { color: Colors.accent, fontWeight: '600' },
+  actionBtn: {
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+  },
+  actionBtnDisabled: { opacity: 0.5 },
+  actionBtnText: { fontSize: Typography.sm, color: Colors.text },
   footer: { padding: Spacing.lg, paddingBottom: Spacing.xl },
   saveBtn: {
     backgroundColor: Colors.accent,
