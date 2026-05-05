@@ -6,17 +6,19 @@ export type ConnectionState = 'idle' | 'scanning' | 'connecting' | 'connected' |
 
 interface DeviceState {
   connectionState: ConnectionState
-  deviceId: string | null       // BLE device ID
+  deviceId: string | null
   deviceName: string | null
   firmwareVersion: string | null
   canHealthy: boolean
-  wifiApSsid: string | null     // set when WiFi AP is active
+  wifiApSsid: string | null
+  isDayMode: boolean | null
   error: string | null
 
   setConnectionState: (s: ConnectionState) => void
   setDevice: (id: string, name: string) => void
   setFirmwareStatus: (version: string, canHealthy: boolean) => void
   setWifiAp: (ssid: string | null) => void
+  setIsDayMode: (v: boolean) => void
   setError: (msg: string | null) => void
   disconnect: () => void
 }
@@ -28,6 +30,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   firmwareVersion: null,
   canHealthy: false,
   wifiApSsid: null,
+  isDayMode: null,
   error: null,
 
   setConnectionState: (connectionState) => set({ connectionState }),
@@ -39,6 +42,8 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setWifiAp: (wifiApSsid) => set({ wifiApSsid }),
 
+  setIsDayMode: (isDayMode) => set({ isDayMode }),
+
   setError: (error) => set({ error, connectionState: 'error' }),
 
   disconnect: () =>
@@ -49,6 +54,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       firmwareVersion: null,
       canHealthy: false,
       wifiApSsid: null,
+      isDayMode: null,
       error: null,
     }),
 }))
