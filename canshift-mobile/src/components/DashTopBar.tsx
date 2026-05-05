@@ -134,14 +134,14 @@ const styles = StyleSheet.create({
   version: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   simBadge: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: Colors.accentDim,
     borderWidth: 1,
-    borderColor: '#4a4aff',
+    borderColor: Colors.accent,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
-  simText: { fontSize: Typography.xs, color: '#7a7aff', fontWeight: '700' },
+  simText: { fontSize: Typography.xs, color: Colors.accent, fontWeight: '700' },
   staleBadge: {
     backgroundColor: Colors.accentDim,
     borderWidth: 1,

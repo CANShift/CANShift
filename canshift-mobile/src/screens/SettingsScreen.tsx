@@ -165,13 +165,11 @@ const styles = StyleSheet.create({
   segLabelActive: { color: Colors.accent, fontWeight: '600' },
   footer: { padding: Spacing.lg, paddingBottom: Spacing.xl },
   saveBtn: {
-    backgroundColor: Colors.successBg,
-    borderWidth: 1,
-    borderColor: Colors.successBorder,
+    backgroundColor: Colors.accent,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { fontSize: Typography.md, fontWeight: '700', color: Colors.success },
+  saveBtnText: { fontSize: Typography.md, fontWeight: '700', color: Colors.white },
 })
