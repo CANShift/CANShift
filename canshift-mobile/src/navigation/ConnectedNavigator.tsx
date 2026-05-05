@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import DashScreen from '../screens/DashScreen'
 import GraphScreen from '../screens/GraphScreen'
+import LogScreen from '../screens/LogScreen'
 import { Colors, Typography } from '../theme'
 import type { RootStackParamList } from './index'
 
@@ -15,7 +16,8 @@ type Props = {
 
 export type ConnectedTabParamList = {
   Dash: undefined
-  Log: undefined
+  Graph: undefined
+  Console: undefined
 }
 
 const Tab = createBottomTabNavigator<ConnectedTabParamList>()
@@ -63,11 +65,19 @@ export default function ConnectedNavigator({ navigation }: Props) {
         {() => <DashScreen navigation={navigation} />}
       </Tab.Screen>
       <Tab.Screen
-        name="Log"
+        name="Graph"
         component={GraphScreen}
         options={{
           tabBarLabel: 'Graph',
           tabBarIcon: ({ focused }) => <TabIcon icon="∿" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Console"
+        component={LogScreen}
+        options={{
+          tabBarLabel: 'Console',
+          tabBarIcon: ({ focused }) => <TabIcon icon="≡" focused={focused} />,
         }}
       />
     </Tab.Navigator>

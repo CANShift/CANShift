@@ -1,10 +1,6 @@
-// UpdateScreen.tsx — Firmware OTA update flow
+// UpdateScreen.tsx — Firmware OTA update
 //
-// Step 1: Fetch available releases from GitHub (over cellular)
-// Step 2: Download selected firmware binary (over cellular, cached)
-// Step 3: Trigger WiFi AP on device via BLE CMD
-// Step 4: User connects phone to CANShift WiFi
-// Step 5: Push firmware binary via HTTP POST /ota
+// Flow: fetch releases → select → download → WiFi AP → flash → done
 
 import React, { useState, useEffect, useCallback } from 'react'
 import {
@@ -12,8 +8,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
-  Alert,
+  ScrollView,
   ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -30,6 +25,116 @@ type Props = {
 
 type Step = 'releases' | 'downloading' | 'wifi_wait' | 'pushing' | 'done'
 
+// ---------------------------------------------------------------------------
+// Step indicator
+// ---------------------------------------------------------------------------
+
+const STEPS = ['Select', 'Download', 'Wi-Fi', 'Flash']
+
+function StepIndicator({ current }: { current: number }) {
+  return (
+    <View style={styles.stepRow}>
+      {STEPS.map((label, i) => {
+        const done = i < current
+        const active = i === current
+        return (
+          <React.Fragment key={label}>
+            <View style={styles.stepItem}>
+              <View
+                style={[
+                  styles.stepDot,
+                  done && styles.stepDotDone,
+                  active && styles.stepDotActive,
+                ]}
+              >
+                <Text style={[styles.stepDotText, (done || active) && styles.stepDotTextActive]}>
+                  {done ? '✓' : String(i + 1)}
+                </Text>
+              </View>
+              <Text style={[styles.stepLabel, active && styles.stepLabelActive]}>{label}</Text>
+            </View>
+            {i < STEPS.length - 1 && (
+              <View style={[styles.stepLine, done && styles.stepLineDone]} />
+            )}
+          </React.Fragment>
+        )
+      })}
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Progress bar
+// ---------------------------------------------------------------------------
+
+function ProgressBar({ value }: { value: number }) {
+  return (
+    <View style={styles.progressTrack}>
+      <View style={[styles.progressFill, { width: `${Math.round(value * 100)}%` }]} />
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Release row
+// ---------------------------------------------------------------------------
+
+function ReleaseRow({
+  release,
+  isCurrent,
+  onSelect,
+}: {
+  release: OtaService.FirmwareRelease
+  isCurrent: boolean
+  onSelect: () => void
+}) {
+  const [notesOpen, setNotesOpen] = useState(false)
+  const date = new Date(release.publishedAt).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  return (
+    <View style={[styles.releaseCard, isCurrent && styles.releaseCardCurrent]}>
+      <View style={styles.releaseHeader}>
+        <View style={styles.releaseLeft}>
+          <Text style={styles.releaseVersion}>v{release.version}</Text>
+          <Text style={styles.releaseDate}>{date}</Text>
+        </View>
+        <View style={styles.releaseActions}>
+          {isCurrent ? (
+            <View style={styles.installedBadge}>
+              <Text style={styles.installedText}>Installed</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.flashBtn} onPress={onSelect}>
+              <Text style={styles.flashBtnText}>Flash</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {release.notes.length > 0 && (
+        <TouchableOpacity
+          style={styles.notesToggle}
+          onPress={() => { setNotesOpen((o) => !o) }}
+        >
+          <Text style={styles.notesToggleText}>
+            {notesOpen ? '▲ Hide notes' : '▼ Release notes'}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {notesOpen && release.notes.length > 0 && (
+        <Text style={styles.notesBody}>{release.notes}</Text>
+      )}
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
 export default function UpdateScreen({ navigation }: Props) {
   const { firmwareVersion, wifiApSsid } = useDeviceStore()
   const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
@@ -43,21 +148,28 @@ export default function UpdateScreen({ navigation }: Props) {
   useEffect(() => {
     void OtaService.fetchReleases()
       .then(setReleases)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load releases'))
-      .finally(() => setLoading(false))
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : 'Failed to load releases')
+      })
+      .finally(() => { setLoading(false) })
   }, [])
+
+  const stepIndex: Record<Step, number> = {
+    releases: 0,
+    downloading: 1,
+    wifi_wait: 2,
+    pushing: 3,
+    done: 3,
+  }
 
   const handleSelectRelease = useCallback(async (release: OtaService.FirmwareRelease) => {
     setSelectedRelease(release)
     setStep('downloading')
     setProgress(0)
     setError(null)
-
     try {
       const path = await OtaService.downloadFirmware(release, setProgress)
       setLocalPath(path)
-
-      // Tell device to start WiFi AP — firmware will push SSID via STATUS notification
       await BleService.sendCmd('start_wifi_ap')
       setStep('wifi_wait')
     } catch (e) {
@@ -70,7 +182,6 @@ export default function UpdateScreen({ navigation }: Props) {
     if (!localPath) return
     setStep('pushing')
     setProgress(0)
-
     try {
       await OtaService.pushFirmware(localPath, setProgress)
       setStep('done')
@@ -80,120 +191,120 @@ export default function UpdateScreen({ navigation }: Props) {
     }
   }, [localPath])
 
-  const renderReleaseItem = ({ item }: { item: OtaService.FirmwareRelease }) => {
-    const isCurrent = item.version === firmwareVersion?.replace(/^v/, '')
-    return (
-      <TouchableOpacity
-        style={[styles.releaseRow, isCurrent && styles.releaseRowCurrent]}
-        onPress={() => void handleSelectRelease(item)}
-        disabled={isCurrent}
-      >
-        <View>
-          <Text style={styles.releaseVersion}>v{item.version}</Text>
-          <Text style={styles.releaseDate}>
-            {new Date(item.publishedAt).toLocaleDateString()}
-            {isCurrent ? '  · installed' : ''}
-          </Text>
-        </View>
-        {!isCurrent && <Text style={styles.releaseArrow}>›</Text>}
-      </TouchableOpacity>
-    )
-  }
+  const normalizedInstalled = firmwareVersion?.replace(/^v/, '') ?? null
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Back</Text>
+        <TouchableOpacity onPress={() => { navigation.goBack() }} style={styles.backBtn}>
+          <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>FIRMWARE UPDATE</Text>
-        <View style={{ width: 48 }} />
+        <Text style={styles.title}>Firmware Update</Text>
+        <View style={styles.headerRight} />
       </View>
 
-      {error && (
+      {/* Step indicator — hidden on releases list */}
+      {step !== 'releases' && (
+        <View style={styles.stepWrapper}>
+          <StepIndicator current={stepIndex[step]} />
+        </View>
+      )}
+
+      {/* Error banner */}
+      {error != null && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
+      {/* ── Releases list ── */}
       {step === 'releases' && (
-        <>
+        <ScrollView contentContainerStyle={styles.list}>
+          <View style={styles.installedRow}>
+            <Text style={styles.installedLabel}>Installed</Text>
+            <Text style={styles.installedVersion}>{firmwareVersion ?? 'unknown'}</Text>
+          </View>
           {loading ? (
             <View style={styles.center}>
               <ActivityIndicator color={Colors.accent} />
               <Text style={styles.hint}>Loading releases…</Text>
             </View>
           ) : (
-            <FlatList
-              data={releases}
-              keyExtractor={(r) => r.version}
-              contentContainerStyle={styles.list}
-              renderItem={renderReleaseItem}
-              ListHeaderComponent={
-                <Text style={styles.sectionLabel}>
-                  Installed: {firmwareVersion ?? 'unknown'}
-                </Text>
-              }
-            />
+            releases.map((r) => (
+              <ReleaseRow
+                key={r.version}
+                release={r}
+                isCurrent={r.version === normalizedInstalled}
+                onSelect={() => { void handleSelectRelease(r) }}
+              />
+            ))
           )}
-        </>
+        </ScrollView>
       )}
 
+      {/* ── Downloading ── */}
       {step === 'downloading' && (
         <View style={styles.center}>
-          <Text style={styles.stepLabel}>Downloading v{selectedRelease?.version}…</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-          </View>
+          <Text style={styles.stepTitle}>Downloading v{selectedRelease?.version}</Text>
+          <ProgressBar value={progress} />
           <Text style={styles.hint}>{Math.round(progress * 100)}%</Text>
         </View>
       )}
 
+      {/* ── WiFi wait ── */}
       {step === 'wifi_wait' && (
         <View style={styles.center}>
-          <Text style={styles.stepLabel}>Connect to CANShift WiFi</Text>
-          {wifiApSsid ? (
+          <Text style={styles.stepTitle}>Connect to CANShift Wi-Fi</Text>
+          {wifiApSsid != null ? (
             <>
-              <View style={styles.ssidBox}>
+              <View style={styles.ssidCard}>
                 <Text style={styles.ssidLabel}>NETWORK</Text>
                 <Text style={styles.ssidValue}>{wifiApSsid}</Text>
-                <Text style={styles.ssidPwd}>Password: canshift</Text>
+                <View style={styles.ssidDivider} />
+                <Text style={styles.ssidPwd}>Password · canshift</Text>
               </View>
-              <Text style={styles.hint}>{'Settings → Wi-Fi → select the network above\nthen come back and tap Push'}</Text>
+              <Text style={styles.hint}>
+                {'Go to Settings → Wi-Fi → select the network above,\nthen come back and tap Push.'}
+              </Text>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() => { void handlePush() }}
+              >
+                <Text style={styles.primaryBtnText}>Push firmware →</Text>
+              </TouchableOpacity>
             </>
           ) : (
-            <Text style={styles.hint}>{'Starting WiFi AP…\nThe network name will appear shortly.'}</Text>
+            <>
+              <ActivityIndicator color={Colors.accent} />
+              <Text style={styles.hint}>Starting Wi-Fi AP on dashboard…</Text>
+            </>
           )}
-          <TouchableOpacity
-            style={[styles.pushBtn, !wifiApSsid && styles.pushBtnDisabled]}
-            onPress={() => void handlePush()}
-            disabled={!wifiApSsid}
-          >
-            <Text style={styles.pushBtnText}>Push firmware</Text>
-          </TouchableOpacity>
         </View>
       )}
 
+      {/* ── Pushing ── */}
       {step === 'pushing' && (
         <View style={styles.center}>
-          <Text style={styles.stepLabel}>Flashing…</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-          </View>
-          <Text style={styles.hint}>Do not close the app</Text>
+          <Text style={styles.stepTitle}>Flashing v{selectedRelease?.version}…</Text>
+          <ProgressBar value={progress} />
+          <Text style={styles.hint}>Keep the app open until complete.</Text>
         </View>
       )}
 
+      {/* ── Done ── */}
       {step === 'done' && (
         <View style={styles.center}>
-          <Text style={styles.doneText}>✓</Text>
-          <Text style={styles.stepLabel}>Update complete</Text>
+          <View style={styles.doneCircle}>
+            <Text style={styles.doneCheck}>✓</Text>
+          </View>
+          <Text style={styles.stepTitle}>Update complete</Text>
           <Text style={styles.hint}>The dashboard is rebooting.</Text>
           <TouchableOpacity
-            style={styles.pushBtn}
-            onPress={() => navigation.replace('Scan')}
+            style={styles.primaryBtn}
+            onPress={() => { navigation.replace('Scan') }}
           >
-            <Text style={styles.pushBtnText}>Reconnect</Text>
+            <Text style={styles.primaryBtnText}>Reconnect</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -203,74 +314,161 @@ export default function UpdateScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  backBtn: { width: 36, alignItems: 'flex-start' },
+  backText: { fontSize: Typography.xl, color: Colors.accent, lineHeight: 26 },
+  title: { flex: 1, fontSize: Typography.md, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+  headerRight: { width: 36 },
+
+  stepWrapper: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  back: { fontSize: Typography.md, color: Colors.accent, width: 48 },
-  title: { fontSize: Typography.sm, fontWeight: '700', color: Colors.textDim, letterSpacing: 1 },
+  stepRow: { flexDirection: 'row', alignItems: 'center' },
+  stepItem: { alignItems: 'center', gap: 4 },
+  stepDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepDotActive: { borderColor: Colors.accent, backgroundColor: Colors.accentDim },
+  stepDotDone: { borderColor: Colors.accent, backgroundColor: Colors.accent },
+  stepDotText: { fontSize: 10, color: Colors.textMuted, fontWeight: '700' },
+  stepDotTextActive: { color: Colors.white },
+  stepLabel: { fontSize: 9, color: Colors.textMuted, fontWeight: '600', letterSpacing: 0.5 },
+  stepLabelActive: { color: Colors.accent },
+  stepLine: { flex: 1, height: 1, backgroundColor: Colors.border, marginBottom: 14, marginHorizontal: 4 },
+  stepLineDone: { backgroundColor: Colors.accent },
+
   errorBanner: {
     backgroundColor: Colors.accentDim,
     borderBottomWidth: 1,
     borderBottomColor: Colors.accent,
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
   },
   errorText: { color: Colors.accent, fontSize: Typography.sm },
+
   list: { padding: Spacing.lg, gap: Spacing.sm },
-  sectionLabel: { fontSize: Typography.xs, color: Colors.textMuted, marginBottom: Spacing.sm },
-  releaseRow: {
+
+  installedRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  installedLabel: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 0.5 },
+  installedVersion: { fontSize: Typography.sm, color: Colors.text, fontWeight: '600' },
+
+  releaseCard: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.md,
     padding: Spacing.md,
-    justifyContent: 'space-between',
+    gap: Spacing.sm,
   },
-  releaseRowCurrent: { opacity: 0.5 },
-  releaseVersion: { fontSize: Typography.md, fontWeight: '600', color: Colors.text },
-  releaseDate: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
-  releaseArrow: { fontSize: Typography.xl, color: Colors.textMuted },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.lg },
-  stepLabel: { fontSize: Typography.lg, fontWeight: '600', color: Colors.text },
+  releaseCardCurrent: { opacity: 0.55 },
+  releaseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  releaseLeft: { gap: 2 },
+  releaseVersion: { fontSize: Typography.md, fontWeight: '700', color: Colors.text },
+  releaseDate: { fontSize: Typography.xs, color: Colors.textMuted },
+  releaseActions: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
+  installedBadge: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
+  installedText: { fontSize: Typography.xs, color: Colors.textMuted },
+  flashBtn: {
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  flashBtnText: { fontSize: Typography.sm, color: Colors.white, fontWeight: '700' },
+  notesToggle: { paddingTop: Spacing.xs },
+  notesToggleText: { fontSize: Typography.xs, color: Colors.textMuted },
+  notesBody: {
+    fontSize: Typography.xs,
+    color: Colors.textDim,
+    lineHeight: 18,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.sm,
+  },
+
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.lg,
+  },
+  stepTitle: { fontSize: Typography.lg, fontWeight: '600', color: Colors.text },
   hint: { fontSize: Typography.sm, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
-  progressBar: {
+
+  progressTrack: {
     width: '100%',
-    height: 4,
+    height: 3,
     backgroundColor: Colors.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: Colors.accent },
-  ssidBox: {
+
+  ssidCard: {
     width: '100%',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.accent,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-    gap: 4,
-  },
-  ssidLabel: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 1 },
-  ssidValue: { fontSize: Typography.lg, fontWeight: '700', color: Colors.text },
-  ssidPwd: { fontSize: Typography.xs, color: Colors.textMuted },
-  pushBtn: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    marginTop: Spacing.md,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
-  pushBtnDisabled: { opacity: 0.4 },
-  pushBtnText: { fontSize: Typography.md, color: Colors.text, fontWeight: '600' },
-  doneText: { fontSize: 64, color: Colors.success },
+  ssidLabel: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 1 },
+  ssidValue: { fontSize: Typography.lg, fontWeight: '700', color: Colors.text },
+  ssidDivider: { width: 40, height: 1, backgroundColor: Colors.border, marginVertical: 4 },
+  ssidPwd: { fontSize: Typography.xs, color: Colors.textMuted },
+
+  primaryBtn: {
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xxl,
+  },
+  primaryBtnText: { fontSize: Typography.md, color: Colors.white, fontWeight: '700' },
+
+  doneCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.successBg,
+    borderWidth: 1,
+    borderColor: Colors.successBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneCheck: { fontSize: Typography.xl, color: Colors.success },
 })

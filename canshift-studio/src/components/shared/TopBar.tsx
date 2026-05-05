@@ -1,4 +1,4 @@
-// TopBar.tsx — Application top navigation bar
+// TopBar.tsx — Application top bar
 
 import { useState } from 'react'
 import logoUrl from '../../../assets/CANShift_studio_logo.png'
@@ -8,49 +8,77 @@ import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
 import { IconLoad, IconExport, IconBurn, IconExit } from '../icons/Icon'
 
-const DOT_COLOR: Record<string, string> = {
-  connected: '#44CC44',
-  burning: '#FF8800',
-  error: '#CC3333',
-  disconnected: '#AAAAAA',
+const STATUS_COLOR: Record<string, string> = {
+  connected: '#3DB86B',
+  burning: '#E08030',
+  error: '#E03030',
+  disconnected: '#3A3A3A',
 }
 
-const LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<string, string> = {
   connected: 'Connected',
   burning: 'Burning…',
   error: 'Error',
-  disconnected: 'No Device',
+  disconnected: 'No device',
 }
 
-const toolbarBtn: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 5,
-  padding: '4px 10px',
-  background: 'transparent',
-  border: '1px solid #2A2A2A',
-  borderRadius: 5,
-  cursor: 'pointer',
-  fontSize: 12,
-  color: '#888888',
-  transition: 'all 0.1s',
-  WebkitAppRegion: 'no-drag',
-} as React.CSSProperties
+function ToolBtn({
+  onClick,
+  disabled,
+  title,
+  children,
+  accent,
+}: {
+  onClick: () => void
+  disabled?: boolean
+  title?: string
+  children: React.ReactNode
+  accent?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      style={
+        {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '4px 11px',
+          background: 'transparent',
+          border: `1px solid ${accent ? '#3A1A1A' : '#202020'}`,
+          borderRadius: 5,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          fontSize: 12,
+          color: disabled ? '#3A3A3A' : accent ? '#E03030' : '#777777',
+          transition: 'border-color 0.1s, color 0.1s',
+          WebkitAppRegion: 'no-drag',
+        } as React.CSSProperties
+      }
+    >
+      {children}
+    </button>
+  )
+}
 
 export default function TopBar() {
   const [modalOpen, setModalOpen] = useState(false)
   const status = useDeviceStore((s) => s.status)
+  const portPath = useDeviceStore((s) => s.portPath)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const exitSimulation = useDeviceStore((s) => s.exitSimulation)
   const log = useLogStore((s) => s.push)
 
   const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
 
-  const dotColor = simulationMode ? '#8844FF' : (DOT_COLOR[status] ?? '#AAAAAA')
-  const label = simulationMode ? 'Simulation' : (LABEL[status] ?? 'No Device')
-
   const canSave = config !== null
   const canBurn = config !== null && connected && !syncing
+
+  const dotColor = simulationMode ? '#8844FF' : (STATUS_COLOR[status] ?? '#3A3A3A')
+  const statusLabel = simulationMode
+    ? 'Simulation'
+    : `${STATUS_LABEL[status] ?? 'No device'}${status === 'connected' && portPath ? ` · ${portPath}` : ''}`
 
   return (
     <>
@@ -59,125 +87,114 @@ export default function TopBar() {
           {
             display: 'flex',
             alignItems: 'center',
-            height: 60,
-            background: '#0D0D0D',
-            borderBottom: '1px solid #2A2A2A',
-            padding: '0 16px 0 80px',
-            gap: 8,
+            height: 52,
+            background: '#0A0A0A',
+            borderBottom: '1px solid #1A1A1A',
+            padding: '0 14px 0 72px',
+            gap: 10,
             WebkitAppRegion: 'drag',
             flexShrink: 0,
           } as React.CSSProperties
         }
       >
-        {/* App logo */}
+        {/* Logo */}
         <img
           src={logoUrl}
           alt="CANShift Studio"
           style={
             {
-              height: 56,
-              marginRight: 24,
+              height: 42,
+              flexShrink: 0,
               WebkitAppRegion: 'no-drag',
-              display: 'block',
             } as React.CSSProperties
           }
         />
 
-        {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Toolbar actions */}
+        {/* Tool actions */}
         <div
           style={
             {
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 4,
               WebkitAppRegion: 'no-drag',
             } as React.CSSProperties
           }
         >
-          {/* Load */}
-          <button onClick={openConfig} style={toolbarBtn} title="Open config file">
-            <IconLoad size={13} />
+          <ToolBtn onClick={openConfig} title="Open config file">
+            <IconLoad size={12} />
             Load
-          </button>
+          </ToolBtn>
 
-          {/* Export */}
-          <button
-            onClick={saveConfig}
-            disabled={!canSave}
-            style={{ ...toolbarBtn, opacity: canSave ? 1 : 0.35 }}
-            title="Save config file"
-          >
-            <IconExport size={13} />
+          <ToolBtn onClick={saveConfig} disabled={!canSave} title="Save config file">
+            <IconExport size={12} />
             Export
-          </button>
+          </ToolBtn>
 
-          {/* Burn */}
-          <button
+          <ToolBtn
             onClick={burnConfig}
             disabled={!canBurn}
-            style={{
-              ...toolbarBtn,
-              opacity: canBurn ? 1 : 0.35,
-              color: canBurn ? '#FF8800' : '#888888',
-              borderColor: canBurn ? '#3A2200' : '#2A2A2A',
-            }}
             title="Push config to device"
+            accent={canBurn}
           >
-            <IconBurn size={13} color={canBurn ? '#FF8800' : '#888888'} />
+            <IconBurn size={12} color={canBurn ? '#E03030' : '#3A3A3A'} />
             {syncing ? 'Burning…' : 'Burn'}
-          </button>
+          </ToolBtn>
 
-          {/* Separator */}
-          <div style={{ width: 1, height: 20, background: '#2A2A2A' }} />
+          <div style={{ width: 1, height: 18, background: '#1E1E1E', margin: '0 4px' }} />
 
           {/* Exit simulation */}
           {simulationMode && (
-            <button
+            <ToolBtn
               onClick={() => {
                 exitSimulation()
                 log('info', 'Simulation mode exited')
               }}
-              style={{ ...toolbarBtn, color: '#663399', borderColor: '#2A1A44' }}
-              title="Exit simulation mode"
+              title="Exit simulation"
             >
-              <IconExit size={13} color="#663399" />
-              Exit Sim
-            </button>
+              <IconExit size={12} color="#7744CC" />
+              <span style={{ color: '#7744CC' }}>Exit sim</span>
+            </ToolBtn>
           )}
 
-          {/* Connect / status */}
+          {/* Connection status / modal trigger */}
           <button
             onClick={() => {
               if (!simulationMode) setModalOpen((o) => !o)
             }}
-            style={{
-              ...toolbarBtn,
-              background: modalOpen ? '#2A2A2A' : 'transparent',
-              borderColor: simulationMode ? '#2A1A44' : modalOpen ? '#3A3A3A' : '#2A2A2A',
-              cursor: simulationMode ? 'default' : 'pointer',
-            }}
+            title={simulationMode ? undefined : 'USB connection'}
+            style={
+              {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                background: modalOpen ? '#141414' : 'transparent',
+                border: `1px solid ${modalOpen ? '#282828' : '#202020'}`,
+                borderRadius: 5,
+                cursor: simulationMode ? 'default' : 'pointer',
+                fontSize: 12,
+                color: status === 'disconnected' && !simulationMode ? '#444444' : '#888888',
+                transition: 'background 0.1s',
+                WebkitAppRegion: 'no-drag',
+              } as React.CSSProperties
+            }
           >
             <span
               style={{
                 display: 'inline-block',
-                width: 7,
-                height: 7,
+                width: 6,
+                height: 6,
                 borderRadius: '50%',
                 background: dotColor,
-                boxShadow: status !== 'disconnected' ? `0 0 5px ${dotColor}99` : 'none',
+                boxShadow:
+                  status !== 'disconnected' || simulationMode ? `0 0 4px ${dotColor}` : 'none',
                 flexShrink: 0,
               }}
             />
-            <span
-              style={{
-                color: status === 'disconnected' && !simulationMode ? '#AAAAAA' : '#CCCCCC',
-              }}
-            >
-              {label}
-            </span>
+            {statusLabel}
           </button>
         </div>
       </header>
