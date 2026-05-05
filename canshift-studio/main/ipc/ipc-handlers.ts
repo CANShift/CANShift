@@ -100,6 +100,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return sessionService.getLastFilePath()
   })
 
+  ipcMain.handle(IpcChannels.SESSION_GET_LAST_PORT, () => {
+    return sessionService.getLastPortPath()
+  })
+
   // ---------------------------------------------------------------------------
   // USB operations
   // ---------------------------------------------------------------------------
@@ -109,7 +113,19 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.USB_CONNECT, async (_event, portPath: string) => {
-    return usbService.connect(portPath)
+    // Refuse any USB connect while a flash is in progress — the renderer's auto-connect
+    // would otherwise grab the port between enterFlash() and navigator.serial.requestPort().
+    if (firmwareService.getFlashPort()) {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'warn',
+        message: `Refused USB connect to ${portPath} — flash in progress`,
+        ts: Date.now(),
+      })
+      return { success: false, error: 'Flash in progress' }
+    }
+    const result = await usbService.connect(portPath)
+    if (result.success) sessionService.setLastPortPath(portPath)
+    return result
   })
 
   ipcMain.handle(IpcChannels.USB_DISCONNECT, async () => {
@@ -170,6 +186,17 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     firmwareService.setFlashPort(null)
     return { success: true }
   })
+
+  // Download firmware binaries in main to bypass renderer CORS on GitHub release CDN.
+  // Renderer subscribes to FIRMWARE_DOWNLOAD_PROGRESS with the same downloadId for live progress.
+  ipcMain.handle(
+    IpcChannels.FIRMWARE_DOWNLOAD,
+    async (event, url: string, downloadId: string): Promise<ArrayBuffer> => {
+      return firmwareService.downloadBinary(url, (received, total) => {
+        event.sender.send(IpcChannels.FIRMWARE_DOWNLOAD_PROGRESS, { downloadId, received, total })
+      })
+    }
+  )
 
   // ---------------------------------------------------------------------------
   // Asset management (local image library → SPIFFS via pio uploadfs)
@@ -289,18 +316,4 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
-
-  ipcMain.handle(
-    IpcChannels.DEVICE_CONFIG_WRITE_TO_SD,
-    async (_event, volumePath: string, config: unknown) => {
-      try {
-        const destDir = join(volumePath, 'config')
-        await mkdir(destDir, { recursive: true })
-        await writeFile(join(destDir, 'device.json'), JSON.stringify(config, null, 2), 'utf-8')
-        return { success: true }
-      } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : String(err) }
-      }
-    }
-  )
 }
