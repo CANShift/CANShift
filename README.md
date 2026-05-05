@@ -126,7 +126,7 @@ docs/                Architecture documentation
 - CAN health indicator in the status bar
 - **Flash Latest** — fetch latest release from GitHub, flash firmware + SPIFFS in one click (no PlatformIO needed)
 - Manual firmware flash from a local `.bin` file
-- Screen settings — brightness, contrast, sleep timeout, rotation
+- Screen settings — brightness, sleep timeout, rotation
 - Device config tab — configure CAN bus speed and TWAI GPIO pins, write `device.json` to SD
 - Studio auto-update (electron-updater)
 - Simulation mode — work without physical hardware
@@ -135,7 +135,7 @@ docs/                Architecture documentation
 - BLE device scan and connect
 - Live telemetry dashboard — RPM, speed, gear, temps, pressures
 - Signal graph view
-- Screen settings push via BLE
+- Screen settings — brightness, sleep timeout, rotation, day/night theme toggle, touch calibration
 - Console tab — app and device event log
 - Firmware OTA update — fetch releases, download, flash over Wi-Fi AP
 - Simulation mode
