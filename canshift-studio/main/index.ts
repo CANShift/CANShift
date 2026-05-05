@@ -130,16 +130,46 @@ function createWindow(): void {
   mainWindow.webContents.session.setDevicePermissionHandler((details) => {
     return details.deviceType === 'serial'
   })
+  // Log a marker on startup so the user can verify the latest main build is running
+  mainWindow.webContents.once('did-finish-load', () => {
+    logMain('info', 'Main process build: select-serial-port v2 active')
+  })
+
   mainWindow.webContents.session.on('select-serial-port', (event, portList, _wc, callback) => {
     event.preventDefault()
     const target = firmwareService.getFlashPort()
-    if (!target) {
-      callback('') // no flash in progress — deny
-      return
+
+    // CrowPanel and similar boards expose a CH340 / CP210x / CH9102 USB-to-UART chip.
+    // We rely on VID/PID detection because the renderer must call requestPort()
+    // synchronously after the user gesture (before any await — including enterFlash IPC),
+    // so `target` may not be set yet when this event fires.
+    // Electron reports vendorId/productId as decimal strings on macOS — convert to hex.
+    const toHex4 = (v: string | undefined): string => {
+      const n = parseInt(v ?? '0', 10)
+      return Number.isNaN(n) ? '' : n.toString(16).padStart(4, '0')
     }
-    // Match on exact portId or basename (macOS: /dev/tty.usbserial-XXX)
-    const found = portList.find(
-      (p) => p.portId === target || basename(p.portId) === basename(target)
+    const isCanShiftBridge = (p: Electron.SerialPort): boolean => {
+      const key = `${toHex4(p.vendorId)}:${toHex4(p.productId)}`
+      return ['1a86:7523', '1a86:55d4', '10c4:ea60'].includes(key)
+    }
+
+    // macOS exposes the same USB serial port at both /dev/tty.* and /dev/cu.*.
+    // Strip the prefix so 'tty.usbserial-2130' matches Chromium's 'cu.usbserial-2130'.
+    const tail = (s: string | undefined): string => basename(s ?? '').replace(/^(?:tty|cu)\./, '')
+
+    let found: Electron.SerialPort | undefined
+    if (target) {
+      const targetTail = tail(target)
+      found =
+        portList.find((p) => p.portId === target) ??
+        portList.find((p) => tail(p.portName) === targetTail) ??
+        portList.find((p) => tail(p.portId) === targetTail)
+    }
+    found = found ?? portList.find(isCanShiftBridge)
+
+    logMain(
+      'info',
+      `select-serial-port: target=${target ?? 'null'} match=${found?.portId ?? 'none'} portList=${JSON.stringify(portList)}`
     )
     callback(found?.portId ?? '')
   })

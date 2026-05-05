@@ -75,8 +75,11 @@ export default function DeviceConfigRoute() {
 
   const [sdVolumes, setSdVolumes] = useState<SdVolume[]>([])
   const [selectedVolume, setSelectedVolume] = useState('')
-  const [sdState, setSdState] = useState<'idle' | 'writing' | 'done' | 'error'>('idle')
-  const [sdError, setSdError] = useState('')
+
+  // "Prepare full SD" copies fonts + dashboard.json + signals.json from sd_contents/
+  const [prepState, setPrepState] = useState<'idle' | 'copying' | 'done' | 'error'>('idle')
+  const [prepError, setPrepError] = useState('')
+  const [prepResult, setPrepResult] = useState<{ copied: number; skipped: number } | null>(null)
 
   useEffect(() => {
     void deviceConfigIpc.read().then((result) => {
@@ -106,20 +109,20 @@ export default function DeviceConfigRoute() {
     })
   }, [])
 
-  const handleWriteToSD = useCallback(async () => {
+  const handlePrepareSD = useCallback(async () => {
     if (!selectedVolume) return
-    setSdState('writing')
-    setSdError('')
-
-    // Write device.json directly to the SD config folder
-    const result = await deviceConfigIpc.writeToSD(selectedVolume, config)
+    setPrepState('copying')
+    setPrepError('')
+    setPrepResult(null)
+    const result = await sdIpc.prepare(selectedVolume)
     if (result.success) {
-      setSdState('done')
+      setPrepResult({ copied: result.copied.length, skipped: result.skipped.length })
+      setPrepState('done')
     } else {
-      setSdError(result.error ?? 'Write failed')
-      setSdState('error')
+      setPrepError(result.error ?? 'Prepare failed')
+      setPrepState('error')
     }
-  }, [selectedVolume, config])
+  }, [selectedVolume])
 
   return (
     <div style={page}>
@@ -227,14 +230,17 @@ export default function DeviceConfigRoute() {
         {saveError && <span style={{ fontSize: 12, color: '#CC3333' }}>{saveError}</span>}
       </div>
 
-      {/* Write to SD */}
+      {/* Prepare full SD card */}
       <div style={section}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 12 }}>
-          Write to SD card
+          Prepare SD card (full)
         </div>
         <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
-          Writes <code style={{ color: '#666666' }}>device.json</code> directly to the selected
-          volume. Firmware reads it on next boot.
+          Copies fonts, default dashboard and signals to the selected volume. Required after a fresh
+          flash — without this, the screen stays black.
+        </div>
+        <div style={{ fontSize: 11, color: '#7B5500', marginBottom: 12 }}>
+          Eject the SD card from the CrowPanel, insert it into your Mac, then click below.
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
@@ -270,30 +276,34 @@ export default function DeviceConfigRoute() {
 
         <button
           onClick={() => {
-            void handleWriteToSD()
+            void handlePrepareSD()
           }}
-          disabled={!selectedVolume || sdState === 'writing'}
+          disabled={!selectedVolume || prepState === 'copying'}
           style={{
             padding: '7px 20px',
             borderRadius: 4,
             fontSize: 12,
             fontWeight: 600,
-            cursor: !selectedVolume || sdState === 'writing' ? 'not-allowed' : 'pointer',
+            cursor: !selectedVolume || prepState === 'copying' ? 'not-allowed' : 'pointer',
             border: 'none',
-            background: !selectedVolume || sdState === 'writing' ? '#332222' : '#CC3333',
-            color: !selectedVolume || sdState === 'writing' ? '#666666' : '#FFFFFF',
+            background: !selectedVolume || prepState === 'copying' ? '#332222' : '#CC3333',
+            color: !selectedVolume || prepState === 'copying' ? '#666666' : '#FFFFFF',
           }}
         >
-          {sdState === 'writing' ? 'Writing…' : 'Write to SD'}
+          {prepState === 'copying' ? 'Copying…' : 'Prepare SD card'}
         </button>
 
-        {sdState === 'done' && (
+        {prepState === 'done' && prepResult && (
           <div style={{ fontSize: 12, color: '#44CC44', marginTop: 8 }}>
-            device.json written — reboot the device to apply
+            ✓ {prepResult.copied} file{prepResult.copied !== 1 ? 's' : ''} copied
+            {prepResult.skipped > 0
+              ? ` · ${String(prepResult.skipped)} skipped (user data preserved)`
+              : ''}{' '}
+            — reinsert the card into the CrowPanel and reboot
           </div>
         )}
-        {sdState === 'error' && (
-          <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{sdError}</div>
+        {prepState === 'error' && (
+          <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{prepError}</div>
         )}
       </div>
     </div>

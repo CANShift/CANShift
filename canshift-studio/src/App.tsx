@@ -17,6 +17,7 @@ import ErrorBoundary from './components/shared/ErrorBoundary'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useFirmwareCheck } from './hooks/useFirmwareCheck'
 import { useSessionRestore } from './hooks/useSessionRestore'
+import { useAutoConnect } from './hooks/useAutoConnect'
 import { useDeviceStore } from './stores/device.store'
 import FirmwareDialog from './components/shared/FirmwareDialog'
 import PushDiffDialog from './components/shared/PushDiffDialog'
@@ -25,6 +26,7 @@ export default function App() {
   useMenuEvents()
   useFirmwareCheck()
   useSessionRestore()
+  useAutoConnect()
 
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)

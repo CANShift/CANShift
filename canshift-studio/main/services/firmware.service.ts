@@ -122,6 +122,49 @@ export class FirmwareService {
   getFlashPort(): string | null {
     return this.flashPortPath
   }
+
+  /**
+   * Download a firmware binary in the main process.
+   * Avoids the renderer-side CORS block on GitHub release CDN (objects.githubusercontent.com
+   * doesn't set Access-Control-Allow-Origin).
+   */
+  async downloadBinary(
+    url: string,
+    onProgress: (received: number, total: number) => void
+  ): Promise<ArrayBuffer> {
+    const response = await net.fetch(url, {
+      headers: { 'User-Agent': 'CANShift-Studio' },
+      redirect: 'follow',
+    })
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + String(response.status))
+    }
+
+    const total = parseInt(response.headers.get('content-length') ?? '0', 10)
+    const body = response.body
+    if (!body) throw new Error('No response body')
+
+    const reader = body.getReader() as ReadableStreamDefaultReader<Uint8Array>
+    const chunks: Uint8Array[] = []
+    let received = 0
+
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      received += value.length
+      onProgress(received, total)
+    }
+
+    const merged = new Uint8Array(received)
+    let offset = 0
+    for (const chunk of chunks) {
+      merged.set(chunk, offset)
+      offset += chunk.length
+    }
+    return merged.buffer
+  }
 }
 
 export const firmwareService = new FirmwareService()

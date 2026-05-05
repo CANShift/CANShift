@@ -39,6 +39,9 @@ export const IpcChannels = {
   FIRMWARE_LIST_RELEASES: 'firmware:list-releases',
   FIRMWARE_ENTER_FLASH: 'firmware:enter-flash',
   FIRMWARE_EXIT_FLASH: 'firmware:exit-flash',
+  FIRMWARE_DOWNLOAD: 'firmware:download',
+  // Main → renderer (download progress events for FIRMWARE_DOWNLOAD)
+  FIRMWARE_DOWNLOAD_PROGRESS: 'firmware:download-progress',
 
   // Edit history (main → renderer)
   HISTORY_UNDO: 'history:undo',
@@ -49,6 +52,7 @@ export const IpcChannels = {
 
   // Session persistence
   SESSION_GET_LAST_FILE: 'session:get-last-file',
+  SESSION_GET_LAST_PORT: 'session:get-last-port',
 
   // Config file — open by path (no dialog)
   CONFIG_OPEN_PATH: 'config:open-path',
@@ -77,7 +81,6 @@ export const IpcChannels = {
   // Device hardware config (renderer → main)
   DEVICE_CONFIG_READ: 'device:read',
   DEVICE_CONFIG_WRITE: 'device:write',
-  DEVICE_CONFIG_WRITE_TO_SD: 'device:write-to-sd',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

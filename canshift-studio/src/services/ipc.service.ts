@@ -69,6 +69,7 @@ export const configService = {
 
 export const sessionIpc = {
   getLastFilePath: () => invoke<string | null>(IpcChannels.SESSION_GET_LAST_FILE),
+  getLastPortPath: () => invoke<string | null>(IpcChannels.SESSION_GET_LAST_PORT),
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,12 @@ export const usbService = {
 // Firmware management
 // ---------------------------------------------------------------------------
 
+export interface FirmwareDownloadProgress {
+  downloadId: string
+  received: number
+  total: number
+}
+
 export const firmwareIpc = {
   queryVersion: () => invoke<{ version: string | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
   listReleases: (channel: 'stable' | 'beta') =>
@@ -103,6 +110,9 @@ export const firmwareIpc = {
   enterFlash: (portPath: string) =>
     invoke<{ success: boolean }>(IpcChannels.FIRMWARE_ENTER_FLASH, portPath),
   exitFlash: () => invoke<{ success: boolean }>(IpcChannels.FIRMWARE_EXIT_FLASH),
+  /** Downloads firmware via the main process to bypass renderer CORS. */
+  download: (url: string, downloadId: string) =>
+    invoke<ArrayBuffer>(IpcChannels.FIRMWARE_DOWNLOAD, url, downloadId),
 }
 
 // ---------------------------------------------------------------------------
@@ -152,12 +162,6 @@ export const deviceConfigIpc = {
     invoke<{ success: boolean; config: DeviceConfig | null }>(IpcChannels.DEVICE_CONFIG_READ),
   write: (config: DeviceConfig) =>
     invoke<{ success: boolean; error?: string }>(IpcChannels.DEVICE_CONFIG_WRITE, config),
-  writeToSD: (volumePath: string, config: DeviceConfig) =>
-    invoke<{ success: boolean; error?: string }>(
-      IpcChannels.DEVICE_CONFIG_WRITE_TO_SD,
-      volumePath,
-      config
-    ),
 }
 
 // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ interface SerialPortOpenOptions {
 interface SerialPort extends EventTarget {
   open(options: SerialPortOpenOptions): Promise<void>
   close(): Promise<void>
+  forget(): Promise<void>
   readonly readable: ReadableStream<Uint8Array> | null
   readonly writable: WritableStream<Uint8Array> | null
 }
