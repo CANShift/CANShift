@@ -146,29 +146,54 @@ export default function ConsolePanel() {
             />
           </svg>
 
-          {/* Clear button — stop propagation so click doesn't toggle collapse */}
+          {/* Copy + Clear buttons — stop propagation so click doesn't toggle collapse */}
           {!collapsed && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                clear()
-              }}
-              title="Clear console"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                background: 'none',
-                border: 'none',
-                color: '#3A3A3A',
-                cursor: 'pointer',
-                fontSize: 10,
-                padding: '0 2px',
-              }}
-            >
-              <IconClear size={10} color="#3A3A3A" />
-              Clear
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const text = entries
+                    .map(
+                      (entry) =>
+                        `${formatTime(entry.timestamp)} ${LEVEL_PREFIX[entry.level] ?? '    '} ${entry.message}`
+                    )
+                    .join('\n')
+                  void navigator.clipboard.writeText(text)
+                }}
+                title="Copy console to clipboard"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#3A3A3A',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  padding: '0 2px',
+                }}
+              >
+                Copy
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  clear()
+                }}
+                title="Clear console"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: 'none',
+                  border: 'none',
+                  color: '#3A3A3A',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  padding: '0 2px',
+                }}
+              >
+                <IconClear size={10} color="#3A3A3A" />
+                Clear
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -182,6 +207,8 @@ export default function ConsolePanel() {
             padding: '6px 12px',
             fontFamily: 'monospace',
             fontSize: 11,
+            userSelect: 'text',
+            cursor: 'text',
           }}
         >
           {entries.length === 0 ? (
