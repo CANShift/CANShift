@@ -7,6 +7,7 @@
 #include "diag/error_store.h"
 
 #include <ArduinoJson.h>
+#include <cmath>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -274,6 +275,8 @@ bool loadSignals() {
         strlcpy(s.unit, sig["unit"] | "", sizeof(s.unit));
         s.minValue = sig["min"] | 0.0f;
         s.maxValue = sig["max"] | 100.0f;
+        s.warningLevel = sig["warningLevel"] | NAN;
+        s.dangerLevel  = sig["dangerLevel"]  | NAN;
         s.timeoutMs = sig["timeoutMs"] | SIGNAL_DEFAULT_TIMEOUT_MS;
         const char *bitMaskStr = sig["bitMask"] | nullptr;
         s.bitMask = bitMaskStr ? static_cast<uint8_t>(strtoul(bitMaskStr, nullptr, 16)) : 0;
