@@ -114,7 +114,7 @@ function ReleaseRow({
           )}
         </View>
       </View>
-      {release.body != null && release.body.length > 0 && (
+      {release.notes.length > 0 && (
         <TouchableOpacity
           style={styles.notesToggle}
           onPress={() => { setNotesOpen((o) => !o) }}
@@ -124,8 +124,8 @@ function ReleaseRow({
           </Text>
         </TouchableOpacity>
       )}
-      {notesOpen && release.body != null && (
-        <Text style={styles.notesBody}>{release.body}</Text>
+      {notesOpen && release.notes.length > 0 && (
+        <Text style={styles.notesBody}>{release.notes}</Text>
       )}
     </View>
   )
