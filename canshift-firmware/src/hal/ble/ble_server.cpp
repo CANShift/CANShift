@@ -5,11 +5,10 @@
 
 #include "ble_server.h"
 #include "hal/wifi/wifi_ap.h"
-#include "hal/touch/touch_driver.h"
+#include "ui/theme_manager.h"
 #include "runtime/signal_store.h"
 #include "can/signal_map.h"
 #include "ui/settings_page.h"
-#include "ui/theme_manager.h"
 #include "diag/logger.h"
 #include "app_config.h"
 
@@ -17,6 +16,7 @@
 #include <ArduinoJson.h>
 #include <freertos/semphr.h>
 #include <Arduino.h>
+#include <atomic>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -42,6 +42,10 @@ static constexpr char CMD_UUID[]      = "4fa0b6a0-0000-0000-0000-000000000005";
 static NimBLECharacteristic *s_pTele     = nullptr;
 static NimBLECharacteristic *s_pStatus   = nullptr;
 static bool s_connected = false;
+
+// Deferred command flags — set by BLE callbacks, consumed by UI task
+static std::atomic<bool> s_pendingDayNightToggle{false};
+static std::atomic<bool> s_pendingCalibration{false};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -138,19 +142,13 @@ class CmdCallbacks : public NimBLECharacteristicCallbacks {
             updateStatus();
             if (s_pStatus->getSubscribedCount() > 0) s_pStatus->notify();
         } else if (strcmp(cmd, "toggle_day_night") == 0) {
-            if (xSemaphoreTake(g_lvglMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-                ThemeManager::toggleDayMode();
-                xSemaphoreGive(g_lvglMutex);
-            }
-            LOG_INFO("BLE", "CMD: day/night toggled — now %s", ThemeManager::isDayMode() ? "day" : "night");
-            updateStatus();
-            if (s_pStatus->getSubscribedCount() > 0) s_pStatus->notify();
+            // Deferred to UI task — ThemeManager requires LVGL mutex from UI context
+            s_pendingDayNightToggle.store(true, std::memory_order_relaxed);
+            LOG_INFO("BLE", "CMD: day/night toggle queued");
         } else if (strcmp(cmd, "start_calibration") == 0) {
-            LOG_INFO("BLE", "CMD: starting touch calibration");
-            if (xSemaphoreTake(g_lvglMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-                TouchDriver::calibrate();
-                xSemaphoreGive(g_lvglMutex);
-            }
+            // Deferred to UI task — calibrate() is blocking (user taps crosshairs)
+            s_pendingCalibration.store(true, std::memory_order_relaxed);
+            LOG_INFO("BLE", "CMD: calibration queued");
         } else if (strcmp(cmd, "reboot") == 0) {
             LOG_INFO("BLE", "CMD: reboot");
             delay(100);
@@ -246,6 +244,19 @@ void BleServer::tick() {
 
 bool BleServer::isConnected() {
     return s_connected;
+}
+
+void BleServer::pushStatusNotify() {
+    updateStatus();
+    if (s_pStatus && s_pStatus->getSubscribedCount() > 0) s_pStatus->notify();
+}
+
+bool BleServer::takePendingDayNightToggle() {
+    return s_pendingDayNightToggle.exchange(false, std::memory_order_relaxed);
+}
+
+bool BleServer::takePendingCalibration() {
+    return s_pendingCalibration.exchange(false, std::memory_order_relaxed);
 }
 
 #endif // APP_BLE_ENABLED
