@@ -64,12 +64,26 @@ void DisplayDriver::init() {
 
     s_tft.init();
     s_tft.setRotation(HW_DISPLAY_ROTATION);
-    s_tft.fillScreen(TFT_BLACK);
 
-    // Configure backlight PWM
+    // Backlight ON before any pixel push so the panel is observable
+    // and not still in reset when fillScreen runs.
     ledcSetup(BL_PWM_CHANNEL, BL_PWM_FREQ_HZ, BL_PWM_BITS);
     ledcAttachPin(PIN_TFT_BL, BL_PWM_CHANNEL);
     setBacklight(BL_DEFAULT_DUTY);
+
+    // Diagnostic: RGB cycle to localize white-screen fault (issue #40).
+    // - Cycles R→G→B→black → TFT_eSPI init OK, fault is downstream (LVGL flush).
+    // - Stays white → SPI / panel init is broken (pinout, RST, clock).
+    LOG_INFO("DISP", "RGB diagnostic — RED");
+    s_tft.fillScreen(TFT_RED);
+    delay(400);
+    LOG_INFO("DISP", "RGB diagnostic — GREEN");
+    s_tft.fillScreen(TFT_GREEN);
+    delay(400);
+    LOG_INFO("DISP", "RGB diagnostic — BLUE");
+    s_tft.fillScreen(TFT_BLUE);
+    delay(400);
+    s_tft.fillScreen(TFT_BLACK);
 
     LOG_INFO("DISP", "Display initialized (%dx%d)", HW_DISPLAY_WIDTH, HW_DISPLAY_HEIGHT);
 }
