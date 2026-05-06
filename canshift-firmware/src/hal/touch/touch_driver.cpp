@@ -45,17 +45,22 @@ void TouchDriver::init() {
 
     Preferences p;
     p.begin(NVS_NS, /*readOnly=*/true);
-    if (p.getBytesLength(NVS_KEY_CAL) == CAL_DATA_SIZE) {
+    const bool hasCalibration = (p.getBytesLength(NVS_KEY_CAL) == CAL_DATA_SIZE);
+    if (hasCalibration) {
         uint16_t calData[8] = {};
         p.getBytes(NVS_KEY_CAL, calData, CAL_DATA_SIZE);
-        p.end();
         s_lcd.setTouchCalibrate(calData);
         LOG_INFO("TOUCH", "Calibration loaded from NVS");
-    } else {
-        p.end();
-        LOG_WARN("TOUCH",
-                 "No NVS calibration — touch may be inaccurate. "
-                 "Run Settings → Calibrate Touch.");
+    }
+    p.end();
+
+    // Without a valid calibration the panel returns raw ADC values that
+    // never match screen coords — the user cannot reach Settings to
+    // calibrate manually. Run the interactive routine on first boot so
+    // the device is usable out of the box.
+    if (!hasCalibration) {
+        LOG_WARN("TOUCH", "No NVS calibration — running first-boot calibration");
+        calibrate();
     }
 
     lv_indev_drv_init(&s_indevDrv);
