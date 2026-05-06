@@ -5,6 +5,7 @@
 import type { CSSProperties } from 'react'
 import type { Widget, WidgetLabelPosition, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
+import { displayLabelForSignal } from '../../utils/signalLabels'
 
 // ---------------------------------------------------------------------------
 // Palette → widget style resolver
@@ -54,9 +55,11 @@ function isDangerState(widget: Widget): boolean {
 // Signal label helper — converts "coolant_temp_c" → "COOLANT TEMP C"
 // ---------------------------------------------------------------------------
 
+// Delegated to the shared dictionary so curated short labels (e.g. COOLANT
+// rather than COOLANT TEMP C) are used everywhere — keeps studio in sync
+// with firmware's `displayLabelForSignal()`.
 function formatSignalLabel(signal: string): string {
-  if (!signal) return '—'
-  return signal.replace(/_+/g, ' ').toUpperCase().trim()
+  return displayLabelForSignal(signal)
 }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +249,7 @@ function GaugeArcPreview({
         dominantBaseline="middle"
         fill="#888888"
         fontSize={labelFontSize}
-        fontFamily="sans-serif"
+        fontFamily="Montserrat, sans-serif"
         fontWeight="600"
         letterSpacing="0.06em"
       >
@@ -276,7 +279,7 @@ function GaugeArcPreview({
         fill={valueColor}
         fontSize={valueFontSize}
         fontWeight="700"
-        fontFamily="monospace"
+        fontFamily="Montserrat, sans-serif"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
@@ -290,7 +293,7 @@ function GaugeArcPreview({
           dominantBaseline="middle"
           fill={st.textColor + '77'}
           fontSize={unitFontSize}
-          fontFamily="sans-serif"
+          fontFamily="Montserrat, sans-serif"
         >
           {cfg.suffix}
         </text>
@@ -308,7 +311,7 @@ function GaugeArcPreview({
               dominantBaseline={lAttrs.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(6, Math.min(9, w * 0.1))}
-              fontFamily="sans-serif"
+              fontFamily="Montserrat, sans-serif"
               fontWeight="600"
               letterSpacing="0.04em"
             >
@@ -428,7 +431,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#888888"
             fontSize={sigFontSize}
-            fontFamily="sans-serif"
+            fontFamily="Montserrat, sans-serif"
             fontWeight="600"
             letterSpacing="0.05em"
           >
@@ -445,7 +448,7 @@ function GaugeBarPreview({
             fill="#FFFFFF"
             fontSize={Math.max(10, Math.min(barH * 0.55, 14))}
             fontWeight="700"
-            fontFamily="monospace"
+            fontFamily="Montserrat, sans-serif"
             style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {valueStr}
@@ -463,7 +466,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill={st.textColor + '77'}
             fontSize={sigFontSize}
-            fontFamily="sans-serif"
+            fontFamily="Montserrat, sans-serif"
             fontWeight="600"
             letterSpacing="0.05em"
           >
@@ -523,7 +526,7 @@ function GaugeBarPreview({
           dominantBaseline="hanging"
           fill="#888888"
           fontSize={sigFontSize}
-          fontFamily="sans-serif"
+          fontFamily="Montserrat, sans-serif"
           fontWeight="600"
           letterSpacing="0.04em"
         >
@@ -579,7 +582,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#383838"
             fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily="monospace"
+            fontFamily="Montserrat, sans-serif"
           >
             {cfg.minValue}
           </text>
@@ -590,7 +593,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#383838"
             fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily="monospace"
+            fontFamily="Montserrat, sans-serif"
           >
             {cfg.maxValue}
           </text>
@@ -605,7 +608,7 @@ function GaugeBarPreview({
         fill={valTextColor}
         fontSize={valFontSize}
         fontWeight="700"
-        fontFamily="monospace"
+        fontFamily="Montserrat, sans-serif"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
@@ -618,7 +621,7 @@ function GaugeBarPreview({
           dominantBaseline="auto"
           fill={unitTextColor}
           fontSize={unitFontSize}
-          fontFamily="sans-serif"
+          fontFamily="Montserrat, sans-serif"
           fontWeight="600"
           letterSpacing="0.03em"
           style={{ animation: danger ? BLINK_ANIM : undefined }}
@@ -639,7 +642,7 @@ function GaugeBarPreview({
               dominantBaseline={lAttrs.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(5, Math.min(8, w * 0.22))}
-              fontFamily="sans-serif"
+              fontFamily="Montserrat, sans-serif"
               fontWeight="600"
             >
               {cfg.label}
@@ -670,17 +673,16 @@ function GaugeNumericPreview({
   const st = widget.style
 
   const range = cfg.maxValue - cfg.minValue || 1
-  const warnPct = Math.max(0, Math.min(1, (cfg.warningLevel - cfg.minValue) / range))
-  const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
   const valuePct = DEMO_PCT
 
   const demoValue = cfg.minValue + range * valuePct
   const valueOnly = demoValue.toFixed(cfg.decimalPlaces)
   const prefix = cfg.prefix ?? ''
-  const suffix = cfg.suffix ?? ''
 
-  const valueColor =
-    valuePct >= dangerPct ? st.criticalColor : valuePct >= warnPct ? st.warningColor : st.textColor
+  // Firmware label_widget.cpp uses style.textColor unconditionally for the
+  // numeric value — no zone-based tinting at the value text level. Mirror that
+  // here so studio is a 1:1 preview of the device.
+  const valueColor = st.textColor
 
   const iconName = cfg.iconName ?? null
   const hasIcon = iconName !== null
@@ -688,15 +690,17 @@ function GaugeNumericPreview({
   const labelText = cfg.label ?? null
   const labelPos = cfg.labelPosition ?? 'top-left'
 
-  // Suffix / prefix render INLINE with the value ("78°C") rather than on a
-  // separate dim line — see the value span below. A corner-anchored user label
-  // can therefore never collide with the unit, regardless of where the user
-  // places the widget label from studio. Matches firmware label_widget.cpp.
+  // Suffix dropped unconditionally — see the value span below. The label name
+  // already conveys the unit, and "195km/h" overflows 80-px-wide cells.
+  // Matches firmware label_widget.cpp behaviour.
 
-  // Signal name shown at top when no custom label
+  // Signal name shown bottom-left when no custom label — matches firmware
+  // applySignalHeader() position so studio preview reads identically to the
+  // device. The auto-header reserves a 14-px band at the bottom (Montserrat
+  // 12 line height) and the value floats above it.
   const showSignalHeader = labelText === null
   const signalLabel = formatSignalLabel(widget.signal)
-  const sigHeaderH = showSignalHeader ? Math.max(8, Math.min(h * 0.18, 14)) : 0
+  const sigHeaderH = showSignalHeader ? 14 : 0
   const availH = h - sigHeaderH
 
   // Inline layout — value occupies the full available band.
@@ -718,20 +722,22 @@ function GaugeNumericPreview({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: `${String(sigHeaderH + 2)}px 4px 2px`,
+        // Reserve the band at the BOTTOM (not the top) so the auto-header
+        // sits below the value — matches firmware applySignalHeader().
+        padding: `2px 4px ${String(sigHeaderH + 2)}px`,
         boxSizing: 'border-box',
         overflow: 'hidden',
         gap: 0,
       }}
     >
-      {/* Signal name header */}
+      {/* Signal name auto-header — bottom-left, dim caps. Matches firmware. */}
       {showSignalHeader && (
         <span
           style={{
             position: 'absolute',
-            top: 2,
-            left: 3,
-            fontSize: Math.max(5, Math.min(7, sigHeaderH * 0.75)),
+            bottom: 1,
+            left: 2,
+            fontSize: 11,
             fontFamily: 'sans-serif',
             fontWeight: 600,
             color: '#888888',
@@ -739,7 +745,7 @@ function GaugeNumericPreview({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: `calc(100% - 6px)`,
+            maxWidth: `calc(100% - 4px)`,
             letterSpacing: '0.06em',
           }}
         >
@@ -787,8 +793,10 @@ function GaugeNumericPreview({
           style={{
             color: valueColor,
             fontSize,
+            // Montserrat to match firmware's compiled-in fonts (FontManager).
+            // System sans-serif fallback for environments without Montserrat.
+            fontFamily: 'Montserrat, sans-serif',
             fontWeight: 700,
-            fontFamily: 'monospace',
             lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -798,8 +806,9 @@ function GaugeNumericPreview({
             animation: danger ? BLINK_ANIM : undefined,
           }}
         >
-          {/* Suffix dropped when a user label is set — the label name conveys the unit. */}
-          {prefix + valueOnly + (labelText !== null ? '' : suffix)}
+          {/* Suffix dropped unconditionally — the label conveys the unit and
+              "195km/h" was clipping on 80-px-wide cells. */}
+          {prefix + valueOnly}
         </span>
       </div>
     </div>
@@ -838,7 +847,7 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
           dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
           fill="#888888"
           fontSize={Math.max(5, Math.min(7, h * 0.22))}
-          fontFamily="sans-serif"
+          fontFamily="Montserrat, sans-serif"
           fontWeight="600"
           letterSpacing="0.05em"
         >
@@ -854,7 +863,7 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
           dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
           fill={st.textColor + 'BB'}
           fontSize={Math.max(7, Math.min(10, h * 0.28))}
-          fontFamily="monospace"
+          fontFamily="Montserrat, sans-serif"
         >
           {valueStr}
         </text>
@@ -868,7 +877,7 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
           dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
           fill={st.textColor + '77'}
           fontSize={Math.max(6, Math.min(9, h * 0.22))}
-          fontFamily="sans-serif"
+          fontFamily="Montserrat, sans-serif"
           fontWeight="600"
           letterSpacing="0.04em"
         >
@@ -1203,7 +1212,7 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
         dominantBaseline="auto"
         fill="#2A2A2A"
         fontSize={Math.max(5, Math.min(7, w * 0.07))}
-        fontFamily="sans-serif"
+        fontFamily="Montserrat, sans-serif"
         fontWeight="600"
         letterSpacing="0.05em"
       >
@@ -1220,7 +1229,7 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
               dominantBaseline={a.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(6, Math.min(9, w * 0.12))}
-              fontFamily="sans-serif"
+              fontFamily="Montserrat, sans-serif"
               fontWeight="600"
               letterSpacing="0.04em"
             >
