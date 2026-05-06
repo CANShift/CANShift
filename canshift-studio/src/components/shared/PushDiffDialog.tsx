@@ -70,7 +70,8 @@ const OVERLAY: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 1000,
+  // Match FirmwareDialog: above all persistent UI, below UpdateBanner (9999).
+  zIndex: 9000,
 }
 
 const PANEL: React.CSSProperties = {

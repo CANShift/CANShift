@@ -14,10 +14,13 @@ import type { FirmwareRelease, SdVolume } from '../../services/ipc.service'
 // Styles
 // ---------------------------------------------------------------------------
 
+// zIndex: 9000 sits above every persistent in-app surface (ConsolePanel,
+// StatusBar, ErrorBar, route content) but below UpdateBanner (9999) so a
+// pending-update notice still shows on top of the flash dialog.
 const overlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  zIndex: 2000,
+  zIndex: 9000,
   background: 'rgba(0,0,0,0.75)',
   display: 'flex',
   alignItems: 'center',
