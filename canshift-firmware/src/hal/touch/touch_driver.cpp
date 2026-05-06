@@ -38,6 +38,13 @@ void TouchDriver::readCallback(lv_indev_drv_t * /*drv*/, lv_indev_data_t *data) 
     s_wasPressed = pressed;
 
     if (pressed) {
+        // Calibration can overshoot at the edges (e.g. x=353 / y=-8 when
+        // pressing top-right corner), causing edge widgets like the gear
+        // button to never receive events. Snap to the nearest pixel.
+        if (x < 0) x = 0;
+        if (y < 0) y = 0;
+        if (x >= HW_DISPLAY_WIDTH)  x = HW_DISPLAY_WIDTH  - 1;
+        if (y >= HW_DISPLAY_HEIGHT) y = HW_DISPLAY_HEIGHT - 1;
         data->point.x = static_cast<lv_coord_t>(x);
         data->point.y = static_cast<lv_coord_t>(y);
         data->state = LV_INDEV_STATE_PRESSED;
