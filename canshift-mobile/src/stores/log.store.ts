@@ -23,18 +23,18 @@ export const useLogStore = create<LogState>()((set) => ({
   entries: [],
 
   log: (level, message) =>
-    set((state) => {
+    { set((state) => {
       const entry: LogEntry = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `${String(Date.now())}-${Math.random().toString(36).slice(2, 7)}`,
         timestamp: Date.now(),
         level,
         message,
       }
       return { entries: [entry, ...state.entries].slice(0, MAX_ENTRIES) }
-    }),
+    }); },
 
-  clear: () => set({ entries: [] }),
+  clear: () => { set({ entries: [] }); },
 }))
 
 export const log = (level: LogLevel, message: string) =>
-  useLogStore.getState().log(level, message)
+  { useLogStore.getState().log(level, message); }

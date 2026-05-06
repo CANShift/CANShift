@@ -10,18 +10,18 @@ import * as BleService from '../services/ble.service'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
 
-type Props = {
+interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>
 }
 
-const SLEEP_OPTIONS: Array<{ label: string; value: number }> = [
+const SLEEP_OPTIONS: { label: string; value: number }[] = [
   { label: 'Off', value: 0 },
   { label: '30s', value: 30 },
   { label: '1m', value: 60 },
   { label: '5m', value: 300 },
 ]
 
-const ROTATION_OPTIONS: Array<{ label: string; value: 0 | 90 | 180 | 270 }> = [
+const ROTATION_OPTIONS: { label: string; value: 0 | 90 | 180 | 270 }[] = [
   { label: '0°', value: 0 },
   { label: '90°', value: 90 },
   { label: '180°', value: 180 },
@@ -83,7 +83,7 @@ export default function SettingsScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => { navigation.goBack(); }}>
           <Text style={styles.back}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>SCREEN SETTINGS</Text>
@@ -118,7 +118,7 @@ export default function SettingsScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.segBtn, sleep === opt.value && styles.segBtnActive]}
-                onPress={() => setSleep(opt.value)}
+                onPress={() => { setSleep(opt.value); }}
               >
                 <Text style={[styles.segLabel, sleep === opt.value && styles.segLabelActive]}>
                   {opt.label}
@@ -136,7 +136,7 @@ export default function SettingsScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.segBtn, rotation === opt.value && styles.segBtnActive]}
-                onPress={() => setRotation(opt.value)}
+                onPress={() => { setRotation(opt.value); }}
               >
                 <Text style={[styles.segLabel, rotation === opt.value && styles.segLabelActive]}>
                   {opt.label}

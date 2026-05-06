@@ -19,11 +19,11 @@ import * as BleService from '../services/ble.service'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 
-type Props = {
+interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Scan'>
 }
 
-type FoundDevice = { id: string; name: string }
+interface FoundDevice { id: string; name: string }
 
 export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
@@ -70,7 +70,7 @@ export default function ScanScreen({ navigation }: Props) {
       {/* Centered main content */}
       <View style={styles.center}>
         <Image
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
           source={require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"

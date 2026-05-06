@@ -10,10 +10,13 @@ import LogScreen from '../screens/LogScreen'
 import { Colors, Typography } from '../theme'
 import type { RootStackParamList } from './index'
 
-type Props = {
+interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connected'>
 }
 
+// Must remain a `type` (not `interface`) — React Navigation's ParamListBase
+// constraint requires an index-signature shape that interfaces don't satisfy.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export type ConnectedTabParamList = {
   Dash: undefined
   Graph: undefined

@@ -25,5 +25,5 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
     set({ values: payload, lastUpdateMs: Date.now(), isLive: true })
   },
 
-  markStale: () => set({ isLive: false }),
+  markStale: () => { set({ isLive: false }); },
 }))

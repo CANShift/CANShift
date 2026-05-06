@@ -11,7 +11,7 @@ import SignalCard from '../components/SignalCard'
 import DashTopBar from '../components/DashTopBar'
 import type { RootStackParamList } from '../navigation'
 
-type Props = {
+interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connected'>
 }
 
@@ -40,8 +40,8 @@ export default function DashScreen(_: Props) {
                   <Text style={[styles.primaryValueLandscape, !isLive && styles.dim]}>
                     {values[key] !== undefined
                       ? meta.decimals === 0
-                        ? Math.round(values[key]!).toString()
-                        : values[key]!.toFixed(meta.decimals)
+                        ? Math.round(values[key]).toString()
+                        : values[key].toFixed(meta.decimals)
                       : '---'}
                   </Text>
                   {meta.unit ? <Text style={styles.primaryUnitLandscape}>{meta.unit}</Text> : null}
@@ -81,8 +81,8 @@ export default function DashScreen(_: Props) {
                   <Text style={[styles.primaryValue, !isLive && styles.dim]}>
                     {values[key] !== undefined
                       ? meta.decimals === 0
-                        ? Math.round(values[key]!).toString()
-                        : values[key]!.toFixed(meta.decimals)
+                        ? Math.round(values[key]).toString()
+                        : values[key].toFixed(meta.decimals)
                       : '---'}
                   </Text>
                   {meta.unit ? <Text style={styles.primaryUnit}>{meta.unit}</Text> : null}
