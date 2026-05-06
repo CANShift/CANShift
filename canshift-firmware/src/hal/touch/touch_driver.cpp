@@ -33,7 +33,7 @@ void TouchDriver::readCallback(lv_indev_drv_t * /*drv*/, lv_indev_data_t *data) 
 
     static bool s_wasPressed = false;
     if (pressed && !s_wasPressed) {
-        LOG_DEBUG("TOUCH", "Press at x=%ld y=%ld", x, y);
+        LOG_INFO("TOUCH", "Press at x=%ld y=%ld", x, y);
     }
     s_wasPressed = pressed;
 

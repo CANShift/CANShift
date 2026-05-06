@@ -199,6 +199,9 @@ void checkGestures() {
             lv_dir_t dir = lv_indev_get_gesture_dir(indev);
             if (dir != LV_DIR_NONE) {
                 onGesture(dir);
+                // Required: gesture_dir stays armed otherwise — every UI tick
+                // would re-fire the same swipe (#40 page-flip loop).
+                lv_indev_wait_release(indev);
             }
             break;
         }
