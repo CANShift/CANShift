@@ -157,3 +157,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+
+      # Pre-1.0 releases are alpha by definition — flip the prerelease flag so
+      # GitHub renders them as such. Drop this step (or tighten the regex)
+      # once we cut v1.0.0.
+      - name: Flag 0.x releases as pre-release
+        if: startsWith(needs.check-version.outputs.tag, 'v0.')
+        run: gh release edit "${{ needs.check-version.outputs.tag }}" --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
