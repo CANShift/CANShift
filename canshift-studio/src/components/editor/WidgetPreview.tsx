@@ -360,10 +360,11 @@ function GaugeBarPreview({
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     const labelIsTop = !cfg.label || labelPos.startsWith('top')
 
-    // Reserve a label band on one side; track takes the rest. Tighter than
-    // the gauge-numeric header so short bars (THROTTLE, h≈28..36) keep enough
-    // vertical room for the fill to read.
-    const labelBandH = Math.max(10, Math.min(20, h * 0.18))
+    // Reserve a label band on one side; track takes the rest. The 14-px floor
+    // matches the firmware's Montserrat 12 line height — anything tighter
+    // clips the value and signal name. Cap at 24 so the bar stays dominant
+    // on tall widgets.
+    const labelBandH = Math.max(14, Math.min(24, h * 0.25))
     const gap = 2
     const barH = Math.max(4, h - labelBandH - gap)
     const trackY = labelIsTop ? labelBandH + gap : 0
