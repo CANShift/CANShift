@@ -32,7 +32,57 @@ const DEFAULT_PALETTE = {
   success: '#00CC44',
 }
 
+// Standard widget types that follow the L/XL size scale (issue #131).
+// Bar gauges keep their own narrow tokens — never resize them here.
+const STANDARD_WIDGET_TYPES = new Set(['button', 'warning', 'gear', 'timer', 'image'])
+
+// Closest remaining size for legacy small dimensions. All small tokens collapse
+// to L (160×56) — the smallest size that survives 1.6.0.
+function upgradeLegacySize(w: number, h: number): { w: number; h: number } | null {
+  // XS = 80×28, S = 80×56, M = 80×112 — collapse to L
+  if (w === 80 && (h === 28 || h === 56 || h === 112)) {
+    return { w: 160, h: 56 }
+  }
+  return null
+}
+
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.5.0 → 1.6.0: drop XS / S / M widget sizes (issue #131).
+    // Any standard widget (button, warning, gear, timer, image) sized 80×28,
+    // 80×56, or 80×112 is upgraded to L (160×56) — the closest remaining size.
+    // Gauge widgets keep their bar-specific narrow tokens (V-M, V).
+    fromVersion: '1.5.0',
+    toVersion: '1.6.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.6.0' }
+
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+
+        const migratedWidgets = widgets.map((widget) => {
+          const type = widget.type as string | undefined
+          if (!type || !STANDARD_WIDGET_TYPES.has(type)) return widget
+
+          const layout = widget.layout as Record<string, unknown> | undefined
+          const w = layout?.w
+          const h = layout?.h
+          if (typeof w !== 'number' || typeof h !== 'number') return widget
+
+          const upgraded = upgradeLegacySize(w, h)
+          if (!upgraded) return widget
+
+          return { ...widget, layout: { ...layout, w: upgraded.w, h: upgraded.h } }
+        })
+
+        return { ...page, widgets: migratedWidgets }
+      })
+
+      return { ...config, version: '1.6.0', pages: migratedPages }
+    },
+  },
   {
     // 1.4.0 → 1.5.0: TopBarConfig gains an optional `layout` field.
     // When absent, both firmware and studio preview fall back to the default
