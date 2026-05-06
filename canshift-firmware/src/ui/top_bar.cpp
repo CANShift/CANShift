@@ -1,7 +1,10 @@
 // top_bar.cpp — Persistent top status bar
 //
 // Layout (left to right):
-//   [• ECU]  [• CAN]  ......  PAGE NAME  ......  12.4V  ↓  ☀  ⚙
+//   [• ECU]  [• CAN]  ......  PAGE NAME  ......  12.4V  ↓  ☀
+//
+// Settings is opened by swiping down from the top of the screen — there is no
+// dedicated gear button (#50, redundant given the gesture).
 //
 // Status sources:
 //   ECU dot:  green when SignalIds::RPM is valid (recent ECU frame received)
@@ -42,18 +45,20 @@ static lv_obj_t *s_usbIcon = nullptr;
 
 static lv_obj_t *s_themeBtn = nullptr;
 static lv_obj_t *s_themeLabel = nullptr;
-static lv_obj_t *s_gearBtn = nullptr;
-static lv_obj_t *s_gearLabel = nullptr;
 
 static int16_t s_height = 30;
 
-static constexpr char ICON_SUN[]  = "\xE2\x98\x80"; // ☀
-static constexpr char ICON_MOON[] = "\xE2\x98\xBE"; // ☾
+// Day/night icons live on the SD as 20×20 RGB565 .bin (LVGL native format).
+// Source PNGs are in scripts/icon_sources/, regenerable via
+// scripts/png_to_lvgl_bin.py. We can't use the Unicode sun/moon glyphs
+// because the compile-time Montserrat fonts don't include them.
 
-static constexpr uint32_t COLOR_DOT_OK   = 0x33CC44;
-static constexpr uint32_t COLOR_DOT_DOWN = 0x444444;
-static constexpr uint32_t COLOR_LABEL    = 0xCCCCCC;
-static constexpr uint32_t COLOR_MUTED    = 0x666666;
+static constexpr uint32_t COLOR_DOT_OK    = 0x33CC44; // green — connected, fresh data
+static constexpr uint32_t COLOR_DOT_STALE = 0xFF8800; // orange — was connected but timing out
+static constexpr uint32_t COLOR_DOT_DOWN  = 0xCC3333; // red — never connected since boot
+static constexpr uint32_t COLOR_USB_OFF   = 0x444444; // gray — host not active
+static constexpr uint32_t COLOR_LABEL     = 0xCCCCCC;
+static constexpr uint32_t COLOR_MUTED     = 0x666666;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +70,8 @@ static lv_obj_t *makeStatusDot(lv_obj_t *parent) {
     lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_set_style_border_width(dot, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(dot, 0, LV_PART_MAIN);
+    // Initial colour = red ("never connected"). update() promotes to orange/green
+    // once a frame is observed, then back to orange if it later goes stale.
     lv_obj_set_style_bg_color(dot, lv_color_hex(COLOR_DOT_DOWN), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_clear_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
@@ -109,56 +116,36 @@ void TopBar::init() {
     lv_obj_clear_flag(s_bar, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(s_bar, LV_OBJ_FLAG_CLICKABLE);
 
-    // ---- Left: ECU + CAN status indicators ----
+    // ---- Left: [• dot] ECU [|] CAN [• dot] — matches studio preview ----
     s_ecuDot = makeStatusDot(s_bar);
     lv_obj_align(s_ecuDot, LV_ALIGN_LEFT_MID, 0, 0);
 
     s_ecuLabel = makeBarLabel(s_bar, "ECU", COLOR_LABEL);
     lv_obj_align_to(s_ecuLabel, s_ecuDot, LV_ALIGN_OUT_RIGHT_MID, 4, 0);
 
-    s_canDot = makeStatusDot(s_bar);
-    lv_obj_align_to(s_canDot, s_ecuLabel, LV_ALIGN_OUT_RIGHT_MID, 8, 0);
+    lv_obj_t *leftSep = makeBarLabel(s_bar, "|", COLOR_MUTED);
+    lv_obj_align_to(leftSep, s_ecuLabel, LV_ALIGN_OUT_RIGHT_MID, 6, 0);
 
     s_canLabel = makeBarLabel(s_bar, "CAN", COLOR_LABEL);
-    lv_obj_align_to(s_canLabel, s_canDot, LV_ALIGN_OUT_RIGHT_MID, 4, 0);
+    lv_obj_align_to(s_canLabel, leftSep, LV_ALIGN_OUT_RIGHT_MID, 6, 0);
+
+    s_canDot = makeStatusDot(s_bar);
+    lv_obj_align_to(s_canDot, s_canLabel, LV_ALIGN_OUT_RIGHT_MID, 4, 0);
 
     // ---- Center: current page name ----
     s_pageLabel = makeBarLabel(s_bar, "", COLOR_LABEL);
     lv_obj_align(s_pageLabel, LV_ALIGN_CENTER, 0, 0);
 
-    // ---- Right cluster: gear (rightmost), theme, usb icon, voltage ----
-    s_gearBtn = lv_btn_create(s_bar);
-    lv_obj_set_size(s_gearBtn, s_height - 4, s_height - 4);
-    lv_obj_align(s_gearBtn, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_obj_set_style_bg_opa(s_gearBtn, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(s_gearBtn, 0, LV_PART_MAIN);
-    lv_obj_set_style_shadow_width(s_gearBtn, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(s_gearBtn, 0, LV_PART_MAIN);
-    s_gearLabel = lv_label_create(s_gearBtn);
-    lv_label_set_text(s_gearLabel, LV_SYMBOL_SETTINGS);
-    lv_obj_set_style_text_color(s_gearLabel, lv_color_hex(COLOR_LABEL), 0);
-    lv_obj_center(s_gearLabel);
-    lv_obj_add_event_cb(
-        s_gearBtn,
-        [](lv_event_t * /*e*/) {
-            LOG_INFO("UI", "Gear/close button clicked");
-            bool nowOpen = SettingsPage::toggle();
-            lv_label_set_text(s_gearLabel, nowOpen ? LV_SYMBOL_CLOSE : LV_SYMBOL_SETTINGS);
-            lv_obj_set_style_text_color(s_gearLabel,
-                                        lv_color_hex(nowOpen ? 0xCC3333 : COLOR_LABEL), 0);
-        },
-        LV_EVENT_CLICKED, nullptr);
-
-    s_themeBtn = lv_btn_create(s_bar);
+    // ---- Right cluster (built right-to-left): theme btn, |, USB icon, voltage ----
+    // Theme toggle — uses an image asset (Montserrat compile-time font has no
+    // sun/moon glyphs). icon_day.bin shown in day mode, icon_night.bin in night.
+    s_themeBtn = lv_imgbtn_create(s_bar);
     lv_obj_set_size(s_themeBtn, s_height - 4, s_height - 4);
-    lv_obj_align(s_themeBtn, LV_ALIGN_RIGHT_MID, -(s_height - 2), 0);
-    lv_obj_set_style_bg_opa(s_themeBtn, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(s_themeBtn, 0, LV_PART_MAIN);
-    lv_obj_set_style_shadow_width(s_themeBtn, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(s_themeBtn, 0, LV_PART_MAIN);
-    s_themeLabel = lv_label_create(s_themeBtn);
-    lv_label_set_text(s_themeLabel, ThemeManager::isDayMode() ? ICON_MOON : ICON_SUN);
-    lv_obj_set_style_text_color(s_themeLabel, lv_color_hex(COLOR_LABEL), 0);
+    lv_obj_align(s_themeBtn, LV_ALIGN_RIGHT_MID, 0, 0);
+    s_themeLabel = lv_img_create(s_themeBtn);
+    lv_img_set_src(s_themeLabel,
+                   ThemeManager::isDayMode() ? "S:/assets/icon_day.bin"
+                                             : "S:/assets/icon_night.bin");
     lv_obj_center(s_themeLabel);
     if (dash.hasDayTheme) {
         lv_obj_add_event_cb(
@@ -169,16 +156,20 @@ void TopBar::init() {
         lv_obj_add_flag(s_themeBtn, LV_OBJ_FLAG_HIDDEN);
     }
 
-    // USB / download icon — left of the theme button
+    // Separator between USB icon and theme button
+    lv_obj_t *rightSep = makeBarLabel(s_bar, "|", COLOR_MUTED);
+    lv_obj_align(rightSep, LV_ALIGN_RIGHT_MID, -(s_height + 2), 0);
+
+    // USB / download icon — left of the separator
     s_usbIcon = lv_label_create(s_bar);
     lv_label_set_text(s_usbIcon, LV_SYMBOL_DOWNLOAD);
-    lv_obj_set_style_text_color(s_usbIcon, lv_color_hex(COLOR_DOT_DOWN), 0);
-    lv_obj_set_style_text_font(s_usbIcon, FontManager::get(12), 0);
-    lv_obj_align(s_usbIcon, LV_ALIGN_RIGHT_MID, -(s_height * 2), 0);
+    lv_obj_set_style_text_color(s_usbIcon, lv_color_hex(COLOR_USB_OFF), 0);
+    lv_obj_set_style_text_font(s_usbIcon, FontManager::get(14), 0);
+    lv_obj_align_to(s_usbIcon, rightSep, LV_ALIGN_OUT_LEFT_MID, -4, 0);
 
     // Voltage — left of the USB icon
     s_voltageLabel = makeBarLabel(s_bar, "--.-V", COLOR_LABEL);
-    lv_obj_align(s_voltageLabel, LV_ALIGN_RIGHT_MID, -(s_height * 2 + 22), 0);
+    lv_obj_align_to(s_voltageLabel, s_usbIcon, LV_ALIGN_OUT_LEFT_MID, -8, 0);
 
     SettingsPage::init(s_height, static_cast<int16_t>(LV_VER_RES - s_height));
 
@@ -190,28 +181,41 @@ void TopBar::reapplyTheme() {
     const CfgTopBar &cfg = ConfigLoader::getDashboardConfig().topBar;
     lv_obj_set_style_bg_color(s_bar, lv_color_hex(cfg.bgColor.rgb), LV_PART_MAIN);
     if (s_themeLabel) {
-        lv_label_set_text(s_themeLabel, ThemeManager::isDayMode() ? ICON_MOON : ICON_SUN);
+        lv_img_set_src(s_themeLabel,
+                       ThemeManager::isDayMode() ? "S:/assets/icon_day.bin"
+                                                 : "S:/assets/icon_night.bin");
     }
 }
 
 void TopBar::update() {
     if (!s_bar) return;
 
-    // ECU dot — green when RPM (or another canonical ECU signal) is valid
+    // Track first-time reception to distinguish "never connected" (red) from
+    // "was connected, now stale" (orange). Once a signal has been seen valid
+    // we keep that bit set for the rest of the boot session.
+    static bool s_ecuEverSeen = false;
+    static bool s_canEverSeen = false;
+
+    const bool ecuValid = SignalStore::isValid(SignalIds::RPM);
+    const bool canValid = ecuValid
+                       || SignalStore::isValid(SignalIds::COOLANT_TEMP_C)
+                       || SignalStore::isValid(SignalIds::BATTERY_VOLTS);
+    if (ecuValid) s_ecuEverSeen = true;
+    if (canValid) s_canEverSeen = true;
+
+    auto dotColor = [](bool valid, bool everSeen) {
+        if (valid) return COLOR_DOT_OK;
+        return everSeen ? COLOR_DOT_STALE : COLOR_DOT_DOWN;
+    };
+
     if (s_ecuDot) {
-        const bool ecuOk = SignalStore::isValid(SignalIds::RPM);
         lv_obj_set_style_bg_color(s_ecuDot,
-                                  lv_color_hex(ecuOk ? COLOR_DOT_OK : COLOR_DOT_DOWN),
+                                  lv_color_hex(dotColor(ecuValid, s_ecuEverSeen)),
                                   LV_PART_MAIN);
     }
-
-    // CAN dot — green when any of a few well-known signals is valid
     if (s_canDot) {
-        const bool canOk = SignalStore::isValid(SignalIds::RPM)
-                        || SignalStore::isValid(SignalIds::COOLANT_TEMP_C)
-                        || SignalStore::isValid(SignalIds::BATTERY_VOLTS);
         lv_obj_set_style_bg_color(s_canDot,
-                                  lv_color_hex(canOk ? COLOR_DOT_OK : COLOR_DOT_DOWN),
+                                  lv_color_hex(dotColor(canValid, s_canEverSeen)),
                                   LV_PART_MAIN);
     }
 
@@ -239,11 +243,13 @@ void TopBar::update() {
         }
     }
 
-    // USB icon — green when the studio host has been active recently
+    // USB icon — green when the studio host has been active recently, gray otherwise.
+    // Note: "active" here means we received a command in the last ~5 s. A bare cable
+    // connection without studio doesn't light it up — see usb_comm.cpp::isHostActive.
     if (s_usbIcon) {
         const bool active = UsbComm::isHostActive();
         lv_obj_set_style_text_color(s_usbIcon,
-                                    lv_color_hex(active ? COLOR_DOT_OK : COLOR_DOT_DOWN), 0);
+                                    lv_color_hex(active ? COLOR_DOT_OK : COLOR_USB_OFF), 0);
     }
 }
 
