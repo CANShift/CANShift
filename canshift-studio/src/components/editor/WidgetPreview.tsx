@@ -2,6 +2,7 @@
 // Renders at the widget's display size (firmware px × SCALE).
 // All previews use a fixed demo value at ~65 % of range so the shape is clear.
 
+import type { CSSProperties } from 'react'
 import type { Widget, WidgetLabelPosition, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 
@@ -81,6 +82,24 @@ function svgLabelAttrs(
     y: isTop ? pad + 6 : h - pad - 1,
     textAnchor: isCenter ? 'middle' : isRight ? 'end' : 'start',
     dominantBaseline: isTop ? 'hanging' : 'auto',
+  }
+}
+
+// HTML-side equivalent — absolute-positioned span style for the four corners +
+// top/bottom centre. Used by HTML-rendered previews (warning, gear, timer).
+function htmlLabelStyle(pos: WidgetLabelPosition, pad = 3): CSSProperties {
+  const isTop = pos.startsWith('top')
+  const isCenter = pos.endsWith('center')
+  const isRight = pos.endsWith('right')
+  return {
+    position: 'absolute',
+    ...(isTop ? { top: pad } : { bottom: pad }),
+    ...(isCenter
+      ? { left: '50%', transform: 'translateX(-50%)' }
+      : isRight
+        ? { right: pad }
+        : { left: pad }),
+    pointerEvents: 'none',
   }
 }
 
@@ -882,12 +901,15 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
   const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
   const labelH = sigFontSize + 4
   const iconSize = Math.min(w * 0.55, h - labelH - 8, 64)
+  const labelText = cfg.label ?? null
+  const labelPos = cfg.labelPosition ?? 'top-left'
 
   return (
     <div
       style={{
         width: w,
         height: h,
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -914,6 +936,22 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
       >
         {signalLabel}
       </span>
+      {labelText !== null && (
+        <span
+          style={{
+            ...htmlLabelStyle(labelPos),
+            fontSize: Math.max(6, Math.min(9, w * 0.12)),
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: st.textColor + '77',
+            lineHeight: 1,
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {labelText}
+        </span>
+      )}
     </div>
   )
 }
@@ -991,12 +1029,16 @@ function ButtonPreview({
 // ---------------------------------------------------------------------------
 
 function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+  if (widget.config.type !== 'gear') return null
+  const cfg = widget.config
   const st = widget.style
   const signalLabel = formatSignalLabel(widget.signal)
   const sigHeaderH = Math.max(8, Math.min(h * 0.16, 13))
   // Digit fills available height below signal label
   const fontSize = Math.min(w * 0.72, (h - sigHeaderH) * 0.85)
   const sigFontSize = Math.max(5, Math.min(sigHeaderH * 0.72, w * 0.12))
+  const labelText = cfg.label ?? null
+  const labelPos = cfg.labelPosition ?? 'top-left'
 
   return (
     <div
@@ -1041,6 +1083,22 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
       >
         3
       </span>
+      {labelText !== null && (
+        <span
+          style={{
+            ...htmlLabelStyle(labelPos),
+            fontSize: Math.max(6, Math.min(9, w * 0.12)),
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: st.textColor + '77',
+            lineHeight: 1,
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {labelText}
+        </span>
+      )}
     </div>
   )
 }
@@ -1056,6 +1114,8 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
   const timeStr = cfg.format === 'ss.mmm' ? '12.847' : '01:23'
   const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
   const sigFontSize = Math.max(5, Math.min(7, w * 0.07))
+  const labelText = cfg.label ?? null
+  const labelPos = cfg.labelPosition ?? 'top-left'
 
   return (
     <div
@@ -1095,6 +1155,22 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
       >
         TIMER
       </span>
+      {labelText !== null && (
+        <span
+          style={{
+            ...htmlLabelStyle(labelPos),
+            fontSize: Math.max(6, Math.min(9, w * 0.12)),
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: st.textColor + '77',
+            lineHeight: 1,
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {labelText}
+        </span>
+      )}
     </div>
   )
 }
@@ -1103,7 +1179,10 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
 // Image widget
 // ---------------------------------------------------------------------------
 
-function ImagePreview({ w, h }: { w: number; h: number }) {
+function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+  if (widget.config.type !== 'image') return null
+  const cfg = widget.config
+  const st = widget.style
   const pts = [
     `${String(w * 0.2)},${String(h * 0.72)}`,
     `${String(w * 0.42)},${String(h * 0.38)}`,
@@ -1111,6 +1190,8 @@ function ImagePreview({ w, h }: { w: number; h: number }) {
     `${String(w * 0.7)},${String(h * 0.42)}`,
     `${String(w * 0.82)},${String(h * 0.72)}`,
   ].join(' ')
+  const labelText = cfg.label ?? null
+  const labelPos = cfg.labelPosition ?? 'top-left'
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
@@ -1131,6 +1212,25 @@ function ImagePreview({ w, h }: { w: number; h: number }) {
       >
         IMAGE
       </text>
+      {labelText !== null &&
+        (() => {
+          const a = svgLabelAttrs(labelPos, w, h)
+          return (
+            <text
+              x={a.x}
+              y={a.y}
+              textAnchor={a.textAnchor}
+              dominantBaseline={a.dominantBaseline}
+              fill={st.textColor + '77'}
+              fontSize={Math.max(6, Math.min(9, w * 0.12))}
+              fontFamily="sans-serif"
+              fontWeight="600"
+              letterSpacing="0.04em"
+            >
+              {labelText}
+            </text>
+          )
+        })()}
     </svg>
   )
 }
@@ -1195,5 +1295,5 @@ export function WidgetPreview({
     return <ButtonPreview widget={resolved} w={w} h={h} active={buttonActive} />
   if (config.type === 'gear') return <GearPreview widget={resolved} w={w} h={h} />
   if (config.type === 'timer') return <TimerPreview widget={resolved} w={w} h={h} />
-  return <ImagePreview w={w} h={h} />
+  return <ImagePreview widget={resolved} w={w} h={h} />
 }
