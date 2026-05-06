@@ -25,7 +25,7 @@ Desktop configuration and management application for the CANShift dashboard.
 | Live telemetry display (LIVE / SIM / NO DATA badge) | Working |
 | Flash Latest (fetch from GitHub + flash via esptool) | Working |
 | Manual firmware flash from local .bin file | Working |
-| Screen settings (brightness, contrast, sleep, rotation) | Working |
+| Screen settings (brightness, contrast, sleep) | Working |
 | Studio auto-update (electron-updater) | Working |
 | Simulation mode (no hardware required) | Working |
 

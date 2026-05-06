@@ -176,11 +176,7 @@ export class UsbService {
     return this.sendCommand(payload)
   }
 
-  async pushScreenSettings(settings: {
-    brightness: number
-    sleep: number
-    rotation: number
-  }): Promise<UsbResult> {
+  async pushScreenSettings(settings: { brightness: number; sleep: number }): Promise<UsbResult> {
     // CMD_SCREEN_SETTINGS = 0x05
     const payload = JSON.stringify({ cmd: 0x05, ...settings }) + '\n'
     return this.sendCommand(payload)

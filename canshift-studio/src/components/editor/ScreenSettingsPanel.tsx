@@ -15,7 +15,7 @@ interface ScreenSettingsPanelProps {
 
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
   const navigate = useNavigate()
-  const { brightness, sleepTimeoutS, rotation, set, reset } = useScreenSettingsStore()
+  const { brightness, sleepTimeoutS, set, reset } = useScreenSettingsStore()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const log = useLogStore((s) => s.push)
@@ -37,13 +37,9 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     const result = await usbService.pushScreenSettings({
       brightness,
       sleep: sleepTimeoutS,
-      rotation,
     })
     if (result.success) {
-      log(
-        'success',
-        `Screen settings pushed — brightness ${String(brightness)}% rotation ${String(rotation)}°`
-      )
+      log('success', `Screen settings pushed — brightness ${String(brightness)}%`)
     } else {
       log('error', `Screen settings push failed: ${result.error ?? 'unknown error'}`)
     }
@@ -140,33 +136,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
               }}
             >
               {v === 0 ? 'Off' : v < 60 ? `${String(v)}s` : `${String(v / 60)}m`}
-            </button>
-          ))}
-        </div>
-      </SettingRow>
-
-      {/* Rotation */}
-      <SettingRow label="ROTATION" value={`${String(rotation)}°`} scale={scale}>
-        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-          {([0, 90, 180, 270] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => {
-                set({ rotation: r })
-              }}
-              style={{
-                flex: 1,
-                padding: `${String(Math.round(scale * 2))}px 0`,
-                background: rotation === r ? '#1A0A0A' : '#111111',
-                border: `1px solid ${rotation === r ? '#CC3333' : '#2A2A2A'}`,
-                borderRadius: 3,
-                color: rotation === r ? '#CC3333' : '#AAAAAA',
-                fontSize: fs,
-                cursor: 'pointer',
-                lineHeight: 1,
-              }}
-            >
-              {r}°
             </button>
           ))}
         </div>
