@@ -41,8 +41,8 @@ void DisplayDriver::flushCallback(lv_disp_drv_t *disp, const lv_area_t *area,
 
     s_tft.startWrite();
     s_tft.setAddrWindow(area->x1, area->y1, w, h);
-    // pushColors with byte-swap mirrors Elecrow's reference flush — required for
-    // the panel byte order on this board even though LV_COLOR_16_SWAP=1.
+    // pushColors(.., true) byte-swaps RGB565 to match the panel byte order.
+    // Pairs with LV_COLOR_16_SWAP=0 in lv_conf.h (single swap, not double).
     s_tft.pushColors(reinterpret_cast<uint16_t *>(colorMap), w * h, true);
     s_tft.endWrite();
 
