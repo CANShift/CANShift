@@ -34,6 +34,14 @@ const DEFAULT_PALETTE = {
 
 const MIGRATIONS: Migration[] = [
   {
+    // 1.4.0 → 1.5.0: TopBarConfig gains an optional `layout` field.
+    // When absent, both firmware and studio preview fall back to the default
+    // layout — no data transformation needed.
+    fromVersion: '1.4.0',
+    toVersion: '1.5.0',
+    migrate: (config) => ({ ...config, version: '1.5.0' }),
+  },
+  {
     // 1.3.0 → 1.4.0: DashboardConfig gains an optional `dayTheme` field.
     // No data transformation needed — existing configs remain valid as-is.
     fromVersion: '1.3.0',

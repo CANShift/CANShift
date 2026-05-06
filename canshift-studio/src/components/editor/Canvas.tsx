@@ -3,7 +3,8 @@
 // alignment tools, and swipe gestures for page navigation.
 
 import { useRef, useCallback, useEffect, useState } from 'react'
-import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
+import type { PageConfig, PagePalette, TopBarConfig, TopBarItem, Widget } from '@tmbk/canshift-core'
+import { DEFAULT_TOP_BAR_LAYOUT } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -386,6 +387,30 @@ interface DashTopBarProps {
 // Swipe-down threshold in px (in SCALE coordinates) to trigger settings open
 const SWIPE_DOWN_THRESHOLD = 18
 
+// Representative preview values for `signal` items in the top bar — the studio
+// has no live ECU data, so we show a static plausible reading. The signal name
+// drives which placeholder is used; unknown signals fall back to "--".
+const PREVIEW_SIGNAL_VALUES: Record<string, number> = {
+  battery_volts: 12.4,
+  rpm: 3500,
+  speed_kph: 80,
+  coolant_temp_c: 88,
+  oil_press_bar: 4.2,
+  oil_temp_c: 95,
+}
+
+function formatPreviewSignal(signal: string, format?: string): string {
+  const value = PREVIEW_SIGNAL_VALUES[signal]
+  if (value === undefined) return '--'
+  if (!format) return value.toFixed(1)
+  // Minimal printf %.<N>f handler — the only format we expose in the schema.
+  const m = /%\.(\d+)f(.*)/.exec(format)
+  if (!m) return format.replace('%f', value.toFixed(1))
+  const decimals = parseInt(m[1] ?? '1', 10)
+  const suffix = m[2] ?? ''
+  return value.toFixed(decimals) + suffix
+}
+
 function DashTopBar({
   topBar,
   pageName,
@@ -419,6 +444,105 @@ function DashTopBar({
     else if (dy < -SWIPE_DOWN_THRESHOLD && settingsOpen) onOpenSettings()
   }
 
+  const layout: TopBarItem[] = topBar.layout ?? DEFAULT_TOP_BAR_LAYOUT
+  const leftItems = layout.filter((it) => it.position === 'left')
+  const centerItems = layout.filter((it) => it.position === 'center')
+  const rightItems = layout.filter((it) => it.position === 'right')
+
+  const renderItem = (item: TopBarItem, key: number) => {
+    switch (item.type) {
+      case 'statusDot':
+        return (
+          <span
+            key={key}
+            style={{
+              display: 'inline-block',
+              width: dot,
+              height: dot,
+              borderRadius: '50%',
+              background: '#44CC44',
+              boxShadow: '0 0 3px #44CC4488',
+              flexShrink: 0,
+            }}
+          />
+        )
+      case 'label':
+        return (
+          <span
+            key={key}
+            style={{
+              fontSize: fs,
+              color: topBar.textColor,
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+            }}
+          >
+            {item.text}
+          </span>
+        )
+      case 'separator':
+        return (
+          <span key={key} style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
+        )
+      case 'pageName':
+        return (
+          <span
+            key={key}
+            style={{
+              fontSize: fs,
+              color: topBar.textColor,
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {pageName.toUpperCase()}
+          </span>
+        )
+      case 'signal':
+        // Studio preview can't read live device values — show a representative
+        // sample formatted with the configured pattern. Falls back to a generic
+        // placeholder if the format is omitted.
+        return (
+          <span key={key} style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>
+            {formatPreviewSignal(item.signal, item.format)}
+          </span>
+        )
+      case 'usbIcon':
+        return <IconUsb key={key} size={iconSz} color={usbColor} />
+      case 'themeToggle':
+        return (
+          <button
+            key={key}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+            }}
+            onPointerUp={(e) => {
+              e.stopPropagation()
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleTheme()
+            }}
+            title={isDayMode ? 'Switch to night mode' : 'Switch to day mode'}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              fontSize: fs + 1,
+              lineHeight: 1,
+              color: topBar.textColor,
+              flexShrink: 0,
+            }}
+          >
+            {isDayMode ? '☾' : '☀'}
+          </button>
+        )
+    }
+  }
+
   return (
     <div
       onPointerDown={handlePointerDown}
@@ -439,89 +563,27 @@ function DashTopBar({
         cursor: 'default',
       }}
     >
-      {/* Left — ECU + CAN status */}
       <div style={{ display: 'flex', alignItems: 'center', gap }}>
-        <span
-          style={{
-            display: 'inline-block',
-            width: dot,
-            height: dot,
-            borderRadius: '50%',
-            background: '#44CC44',
-            boxShadow: '0 0 3px #44CC4488',
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{ fontSize: fs, color: topBar.textColor, letterSpacing: '0.04em', lineHeight: 1 }}
-        >
-          ECU
-        </span>
-        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        <span style={{ fontSize: fs, color: '#AAAAAA', lineHeight: 1 }}>CAN</span>
-        <span
-          style={{
-            display: 'inline-block',
-            width: dot,
-            height: dot,
-            borderRadius: '50%',
-            background: '#44CC44',
-            flexShrink: 0,
-          }}
-        />
+        {leftItems.map((it, i) => renderItem(it, i))}
       </div>
 
-      {/* Center — page / map name */}
-      {topBar.showMapName && (
-        <span
+      {centerItems.length > 0 && (
+        <div
           style={{
-            fontSize: fs,
-            color: topBar.textColor,
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            lineHeight: 1,
             position: 'absolute',
             left: '50%',
             transform: 'translateX(-50%)',
-            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap,
           }}
         >
-          {pageName.toUpperCase()}
-        </span>
+          {centerItems.map((it, i) => renderItem(it, i))}
+        </div>
       )}
 
-      {/* Right — battery + USB + day/night toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap }}>
-        <span style={{ fontSize: fs, color: '#777777', lineHeight: 1 }}>12.4V</span>
-        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        <IconUsb size={iconSz} color={usbColor} />
-        <span style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        {/* Day / Night toggle — stops pointer propagation so swipe-down isn't triggered */}
-        <button
-          onPointerDown={(e) => {
-            e.stopPropagation()
-          }}
-          onPointerUp={(e) => {
-            e.stopPropagation()
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleTheme()
-          }}
-          title={isDayMode ? 'Switch to night mode' : 'Switch to day mode'}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            fontSize: fs + 1,
-            lineHeight: 1,
-            color: topBar.textColor,
-            flexShrink: 0,
-          }}
-        >
-          {isDayMode ? '☾' : '☀'}
-        </button>
+        {rightItems.map((it, i) => renderItem(it, i))}
       </div>
 
       {/* Swipe-down hint — subtle chevron */}

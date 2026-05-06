@@ -14,6 +14,8 @@ export type {
   PagePalette,
   Widget,
   TopBarConfig,
+  TopBarItem,
+  TopBarItemPosition,
   WidgetConfig,
   GaugeWidgetConfig,
   GaugeDisplayStyle,
@@ -35,7 +37,7 @@ export type {
   CanRawAction,
 } from './types/dashboard'
 
-export { DEFAULT_PAGE_PALETTE } from './types/dashboard'
+export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
 export type { SignalConfig, SignalDef } from './types/signal'
 export type { DeviceConfig, CanSpeedKbps } from './types/device'
 export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
@@ -57,7 +59,7 @@ export type { MigrationResult } from './migrations/migration-runner'
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.4.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.5.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const
