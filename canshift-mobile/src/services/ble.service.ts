@@ -216,6 +216,30 @@ export async function pushSettings(settings: {
   )
 }
 
+/**
+ * Read the current screen settings from the device.
+ * Firmware exposes only brightness + sleep — rotation is mobile-side state.
+ * Returns null if the characteristic value is missing or unparseable.
+ */
+export async function readSettings(): Promise<{ brightness: number; sleep: number } | null> {
+  if (!connectedDevice) throw new Error('Not connected')
+  const char = await connectedDevice.readCharacteristicForService(
+    BLE_SERVICE_UUID,
+    BLE_CHAR_SETTINGS
+  )
+  if (!char.value) return null
+  try {
+    const parsed = JSON.parse(decodeBase64(char.value)) as {
+      brightness?: number
+      sleep?: number
+    }
+    if (typeof parsed.brightness !== 'number' || typeof parsed.sleep !== 'number') return null
+    return { brightness: parsed.brightness, sleep: parsed.sleep }
+  } catch {
+    return null
+  }
+}
+
 /** Send a command to the device. */
 export async function sendCmd(cmd: string): Promise<void> {
   if (!connectedDevice) throw new Error('Not connected')
