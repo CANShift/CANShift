@@ -298,13 +298,39 @@ export class UsbService {
   private startHeartbeat(): void {
     this.stopHeartbeat()
     this.heartbeatTimer = setInterval(() => {
-      if (!this.port?.isOpen) return
-      // Bare \n: firmware updates s_lastHostCmdMs on the byte but s_rxPos stays
-      // 0 → no command parsed, no response sent, no pendingAck collision.
-      this.port.write('\n', (err) => {
-        if (err) this.handlers.onError?.(`heartbeat: ${err.message}`)
-      })
+      void this.heartbeatTick()
     }, HEARTBEAT_INTERVAL_MS)
+  }
+
+  // One heartbeat round: writes a bare \n and confirms the port still exists
+  // in the OS port list. Either failing condition forces a disconnect so the
+  // UI transitions out of "connected" within HEARTBEAT_INTERVAL_MS instead of
+  // waiting for the next user-initiated command to time out (issue #107).
+  private async heartbeatTick(): Promise<void> {
+    if (!this.port?.isOpen || !this.portPath) return
+
+    // Quick port-list sanity check — catches the unplug case on platforms
+    // where Node SerialPort doesn't surface the close event promptly.
+    try {
+      const ports = await SerialPort.list()
+      const stillPresent = ports.some((p) => p.path === this.portPath)
+      if (!stillPresent) {
+        this.handlers.onError?.('Device unplugged')
+        await this.disconnect()
+        return
+      }
+    } catch {
+      // SerialPort.list failures are non-fatal — heartbeat continues
+    }
+
+    // Bare \n: firmware updates s_lastHostCmdMs on the byte but s_rxPos stays
+    // 0 → no command parsed, no response sent, no pendingAck collision.
+    this.port.write('\n', (err) => {
+      if (err) {
+        this.handlers.onError?.(`heartbeat: ${err.message}`)
+        void this.disconnect()
+      }
+    })
   }
 
   private stopHeartbeat(): void {
