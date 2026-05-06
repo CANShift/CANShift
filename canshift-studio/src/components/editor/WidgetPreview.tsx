@@ -400,20 +400,22 @@ function GaugeBarPreview({
           rx={2}
           style={{ animation: danger ? BLINK_ANIM : undefined }}
         />
-        {/* Signal name */}
-        <text
-          x={4}
-          y={labelIsTop ? h - 3 : 3}
-          textAnchor="start"
-          dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
-          fill="#888888"
-          fontSize={sigFontSize}
-          fontFamily="sans-serif"
-          fontWeight="600"
-          letterSpacing="0.05em"
-        >
-          {signalLabel}
-        </text>
+        {/* Signal name — only when no custom label is set */}
+        {!cfg.label && (
+          <text
+            x={4}
+            y={labelIsTop ? h - 3 : 3}
+            textAnchor="start"
+            dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
+            fill="#888888"
+            fontSize={sigFontSize}
+            fontFamily="sans-serif"
+            fontWeight="600"
+            letterSpacing="0.05em"
+          >
+            {signalLabel}
+          </text>
+        )}
         {h > 18 && (
           <text
             x={w / 2}
@@ -492,20 +494,22 @@ function GaugeBarPreview({
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      {/* Signal name — top center */}
-      <text
-        x={w / 2}
-        y={2}
-        textAnchor="middle"
-        dominantBaseline="hanging"
-        fill="#888888"
-        fontSize={sigFontSize}
-        fontFamily="sans-serif"
-        fontWeight="600"
-        letterSpacing="0.04em"
-      >
-        {signalLabel}
-      </text>
+      {/* Signal name — top centre, dropped when the user supplies a label */}
+      {!cfg.label && (
+        <text
+          x={w / 2}
+          y={2}
+          textAnchor="middle"
+          dominantBaseline="hanging"
+          fill="#888888"
+          fontSize={sigFontSize}
+          fontFamily="sans-serif"
+          fontWeight="600"
+          letterSpacing="0.04em"
+        >
+          {signalLabel}
+        </text>
+      )}
       {/* Track background */}
       <rect x={padX} y={padTop} width={bw} height={trackH} fill="#1C1C1C" rx={3} />
       {/* Warning zone */}
@@ -840,20 +844,22 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
       <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
       {/* Fill */}
       <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={st.primaryColor} rx={2} />
-      {/* Signal name */}
-      <text
-        x={4}
-        y={labelIsTop ? h - 3 : 3}
-        textAnchor="start"
-        dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
-        fill="#888888"
-        fontSize={Math.max(5, Math.min(7, h * 0.22))}
-        fontFamily="sans-serif"
-        fontWeight="600"
-        letterSpacing="0.05em"
-      >
-        {signalLabel}
-      </text>
+      {/* Signal name — only when no custom label is set (avoid stacked text) */}
+      {!cfg.label && (
+        <text
+          x={4}
+          y={labelIsTop ? h - 3 : 3}
+          textAnchor="start"
+          dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
+          fill="#888888"
+          fontSize={Math.max(5, Math.min(7, h * 0.22))}
+          fontFamily="sans-serif"
+          fontWeight="600"
+          letterSpacing="0.05em"
+        >
+          {signalLabel}
+        </text>
+      )}
       {/* Value readout */}
       {h > 18 && (
         <text
@@ -923,19 +929,21 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
       }}
     >
       <SensorIcon name={iconName} size={iconSize} color={st.criticalColor} />
-      <span
-        style={{
-          fontSize: sigFontSize,
-          fontFamily: 'sans-serif',
-          fontWeight: 600,
-          color: st.criticalColor + '99',
-          lineHeight: 1,
-          whiteSpace: 'nowrap',
-          letterSpacing: '0.06em',
-        }}
-      >
-        {signalLabel}
-      </span>
+      {labelText === null && (
+        <span
+          style={{
+            fontSize: sigFontSize,
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: st.criticalColor + '99',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.06em',
+          }}
+        >
+          {signalLabel}
+        </span>
+      )}
       {labelText !== null && (
         <span
           style={{
@@ -1055,23 +1063,25 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
         overflow: 'hidden',
       }}
     >
-      <span
-        style={{
-          position: 'absolute',
-          top: 2,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          fontSize: sigFontSize,
-          fontFamily: 'sans-serif',
-          fontWeight: 600,
-          color: '#888888',
-          lineHeight: 1,
-          letterSpacing: '0.05em',
-        }}
-      >
-        {signalLabel}
-      </span>
+      {labelText === null && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: sigFontSize,
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: '#888888',
+            lineHeight: 1,
+            letterSpacing: '0.05em',
+          }}
+        >
+          {signalLabel}
+        </span>
+      )}
       <span
         style={{
           color: st.primaryColor,
@@ -1140,21 +1150,23 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
       >
         {timeStr}
       </span>
-      <span
-        style={{
-          position: 'absolute',
-          top: 2,
-          left: 3,
-          fontSize: sigFontSize,
-          fontFamily: 'sans-serif',
-          fontWeight: 600,
-          color: '#888888',
-          lineHeight: 1,
-          letterSpacing: '0.05em',
-        }}
-      >
-        TIMER
-      </span>
+      {labelText === null && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: 3,
+            fontSize: sigFontSize,
+            fontFamily: 'sans-serif',
+            fontWeight: 600,
+            color: '#888888',
+            lineHeight: 1,
+            letterSpacing: '0.05em',
+          }}
+        >
+          TIMER
+        </span>
+      )}
       {labelText !== null && (
         <span
           style={{
