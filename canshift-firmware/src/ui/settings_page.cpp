@@ -426,6 +426,10 @@ uint32_t SettingsPage::getSleepTimeoutS() {
     return s_sleepTimeoutS;
 }
 
+uint8_t SettingsPage::getBrightness() {
+    return s_brightness;
+}
+
 // ---------------------------------------------------------------------------
 // Drag-to-reveal (#47)
 // ---------------------------------------------------------------------------

@@ -44,6 +44,9 @@ uint32_t lastOpenMs();
 /** Returns the configured sleep timeout in seconds (0 = disabled). */
 uint32_t getSleepTimeoutS();
 
+/** Returns the current brightness percentage (10–100). */
+uint8_t getBrightness();
+
 // ---------------------------------------------------------------------------
 // Drag-to-reveal API (#47) — finger-driven panel pull-down
 // ---------------------------------------------------------------------------
