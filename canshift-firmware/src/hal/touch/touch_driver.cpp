@@ -31,6 +31,12 @@ void TouchDriver::readCallback(lv_indev_drv_t * /*drv*/, lv_indev_data_t *data) 
     int32_t x = 0, y = 0;
     const bool pressed = s_lcd.getTouch(&x, &y);
 
+    static bool s_wasPressed = false;
+    if (pressed && !s_wasPressed) {
+        LOG_DEBUG("TOUCH", "Press at x=%ld y=%ld", x, y);
+    }
+    s_wasPressed = pressed;
+
     if (pressed) {
         data->point.x = static_cast<lv_coord_t>(x);
         data->point.y = static_cast<lv_coord_t>(y);

@@ -93,6 +93,7 @@ void TopBar::init() {
     lv_obj_add_event_cb(
         s_gearBtn,
         [](lv_event_t * /*e*/) {
+            LOG_INFO("UI", "Gear/close button clicked");
             bool nowOpen = SettingsPage::toggle();
             lv_label_set_text(s_gearLabel, nowOpen ? LV_SYMBOL_CLOSE : LV_SYMBOL_SETTINGS);
             lv_obj_set_style_text_color(s_gearLabel, lv_color_hex(nowOpen ? 0xCC3333 : 0x555555),

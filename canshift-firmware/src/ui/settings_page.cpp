@@ -191,6 +191,7 @@ static void onCalibrateTouch(lv_event_t * /*e*/) {
 }
 
 static void onSave(lv_event_t * /*e*/) {
+    LOG_INFO("Settings", "SAVE button clicked");
     nvsSave();
 }
 
