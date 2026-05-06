@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react'
 import { ESPLoader, Transport } from 'esptool-js'
 import SparkMD5 from 'spark-md5'
-import { firmwareIpc, usbService } from '../services/ipc.service'
+import { firmwareIpc } from '../services/ipc.service'
 import type { FirmwareDownloadProgress } from '../services/ipc.service'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import { useDeviceStore } from '../stores/device.store'
@@ -84,7 +84,6 @@ async function simulateFlash(
 
 export function useFirmwareFlash() {
   const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const setConnected = useDeviceStore((s) => s.setConnected)
   const setDisconnected = useDeviceStore((s) => s.setDisconnected)
   const pushGlobalLog = useLogStore((s) => s.push)
 
@@ -313,20 +312,8 @@ export function useFirmwareFlash() {
           /* best-effort */
         })
 
-        // Auto-reconnect after device reboots — useAutoConnect will pick it up
-        // within 2s once exitFlash clears the flashPort lock. The setTimeout
-        // here is a fallback for setups where useAutoConnect isn't running.
-        setTimeout(() => {
-          usbService
-            .connect(portPath)
-            .then((result) => {
-              if (result.success) setConnected(portPath)
-            })
-            .catch(() => {
-              /* best-effort */
-            })
-        }, 3_500)
-
+        // useAutoConnect picks the device back up within 2s once exitFlash
+        // clears the flashPort lock — no need for a hard-coded reconnect here.
         return { success: true }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -344,7 +331,7 @@ export function useFirmwareFlash() {
         return { success: false, error: msg }
       }
     },
-    [simulationMode, appendLog, setDisconnected, setConnected]
+    [simulationMode, appendLog, setDisconnected]
   )
 
   return { state, phase, progress, logs, error, flash, reset }
