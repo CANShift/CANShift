@@ -349,64 +349,79 @@ function GaugeBarPreview({
   const signalLabel = formatSignalLabel(widget.signal)
 
   if (isHorizontal) {
-    const valueColor =
-      valuePct >= dangerPct
-        ? st.criticalColor
-        : valuePct >= warnPct
-          ? st.warningColor
-          : st.primaryColor
-    const barH = Math.max(4, h * 0.35)
-    const padX = 6 // equal left/right breathing room around the track
-    const trackW = w - padX * 2
-    const textY = (h - barH) / 2
+    // Zone-based fill colour — automotive green/orange/red regardless of the
+    // widget's primaryColor. Mirrors firmware bar_widget.cpp.
+    const ZONE_NORMAL = '#00CC44'
+    const ZONE_WARNING = '#FF8800'
+    const ZONE_DANGER = '#FF4444'
+    const fillColor =
+      valuePct >= dangerPct ? ZONE_DANGER : valuePct >= warnPct ? ZONE_WARNING : ZONE_NORMAL
+
     const labelPos = cfg.labelPosition ?? 'bottom-left'
-    const labelIsTop = labelPos.startsWith('top')
-    const sigFontSize = Math.max(6, Math.min(11, h * 0.26))
+    const labelIsTop = !cfg.label || labelPos.startsWith('top')
+
+    // Reserve a label band on one side; track takes the rest.
+    const labelBandH = Math.max(11, Math.min(28, h * 0.25))
+    const gap = 2
+    const barH = Math.max(4, h - labelBandH - gap)
+    const trackY = labelIsTop ? labelBandH + gap : 0
+    const bandY = labelIsTop ? 0 : barH + gap
+    const padX = 6
+    const trackW = w - padX * 2
+
+    const sigFontSize = Math.max(7, Math.min(11, labelBandH * 0.7))
+    const valFontSize = Math.max(9, Math.min(14, labelBandH * 0.85))
+    // Centre the inline-baseline text inside the band
+    const bandTextY = bandY + labelBandH / 2
 
     return (
       <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-        <rect x={padX} y={(h - barH) / 2} width={trackW} height={barH} fill="#1C1C1C" rx={2} />
+        {/* Track — square corners */}
+        <rect x={padX} y={trackY} width={trackW} height={barH} fill="#1C1C1C" />
+        {/* Warning zone (warn..danger band) — orange tint */}
         {dangerPct > warnPct && (
           <rect
             x={padX + trackW * warnPct}
-            y={(h - barH) / 2}
+            y={trackY}
             width={(dangerPct - warnPct) * trackW}
             height={barH}
-            fill={st.warningColor + '35'}
+            fill={ZONE_WARNING + '35'}
           />
         )}
+        {/* Danger zone — red tint */}
         <rect
           x={padX + trackW * dangerPct}
-          y={(h - barH) / 2}
+          y={trackY}
           width={(1 - dangerPct) * trackW}
           height={barH}
-          fill={st.criticalColor + '35'}
+          fill={ZONE_DANGER + '35'}
         />
+        {/* Danger threshold tick */}
         <line
           x1={padX + trackW * dangerPct}
-          y1={(h - barH) / 2 - 2}
+          y1={trackY - 2}
           x2={padX + trackW * dangerPct}
-          y2={(h + barH) / 2 + 2}
-          stroke={st.criticalColor}
+          y2={trackY + barH + 2}
+          stroke={ZONE_DANGER}
           strokeWidth={1}
           strokeDasharray="2 2"
         />
+        {/* Fill — zone-coloured, square corners */}
         <rect
           x={padX}
-          y={(h - barH) / 2}
+          y={trackY}
           width={trackW * valuePct}
           height={barH}
-          fill={valueColor}
-          rx={2}
+          fill={fillColor}
           style={{ animation: danger ? BLINK_ANIM : undefined }}
         />
-        {/* Signal name — only when no custom label is set */}
+        {/* Signal label — only when no custom label is set */}
         {!cfg.label && (
           <text
             x={4}
-            y={labelIsTop ? h - 3 : 3}
+            y={bandTextY}
             textAnchor="start"
-            dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
+            dominantBaseline="middle"
             fill="#888888"
             fontSize={sigFontSize}
             fontFamily="sans-serif"
@@ -416,14 +431,15 @@ function GaugeBarPreview({
             {signalLabel}
           </text>
         )}
-        {h > 18 && (
+        {/* Value — always white, centred inside the label band */}
+        {labelBandH >= 10 && (
           <text
             x={w / 2}
-            y={textY > 10 ? textY - 2 : h - textY + 2}
+            y={bandTextY}
             textAnchor="middle"
-            dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
-            fill={valueColor}
-            fontSize={Math.max(8, Math.min(15, h * 0.38))}
+            dominantBaseline="middle"
+            fill="#FFFFFF"
+            fontSize={valFontSize}
             fontWeight="700"
             fontFamily="monospace"
             style={{ animation: danger ? BLINK_ANIM : undefined }}
@@ -432,34 +448,34 @@ function GaugeBarPreview({
             {cfg.suffix ?? ''}
           </text>
         )}
-        {cfg.label &&
-          (() => {
-            const lAttrs = svgLabelAttrs(labelPos, w, h)
-            return (
-              <text
-                x={lAttrs.x}
-                y={labelIsTop ? 8 : h - 3}
-                textAnchor={lAttrs.textAnchor}
-                dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
-                fill={st.textColor + '77'}
-                fontSize={Math.max(6, Math.min(9, h * 0.22))}
-                fontFamily="sans-serif"
-                fontWeight="600"
-              >
-                {cfg.label}
-              </text>
-            )
-          })()}
+        {/* User label — sits in the band at the user-chosen horizontal corner */}
+        {cfg.label && (
+          <text
+            x={labelPos.endsWith('center') ? w / 2 : labelPos.endsWith('right') ? w - 4 : 4}
+            y={bandTextY}
+            textAnchor={
+              labelPos.endsWith('center') ? 'middle' : labelPos.endsWith('right') ? 'end' : 'start'
+            }
+            dominantBaseline="middle"
+            fill={st.textColor + '77'}
+            fontSize={sigFontSize}
+            fontFamily="sans-serif"
+            fontWeight="600"
+            letterSpacing="0.05em"
+          >
+            {cfg.label}
+          </text>
+        )}
       </svg>
     )
   }
 
+  // Vertical bar — zone colours green/orange/red regardless of primaryColor.
+  const ZONE_NORMAL_V = '#00CC44'
+  const ZONE_WARNING_V = '#FF8800'
+  const ZONE_DANGER_V = '#FF4444'
   const valueColor =
-    valuePct >= dangerPct
-      ? st.criticalColor
-      : valuePct >= warnPct
-        ? st.warningColor
-        : st.primaryColor
+    valuePct >= dangerPct ? ZONE_DANGER_V : valuePct >= warnPct ? ZONE_WARNING_V : ZONE_NORMAL_V
 
   // Bar track: 60 % of widget width, centered
   const bw = Math.max(10, w * 0.6)
@@ -510,16 +526,16 @@ function GaugeBarPreview({
           {signalLabel}
         </text>
       )}
-      {/* Track background */}
-      <rect x={padX} y={padTop} width={bw} height={trackH} fill="#1C1C1C" rx={3} />
-      {/* Warning zone */}
+      {/* Track background — square corners */}
+      <rect x={padX} y={padTop} width={bw} height={trackH} fill="#1C1C1C" />
+      {/* Warning zone (warn..danger band) */}
       {dangerPct > warnPct && (
         <rect
           x={padX}
           y={warnY}
           width={bw}
           height={(warnPct - dangerPct) * trackH}
-          fill={st.warningColor + '35'}
+          fill={ZONE_WARNING_V + '35'}
         />
       )}
       {/* Danger zone */}
@@ -528,7 +544,7 @@ function GaugeBarPreview({
         y={dangerY}
         width={bw}
         height={dangerPct * trackH}
-        fill={st.criticalColor + '35'}
+        fill={ZONE_DANGER_V + '35'}
       />
       {/* Danger line tick */}
       <line
@@ -536,18 +552,17 @@ function GaugeBarPreview({
         y1={dangerY}
         x2={padX + bw + 3}
         y2={dangerY}
-        stroke={st.criticalColor}
+        stroke={ZONE_DANGER_V}
         strokeWidth={1}
         strokeDasharray="2 2"
       />
-      {/* Value fill from bottom */}
+      {/* Value fill from bottom — square corners */}
       <rect
         x={padX}
         y={fillY}
         width={bw}
         height={fillH}
         fill={valueColor}
-        rx={3}
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
       {/* Scale ticks — min/max on sides when space allows */}
@@ -669,9 +684,10 @@ function GaugeNumericPreview({
   const labelText = cfg.label ?? null
   const labelPos = cfg.labelPosition ?? 'top-left'
 
-  const hasSuffix = suffix.length > 0
-  const hasPrefix = prefix.length > 0
-  const twoLine = hasSuffix || hasPrefix
+  // Suffix / prefix render INLINE with the value ("78°C") rather than on a
+  // separate dim line — see the value span below. A corner-anchored user label
+  // can therefore never collide with the unit, regardless of where the user
+  // places the widget label from studio. Matches firmware label_widget.cpp.
 
   // Signal name shown at top when no custom label
   const showSignalHeader = labelText === null
@@ -679,11 +695,8 @@ function GaugeNumericPreview({
   const sigHeaderH = showSignalHeader ? Math.max(8, Math.min(h * 0.18, 14)) : 0
   const availH = h - sigHeaderH
 
-  // Two-line: value gets most of height, unit/prefix gets ~22 %
-  const unitLineH = twoLine ? Math.max(8, availH * 0.24) : 0
-  const valueLineH = availH - unitLineH
-  const fontSize = Math.max(8, Math.min(valueLineH * 0.72, w * 0.52))
-  const unitFontSize = Math.max(7, Math.min(unitLineH * 0.72, w * 0.2))
+  // Inline layout — value occupies the full available band.
+  const fontSize = Math.max(8, Math.min(availH * 0.72, w * 0.52))
 
   const isLabelTop = labelText !== null && labelPos.startsWith('top')
   const isLabelRight = labelPos.endsWith('right')
@@ -704,7 +717,7 @@ function GaugeNumericPreview({
         padding: `${String(sigHeaderH + 2)}px 4px 2px`,
         boxSizing: 'border-box',
         overflow: 'hidden',
-        gap: twoLine ? 1 : 0,
+        gap: 0,
       }}
     >
       {/* Signal name header */}
@@ -753,23 +766,7 @@ function GaugeNumericPreview({
           {labelText}
         </span>
       )}
-      {/* Prefix line (two-line layout) */}
-      {hasPrefix && (
-        <span
-          style={{
-            color: valueColor + 'BB',
-            fontSize: unitFontSize,
-            fontWeight: 600,
-            fontFamily: 'sans-serif',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            letterSpacing: '0.03em',
-          }}
-        >
-          {prefix}
-        </span>
-      )}
-      {/* Value row */}
+      {/* Value row — prefix and suffix concatenated inline */}
       <div
         style={{
           display: 'flex',
@@ -797,26 +794,9 @@ function GaugeNumericPreview({
             animation: danger ? BLINK_ANIM : undefined,
           }}
         >
-          {twoLine ? valueOnly : prefix + valueOnly + suffix}
+          {prefix + valueOnly + suffix}
         </span>
       </div>
-      {/* Suffix / unit line (two-line layout) */}
-      {hasSuffix && (
-        <span
-          style={{
-            color: valueColor + 'BB',
-            fontSize: unitFontSize,
-            fontWeight: 600,
-            fontFamily: 'sans-serif',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            letterSpacing: '0.03em',
-            animation: danger ? BLINK_ANIM : undefined,
-          }}
-        >
-          {suffix}
-        </span>
-      )}
     </div>
   )
 }
@@ -841,9 +821,9 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
       {/* Track */}
-      <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" rx={2} />
+      <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" />
       {/* Fill */}
-      <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={st.primaryColor} rx={2} />
+      <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={st.primaryColor} />
       {/* Signal name — only when no custom label is set (avoid stacked text) */}
       {!cfg.label && (
         <text
@@ -922,7 +902,7 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
         justifyContent: 'center',
         gap: 4,
         background: st.criticalColor + '22',
-        borderRadius: 3,
+        borderRadius: 0,
         animation: BLINK_ANIM,
         overflow: 'hidden',
         boxSizing: 'border-box',
@@ -1007,7 +987,7 @@ function ButtonPreview({
         boxSizing: 'border-box',
         background: bgColor,
         border: `1px solid ${borderColor}`,
-        borderRadius: 3,
+        borderRadius: 0,
         overflow: 'hidden',
         transition: 'background 0.1s, border-color 0.1s',
       }}
