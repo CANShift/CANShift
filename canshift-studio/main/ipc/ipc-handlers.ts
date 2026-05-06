@@ -176,6 +176,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return usbService.queryVersion()
   })
 
+  ipcMain.handle(IpcChannels.DEVICE_GET_CONFIG, async () => {
+    return usbService.getConfig()
+  })
+
   ipcMain.handle(IpcChannels.FIRMWARE_LIST_RELEASES, async (_event, channel: 'stable' | 'beta') => {
     const releases: FirmwareRelease[] = await firmwareService.listReleases(channel)
     return releases

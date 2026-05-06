@@ -117,6 +117,11 @@ export const firmwareIpc = {
     invoke<ArrayBuffer>(IpcChannels.FIRMWARE_DOWNLOAD, url, downloadId),
 }
 
+export const deviceIpc = {
+  /** Reads the on-device dashboard.json (returns null when unavailable). */
+  getConfig: () => invoke<Record<string, unknown> | null>(IpcChannels.DEVICE_GET_CONFIG),
+}
+
 // ---------------------------------------------------------------------------
 // CAN scanner
 // ---------------------------------------------------------------------------

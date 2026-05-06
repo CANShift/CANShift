@@ -202,6 +202,24 @@ export class UsbService {
     }
   }
 
+  /**
+   * Read the current dashboard.json content from the device's SD card.
+   * Returns null on any failure (firmware too old, missing file, parse error)
+   * — caller decides whether to fall back to local state.
+   */
+  async getConfig(): Promise<Record<string, unknown> | null> {
+    // CMD_GET_CONFIG = 0x01 — response:
+    //   {"status":"ok","config":{...}}  on success (whole dashboard.json)
+    //   {"status":"error","message":"config_not_found"} when the file is missing
+    const payload = JSON.stringify({ cmd: 0x01 }) + '\n'
+    // The full dashboard.json can run > 10 KB; allow extra read time so the
+    // ReadlineParser has the whole frame before the ack timer fires.
+    const result = await this.sendCommand(payload, 8_000)
+    if (!result.success || !result.data) return null
+    const cfg = result.data.config
+    return isRecord(cfg) ? cfg : null
+  }
+
   async toggleDayNight(): Promise<UsbResult> {
     // CMD_TOGGLE_DAY_NIGHT = 0x07
     const payload = JSON.stringify({ cmd: 0x07 }) + '\n'
