@@ -21,7 +21,10 @@ function applyPalette(widget: Widget, palette: PagePalette): Widget {
       primaryColor: palette.primary,
       warningColor: palette.warning,
       criticalColor: palette.danger,
-      textColor: palette.text,
+      // Note: textColor is NOT overridden by the palette — firmware reads
+      // cfg.style.textColor.rgb directly per-widget so values keep their
+      // bespoke colour (cyan for COOLANT, orange for OIL, red for GEAR, …).
+      // Studio preview mirrors that to stay 1:1 with the device.
     },
   }
 }
@@ -70,6 +73,7 @@ function svgLabelAttrs(
   pos: WidgetLabelPosition,
   w: number,
   h: number,
+  // 4-px horizontal inset matches firmware's kEdgeInsetX in widget_label.h.
   pad = 4
 ): {
   x: number
@@ -178,16 +182,12 @@ function GaugeArcPreview({
   // Thicker stroke than the original 16 % — matches firmware kBgWidth=14 on
   // the smaller h=80 dashboard arcs so the trace stays readable.
   const strokeW = Math.max(5, r * 0.24)
-  const innerR = r - strokeW / 2 - 2
 
-  const needleTip = svgPt(cx, cy, r * 0.88, 135 + valuePct * 270)
   const revFlash = cfg.revFlash === true
   const showRevFlash = revFlash && revLimiting
 
-  const signalLabel = formatSignalLabel(widget.signal)
   const valueFontSize = Math.max(9, Math.min(r * 0.38, h * 0.18, 28))
   const unitFontSize = Math.max(6, r * 0.17)
-  const labelFontSize = Math.max(6, Math.min(10, r * 0.17))
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
@@ -239,37 +239,9 @@ function GaugeArcPreview({
         strokeLinecap="butt"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
-      {/* Inner circle */}
-      <circle cx={cx} cy={cy} r={innerR} fill="#0D0D0D" />
-      {/* Signal name — inside arc, above center */}
-      <text
-        x={cx}
-        y={cy - r * 0.28}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill="#888888"
-        fontSize={labelFontSize}
-        fontFamily="Montserrat, sans-serif"
-        fontWeight="600"
-        letterSpacing="0.06em"
-      >
-        {signalLabel}
-      </text>
-      {/* Needle */}
-      {cfg.showNeedle !== false && (
-        <g style={{ animation: danger ? BLINK_ANIM : undefined }}>
-          <line
-            x1={cx}
-            y1={cy}
-            x2={needleTip.x}
-            y2={needleTip.y}
-            stroke={st.textColor}
-            strokeWidth={Math.max(1, strokeW * 0.22)}
-            strokeLinecap="butt"
-          />
-          <circle cx={cx} cy={cy} r={Math.max(2, strokeW * 0.3)} fill={valueColor} />
-        </g>
-      )}
+      {/* Inner circle, top-of-arc duplicate label and the white indicator
+          needle were all dropped per user spec — the arc trace + the centred
+          numeric value carry the read on their own. */}
       {/* Value text — center of arc */}
       <text
         x={cx}
@@ -730,22 +702,23 @@ function GaugeNumericPreview({
         gap: 0,
       }}
     >
-      {/* Signal name auto-header — bottom-left, dim caps. Matches firmware. */}
+      {/* Signal name auto-header — bottom-left, dim caps. Matches firmware
+          applySignalHeader() position and padding (kEdgeInsetX=4, Y=1). */}
       {showSignalHeader && (
         <span
           style={{
             position: 'absolute',
             bottom: 1,
-            left: 2,
+            left: 4,
             fontSize: 11,
-            fontFamily: 'sans-serif',
+            fontFamily: 'Montserrat, sans-serif',
             fontWeight: 600,
             color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: `calc(100% - 4px)`,
+            maxWidth: `calc(100% - 8px)`,
             letterSpacing: '0.06em',
           }}
         >
