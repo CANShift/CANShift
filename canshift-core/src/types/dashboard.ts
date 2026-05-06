@@ -288,13 +288,56 @@ export interface PageConfig {
 // Top bar configuration
 // ---------------------------------------------------------------------------
 
+export type TopBarItemPosition = 'left' | 'center' | 'right'
+
+/**
+ * Items that can appear in the top bar layout. The renderer (firmware or
+ * studio preview) walks the array and emits one element per item, grouped
+ * by `position` (left → center → right).
+ */
+export type TopBarItem =
+  | { type: 'statusDot'; signal: string; position: TopBarItemPosition }
+  | { type: 'label'; text: string; position: TopBarItemPosition }
+  | { type: 'separator'; position: TopBarItemPosition }
+  | { type: 'pageName'; position: TopBarItemPosition }
+  | { type: 'signal'; signal: string; format?: string; position: TopBarItemPosition }
+  | { type: 'usbIcon'; position: TopBarItemPosition }
+  | { type: 'themeToggle'; position: TopBarItemPosition }
+
 export interface TopBarConfig {
   height: number
   showMapName: boolean
   showMapProfile: boolean
   bgColor: HexColor
   textColor: HexColor
+  /**
+   * Optional ordered list of items rendered in the top bar.
+   * When absent, both firmware and studio preview fall back to the default
+   * layout below — this keeps pre-1.5.0 configs working unchanged.
+   */
+  layout?: TopBarItem[]
 }
+
+/**
+ * Default top bar layout — mirrors what the firmware and studio used to
+ * render via hardcoded markup before 1.5.0. Used as fallback when a config
+ * has no `topBar.layout` set.
+ *
+ * `signal: 'any'` on a statusDot lights it green when ANY signal in the
+ * signal store has been received recently — used for the CAN-presence dot.
+ */
+export const DEFAULT_TOP_BAR_LAYOUT: TopBarItem[] = [
+  { type: 'statusDot', signal: 'rpm', position: 'left' },
+  { type: 'label', text: 'ECU', position: 'left' },
+  { type: 'separator', position: 'left' },
+  { type: 'label', text: 'CAN', position: 'left' },
+  { type: 'statusDot', signal: 'any', position: 'left' },
+  { type: 'pageName', position: 'center' },
+  { type: 'signal', signal: 'battery_volts', format: '%.1fV', position: 'right' },
+  { type: 'usbIcon', position: 'right' },
+  { type: 'separator', position: 'right' },
+  { type: 'themeToggle', position: 'right' },
+]
 
 // ---------------------------------------------------------------------------
 // Dashboard root configuration

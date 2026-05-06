@@ -47,6 +47,9 @@ export function validateDashboard(config: unknown): ValidationResult {
     if (typeof config.topBar.height !== 'number' || config.topBar.height <= 0) {
       errors.push('topBar.height must be a positive number')
     }
+    if (config.topBar.layout !== undefined) {
+      errors.push(...validateTopBarLayout(config.topBar.layout))
+    }
   }
 
   // Collect known signal ids for cross-reference checks
@@ -163,6 +166,65 @@ function validateWidget(
   }
 
   return { errors, warnings }
+}
+
+const VALID_TOP_BAR_ITEM_TYPES = [
+  'statusDot',
+  'label',
+  'separator',
+  'pageName',
+  'signal',
+  'usbIcon',
+  'themeToggle',
+] as const
+
+const VALID_TOP_BAR_POSITIONS = ['left', 'center', 'right'] as const
+
+function validateTopBarLayout(layout: unknown): string[] {
+  const errors: string[] = []
+
+  if (!Array.isArray(layout)) {
+    errors.push('topBar.layout must be an array')
+    return errors
+  }
+
+  layout.forEach((item: unknown, idx: number) => {
+    const prefix = `topBar.layout[${idx.toString()}]`
+
+    if (!isRecord(item)) {
+      errors.push(`${prefix} must be an object`)
+      return
+    }
+
+    const itemType = item.type
+    if (typeof itemType !== 'string') {
+      errors.push(`${prefix}.type is required`)
+      return
+    }
+    if (!(VALID_TOP_BAR_ITEM_TYPES as readonly string[]).includes(itemType)) {
+      errors.push(`${prefix}.type "${itemType}" is not a valid top-bar item type`)
+    }
+
+    if (
+      typeof item.position !== 'string' ||
+      !(VALID_TOP_BAR_POSITIONS as readonly string[]).includes(item.position)
+    ) {
+      errors.push(`${prefix}.position must be one of: left | center | right`)
+    }
+
+    if (
+      (itemType === 'statusDot' || itemType === 'signal') &&
+      (typeof item.signal !== 'string' || item.signal.length === 0)
+    ) {
+      errors.push(`${prefix} (${itemType}): signal must be a non-empty string`)
+    }
+
+    if (itemType === 'label' && (typeof item.text !== 'string' || item.text.length === 0)) {
+      errors.push(`${prefix} (label): text must be a non-empty string`)
+    }
+  })
+
+  return errors
 }
 
 function validateWidgetTypeFields(type: string, cfg: UnknownRecord, prefix: string): string[] {

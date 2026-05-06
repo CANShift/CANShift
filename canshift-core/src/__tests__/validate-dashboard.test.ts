@@ -462,6 +462,90 @@ describe('validateDashboard — bar widget type fields', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Top bar layout validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — top bar layout', () => {
+  it('accepts a config without topBar.layout (legacy fallback)', () => {
+    const result = validateDashboard(minimalConfig({ topBar: { height: 16 } }))
+    expect(result.errors.filter((e) => e.includes('topBar.layout'))).toHaveLength(0)
+  })
+
+  it('accepts a valid layout', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [
+            { type: 'statusDot', signal: 'rpm', position: 'left' },
+            { type: 'pageName', position: 'center' },
+            { type: 'themeToggle', position: 'right' },
+          ],
+        },
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('topBar.layout'))).toHaveLength(0)
+  })
+
+  it('rejects a non-array layout', () => {
+    const result = validateDashboard(minimalConfig({ topBar: { height: 16, layout: 'oops' } }))
+    expect(result.errors).toContain('topBar.layout must be an array')
+  })
+
+  it('rejects an unknown item type', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [{ type: 'rocket', position: 'left' }],
+        },
+      })
+    )
+    expect(
+      result.errors.some(
+        (e) => e.includes('topBar.layout[0].type') && e.includes('not a valid top-bar item type')
+      )
+    ).toBe(true)
+  })
+
+  it('rejects an invalid position', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [{ type: 'pageName', position: 'top' }],
+        },
+      })
+    )
+    expect(result.errors.some((e) => e.includes('topBar.layout[0].position'))).toBe(true)
+  })
+
+  it('requires statusDot.signal to be a non-empty string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [{ type: 'statusDot', signal: '', position: 'left' }],
+        },
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(statusDot): signal'))).toBe(true)
+  })
+
+  it('requires label.text to be a non-empty string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [{ type: 'label', text: '', position: 'left' }],
+        },
+      })
+    )
+    expect(result.errors.some((e) => e.includes('(label): text'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Signal cross-reference warnings
 // ---------------------------------------------------------------------------
 
