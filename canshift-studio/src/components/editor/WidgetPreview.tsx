@@ -373,7 +373,6 @@ function GaugeBarPreview({
     const trackW = w - padX * 2
 
     const sigFontSize = Math.max(7, Math.min(11, labelBandH * 0.7))
-    const valFontSize = Math.max(9, Math.min(14, labelBandH * 0.85))
     // Centre the inline-baseline text inside the band
     const bandTextY = bandY + labelBandH / 2
 
@@ -434,15 +433,15 @@ function GaugeBarPreview({
             {signalLabel}
           </text>
         )}
-        {/* Value — always white, centred inside the label band */}
-        {labelBandH >= 10 && (
+        {/* Value — white, centred ON the bar track (over the fill). */}
+        {barH >= 14 && (
           <text
             x={w / 2}
-            y={bandTextY}
+            y={trackY + barH / 2}
             textAnchor="middle"
             dominantBaseline="middle"
             fill="#FFFFFF"
-            fontSize={valFontSize}
+            fontSize={Math.max(10, Math.min(barH * 0.55, 14))}
             fontWeight="700"
             fontFamily="monospace"
             style={{ animation: danger ? BLINK_ANIM : undefined }}
