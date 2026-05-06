@@ -68,7 +68,7 @@
             "suffix": "rpm",
             "showNeedle": true,
             "label": "RPM",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -94,7 +94,7 @@
             "decimalPlaces": 0,
             "suffix": "km/h",
             "label": "SPEED",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -120,7 +120,7 @@
             "decimalPlaces": 0,
             "suffix": "°C",
             "label": "COOLANT",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -146,7 +146,7 @@
             "decimalPlaces": 0,
             "suffix": "°C",
             "label": "OIL",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -166,7 +166,7 @@
             "type": "gear",
             "decimalPlaces": 0,
             "label": "GEAR",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -192,7 +192,7 @@
             "decimalPlaces": 1,
             "suffix": "AFR",
             "label": "AFR",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -219,7 +219,7 @@
             "decimalPlaces": 0,
             "suffix": "%",
             "label": "THROTTLE",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -240,7 +240,7 @@
             "invertLogic": false,
             "threshold": 0.5,
             "label": "MIL",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -296,7 +296,7 @@
             "decimalPlaces": 1,
             "suffix": "bar",
             "label": "BOOST",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -322,7 +322,7 @@
             "decimalPlaces": 0,
             "suffix": "°C",
             "label": "IAT",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -348,7 +348,7 @@
             "decimalPlaces": 1,
             "suffix": "bar",
             "label": "OIL",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -375,7 +375,7 @@
             "decimalPlaces": 0,
             "suffix": "rpm",
             "label": "RPM",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -401,7 +401,7 @@
             "decimalPlaces": 2,
             "suffix": "λ",
             "label": "LAMBDA",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -427,7 +427,7 @@
             "decimalPlaces": 1,
             "suffix": "V",
             "label": "BATT",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -454,7 +454,7 @@
             "decimalPlaces": 0,
             "suffix": "%",
             "label": "THROTTLE",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         },
         {
@@ -496,7 +496,7 @@
             "invertLogic": false,
             "threshold": 0.5,
             "label": "MIL",
-            "labelPosition": "top-left"
+            "labelPosition": "bottom-left"
           }
         }
       ]
