@@ -377,7 +377,6 @@ function WidgetBox({
 
 interface DashTopBarProps {
   topBar: TopBarConfig
-  pageName: string
   settingsOpen: boolean
   isDayMode: boolean
   onOpenSettings: () => void
@@ -413,7 +412,6 @@ function formatPreviewSignal(signal: string, format?: string): string {
 
 function DashTopBar({
   topBar,
-  pageName,
   settingsOpen,
   isDayMode,
   onOpenSettings,
@@ -483,22 +481,6 @@ function DashTopBar({
       case 'separator':
         return (
           <span key={key} style={{ width: 1, height: sep, background: '#2A2A2A', flexShrink: 0 }} />
-        )
-      case 'pageName':
-        return (
-          <span
-            key={key}
-            style={{
-              fontSize: fs,
-              color: topBar.textColor,
-              fontWeight: 600,
-              letterSpacing: '0.06em',
-              lineHeight: 1,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {pageName.toUpperCase()}
-          </span>
         )
       case 'signal':
         // Studio preview can't read live device values — show a representative
@@ -1002,7 +984,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               {page.showTopBar && (
                 <DashTopBar
                   topBar={topBar}
-                  pageName={page.name}
                   settingsOpen={settingsOpen}
                   isDayMode={isPreviewDayMode}
                   onOpenSettings={() => {

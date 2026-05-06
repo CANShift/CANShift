@@ -299,7 +299,6 @@ export type TopBarItem =
   | { type: 'statusDot'; signal: string; position: TopBarItemPosition }
   | { type: 'label'; text: string; position: TopBarItemPosition }
   | { type: 'separator'; position: TopBarItemPosition }
-  | { type: 'pageName'; position: TopBarItemPosition }
   | { type: 'signal'; signal: string; format?: string; position: TopBarItemPosition }
   | { type: 'usbIcon'; position: TopBarItemPosition }
   | { type: 'themeToggle'; position: TopBarItemPosition }
@@ -332,7 +331,6 @@ export const DEFAULT_TOP_BAR_LAYOUT: TopBarItem[] = [
   { type: 'separator', position: 'left' },
   { type: 'label', text: 'CAN', position: 'left' },
   { type: 'statusDot', signal: 'any', position: 'left' },
-  { type: 'pageName', position: 'center' },
   { type: 'signal', signal: 'battery_volts', format: '%.1fV', position: 'right' },
   { type: 'usbIcon', position: 'right' },
   { type: 'separator', position: 'right' },

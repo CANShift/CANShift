@@ -172,7 +172,6 @@ const VALID_TOP_BAR_ITEM_TYPES = [
   'statusDot',
   'label',
   'separator',
-  'pageName',
   'signal',
   'usbIcon',
   'themeToggle',
