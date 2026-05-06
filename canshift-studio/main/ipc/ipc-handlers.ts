@@ -275,6 +275,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     sdService.prepareSD(volumePath)
   )
 
+  ipcMain.handle(IpcChannels.SD_PUSH_OVER_USB, () =>
+    sdService.pushOverUsb(usbService, (progress) => {
+      getWindow()?.webContents.send(IpcChannels.SD_PUSH_PROGRESS, progress)
+    })
+  )
+
   // ---------------------------------------------------------------------------
   // App info
   // ---------------------------------------------------------------------------

@@ -77,6 +77,10 @@ export const IpcChannels = {
   // SD card preparation (renderer → main)
   SD_LIST_VOLUMES: 'sd:list-volumes',
   SD_PREPARE: 'sd:prepare',
+  // Stream sd_contents/ to the connected board over USB (no card removal needed)
+  SD_PUSH_OVER_USB: 'sd:push-over-usb',
+  // Main → renderer: per-file progress while SD_PUSH_OVER_USB runs
+  SD_PUSH_PROGRESS: 'sd:push-progress',
 
   // Device hardware config (renderer → main)
   DEVICE_CONFIG_READ: 'device:read',

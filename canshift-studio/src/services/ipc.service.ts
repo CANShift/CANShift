@@ -5,9 +5,9 @@ import type { DashboardConfig, SignalConfig, DeviceConfig } from '@tmbk/canshift
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
 import type { CanFrame, CanHealth } from '../../main/services/usb.service'
-import type { SdVolume, SdPrepareResult } from '../../main/services/sd.service'
+import type { SdVolume, SdPrepareResult, SdPushProgress } from '../../main/services/sd.service'
 
-export type { FirmwareRelease, CanFrame, CanHealth, SdVolume, SdPrepareResult }
+export type { FirmwareRelease, CanFrame, CanHealth, SdVolume, SdPrepareResult, SdPushProgress }
 
 // ---------------------------------------------------------------------------
 // Response shapes (must mirror main/services/* return types)
@@ -151,6 +151,16 @@ export const assetIpc = {
 export const sdIpc = {
   listVolumes: () => invoke<SdVolume[]>(IpcChannels.SD_LIST_VOLUMES),
   prepare: (volumePath: string) => invoke<SdPrepareResult>(IpcChannels.SD_PREPARE, volumePath),
+  pushOverUsb: () => invoke<SdPrepareResult>(IpcChannels.SD_PUSH_OVER_USB),
+  onPushProgress: (handler: (progress: SdPushProgress) => void) => {
+    const wrapped = (...args: unknown[]): void => {
+      handler(args[0] as SdPushProgress)
+    }
+    window.ipc.on(IpcChannels.SD_PUSH_PROGRESS, wrapped)
+    return () => {
+      window.ipc.off(IpcChannels.SD_PUSH_PROGRESS, wrapped)
+    }
+  },
 }
 
 // ---------------------------------------------------------------------------
