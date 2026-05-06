@@ -205,7 +205,6 @@ export async function disconnect(): Promise<void> {
 export async function pushSettings(settings: {
   brightness: number
   sleep: number
-  rotation: 0 | 90 | 180 | 270
 }): Promise<void> {
   if (!connectedDevice) throw new Error('Not connected')
   const json = JSON.stringify(settings)
@@ -218,7 +217,6 @@ export async function pushSettings(settings: {
 
 /**
  * Read the current screen settings from the device.
- * Firmware exposes only brightness + sleep — rotation is mobile-side state.
  * Returns null if the characteristic value is missing or unparseable.
  */
 export async function readSettings(): Promise<{ brightness: number; sleep: number } | null> {

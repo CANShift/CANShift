@@ -21,18 +21,10 @@ const SLEEP_OPTIONS: { label: string; value: number }[] = [
   { label: '5m', value: 300 },
 ]
 
-const ROTATION_OPTIONS: { label: string; value: 0 | 90 | 180 | 270 }[] = [
-  { label: '0°', value: 0 },
-  { label: '90°', value: 90 },
-  { label: '180°', value: 180 },
-  { label: '270°', value: 270 },
-]
-
 export default function SettingsScreen({ navigation }: Props) {
   const isDayMode = useDeviceStore((s) => s.isDayMode)
   const [brightness, setBrightness] = useState(80)
   const [sleep, setSleep] = useState(0)
-  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0)
   const [saving, setSaving] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
 
@@ -59,7 +51,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await BleService.pushSettings({ brightness, sleep, rotation })
+      await BleService.pushSettings({ brightness, sleep })
       Alert.alert('Saved', 'Settings applied to dashboard.')
       navigation.goBack()
     } catch (err) {
@@ -141,24 +133,6 @@ export default function SettingsScreen({ navigation }: Props) {
                 onPress={() => { setSleep(opt.value); }}
               >
                 <Text style={[styles.segLabel, sleep === opt.value && styles.segLabelActive]}>
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Rotation */}
-        <View style={styles.section}>
-          <Text style={styles.label}>ROTATION</Text>
-          <View style={styles.segRow}>
-            {ROTATION_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.segBtn, rotation === opt.value && styles.segBtnActive]}
-                onPress={() => { setRotation(opt.value); }}
-              >
-                <Text style={[styles.segLabel, rotation === opt.value && styles.segLabelActive]}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
