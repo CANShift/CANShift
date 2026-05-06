@@ -362,6 +362,10 @@ bool UsbComm::pushCanFrame(const CanScanFrame &frame) {
 void UsbComm::tick() {
     while (Serial.available() > 0) {
         char c = static_cast<char>(Serial.read());
+        // Update host activity on any byte received, not just complete commands.
+        // This keeps the top-bar USB icon green while the studio's serial port
+        // is open even between command lines.
+        s_lastHostCmdMs = millis();
 
         if (c == '\n') {
             s_rxBuf[s_rxPos] = '\0';

@@ -41,8 +41,10 @@ static const char *const SLEEP_LABELS[SLEEP_OPTION_COUNT] = {"Off", "30s", "1m",
 // Rotation options
 // ---------------------------------------------------------------------------
 
-static constexpr uint8_t ROT_OPTION_COUNT = 4;
-static constexpr uint16_t ROT_OPTIONS[ROT_OPTION_COUNT] = {0, 90, 180, 270};
+// Only landscape orientations are useful on this 320x240 form factor.
+// 0° = normal landscape, 180° = upside-down landscape.
+static constexpr uint8_t ROT_OPTION_COUNT = 2;
+static constexpr uint16_t ROT_OPTIONS[ROT_OPTION_COUNT] = {0, 180};
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -193,6 +195,7 @@ static void onCalibrateTouch(lv_event_t * /*e*/) {
 static void onSave(lv_event_t * /*e*/) {
     LOG_INFO("Settings", "SAVE button clicked");
     nvsSave();
+    SettingsPage::close(); // close after saving — matches user expectation
 }
 
 static void onReset(lv_event_t * /*e*/) {

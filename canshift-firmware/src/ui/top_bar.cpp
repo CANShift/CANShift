@@ -114,7 +114,21 @@ void TopBar::init() {
     lv_obj_set_style_radius(s_bar, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_bar, 4, LV_PART_MAIN);
     lv_obj_clear_flag(s_bar, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(s_bar, LV_OBJ_FLAG_CLICKABLE);
+    // Bar itself is clickable — tapping a non-widget area while Settings is
+    // open closes the panel (alongside the swipe-up gesture).
+    lv_obj_add_flag(s_bar, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(
+        s_bar,
+        [](lv_event_t *e) {
+            // Only fire when the click hit the bar itself, not a child button
+            if (lv_event_get_target(e) != lv_event_get_current_target(e))
+                return;
+            if (SettingsPage::isOpen()) {
+                LOG_INFO("UI", "Top bar tapped — closing Settings");
+                SettingsPage::close();
+            }
+        },
+        LV_EVENT_CLICKED, nullptr);
 
     // ---- Left: [• dot] ECU [|] CAN [• dot] — matches studio preview ----
     s_ecuDot = makeStatusDot(s_bar);
