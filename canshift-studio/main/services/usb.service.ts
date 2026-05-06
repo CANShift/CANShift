@@ -64,6 +64,13 @@ const ACK_TIMEOUT_MS = 5_000
 // or interfere with pending acks. Drives the top-bar USB icon (issue #53).
 const HEARTBEAT_INTERVAL_MS = 2_000
 
+// CMD_PUT_FILE chunking. 2 KB raw → ~2.7 KB base64 → ~2.9 KB JSON line, well
+// below the firmware's 6.4 KB receive buffer. Each chunk is acked individually
+// so a 76 KB asset takes ~38 round-trips at 115 200 baud (~10 s end-to-end).
+const PUT_FILE_CHUNK_SIZE = 2048
+// CMD_PUT_FILE acks come back fast — 1 s is generous on a healthy link.
+const PUT_FILE_CHUNK_TIMEOUT_MS = 5_000
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -201,6 +208,49 @@ export class UsbService {
   async stopCanScan(): Promise<UsbResult> {
     const payload = JSON.stringify({ cmd: 0x21 }) + '\n'
     return this.sendCommand(payload)
+  }
+
+  /**
+   * Stream a file to the SD card over USB in base64-encoded chunks.
+   * Each chunk is acked by the firmware before the next is sent — so a slow
+   * SD write or a stalled link can't run ahead of the device.
+   *
+   * @param devicePath absolute path on the SD ("/assets/icon_day.bin")
+   * @param content    file bytes to write
+   */
+  async pushFile(devicePath: string, content: Buffer): Promise<UsbResult> {
+    if (!this.port?.isOpen) {
+      return { success: false, error: 'Not connected to device' }
+    }
+    if (!devicePath.startsWith('/')) {
+      return { success: false, error: `Invalid device path: ${devicePath}` }
+    }
+
+    const totalChunks = Math.max(1, Math.ceil(content.length / PUT_FILE_CHUNK_SIZE))
+
+    for (let idx = 0; idx < totalChunks; idx++) {
+      const start = idx * PUT_FILE_CHUNK_SIZE
+      const end = Math.min(start + PUT_FILE_CHUNK_SIZE, content.length)
+      const chunk = content.subarray(start, end)
+      const payload =
+        JSON.stringify({
+          cmd: 0x06,
+          path: devicePath,
+          total: totalChunks,
+          idx,
+          data: chunk.toString('base64'),
+        }) + '\n'
+
+      const ack = await this.sendCommand(payload, PUT_FILE_CHUNK_TIMEOUT_MS)
+      if (!ack.success) {
+        return {
+          success: false,
+          error: `chunk ${String(idx + 1)}/${String(totalChunks)} of ${devicePath}: ${ack.error ?? 'unknown error'}`,
+        }
+      }
+    }
+
+    return { success: true }
   }
 
   async rebootDevice(): Promise<UsbResult> {

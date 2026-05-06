@@ -1,7 +1,8 @@
-import { readdir, copyFile, access, mkdir } from 'node:fs/promises'
+import { readdir, copyFile, access, mkdir, readFile } from 'node:fs/promises'
 import { join, dirname, relative } from 'node:path'
 import { platform } from 'node:os'
 import { app } from 'electron'
+import type { UsbService } from './usb.service'
 
 export interface SdVolume {
   path: string
@@ -14,6 +15,14 @@ export interface SdPrepareResult {
   skipped: string[]
   error?: string
 }
+
+export interface SdPushProgress {
+  fileIndex: number
+  totalFiles: number
+  relPath: string
+}
+
+export type SdPushProgressCallback = (progress: SdPushProgress) => void
 
 // Files under config/ belong to the user (dashboard, signals). Never overwrite.
 // Everything else (fonts, assets) is app-managed and always refreshed.
@@ -125,4 +134,56 @@ async function prepareSD(volumePath: string): Promise<SdPrepareResult> {
   }
 }
 
-export const sdService = { listVolumes, prepareSD }
+// ---------------------------------------------------------------------------
+// Push sd_contents/ to a connected board over USB (no card removal)
+// ---------------------------------------------------------------------------
+
+/**
+ * Stream every file under sd_contents/ to the connected board's SD card.
+ * /config/* is intentionally excluded — those are user data managed by other
+ * flows (CMD_PUT_CONFIG / dashboard editor). Use the mounted-volume Prepare
+ * SD path for first-time setup that needs to seed default config.
+ */
+async function pushOverUsb(
+  usbService: UsbService,
+  onProgress?: SdPushProgressCallback
+): Promise<SdPrepareResult> {
+  const copied: string[] = []
+  const skipped: string[] = []
+
+  try {
+    const files = await walkDirectory(sdContentsPath(), sdContentsPath())
+    const pushable = files.filter(({ rel }) => !isUserData(rel))
+    skipped.push(...files.filter(({ rel }) => isUserData(rel)).map((f) => f.rel))
+
+    for (let i = 0; i < pushable.length; i++) {
+      const entry = pushable[i]
+      if (!entry) continue
+      const { src, rel } = entry
+      onProgress?.({ fileIndex: i, totalFiles: pushable.length, relPath: rel })
+
+      const content = await readFile(src)
+      const result = await usbService.pushFile('/' + rel, content)
+      if (!result.success) {
+        return {
+          success: false,
+          copied,
+          skipped,
+          error: result.error ?? `Failed to push ${rel}`,
+        }
+      }
+      copied.push(rel)
+    }
+
+    return { success: true, copied, skipped }
+  } catch (err) {
+    return {
+      success: false,
+      copied,
+      skipped,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+}
+
+export const sdService = { listVolumes, prepareSD, pushOverUsb }

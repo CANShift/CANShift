@@ -6,9 +6,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { deviceConfigIpc, sdIpc } from '../services/ipc.service'
-import type { SdVolume } from '../services/ipc.service'
+import type { SdVolume, SdPushProgress } from '../services/ipc.service'
 import type { DeviceConfig, CanSpeedKbps } from '@tmbk/canshift-core'
 import { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from '@tmbk/canshift-core'
+import { useDeviceStore } from '../stores/device.store'
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -81,6 +82,14 @@ export default function DeviceConfigRoute() {
   const [prepError, setPrepError] = useState('')
   const [prepResult, setPrepResult] = useState<{ copied: number; skipped: number } | null>(null)
 
+  // "Push SD over USB" — same payload, but streamed to the connected board
+  // through the existing serial link instead of a mounted volume.
+  const connected = useDeviceStore((s) => s.connected)
+  const [pushState, setPushState] = useState<'idle' | 'pushing' | 'done' | 'error'>('idle')
+  const [pushError, setPushError] = useState('')
+  const [pushProgress, setPushProgress] = useState<SdPushProgress | null>(null)
+  const [pushResult, setPushResult] = useState<{ copied: number; skipped: number } | null>(null)
+
   useEffect(() => {
     void deviceConfigIpc.read().then((result) => {
       if (result.success && result.config) setConfig(result.config)
@@ -123,6 +132,28 @@ export default function DeviceConfigRoute() {
       setPrepState('error')
     }
   }, [selectedVolume])
+
+  const handlePushOverUsb = useCallback(async () => {
+    setPushState('pushing')
+    setPushError('')
+    setPushProgress(null)
+    setPushResult(null)
+
+    const unsubscribe = sdIpc.onPushProgress(setPushProgress)
+    try {
+      const result = await sdIpc.pushOverUsb()
+      if (result.success) {
+        setPushResult({ copied: result.copied.length, skipped: result.skipped.length })
+        setPushState('done')
+      } else {
+        setPushError(result.error ?? 'Push failed')
+        setPushState('error')
+      }
+    } finally {
+      unsubscribe()
+      setPushProgress(null)
+    }
+  }, [])
 
   return (
     <div style={page}>
@@ -304,6 +335,63 @@ export default function DeviceConfigRoute() {
         )}
         {prepState === 'error' && (
           <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{prepError}</div>
+        )}
+      </div>
+
+      {/* Push SD over USB (no card removal) */}
+      <div style={section}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 12 }}>
+          Push SD over USB
+        </div>
+        <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
+          Streams fonts and assets directly to the SD card while it stays plugged into the board.
+          User configuration in <code style={{ color: '#777777' }}>/config/</code> is left untouched
+          — use the dashboard editor to push that.
+        </div>
+
+        <button
+          onClick={() => {
+            void handlePushOverUsb()
+          }}
+          disabled={!connected || pushState === 'pushing'}
+          style={{
+            padding: '7px 20px',
+            borderRadius: 4,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: !connected || pushState === 'pushing' ? 'not-allowed' : 'pointer',
+            border: 'none',
+            background: !connected || pushState === 'pushing' ? '#332222' : '#CC3333',
+            color: !connected || pushState === 'pushing' ? '#666666' : '#FFFFFF',
+          }}
+        >
+          {pushState === 'pushing' ? 'Pushing…' : 'Push to board'}
+        </button>
+
+        {!connected && (
+          <span style={{ fontSize: 11, color: '#555555', marginLeft: 10 }}>
+            Connect a device first.
+          </span>
+        )}
+
+        {pushState === 'pushing' && pushProgress && (
+          <div style={{ fontSize: 12, color: '#888888', marginTop: 8 }}>
+            {pushProgress.fileIndex + 1} / {pushProgress.totalFiles} ·{' '}
+            <code style={{ color: '#AAAAAA' }}>{pushProgress.relPath}</code>
+          </div>
+        )}
+
+        {pushState === 'done' && pushResult && (
+          <div style={{ fontSize: 12, color: '#44CC44', marginTop: 8 }}>
+            ✓ {pushResult.copied} file{pushResult.copied !== 1 ? 's' : ''} written
+            {pushResult.skipped > 0
+              ? ` · ${String(pushResult.skipped)} skipped (config preserved)`
+              : ''}{' '}
+            — reboot the board to load the new content
+          </div>
+        )}
+        {pushState === 'error' && (
+          <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{pushError}</div>
         )}
       </div>
     </div>
