@@ -90,6 +90,10 @@ export class UsbService {
   private handlers: UsbEventHandlers = {}
   private pendingAck: PendingAck | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  // True while a voluntary disconnect is in flight. The 'close' listener uses
+  // it to suppress the onConnectionChanged event so the UI doesn't log a
+  // spurious "disconnected unexpectedly" entry on a user-initiated disconnect.
+  private intentionalDisconnect = false
 
   setEventHandlers(handlers: UsbEventHandlers): void {
     this.handlers = { ...handlers }
@@ -110,6 +114,7 @@ export class UsbService {
     if (this.port?.isOpen) {
       await this.disconnect()
     }
+    this.intentionalDisconnect = false
 
     return new Promise((resolve) => {
       this.port = new SerialPort({
@@ -129,7 +134,8 @@ export class UsbService {
         const wasConnected = this.portPath !== null
         this.portPath = null
         this.stopHeartbeat()
-        if (wasConnected) {
+        this.rejectPendingAck('Connection closed')
+        if (wasConnected && !this.intentionalDisconnect) {
           this.handlers.onConnectionChanged?.({ connected: false })
         }
       })
@@ -151,17 +157,45 @@ export class UsbService {
     })
   }
 
-  async disconnect(): Promise<UsbResult> {
+  /**
+   * Close the serial port and reset all connection state.
+   *
+   * @param intentional `true` (default) when triggered by the user or another
+   *   voluntary code path — suppresses the onConnectionChanged event so the
+   *   renderer's "disconnected unexpectedly" log doesn't fire. Pass `false`
+   *   from involuntary paths (heartbeat unplug, write failure) so the UI is
+   *   notified.
+   */
+  async disconnect(intentional = true): Promise<UsbResult> {
     this.stopHeartbeat()
+    this.rejectPendingAck('Disconnecting')
+
     if (!this.port?.isOpen) {
       this.portPath = null
+      this.port = null
+      this.parser = null
+      this.intentionalDisconnect = false
       return { success: true }
     }
 
+    this.intentionalDisconnect = intentional
+    const port = this.port
+    const parser = this.parser
+
+    // Detach the read pipeline before close so no late `data` events run on
+    // a half-torn-down state.
+    if (parser) {
+      parser.removeAllListeners()
+      port.unpipe(parser)
+    }
+
     return new Promise((resolve) => {
-      this.port?.close((err) => {
+      port.close((err) => {
+        port.removeAllListeners()
         this.port = null
         this.parser = null
+        this.portPath = null
+        this.intentionalDisconnect = false
         if (err) {
           resolve({ success: false, error: err.message })
         } else {
@@ -339,7 +373,7 @@ export class UsbService {
       const stillPresent = ports.some((p) => p.path === this.portPath)
       if (!stillPresent) {
         this.handlers.onError?.('Device unplugged')
-        await this.disconnect()
+        await this.disconnect(false)
         return
       }
     } catch {
@@ -351,7 +385,7 @@ export class UsbService {
     this.port.write('\n', (err) => {
       if (err) {
         this.handlers.onError?.(`heartbeat: ${err.message}`)
-        void this.disconnect()
+        void this.disconnect(false)
       }
     })
   }
@@ -361,6 +395,14 @@ export class UsbService {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
     }
+  }
+
+  private rejectPendingAck(reason: string): void {
+    if (!this.pendingAck) return
+    const ack = this.pendingAck
+    this.pendingAck = null
+    clearTimeout(ack.timer)
+    ack.resolve({ success: false, error: reason })
   }
 
   /**
