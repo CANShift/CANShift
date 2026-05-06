@@ -155,6 +155,25 @@ export default function FirmwareDialog() {
     setSdCopied(null)
   }, [scanVolumes])
 
+  // Push sd_contents/ to the device's SD card directly over the open serial
+  // link — avoids ejecting the card, and works when the SD lives in the LCD
+  // (which is the common case after a fresh flash). Issue #104.
+  const handlePushOverUsb = useCallback(async () => {
+    setSdState('copying')
+    setSdError('')
+    setSdCopied(null)
+    const result = await sdIpc.pushOverUsb()
+    if (result.success) {
+      setSdCopied({ copied: result.copied.length, skipped: result.skipped.length })
+      setSdState('done')
+    } else {
+      setSdError(result.error ?? 'Push over USB failed')
+      setSdState('error')
+    }
+  }, [])
+
+  const connected = useDeviceStore((s) => s.connected)
+
   if (!visible) return null
 
   return (
@@ -216,6 +235,8 @@ export default function FirmwareDialog() {
               onSelectVolume={setSelectedVolume}
               loadingVolumes={loadingVolumes}
               onConfirmSD={handlePrepareSD}
+              connected={connected}
+              onPushOverUsb={handlePushOverUsb}
             />
           ) : sdState === 'copying' ? (
             <SdCopyingPanel />
@@ -507,6 +528,8 @@ function DonePanel({
   onSelectVolume,
   loadingVolumes,
   onConfirmSD,
+  connected,
+  onPushOverUsb,
 }: {
   onClose: () => void
   onPrepareSD: () => void
@@ -515,6 +538,8 @@ function DonePanel({
   onSelectVolume: (v: string) => void
   loadingVolumes: boolean
   onConfirmSD: () => Promise<void>
+  connected: boolean
+  onPushOverUsb: () => Promise<void>
 }) {
   const [sdExpanded, setSdExpanded] = useState(false)
 
@@ -544,43 +569,82 @@ function DonePanel({
             Also prepare an SD card?
           </div>
           <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
-            Copies fonts, assets and default configs to your SD card — required for the display to
-            work.
+            Copies fonts, assets and default configs — required for the display to work.
+            {connected ? ' Pick the USB option if your SD card is in the device.' : ''}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => {
-                onPrepareSD()
-                setSdExpanded(true)
-              }}
-              style={{
-                flex: 1,
-                padding: '7px 0',
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                border: 'none',
-                background: '#CC3333',
-                color: '#FFFFFF',
-              }}
-            >
-              Prepare SD card
-            </button>
-            <button
-              onClick={onClose}
-              style={{
-                padding: '7px 16px',
-                borderRadius: 4,
-                fontSize: 12,
-                cursor: 'pointer',
-                border: '1px solid #333333',
-                background: 'transparent',
-                color: '#888888',
-              }}
-            >
-              Skip
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {connected && (
+              <button
+                onClick={() => {
+                  void onPushOverUsb()
+                }}
+                style={{
+                  padding: '7px 0',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: '#CC3333',
+                  color: '#FFFFFF',
+                }}
+              >
+                Push over USB (no eject)
+              </button>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  onPrepareSD()
+                  setSdExpanded(true)
+                }}
+                style={{
+                  flex: 1,
+                  padding: '7px 0',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  fontWeight: connected ? 400 : 600,
+                  cursor: 'pointer',
+                  border: connected ? '1px solid #444444' : 'none',
+                  background: connected ? 'transparent' : '#CC3333',
+                  color: connected ? '#AAAAAA' : '#FFFFFF',
+                }}
+              >
+                {connected ? 'Use a mounted SD card instead…' : 'Prepare SD card'}
+              </button>
+              {!connected && (
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    border: '1px solid #333333',
+                    background: 'transparent',
+                    color: '#888888',
+                  }}
+                >
+                  Skip
+                </button>
+              )}
+            </div>
+            {connected && (
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '5px 0',
+                  borderRadius: 4,
+                  fontSize: 11,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#666666',
+                }}
+              >
+                Skip
+              </button>
+            )}
           </div>
         </div>
       ) : (
