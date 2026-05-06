@@ -45,6 +45,9 @@ export const IpcChannels = {
   // Main → renderer (download progress events for FIRMWARE_DOWNLOAD)
   FIRMWARE_DOWNLOAD_PROGRESS: 'firmware:download-progress',
 
+  // Read the current dashboard.json from the connected device's SD card.
+  DEVICE_GET_CONFIG: 'device:get-config',
+
   // Edit history (main → renderer)
   HISTORY_UNDO: 'history:undo',
   HISTORY_REDO: 'history:redo',

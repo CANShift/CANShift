@@ -18,6 +18,7 @@ import { useMenuEvents } from './hooks/useMenuEvents'
 import { useFirmwareCheck } from './hooks/useFirmwareCheck'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useAutoConnect } from './hooks/useAutoConnect'
+import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDeviceStore } from './stores/device.store'
 import FirmwareDialog from './components/shared/FirmwareDialog'
 import PushDiffDialog from './components/shared/PushDiffDialog'
@@ -25,6 +26,7 @@ import PushDiffDialog from './components/shared/PushDiffDialog'
 export default function App() {
   useMenuEvents()
   useFirmwareCheck()
+  useDeviceConfigLoad()
   useSessionRestore()
   useAutoConnect()
 
