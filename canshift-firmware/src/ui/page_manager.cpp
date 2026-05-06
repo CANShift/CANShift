@@ -193,15 +193,24 @@ void onGesture(lv_dir_t dir) {
 }
 
 void checkGestures() {
+    // gesture_dir stays armed until a new gesture is detected — without this
+    // tracker the same swipe re-fires every UI tick (#40 page-flip loop).
+    // We consume it once per touch cycle and reset on physical release.
+    static lv_dir_t lastDir = LV_DIR_NONE;
+
     lv_indev_t *indev = lv_indev_get_next(nullptr);
     while (indev != nullptr) {
         if (lv_indev_get_type(indev) == LV_INDEV_TYPE_POINTER) {
-            lv_dir_t dir = lv_indev_get_gesture_dir(indev);
-            if (dir != LV_DIR_NONE) {
-                onGesture(dir);
-                // Required: gesture_dir stays armed otherwise — every UI tick
-                // would re-fire the same swipe (#40 page-flip loop).
-                lv_indev_wait_release(indev);
+            // LVGL 8.3 exposes the state via the proc struct, not a getter.
+            const lv_indev_state_t state = indev->proc.state;
+            if (state == LV_INDEV_STATE_RELEASED) {
+                lastDir = LV_DIR_NONE;
+            } else {
+                lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+                if (dir != LV_DIR_NONE && dir != lastDir) {
+                    onGesture(dir);
+                    lastDir = dir;
+                }
             }
             break;
         }
