@@ -1,6 +1,6 @@
 // SettingsScreen.tsx — Screen settings pushed to device via BLE
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native'
 import Slider from '@react-native-community/slider'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -35,6 +35,26 @@ export default function SettingsScreen({ navigation }: Props) {
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0)
   const [saving, setSaving] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
+
+  // Pull current values from the device on mount so sliders/segments don't
+  // open at hardcoded defaults that misrepresent the device state (#26).
+  // If the read fails (older firmware, transient BLE error), we silently
+  // keep the defaults — saving will just push them, no worse than before.
+  useEffect(() => {
+    let cancelled = false
+    void BleService.readSettings()
+      .then((current) => {
+        if (cancelled || !current) return
+        setBrightness(current.brightness)
+        setSleep(current.sleep)
+      })
+      .catch(() => {
+        // Older firmware exposes SETTINGS as write-only — fall back to defaults.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleSave = async () => {
     setSaving(true)
