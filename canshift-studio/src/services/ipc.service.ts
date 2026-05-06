@@ -152,7 +152,8 @@ export const assetIpc = {
 
 export const sdIpc = {
   listVolumes: () => invoke<SdVolume[]>(IpcChannels.SD_LIST_VOLUMES),
-  prepare: (volumePath: string) => invoke<SdPrepareResult>(IpcChannels.SD_PREPARE, volumePath),
+  prepare: (volumePath: string, forceRefresh = false) =>
+    invoke<SdPrepareResult>(IpcChannels.SD_PREPARE, volumePath, forceRefresh),
   pushOverUsb: () => invoke<SdPrepareResult>(IpcChannels.SD_PUSH_OVER_USB),
   onPushProgress: (handler: (progress: SdPushProgress) => void) => {
     const wrapped = (...args: unknown[]): void => {

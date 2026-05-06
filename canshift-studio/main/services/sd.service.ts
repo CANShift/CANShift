@@ -103,7 +103,10 @@ async function listVolumes(): Promise<SdVolume[]> {
   }
 }
 
-async function prepareSD(volumePath: string): Promise<SdPrepareResult> {
+// `forceRefresh` overrides the user-data preservation rule: every file under
+// sd_contents/, including config/, is overwritten. Used during firmware
+// development when a new dashboard.json schema needs to land on existing SDs.
+async function prepareSD(volumePath: string, forceRefresh = false): Promise<SdPrepareResult> {
   const copied: string[] = []
   const skipped: string[] = []
 
@@ -114,7 +117,7 @@ async function prepareSD(volumePath: string): Promise<SdPrepareResult> {
       const dest = join(volumePath, rel)
       await mkdir(dirname(dest), { recursive: true })
 
-      if (isUserData(rel) && (await fileExists(dest))) {
+      if (!forceRefresh && isUserData(rel) && (await fileExists(dest))) {
         skipped.push(rel)
         continue
       }

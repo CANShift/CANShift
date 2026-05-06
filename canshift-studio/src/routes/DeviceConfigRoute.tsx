@@ -81,6 +81,10 @@ export default function DeviceConfigRoute() {
   const [prepState, setPrepState] = useState<'idle' | 'copying' | 'done' | 'error'>('idle')
   const [prepError, setPrepError] = useState('')
   const [prepResult, setPrepResult] = useState<{ copied: number; skipped: number } | null>(null)
+  // Force-refresh overwrites configs in /Volumes/SD/config/ — destructive,
+  // gated by the confirmation modal below.
+  const [forceRefresh, setForceRefresh] = useState(false)
+  const [confirmForce, setConfirmForce] = useState(false)
 
   // "Push SD over USB" — same payload, but streamed to the connected board
   // through the existing serial link instead of a mounted volume.
@@ -123,7 +127,7 @@ export default function DeviceConfigRoute() {
     setPrepState('copying')
     setPrepError('')
     setPrepResult(null)
-    const result = await sdIpc.prepare(selectedVolume)
+    const result = await sdIpc.prepare(selectedVolume, forceRefresh)
     if (result.success) {
       setPrepResult({ copied: result.copied.length, skipped: result.skipped.length })
       setPrepState('done')
@@ -131,7 +135,20 @@ export default function DeviceConfigRoute() {
       setPrepError(result.error ?? 'Prepare failed')
       setPrepState('error')
     }
-  }, [selectedVolume])
+  }, [selectedVolume, forceRefresh])
+
+  const handlePrepareClick = useCallback(() => {
+    if (forceRefresh) {
+      setConfirmForce(true)
+      return
+    }
+    void handlePrepareSD()
+  }, [forceRefresh, handlePrepareSD])
+
+  const handleConfirmForce = useCallback(() => {
+    setConfirmForce(false)
+    void handlePrepareSD()
+  }, [handlePrepareSD])
 
   const handlePushOverUsb = useCallback(async () => {
     setPushState('pushing')
@@ -305,10 +322,30 @@ export default function DeviceConfigRoute() {
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            void handlePrepareSD()
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 11,
+            color: '#888888',
+            marginBottom: 10,
+            cursor: 'pointer',
           }}
+        >
+          <input
+            type="checkbox"
+            checked={forceRefresh}
+            onChange={(e) => {
+              setForceRefresh(e.target.checked)
+            }}
+          />
+          Force refresh — also overwrite <code style={{ color: '#AAAAAA' }}>/config/</code>{' '}
+          (dashboard, signals, theme)
+        </label>
+
+        <button
+          onClick={handlePrepareClick}
           disabled={!selectedVolume || prepState === 'copying'}
           style={{
             padding: '7px 20px',
@@ -321,7 +358,11 @@ export default function DeviceConfigRoute() {
             color: !selectedVolume || prepState === 'copying' ? '#666666' : '#FFFFFF',
           }}
         >
-          {prepState === 'copying' ? 'Copying…' : 'Prepare SD card'}
+          {prepState === 'copying'
+            ? 'Copying…'
+            : forceRefresh
+              ? 'Prepare SD card (force)'
+              : 'Prepare SD card'}
         </button>
 
         {prepState === 'done' && prepResult && (
@@ -394,6 +435,81 @@ export default function DeviceConfigRoute() {
           <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{pushError}</div>
         )}
       </div>
+
+      {confirmForce && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            setConfirmForce(false)
+          }}
+        >
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+            }}
+            style={{
+              background: '#1A1A1A',
+              border: '1px solid #333333',
+              borderRadius: 8,
+              padding: 24,
+              maxWidth: 460,
+              color: '#CCCCCC',
+              fontFamily: 'monospace',
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 12 }}>
+              Force refresh?
+            </div>
+            <div style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 20, color: '#999999' }}>
+              This will overwrite <code style={{ color: '#FFFFFF' }}>dashboard.json</code>,{' '}
+              <code style={{ color: '#FFFFFF' }}>signals.json</code>, and{' '}
+              <code style={{ color: '#FFFFFF' }}>theme.json</code> on the SD card. Any local edits
+              you made on the device will be lost.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setConfirmForce(false)
+                }}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  border: '1px solid #333333',
+                  background: 'transparent',
+                  color: '#AAAAAA',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmForce}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 4,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: '#CC3333',
+                  color: '#FFFFFF',
+                }}
+              >
+                Overwrite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
