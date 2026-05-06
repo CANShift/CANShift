@@ -8,6 +8,9 @@ import SettingsScreen from '../screens/SettingsScreen'
 import UpdateScreen from '../screens/UpdateScreen'
 import ConnectedNavigator from './ConnectedNavigator'
 
+// Must remain a `type` (not `interface`) — React Navigation's ParamListBase
+// constraint requires an index-signature shape that interfaces don't satisfy.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export type RootStackParamList = {
   Scan: undefined
   Connected: undefined

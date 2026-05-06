@@ -23,16 +23,16 @@ export interface FirmwareRelease {
 
 export async function fetchReleases(): Promise<FirmwareRelease[]> {
   const response = await fetch(`${GITHUB_API}?per_page=10`)
-  if (!response.ok) throw new Error(`GitHub API error: ${response.status}`)
+  if (!response.ok) throw new Error(`GitHub API error: ${String(response.status)}`)
 
-  const data = (await response.json()) as Array<{
+  const data = (await response.json()) as {
     tag_name: string
     published_at: string
     body: string
-    assets: Array<{ name: string; browser_download_url: string; size: number }>
+    assets: { name: string; browser_download_url: string; size: number }[]
     draft: boolean
     prerelease: boolean
-  }>
+  }[]
 
   return data
     .filter((r) => !r.draft && !r.prerelease)
@@ -41,7 +41,7 @@ export async function fetchReleases(): Promise<FirmwareRelease[]> {
       return {
         version: r.tag_name.replace(/^v/, ''),
         publishedAt: r.published_at,
-        notes: r.body ?? '',
+        notes: r.body,
         downloadUrl: asset?.browser_download_url ?? '',
         sizeBytes: asset?.size ?? 0,
       }
@@ -57,7 +57,7 @@ export async function downloadFirmware(
   release: FirmwareRelease,
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  const dest = `${FileSystem.cacheDirectory}canshift-${release.version}.bin`
+  const dest = `${FileSystem.cacheDirectory ?? ''}canshift-${release.version}.bin`
 
   // Check if already cached
   const info = await FileSystem.getInfoAsync(dest)
@@ -108,10 +108,10 @@ export async function pushFirmware(
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve()
       } else {
-        reject(new Error(`OTA failed: HTTP ${xhr.status}`))
+        reject(new Error(`OTA failed: HTTP ${String(xhr.status)}`))
       }
     }
-    xhr.onerror = () => reject(new Error('OTA network error'))
+    xhr.onerror = () => { reject(new Error('OTA network error')); }
     xhr.open('POST', ESP32_OTA_URL)
     xhr.send(formData)
   })

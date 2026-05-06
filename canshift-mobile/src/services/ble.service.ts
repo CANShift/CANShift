@@ -63,7 +63,7 @@ function stopStalenessTimer() {
 // Public API
 // ---------------------------------------------------------------------------
 
-export type ScanResult = { id: string; name: string }
+export interface ScanResult { id: string; name: string }
 
 /** Scan for CANShift BLE devices. Returns list of found devices after timeoutMs. */
 export function scan(
@@ -73,24 +73,26 @@ export function scan(
   return new Promise((resolve, reject) => {
     const found = new Set<string>()
 
-    manager.startDeviceScan(
+    // startDeviceScan / stopDeviceScan are typed as Promise-returning by the
+    // SDK but used here as fire-and-forget — `void` makes that explicit.
+    void manager.startDeviceScan(
       [BLE_SERVICE_UUID],
       { allowDuplicates: false },
       (error, device) => {
         if (error) {
-          manager.stopDeviceScan()
+          void manager.stopDeviceScan()
           reject(new Error(error.message))
           return
         }
-        if (device && device.name?.includes(BLE_DEVICE_NAME) && !found.has(device.id)) {
+        if (device?.name?.includes(BLE_DEVICE_NAME) && !found.has(device.id)) {
           found.add(device.id)
-          onFound({ id: device.id, name: device.name ?? BLE_DEVICE_NAME })
+          onFound({ id: device.id, name: device.name })
         }
       }
     )
 
     setTimeout(() => {
-      manager.stopDeviceScan()
+      void manager.stopDeviceScan()
       resolve()
     }, timeoutMs)
   })
@@ -98,7 +100,7 @@ export function scan(
 
 /** Stop an ongoing scan. */
 export function stopScan() {
-  manager.stopDeviceScan()
+  void manager.stopDeviceScan()
 }
 
 /** Connect to a device and subscribe to telemetry notifications. */
@@ -162,7 +164,9 @@ export async function connect(deviceId: string): Promise<void> {
           store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
           store.setWifiAp(s.ap_ssid ?? null)
           if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
-        } catch {}
+        } catch {
+          // Drop malformed status payloads silently — the next valid one wins.
+        }
       }
     )
 

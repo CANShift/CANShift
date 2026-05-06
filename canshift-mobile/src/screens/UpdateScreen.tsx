@@ -19,7 +19,7 @@ import * as BleService from '../services/ble.service'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
 
-type Props = {
+interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Update'>
 }
 
@@ -70,7 +70,15 @@ function StepIndicator({ current }: { current: number }) {
 function ProgressBar({ value }: { value: number }) {
   return (
     <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${Math.round(value * 100)}%` }]} />
+      <View
+        style={[
+          styles.progressFill,
+          // React Native's DimensionValue requires a `${number}%` literal here,
+          // so the eslint restrict-template rule must yield to the RN typing.
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          { width: `${Math.round(value * 100)}%` },
+        ]}
+      />
     </View>
   )
 }

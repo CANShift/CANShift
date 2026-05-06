@@ -98,7 +98,7 @@ function formatValue(key: string, val: number | undefined): string {
   const meta = SIGNAL_META[key]
   if (!meta) return val.toString()
   return meta.decimals === 0
-    ? `${Math.round(val)}${meta.unit}`
+    ? `${String(Math.round(val))}${meta.unit}`
     : `${val.toFixed(meta.decimals)}${meta.unit}`
 }
 
@@ -134,8 +134,8 @@ function ChartPanel({
 
   useEffect(() => {
     if (paused) return
-    const id = setInterval(() => setTick((n) => n + 1), 100)
-    return () => clearInterval(id)
+    const id = setInterval(() => { setTick((n) => n + 1); }, 100)
+    return () => { clearInterval(id); }
   }, [paused])
 
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
@@ -147,7 +147,7 @@ function ChartPanel({
     const now = paused ? pausedAt : Date.now()
     const windowStart = now - windowSecs * 1000
     const buf = getBuffer().filter((s) => s.t >= windowStart)
-    const latest = buf.length > 0 ? buf[buf.length - 1].v : {}
+    const latest: Record<string, number> = buf[buf.length - 1]?.v ?? {}
     const lines = visibleSignals.map((key) => ({
       key,
       color: SIGNAL_COLOR[key] ?? '#888',
@@ -160,7 +160,6 @@ function ChartPanel({
       windowEnd: now,
       hasData: buf.length > 1,
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, visibleSignals, windowSecs, paused, pausedAt, chartSize])
 
   const vGap = compact ? 2 : Spacing.xs
@@ -181,7 +180,7 @@ function ChartPanel({
             <TouchableOpacity
               key={key}
               style={[styles.pill, active && { borderColor: color, backgroundColor: `${color}22` }]}
-              onPress={() => onToggleSignal(key)}
+              onPress={() => { onToggleSignal(key); }}
             >
               <View style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]} />
               <Text style={[styles.pillLabel, active && { color }]}>
@@ -202,7 +201,7 @@ function ChartPanel({
             <TouchableOpacity
               key={opt.value}
               style={[styles.windowBtn, windowSecs === opt.value && styles.windowBtnActive]}
-              onPress={() => onSetWindow(opt.value)}
+              onPress={() => { onSetWindow(opt.value); }}
             >
               <Text style={[styles.windowBtnText, windowSecs === opt.value && styles.windowBtnTextActive]}>
                 {opt.label}

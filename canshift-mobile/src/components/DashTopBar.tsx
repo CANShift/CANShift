@@ -43,7 +43,7 @@ export default function DashTopBar() {
           } else {
             await BleService.disconnect()
           }
-          rootNav?.replace('Scan')
+          rootNav.replace('Scan')
         },
       },
     ])
@@ -73,7 +73,7 @@ export default function DashTopBar() {
               <Text style={styles.staleText}>NO DATA</Text>
             </View>
           )}
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.iconBtn}>
+          <TouchableOpacity onPress={() => { setMenuVisible(true); }} style={styles.iconBtn}>
             <Text style={styles.iconBtnText}>☰</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDisconnect} style={styles.iconBtn}>
@@ -86,15 +86,15 @@ export default function DashTopBar() {
         visible={menuVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
+        onRequestClose={() => { setMenuVisible(false); }}
       >
-        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+        <Pressable style={styles.menuOverlay} onPress={() => { setMenuVisible(false); }}>
           <View style={styles.menuSheet}>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
                 setMenuVisible(false)
-                rootNav?.navigate('Settings')
+                rootNav.navigate('Settings')
               }}
             >
               <Text style={styles.menuItemText}>Settings</Text>
@@ -104,13 +104,13 @@ export default function DashTopBar() {
               style={styles.menuItem}
               onPress={() => {
                 setMenuVisible(false)
-                rootNav?.navigate('Update')
+                rootNav.navigate('Update')
               }}
             >
               <Text style={styles.menuItemText}>Firmware Update</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => setMenuVisible(false)}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); }}>
               <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
