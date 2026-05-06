@@ -478,7 +478,7 @@ describe('validateDashboard — top bar layout', () => {
           height: 16,
           layout: [
             { type: 'statusDot', signal: 'rpm', position: 'left' },
-            { type: 'pageName', position: 'center' },
+            { type: 'label', text: 'ECU', position: 'center' },
             { type: 'themeToggle', position: 'right' },
           ],
         },
@@ -513,7 +513,7 @@ describe('validateDashboard — top bar layout', () => {
       minimalConfig({
         topBar: {
           height: 16,
-          layout: [{ type: 'pageName', position: 'top' }],
+          layout: [{ type: 'statusDot', signal: 'rpm', position: 'top' }],
         },
       })
     )
