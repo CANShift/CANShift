@@ -16,6 +16,13 @@ import type { PortInfo } from '../services/ipc.service'
 
 const POLL_INTERVAL_MS = 2_000
 
+// Rate-limit the "Auto-connected" success log. The hook re-runs every
+// disconnect → reconnect transition, so a flash retry that bounces the port
+// would otherwise spam the log between the flash-error entries (#35). Module
+// scope so it persists across hook unmount/remount within the same session.
+const RECONNECT_LOG_COOLDOWN_MS = 30_000
+let lastAutoConnectLogAt = 0
+
 // USB-to-UART chips used by the supported boards. Match against manufacturer
 // strings reported by the OS — covers macOS, Windows and Linux variants.
 const CANSHIFT_MANUFACTURER_HINTS = ['silicon labs', 'cp210', 'wch.cn', 'ch340', 'ch9102']
@@ -69,7 +76,11 @@ export function useAutoConnect(): void {
 
         if (result.success) {
           setConnected(candidate.path)
-          log('success', `Auto-connected to ${candidate.path}`)
+          const now = Date.now()
+          if (now - lastAutoConnectLogAt > RECONNECT_LOG_COOLDOWN_MS) {
+            log('success', `Auto-connected to ${candidate.path}`)
+            lastAutoConnectLogAt = now
+          }
         }
       } catch {
         // Best-effort — next tick will retry
