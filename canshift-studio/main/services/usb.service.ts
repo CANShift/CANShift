@@ -58,6 +58,12 @@ interface PendingAck {
 
 const ACK_TIMEOUT_MS = 5_000
 
+// Heartbeat: a single \n every 2s while connected. The firmware updates its
+// "host active" timer on any byte received, but a bare \n produces no command
+// (rxPos=0 → no handleCommand call) so it doesn't pollute the response stream
+// or interfere with pending acks. Drives the top-bar USB icon (issue #53).
+const HEARTBEAT_INTERVAL_MS = 2_000
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -76,6 +82,7 @@ export class UsbService {
   private portPath: string | null = null
   private handlers: UsbEventHandlers = {}
   private pendingAck: PendingAck | null = null
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
 
   setEventHandlers(handlers: UsbEventHandlers): void {
     this.handlers = { ...handlers }
@@ -114,6 +121,7 @@ export class UsbService {
       this.port.on('close', () => {
         const wasConnected = this.portPath !== null
         this.portPath = null
+        this.stopHeartbeat()
         if (wasConnected) {
           this.handlers.onConnectionChanged?.({ connected: false })
         }
@@ -129,6 +137,7 @@ export class UsbService {
           return
         }
         this.portPath = portPath
+        this.startHeartbeat()
         this.handlers.onConnectionChanged?.({ connected: true, portPath })
         resolve({ success: true })
       })
@@ -136,6 +145,7 @@ export class UsbService {
   }
 
   async disconnect(): Promise<UsbResult> {
+    this.stopHeartbeat()
     if (!this.port?.isOpen) {
       this.portPath = null
       return { success: true }
@@ -219,6 +229,25 @@ export class UsbService {
   // ---------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat()
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.port?.isOpen) return
+      // Bare \n: firmware updates s_lastHostCmdMs on the byte but s_rxPos stays
+      // 0 → no command parsed, no response sent, no pendingAck collision.
+      this.port.write('\n', (err) => {
+        if (err) this.handlers.onError?.(`heartbeat: ${err.message}`)
+      })
+    }, HEARTBEAT_INTERVAL_MS)
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+  }
 
   /**
    * Send a command line and wait for the firmware ack.
