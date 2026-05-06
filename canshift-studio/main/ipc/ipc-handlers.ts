@@ -148,6 +148,14 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return usbService.rebootDevice()
   })
 
+  ipcMain.handle(IpcChannels.USB_TOGGLE_DAY_NIGHT, async () => {
+    return usbService.toggleDayNight()
+  })
+
+  ipcMain.handle(IpcChannels.USB_CALIBRATE_TOUCH, async () => {
+    return usbService.calibrateTouch()
+  })
+
   // ---------------------------------------------------------------------------
   // CAN scanner
   // ---------------------------------------------------------------------------
