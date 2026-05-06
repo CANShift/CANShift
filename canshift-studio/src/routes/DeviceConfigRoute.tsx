@@ -98,6 +98,13 @@ export default function DeviceConfigRoute() {
     void deviceConfigIpc.read().then((result) => {
       if (result.success && result.config) setConfig(result.config)
     })
+    // Pre-fill the volume dropdown so the user doesn't have to click "Scan"
+    // every time. handleScanVolumes already auto-selects when there's exactly
+    // one removable volume.
+    void sdIpc.listVolumes().then((vols) => {
+      setSdVolumes(vols)
+      if (vols.length === 1 && vols[0]) setSelectedVolume(vols[0].path)
+    })
   }, [])
 
   const handleSave = useCallback(async () => {
