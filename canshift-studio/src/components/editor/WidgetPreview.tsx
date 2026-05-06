@@ -172,7 +172,9 @@ function GaugeArcPreview({
   // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
   const r = Math.min(w * 0.45, h * 0.46)
   const cy = h * 0.5 // true vertical center
-  const strokeW = Math.max(3, r * 0.16)
+  // Thicker stroke than the original 16 % — matches firmware kBgWidth=14 on
+  // the smaller h=80 dashboard arcs so the trace stays readable.
+  const strokeW = Math.max(5, r * 0.24)
   const innerR = r - strokeW / 2 - 2
 
   const needleTip = svgPt(cx, cy, r * 0.88, 135 + valuePct * 270)
@@ -207,7 +209,7 @@ function GaugeArcPreview({
         fill="none"
         stroke="#252525"
         strokeWidth={strokeW}
-        strokeLinecap="round"
+        strokeLinecap="butt"
       />
       {/* Warning zone */}
       {dangerPct > warnPct && (
@@ -231,7 +233,7 @@ function GaugeArcPreview({
         fill="none"
         stroke={valueColor}
         strokeWidth={strokeW}
-        strokeLinecap="round"
+        strokeLinecap="butt"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
       {/* Inner circle */}
@@ -260,7 +262,7 @@ function GaugeArcPreview({
             y2={needleTip.y}
             stroke={st.textColor}
             strokeWidth={Math.max(1, strokeW * 0.22)}
-            strokeLinecap="round"
+            strokeLinecap="butt"
           />
           <circle cx={cx} cy={cy} r={Math.max(2, strokeW * 0.3)} fill={valueColor} />
         </g>
