@@ -443,13 +443,20 @@ void SettingsPage::init(int16_t yOffset, int16_t height) {
     LOG_INFO("Settings", "Settings page initialized");
 }
 
+static uint32_t s_lastOpenMs = 0;
+
 void SettingsPage::open() {
     if (!s_panel || s_open)
         return;
     lv_obj_clear_flag(s_panel, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_panel);
     s_open = true;
+    s_lastOpenMs = millis();
     LOG_DEBUG("Settings", "Settings page opened");
+}
+
+uint32_t SettingsPage::lastOpenMs() {
+    return s_lastOpenMs;
 }
 
 void SettingsPage::close() {

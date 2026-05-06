@@ -98,7 +98,7 @@ static void showSplash() {
     lv_obj_set_style_radius(bar, 2, LV_PART_INDICATOR);
 
     lv_obj_t *status = lv_label_create(scr);
-    lv_label_set_text(status, "Starting\xe2\x80\xa6");
+    lv_label_set_text(status, "Starting...");
     lv_obj_set_style_text_color(status, lv_color_hex(0x666666), 0);
     lv_obj_align(status, LV_ALIGN_CENTER, 0, 52);
 
@@ -136,12 +136,14 @@ static void showSDError() {
 }
 
 // Advance the bar and update the status text between init steps.
+// lv_refr_now flushes synchronously so the bar visibly progresses even when
+// boot stages take only a few ms.
 static void updateSplash(const char *status, uint8_t pct) {
     if (s_splashBar)
         lv_bar_set_value(s_splashBar, pct, LV_ANIM_OFF);
     if (s_splashStatus)
         lv_label_set_text(s_splashStatus, status);
-    lv_task_handler();
+    lv_refr_now(NULL);
 }
 
 // Returns false if SD is absent — caller must halt.
@@ -189,25 +191,25 @@ void BootSequence::run() {
     // 2. Touch controller
     LOG_INFO("BOOT", "Initializing touch...");
     TouchDriver::init();
-    updateSplash("Initializing touch\xe2\x80\xa6", 15);
+    updateSplash("Initializing touch...", 15);
 
     // 3. Storage — fatal if SD missing
-    updateSplash("Checking SD card\xe2\x80\xa6", 20);
+    updateSplash("Checking SD card...", 20);
     if (!initStorage()) {
         showSDError(); // halts
     }
-    updateSplash("SD ready\xe2\x80\xa6", 35);
+    updateSplash("SD ready...", 35);
 
     // 4. Config
     logHeap("before loadConfig");
     loadConfig();
     logHeap("after loadConfig");
-    updateSplash("Applying config\xe2\x80\xa6", 55);
+    updateSplash("Applying config...", 55);
 
     // 5. Runtime
     SignalStore::init();
     AlertEngine::init();
-    updateSplash("Starting runtime\xe2\x80\xa6", 65);
+    updateSplash("Starting runtime...", 65);
 
     // 6. CAN hardware (skip in simulation mode)
 #if !APP_SIMULATION_MODE

@@ -120,13 +120,18 @@ void TopBar::init() {
     lv_obj_add_event_cb(
         s_bar,
         [](lv_event_t *e) {
-            // Only fire when the click hit the bar itself, not a child button
             if (lv_event_get_target(e) != lv_event_get_current_target(e))
                 return;
-            if (SettingsPage::isOpen()) {
-                LOG_INFO("UI", "Top bar tapped — closing Settings");
-                SettingsPage::close();
-            }
+            if (!SettingsPage::isOpen())
+                return;
+            // A tap on the top bar can be flagged by LVGL as a tiny down-swipe,
+            // which opens Settings, immediately followed by the click event
+            // that would close it again — net effect is a flicker. Skip the
+            // close if Settings was opened in the last ~300 ms (i.e. opened
+            // by the same touch event).
+            if (millis() - SettingsPage::lastOpenMs() < 300) return;
+            LOG_INFO("UI", "Top bar tapped — closing Settings");
+            SettingsPage::close();
         },
         LV_EVENT_CLICKED, nullptr);
 
