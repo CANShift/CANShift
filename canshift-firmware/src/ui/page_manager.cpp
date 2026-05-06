@@ -402,6 +402,15 @@ void PageManager::updateWidgets() {
     lv_obj_t *currentScreen = s_pages[s_currentIdx].screen;
     WidgetFactory::updateAll(currentScreen);
 
+    // Refresh top bar status (ECU/CAN dots, voltage, page name, USB icon).
+    // Throttled to ~5 Hz to keep frame budget reasonable.
+    static uint32_t lastTopBarMs = 0;
+    uint32_t nowMs = millis();
+    if (nowMs - lastTopBarMs > 200) {
+        TopBar::update();
+        lastTopBarMs = nowMs;
+    }
+
     // Check signal timeouts periodically (100ms interval is sufficient)
     static uint32_t lastTimeoutCheck = 0;
     uint32_t now = millis();

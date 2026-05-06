@@ -218,7 +218,13 @@ void handleScreenSettings(const JsonObjectConst &obj) {
     }
 }
 
+// Last time the host sent a command. Used by UsbComm::isHostActive() for the
+// top bar "USB connected" icon. Updated on every received command (volatile is
+// fine — single writer, single reader, atomic on 32-bit ESP32).
+static volatile uint32_t s_lastHostCmdMs = 0;
+
 void handleCommand(const char *jsonLine) {
+    s_lastHostCmdMs = millis();
     LOG_DEBUG("USB", "Received command: %.40s...", jsonLine);
 
     // Peek at cmd using a filter — avoids loading the full PUT_CONFIG payload
@@ -328,6 +334,13 @@ void UsbComm::init() {
         LOG_ERROR("USB", "Failed to create CAN scan queue");
     }
     LOG_INFO("USB", "USB comm initialized");
+}
+
+bool UsbComm::isHostActive() {
+    constexpr uint32_t HOST_TIMEOUT_MS = 5000;
+    if (s_lastHostCmdMs == 0)
+        return false;
+    return (millis() - s_lastHostCmdMs) < HOST_TIMEOUT_MS;
 }
 
 void UsbComm::updateCanStats(uint32_t fpsX10, uint32_t errors) {
