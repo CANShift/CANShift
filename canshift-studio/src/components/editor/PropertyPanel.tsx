@@ -170,13 +170,75 @@ const SIGNAL_UNITS: Record<string, string[]> = {
   battery_volts: ['V'],
 }
 
-// Label position options for gauge widgets
+// Label position options shared by every widget that exposes a corner label.
 const GAUGE_LABEL_POSITIONS: { value: WidgetLabelPosition; label: string }[] = [
   { value: 'top-left', label: '↖ TL' },
   { value: 'top-right', label: '↗ TR' },
   { value: 'bottom-left', label: '↙ BL' },
   { value: 'bottom-right', label: '↘ BR' },
 ]
+
+// Reusable label / labelPosition editor block — used by every widget editor
+// that supports a corner label (gauge, bar, warning, timer, gear, image).
+interface LabelEditableConfig {
+  label?: string
+  labelPosition?: WidgetLabelPosition
+}
+
+function LabelFields<T extends LabelEditableConfig>({
+  cfg,
+  onChange,
+}: {
+  cfg: T
+  onChange: (next: T) => void
+}) {
+  return (
+    <>
+      <Field label="Label">
+        <input
+          style={inputStyle}
+          placeholder="e.g. RPM, Coolant…"
+          value={cfg.label ?? ''}
+          onChange={(e) => {
+            const next = { ...cfg }
+            if (e.target.value) next.label = e.target.value
+            else delete next.label
+            onChange(next)
+          }}
+        />
+      </Field>
+      {cfg.label && (
+        <Field label="Label pos.">
+          <div style={{ display: 'flex', gap: 3 }}>
+            {GAUGE_LABEL_POSITIONS.map(({ value, label }) => {
+              const isActive = (cfg.labelPosition ?? 'top-left') === value
+              return (
+                <button
+                  key={value}
+                  onClick={() => {
+                    onChange({ ...cfg, labelPosition: value })
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '3px 0',
+                    fontSize: 9,
+                    background: isActive ? '#2A2A3A' : '#111111',
+                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: isActive ? '#7788CC' : '#AAAAAA',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </Field>
+      )}
+    </>
+  )
+}
 
 function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
@@ -475,48 +537,12 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
       )}
 
       {/* Widget label */}
-      <Field label="Label">
-        <input
-          style={inputStyle}
-          placeholder="e.g. RPM, Coolant…"
-          value={cfg.label ?? ''}
-          onChange={(e) => {
-            const next = { ...cfg }
-            if (e.target.value) next.label = e.target.value
-            else delete next.label
-            onChange({ config: next })
-          }}
-        />
-      </Field>
-      {cfg.label && (
-        <Field label="Label pos.">
-          <div style={{ display: 'flex', gap: 3 }}>
-            {GAUGE_LABEL_POSITIONS.map(({ value, label }) => {
-              const isActive = (cfg.labelPosition ?? 'top-left') === value
-              return (
-                <button
-                  key={value}
-                  onClick={() => {
-                    onChange({ config: { ...cfg, labelPosition: value } })
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '3px 0',
-                    fontSize: 9,
-                    background: isActive ? '#2A2A3A' : '#111111',
-                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
-                    borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#AAAAAA',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </Field>
-      )}
+      <LabelFields
+        cfg={cfg}
+        onChange={(next) => {
+          onChange({ config: next })
+        }}
+      />
 
       <Field label="Icon">
         <IconPicker
@@ -1040,6 +1066,113 @@ function WarningFields({ widget, onChange }: ConfigFieldsProps) {
           }}
         />
       </Field>
+      <LabelFields
+        cfg={cfg}
+        onChange={(next) => {
+          onChange({ config: next })
+        }}
+      />
+    </>
+  )
+}
+
+function TimerFields({ widget, onChange }: ConfigFieldsProps) {
+  const cfg = widget.config.type === 'timer' ? widget.config : null
+  if (!cfg) return null
+  return (
+    <>
+      <Field label="Format">
+        <div style={{ display: 'flex', gap: 3 }}>
+          {(['mm:ss', 'ss.mmm'] as const).map((fmt) => {
+            const isActive = (cfg.format ?? 'mm:ss') === fmt
+            return (
+              <button
+                key={fmt}
+                onClick={() => {
+                  onChange({ config: { ...cfg, format: fmt } })
+                }}
+                style={{
+                  flex: 1,
+                  padding: '3px 0',
+                  fontSize: 10,
+                  background: isActive ? '#2A2A3A' : '#111111',
+                  border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
+                  borderRadius: 3,
+                  color: isActive ? '#7788CC' : '#AAAAAA',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {fmt}
+              </button>
+            )
+          })}
+        </div>
+      </Field>
+      <Field label="Auto-start">
+        <input
+          type="checkbox"
+          checked={cfg.autoStart ?? false}
+          onChange={(e) => {
+            onChange({ config: { ...cfg, autoStart: e.target.checked } })
+          }}
+        />
+      </Field>
+      <LabelFields
+        cfg={cfg}
+        onChange={(next) => {
+          onChange({ config: next })
+        }}
+      />
+    </>
+  )
+}
+
+function GearFields({ widget, onChange }: ConfigFieldsProps) {
+  const cfg = widget.config.type === 'gear' ? widget.config : null
+  if (!cfg) return null
+  return (
+    <>
+      <Field label="Hide if invalid">
+        <input
+          type="checkbox"
+          checked={cfg.hideWhenInvalid ?? false}
+          onChange={(e) => {
+            onChange({ config: { ...cfg, hideWhenInvalid: e.target.checked } })
+          }}
+        />
+      </Field>
+      <LabelFields
+        cfg={cfg}
+        onChange={(next) => {
+          onChange({ config: next })
+        }}
+      />
+    </>
+  )
+}
+
+function ImageFields({ widget, onChange }: ConfigFieldsProps) {
+  const cfg = widget.config.type === 'image' ? widget.config : null
+  if (!cfg) return null
+  return (
+    <>
+      <Field label="Path">
+        <input
+          style={inputStyle}
+          placeholder="/images/logo.bin"
+          value={cfg.imagePath}
+          onChange={(e) => {
+            onChange({ config: { ...cfg, imagePath: e.target.value } })
+          }}
+        />
+      </Field>
+      <LabelFields
+        cfg={cfg}
+        onChange={(next) => {
+          onChange({ config: next })
+        }}
+      />
     </>
   )
 }
@@ -1051,6 +1184,9 @@ const CONFIG_FIELDS: Partial<
   button: ButtonFields,
   bar: BarFields,
   warning: WarningFields,
+  timer: TimerFields,
+  gear: GearFields,
+  image: ImageFields,
 }
 
 // ---------------------------------------------------------------------------

@@ -92,6 +92,9 @@ export interface WarningWidgetConfig {
   threshold: number
   /** Icon displayed inside the warning indicator */
   iconName?: SensorIconName
+  /** Short label shown at a fixed corner of the widget (e.g. "MIL", "Oil") */
+  label?: string
+  labelPosition?: WidgetLabelPosition
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +167,9 @@ export interface TimerWidgetConfig {
   type: 'timer'
   autoStart?: boolean
   format?: 'mm:ss' | 'ss.mmm'
+  /** Short label shown at a fixed corner of the widget */
+  label?: string
+  labelPosition?: WidgetLabelPosition
 }
 
 export interface BarWidgetConfig {
@@ -190,11 +196,17 @@ export interface GearWidgetConfig {
   prefix?: string
   suffix?: string
   hideWhenInvalid?: boolean
+  /** Short label shown at a fixed corner of the widget (e.g. "GEAR") */
+  label?: string
+  labelPosition?: WidgetLabelPosition
 }
 
 export interface ImageWidgetConfig {
   type: 'image'
   imagePath: string
+  /** Short label shown at a fixed corner of the widget */
+  label?: string
+  labelPosition?: WidgetLabelPosition
 }
 
 export type WidgetConfig =
