@@ -79,6 +79,7 @@ export const sessionIpc = {
 export interface ScreenSettingsPayload {
   brightness: number
   sleep: number
+  rotation?: 0 | 180
 }
 
 export const usbService = {

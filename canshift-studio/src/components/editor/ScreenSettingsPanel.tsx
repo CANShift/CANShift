@@ -15,7 +15,7 @@ interface ScreenSettingsPanelProps {
 
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
   const navigate = useNavigate()
-  const { brightness, sleepTimeoutS, set, reset } = useScreenSettingsStore()
+  const { brightness, sleepTimeoutS, rotation, set, reset } = useScreenSettingsStore()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
@@ -37,9 +37,19 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
       log('warn', 'Screen settings: no device connected')
       return
     }
+    // Rotation is always sent. Firmware only reboots when the new value
+    // differs from the persisted one, so studio doesn't need to know the
+    // device's current orientation — a no-op rotation is free.
+    if (rotation === 180) {
+      const ok = window.confirm(
+        'Switching mounting orientation to 180° reboots the device and clears the touch calibration. You will be asked to re-calibrate on the next boot.\n\nContinue?'
+      )
+      if (!ok) return
+    }
     const result = await usbService.pushScreenSettings({
       brightness,
       sleep: sleepTimeoutS,
+      rotation,
     })
     if (result.success) {
       log('success', `Screen settings pushed — brightness ${String(brightness)}%`)
@@ -206,6 +216,36 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
                 }}
               >
                 {mode}
+              </button>
+            )
+          })}
+        </div>
+      </SettingRow>
+
+      {/* Mounting orientation — applied on save, reboots the device */}
+      <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
+        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+          {([0, 180] as const).map((deg) => {
+            const active = rotation === deg
+            return (
+              <button
+                key={deg}
+                onClick={() => {
+                  set({ rotation: deg })
+                }}
+                style={{
+                  flex: 1,
+                  padding: `${String(Math.round(scale * 2))}px 0`,
+                  background: active ? '#1A0A0A' : '#111111',
+                  border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                  borderRadius: 3,
+                  color: active ? '#CC3333' : '#AAAAAA',
+                  fontSize: fs,
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                }}
+              >
+                {deg === 0 ? '0°' : '180°'}
               </button>
             )
           })}
