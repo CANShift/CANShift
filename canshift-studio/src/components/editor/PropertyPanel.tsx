@@ -9,7 +9,6 @@ import type {
   ButtonAction,
   GaugeDisplayStyle,
   WidgetLabelPosition,
-  PagePalette,
 } from '@tmbk/canshift-core'
 import { DAY_THEME_PRESET } from '../../constants/theme'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -1202,12 +1201,9 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
-  const updatePage = useDashboardStore((s) => s.updatePage)
-  const updateAllPages = useDashboardStore((s) => s.updateAllPages)
   const updateTopBar = useDashboardStore((s) => s.updateTopBar)
   const setDayTheme = useDashboardStore((s) => s.setDayTheme)
   const signals = useSignalStore((s) => s.signals)
-  const [applyToAll, setApplyToAll] = useState(false)
 
   const page = config?.pages.find((p) => p.id === pageId)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
@@ -1234,101 +1230,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         >
           Page — {page.name}
         </div>
-
-        {/* Apply-to-all scope toggle */}
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 10,
-            color: applyToAll ? '#7799DD' : '#555555',
-            cursor: 'pointer',
-            marginBottom: 10,
-            userSelect: 'none',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={applyToAll}
-            onChange={(e) => {
-              setApplyToAll(e.target.checked)
-            }}
-          />
-          Apply changes to all pages
-        </label>
-
-        {/* Night theme — background + palette (per-page, or all pages) */}
-        <div
-          style={{
-            fontSize: 10,
-            color: '#AAAAAA',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: 6,
-          }}
-        >
-          Night Theme
-        </div>
-
-        <Field label="Background">
-          <input
-            type="color"
-            value={page.backgroundColor}
-            style={{
-              width: '100%',
-              height: 28,
-              padding: 2,
-              background: '#111',
-              border: '1px solid #333',
-              borderRadius: 3,
-              cursor: 'pointer',
-              boxSizing: 'border-box',
-            }}
-            onChange={(e) => {
-              const patch = { backgroundColor: e.target.value as `#${string}` }
-              if (applyToAll) updateAllPages(patch)
-              else updatePage(pageId, patch)
-            }}
-          />
-        </Field>
-
-        {(
-          [
-            ['surface', 'Surface'],
-            ['primary', 'Primary'],
-            ['accent', 'Accent'],
-            ['text', 'Text'],
-            ['textDim', 'Text dim'],
-            ['warning', 'Warning'],
-            ['danger', 'Danger'],
-            ['success', 'Success'],
-          ] as [keyof PagePalette, string][]
-        ).map(([key, label]) => (
-          <Field key={key} label={label}>
-            <input
-              type="color"
-              value={page.palette[key]}
-              style={{
-                width: '100%',
-                height: 28,
-                padding: 2,
-                background: '#111',
-                border: '1px solid #333',
-                borderRadius: 3,
-                cursor: 'pointer',
-                boxSizing: 'border-box',
-              }}
-              onChange={(e) => {
-                const patch = {
-                  palette: { ...page.palette, [key]: e.target.value as `#${string}` },
-                }
-                if (applyToAll) updateAllPages(patch)
-                else updatePage(pageId, patch)
-              }}
-            />
-          </Field>
-        ))}
 
         {/* Day theme — stored in config root, enables ☀/☾ toggle on device */}
         <div
@@ -1384,70 +1285,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           )}
         </div>
 
-        {config.dayTheme ? (
-          // Capture narrowed reference so closures below don't need `!`
-          (() => {
-            const dt = config.dayTheme
-            return (
-              <>
-                <Field label="Background">
-                  <input
-                    type="color"
-                    value={dt.bgColor}
-                    style={{
-                      width: '100%',
-                      height: 28,
-                      padding: 2,
-                      background: '#111',
-                      border: '1px solid #333',
-                      borderRadius: 3,
-                      cursor: 'pointer',
-                      boxSizing: 'border-box',
-                    }}
-                    onChange={(e) => {
-                      setDayTheme({ ...dt, bgColor: e.target.value as `#${string}` })
-                    }}
-                  />
-                </Field>
-                {(
-                  [
-                    ['surface', 'Surface'],
-                    ['primary', 'Primary'],
-                    ['accent', 'Accent'],
-                    ['text', 'Text'],
-                    ['textDim', 'Text dim'],
-                    ['warning', 'Warning'],
-                    ['danger', 'Danger'],
-                    ['success', 'Success'],
-                  ] as [keyof PagePalette, string][]
-                ).map(([key, label]) => (
-                  <Field key={key} label={label}>
-                    <input
-                      type="color"
-                      value={dt.palette[key]}
-                      style={{
-                        width: '100%',
-                        height: 28,
-                        padding: 2,
-                        background: '#111',
-                        border: '1px solid #333',
-                        borderRadius: 3,
-                        cursor: 'pointer',
-                        boxSizing: 'border-box',
-                      }}
-                      onChange={(e) => {
-                        setDayTheme({
-                          ...dt,
-                          palette: { ...dt.palette, [key]: e.target.value as `#${string}` },
-                        })
-                      }}
-                    />
-                  </Field>
-                ))}
-              </>
-            )
-          })()
-        ) : (
+        {!config.dayTheme && (
           <div style={{ fontSize: 10, color: '#444444', marginBottom: 8 }}>
             Not configured — device will not show ☀/☾ toggle.
           </div>
