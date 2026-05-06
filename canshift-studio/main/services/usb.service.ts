@@ -176,8 +176,13 @@ export class UsbService {
     return this.sendCommand(payload)
   }
 
-  async pushScreenSettings(settings: { brightness: number; sleep: number }): Promise<UsbResult> {
-    // CMD_SCREEN_SETTINGS = 0x05
+  async pushScreenSettings(settings: {
+    brightness: number
+    sleep: number
+    rotation?: 0 | 180
+  }): Promise<UsbResult> {
+    // CMD_SCREEN_SETTINGS = 0x05 — `rotation` is optional; sending a value
+    // different from the device's current setting triggers a reboot.
     const payload = JSON.stringify({ cmd: 0x05, ...settings }) + '\n'
     return this.sendCommand(payload)
   }
