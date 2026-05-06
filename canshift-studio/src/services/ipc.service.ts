@@ -90,6 +90,8 @@ export const usbService = {
     invoke<UsbResult>(IpcChannels.USB_SCREEN_SETTINGS, settings),
   getStatus: () => invoke<ConnectionStatus>(IpcChannels.USB_GET_STATUS),
   reboot: () => invoke<UsbResult>(IpcChannels.USB_REBOOT),
+  toggleDayNight: () => invoke<UsbResult>(IpcChannels.USB_TOGGLE_DAY_NIGHT),
+  calibrateTouch: () => invoke<UsbResult>(IpcChannels.USB_CALIBRATE_TOUCH),
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +105,8 @@ export interface FirmwareDownloadProgress {
 }
 
 export const firmwareIpc = {
-  queryVersion: () => invoke<{ version: string | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
+  queryVersion: () =>
+    invoke<{ version: string | null; isDay: boolean | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
   listReleases: (channel: 'stable' | 'beta') =>
     invoke<FirmwareRelease[]>(IpcChannels.FIRMWARE_LIST_RELEASES, channel),
   enterFlash: (portPath: string) =>

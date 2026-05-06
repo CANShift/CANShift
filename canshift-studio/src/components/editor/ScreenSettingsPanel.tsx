@@ -18,8 +18,11 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const { brightness, sleepTimeoutS, set, reset } = useScreenSettingsStore()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const isDayMode = useDeviceStore((s) => s.isDayMode)
+  const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
   const log = useLogStore((s) => s.push)
   const [otaState, setOtaState] = useState<'idle' | 'pending'>('idle')
+  const [calibrating, setCalibrating] = useState(false)
 
   const fs = Math.round(scale * 6)
   const fsLg = Math.round(scale * 7)
@@ -46,6 +49,38 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   }
 
   const canSave = connected || simulationMode
+  const canDeviceAction = connected && !simulationMode
+
+  // Day/Night toggle — fires immediately, optimistically flips local state.
+  // The firmware response is the next CMD_GET_STATUS (re-fetched on reconnect),
+  // so a stale toggle would self-correct on the next probe.
+  const handleSelectMode = async (target: 'night' | 'day') => {
+    if (!canDeviceAction) return
+    if (isDayMode === (target === 'day')) return
+    const result = await usbService.toggleDayNight()
+    if (result.success) {
+      setIsDayMode(target === 'day')
+      log('success', `Theme set to ${target}`)
+    } else {
+      log('error', `Theme toggle failed: ${result.error ?? 'unknown error'}`)
+    }
+  }
+
+  const handleCalibrate = async () => {
+    if (!canDeviceAction) return
+    const ok = window.confirm(
+      'Calibration starts on the device.\nTap each crosshair on the dashboard screen.\n\nContinue?'
+    )
+    if (!ok) return
+    setCalibrating(true)
+    const result = await usbService.calibrateTouch()
+    setCalibrating(false)
+    if (result.success) {
+      log('info', 'Touch calibration started — follow the crosshairs on the device')
+    } else {
+      log('error', `Calibration failed: ${result.error ?? 'unknown error'}`)
+    }
+  }
 
   const handleOtaUsb = () => {
     if (!connected) {
@@ -139,6 +174,66 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             </button>
           ))}
         </div>
+      </SettingRow>
+
+      {/* Theme — fires immediately (no Save needed), state mirrors firmware */}
+      <SettingRow
+        label="THEME"
+        value={isDayMode === null ? '—' : isDayMode ? 'Day' : 'Night'}
+        scale={scale}
+      >
+        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+          {(['night', 'day'] as const).map((mode) => {
+            const active = isDayMode === (mode === 'day')
+            return (
+              <button
+                key={mode}
+                onClick={() => {
+                  void handleSelectMode(mode)
+                }}
+                disabled={!canDeviceAction}
+                style={{
+                  flex: 1,
+                  padding: `${String(Math.round(scale * 2))}px 0`,
+                  background: active ? '#1A0A0A' : '#111111',
+                  border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                  borderRadius: 3,
+                  color: active ? '#CC3333' : canDeviceAction ? '#AAAAAA' : '#444444',
+                  fontSize: fs,
+                  cursor: canDeviceAction ? 'pointer' : 'default',
+                  lineHeight: 1,
+                  textTransform: 'capitalize',
+                }}
+              >
+                {mode}
+              </button>
+            )
+          })}
+        </div>
+      </SettingRow>
+
+      {/* Touch calibration — opens crosshairs on the device */}
+      <SettingRow label="TOUCH" value="" scale={scale}>
+        <button
+          onClick={() => {
+            void handleCalibrate()
+          }}
+          disabled={!canDeviceAction || calibrating}
+          style={{
+            width: '100%',
+            padding: `${String(Math.round(scale * 2))}px 0`,
+            background: '#111111',
+            border: `1px solid ${canDeviceAction ? '#2A2A2A' : '#1E1E1E'}`,
+            borderRadius: 3,
+            color: canDeviceAction ? '#AAAAAA' : '#444444',
+            fontSize: fs,
+            cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
+            lineHeight: 1,
+            letterSpacing: '0.04em',
+          }}
+        >
+          {calibrating ? 'Starting…' : 'CALIBRATE TOUCH'}
+        </button>
       </SettingRow>
 
       {/* Firmware update */}

@@ -28,6 +28,7 @@ export function useFirmwareCheck(): void {
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const setFirmwareVersion = useDeviceStore((s) => s.setFirmwareVersion)
   const setFirmwareDialog = useDeviceStore((s) => s.setFirmwareDialog)
+  const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
 
   // Track portPath at the time the check was launched so stale results are ignored
   const checkPortRef = useRef<string | null>(null)
@@ -43,7 +44,7 @@ export function useFirmwareCheck(): void {
 
     async function run(): Promise<void> {
       // 1. Query device version
-      const { version } = await firmwareIpc.queryVersion()
+      const { version, isDay } = await firmwareIpc.queryVersion()
 
       if (cancelled || checkPortRef.current !== currentPort) return
 
@@ -55,6 +56,7 @@ export function useFirmwareCheck(): void {
       }
 
       setFirmwareVersion(version)
+      setIsDayMode(isDay)
 
       // 2. Check for updates against stable releases (best-effort — ignore errors)
       let releases: FirmwareRelease[]
@@ -81,5 +83,5 @@ export function useFirmwareCheck(): void {
     return () => {
       cancelled = true
     }
-  }, [connected, portPath, simulationMode, setFirmwareVersion, setFirmwareDialog])
+  }, [connected, portPath, simulationMode, setFirmwareVersion, setFirmwareDialog, setIsDayMode])
 }

@@ -183,17 +183,36 @@ export class UsbService {
   }
 
   /**
-   * Query the device firmware version.
-   * Returns { version: string } if the device responds, or { version: null } on timeout
-   * (device has no CANShift firmware, or pre-v0.2 firmware without CMD_GET_STATUS support).
+   * Query the device firmware version + day/night state.
+   * Returns { version: null } on timeout (device has no CANShift firmware,
+   * or pre-v0.2 firmware without CMD_GET_STATUS support).
+   * `isDay` is null on firmware older than 0.7.0 which didn't expose it.
    */
-  async queryVersion(): Promise<{ version: string | null }> {
-    // CMD_GET_STATUS = 0x10 — response: {"status":"ok","version":"x.y.z","protocol":N}
+  async queryVersion(): Promise<{ version: string | null; isDay: boolean | null }> {
+    // CMD_GET_STATUS = 0x10 — response:
+    //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1}
     const payload = JSON.stringify({ cmd: 0x10 }) + '\n'
     const result = await this.sendCommand(payload, 2_000) // shorter timeout for probe
-    if (!result.success || !result.data) return { version: null }
+    if (!result.success || !result.data) return { version: null, isDay: null }
     const v = result.data.version
-    return { version: typeof v === 'string' ? v : null }
+    const isDayRaw = result.data.is_day
+    return {
+      version: typeof v === 'string' ? v : null,
+      isDay: isDayRaw === 1 ? true : isDayRaw === 0 ? false : null,
+    }
+  }
+
+  async toggleDayNight(): Promise<UsbResult> {
+    // CMD_TOGGLE_DAY_NIGHT = 0x07
+    const payload = JSON.stringify({ cmd: 0x07 }) + '\n'
+    return this.sendCommand(payload)
+  }
+
+  async calibrateTouch(): Promise<UsbResult> {
+    // CMD_CALIBRATE_TOUCH = 0x08 — fires the on-device crosshair flow.
+    // The firmware acks immediately and runs the blocking calibration on the UI task.
+    const payload = JSON.stringify({ cmd: 0x08 }) + '\n'
+    return this.sendCommand(payload)
   }
 
   async startCanScan(): Promise<UsbResult> {

@@ -29,6 +29,12 @@ interface DeviceState {
   // Firmware dialog
   firmwareDialog: FirmwareDialogState
 
+  /**
+   * Mirrors the firmware's day/night mode. `null` until reported by
+   * CMD_GET_STATUS — older firmware (< 0.7.0) doesn't send the field.
+   */
+  isDayMode: boolean | null
+
   setConnected: (portPath: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
@@ -37,6 +43,7 @@ interface DeviceState {
   clearError: () => void
   setFirmwareVersion: (version: string | null) => void
   setFirmwareDialog: (state: FirmwareDialogState) => void
+  setIsDayMode: (isDay: boolean | null) => void
   enterSimulation: () => void
   exitSimulation: () => void
 
@@ -55,6 +62,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   syncing: false,
   simulationMode: false,
   firmwareDialog: { visible: false, mode: null },
+  isDayMode: null,
   lastPushedConfig: null,
 
   setConnected: (portPath) => {
@@ -62,7 +70,13 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   },
 
   setDisconnected: () => {
-    set({ status: 'disconnected', portPath: null, connected: false, syncing: false })
+    set({
+      status: 'disconnected',
+      portPath: null,
+      connected: false,
+      syncing: false,
+      isDayMode: null,
+    })
   },
 
   setSyncing: (syncing) => {
@@ -93,6 +107,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFirmwareDialog: (state) => {
     set({ firmwareDialog: state })
+  },
+
+  setIsDayMode: (isDay) => {
+    set({ isDayMode: isDay })
   },
 
   enterSimulation: () => {
