@@ -360,8 +360,10 @@ function GaugeBarPreview({
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     const labelIsTop = !cfg.label || labelPos.startsWith('top')
 
-    // Reserve a label band on one side; track takes the rest.
-    const labelBandH = Math.max(11, Math.min(28, h * 0.25))
+    // Reserve a label band on one side; track takes the rest. Tighter than
+    // the gauge-numeric header so short bars (THROTTLE, h≈28..36) keep enough
+    // vertical room for the fill to read.
+    const labelBandH = Math.max(10, Math.min(20, h * 0.18))
     const gap = 2
     const barH = Math.max(4, h - labelBandH - gap)
     const trackY = labelIsTop ? labelBandH + gap : 0
@@ -794,7 +796,8 @@ function GaugeNumericPreview({
             animation: danger ? BLINK_ANIM : undefined,
           }}
         >
-          {prefix + valueOnly + suffix}
+          {/* Suffix dropped when a user label is set — the label name conveys the unit. */}
+          {prefix + valueOnly + (labelText !== null ? '' : suffix)}
         </span>
       </div>
     </div>
