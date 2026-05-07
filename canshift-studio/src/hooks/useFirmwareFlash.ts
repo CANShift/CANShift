@@ -236,7 +236,12 @@ export function useFirmwareFlash() {
         // slower for a 1.4 MB image.
         const loader = new ESPLoader({
           transport,
-          baudrate: 460800,
+          // 230400 chosen empirically — esptool-js 0.6.0 added a Flash ID
+          // read step that fails with `Flash ID: ffffff` on CH340 + macOS
+          // at 460800 (the stub itself prints "consider using a lower baud
+          // rate" in that scenario). 230400 keeps SPI bus comms reliable on
+          // this board with only ~50% extra wall-clock per flash.
+          baudrate: 230400,
           enableTracing: false,
           terminal: {
             write: (text: string) => {
