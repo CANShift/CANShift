@@ -622,6 +622,125 @@ describe('migrateConfig — 1.9.0 → 1.10.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Full chain regression — load a 1.0.0 config and walk it to the latest
+// schema. Guards against silent breakage of the chain when adding migrations.
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — full chain to current', () => {
+  it('walks a 1.0.0 config all the way to 1.10.0 without losing data', () => {
+    const config = {
+      version: '1.0.0',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: {
+        height: 16,
+        bgColor: '#0D0D0D',
+        textColor: '#AAAAAA',
+        showMapName: true, // dropped in 1.6→1.7
+      },
+      pages: [
+        {
+          id: 'p1',
+          name: 'Main', // dropped in 1.6→1.7
+          showTopBar: true,
+          backgroundColor: '#000000',
+          widgets: [
+            // Button — gains `actions` in 1.0→1.1, then `colors` in 1.7→1.8
+            {
+              id: 'btn1',
+              type: 'button',
+              style: { primaryColor: '#CC3333', textColor: '#FFFFFF' },
+              config: { type: 'button', label: 'Engine', targetPageId: 'p2' },
+            },
+            // Label — becomes a numeric gauge in 1.1→1.2
+            {
+              id: 'lbl1',
+              type: 'label',
+              config: { signalId: 'rpm', decimalPlaces: 0, suffix: ' rpm' },
+            },
+            // Standard widget at legacy 80×56 — collapsed to 160×56 in 1.5→1.6
+            {
+              id: 'gear1',
+              type: 'gear',
+              layout: { x: 0, y: 0, w: 80, h: 56, zOrder: 0 },
+              config: { type: 'gear', decimalPlaces: 0 },
+            },
+            // Horizontal bar gauge at the legacy 320×28 — doubled to 320×56 in 1.8→1.9
+            {
+              id: 'tps_bar',
+              type: 'gauge',
+              layout: { x: 0, y: 196, w: 320, h: 28, zOrder: 0 },
+              style: { primaryColor: '#FF4444' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'bar',
+                barOrientation: 'horizontal',
+                minValue: 0,
+                maxValue: 100,
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    const { config: out, applied } = migrateConfig(config, '1.10.0')
+    expect(out.version).toBe('1.10.0')
+    expect(applied).toEqual([
+      '1.0.0 → 1.1.0',
+      '1.1.0 → 1.2.0',
+      '1.2.0 → 1.3.0',
+      '1.3.0 → 1.4.0',
+      '1.4.0 → 1.5.0',
+      '1.5.0 → 1.6.0',
+      '1.6.0 → 1.7.0',
+      '1.7.0 → 1.8.0',
+      '1.8.0 → 1.9.0',
+      '1.9.0 → 1.10.0',
+    ])
+
+    const page = (out.pages as Record<string, unknown>[])[0]!
+    expect(page.name).toBeUndefined() // dropped in 1.6→1.7
+    expect(page.palette).toBeDefined() // added in 1.2→1.3
+
+    const topBar = out.topBar as Record<string, unknown>
+    expect(topBar.showMapName).toBeUndefined() // dropped in 1.6→1.7
+
+    const widgets = page.widgets as Record<string, unknown>[]
+
+    // Button: gained colors block, kept its label
+    const btn = widgets[0]!
+    expect((btn.config as Record<string, unknown>).colors).toBeDefined()
+
+    // Label widget became a numeric gauge
+    const lbl = widgets[1]!
+    expect(lbl.type).toBe('gauge')
+
+    // Gear at 80×56 was collapsed to 160×56
+    const gear = widgets[2]!
+    const gearLayout = gear.layout as Record<string, unknown>
+    expect(gearLayout.w).toBe(160)
+    expect(gearLayout.h).toBe(56)
+
+    // Horizontal bar at 320×28 was doubled to 320×56
+    const tps = widgets[3]!
+    const tpsLayout = tps.layout as Record<string, unknown>
+    expect(tpsLayout.w).toBe(320)
+    expect(tpsLayout.h).toBe(56)
+  })
+
+  it('a fresh 1.10.0 config is a no-op through the runner', () => {
+    const config = {
+      version: '1.10.0',
+      pages: [{ id: 'p1', widgets: [] }],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.10.0')
+    expect(applied).toEqual([])
+    expect(out).toEqual(config)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 
