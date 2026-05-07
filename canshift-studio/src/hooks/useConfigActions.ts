@@ -23,6 +23,7 @@ export function useConfigActions() {
   const setError = useDeviceStore((s) => s.setError)
   const lastPushedConfig = useDeviceStore((s) => s.lastPushedConfig)
   const setLastPushedConfig = useDeviceStore((s) => s.setLastPushedConfig)
+  const setBurnPhase = useDeviceStore((s) => s.setBurnPhase)
 
   const showDiff = usePushDiffStore((s) => s.show)
 
@@ -173,6 +174,7 @@ export function useConfigActions() {
 
     const doBurn = () => {
       setSyncing(true)
+      setBurnPhase('pushing')
       // Payload size — what the firmware will actually receive over the wire.
       // Use the same JSON.stringify the IPC layer applies so the count matches.
       const payloadBytes = new TextEncoder().encode(JSON.stringify(config)).length
@@ -189,6 +191,10 @@ export function useConfigActions() {
           if (result.success) {
             setSyncComplete(new Date())
             setLastPushedConfig(config)
+            // Firmware acked → it now writes to SD and reboots. Connection
+            // will drop within ~1 s; auto-connect picks it back up after the
+            // splash. The 'done' transition lives in useUsbConnection.
+            setBurnPhase('rebooting')
             log(
               'success',
               `Config written to device — ${payloadKb} KB in ${String(elapsedMs)} ms (schema v${config.version})`
@@ -198,6 +204,7 @@ export function useConfigActions() {
             const msg = result.error ?? 'Burn failed'
             setError(msg)
             setSyncing(false)
+            setBurnPhase('idle')
             log('error', `${msg} (after ${String(elapsedMs)} ms)`)
             pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
           }
@@ -207,6 +214,7 @@ export function useConfigActions() {
           const msg = `Config burn error (after ${String(elapsedMs)} ms)`
           setError(msg)
           setSyncing(false)
+          setBurnPhase('idle')
           log('error', msg)
           pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
         })
@@ -225,6 +233,7 @@ export function useConfigActions() {
     pushError,
     lastPushedConfig,
     setLastPushedConfig,
+    setBurnPhase,
     showDiff,
   ])
 
