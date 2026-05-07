@@ -25,11 +25,6 @@ export const IpcChannels = {
   USB_DATA_RECEIVED: 'usb:data-received',
   USB_ERROR: 'usb:error',
 
-  // Asset management
-  ASSET_IMPORT_IMAGE: 'asset:import-image',
-  ASSET_LIST: 'asset:list',
-  ASSET_DELETE: 'asset:delete',
-
   // CAN scanner
   CAN_SCAN_START: 'can:scan-start',
   CAN_SCAN_STOP: 'can:scan-stop',
