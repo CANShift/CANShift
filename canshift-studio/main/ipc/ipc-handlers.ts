@@ -14,6 +14,42 @@ import { buildMenu } from '../menu'
 import type { FirmwareRelease } from '../services/firmware.service'
 import type { CanFrame } from '../services/usb.service'
 
+// ---------------------------------------------------------------------------
+// Renderer payload guards
+// ---------------------------------------------------------------------------
+//
+// IPC handlers receive unknown values from the renderer. The renderer is
+// trusted but Electron's process boundary is the right place to enforce the
+// shape, so a single corrupt or stale payload can't crash main with a runtime
+// type error. These guards are deliberately shallow — deeper schema validation
+// (e.g. dashboard config) still runs inside the relevant service or in
+// canshift-core's validateDashboard.
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+interface ScreenSettingsPayload {
+  brightness: number
+  sleep: number
+  rotation?: 0 | 180
+}
+
+function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
+  if (!isPlainObject(v)) return null
+  const brightness = v.brightness
+  const sleep = v.sleep
+  const rotation = v.rotation
+  if (typeof brightness !== 'number' || !Number.isFinite(brightness)) return null
+  if (typeof sleep !== 'number' || !Number.isFinite(sleep)) return null
+  if (rotation !== undefined && rotation !== 0 && rotation !== 180) return null
+  return rotation === undefined ? { brightness, sleep } : { brightness, sleep, rotation }
+}
+
 /**
  * Singleton USB service instance — exported so that main/index.ts can call
  * usbService.disconnect() during the before-quit lifecycle event.
@@ -79,6 +115,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE, async (_event, config: unknown) => {
+    if (!isPlainObject(config)) {
+      return { success: false, error: 'Save payload must be a config object' }
+    }
     const result = await configService.saveFile(config)
     if (result.success && result.filePath) {
       sessionService.addRecentFile(result.filePath)
@@ -88,6 +127,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE_AS, async (_event, config: unknown) => {
+    if (!isPlainObject(config)) {
+      return { success: false, error: 'Save payload must be a config object' }
+    }
     const result = await configService.saveFileAs(config)
     if (result.success && result.filePath) {
       sessionService.addRecentFile(result.filePath)
@@ -112,7 +154,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return usbService.listPorts()
   })
 
-  ipcMain.handle(IpcChannels.USB_CONNECT, async (_event, portPath: string) => {
+  ipcMain.handle(IpcChannels.USB_CONNECT, async (_event, portPath: unknown) => {
+    if (!isNonEmptyString(portPath)) {
+      return { success: false, error: 'portPath must be a non-empty string' }
+    }
     // Refuse any USB connect while a flash is in progress — the renderer's auto-connect
     // would otherwise grab the port between enterFlash() and navigator.serial.requestPort().
     if (firmwareService.getFlashPort()) {
@@ -133,13 +178,18 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.USB_PUSH_CONFIG, async (_event, config: unknown) => {
+    if (!isPlainObject(config)) {
+      return { success: false, error: 'Push payload must be a config object' }
+    }
     return usbService.pushConfig(config)
   })
 
   ipcMain.handle(IpcChannels.USB_SCREEN_SETTINGS, async (_event, settings: unknown) => {
-    return usbService.pushScreenSettings(
-      settings as { brightness: number; sleep: number; rotation?: 0 | 180 }
-    )
+    const parsed = parseScreenSettings(settings)
+    if (!parsed) {
+      return { success: false, error: 'Screen settings payload is invalid' }
+    }
+    return usbService.pushScreenSettings(parsed)
   })
 
   ipcMain.handle(IpcChannels.USB_GET_STATUS, () => {
@@ -215,6 +265,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.SIGNAL_EXPORT, async (_event, config: unknown) => {
+    if (!isPlainObject(config)) {
+      return { success: false, error: 'Signal export payload must be an object' }
+    }
     const { filePath, canceled } = await dialog.showSaveDialog({
       title: 'Export signals.json',
       defaultPath: 'signals.json',
@@ -235,9 +288,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   ipcMain.handle(IpcChannels.SD_LIST_VOLUMES, () => sdService.listVolumes())
 
-  ipcMain.handle(IpcChannels.SD_PREPARE, (_event, volumePath: string, forceRefresh?: boolean) =>
-    sdService.prepareSD(volumePath, forceRefresh ?? false)
-  )
+  ipcMain.handle(IpcChannels.SD_PREPARE, (_event, volumePath: unknown, forceRefresh: unknown) => {
+    if (!isNonEmptyString(volumePath)) {
+      return Promise.resolve({ success: false, error: 'volumePath must be a non-empty string' })
+    }
+    return sdService.prepareSD(volumePath, forceRefresh === true)
+  })
 
   ipcMain.handle(IpcChannels.SD_PUSH_OVER_USB, () =>
     sdService.pushOverUsb(usbService, (progress) => {
@@ -279,6 +335,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.DEVICE_CONFIG_WRITE, async (_event, config: unknown) => {
+    if (!isPlainObject(config)) {
+      return { success: false, error: 'Device config payload must be an object' }
+    }
     try {
       await writeFile(deviceConfigPath, JSON.stringify(config, null, 2), 'utf-8')
       return { success: true }
