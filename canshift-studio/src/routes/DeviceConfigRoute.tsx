@@ -15,8 +15,18 @@ import { useDeviceStore } from '../stores/device.store'
 // Styles
 // ---------------------------------------------------------------------------
 
+// The route is a flex child of `<div overflow:hidden>` in App.tsx so it has
+// no scroll of its own. `scrollContainer` makes the page scrollable within
+// the available height — without it, the SD prep section at the bottom is
+// clipped by the parent and looks "hidden behind" the console panel (#141).
+const scrollContainer: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+}
+
 const page: React.CSSProperties = {
-  padding: 24,
+  padding: '24px 24px 48px',
   maxWidth: 560,
   margin: '0 auto',
   color: '#CCCCCC',
@@ -180,343 +190,345 @@ export default function DeviceConfigRoute() {
   }, [])
 
   return (
-    <div style={page}>
-      <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 4 }}>
-        Device Configuration
-      </div>
-      <div style={{ fontSize: 12, color: '#555555', marginBottom: 20 }}>
-        Hardware settings applied at boot from{' '}
-        <code style={{ color: '#777777' }}>/config/device.json</code>
-      </div>
-
-      {/* CAN Bus */}
-      <div style={section}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 14 }}>
-          CAN Bus
+    <div style={scrollContainer}>
+      <div style={page}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 4 }}>
+          Device Configuration
+        </div>
+        <div style={{ fontSize: 12, color: '#555555', marginBottom: 20 }}>
+          Hardware settings applied at boot from{' '}
+          <code style={{ color: '#777777' }}>/config/device.json</code>
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <span style={label}>Speed</span>
-          <select
-            value={config.can_speed_kbps}
-            onChange={(e) => {
-              setConfig((c) => ({
-                ...c,
-                can_speed_kbps: parseInt(e.target.value, 10) as CanSpeedKbps,
-              }))
-            }}
-            style={inputStyle}
-          >
-            {CAN_SPEED_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s} kbps
-              </option>
-            ))}
-          </select>
-          <div style={hint}>Must match MaxxECU CAN output configuration</div>
-        </div>
+        {/* CAN Bus */}
+        <div style={section}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 14 }}>
+            CAN Bus
+          </div>
 
-        <div style={row}>
-          <div>
-            <span style={label}>TWAI TX pin (GPIO)</span>
-            <input
-              type="number"
-              min={0}
-              max={39}
-              value={config.twai_tx_pin}
+          <div style={{ marginBottom: 12 }}>
+            <span style={label}>Speed</span>
+            <select
+              value={config.can_speed_kbps}
               onChange={(e) => {
-                setConfig((c) => ({ ...c, twai_tx_pin: parseInt(e.target.value, 10) }))
+                setConfig((c) => ({
+                  ...c,
+                  can_speed_kbps: parseInt(e.target.value, 10) as CanSpeedKbps,
+                }))
               }}
               style={inputStyle}
-            />
-            <div style={hint}>CAN Pal CTX → ESP32</div>
+            >
+              {CAN_SPEED_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s} kbps
+                </option>
+              ))}
+            </select>
+            <div style={hint}>Must match MaxxECU CAN output configuration</div>
           </div>
-          <div>
-            <span style={label}>TWAI RX pin (GPIO)</span>
-            <input
-              type="number"
-              min={0}
-              max={39}
-              value={config.twai_rx_pin}
-              onChange={(e) => {
-                setConfig((c) => ({ ...c, twai_rx_pin: parseInt(e.target.value, 10) }))
-              }}
-              style={inputStyle}
-            />
-            <div style={hint}>CAN Pal CRX → ESP32</div>
+
+          <div style={row}>
+            <div>
+              <span style={label}>TWAI TX pin (GPIO)</span>
+              <input
+                type="number"
+                min={0}
+                max={39}
+                value={config.twai_tx_pin}
+                onChange={(e) => {
+                  setConfig((c) => ({ ...c, twai_tx_pin: parseInt(e.target.value, 10) }))
+                }}
+                style={inputStyle}
+              />
+              <div style={hint}>CAN Pal CTX → ESP32</div>
+            </div>
+            <div>
+              <span style={label}>TWAI RX pin (GPIO)</span>
+              <input
+                type="number"
+                min={0}
+                max={39}
+                value={config.twai_rx_pin}
+                onChange={(e) => {
+                  setConfig((c) => ({ ...c, twai_rx_pin: parseInt(e.target.value, 10) }))
+                }}
+                style={inputStyle}
+              />
+              <div style={hint}>CAN Pal CRX → ESP32</div>
+            </div>
           </div>
-        </div>
 
-        <div
-          style={{
-            fontSize: 11,
-            color: '#333333',
-            borderTop: '1px solid #1E1E1E',
-            paddingTop: 10,
-            marginTop: 4,
-          }}
-        >
-          Wiring: CAN Pal CTX → GPIO {config.twai_tx_pin} · CRX → GPIO {config.twai_rx_pin} ·
-          CANH/CANL → MaxxECU · VCC → 5V
-        </div>
-      </div>
-
-      {/* Save to userData */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20 }}>
-        <button
-          onClick={() => {
-            void handleSave()
-          }}
-          disabled={saving}
-          style={{
-            padding: '8px 20px',
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: saving ? 'not-allowed' : 'pointer',
-            border: 'none',
-            background: saving ? '#332222' : '#CC3333',
-            color: saving ? '#666666' : '#FFFFFF',
-          }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        {saved && <span style={{ fontSize: 12, color: '#44CC44' }}>Saved</span>}
-        {saveError && <span style={{ fontSize: 12, color: '#CC3333' }}>{saveError}</span>}
-      </div>
-
-      {/* Prepare full SD card */}
-      <div style={section}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 12 }}>
-          Prepare SD card (full)
-        </div>
-        <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
-          Copies fonts, default dashboard and signals to the selected volume. Required after a fresh
-          flash — without this, the screen stays black.
-        </div>
-        <div style={{ fontSize: 11, color: '#7B5500', marginBottom: 12 }}>
-          Eject the SD card from the CrowPanel, insert it into your Mac, then click below.
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <select
-            value={selectedVolume}
-            onChange={(e) => {
-              setSelectedVolume(e.target.value)
-            }}
-            style={{ ...inputStyle, flex: 1 }}
-          >
-            <option value="">— select volume —</option>
-            {sdVolumes.map((v) => (
-              <option key={v.path} value={v.path}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleScanVolumes}
+          <div
             style={{
-              padding: '7px 14px',
+              fontSize: 11,
+              color: '#333333',
+              borderTop: '1px solid #1E1E1E',
+              paddingTop: 10,
+              marginTop: 4,
+            }}
+          >
+            Wiring: CAN Pal CTX → GPIO {config.twai_tx_pin} · CRX → GPIO {config.twai_rx_pin} ·
+            CANH/CANL → MaxxECU · VCC → 5V
+          </div>
+        </div>
+
+        {/* Save to userData */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20 }}>
+          <button
+            onClick={() => {
+              void handleSave()
+            }}
+            disabled={saving}
+            style={{
+              padding: '8px 20px',
               borderRadius: 4,
               fontSize: 12,
-              cursor: 'pointer',
-              border: '1px solid #333333',
-              background: 'transparent',
-              color: '#888888',
+              fontWeight: 600,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              border: 'none',
+              background: saving ? '#332222' : '#CC3333',
+              color: saving ? '#666666' : '#FFFFFF',
             }}
           >
-            Scan
+            {saving ? 'Saving…' : 'Save'}
           </button>
+          {saved && <span style={{ fontSize: 12, color: '#44CC44' }}>Saved</span>}
+          {saveError && <span style={{ fontSize: 12, color: '#CC3333' }}>{saveError}</span>}
         </div>
 
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 11,
-            color: '#888888',
-            marginBottom: 10,
-            cursor: 'pointer',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={forceRefresh}
-            onChange={(e) => {
-              setForceRefresh(e.target.checked)
-            }}
-          />
-          Force refresh — also overwrite <code style={{ color: '#AAAAAA' }}>/config/</code>{' '}
-          (dashboard, signals, theme)
-        </label>
-
-        <button
-          onClick={handlePrepareClick}
-          disabled={!selectedVolume || prepState === 'copying'}
-          style={{
-            padding: '7px 20px',
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: !selectedVolume || prepState === 'copying' ? 'not-allowed' : 'pointer',
-            border: 'none',
-            background: !selectedVolume || prepState === 'copying' ? '#332222' : '#CC3333',
-            color: !selectedVolume || prepState === 'copying' ? '#666666' : '#FFFFFF',
-          }}
-        >
-          {prepState === 'copying'
-            ? 'Copying…'
-            : forceRefresh
-              ? 'Prepare SD card (force)'
-              : 'Prepare SD card'}
-        </button>
-
-        {prepState === 'done' && prepResult && (
-          <div style={{ fontSize: 12, color: '#44CC44', marginTop: 8 }}>
-            ✓ {prepResult.copied} file{prepResult.copied !== 1 ? 's' : ''} copied
-            {prepResult.skipped > 0
-              ? ` · ${String(prepResult.skipped)} skipped (user data preserved)`
-              : ''}{' '}
-            — reinsert the card into the CrowPanel and reboot
+        {/* Prepare full SD card */}
+        <div style={section}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 12 }}>
+            Prepare SD card (full)
           </div>
-        )}
-        {prepState === 'error' && (
-          <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{prepError}</div>
-        )}
-      </div>
-
-      {/* Push SD over USB (no card removal) */}
-      <div style={section}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 12 }}>
-          Push SD over USB
-        </div>
-        <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
-          Streams fonts and assets directly to the SD card while it stays plugged into the board.
-          User configuration in <code style={{ color: '#777777' }}>/config/</code> is left untouched
-          — use the dashboard editor to push that.
-        </div>
-
-        <button
-          onClick={() => {
-            void handlePushOverUsb()
-          }}
-          disabled={!connected || pushState === 'pushing'}
-          style={{
-            padding: '7px 20px',
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: !connected || pushState === 'pushing' ? 'not-allowed' : 'pointer',
-            border: 'none',
-            background: !connected || pushState === 'pushing' ? '#332222' : '#CC3333',
-            color: !connected || pushState === 'pushing' ? '#666666' : '#FFFFFF',
-          }}
-        >
-          {pushState === 'pushing' ? 'Pushing…' : 'Push to board'}
-        </button>
-
-        {!connected && (
-          <span style={{ fontSize: 11, color: '#555555', marginLeft: 10 }}>
-            Connect a device first.
-          </span>
-        )}
-
-        {pushState === 'pushing' && pushProgress && (
-          <div style={{ fontSize: 12, color: '#888888', marginTop: 8 }}>
-            {pushProgress.fileIndex + 1} / {pushProgress.totalFiles} ·{' '}
-            <code style={{ color: '#AAAAAA' }}>{pushProgress.relPath}</code>
+          <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
+            Copies fonts, default dashboard and signals to the selected volume. Required after a
+            fresh flash — without this, the screen stays black.
           </div>
-        )}
-
-        {pushState === 'done' && pushResult && (
-          <div style={{ fontSize: 12, color: '#44CC44', marginTop: 8 }}>
-            ✓ {pushResult.copied} file{pushResult.copied !== 1 ? 's' : ''} written
-            {pushResult.skipped > 0
-              ? ` · ${String(pushResult.skipped)} skipped (config preserved)`
-              : ''}{' '}
-            — reboot the board to load the new content
+          <div style={{ fontSize: 11, color: '#7B5500', marginBottom: 12 }}>
+            Eject the SD card from the CrowPanel, insert it into your Mac, then click below.
           </div>
-        )}
-        {pushState === 'error' && (
-          <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{pushError}</div>
-        )}
-      </div>
 
-      {confirmForce && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => {
-            setConfirmForce(false)
-          }}
-        >
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-            }}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <select
+              value={selectedVolume}
+              onChange={(e) => {
+                setSelectedVolume(e.target.value)
+              }}
+              style={{ ...inputStyle, flex: 1 }}
+            >
+              <option value="">— select volume —</option>
+              {sdVolumes.map((v) => (
+                <option key={v.path} value={v.path}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleScanVolumes}
+              style={{
+                padding: '7px 14px',
+                borderRadius: 4,
+                fontSize: 12,
+                cursor: 'pointer',
+                border: '1px solid #333333',
+                background: 'transparent',
+                color: '#888888',
+              }}
+            >
+              Scan
+            </button>
+          </div>
+
+          <label
             style={{
-              background: '#1A1A1A',
-              border: '1px solid #333333',
-              borderRadius: 8,
-              padding: 24,
-              maxWidth: 460,
-              color: '#CCCCCC',
-              fontFamily: 'monospace',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 11,
+              color: '#888888',
+              marginBottom: 10,
+              cursor: 'pointer',
             }}
           >
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 12 }}>
-              Force refresh?
+            <input
+              type="checkbox"
+              checked={forceRefresh}
+              onChange={(e) => {
+                setForceRefresh(e.target.checked)
+              }}
+            />
+            Force refresh — also overwrite <code style={{ color: '#AAAAAA' }}>/config/</code>{' '}
+            (dashboard, signals, theme)
+          </label>
+
+          <button
+            onClick={handlePrepareClick}
+            disabled={!selectedVolume || prepState === 'copying'}
+            style={{
+              padding: '7px 20px',
+              borderRadius: 4,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: !selectedVolume || prepState === 'copying' ? 'not-allowed' : 'pointer',
+              border: 'none',
+              background: !selectedVolume || prepState === 'copying' ? '#332222' : '#CC3333',
+              color: !selectedVolume || prepState === 'copying' ? '#666666' : '#FFFFFF',
+            }}
+          >
+            {prepState === 'copying'
+              ? 'Copying…'
+              : forceRefresh
+                ? 'Prepare SD card (force)'
+                : 'Prepare SD card'}
+          </button>
+
+          {prepState === 'done' && prepResult && (
+            <div style={{ fontSize: 12, color: '#44CC44', marginTop: 8 }}>
+              ✓ {prepResult.copied} file{prepResult.copied !== 1 ? 's' : ''} copied
+              {prepResult.skipped > 0
+                ? ` · ${String(prepResult.skipped)} skipped (user data preserved)`
+                : ''}{' '}
+              — reinsert the card into the CrowPanel and reboot
             </div>
-            <div style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 20, color: '#999999' }}>
-              This will overwrite <code style={{ color: '#FFFFFF' }}>dashboard.json</code>,{' '}
-              <code style={{ color: '#FFFFFF' }}>signals.json</code>, and{' '}
-              <code style={{ color: '#FFFFFF' }}>theme.json</code> on the SD card. Any local edits
-              you made on the device will be lost.
+          )}
+          {prepState === 'error' && (
+            <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{prepError}</div>
+          )}
+        </div>
+
+        {/* Push SD over USB (no card removal) */}
+        <div style={section}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#AAAAAA', marginBottom: 12 }}>
+            Push SD over USB
+          </div>
+          <div style={{ fontSize: 11, color: '#555555', marginBottom: 12 }}>
+            Streams fonts and assets directly to the SD card while it stays plugged into the board.
+            User configuration in <code style={{ color: '#777777' }}>/config/</code> is left
+            untouched — use the dashboard editor to push that.
+          </div>
+
+          <button
+            onClick={() => {
+              void handlePushOverUsb()
+            }}
+            disabled={!connected || pushState === 'pushing'}
+            style={{
+              padding: '7px 20px',
+              borderRadius: 4,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: !connected || pushState === 'pushing' ? 'not-allowed' : 'pointer',
+              border: 'none',
+              background: !connected || pushState === 'pushing' ? '#332222' : '#CC3333',
+              color: !connected || pushState === 'pushing' ? '#666666' : '#FFFFFF',
+            }}
+          >
+            {pushState === 'pushing' ? 'Pushing…' : 'Push to board'}
+          </button>
+
+          {!connected && (
+            <span style={{ fontSize: 11, color: '#555555', marginLeft: 10 }}>
+              Connect a device first.
+            </span>
+          )}
+
+          {pushState === 'pushing' && pushProgress && (
+            <div style={{ fontSize: 12, color: '#888888', marginTop: 8 }}>
+              {pushProgress.fileIndex + 1} / {pushProgress.totalFiles} ·{' '}
+              <code style={{ color: '#AAAAAA' }}>{pushProgress.relPath}</code>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setConfirmForce(false)
-                }}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: 4,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  border: '1px solid #333333',
-                  background: 'transparent',
-                  color: '#AAAAAA',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmForce}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: 4,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: '#CC3333',
-                  color: '#FFFFFF',
-                }}
-              >
-                Overwrite
-              </button>
+          )}
+
+          {pushState === 'done' && pushResult && (
+            <div style={{ fontSize: 12, color: '#44CC44', marginTop: 8 }}>
+              ✓ {pushResult.copied} file{pushResult.copied !== 1 ? 's' : ''} written
+              {pushResult.skipped > 0
+                ? ` · ${String(pushResult.skipped)} skipped (config preserved)`
+                : ''}{' '}
+              — reboot the board to load the new content
+            </div>
+          )}
+          {pushState === 'error' && (
+            <div style={{ fontSize: 12, color: '#CC3333', marginTop: 8 }}>{pushError}</div>
+          )}
+        </div>
+
+        {confirmForce && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={() => {
+              setConfirmForce(false)
+            }}
+          >
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+              }}
+              style={{
+                background: '#1A1A1A',
+                border: '1px solid #333333',
+                borderRadius: 8,
+                padding: 24,
+                maxWidth: 460,
+                color: '#CCCCCC',
+                fontFamily: 'monospace',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 12 }}>
+                Force refresh?
+              </div>
+              <div style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 20, color: '#999999' }}>
+                This will overwrite <code style={{ color: '#FFFFFF' }}>dashboard.json</code>,{' '}
+                <code style={{ color: '#FFFFFF' }}>signals.json</code>, and{' '}
+                <code style={{ color: '#FFFFFF' }}>theme.json</code> on the SD card. Any local edits
+                you made on the device will be lost.
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setConfirmForce(false)
+                  }}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    border: '1px solid #333333',
+                    background: 'transparent',
+                    color: '#AAAAAA',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmForce}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: '#CC3333',
+                    color: '#FFFFFF',
+                  }}
+                >
+                  Overwrite
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
