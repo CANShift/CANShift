@@ -169,6 +169,62 @@ describe('resolveCollisions', () => {
       expect(pos.y + 56).toBeLessThanOrEqual(canvasH)
     }
   })
+
+  it('pushes overlapping widget LEFT when the moved widget approaches from the right', () => {
+    // 'b' sits in the middle of the canvas; 'a' moves into b from the right.
+    // Pushing right would clip b out of bounds, so the algorithm should pick
+    // the smaller-displacement direction — here, left.
+    const other: LayoutRect = { id: 'b', x: 80, y: 80, w: 80, h: 56 }
+    const moved: LayoutRect = { id: 'a', x: 200, y: 80, w: 80, h: 56 }
+    const result = resolveCollisions(moved, 120, 80, [other], canvasW, canvasH)
+    const newB = result.get('b')
+
+    expect(newB).toBeDefined()
+    if (newB !== undefined) {
+      // b must clear a (a now at x=120, w=80 → ends at 200), so b's right edge ≤ 120
+      expect(newB.x + 80).toBeLessThanOrEqual(120)
+      const aRect: LayoutRect = { id: 'a', x: 120, y: 80, w: 80, h: 56 }
+      const bRect: LayoutRect = { id: 'b', x: newB.x, y: newB.y, w: 80, h: 56 }
+      expect(rectsOverlap(aRect, bRect)).toBe(false)
+    }
+  })
+
+  it('pushes overlapping widget UP when the moved widget approaches from below', () => {
+    // 'b' sits at y=80; 'a' moves into b from below. Pushing down would clip b
+    // out of bounds, so push up is preferred.
+    const other: LayoutRect = { id: 'b', x: 80, y: 80, w: 80, h: 56 }
+    const moved: LayoutRect = { id: 'a', x: 80, y: 168, w: 80, h: 56 }
+    const result = resolveCollisions(moved, 80, 100, [other], canvasW, canvasH)
+    const newB = result.get('b')
+
+    expect(newB).toBeDefined()
+    if (newB !== undefined) {
+      // b's bottom edge ≤ a's top (100)
+      expect(newB.y + 56).toBeLessThanOrEqual(100)
+      const aRect: LayoutRect = { id: 'a', x: 80, y: 100, w: 80, h: 56 }
+      const bRect: LayoutRect = { id: 'b', x: newB.x, y: newB.y, w: 80, h: 56 }
+      expect(rectsOverlap(aRect, bRect)).toBe(false)
+    }
+  })
+
+  it('terminates and displaces the anchor-overlapping widget even when cascade cannot fully resolve', () => {
+    // Pathological scenario: pushing b away from anchor a lands b on c; pushing
+    // b away from c lands b back on a — the algorithm caps at 8 passes and
+    // returns the last state. Locks the termination contract (no infinite loop)
+    // and that the moved widget's request is honoured.
+    const moved: LayoutRect = { id: 'a', x: 40, y: 0, w: 80, h: 56 }
+    const b: LayoutRect = { id: 'b', x: 40, y: 20, w: 80, h: 56 }
+    const c: LayoutRect = { id: 'c', x: 40, y: 80, w: 160, h: 56 }
+    const result = resolveCollisions(moved, 40, 0, [b, c], canvasW, canvasH)
+
+    expect(result.get('a')).toEqual({ x: 40, y: 0 })
+    // b must end up somewhere different from its starting position
+    const newB = result.get('b')
+    expect(newB).toBeDefined()
+    if (newB !== undefined) {
+      expect(newB).not.toEqual({ x: 40, y: 20 })
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
