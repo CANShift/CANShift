@@ -43,12 +43,23 @@ export interface CanHealth {
   errors: number
 }
 
+/**
+ * Structured log entry forwarded from the firmware.
+ * Wire format: {"log":1,"lvl":"E|W|I|D|V","tag":"...","msg":"..."}
+ */
+export interface DeviceLogEntry {
+  level: string
+  tag: string
+  message: string
+}
+
 interface UsbEventHandlers {
   onConnectionChanged?: (status: ConnectionStatus) => void
   onError?: (message: string) => void
   onTelemetry?: (values: Record<string, number>) => void
   onCanFrame?: (frame: CanFrame) => void
   onCanHealth?: (health: CanHealth) => void
+  onDeviceLog?: (entry: DeviceLogEntry) => void
 }
 
 interface PendingAck {
@@ -476,6 +487,20 @@ export class UsbService {
         const data = (f.d as unknown[]).filter((b): b is number => typeof b === 'number')
         this.handlers.onCanFrame?.({ id: f.id, len: f.len, data })
       }
+      return
+    }
+
+    // Device log line — field "log" present
+    // Format: {"log":1,"lvl":"E|W|I|D|V","tag":"...","msg":"..."}
+    // Must be checked BEFORE the command-ack fallthrough so a logger emit from
+    // the firmware can never accidentally resolve a pending command.
+    if ('log' in parsed) {
+      const e = parsed as { lvl?: unknown; tag?: unknown; msg?: unknown }
+      this.handlers.onDeviceLog?.({
+        level: typeof e.lvl === 'string' ? e.lvl : 'I',
+        tag: typeof e.tag === 'string' ? e.tag : '',
+        message: typeof e.msg === 'string' ? e.msg : '',
+      })
       return
     }
 

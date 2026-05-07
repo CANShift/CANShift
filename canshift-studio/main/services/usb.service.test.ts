@@ -135,6 +135,36 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
     expect(onConnectionChanged).toHaveBeenCalledWith({ connected: false })
   })
 
+  it('device log lines fire onDeviceLog and do not resolve a pending ack (regression for #199)', async () => {
+    const service = new UsbService()
+    const onDeviceLog = vi.fn()
+    service.setEventHandlers({ onDeviceLog })
+
+    await service.connect('/dev/tty.test')
+
+    // Build a pending ack we can prove was NOT resolved by the log line.
+    const ackPromise = service.toggleDayNight()
+
+    // Reach into the service to access the live parser instance — the fake
+    // ReadlineParser is what UsbService listens to, so emitting 'data' on it
+    // exercises the real onData() dispatcher.
+    const parser = (service as unknown as { parser: EventEmitter }).parser
+    expect(parser).toBeDefined()
+    parser.emit('data', '{"log":1,"lvl":"I","tag":"BOOT","msg":"hello"}')
+
+    expect(onDeviceLog).toHaveBeenCalledWith({
+      level: 'I',
+      tag: 'BOOT',
+      message: 'hello',
+    })
+
+    // Sanity: the ack is still pending. Resolve it explicitly so the awaited
+    // promise doesn't leak into the next test.
+    parser.emit('data', '{"status":"ok"}')
+    const ack = await ackPromise
+    expect(ack.success).toBe(true)
+  })
+
   it('a fresh connect after disconnect resets the intentional flag', async () => {
     // Regression guard: if intentionalDisconnect leaks across sessions, an
     // unplug right after a fresh connect would silently swallow the event.

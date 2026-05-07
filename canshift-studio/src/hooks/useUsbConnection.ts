@@ -22,6 +22,29 @@ interface AppLogPayload {
   ts: number
 }
 
+interface DeviceLogPayload {
+  level: string
+  tag: string
+  message: string
+}
+
+// Map a firmware log level letter to the renderer's LogLevel.
+// Debug/verbose collapse to 'info' because the renderer's log panel does not
+// have a debug rung — keeping all messages visible is preferable to dropping.
+function mapDeviceLevel(level: string): LogLevel {
+  switch (level) {
+    case 'E':
+      return 'error'
+    case 'W':
+      return 'warn'
+    case 'I':
+    case 'D':
+    case 'V':
+    default:
+      return 'info'
+  }
+}
+
 export function useUsbConnection() {
   const [ports, setPorts] = useState<PortInfo[]>([])
   const [selectedPort, setSelectedPort] = useState('')
@@ -94,16 +117,40 @@ export function useUsbConnection() {
       }
     }
 
+    // Forward structured firmware log lines (issue #199) — replaces the
+    // pre-#199 plain-text "[I][TAG] msg" stream that polluted the JSON-line
+    // wire protocol.
+    const handleDeviceLog = (payload: unknown) => {
+      if (
+        typeof payload !== 'object' ||
+        payload === null ||
+        !('level' in payload) ||
+        !('tag' in payload) ||
+        !('message' in payload)
+      ) {
+        return
+      }
+      const entry = payload as DeviceLogPayload
+      const mapped = mapDeviceLevel(entry.level)
+      const formatted = `[device][${entry.tag}] ${entry.message}`
+      log(mapped, formatted)
+      if (mapped === 'error') {
+        pushError({ source: 'usb', code: 'DEVICE_ERROR', message: formatted })
+      }
+    }
+
     window.ipc.on(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
     window.ipc.on(IpcChannels.USB_ERROR, handleError)
     window.ipc.on(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
     window.ipc.on(IpcChannels.APP_LOG, handleAppLog)
+    window.ipc.on(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
 
     return () => {
       window.ipc.off(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
       window.ipc.off(IpcChannels.USB_ERROR, handleError)
       window.ipc.off(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
       window.ipc.off(IpcChannels.APP_LOG, handleAppLog)
+      window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
     }
   }, [setDisconnected, setError, log, updateCanHealth, pushError, pushOrUpdateError])
 
