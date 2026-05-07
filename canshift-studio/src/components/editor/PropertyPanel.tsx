@@ -1228,7 +1228,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             marginBottom: 10,
           }}
         >
-          Page — {page.name}
+          Page settings
         </div>
 
         {/* Day theme — stored in config root, enables ☀/☾ toggle on device */}
@@ -1343,16 +1343,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             />
           </Field>
         </Row>
-        <Field label="Show map name">
-          <input
-            type="checkbox"
-            checked={config.topBar.showMapName}
-            onChange={(e) => {
-              updateTopBar({ showMapName: e.target.checked })
-            }}
-          />
-        </Field>
-
         <div style={{ fontSize: 10, color: '#333', marginTop: 12 }}>
           Select a widget to edit its properties.
         </div>

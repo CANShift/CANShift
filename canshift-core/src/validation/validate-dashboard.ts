@@ -101,9 +101,6 @@ function validatePage(
   if (typeof page.id !== 'string' || page.id.length === 0) {
     errors.push(`${prefix}.id is required`)
   }
-  if (typeof page.name !== 'string') {
-    errors.push(`${prefix}.name is required`)
-  }
   if (!Array.isArray(page.widgets)) {
     errors.push(`${prefix}.widgets must be an array`)
   } else {

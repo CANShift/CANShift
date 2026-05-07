@@ -285,7 +285,6 @@ export interface ThemePreset {
 
 export interface PageConfig {
   id: string
-  name: string
   backgroundImage: string | null
   backgroundColor: HexColor
   /** Per-page color palette used by widgets */
@@ -317,8 +316,6 @@ export type TopBarItem =
 
 export interface TopBarConfig {
   height: number
-  showMapName: boolean
-  showMapProfile: boolean
   bgColor: HexColor
   textColor: HexColor
   /**
