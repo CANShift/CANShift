@@ -6,7 +6,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
-import { IconLoad, IconExport, IconBurn, IconExit } from '../icons/Icon'
+import { IconLoad, IconExport, IconBurn, IconExit, IconUsb } from '../icons/Icon'
 
 const STATUS_COLOR: Record<string, string> = {
   connected: '#3DB86B',
@@ -75,7 +75,7 @@ export default function TopBar() {
   const canSave = config !== null
   const canBurn = config !== null && connected && !syncing
 
-  const dotColor = simulationMode ? '#8844FF' : (STATUS_COLOR[status] ?? '#3A3A3A')
+  const statusColor = simulationMode ? '#8844FF' : (STATUS_COLOR[status] ?? '#3A3A3A')
   const statusLabel = simulationMode
     ? 'Simulation'
     : `${STATUS_LABEL[status] ?? 'No device'}${status === 'connected' && portPath ? ` · ${portPath}` : ''}`
@@ -182,16 +182,14 @@ export default function TopBar() {
               } as React.CSSProperties
             }
           >
-            <span
+            <IconUsb
+              size={13}
+              color={statusColor}
               style={{
-                display: 'inline-block',
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: dotColor,
-                boxShadow:
-                  status !== 'disconnected' || simulationMode ? `0 0 4px ${dotColor}` : 'none',
-                flexShrink: 0,
+                filter:
+                  status !== 'disconnected' || simulationMode
+                    ? `drop-shadow(0 0 3px ${statusColor})`
+                    : undefined,
               }}
             />
             {statusLabel}
