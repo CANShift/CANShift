@@ -107,25 +107,38 @@ export function useConfigActions() {
 
     const doBurn = () => {
       setSyncing(true)
-      log('info', 'Burning config to device…')
+      // Payload size — what the firmware will actually receive over the wire.
+      // Use the same JSON.stringify the IPC layer applies so the count matches.
+      const payloadBytes = new TextEncoder().encode(JSON.stringify(config)).length
+      const payloadKb = (payloadBytes / 1024).toFixed(1)
+      log(
+        'info',
+        `Burning config to device — schema v${config.version}, ${payloadKb} KB (${String(payloadBytes)} bytes)`
+      )
+      const startedAt = performance.now()
       void usbService
         .pushConfig(config)
         .then((result) => {
+          const elapsedMs = Math.round(performance.now() - startedAt)
           if (result.success) {
             setSyncComplete(new Date())
             setLastPushedConfig(config)
-            log('success', 'Config written to device')
+            log(
+              'success',
+              `Config written to device — ${payloadKb} KB in ${String(elapsedMs)} ms (schema v${config.version})`
+            )
             log('info', 'Device is rebooting — reconnect in a few seconds')
           } else {
             const msg = result.error ?? 'Burn failed'
             setError(msg)
             setSyncing(false)
-            log('error', msg)
+            log('error', `${msg} (after ${String(elapsedMs)} ms)`)
             pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
           }
         })
         .catch(() => {
-          const msg = 'Config burn error'
+          const elapsedMs = Math.round(performance.now() - startedAt)
+          const msg = `Config burn error (after ${String(elapsedMs)} ms)`
           setError(msg)
           setSyncing(false)
           log('error', msg)
