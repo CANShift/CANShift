@@ -28,21 +28,51 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  onReset,
+}: {
+  label: string
+  children: React.ReactNode
+  /** Show a small reset icon next to the label that calls back when clicked. */
+  onReset?: (() => void) | undefined
+}) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <label
-        style={{
-          display: 'block',
-          fontSize: 10,
-          color: '#666666',
-          marginBottom: 3,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-        }}
-      >
-        {label}
-      </label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+        <label
+          style={{
+            display: 'block',
+            fontSize: 10,
+            color: '#666666',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          {label}
+        </label>
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            title="Reset to default"
+            style={{
+              padding: 0,
+              width: 14,
+              height: 14,
+              background: 'transparent',
+              border: 'none',
+              color: '#555555',
+              cursor: 'pointer',
+              fontSize: 11,
+              lineHeight: '14px',
+            }}
+          >
+            ↺
+          </button>
+        )}
+      </div>
       {children}
     </div>
   )
@@ -143,6 +173,8 @@ function IconPicker({
 interface ConfigFieldsProps {
   widget: Widget
   onChange: (patch: Partial<Widget>) => void
+  /** Definition for the bound signal (when one is bound) — used to resolve "reset to default". */
+  signalDef?: import('@tmbk/canshift-core').SignalDef | undefined
 }
 
 const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
@@ -239,10 +271,14 @@ function LabelFields<T extends LabelEditableConfig>({
   )
 }
 
-function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
+function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
   const style = cfg.displayStyle
+  // Pre-narrowed defaults — TypeScript can't follow signalDef?.X through the
+  // chained ternaries inside the JSX, so we hoist the values once.
+  const defaultWarn = signalDef?.warningLevel
+  const defaultDanger = signalDef?.dangerLevel
   const barOrientation = cfg.barOrientation ?? 'vertical'
   const allowedTokenIds = gaugeTokenIds(style, barOrientation)
   // If current dimensions don't match any token, fall back to the first available
@@ -434,7 +470,16 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
       {(style === 'arc' || style === 'bar') && (
         <>
           <Row>
-            <Field label="Min">
+            <Field
+              label="Min"
+              onReset={
+                signalDef && cfg.minValue !== signalDef.min
+                  ? () => {
+                      onChange({ config: { ...cfg, minValue: signalDef.min } })
+                    }
+                  : undefined
+              }
+            >
               <input
                 type="number"
                 style={numberInputStyle}
@@ -452,7 +497,16 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                 }}
               />
             </Field>
-            <Field label="Max">
+            <Field
+              label="Max"
+              onReset={
+                signalDef && cfg.maxValue !== signalDef.max
+                  ? () => {
+                      onChange({ config: { ...cfg, maxValue: signalDef.max } })
+                    }
+                  : undefined
+              }
+            >
               <input
                 type="number"
                 style={numberInputStyle}
@@ -477,7 +531,16 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
             </Field>
           </Row>
           <Row>
-            <Field label="Warn">
+            <Field
+              label="Warn"
+              onReset={
+                defaultWarn !== undefined && cfg.warningLevel !== defaultWarn
+                  ? () => {
+                      onChange({ config: { ...cfg, warningLevel: defaultWarn } })
+                    }
+                  : undefined
+              }
+            >
               <input
                 type="number"
                 style={numberInputStyle}
@@ -493,7 +556,16 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
                 }}
               />
             </Field>
-            <Field label="Danger">
+            <Field
+              label="Danger"
+              onReset={
+                defaultDanger !== undefined && cfg.dangerLevel !== defaultDanger
+                  ? () => {
+                      onChange({ config: { ...cfg, dangerLevel: defaultDanger } })
+                    }
+                  : undefined
+              }
+            >
               <input
                 type="number"
                 style={numberInputStyle}
@@ -533,7 +605,18 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
             </>
           )}
           <Row>
-            <Field label="Alert at">
+            <Field
+              label="Alert at"
+              onReset={
+                cfg.alertThreshold !== undefined
+                  ? () => {
+                      const { alertThreshold: _drop, ...rest } = cfg
+                      void _drop
+                      onChange({ config: rest })
+                    }
+                  : undefined
+              }
+            >
               <input
                 type="number"
                 style={numberInputStyle}
@@ -1356,6 +1439,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   }
 
   const ConfigFields = CONFIG_FIELDS[widget.type]
+  const boundSignalDef = signals.find((s) => s.name === widget.signal)
 
   return (
     <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
@@ -1593,7 +1677,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           >
             {widget.type} config
           </div>
-          <ConfigFields widget={widget} onChange={patch} />
+          <ConfigFields widget={widget} onChange={patch} signalDef={boundSignalDef} />
         </>
       )}
     </div>
