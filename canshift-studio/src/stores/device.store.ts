@@ -65,6 +65,15 @@ interface DeviceState {
   /** Current burn-cycle stage, drives BurnProgressModal. */
   burnPhase: BurnPhase
   setBurnPhase: (phase: BurnPhase) => void
+
+  /**
+   * True while `useFirmwareFlash.flash()` is in flight. Distinct from
+   * `firmwareDialog.visible` because UpdateRoute drives a flash without ever
+   * opening the firmware dialog. `useAutoConnect` checks this so its 2 s
+   * reconnect poll cannot grab the serial port back from esptool-js mid-flash.
+   */
+  flashing: boolean
+  setFlashing: (flashing: boolean) => void
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -80,6 +89,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   isDayMode: null,
   lastPushedConfig: null,
   burnPhase: 'idle',
+  flashing: false,
 
   setConnected: (portPath) => {
     set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
@@ -143,5 +153,9 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setBurnPhase: (phase) => {
     set({ burnPhase: phase })
+  },
+
+  setFlashing: (flashing) => {
+    set({ flashing })
   },
 }))

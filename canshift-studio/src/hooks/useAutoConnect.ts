@@ -45,6 +45,10 @@ export function useAutoConnect(): void {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const flashDialogVisible = useDeviceStore((s) => s.firmwareDialog.visible)
+  // `flashing` covers UpdateRoute, which kicks off a flash without ever
+  // opening FirmwareDialog. Without this guard, the 2 s reconnect poll grabs
+  // the serial port back from esptool-js mid-flash and the write times out.
+  const flashing = useDeviceStore((s) => s.flashing)
   const setConnected = useDeviceStore((s) => s.setConnected)
   const log = useLogStore((s) => s.push)
 
@@ -52,7 +56,7 @@ export function useAutoConnect(): void {
   const inFlight = useRef(false)
 
   useEffect(() => {
-    if (connected || simulationMode || flashDialogVisible) return
+    if (connected || simulationMode || flashDialogVisible || flashing) return
 
     let cancelled = false
 
@@ -96,5 +100,5 @@ export function useAutoConnect(): void {
       cancelled = true
       clearInterval(interval)
     }
-  }, [connected, simulationMode, flashDialogVisible, setConnected, log])
+  }, [connected, simulationMode, flashDialogVisible, flashing, setConnected, log])
 }
