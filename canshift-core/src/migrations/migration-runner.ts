@@ -65,6 +65,36 @@ function brightenHex(hex: string, delta = 0x33): string {
 
 const MIGRATIONS: Migration[] = [
   {
+    // 1.8.0 → 1.9.0: H-FULL bar gauge token doubled from 320×28 to 320×56
+    // (issue #134). Existing horizontal bar gauges sized 320×28 are upgraded
+    // so the size picker keeps recognising them as H-FULL.
+    fromVersion: '1.8.0',
+    toVersion: '1.9.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.9.0' }
+
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+
+        const migratedWidgets = widgets.map((widget) => {
+          const cfg = widget.config as Record<string, unknown> | undefined
+          const layout = widget.layout as Record<string, unknown> | undefined
+          if (!cfg || !layout) return widget
+          if (cfg.displayStyle !== 'bar') return widget
+          if (cfg.barOrientation !== 'horizontal') return widget
+          if (layout.w !== 320 || layout.h !== 28) return widget
+          return { ...widget, layout: { ...layout, h: 56 } }
+        })
+
+        return { ...page, widgets: migratedWidgets }
+      })
+
+      return { ...config, version: '1.9.0', pages: migratedPages }
+    },
+  },
+  {
     // 1.7.0 → 1.8.0: button colours move to ButtonWidgetConfig.colors (issue #146).
     //   - For each button widget, set colors.normal = widget.style.primaryColor
     //     and colors.active = a brightened variant of normal.

@@ -481,6 +481,97 @@ describe('migrateConfig — 1.7.0 → 1.8.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.8.0 → 1.9.0: H-FULL bar gauge token doubled (320×28 → 320×56)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.8.0 → 1.9.0', () => {
+  function makeHorizontalBar(layout: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: 'tps',
+      type: 'gauge',
+      layout,
+      config: {
+        type: 'gauge',
+        displayStyle: 'bar',
+        barOrientation: 'horizontal',
+        minValue: 0,
+        maxValue: 100,
+      },
+    }
+  }
+
+  it('upgrades horizontal bar gauges from 320×28 to 320×56', () => {
+    const config = {
+      version: '1.8.0',
+      pages: wrapInPages([makeHorizontalBar({ x: 0, y: 168, w: 320, h: 28, zOrder: 0 })]),
+    }
+    const { config: out, applied } = migrateConfig(config, '1.9.0')
+    expect(applied).toEqual(['1.8.0 → 1.9.0'])
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, unknown>
+    expect(layout.h).toBe(56)
+    expect(layout.w).toBe(320)
+  })
+
+  it('leaves bars at the new height untouched', () => {
+    const config = {
+      version: '1.8.0',
+      pages: wrapInPages([makeHorizontalBar({ x: 0, y: 168, w: 320, h: 56, zOrder: 0 })]),
+    }
+    const { config: out } = migrateConfig(config, '1.9.0')
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, unknown>
+    expect(layout.h).toBe(56)
+  })
+
+  it('does not touch vertical bars (V / V-M)', () => {
+    const config = {
+      version: '1.8.0',
+      pages: wrapInPages([
+        {
+          id: 'rpm_v',
+          type: 'gauge',
+          layout: { x: 0, y: 0, w: 40, h: 224, zOrder: 0 },
+          config: {
+            type: 'gauge',
+            displayStyle: 'bar',
+            barOrientation: 'vertical',
+            minValue: 0,
+            maxValue: 8000,
+          },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.9.0')
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, unknown>
+    expect(layout.h).toBe(224)
+  })
+
+  it('does not touch numeric or arc gauges sized 320×28', () => {
+    const config = {
+      version: '1.8.0',
+      pages: wrapInPages([
+        {
+          id: 'fuel',
+          type: 'gauge',
+          layout: { x: 0, y: 196, w: 320, h: 28, zOrder: 0 },
+          config: { type: 'gauge', displayStyle: 'numeric', minValue: 0, maxValue: 6 },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.9.0')
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, unknown>
+    expect(layout.h).toBe(28)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 
