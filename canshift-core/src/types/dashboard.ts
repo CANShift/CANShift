@@ -69,8 +69,6 @@ export interface GaugeWidgetConfig {
   hideWhenInvalid?: boolean
   /** Show needle pointer — arc style only */
   showNeedle?: boolean
-  /** Icon shown in arc centre or beside numeric value */
-  iconName?: SensorIconName
   /**
    * Flash the widget red when the signal value reaches revLimitRpm.
    * Firmware triggers a full-screen red blink; preview shows a red ring.
@@ -157,6 +155,17 @@ export interface ButtonWidgetConfig {
    */
   isToggle?: boolean
   /**
+   * Two-state button colour palette (issue #146):
+   *   `normal` — idle background / outline / label tint
+   *   `active` — pressed / hover / triggered state
+   * Older configs without this field fall back to the legacy `widget.style`
+   * colours; the 1.7→1.8 migration backfills these from the existing style.
+   */
+  colors?: {
+    normal: HexColor
+    active: HexColor
+  }
+  /**
    * Ordered list of actions to execute on press.
    * A button can have one or more actions, mixing ECU and dashboard types.
    */
@@ -177,8 +186,6 @@ export interface BarWidgetConfig {
   decimalPlaces: number
   prefix?: string
   suffix?: string
-  /** Icon displayed at the start of the bar */
-  iconName?: SensorIconName
   /** Short label shown above or below the bar */
   label?: string
   labelPosition?: 'top-center' | 'bottom-center'

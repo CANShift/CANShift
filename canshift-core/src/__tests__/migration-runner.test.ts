@@ -355,6 +355,132 @@ describe('migrateConfig — 1.6.0 → 1.7.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.7.0 → 1.8.0: button colours, drop iconName from gauge/bar
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.7.0 → 1.8.0', () => {
+  function makeButton(
+    overrides: Record<string, unknown> = {},
+    style?: Record<string, unknown>
+  ): Record<string, unknown> {
+    return {
+      id: 'btn1',
+      type: 'button',
+      style: style ?? { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+      config: { type: 'button', label: 'Go', actions: [] },
+      ...overrides,
+    }
+  }
+
+  it('populates button colors from style.primaryColor and brightens for active', () => {
+    const config = {
+      version: '1.7.0',
+      pages: wrapInPages([makeButton({}, { primaryColor: '#CC3333' })]),
+    }
+    const { config: out, applied } = migrateConfig(config, '1.8.0')
+    expect(applied).toEqual(['1.7.0 → 1.8.0'])
+    const btnCfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    const colors = btnCfg.colors as Record<string, string>
+    expect(colors.normal).toBe('#CC3333')
+    expect(colors.active).toBe('#FF6666')
+  })
+
+  it('falls back to default red when widget.style.primaryColor is missing', () => {
+    const config = {
+      version: '1.7.0',
+      pages: wrapInPages([
+        {
+          id: 'btn1',
+          type: 'button',
+          config: { type: 'button', label: 'Go', actions: [] },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.8.0')
+    const btnCfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    const colors = btnCfg.colors as Record<string, string>
+    expect(colors.normal).toBe('#FF4444')
+    expect(colors.active).toBe('#FF7777')
+  })
+
+  it('does not overwrite existing button colors', () => {
+    const existingColors = { normal: '#0000FF', active: '#3333FF' }
+    const config = {
+      version: '1.7.0',
+      pages: wrapInPages([
+        makeButton({
+          config: { type: 'button', label: 'Go', actions: [], colors: existingColors },
+        }),
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.8.0')
+    const btnCfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect(btnCfg.colors).toEqual(existingColors)
+  })
+
+  it('drops iconName from gauge configs', () => {
+    const config = {
+      version: '1.7.0',
+      pages: wrapInPages([
+        {
+          id: 'g1',
+          type: 'gauge',
+          config: { type: 'gauge', iconName: 'rpm', minValue: 0, maxValue: 100 },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.8.0')
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect('iconName' in cfg).toBe(false)
+    expect(cfg.minValue).toBe(0)
+  })
+
+  it('drops iconName from bar configs', () => {
+    const config = {
+      version: '1.7.0',
+      pages: wrapInPages([
+        {
+          id: 'b1',
+          type: 'bar',
+          config: { type: 'bar', iconName: 'rpm', decimalPlaces: 0 },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.8.0')
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect('iconName' in cfg).toBe(false)
+  })
+
+  it('keeps iconName on warning widgets', () => {
+    const config = {
+      version: '1.7.0',
+      pages: wrapInPages([
+        {
+          id: 'w1',
+          type: 'warning',
+          config: { type: 'warning', iconName: 'warning', threshold: 0.5 },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.8.0')
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect(cfg.iconName).toBe('warning')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 

@@ -542,17 +542,6 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
           onChange({ config: next })
         }}
       />
-
-      <Field label="Icon">
-        <IconPicker
-          value={cfg.iconName}
-          onChange={(name) => {
-            onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
-            })
-          }}
-        />
-      </Field>
     </>
   )
 }
@@ -1017,16 +1006,6 @@ function BarFields({ widget, onChange }: ConfigFieldsProps) {
           </div>
         </Field>
       )}
-      <Field label="Icon">
-        <IconPicker
-          value={cfg.iconName}
-          onChange={(name) => {
-            onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
-            })
-          }}
-        />
-      </Field>
     </>
   )
 }
@@ -1501,98 +1480,78 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
-      {/* Style */}
-      <div
-        style={{
-          fontSize: 10,
-          color: '#AAAAAA',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          marginBottom: 6,
-          marginTop: 4,
-        }}
-      >
-        Style
-      </div>
-      <Row>
-        <Field label="Color">
-          <input
-            type="color"
-            value={widget.style.primaryColor}
+      {/* Button states — only buttons expose colour pickers (#146).
+          Normal = idle state, Active = pressed / hover / triggered. */}
+      {widget.type === 'button' && widget.config.type === 'button' && (
+        <>
+          <div
             style={{
-              width: '100%',
-              height: 28,
-              padding: 2,
-              background: '#111',
-              border: '1px solid #333',
-              borderRadius: 3,
-              cursor: 'pointer',
+              fontSize: 10,
+              color: '#AAAAAA',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: 6,
+              marginTop: 4,
             }}
-            onChange={(e) => {
-              patch({ style: { ...widget.style, primaryColor: e.target.value as `#${string}` } })
-            }}
-          />
-        </Field>
-        <Field label="Text">
-          <input
-            type="color"
-            value={widget.style.textColor}
-            style={{
-              width: '100%',
-              height: 28,
-              padding: 2,
-              background: '#111',
-              border: '1px solid #333',
-              borderRadius: 3,
-              cursor: 'pointer',
-            }}
-            onChange={(e) => {
-              patch({ style: { ...widget.style, textColor: e.target.value as `#${string}` } })
-            }}
-          />
-        </Field>
-      </Row>
-      <Row>
-        <Field label="Border">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="checkbox"
-              checked={!!widget.style.borderColor}
-              onChange={(e) => {
-                patch({
-                  style: {
-                    ...widget.style,
-                    borderColor: e.target.checked ? '#FFFFFF' : null,
-                  },
-                })
-              }}
-            />
-            {widget.style.borderColor && (
-              <input
-                type="color"
-                value={widget.style.borderColor}
-                style={{
-                  flex: 1,
-                  height: 28,
-                  padding: 2,
-                  background: '#111',
-                  border: '1px solid #333',
-                  borderRadius: 3,
-                  cursor: 'pointer',
-                }}
-                onChange={(e) => {
-                  patch({
-                    style: {
-                      ...widget.style,
-                      borderColor: e.target.value as `#${string}`,
-                    },
-                  })
-                }}
-              />
-            )}
+          >
+            Button colors
           </div>
-        </Field>
-      </Row>
+          {(() => {
+            const cfg = widget.config
+            const normal = cfg.colors?.normal ?? widget.style.primaryColor
+            const active = cfg.colors?.active ?? widget.style.primaryColor
+            return (
+              <Row>
+                <Field label="Normal">
+                  <input
+                    type="color"
+                    value={normal}
+                    style={{
+                      width: '100%',
+                      height: 28,
+                      padding: 2,
+                      background: '#111',
+                      border: '1px solid #333',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                    }}
+                    onChange={(e) => {
+                      const next = {
+                        normal: e.target.value as `#${string}`,
+                        active: cfg.colors?.active ?? (e.target.value as `#${string}`),
+                      }
+                      patch({ config: { ...cfg, colors: next } })
+                    }}
+                  />
+                </Field>
+                <Field label="Active">
+                  <input
+                    type="color"
+                    value={active}
+                    style={{
+                      width: '100%',
+                      height: 28,
+                      padding: 2,
+                      background: '#111',
+                      border: '1px solid #333',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                    }}
+                    onChange={(e) => {
+                      const next = {
+                        normal: cfg.colors?.normal ?? (e.target.value as `#${string}`),
+                        active: e.target.value as `#${string}`,
+                      }
+                      patch({ config: { ...cfg, colors: next } })
+                    }}
+                  />
+                </Field>
+              </Row>
+            )
+          })()}
+        </>
+      )}
+
       {/* Type-specific config */}
       {ConfigFields && (
         <>
