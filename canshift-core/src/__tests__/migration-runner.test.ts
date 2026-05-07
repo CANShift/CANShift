@@ -201,6 +201,105 @@ describe('migrateConfig — multi-step chain (1.0.0 → 1.2.0)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.5.0 → 1.6.0: drop XS / S / M sizes — upgrade legacy small widgets to L
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.5.0 → 1.6.0', () => {
+  function makeStandardWidget(
+    type: string,
+    layout: { w: number; h: number }
+  ): Record<string, unknown> {
+    return {
+      id: `${type}_1`,
+      type,
+      layout: { x: 0, y: 0, zOrder: 0, ...layout },
+      config: { type },
+    }
+  }
+
+  it('upgrades XS button (80×28) to L (160×56)', () => {
+    const config = {
+      version: '1.5.0',
+      pages: wrapInPages([makeStandardWidget('button', { w: 80, h: 28 })]),
+    }
+    const { config: out, applied } = migrateConfig(config, '1.6.0')
+    expect(applied).toEqual(['1.5.0 → 1.6.0'])
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, number>
+    expect(layout.w).toBe(160)
+    expect(layout.h).toBe(56)
+  })
+
+  it('upgrades S warning (80×56) and M gear (80×112) to L', () => {
+    const config = {
+      version: '1.5.0',
+      pages: wrapInPages([
+        makeStandardWidget('warning', { w: 80, h: 56 }),
+        makeStandardWidget('gear', { w: 80, h: 112 }),
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.6.0')
+    const widgets = (out.pages as Record<string, unknown>[])[0]!.widgets as Record<
+      string,
+      unknown
+    >[]
+    for (const w of widgets) {
+      const layout = w.layout as Record<string, number>
+      expect(layout.w).toBe(160)
+      expect(layout.h).toBe(56)
+    }
+  })
+
+  it('does not touch already-large standard widgets (L / XL)', () => {
+    const config = {
+      version: '1.5.0',
+      pages: wrapInPages([
+        makeStandardWidget('button', { w: 160, h: 56 }),
+        makeStandardWidget('warning', { w: 160, h: 112 }),
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.6.0')
+    const widgets = (out.pages as Record<string, unknown>[])[0]!.widgets as Record<
+      string,
+      unknown
+    >[]
+    expect((widgets[0]!.layout as Record<string, number>).w).toBe(160)
+    expect((widgets[0]!.layout as Record<string, number>).h).toBe(56)
+    expect((widgets[1]!.layout as Record<string, number>).w).toBe(160)
+    expect((widgets[1]!.layout as Record<string, number>).h).toBe(112)
+  })
+
+  it('leaves gauge widgets alone (they keep their narrow bar tokens)', () => {
+    // A vertical bar gauge sized 40×112 (V-M) must not be touched by the
+    // standard-widget migration. A vertical bar at 80×56 (legacy S vertical)
+    // also stays — gauges are exempt from the L/XL collapse.
+    const config = {
+      version: '1.5.0',
+      pages: wrapInPages([
+        makeStandardWidget('gauge', { w: 40, h: 112 }),
+        makeStandardWidget('gauge', { w: 80, h: 56 }),
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.6.0')
+    const widgets = (out.pages as Record<string, unknown>[])[0]!.widgets as Record<
+      string,
+      unknown
+    >[]
+    expect((widgets[0]!.layout as Record<string, number>).w).toBe(40)
+    expect((widgets[0]!.layout as Record<string, number>).h).toBe(112)
+    expect((widgets[1]!.layout as Record<string, number>).w).toBe(80)
+    expect((widgets[1]!.layout as Record<string, number>).h).toBe(56)
+  })
+
+  it('handles config with no pages', () => {
+    const config = { version: '1.5.0' }
+    const { config: out } = migrateConfig(config, '1.6.0')
+    expect(out.version).toBe('1.6.0')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 
