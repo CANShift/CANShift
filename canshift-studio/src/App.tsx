@@ -1,11 +1,32 @@
 // App.tsx — Root component and route definitions
 
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import EditorRoute from './routes/EditorRoute'
-import SignalRoute from './routes/SignalRoute'
-import UpdateRoute from './routes/UpdateRoute'
-import CanScannerRoute from './routes/CanScannerRoute'
-import DeviceConfigRoute from './routes/DeviceConfigRoute'
+
+// Secondary routes — code-split so the editor's first paint isn't blocked on
+// signal mapping, CAN scanner, firmware updater, or device config bundles.
+const SignalRoute = lazy(() => import('./routes/SignalRoute'))
+const UpdateRoute = lazy(() => import('./routes/UpdateRoute'))
+const CanScannerRoute = lazy(() => import('./routes/CanScannerRoute'))
+const DeviceConfigRoute = lazy(() => import('./routes/DeviceConfigRoute'))
+
+function RouteLoading() {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#444444',
+        fontSize: 12,
+      }}
+    >
+      Loading…
+    </div>
+  )
+}
 import TopBar from './components/shared/TopBar'
 import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
@@ -69,7 +90,9 @@ export default function App() {
                 path="/signals"
                 element={
                   <ErrorBoundary>
-                    <SignalRoute />
+                    <Suspense fallback={<RouteLoading />}>
+                      <SignalRoute />
+                    </Suspense>
                   </ErrorBoundary>
                 }
               />
@@ -77,7 +100,9 @@ export default function App() {
                 path="/scanner"
                 element={
                   <ErrorBoundary>
-                    <CanScannerRoute />
+                    <Suspense fallback={<RouteLoading />}>
+                      <CanScannerRoute />
+                    </Suspense>
                   </ErrorBoundary>
                 }
               />
@@ -85,7 +110,9 @@ export default function App() {
                 path="/update"
                 element={
                   <ErrorBoundary>
-                    <UpdateRoute />
+                    <Suspense fallback={<RouteLoading />}>
+                      <UpdateRoute />
+                    </Suspense>
                   </ErrorBoundary>
                 }
               />
@@ -93,7 +120,9 @@ export default function App() {
                 path="/device-config"
                 element={
                   <ErrorBoundary>
-                    <DeviceConfigRoute />
+                    <Suspense fallback={<RouteLoading />}>
+                      <DeviceConfigRoute />
+                    </Suspense>
                   </ErrorBoundary>
                 }
               />
