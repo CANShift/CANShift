@@ -8,6 +8,7 @@ import { DEFAULT_TOP_BAR_LAYOUT } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
+import { useTestModeStore } from '../../stores/testMode.store'
 import { IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
@@ -284,6 +285,7 @@ interface WidgetBoxProps {
   isInMultiSelection: boolean
   isOverlapping: boolean
   revLimiting: boolean
+  testValue: number | null
   onSelect: (id: string) => void
   onShiftSelect: (id: string) => void
   onDragStart: (e: React.MouseEvent, widget: Widget) => void
@@ -296,6 +298,7 @@ function WidgetBox({
   isInMultiSelection,
   isOverlapping,
   revLimiting,
+  testValue,
   onSelect,
   onShiftSelect,
   onDragStart,
@@ -356,6 +359,7 @@ function WidgetBox({
         displayW={layout.w * SCALE}
         displayH={layout.h * SCALE}
         revLimiting={revLimiting}
+        testValue={testValue}
       />
       {isSelected && (
         <div
@@ -647,6 +651,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const [diagOpen, setDiagOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
+
+  // Test-mode signal injection — when enabled, widgets read from `testValues`
+  // keyed by signal name instead of the static demo percentage. See #114.
+  const testModeEnabled = useTestModeStore((s) => s.enabled)
+  const testValues = useTestModeStore((s) => s.values)
 
   // Rev limit flash: alternates red overlay every 80ms, auto-stops after 5s
   useEffect(() => {
@@ -1072,6 +1081,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                     }
                     isOverlapping={overlappingIds.has(widget.id)}
                     revLimiting={revLimiting}
+                    testValue={
+                      testModeEnabled && widget.signal in testValues
+                        ? (testValues[widget.signal] ?? null)
+                        : null
+                    }
                     onSelect={selectWidget}
                     onShiftSelect={toggleWidgetSelection}
                     onDragStart={handleDragStart}
