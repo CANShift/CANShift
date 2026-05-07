@@ -255,6 +255,28 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.FIRMWARE_ENTER_FLASH, async (_event, portPath: string) => {
     // Disconnect the Node.js serial port so the renderer can use Web Serial API on the same port
     await usbService.disconnect()
+    // Drive the BOOT-mode reset from the main process — Web Serial's setSignals
+    // is too flaky on macOS CH340 to reliably enter download mode (#196).
+    const reset = await firmwareService.resetIntoBootloader(portPath)
+    if (!reset.success) {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'warn',
+        message: `Pre-flash reset failed: ${reset.error ?? 'unknown'} — esptool-js will retry from Web Serial`,
+        ts: Date.now(),
+      })
+    } else if (reset.error) {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'warn',
+        message: `Pre-flash reset succeeded with caveat: ${reset.error}`,
+        ts: Date.now(),
+      })
+    } else {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'info',
+        message: `Pre-flash reset OK — chip should be in bootloader on ${portPath}`,
+        ts: Date.now(),
+      })
+    }
     firmwareService.setFlashPort(portPath)
     return { success: true }
   })
