@@ -5,6 +5,7 @@ node_modules/
 dist/
 out/
 release/
+coverage/
 *.local
 
 # Electron builder cache
