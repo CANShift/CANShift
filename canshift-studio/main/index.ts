@@ -7,6 +7,7 @@ import { registerIpcHandlers, usbService } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
+import { installContentSecurityPolicy } from './services/security.service'
 import { IpcChannels } from './ipc/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
@@ -58,7 +59,7 @@ function createSplash(): void {
     resizable: false,
     skipTaskbar: true,
     center: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   })
 
   // Read logo as base64 to avoid file:// CSP issues inside a data: page
@@ -127,7 +128,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   })
 
@@ -235,6 +236,7 @@ app
       if (icon) app.dock?.setIcon(icon)
     }
 
+    installContentSecurityPolicy()
     registerIpcHandlers(() => mainWindow)
     initUpdater(() => mainWindow)
     createSplash()
