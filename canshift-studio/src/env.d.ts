@@ -21,6 +21,7 @@ declare module '*.webp' {
 interface Window {
   ipc: {
     invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+    send: (channel: string, ...args: unknown[]) => void
     on: (channel: string, listener: (...args: unknown[]) => void) => void
     off: (channel: string, listener: (...args: unknown[]) => void) => void
     channels: typeof import('../main/ipc/ipc-channels').IpcChannels

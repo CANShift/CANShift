@@ -1451,12 +1451,17 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
-      {/* Signal binding — not applicable for button, timer, image */}
+      {/* Signal binding — not applicable for button, timer, image.
+          Uses an <input list> + <datalist> for native filter-as-you-type
+          search; the dropdown stays scrollable in browsers that support it. */}
       {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
         <Field label="Signal">
-          <select
-            style={{ ...inputStyle, cursor: 'pointer' }}
+          <input
+            type="text"
+            list={`signals-list-${widget.id}`}
+            style={inputStyle}
             value={widget.signal}
+            placeholder="— search signals —"
             onChange={(e) => {
               const newSignal = e.target.value
               const signalDef = signals.find((s) => s.name === newSignal)
@@ -1490,15 +1495,14 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
               }
               patch(p)
             }}
-          >
-            <option value="">— none —</option>
+          />
+          <datalist id={`signals-list-${widget.id}`}>
             {signals.map((s) => (
               <option key={s.name} value={s.name}>
-                {s.name}
-                {s.unit ? ` (${s.unit})` : ''}
+                {s.unit}
               </option>
             ))}
-          </select>
+          </datalist>
         </Field>
       )}
 

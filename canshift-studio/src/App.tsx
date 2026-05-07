@@ -19,6 +19,7 @@ import { useFirmwareCheck } from './hooks/useFirmwareCheck'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useAutoConnect } from './hooks/useAutoConnect'
 import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
+import { useDirtySync } from './hooks/useDirtySync'
 import { useDeviceStore } from './stores/device.store'
 import FirmwareDialog from './components/shared/FirmwareDialog'
 import PushDiffDialog from './components/shared/PushDiffDialog'
@@ -29,6 +30,7 @@ export default function App() {
   useDeviceConfigLoad()
   useSessionRestore()
   useAutoConnect()
+  useDirtySync()
 
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)

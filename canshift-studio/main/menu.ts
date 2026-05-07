@@ -103,6 +103,14 @@ export function buildMenu(win: BrowserWindow): void {
           },
         },
         { type: 'separator' },
+        {
+          label: 'Duplicate',
+          accelerator: 'CmdOrCtrl+D',
+          click: () => {
+            win.webContents.send(IpcChannels.EDIT_DUPLICATE)
+          },
+        },
+        { type: 'separator' },
         { role: 'cut' as const },
         { role: 'copy' as const },
         { role: 'paste' as const },

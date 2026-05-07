@@ -12,6 +12,7 @@ export function useMenuEvents() {
   const markSaved = useDashboardStore((s) => s.markSaved)
   const undo = useDashboardStore((s) => s.undo)
   const redo = useDashboardStore((s) => s.redo)
+  const duplicateWidgets = useDashboardStore((s) => s.duplicateWidgets)
   const { openConfig, openConfigPath, saveConfig } = useConfigActions()
 
   // Keep refs current without triggering effect re-registration
@@ -21,12 +22,14 @@ export function useMenuEvents() {
   const markSavedRef = useRef(markSaved)
   const undoRef = useRef(undo)
   const redoRef = useRef(redo)
+  const duplicateRef = useRef(duplicateWidgets)
   openConfigRef.current = openConfig
   openConfigPathRef.current = openConfigPath
   saveConfigRef.current = saveConfig
   markSavedRef.current = markSaved
   undoRef.current = undo
   redoRef.current = redo
+  duplicateRef.current = duplicateWidgets
 
   useEffect(() => {
     const unsub = useDashboardStore.subscribe((s) => {
@@ -55,6 +58,18 @@ export function useMenuEvents() {
     const handleRedo = () => {
       redoRef.current()
     }
+    const handleDuplicate = () => {
+      const state = useDashboardStore.getState()
+      const pageId = state.selectedPageId
+      const ids =
+        state.selectedWidgetIds.length > 0
+          ? state.selectedWidgetIds
+          : state.selectedWidgetId
+            ? [state.selectedWidgetId]
+            : []
+      if (!pageId || ids.length === 0) return
+      duplicateRef.current(pageId, ids)
+    }
 
     window.ipc.on(IpcChannels.CONFIG_OPEN, handleOpen)
     window.ipc.on(IpcChannels.CONFIG_OPEN_PATH, handleOpenPath)
@@ -62,6 +77,7 @@ export function useMenuEvents() {
     window.ipc.on(IpcChannels.CONFIG_SAVE_AS, handleSaveAs)
     window.ipc.on(IpcChannels.HISTORY_UNDO, handleUndo)
     window.ipc.on(IpcChannels.HISTORY_REDO, handleRedo)
+    window.ipc.on(IpcChannels.EDIT_DUPLICATE, handleDuplicate)
 
     return () => {
       window.ipc.off(IpcChannels.CONFIG_OPEN, handleOpen)
@@ -70,6 +86,7 @@ export function useMenuEvents() {
       window.ipc.off(IpcChannels.CONFIG_SAVE_AS, handleSaveAs)
       window.ipc.off(IpcChannels.HISTORY_UNDO, handleUndo)
       window.ipc.off(IpcChannels.HISTORY_REDO, handleRedo)
+      window.ipc.off(IpcChannels.EDIT_DUPLICATE, handleDuplicate)
       unsub()
     }
   }, []) // stable refs — register once, never re-register
