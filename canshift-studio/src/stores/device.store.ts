@@ -5,6 +5,17 @@ import type { DashboardConfig } from '@tmbk/canshift-core'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
 
+/**
+ * Visible stage of the burn cycle, drives BurnProgressModal:
+ *   idle       — no burn in flight
+ *   pushing    — sending the JSON over USB; waiting for firmware ack
+ *   rebooting  — firmware has acked + is now writing to SD and rebooting;
+ *                connection has dropped, auto-connect is trying to come back
+ *   done       — device reconnected after the reboot; modal shows a short
+ *                success state then returns to idle
+ */
+export type BurnPhase = 'idle' | 'pushing' | 'rebooting' | 'done'
+
 /** Controls the firmware flash / update dialog. */
 export interface FirmwareDialogState {
   visible: boolean
@@ -50,6 +61,10 @@ interface DeviceState {
   // Last config successfully pushed to the device (for diff before next burn)
   lastPushedConfig: DashboardConfig | null
   setLastPushedConfig: (config: DashboardConfig) => void
+
+  /** Current burn-cycle stage, drives BurnProgressModal. */
+  burnPhase: BurnPhase
+  setBurnPhase: (phase: BurnPhase) => void
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -64,6 +79,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   firmwareDialog: { visible: false, mode: null },
   isDayMode: null,
   lastPushedConfig: null,
+  burnPhase: 'idle',
 
   setConnected: (portPath) => {
     set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
@@ -123,5 +139,9 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setLastPushedConfig: (config) => {
     set({ lastPushedConfig: config })
+  },
+
+  setBurnPhase: (phase) => {
+    set({ burnPhase: phase })
   },
 }))

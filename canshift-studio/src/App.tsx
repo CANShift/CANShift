@@ -42,9 +42,11 @@ import { useSessionRestore } from './hooks/useSessionRestore'
 import { useAutoConnect } from './hooks/useAutoConnect'
 import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
+import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useDeviceStore } from './stores/device.store'
 import FirmwareDialog from './components/shared/FirmwareDialog'
 import PushDiffDialog from './components/shared/PushDiffDialog'
+import BurnProgressModal from './components/shared/BurnProgressModal'
 
 export default function App() {
   useMenuEvents()
@@ -53,6 +55,7 @@ export default function App() {
   useSessionRestore()
   useAutoConnect()
   useDirtySync()
+  useBurnPhaseTracker()
 
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -140,6 +143,7 @@ export default function App() {
       <VersionMismatchBanner />
       <FirmwareDialog />
       <PushDiffDialog />
+      <BurnProgressModal />
     </div>
   )
 }
