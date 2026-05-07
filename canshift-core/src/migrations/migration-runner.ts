@@ -65,6 +65,14 @@ function brightenHex(hex: string, delta = 0x33): string {
 
 const MIGRATIONS: Migration[] = [
   {
+    // 1.9.0 → 1.10.0: gauge / bar widgets gain an optional `alertThreshold`
+    // field (issue #133). No data transformation needed — existing configs
+    // simply leave the field undefined and the firmware does not flash.
+    fromVersion: '1.9.0',
+    toVersion: '1.10.0',
+    migrate: (config) => ({ ...config, version: '1.10.0' }),
+  },
+  {
     // 1.8.0 → 1.9.0: H-FULL bar gauge token doubled from 320×28 to 320×56
     // (issue #134). Existing horizontal bar gauges sized 320×28 are upgraded
     // so the size picker keeps recognising them as H-FULL.

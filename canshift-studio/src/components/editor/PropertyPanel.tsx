@@ -532,6 +532,28 @@ function GaugeFields({ widget, onChange }: ConfigFieldsProps) {
               </Field>
             </>
           )}
+          <Row>
+            <Field label="Alert at">
+              <input
+                type="number"
+                style={numberInputStyle}
+                placeholder="off"
+                value={cfg.alertThreshold ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (raw === '') {
+                    const { alertThreshold: _drop, ...rest } = cfg
+                    void _drop
+                    onChange({ config: rest })
+                    return
+                  }
+                  const v = Number(raw)
+                  if (!Number.isFinite(v)) return
+                  onChange({ config: { ...cfg, alertThreshold: v } })
+                }}
+              />
+            </Field>
+          </Row>
         </>
       )}
 

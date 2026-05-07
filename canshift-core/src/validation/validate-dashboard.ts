@@ -241,6 +241,9 @@ function validateWidgetTypeFields(type: string, cfg: UnknownRecord, prefix: stri
       ) {
         errors.push(`${prefix} (gauge): minValue must be less than maxValue`)
       }
+      if (cfg.alertThreshold !== undefined && typeof cfg.alertThreshold !== 'number') {
+        errors.push(`${prefix} (gauge): alertThreshold must be a number when set`)
+      }
       break
     }
 
@@ -279,6 +282,9 @@ function validateWidgetTypeFields(type: string, cfg: UnknownRecord, prefix: stri
         cfg.minValue >= cfg.maxValue
       ) {
         errors.push(`${prefix} (bar): minValue must be less than maxValue`)
+      }
+      if (cfg.alertThreshold !== undefined && typeof cfg.alertThreshold !== 'number') {
+        errors.push(`${prefix} (bar): alertThreshold must be a number when set`)
       }
       break
     }

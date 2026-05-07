@@ -59,7 +59,7 @@ export type { MigrationResult } from './migrations/migration-runner'
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.9.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.10.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const
