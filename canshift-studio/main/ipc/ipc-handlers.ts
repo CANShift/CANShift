@@ -138,6 +138,21 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return result
   })
 
+  // Import deliberately does NOT touch sessionService.addRecentFile — the
+  // imported file is treated as a foreign source, not a working file.
+  ipcMain.handle(IpcChannels.CONFIG_IMPORT, async () => {
+    return configService.importFile()
+  })
+
+  // Export does NOT update recent files for the same reason — it's a one-shot
+  // copy out, not a change of working location.
+  ipcMain.handle(IpcChannels.CONFIG_EXPORT, async (_event, config: unknown) => {
+    if (!isPlainObject(config)) {
+      return { success: false, error: 'Export payload must be a config object' }
+    }
+    return configService.exportFile(config)
+  })
+
   ipcMain.handle(IpcChannels.SESSION_GET_LAST_FILE, () => {
     return sessionService.getLastFilePath()
   })

@@ -56,6 +56,12 @@ interface DashboardState {
 
   // Config lifecycle
   setConfig: (config: DashboardConfig, filePath?: string) => void
+  /**
+   * Replace the current config from an imported source (Import menu, shared
+   * dashboard) — clears `filePath`, marks dirty so the user is prompted to
+   * Save As, resets history. The next Save will land in a new file.
+   */
+  loadImported: (config: DashboardConfig) => void
   markSaved: (filePath: string) => void
 
   // Edit history
@@ -138,6 +144,19 @@ export const useDashboardStore = create<DashboardState>()(
         s.config = config
         s.filePath = filePath ?? null
         s.isDirty = false
+        s.selectedPageId = config.defaultPageId
+        s.selectedWidgetId = null
+        s.selectedWidgetIds = []
+      })
+    },
+
+    loadImported: (config) => {
+      set((s) => {
+        s.past = []
+        s.future = []
+        s.config = config
+        s.filePath = null
+        s.isDirty = true
         s.selectedPageId = config.defaultPageId
         s.selectedWidgetId = null
         s.selectedWidgetIds = []

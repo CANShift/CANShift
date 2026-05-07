@@ -13,11 +13,13 @@ export function useMenuEvents() {
   const undo = useDashboardStore((s) => s.undo)
   const redo = useDashboardStore((s) => s.redo)
   const duplicateWidgets = useDashboardStore((s) => s.duplicateWidgets)
-  const { openConfig, openConfigPath, saveConfig } = useConfigActions()
+  const { openConfig, openConfigPath, importConfig, exportConfig, saveConfig } = useConfigActions()
 
   // Keep refs current without triggering effect re-registration
   const openConfigRef = useRef(openConfig)
   const openConfigPathRef = useRef(openConfigPath)
+  const importConfigRef = useRef(importConfig)
+  const exportConfigRef = useRef(exportConfig)
   const saveConfigRef = useRef(saveConfig)
   const markSavedRef = useRef(markSaved)
   const undoRef = useRef(undo)
@@ -25,6 +27,8 @@ export function useMenuEvents() {
   const duplicateRef = useRef(duplicateWidgets)
   openConfigRef.current = openConfig
   openConfigPathRef.current = openConfigPath
+  importConfigRef.current = importConfig
+  exportConfigRef.current = exportConfig
   saveConfigRef.current = saveConfig
   markSavedRef.current = markSaved
   undoRef.current = undo
@@ -52,6 +56,12 @@ export function useMenuEvents() {
         if (result.success && result.filePath) markSavedRef.current(result.filePath)
       })
     }
+    const handleImport = () => {
+      importConfigRef.current()
+    }
+    const handleExport = () => {
+      exportConfigRef.current()
+    }
     const handleUndo = () => {
       undoRef.current()
     }
@@ -75,6 +85,8 @@ export function useMenuEvents() {
     window.ipc.on(IpcChannels.CONFIG_OPEN_PATH, handleOpenPath)
     window.ipc.on(IpcChannels.CONFIG_SAVE, handleSave)
     window.ipc.on(IpcChannels.CONFIG_SAVE_AS, handleSaveAs)
+    window.ipc.on(IpcChannels.CONFIG_IMPORT, handleImport)
+    window.ipc.on(IpcChannels.CONFIG_EXPORT, handleExport)
     window.ipc.on(IpcChannels.HISTORY_UNDO, handleUndo)
     window.ipc.on(IpcChannels.HISTORY_REDO, handleRedo)
     window.ipc.on(IpcChannels.EDIT_DUPLICATE, handleDuplicate)
@@ -84,6 +96,8 @@ export function useMenuEvents() {
       window.ipc.off(IpcChannels.CONFIG_OPEN_PATH, handleOpenPath)
       window.ipc.off(IpcChannels.CONFIG_SAVE, handleSave)
       window.ipc.off(IpcChannels.CONFIG_SAVE_AS, handleSaveAs)
+      window.ipc.off(IpcChannels.CONFIG_IMPORT, handleImport)
+      window.ipc.off(IpcChannels.CONFIG_EXPORT, handleExport)
       window.ipc.off(IpcChannels.HISTORY_UNDO, handleUndo)
       window.ipc.off(IpcChannels.HISTORY_REDO, handleRedo)
       window.ipc.off(IpcChannels.EDIT_DUPLICATE, handleDuplicate)

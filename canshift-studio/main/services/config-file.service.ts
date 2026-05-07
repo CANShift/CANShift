@@ -81,6 +81,63 @@ export class ConfigFileService {
     }
   }
 
+  /**
+   * Import a config JSON without binding it as the working file. Used for
+   * loading shared dashboards — the editor treats the result as a new unsaved
+   * document so a subsequent Save prompts for a fresh location.
+   */
+  async importFile(): Promise<OpenResult> {
+    const result = await dialog.showOpenDialog({
+      title: 'Import Dashboard',
+      filters: [
+        { name: 'CANShift Config', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      properties: ['openFile'],
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false }
+    }
+
+    const filePath = result.filePaths[0]
+    if (!filePath) return { success: false }
+
+    try {
+      const raw = await readFile(filePath, 'utf-8')
+      const content: unknown = JSON.parse(raw)
+      return { success: true, filePath, content }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { success: false, error: `Failed to read config: ${message}` }
+    }
+  }
+
+  /**
+   * Export a snapshot of the config to a chosen path without changing the
+   * working file path. Useful for backups and sharing where the in-editor
+   * working file shouldn't be retargeted.
+   */
+  async exportFile(config: unknown): Promise<SaveResult> {
+    const result = await dialog.showSaveDialog({
+      title: 'Export Dashboard',
+      defaultPath: 'dashboard.json',
+      filters: [{ name: 'CANShift Config', extensions: ['json'] }],
+    })
+
+    if (result.canceled || !result.filePath) {
+      return { success: false }
+    }
+
+    try {
+      await writeFile(result.filePath, JSON.stringify(config, null, 2), 'utf-8')
+      return { success: true, filePath: result.filePath }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { success: false, error: `Failed to export config: ${message}` }
+    }
+  }
+
   async saveFileAs(config: unknown): Promise<SaveResult> {
     const result = await dialog.showSaveDialog({
       title: 'Save Dashboard Config',
