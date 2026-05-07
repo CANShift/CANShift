@@ -311,7 +311,10 @@ function WidgetBox({
         ? '#AAAAFF'
         : (configuredBorder ?? typeColor)
   const borderWidth = isSelected || isOverlapping || isInMultiSelection ? 2 : 1
-  const bgColor = isOverlapping ? '#2A0000' : isInMultiSelection ? '#0A0A1E' : palette.surface
+  // Default to black so the widget container blends with the (black) page
+  // background — firmware widgets render directly on the page bg with no
+  // per-widget surface tint (issue #143).
+  const bgColor = isOverlapping ? '#2A0000' : isInMultiSelection ? '#0A0A1E' : '#000000'
 
   return (
     <div
