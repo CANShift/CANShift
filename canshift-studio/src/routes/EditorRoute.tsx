@@ -7,6 +7,7 @@ import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
 import PropertyPanel from '../components/editor/PropertyPanel'
+import TestValuesPanel from '../components/editor/TestValuesPanel'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
 
 // Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
@@ -489,6 +490,10 @@ export default function EditorRoute() {
         <div style={{ padding: '4px 0' }}>
           {currentPage && <WidgetPalette pageId={currentPage.id} />}
         </div>
+
+        {/* Test mode signal injector — sits below the palette so the canvas keeps
+            its full height while the panel is collapsed. */}
+        <TestValuesPanel />
       </aside>
 
       {/* ── Canvas centre ────────────────────────────────────────────────── */}

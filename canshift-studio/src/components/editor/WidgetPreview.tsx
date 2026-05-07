@@ -31,6 +31,25 @@ function applyPalette(widget: Widget, palette: PagePalette): Widget {
 
 const DEMO_PCT = 0.65 // fraction of range used for demo value
 
+/**
+ * Compute the percentage and raw value to render for a preview.
+ * When the test-mode panel pins a value (testValue != null) the preview reads
+ * from there; otherwise it falls back to the static demo percentage so the
+ * inspector keeps a sensible visual when test mode is off.
+ */
+function effectiveValue(
+  testValue: number | null | undefined,
+  min: number,
+  max: number
+): { pct: number; raw: number } {
+  const range = max - min || 1
+  if (testValue == null || !Number.isFinite(testValue)) {
+    return { pct: DEMO_PCT, raw: min + range * DEMO_PCT }
+  }
+  const pct = Math.max(0, Math.min(1, (testValue - min) / range))
+  return { pct, raw: testValue }
+}
+
 // ---------------------------------------------------------------------------
 // Danger blink — inject keyframe once, use as CSS animation string
 // ---------------------------------------------------------------------------
@@ -46,12 +65,13 @@ function ensureBlinkStyle(): void {
   document.head.appendChild(el)
 }
 
-function isDangerState(widget: Widget): boolean {
+function isDangerState(widget: Widget, testValue: number | null | undefined): boolean {
   const cfg = widget.config
   if (cfg.type !== 'gauge') return false
+  const { pct } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
   const range = cfg.maxValue - cfg.minValue || 1
   const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
-  return DEMO_PCT >= dangerPct
+  return pct >= dangerPct
 }
 
 // ---------------------------------------------------------------------------
@@ -149,12 +169,14 @@ function GaugeArcPreview({
   h,
   revLimiting,
   danger,
+  testValue,
 }: {
   widget: Widget
   w: number
   h: number
   revLimiting: boolean
   danger: boolean
+  testValue?: number | null
 }) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -163,9 +185,8 @@ function GaugeArcPreview({
   const range = cfg.maxValue - cfg.minValue || 1
   const warnPct = Math.max(0, Math.min(1, (cfg.warningLevel - cfg.minValue) / range))
   const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
-  const valuePct = DEMO_PCT
+  const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
 
-  const demoValue = cfg.minValue + range * valuePct
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
 
   const valueColor =
@@ -304,11 +325,13 @@ function GaugeBarPreview({
   w,
   h,
   danger,
+  testValue,
 }: {
   widget: Widget
   w: number
   h: number
   danger: boolean
+  testValue?: number | null
 }) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -319,9 +342,8 @@ function GaugeBarPreview({
   const range = cfg.maxValue - cfg.minValue || 1
   const warnPct = Math.max(0, Math.min(1, (cfg.warningLevel - cfg.minValue) / range))
   const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
-  const valuePct = DEMO_PCT
+  const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
 
-  const demoValue = cfg.minValue + range * valuePct
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
   const signalLabel = formatSignalLabel(widget.signal)
 
@@ -637,20 +659,19 @@ function GaugeNumericPreview({
   w,
   h,
   danger,
+  testValue,
 }: {
   widget: Widget
   w: number
   h: number
   danger: boolean
+  testValue?: number | null
 }) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
 
-  const range = cfg.maxValue - cfg.minValue || 1
-  const valuePct = DEMO_PCT
-
-  const demoValue = cfg.minValue + range * valuePct
+  const { raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
   const valueOnly = demoValue.toFixed(cfg.decimalPlaces)
   const prefix = cfg.prefix ?? ''
 
@@ -791,15 +812,33 @@ function GaugeNumericPreview({
 // Bar widget — horizontal progress bar
 // ---------------------------------------------------------------------------
 
-function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+function BarWidgetPreview({
+  widget,
+  w,
+  h,
+  testValue,
+}: {
+  widget: Widget
+  w: number
+  h: number
+  testValue?: number | null
+}) {
   if (widget.config.type !== 'bar') return null
   const cfg = widget.config
   const st = widget.style
 
-  const fillW = w * DEMO_PCT
+  // Standalone bar widgets default to a 0..100 percent range when min/max are
+  // unset — keep the legacy display-as-percent behaviour in that case.
+  const min = cfg.minValue ?? 0
+  const max = cfg.maxValue ?? 100
+  const { pct: valuePct, raw: rawValue } = effectiveValue(testValue, min, max)
+  const fillW = w * valuePct
   const barH = Math.max(4, h * 0.35)
   const textY = (h - barH) / 2
-  const valueStr = (cfg.prefix ?? '') + String(Math.round(DEMO_PCT * 100)) + (cfg.suffix ?? '')
+  const valueStr =
+    (cfg.prefix ?? '') +
+    String(Math.round(testValue == null ? valuePct * 100 : rawValue)) +
+    (cfg.suffix ?? '')
   const labelPos = cfg.labelPosition ?? 'bottom-center'
   const labelIsTop = labelPos === 'top-center'
   const signalLabel = formatSignalLabel(widget.signal)
@@ -1250,6 +1289,8 @@ interface WidgetPreviewProps {
   buttonActive?: boolean
   /** When true, suppresses all CSS animations (blink, flash). Use for thumbnails. */
   noAnimate?: boolean
+  /** Test-mode injected raw value for this widget's signal; null falls back to the demo percentage. */
+  testValue?: number | null
 }
 
 export function WidgetPreview({
@@ -1260,6 +1301,7 @@ export function WidgetPreview({
   revLimiting = false,
   buttonActive = false,
   noAnimate = false,
+  testValue = null,
 }: WidgetPreviewProps) {
   // Clamp to zero — SVG attributes reject negative values, which can occur
   // transiently when the parent container hasn't laid out yet or scale is < 1.
@@ -1269,7 +1311,7 @@ export function WidgetPreview({
 
   const resolved = palette ? applyPalette(widget, palette) : widget
   const { config } = resolved
-  const danger = noAnimate ? false : isDangerState(resolved)
+  const danger = noAnimate ? false : isDangerState(resolved, testValue)
 
   if (config.type === 'gauge') {
     if (config.displayStyle === 'arc')
@@ -1280,13 +1322,17 @@ export function WidgetPreview({
           h={h}
           revLimiting={noAnimate ? false : revLimiting}
           danger={danger}
+          testValue={testValue}
         />
       )
     if (config.displayStyle === 'bar')
-      return <GaugeBarPreview widget={resolved} w={w} h={h} danger={danger} />
-    return <GaugeNumericPreview widget={resolved} w={w} h={h} danger={danger} />
+      return <GaugeBarPreview widget={resolved} w={w} h={h} danger={danger} testValue={testValue} />
+    return (
+      <GaugeNumericPreview widget={resolved} w={w} h={h} danger={danger} testValue={testValue} />
+    )
   }
-  if (config.type === 'bar') return <BarWidgetPreview widget={resolved} w={w} h={h} />
+  if (config.type === 'bar')
+    return <BarWidgetPreview widget={resolved} w={w} h={h} testValue={testValue} />
   if (config.type === 'warning')
     return <WarningPreview widget={resolved} w={w} h={h} noAnimate={noAnimate} />
   if (config.type === 'button')
