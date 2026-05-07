@@ -85,6 +85,7 @@ async function simulateFlash(
 export function useFirmwareFlash() {
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const setDisconnected = useDeviceStore((s) => s.setDisconnected)
+  const setFlashing = useDeviceStore((s) => s.setFlashing)
   const pushGlobalLog = useLogStore((s) => s.push)
 
   const [state, setState] = useState<FlashState>('idle')
@@ -123,19 +124,27 @@ export function useFirmwareFlash() {
       setLogs([])
       setError(null)
       setProgress(0)
+      // Pause useAutoConnect for the entire flash window — including the
+      // simulation path so the dev/sim flow exercises the same gate. Cleared
+      // in the finally block at the bottom of this callback.
+      setFlashing(true)
 
       if (simulationMode) {
-        setState('downloading')
-        setPhase('downloading')
-        await simulateFlash(
-          displayLabel,
-          Boolean(spiffsUrl),
-          setState,
-          setPhase,
-          setProgress,
-          appendLog
-        )
-        return { success: true }
+        try {
+          setState('downloading')
+          setPhase('downloading')
+          await simulateFlash(
+            displayLabel,
+            Boolean(spiffsUrl),
+            setState,
+            setPhase,
+            setProgress,
+            appendLog
+          )
+          return { success: true }
+        } finally {
+          setFlashing(false)
+        }
       }
 
       appendLog(
@@ -160,6 +169,7 @@ export function useFirmwareFlash() {
         appendLog(`requestPort failed: ${msg}`, 'error')
         setError(msg)
         setState('error')
+        setFlashing(false)
         return { success: false, error: msg }
       }
 
@@ -314,6 +324,7 @@ export function useFirmwareFlash() {
 
         // useAutoConnect picks the device back up within 2s once exitFlash
         // clears the flashPort lock — no need for a hard-coded reconnect here.
+        setFlashing(false)
         return { success: true }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -328,10 +339,11 @@ export function useFirmwareFlash() {
         await firmwareIpc.exitFlash().catch(() => {
           /* best-effort */
         })
+        setFlashing(false)
         return { success: false, error: msg }
       }
     },
-    [simulationMode, appendLog, setDisconnected]
+    [simulationMode, appendLog, setDisconnected, setFlashing]
   )
 
   return { state, phase, progress, logs, error, flash, reset }
