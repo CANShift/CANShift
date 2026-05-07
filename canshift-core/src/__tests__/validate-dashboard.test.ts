@@ -302,7 +302,7 @@ describe('validateDashboard — warning widget type fields', () => {
     const result = validateDashboard(
       minimalConfig({
         pages: [
-          minimalPage({ widgets: [warningWidget({ threshold: 95, signalId: 'oil_pressure' })] }),
+          minimalPage({ widgets: [warningWidget({ signal: 'oil_pressure', threshold: 95 })] }),
         ],
       })
     )
@@ -312,7 +312,7 @@ describe('validateDashboard — warning widget type fields', () => {
   it('requires threshold to be a number', () => {
     const result = validateDashboard(
       minimalConfig({
-        pages: [minimalPage({ widgets: [warningWidget({ signalId: 'oil_pressure' })] })],
+        pages: [minimalPage({ widgets: [warningWidget({ signal: 'oil_pressure' })] })],
       })
     )
     expect(result.errors.some((e) => e.includes('(warning): threshold must be a number'))).toBe(
@@ -320,23 +320,23 @@ describe('validateDashboard — warning widget type fields', () => {
     )
   })
 
-  it('requires signalId to be a non-empty string', () => {
+  it('requires signal to be a non-empty string on the parent widget', () => {
     const missing = validateDashboard(
       minimalConfig({
         pages: [minimalPage({ widgets: [warningWidget({ threshold: 95 })] })],
       })
     )
     expect(
-      missing.errors.some((e) => e.includes('(warning): signalId must be a non-empty string'))
+      missing.errors.some((e) => e.includes('(warning): signal must be a non-empty string'))
     ).toBe(true)
 
     const empty = validateDashboard(
       minimalConfig({
-        pages: [minimalPage({ widgets: [warningWidget({ threshold: 95, signalId: '' })] })],
+        pages: [minimalPage({ widgets: [warningWidget({ signal: '', threshold: 95 })] })],
       })
     )
     expect(
-      empty.errors.some((e) => e.includes('(warning): signalId must be a non-empty string'))
+      empty.errors.some((e) => e.includes('(warning): signal must be a non-empty string'))
     ).toBe(true)
   })
 })
@@ -551,7 +551,7 @@ describe('validateDashboard — signal cross-reference', () => {
         pages: [
           minimalPage({
             widgets: [
-              { id: 'w1', type: 'gauge', signalId: 'unknown_signal', minValue: 0, maxValue: 100 },
+              { id: 'w1', type: 'gauge', signal: 'unknown_signal', minValue: 0, maxValue: 100 },
             ],
           }),
         ],
@@ -560,27 +560,29 @@ describe('validateDashboard — signal cross-reference', () => {
     expect(result.warnings).toHaveLength(0)
   })
 
-  it('emits no warning when signalId is found in catalog', () => {
+  it('emits no warning when widget.signal is found in catalog', () => {
     const result = validateDashboard(
       minimalConfig({
         signals: [{ name: 'rpm' }],
         pages: [
           minimalPage({
-            widgets: [{ id: 'w1', type: 'gauge', signalId: 'rpm', minValue: 0, maxValue: 8000 }],
+            widgets: [{ id: 'w1', type: 'gauge', signal: 'rpm', minValue: 0, maxValue: 8000 }],
           }),
         ],
       })
     )
-    expect(result.warnings.filter((w) => w.includes('signalId'))).toHaveLength(0)
+    expect(result.warnings.filter((w) => w.includes('not defined in config.signals'))).toHaveLength(
+      0
+    )
   })
 
-  it('warns when signalId is not in the catalog', () => {
+  it('warns when widget.signal is not in the catalog', () => {
     const result = validateDashboard(
       minimalConfig({
         signals: [{ name: 'rpm' }],
         pages: [
           minimalPage({
-            widgets: [{ id: 'w1', type: 'gauge', signalId: 'boost', minValue: 0, maxValue: 300 }],
+            widgets: [{ id: 'w1', type: 'gauge', signal: 'boost', minValue: 0, maxValue: 300 }],
           }),
         ],
       })

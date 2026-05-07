@@ -143,21 +143,16 @@ function validateWidget(
   const cfg = isRecord(widget.config) ? widget.config : widget
 
   if (typeof widget.type === 'string') {
-    errors.push(...validateWidgetTypeFields(widget.type, cfg, prefix))
+    errors.push(...validateWidgetTypeFields(widget.type, widget, cfg, prefix))
   }
 
-  // Signal cross-reference warning
+  // Signal cross-reference warning — Widget.signal is the canonical top-level field
   if (knownSignalIds !== null) {
-    const signalId =
-      typeof widget.signalId === 'string'
-        ? widget.signalId
-        : isRecord(widget.config) && typeof widget.config.signalId === 'string'
-          ? widget.config.signalId
-          : null
+    const signalId = typeof widget.signal === 'string' ? widget.signal : null
 
-    if (signalId !== null && !knownSignalIds.has(signalId)) {
+    if (signalId !== null && signalId.length > 0 && !knownSignalIds.has(signalId)) {
       warnings.push(
-        `${prefix} references signalId "${signalId}" which is not defined in config.signals`
+        `${prefix} references signal "${signalId}" which is not defined in config.signals`
       )
     }
   }
@@ -223,7 +218,12 @@ function validateTopBarLayout(layout: unknown): string[] {
   return errors
 }
 
-function validateWidgetTypeFields(type: string, cfg: UnknownRecord, prefix: string): string[] {
+function validateWidgetTypeFields(
+  type: string,
+  widget: UnknownRecord,
+  cfg: UnknownRecord,
+  prefix: string
+): string[] {
   const errors: string[] = []
 
   switch (type) {
@@ -251,8 +251,9 @@ function validateWidgetTypeFields(type: string, cfg: UnknownRecord, prefix: stri
       if (typeof cfg.threshold !== 'number') {
         errors.push(`${prefix} (warning): threshold must be a number`)
       }
-      if (typeof cfg.signalId !== 'string' || cfg.signalId.length === 0) {
-        errors.push(`${prefix} (warning): signalId must be a non-empty string`)
+      // Warning widgets share the parent widget's signal field (canonical Widget.signal).
+      if (typeof widget.signal !== 'string' || widget.signal.length === 0) {
+        errors.push(`${prefix} (warning): signal must be a non-empty string`)
       }
       break
     }
