@@ -75,6 +75,12 @@ export interface GaugeWidgetConfig {
    */
   revFlash?: boolean
   /**
+   * Per-widget red flash threshold (issue #133). When the live value exceeds
+   * this number, firmware pulses the widget red at ~1 Hz and renders the
+   * value/label in white. Omit (or leave undefined) to disable.
+   */
+  alertThreshold?: number
+  /**
    * Orientation for the bar display style.
    * 'vertical' (default) = thermometer, 'horizontal' = progress bar.
    */
@@ -195,6 +201,8 @@ export interface BarWidgetConfig {
   /** Optional thresholds — auto-filled from signal definition on signal selection */
   warningLevel?: number
   dangerLevel?: number
+  /** Per-widget red flash threshold (issue #133) — see GaugeWidgetConfig.alertThreshold */
+  alertThreshold?: number
 }
 
 export interface GearWidgetConfig {
