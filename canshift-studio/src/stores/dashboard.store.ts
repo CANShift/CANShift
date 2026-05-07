@@ -85,6 +85,11 @@ interface DashboardState {
   toggleWidgetSelection: (widgetId: string) => void
   /** Add a widget; auto-places it in the first free spot. */
   addWidget: (pageId: string, widget: Widget) => void
+  /**
+   * Clone the given widgets within a page (Cmd+D). Each clone gets a fresh id
+   * and is auto-placed near the source widget. New clones become the selection.
+   */
+  duplicateWidgets: (pageId: string, widgetIds: string[]) => void
   removeWidget: (pageId: string, widgetId: string) => void
   updateWidget: (pageId: string, widgetId: string, patch: Partial<Widget>) => void
   /**
@@ -368,6 +373,71 @@ export const useDashboardStore = create<DashboardState>()(
         s.selectedWidgetId = widget.id
         s.selectedWidgetIds = [widget.id]
         s.isDirty = true
+      })
+    },
+
+    duplicateWidgets: (pageId, widgetIds) => {
+      set((s) => {
+        if (!s.config || widgetIds.length === 0) return
+        const page = s.config.pages.find((p) => p.id === pageId)
+        if (!page) return
+
+        const sources = widgetIds
+          .map((id) => page.widgets.find((w) => w.id === id))
+          .filter((w): w is Widget => w !== undefined)
+        if (sources.length === 0) return
+
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const others = page.widgets.map(toLayoutRect)
+        const newIds: string[] = []
+
+        for (const src of sources) {
+          const newId = `${src.type}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+          // Try to land just below the source first; fall back to the right,
+          // then to the first free slot anywhere on the page.
+          const candidates = [
+            { x: src.layout.x, y: src.layout.y + src.layout.h + LAYOUT_GAP },
+            { x: src.layout.x + src.layout.w + LAYOUT_GAP, y: src.layout.y },
+          ]
+          let pos: { x: number; y: number } | null = null
+          for (const cand of candidates) {
+            const sx = snapToGrid(cand.x)
+            const sy = snapToGrid(cand.y)
+            if (sx < 0 || sy < 0) continue
+            if (sx + src.layout.w > 320 || sy + src.layout.h > canvasH) continue
+            const rect = { id: '__new__', x: sx, y: sy, w: src.layout.w, h: src.layout.h }
+            if (!others.some((o) => rectsOverlap(rect, o))) {
+              pos = { x: sx, y: sy }
+              break
+            }
+          }
+          pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, 320, canvasH)
+          if (!pos) continue
+
+          const clone: Widget = {
+            ...src,
+            id: newId,
+            layout: { ...src.layout, x: pos.x, y: pos.y },
+            style: { ...src.style },
+            config: { ...src.config },
+          }
+          page.widgets.push(clone)
+          others.push(toLayoutRect(clone))
+          newIds.push(newId)
+        }
+
+        if (newIds.length > 0) {
+          s.selectedWidgetId = newIds[newIds.length - 1] ?? null
+          s.selectedWidgetIds = newIds
+          s.isDirty = true
+        } else {
+          // No room anywhere — roll back the history push so undo isn't a no-op.
+          s.past.pop()
+        }
       })
     },
 

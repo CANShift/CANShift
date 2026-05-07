@@ -16,6 +16,9 @@ const ipc = {
   invoke: (channel: string, ...args: unknown[]): Promise<unknown> => {
     return ipcRenderer.invoke(channel, ...args)
   },
+  send: (channel: string, ...args: unknown[]): void => {
+    ipcRenderer.send(channel, ...args)
+  },
   on: (channel: string, listener: (...args: unknown[]) => void): void => {
     const wrapper: IpcWrapper = (_event, ...args) => {
       listener(...args)

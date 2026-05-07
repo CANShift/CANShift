@@ -51,6 +51,10 @@ export const IpcChannels = {
   // Edit history (main → renderer)
   HISTORY_UNDO: 'history:undo',
   HISTORY_REDO: 'history:redo',
+  // Duplicate the current widget selection (main → renderer, Cmd+D)
+  EDIT_DUPLICATE: 'edit:duplicate',
+  // Renderer → main: latest dirty flag — used to prompt before close
+  WINDOW_SET_DIRTY: 'window:set-dirty',
 
   // Signal mapping
   SIGNAL_EXPORT: 'signal:export',

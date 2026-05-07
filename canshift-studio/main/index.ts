@@ -1,6 +1,6 @@
 // main/index.ts — Electron main process entry point
 
-import { app, BrowserWindow, shell, nativeImage } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } from 'electron'
 import { join, basename } from 'path'
 import { readFileSync } from 'fs'
 import { registerIpcHandlers, usbService } from './ipc/ipc-handlers'
@@ -11,6 +11,15 @@ import { IpcChannels } from './ipc/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
+
+// Latest dirty flag pushed by the renderer — used to prompt before close.
+let configIsDirty = false
+// True after the user confirms "Discard changes" so the next close goes through.
+let confirmedClose = false
+
+ipcMain.on(IpcChannels.WINDOW_SET_DIRTY, (_e, dirty: unknown) => {
+  configIsDirty = Boolean(dirty)
+})
 
 // ---------------------------------------------------------------------------
 // Structured logging — forwards main-process messages to the renderer console
@@ -179,6 +188,28 @@ function createWindow(): void {
     splashWindow = null
     mainWindow?.show()
     if (mainWindow) buildMenu(mainWindow)
+  })
+
+  // Prompt before closing the window if there are unsaved config changes.
+  // The renderer keeps `configIsDirty` in sync via WINDOW_SET_DIRTY.
+  mainWindow.on('close', (event) => {
+    if (!configIsDirty || confirmedClose) return
+    event.preventDefault()
+    if (!mainWindow) return
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'warning',
+      buttons: ['Discard', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'Unsaved changes',
+      message: 'You have unsaved changes to the dashboard config.',
+      detail:
+        'Closing now will lose any edits made since the last save. Save the file first if you want to keep them.',
+    })
+    if (choice === 0) {
+      confirmedClose = true
+      mainWindow.close()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
