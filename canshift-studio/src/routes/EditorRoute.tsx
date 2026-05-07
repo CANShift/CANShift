@@ -449,7 +449,9 @@ export default function EditorRoute() {
               addPage({
                 id: generateId('page'),
                 backgroundImage: null,
-                backgroundColor: '#111111',
+                // New pages default to pure black so the studio preview
+                // matches the firmware background (issue #143).
+                backgroundColor: '#000000',
                 palette: { ...DEFAULT_PAGE_PALETTE },
                 showTopBar: true,
                 visible: true,

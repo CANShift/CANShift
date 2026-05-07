@@ -335,7 +335,10 @@ function GaugeBarPreview({
       valuePct >= dangerPct ? ZONE_DANGER : valuePct >= warnPct ? ZONE_WARNING : ZONE_NORMAL
 
     const labelPos = cfg.labelPosition ?? 'bottom-left'
-    const labelIsTop = !cfg.label || labelPos.startsWith('top')
+    // Label band sits below the bar by default (issue #137). Users can still
+    // pin it to the top via labelPosition, but the auto signal-name fallback
+    // no longer forces the band to the top when no custom label is set.
+    const labelIsTop = labelPos.startsWith('top')
 
     // Reserve a label band on one side; track takes the rest. The 14-px floor
     // matches the firmware's Montserrat 12 line height — anything tighter
@@ -861,7 +864,17 @@ function BarWidgetPreview({ widget, w, h }: { widget: Widget; w: number; h: numb
 // Warning widget
 // ---------------------------------------------------------------------------
 
-function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+function WarningPreview({
+  widget,
+  w,
+  h,
+  noAnimate,
+}: {
+  widget: Widget
+  w: number
+  h: number
+  noAnimate: boolean
+}) {
   if (widget.config.type !== 'warning') return null
   const cfg = widget.config
   const st = widget.style
@@ -886,7 +899,9 @@ function WarningPreview({ widget, w, h }: { widget: Widget; w: number; h: number
         gap: 4,
         background: st.criticalColor + '22',
         borderRadius: 0,
-        animation: BLINK_ANIM,
+        // Side-page thumbnails pass noAnimate to suppress the alert flash so
+        // they show layout, not live state (issue #144).
+        animation: noAnimate ? undefined : BLINK_ANIM,
         overflow: 'hidden',
         boxSizing: 'border-box',
       }}
@@ -1014,7 +1029,9 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
   const fontSize = Math.min(w * 0.72, (h - sigHeaderH) * 0.85)
   const sigFontSize = Math.max(5, Math.min(sigHeaderH * 0.72, w * 0.12))
   const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
+  // Default to bottom — gear digit is the focal point, the label belongs
+  // under it (issue #136).
+  const labelPos = cfg.labelPosition ?? 'bottom-left'
 
   return (
     <div
@@ -1270,7 +1287,8 @@ export function WidgetPreview({
     return <GaugeNumericPreview widget={resolved} w={w} h={h} danger={danger} />
   }
   if (config.type === 'bar') return <BarWidgetPreview widget={resolved} w={w} h={h} />
-  if (config.type === 'warning') return <WarningPreview widget={resolved} w={w} h={h} />
+  if (config.type === 'warning')
+    return <WarningPreview widget={resolved} w={w} h={h} noAnimate={noAnimate} />
   if (config.type === 'button')
     return <ButtonPreview widget={resolved} w={w} h={h} active={buttonActive} />
   if (config.type === 'gear') return <GearPreview widget={resolved} w={w} h={h} />
