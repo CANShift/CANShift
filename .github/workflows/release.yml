@@ -130,6 +130,18 @@ jobs:
       - name: Build production firmware
         run: platformio run -e crowpanel_28
 
+      - name: Assert APP_VERSION_STR was injected into firmware binary
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          ELF=.pio/build/crowpanel_28/firmware.elf
+          if ! strings "$ELF" | grep -qF "CANShift v${VERSION} starting"; then
+            echo "::error::APP_VERSION_STR mismatch — expected v${VERSION} in $ELF"
+            echo "extra_targets.py likely failed to inject the macro into projenv."
+            strings "$ELF" | grep -E "CANShift v|0\.0\.0-unset" | head -5
+            exit 1
+          fi
+          echo "APP_VERSION_STR=v${VERSION} confirmed in firmware ELF."
+
       - name: Build SPIFFS image
         run: platformio run --target buildfs -e crowpanel_28
 
