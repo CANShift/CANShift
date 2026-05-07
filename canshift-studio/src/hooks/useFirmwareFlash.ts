@@ -259,8 +259,15 @@ export function useFirmwareFlash() {
           },
         })
 
-        appendLog('Calling loader.main() — chip detection + bootloader handshake')
-        await loader.main()
+        // The main-process reset (firmware.service.resetIntoBootloader) ran
+        // inside firmwareIpc.enterFlash() before this point — chip should
+        // already be in ROM bootloader. Tell esptool-js to skip its own
+        // (Web-Serial-based, flaky on macOS CH340) reset sequence and just
+        // sync up. If the main-process reset failed for any reason, mode is
+        // still 'no_reset' here — the user will see a sync timeout in 7
+        // attempts (~50 s) and we'll have a clear log to diagnose with.
+        appendLog('Calling loader.main(no_reset) — chip should already be in bootloader')
+        await loader.main('no_reset')
         appendLog('loader.main() OK — bootloader synced')
 
         // The merged binary (built via `esptool merge_bin 0x1000 bootloader 0x8000
