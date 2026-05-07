@@ -22,10 +22,12 @@ function applyPalette(widget: Widget, palette: PagePalette): Widget {
       primaryColor: palette.primary,
       warningColor: palette.warning,
       criticalColor: palette.danger,
-      // Note: textColor is NOT overridden by the palette — firmware reads
-      // cfg.style.textColor.rgb directly per-widget so values keep their
-      // bespoke colour (cyan for COOLANT, orange for OIL, red for GEAR, …).
-      // Studio preview mirrors that to stay 1:1 with the device.
+      // Mirror the firmware's `ThemeManager::getEffectiveTextColor()` (#171):
+      // widget text always follows the active page palette text color (white
+      // on dark night bg, black on light day bg). Bespoke per-widget text
+      // colours are intentionally collapsed for legibility — the device
+      // does the same so the preview stays 1:1.
+      textColor: palette.text,
     },
   }
 }
