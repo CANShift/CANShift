@@ -270,6 +270,58 @@ export function useFirmwareFlash() {
         await loader.main('no_reset')
         appendLog('loader.main() OK — bootloader synced')
 
+        // -----------------------------------------------------------------
+        // Workaround for esptool-js 0.4.7 — flash commands hardcode 3000 ms
+        // timeouts under IS_STUB. The ESP32 stub erases the target region
+        // synchronously before acking, and that erase can run 5-15 s on
+        // ~1.3 MB images depending on how much is currently written. Mirror
+        // python-esptool's behaviour by widening the floor for every
+        // flash-related command. Implemented as a checkCommand wrapper so
+        // we don't fork the whole flashDefl* packet builders.
+        // -----------------------------------------------------------------
+        interface EsploaderInternals {
+          checkCommand: (
+            op: string,
+            cmd: number,
+            data: Uint8Array,
+            chk: number,
+            timeout: number
+          ) => Promise<unknown>
+          ESP_FLASH_BEGIN: number
+          ESP_FLASH_DATA: number
+          ESP_FLASH_END: number
+          ESP_FLASH_DEFL_BEGIN: number
+          ESP_FLASH_DEFL_DATA: number
+          ESP_FLASH_DEFL_END: number
+          IS_STUB: boolean
+        }
+        const loaderI = loader as unknown as EsploaderInternals
+        const flashCmds = new Set([
+          loaderI.ESP_FLASH_BEGIN,
+          loaderI.ESP_FLASH_DATA,
+          loaderI.ESP_FLASH_END,
+          loaderI.ESP_FLASH_DEFL_BEGIN,
+          loaderI.ESP_FLASH_DEFL_DATA,
+          loaderI.ESP_FLASH_DEFL_END,
+        ])
+        const FLASH_MIN_TIMEOUT_MS = 60_000
+        const origCheckCommand = loaderI.checkCommand.bind(loaderI)
+        let firstFlashCmdLogged = false
+        loaderI.checkCommand = async (op, cmd, data, chk, timeout) => {
+          let effectiveTimeout = timeout
+          if (loaderI.IS_STUB && flashCmds.has(cmd) && effectiveTimeout < FLASH_MIN_TIMEOUT_MS) {
+            effectiveTimeout = FLASH_MIN_TIMEOUT_MS
+            if (!firstFlashCmdLogged) {
+              appendLog(
+                `Patched flash-command timeouts to ${String(FLASH_MIN_TIMEOUT_MS)}ms (esptool-js 0.4.7 stub-timeout workaround)`,
+                'info'
+              )
+              firstFlashCmdLogged = true
+            }
+          }
+          return origCheckCommand(op, cmd, data, chk, effectiveTimeout)
+        }
+
         // The merged binary (built via `esptool merge_bin 0x1000 bootloader 0x8000
         // partitions 0x10000 firmware`) starts at flash offset 0x0 — it embeds
         // the bootloader at its own 0x1000 internal offset. Writing at 0x1000
