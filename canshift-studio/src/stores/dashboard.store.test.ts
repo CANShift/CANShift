@@ -180,3 +180,37 @@ describe('useDashboardStore.duplicateWidgets', () => {
     expect(widgetsOnPage1()).toHaveLength(1)
   })
 })
+
+describe('useDashboardStore.loadImported', () => {
+  beforeEach(() => {
+    useDashboardStore.setState({
+      config: null,
+      filePath: null,
+      isDirty: false,
+      selectedPageId: null,
+      selectedWidgetId: null,
+      selectedWidgetIds: [],
+      past: [],
+      future: [],
+      isPreviewDayMode: false,
+    })
+  })
+
+  it('replaces the config, clears filePath, and marks dirty', () => {
+    // Start from a saved working file so we can verify it gets cleared
+    useDashboardStore.getState().setConfig(makeConfig([makeWidget('rpm_a')]), '/tmp/existing.json')
+    expect(useDashboardStore.getState().filePath).toBe('/tmp/existing.json')
+    expect(useDashboardStore.getState().isDirty).toBe(false)
+
+    const imported = makeConfig([makeWidget('imported_w')])
+    useDashboardStore.getState().loadImported(imported)
+
+    const state = useDashboardStore.getState()
+    expect(state.config).toBe(imported)
+    expect(state.filePath).toBeNull()
+    expect(state.isDirty).toBe(true)
+    expect(state.past).toHaveLength(0)
+    expect(state.future).toHaveLength(0)
+    expect(state.selectedPageId).toBe(imported.defaultPageId)
+  })
+})

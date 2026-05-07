@@ -13,6 +13,7 @@ import { configService, usbService } from '../services/ipc.service'
 export function useConfigActions() {
   const config = useDashboardStore((s) => s.config)
   const setConfig = useDashboardStore((s) => s.setConfig)
+  const loadImported = useDashboardStore((s) => s.loadImported)
   const markSaved = useDashboardStore((s) => s.markSaved)
 
   const connected = useDeviceStore((s) => s.connected)
@@ -66,6 +67,71 @@ export function useConfigActions() {
     },
     [applyOpenResult]
   )
+
+  const importConfig = useCallback(() => {
+    void configService.import().then((result) => {
+      if (!result.success) {
+        if (result.error) {
+          log('error', `Import failed: ${result.error}`)
+          pushError({ source: 'config', code: 'IMPORT_FAILED', message: result.error })
+        }
+        return
+      }
+      if (!result.content) return
+
+      let imported = result.content as DashboardConfig
+      try {
+        const { config: migrated, applied } = migrateConfig(
+          imported as unknown as Record<string, unknown>,
+          CURRENT_SCHEMA_VERSION
+        )
+        imported = migrated as unknown as DashboardConfig
+        if (applied.length > 0) {
+          log('info', `Imported config migrated: ${applied.join(', ')}`)
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        log('error', `Import migration failed: ${msg}`)
+        pushError({ source: 'config', code: 'MIGRATION_FAILED', message: msg })
+        return
+      }
+
+      const validation = validateDashboard(imported)
+      if (!validation.valid) {
+        validation.errors.forEach((e) => {
+          log('error', `Import validation: ${e}`)
+        })
+        pushError({
+          source: 'config',
+          code: 'VALIDATION_FAILED',
+          message: `Imported config has ${String(validation.errors.length)} validation error(s)`,
+          detail: validation.errors.join('\n'),
+        })
+        return
+      }
+      validation.warnings.forEach((w) => {
+        log('warn', `Import: ${w}`)
+      })
+
+      loadImported(imported)
+      log(
+        'success',
+        `Imported ${result.filePath ?? 'dashboard'} — review then Save to keep a local copy`
+      )
+    })
+  }, [loadImported, log, pushError])
+
+  const exportConfig = useCallback(() => {
+    if (!config) return
+    void configService.export(config).then((result) => {
+      if (result.success && result.filePath) {
+        log('success', `Exported snapshot to ${result.filePath}`)
+      } else if (!result.success && result.error) {
+        log('error', `Export failed: ${result.error}`)
+        pushError({ source: 'config', code: 'EXPORT_FAILED', message: result.error })
+      }
+    })
+  }, [config, log, pushError])
 
   const saveConfig = useCallback(() => {
     if (!config) return
@@ -162,5 +228,15 @@ export function useConfigActions() {
     showDiff,
   ])
 
-  return { openConfig, openConfigPath, saveConfig, burnConfig, config, connected, syncing }
+  return {
+    openConfig,
+    openConfigPath,
+    importConfig,
+    exportConfig,
+    saveConfig,
+    burnConfig,
+    config,
+    connected,
+    syncing,
+  }
 }

@@ -8,6 +8,10 @@ export const IpcChannels = {
   CONFIG_OPEN: 'config:open',
   CONFIG_SAVE: 'config:save',
   CONFIG_SAVE_AS: 'config:save-as',
+  // Import = load a foreign JSON without binding it as the working file path.
+  // Export = write a snapshot copy without changing the working file path.
+  CONFIG_IMPORT: 'config:import',
+  CONFIG_EXPORT: 'config:export',
 
   // USB device operations
   USB_LIST_PORTS: 'usb:list-ports',

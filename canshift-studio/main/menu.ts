@@ -80,6 +80,19 @@ export function buildMenu(win: BrowserWindow): void {
           },
         },
         { type: 'separator' },
+        {
+          label: 'Import Dashboard…',
+          click: () => {
+            win.webContents.send(IpcChannels.CONFIG_IMPORT)
+          },
+        },
+        {
+          label: 'Export Dashboard…',
+          click: () => {
+            win.webContents.send(IpcChannels.CONFIG_EXPORT)
+          },
+        },
+        { type: 'separator' },
         isMac ? { role: 'close' as const } : { role: 'quit' as const },
       ],
     },

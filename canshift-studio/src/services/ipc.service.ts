@@ -61,6 +61,8 @@ export const configService = {
   openPath: (filePath: string) => invoke<OpenResult>(IpcChannels.CONFIG_OPEN_PATH, filePath),
   save: (config: DashboardConfig) => invoke<SaveResult>(IpcChannels.CONFIG_SAVE, config),
   saveAs: (config: DashboardConfig) => invoke<SaveResult>(IpcChannels.CONFIG_SAVE_AS, config),
+  import: () => invoke<OpenResult>(IpcChannels.CONFIG_IMPORT),
+  export: (config: DashboardConfig) => invoke<SaveResult>(IpcChannels.CONFIG_EXPORT, config),
 }
 
 // ---------------------------------------------------------------------------
