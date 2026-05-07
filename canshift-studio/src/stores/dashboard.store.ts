@@ -66,11 +66,8 @@ interface DashboardState {
   selectPage: (pageId: string | null) => void
   addPage: (page: PageConfig) => void
   removePage: (pageId: string) => void
-  renamePage: (pageId: string, name: string) => void
   setDefaultPage: (pageId: string) => void
   updatePage: (pageId: string, patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
-  /** Apply a patch to every page simultaneously (single undo entry). */
-  updateAllPages: (patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
   movePage: (fromIndex: number, toIndex: number) => void
   updateTopBar: (patch: Partial<TopBarConfig>) => void
 
@@ -217,19 +214,6 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
-    renamePage: (pageId, name) => {
-      set((s) => {
-        if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
-        const page = s.config.pages.find((p) => p.id === pageId)
-        if (!page) return
-        page.name = name
-        s.isDirty = true
-      })
-    },
-
     setDefaultPage: (pageId) => {
       set((s) => {
         if (!s.config) return
@@ -252,17 +236,6 @@ export const useDashboardStore = create<DashboardState>()(
         const existing = s.config.pages[idx]
         if (!existing) return
         s.config.pages[idx] = { ...existing, ...patch }
-        s.isDirty = true
-      })
-    },
-
-    updateAllPages: (patch) => {
-      set((s) => {
-        if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
-        s.config.pages = s.config.pages.map((page) => ({ ...page, ...patch }))
         s.isDirty = true
       })
     },

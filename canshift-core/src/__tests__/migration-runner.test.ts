@@ -300,6 +300,61 @@ describe('migrateConfig — 1.5.0 → 1.6.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.6.0 → 1.7.0: drop unused page-level fields
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.6.0 → 1.7.0', () => {
+  it('drops page.name silently', () => {
+    const config = {
+      version: '1.6.0',
+      pages: [{ id: 'p1', name: 'Main', widgets: [] }],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.7.0')
+    expect(applied).toEqual(['1.6.0 → 1.7.0'])
+    const page = (out.pages as Record<string, unknown>[])[0]!
+    expect('name' in page).toBe(false)
+    expect(page.id).toBe('p1')
+  })
+
+  it('drops topBar.showMapName and topBar.showMapProfile silently', () => {
+    const config = {
+      version: '1.6.0',
+      topBar: {
+        height: 16,
+        bgColor: '#000',
+        textColor: '#FFF',
+        showMapName: true,
+        showMapProfile: false,
+      },
+    }
+    const { config: out } = migrateConfig(config, '1.7.0')
+    const topBar = out.topBar as Record<string, unknown>
+    expect('showMapName' in topBar).toBe(false)
+    expect('showMapProfile' in topBar).toBe(false)
+    expect(topBar.height).toBe(16)
+    expect(topBar.bgColor).toBe('#000')
+  })
+
+  it('preserves widgets and other page fields', () => {
+    const widgets = [{ id: 'w1', type: 'gauge' }]
+    const config = {
+      version: '1.6.0',
+      pages: [{ id: 'p1', name: 'Main', backgroundColor: '#111', widgets }],
+    }
+    const { config: out } = migrateConfig(config, '1.7.0')
+    const page = (out.pages as Record<string, unknown>[])[0]!
+    expect(page.widgets).toEqual(widgets)
+    expect(page.backgroundColor).toBe('#111')
+  })
+
+  it('handles config with no topBar and no pages', () => {
+    const config = { version: '1.6.0' }
+    const { config: out } = migrateConfig(config, '1.7.0')
+    expect(out.version).toBe('1.7.0')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 

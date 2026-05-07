@@ -69,8 +69,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
   revLimitRpm: 7200,
   topBar: {
     height: 16,
-    showMapName: true,
-    showMapProfile: false,
     bgColor: '#0D0D0D',
     textColor: '#AAAAAA',
   },
@@ -80,7 +78,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
     // -----------------------------------------------------------------------
     {
       id: 'overview',
-      name: 'Overview',
       backgroundImage: null,
       backgroundColor: '#000000',
       showTopBar: true,
@@ -192,7 +189,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
     // -----------------------------------------------------------------------
     {
       id: 'engine',
-      name: 'Engine',
       backgroundImage: null,
       backgroundColor: '#000000',
       showTopBar: true,
@@ -333,7 +329,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
     // -----------------------------------------------------------------------
     {
       id: 'fluids',
-      name: 'Fluids',
       backgroundImage: null,
       backgroundColor: '#000000',
       showTopBar: true,
@@ -455,7 +450,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
     // -----------------------------------------------------------------------
     {
       id: 'controls',
-      name: 'Controls',
       backgroundImage: null,
       backgroundColor: '#000000',
       showTopBar: true,

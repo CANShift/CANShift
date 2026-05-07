@@ -171,11 +171,6 @@ describe('validateDashboard — page validation', () => {
     expect(result.errors.some((e) => e.includes('pages[0].id'))).toBe(true)
   })
 
-  it('requires page.name', () => {
-    const result = validateDashboard(minimalConfig({ pages: [minimalPage({ name: 42 })] }))
-    expect(result.errors.some((e) => e.includes('pages[0].name'))).toBe(true)
-  })
-
   it('requires page.widgets to be an array', () => {
     const result = validateDashboard(minimalConfig({ pages: [minimalPage({ widgets: null })] }))
     expect(result.errors.some((e) => e.includes('pages[0].widgets'))).toBe(true)
@@ -184,11 +179,11 @@ describe('validateDashboard — page validation', () => {
   it('validates each page independently', () => {
     const result = validateDashboard(
       minimalConfig({
-        pages: [minimalPage({ id: 'p1' }), minimalPage({ id: 'p2', name: undefined })],
+        pages: [minimalPage({ id: 'p1' }), minimalPage({ id: 'p2', widgets: null })],
         defaultPageId: 'p1',
       })
     )
-    expect(result.errors.some((e) => e.includes('pages[1].name'))).toBe(true)
+    expect(result.errors.some((e) => e.includes('pages[1].widgets'))).toBe(true)
     expect(result.errors.some((e) => e.includes('pages[0]'))).toBe(false)
   })
 })

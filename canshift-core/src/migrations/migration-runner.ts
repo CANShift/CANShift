@@ -48,6 +48,43 @@ function upgradeLegacySize(w: number, h: number): { w: number; h: number } | nul
 
 const MIGRATIONS: Migration[] = [
   {
+    // 1.6.0 → 1.7.0: drop unused page-level fields (issue #142).
+    //   PageConfig.name → silently dropped (no per-page title in studio anymore)
+    //   TopBarConfig.showMapName / showMapProfile → silently dropped
+    fromVersion: '1.6.0',
+    toVersion: '1.7.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      const migratedPages = Array.isArray(pages)
+        ? pages.map((page) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { name: _name, ...rest } = page
+            return rest
+          })
+        : pages
+
+      const topBar = config.topBar as Record<string, unknown> | undefined
+      let migratedTopBar = topBar
+      if (topBar) {
+        const {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          showMapName: _showMapName,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          showMapProfile: _showMapProfile,
+          ...rest
+        } = topBar
+        migratedTopBar = rest
+      }
+
+      return {
+        ...config,
+        version: '1.7.0',
+        ...(migratedPages !== undefined && { pages: migratedPages }),
+        ...(migratedTopBar !== undefined && { topBar: migratedTopBar }),
+      }
+    },
+  },
+  {
     // 1.5.0 → 1.6.0: drop XS / S / M widget sizes (issue #131).
     // Any standard widget (button, warning, gear, timer, image) sized 80×28,
     // 80×56, or 80×112 is upgraded to L (160×56) — the closest remaining size.
