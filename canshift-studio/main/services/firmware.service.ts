@@ -3,10 +3,17 @@
 // Responsibilities:
 //   - Fetch firmware releases from GitHub Releases API
 //   - Track which serial port the renderer is about to flash (for Web Serial auto-select)
+//   - Run the ESP32 BOOT-mode reset sequence from the main process before
+//     handing the port to esptool-js (#196). Web Serial's setSignals on macOS
+//     CH340 drivers is too flaky to drive the chip into download mode
+//     reliably; the Node serialport library talks straight to the kernel
+//     driver and is fast/sequential enough that the auto-program circuit
+//     latches every time, no BOOT button press required.
 //
 // Actual binary download and flashing happens in the renderer (esptool-js + Web Serial API).
 
 import { net } from 'electron'
+import { SerialPort } from 'serialport'
 
 const GITHUB_OWNER = 'tburkhalterr'
 const GITHUB_REPO = 'CANShift'
@@ -121,6 +128,86 @@ export class FirmwareService {
 
   getFlashPort(): string | null {
     return this.flashPortPath
+  }
+
+  /**
+   * Hardware-reset the ESP32 into download mode by toggling DTR/RTS via the
+   * native serialport library. Mirrors esptool's "default_reset" sequence
+   * (D0 R1 W100 D1 R0 W50 D0) but runs in the main process so macOS doesn't
+   * fight us on Web Serial's setSignals throttling.
+   *
+   * Always closes the port before returning so the renderer's Web Serial can
+   * grab it without an "already open" error. Errors are non-fatal — esptool-js
+   * will fall back to its own (less reliable) reset attempt and pretend
+   * nothing happened.
+   *
+   * Convention on the ESP32 auto-program circuit:
+   *   DTR=true  → IO0 LOW (boot pin pulled low — enter download mode)
+   *   DTR=false → IO0 HIGH (release boot pin)
+   *   RTS=true  → EN LOW  (chip held in reset)
+   *   RTS=false → EN HIGH (release reset)
+   */
+  async resetIntoBootloader(portPath: string): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      const port = new SerialPort({
+        path: portPath,
+        baudRate: 115200,
+        autoOpen: false,
+      })
+      const fail = (err: Error | null | undefined): void => {
+        // Best-effort close, then surface the error
+        port.close(() => {
+          /* swallow */
+        })
+        resolve({
+          success: false,
+          error: err?.message ?? 'Failed to reset device into bootloader',
+        })
+      }
+      port.open((err) => {
+        if (err) {
+          resolve({
+            success: false,
+            error: `Open ${portPath} failed: ${err.message}`,
+          })
+          return
+        }
+        const setSignals = (signals: { dtr: boolean; rts: boolean }, cb: () => void): void => {
+          port.set(signals, (setErr) => {
+            if (setErr) {
+              fail(setErr)
+              return
+            }
+            cb()
+          })
+        }
+        const sleep = (ms: number, cb: () => void): void => {
+          setTimeout(cb, ms)
+        }
+        // D0 R1 — release boot, hold reset
+        setSignals({ dtr: false, rts: true }, () => {
+          sleep(100, () => {
+            // D1 R0 — pull boot LOW, release reset (chip enters bootloader)
+            setSignals({ dtr: true, rts: false }, () => {
+              sleep(50, () => {
+                // D0 — release boot pin (chip stays in bootloader)
+                setSignals({ dtr: false, rts: false }, () => {
+                  port.close((closeErr) => {
+                    if (closeErr) {
+                      // Closing failed but the reset itself worked — log
+                      // upstream by surfacing as success with caveat.
+                      resolve({ success: true, error: `close: ${closeErr.message}` })
+                      return
+                    }
+                    resolve({ success: true })
+                  })
+                })
+              })
+            })
+          })
+        })
+      })
+    })
   }
 
   /**

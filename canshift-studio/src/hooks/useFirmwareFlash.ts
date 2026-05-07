@@ -16,13 +16,6 @@ export type FlashState = 'idle' | 'downloading' | 'connecting' | 'flashing' | 'd
 export type FlashPhase = 'downloading' | 'connecting' | 'flashing'
 export type FlashSource = { type: 'url'; url: string } | { type: 'file'; file: File }
 
-function bufferToString(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf)
-  let str = ''
-  for (const byte of bytes) str += String.fromCharCode(byte)
-  return str
-}
-
 async function downloadBinaryViaIpc(
   url: string,
   onProgress: (pct: number) => void
@@ -243,8 +236,12 @@ export function useFirmwareFlash() {
         // slower for a 1.4 MB image.
         const loader = new ESPLoader({
           transport,
-          baudrate: 460800,
-          romBaudrate: 115200,
+          // 230400 chosen empirically — esptool-js 0.6.0 added a Flash ID
+          // read step that fails with `Flash ID: ffffff` on CH340 + macOS
+          // at 460800 (the stub itself prints "consider using a lower baud
+          // rate" in that scenario). 230400 keeps SPI bus comms reliable on
+          // this board with only ~50% extra wall-clock per flash.
+          baudrate: 230400,
           enableTracing: false,
           terminal: {
             write: (text: string) => {
@@ -259,21 +256,88 @@ export function useFirmwareFlash() {
           },
         })
 
-        appendLog('Calling loader.main() — chip detection + bootloader handshake')
-        await loader.main()
+        // The main-process reset (firmware.service.resetIntoBootloader) ran
+        // inside firmwareIpc.enterFlash() before this point — chip should
+        // already be in ROM bootloader. Tell esptool-js to skip its own
+        // (Web-Serial-based, flaky on macOS CH340) reset sequence and just
+        // sync up. If the main-process reset failed for any reason, mode is
+        // still 'no_reset' here — the user will see a sync timeout in 7
+        // attempts (~50 s) and we'll have a clear log to diagnose with.
+        appendLog('Calling loader.main(no_reset) — chip should already be in bootloader')
+        await loader.main('no_reset')
         appendLog('loader.main() OK — bootloader synced')
+
+        // -----------------------------------------------------------------
+        // Workaround for the esptool-js 0.6.0 stub timeout bug — flash
+        // commands hardcode `timeout = DEFAULT_TIMEOUT` (3000 ms) when
+        // IS_STUB is true (see esploader.flashDeflBegin). The ESP32 stub
+        // erases the target region synchronously before acking, and that
+        // erase can run 5-15 s on ~1.3 MB images depending on how much is
+        // currently written. Mirror python-esptool's behaviour by widening
+        // the floor for every flash-related command via a checkCommand
+        // wrapper.
+        //
+        // 0.6.0 changed `checkCommand`'s signature — added a
+        // `responseDataLength` arg between `chk` and `timeout`. Don't omit
+        // it: passing 5 args lands `timeout` in the responseDataLength slot
+        // and silently does nothing.
+        // -----------------------------------------------------------------
+        interface EsploaderInternals {
+          checkCommand: (
+            op: string,
+            cmd: number,
+            data: Uint8Array,
+            chk: number,
+            responseDataLength: number,
+            timeout: number
+          ) => Promise<unknown>
+          ESP_FLASH_BEGIN: number
+          ESP_FLASH_DATA: number
+          ESP_FLASH_END: number
+          ESP_FLASH_DEFL_BEGIN: number
+          ESP_FLASH_DEFL_DATA: number
+          ESP_FLASH_DEFL_END: number
+          IS_STUB: boolean
+        }
+        const loaderI = loader as unknown as EsploaderInternals
+        const flashCmds = new Set([
+          loaderI.ESP_FLASH_BEGIN,
+          loaderI.ESP_FLASH_DATA,
+          loaderI.ESP_FLASH_END,
+          loaderI.ESP_FLASH_DEFL_BEGIN,
+          loaderI.ESP_FLASH_DEFL_DATA,
+          loaderI.ESP_FLASH_DEFL_END,
+        ])
+        const FLASH_MIN_TIMEOUT_MS = 60_000
+        const origCheckCommand = loaderI.checkCommand.bind(loaderI)
+        let firstFlashCmdLogged = false
+        loaderI.checkCommand = async (op, cmd, data, chk, responseDataLength, timeout) => {
+          let effectiveTimeout = timeout
+          if (loaderI.IS_STUB && flashCmds.has(cmd) && effectiveTimeout < FLASH_MIN_TIMEOUT_MS) {
+            effectiveTimeout = FLASH_MIN_TIMEOUT_MS
+            if (!firstFlashCmdLogged) {
+              appendLog(
+                `Patched flash-command timeouts to ${String(FLASH_MIN_TIMEOUT_MS)}ms (esptool-js 0.6.0 stub-timeout workaround)`,
+                'info'
+              )
+              firstFlashCmdLogged = true
+            }
+          }
+          return origCheckCommand(op, cmd, data, chk, responseDataLength, effectiveTimeout)
+        }
 
         // The merged binary (built via `esptool merge_bin 0x1000 bootloader 0x8000
         // partitions 0x10000 firmware`) starts at flash offset 0x0 — it embeds
         // the bootloader at its own 0x1000 internal offset. Writing at 0x1000
         // would shift every component by 0x1000 and brick boot with
         // "flash read err, 1000" from the ROM bootloader.
-        const fileArray: { data: string; address: number }[] = [
-          { data: bufferToString(fwBuffer), address: 0x0 },
+        // esptool-js 0.6.0 expects Uint8Array for image data (was string in 0.4.x).
+        const fileArray: { data: Uint8Array; address: number }[] = [
+          { data: new Uint8Array(fwBuffer), address: 0x0 },
         ]
         if (spiffsBuffer) {
           // SPIFFS partition offset per ota_4mb.csv
-          fileArray.push({ data: bufferToString(spiffsBuffer), address: 0x310000 })
+          fileArray.push({ data: new Uint8Array(spiffsBuffer), address: 0x310000 })
         }
         appendLog(`Calling writeFlash with ${String(fileArray.length)} image(s)`)
 
@@ -287,18 +351,24 @@ export function useFirmwareFlash() {
           reportProgress: (_idx: number, written: number, total: number) => {
             setProgress(40 + Math.round((written / total) * 55)) // 40–95 %
           },
-          calculateMD5Hash: (image: string) => SparkMD5.hashBinary(image),
+          // SparkMD5 wants a binary string; convert the Uint8Array back for it.
+          calculateMD5Hash: (image: Uint8Array) => {
+            let s = ''
+            for (const b of image) s += String.fromCharCode(b)
+            return SparkMD5.hashBinary(s)
+          },
         })
 
         appendLog('writeFlash done — running hardReset + cleanup')
 
         // Cleanup steps after a successful write are best-effort:
-        // hardReset triggers a USB re-enumeration on macOS which can invalidate
-        // the port handle before disconnect()/close() complete. Errors here
-        // would mask a successful flash, so we swallow them.
-        await loader.hardReset().catch((e: unknown) => {
+        // hardReset (now `loader.after()` in 0.6.0) triggers a USB
+        // re-enumeration on macOS which can invalidate the port handle
+        // before disconnect()/close() complete. Errors here would mask a
+        // successful flash, so we swallow them.
+        await loader.after().catch((e: unknown) => {
           appendLog(
-            `hardReset error (ignored): ${e instanceof Error ? e.message : String(e)}`,
+            `after() error (ignored): ${e instanceof Error ? e.message : String(e)}`,
             'warn'
           )
         })
