@@ -656,9 +656,6 @@ function GaugeNumericPreview({
   // here so studio is a 1:1 preview of the device.
   const valueColor = st.textColor
 
-  const iconName = cfg.iconName ?? null
-  const hasIcon = iconName !== null
-  const iconSize = Math.min(h * 0.35, w * 0.22, 20)
   const labelText = cfg.label ?? null
   const labelPos = cfg.labelPosition ?? 'top-left'
 
@@ -761,7 +758,6 @@ function GaugeNumericPreview({
           flexShrink: 0,
         }}
       >
-        {hasIcon && <SensorIcon name={iconName} size={iconSize} color={valueColor + 'AA'} />}
         <span
           style={{
             color: valueColor,
@@ -774,7 +770,7 @@ function GaugeNumericPreview({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'clip',
-            maxWidth: hasIcon ? `calc(100% - ${String(iconSize + 4)}px)` : '100%',
+            maxWidth: '100%',
             textAlign: 'center',
             animation: danger ? BLINK_ANIM : undefined,
           }}
@@ -956,9 +952,14 @@ function ButtonPreview({
   const iconSize = Math.min(h * 0.48, w * 0.3)
   const fontSize = Math.max(8, Math.min(h * 0.38, w * 0.28))
 
-  const bgColor = active ? st.primaryColor + '55' : st.primaryColor + '18'
-  const borderColor = active ? st.primaryColor : st.secondaryColor
-  const textColor = active ? st.primaryColor : st.textColor
+  // Two-state button colours (#146): cfg.colors.normal / cfg.colors.active.
+  // Older configs without `colors` still fall back to the legacy widget.style.
+  const normalColor = cfg.colors?.normal ?? st.primaryColor
+  const activeColor = cfg.colors?.active ?? st.primaryColor
+  const stateColor = active ? activeColor : normalColor
+  const bgColor = active ? activeColor + '55' : normalColor + '18'
+  const borderColor = active ? activeColor : st.secondaryColor
+  const textColor = active ? stateColor : st.textColor
 
   return (
     <div

@@ -46,7 +46,75 @@ function upgradeLegacySize(w: number, h: number): { w: number; h: number } | nul
   return null
 }
 
+// Brighten a hex colour by adding `delta` to each channel (clamped to 0xFF).
+// Used by the 1.7→1.8 migration to derive a button "active" colour from the
+// pre-existing primaryColor — gives a contrasting hover shade by default.
+function brightenHex(hex: string, delta = 0x33): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return hex
+  const value = m[1]
+  if (!value) return hex
+  const channels = [0, 2, 4].map((i) => {
+    const c = parseInt(value.substring(i, i + 2), 16)
+    return Math.min(0xff, c + delta)
+      .toString(16)
+      .padStart(2, '0')
+  })
+  return `#${channels.join('').toUpperCase()}`
+}
+
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.7.0 → 1.8.0: button colours move to ButtonWidgetConfig.colors (issue #146).
+    //   - For each button widget, set colors.normal = widget.style.primaryColor
+    //     and colors.active = a brightened variant of normal.
+    //   - Drop iconName from gauge and bar configs (icon picker is restricted to
+    //     buttons and warnings only).
+    fromVersion: '1.7.0',
+    toVersion: '1.8.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.8.0' }
+
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+
+        const migratedWidgets = widgets.map((widget) => {
+          const type = widget.type as string | undefined
+          const cfg = widget.config as Record<string, unknown> | undefined
+          if (!cfg) return widget
+
+          if (type === 'button') {
+            // Skip if already migrated
+            if (cfg.colors !== undefined) return widget
+            const style = widget.style as Record<string, unknown> | undefined
+            const normalRaw =
+              typeof style?.primaryColor === 'string' ? style.primaryColor : '#FF4444'
+            const normal = normalRaw
+            const active = brightenHex(normal)
+            return {
+              ...widget,
+              config: { ...cfg, colors: { normal, active } },
+            }
+          }
+
+          if (type === 'gauge' || type === 'bar') {
+            if (!('iconName' in cfg)) return widget
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { iconName: _iconName, ...rest } = cfg
+            return { ...widget, config: rest }
+          }
+
+          return widget
+        })
+
+        return { ...page, widgets: migratedWidgets }
+      })
+
+      return { ...config, version: '1.8.0', pages: migratedPages }
+    },
+  },
   {
     // 1.6.0 → 1.7.0: drop unused page-level fields (issue #142).
     //   PageConfig.name → silently dropped (no per-page title in studio anymore)

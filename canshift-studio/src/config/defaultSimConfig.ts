@@ -61,6 +61,16 @@ const DEMO_STYLE_BUTTON = {
   fontSize: 16,
 }
 
+const DEMO_BUTTON_COLORS_RED = {
+  normal: '#FF4444' as const,
+  active: '#FF7777' as const,
+}
+
+const DEMO_BUTTON_COLORS_NAV = {
+  normal: '#444444' as const,
+  active: '#777777' as const,
+}
+
 export const DEFAULT_SIM_CONFIG: DashboardConfig = {
   version: CURRENT_SCHEMA_VERSION,
   name: 'CANShift Demo',
@@ -468,6 +478,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: false,
+            colors: DEMO_BUTTON_COLORS_RED,
             actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 1 }],
           },
         },
@@ -484,6 +495,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: false,
+            colors: DEMO_BUTTON_COLORS_RED,
             actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 2 }],
           },
         },
@@ -500,6 +512,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: false,
+            colors: DEMO_BUTTON_COLORS_RED,
             actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 3 }],
           },
         },
@@ -516,6 +529,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: false,
+            colors: DEMO_BUTTON_COLORS_RED,
             actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 4 }],
           },
         },
@@ -532,6 +546,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: true,
+            colors: DEMO_BUTTON_COLORS_RED,
             actions: [{ category: 'ecu', type: 'can_raw', frameId: 0x520, data: '01' }],
           },
         },
@@ -548,6 +563,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: true,
+            colors: DEMO_BUTTON_COLORS_RED,
             actions: [{ category: 'ecu', type: 'can_raw', frameId: 0x521, data: '01' }],
           },
         },
@@ -563,6 +579,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: false,
             isToggle: false,
+            colors: DEMO_BUTTON_COLORS_NAV,
             actions: [{ category: 'dashboard', type: 'navigate', pageId: 'overview' }],
           },
         },
@@ -578,6 +595,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: false,
             isToggle: false,
+            colors: DEMO_BUTTON_COLORS_NAV,
             actions: [{ category: 'dashboard', type: 'navigate', pageId: 'engine' }],
           },
         },
