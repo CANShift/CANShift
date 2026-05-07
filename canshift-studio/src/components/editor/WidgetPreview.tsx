@@ -2,6 +2,7 @@
 // Renders at the widget's display size (firmware px × SCALE).
 // All previews use a fixed demo value at ~65 % of range so the shape is clear.
 
+import { memo } from 'react'
 import type { CSSProperties } from 'react'
 import type { Widget, WidgetLabelPosition, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
@@ -1293,7 +1294,7 @@ interface WidgetPreviewProps {
   testValue?: number | null
 }
 
-export function WidgetPreview({
+function WidgetPreviewImpl({
   widget,
   displayW: rawW,
   displayH: rawH,
@@ -1341,3 +1342,9 @@ export function WidgetPreview({
   if (config.type === 'timer') return <TimerPreview widget={resolved} w={w} h={h} />
   return <ImagePreview widget={resolved} w={w} h={h} />
 }
+
+// React.memo with shallow prop comparison — `widget` and `palette` are stable
+// across store updates thanks to immer (unchanged entries keep the same ref),
+// so unrelated changes (selection, drag of another widget) no longer rerun
+// every preview's SVG path math.
+export const WidgetPreview = memo(WidgetPreviewImpl)
