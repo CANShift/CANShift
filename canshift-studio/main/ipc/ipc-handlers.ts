@@ -90,6 +90,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     onCanHealth: (health) => {
       getWindow()?.webContents.send(IpcChannels.CAN_HEALTH_UPDATE, health)
     },
+    onDeviceLog: (entry) => {
+      getWindow()?.webContents.send(IpcChannels.USB_DEVICE_LOG, entry)
+    },
   })
 
   // ---------------------------------------------------------------------------

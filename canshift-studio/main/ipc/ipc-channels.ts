@@ -28,6 +28,8 @@ export const IpcChannels = {
   USB_CONNECTION_CHANGED: 'usb:connection-changed',
   USB_DATA_RECEIVED: 'usb:data-received',
   USB_ERROR: 'usb:error',
+  // Structured firmware log line — payload: { level, tag, message }
+  USB_DEVICE_LOG: 'usb:device-log',
 
   // CAN scanner
   CAN_SCAN_START: 'can:scan-start',
