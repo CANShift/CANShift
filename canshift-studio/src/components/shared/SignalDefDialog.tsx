@@ -7,6 +7,14 @@
 import { useState, useCallback } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 // ---------------------------------------------------------------------------
 // Partial pre-fill shape from ByteInterpreter
@@ -202,48 +210,16 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
   ])
 
   return (
-    // Backdrop
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.65)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 200,
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose()
       }}
-      onClick={onClose}
     >
-      {/* Dialog */}
-      <div
-        style={{
-          background: '#161616',
-          border: '1px solid #2A2A2A',
-          borderRadius: 6,
-          padding: 20,
-          width: 420,
-          maxHeight: '80vh',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-        }}
-        onClick={(e) => {
-          e.stopPropagation()
-        }}
-      >
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: '#DDDDDD',
-            borderBottom: '1px solid #222',
-            paddingBottom: 10,
-          }}
-        >
-          Define signal
-        </div>
+      <DialogContent className="flex max-h-[80vh] flex-col gap-3.5 overflow-y-auto sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>Define signal</DialogTitle>
+        </DialogHeader>
 
         <Field label="Signal name">
           <TextInput value={name} onChange={setName} placeholder="e.g. rpm" />
@@ -376,40 +352,15 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
           </span>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '5px 14px',
-              borderRadius: 4,
-              fontSize: 12,
-              cursor: 'pointer',
-              border: '1px solid #2A2A2A',
-              background: 'transparent',
-              color: '#666',
-            }}
-          >
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!name.trim()}
-            style={{
-              padding: '5px 14px',
-              borderRadius: 4,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: name.trim() ? 'pointer' : 'not-allowed',
-              border: 'none',
-              background: name.trim() ? '#CC3333' : '#2A2A2A',
-              color: name.trim() ? '#FFFFFF' : '#444',
-            }}
-          >
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={!name.trim()}>
             Add signal
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

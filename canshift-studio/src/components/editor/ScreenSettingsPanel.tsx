@@ -8,6 +8,16 @@ import { useScreenSettingsStore } from '../../stores/screenSettings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
 import { usbService } from '../../services/ipc.service'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface ScreenSettingsPanelProps {
   scale: number
@@ -23,10 +33,24 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const log = useLogStore((s) => s.push)
   const [otaState, setOtaState] = useState<'idle' | 'pending'>('idle')
   const [calibrating, setCalibrating] = useState(false)
+  const [pendingRotation180, setPendingRotation180] = useState(false)
 
   const fs = Math.round(scale * 6)
   const fsLg = Math.round(scale * 7)
   const gap = Math.round(scale * 6)
+
+  const pushScreenSettings = async () => {
+    const result = await usbService.pushScreenSettings({
+      brightness,
+      sleep: sleepTimeoutS,
+      rotation,
+    })
+    if (result.success) {
+      log('success', `Screen settings pushed — brightness ${String(brightness)}%`)
+    } else {
+      log('error', `Screen settings push failed: ${result.error ?? 'unknown error'}`)
+    }
+  }
 
   const handleSave = async () => {
     if (simulationMode) {
@@ -41,21 +65,15 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     // differs from the persisted one, so studio doesn't need to know the
     // device's current orientation — a no-op rotation is free.
     if (rotation === 180) {
-      const ok = window.confirm(
-        'Switching mounting orientation to 180° reboots the device and clears the touch calibration. You will be asked to re-calibrate on the next boot.\n\nContinue?'
-      )
-      if (!ok) return
+      setPendingRotation180(true)
+      return
     }
-    const result = await usbService.pushScreenSettings({
-      brightness,
-      sleep: sleepTimeoutS,
-      rotation,
-    })
-    if (result.success) {
-      log('success', `Screen settings pushed — brightness ${String(brightness)}%`)
-    } else {
-      log('error', `Screen settings push failed: ${result.error ?? 'unknown error'}`)
-    }
+    await pushScreenSettings()
+  }
+
+  const handleConfirmRotation180 = () => {
+    setPendingRotation180(false)
+    void pushScreenSettings()
   }
 
   const canSave = connected || simulationMode
@@ -109,263 +127,282 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0D0D0D',
-        zIndex: 50,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: Math.round(scale * 8),
-        boxSizing: 'border-box',
-        gap,
-        overflowY: 'auto',
-      }}
-      onMouseDown={(e) => {
-        e.stopPropagation()
-      }}
-    >
-      {/* Header */}
-      <span
+    <>
+      <div
         style={{
-          fontSize: fsLg,
-          fontWeight: 700,
-          color: '#CCCCCC',
-          letterSpacing: '0.05em',
-          marginBottom: Math.round(scale * 2),
+          position: 'absolute',
+          inset: 0,
+          background: '#0D0D0D',
+          zIndex: 50,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: Math.round(scale * 8),
+          boxSizing: 'border-box',
+          gap,
+          overflowY: 'auto',
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation()
         }}
       >
-        SCREEN SETTINGS
-      </span>
-
-      {/* Brightness */}
-      <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
-        <input
-          type="range"
-          min={10}
-          max={100}
-          value={brightness}
-          onChange={(e) => {
-            set({ brightness: Number(e.target.value) })
-          }}
+        {/* Header */}
+        <span
           style={{
-            width: '100%',
-            accentColor: '#CC3333',
-            cursor: 'pointer',
-            height: Math.round(scale * 3),
+            fontSize: fsLg,
+            fontWeight: 700,
+            color: '#CCCCCC',
+            letterSpacing: '0.05em',
+            marginBottom: Math.round(scale * 2),
           }}
-        />
-      </SettingRow>
+        >
+          SCREEN SETTINGS
+        </span>
 
-      {/* Sleep */}
-      <SettingRow
-        label="SLEEP"
-        value={sleepTimeoutS === 0 ? 'Off' : `${String(sleepTimeoutS)}s`}
-        scale={scale}
-      >
-        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-          {([0, 30, 60, 300] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => {
-                set({ sleepTimeoutS: v })
-              }}
-              style={{
-                flex: 1,
-                padding: `${String(Math.round(scale * 2))}px 0`,
-                background: sleepTimeoutS === v ? '#1A0A0A' : '#111111',
-                border: `1px solid ${sleepTimeoutS === v ? '#CC3333' : '#2A2A2A'}`,
-                borderRadius: 3,
-                color: sleepTimeoutS === v ? '#CC3333' : '#AAAAAA',
-                fontSize: fs,
-                cursor: 'pointer',
-                lineHeight: 1,
-              }}
-            >
-              {v === 0 ? 'Off' : v < 60 ? `${String(v)}s` : `${String(v / 60)}m`}
-            </button>
-          ))}
-        </div>
-      </SettingRow>
+        {/* Brightness */}
+        <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
+          <input
+            type="range"
+            min={10}
+            max={100}
+            value={brightness}
+            onChange={(e) => {
+              set({ brightness: Number(e.target.value) })
+            }}
+            style={{
+              width: '100%',
+              accentColor: '#CC3333',
+              cursor: 'pointer',
+              height: Math.round(scale * 3),
+            }}
+          />
+        </SettingRow>
 
-      {/* Theme — fires immediately (no Save needed), state mirrors firmware */}
-      <SettingRow
-        label="THEME"
-        value={isDayMode === null ? '—' : isDayMode ? 'Day' : 'Night'}
-        scale={scale}
-      >
-        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-          {(['night', 'day'] as const).map((mode) => {
-            const active = isDayMode === (mode === 'day')
-            return (
+        {/* Sleep */}
+        <SettingRow
+          label="SLEEP"
+          value={sleepTimeoutS === 0 ? 'Off' : `${String(sleepTimeoutS)}s`}
+          scale={scale}
+        >
+          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+            {([0, 30, 60, 300] as const).map((v) => (
               <button
-                key={mode}
+                key={v}
                 onClick={() => {
-                  void handleSelectMode(mode)
-                }}
-                disabled={!canDeviceAction}
-                style={{
-                  flex: 1,
-                  padding: `${String(Math.round(scale * 2))}px 0`,
-                  background: active ? '#1A0A0A' : '#111111',
-                  border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
-                  borderRadius: 3,
-                  color: active ? '#CC3333' : canDeviceAction ? '#AAAAAA' : '#444444',
-                  fontSize: fs,
-                  cursor: canDeviceAction ? 'pointer' : 'default',
-                  lineHeight: 1,
-                  textTransform: 'capitalize',
-                }}
-              >
-                {mode}
-              </button>
-            )
-          })}
-        </div>
-      </SettingRow>
-
-      {/* Mounting orientation — applied on save, reboots the device */}
-      <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
-        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-          {([0, 180] as const).map((deg) => {
-            const active = rotation === deg
-            return (
-              <button
-                key={deg}
-                onClick={() => {
-                  set({ rotation: deg })
+                  set({ sleepTimeoutS: v })
                 }}
                 style={{
                   flex: 1,
                   padding: `${String(Math.round(scale * 2))}px 0`,
-                  background: active ? '#1A0A0A' : '#111111',
-                  border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                  background: sleepTimeoutS === v ? '#1A0A0A' : '#111111',
+                  border: `1px solid ${sleepTimeoutS === v ? '#CC3333' : '#2A2A2A'}`,
                   borderRadius: 3,
-                  color: active ? '#CC3333' : '#AAAAAA',
+                  color: sleepTimeoutS === v ? '#CC3333' : '#AAAAAA',
                   fontSize: fs,
                   cursor: 'pointer',
                   lineHeight: 1,
                 }}
               >
-                {deg === 0 ? '0°' : '180°'}
+                {v === 0 ? 'Off' : v < 60 ? `${String(v)}s` : `${String(v / 60)}m`}
               </button>
-            )
-          })}
-        </div>
-      </SettingRow>
+            ))}
+          </div>
+        </SettingRow>
 
-      {/* Touch calibration — opens crosshairs on the device */}
-      <SettingRow label="TOUCH" value="" scale={scale}>
-        <button
-          onClick={() => {
-            void handleCalibrate()
-          }}
-          disabled={!canDeviceAction || calibrating}
-          style={{
-            width: '100%',
-            padding: `${String(Math.round(scale * 2))}px 0`,
-            background: '#111111',
-            border: `1px solid ${canDeviceAction ? '#2A2A2A' : '#1E1E1E'}`,
-            borderRadius: 3,
-            color: canDeviceAction ? '#AAAAAA' : '#444444',
-            fontSize: fs,
-            cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-          }}
+        {/* Theme — fires immediately (no Save needed), state mirrors firmware */}
+        <SettingRow
+          label="THEME"
+          value={isDayMode === null ? '—' : isDayMode ? 'Day' : 'Night'}
+          scale={scale}
         >
-          {calibrating ? 'Starting…' : 'CALIBRATE TOUCH'}
-        </button>
-      </SettingRow>
+          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+            {(['night', 'day'] as const).map((mode) => {
+              const active = isDayMode === (mode === 'day')
+              return (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    void handleSelectMode(mode)
+                  }}
+                  disabled={!canDeviceAction}
+                  style={{
+                    flex: 1,
+                    padding: `${String(Math.round(scale * 2))}px 0`,
+                    background: active ? '#1A0A0A' : '#111111',
+                    border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: active ? '#CC3333' : canDeviceAction ? '#AAAAAA' : '#444444',
+                    fontSize: fs,
+                    cursor: canDeviceAction ? 'pointer' : 'default',
+                    lineHeight: 1,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {mode}
+                </button>
+              )
+            })}
+          </div>
+        </SettingRow>
 
-      {/* Firmware update */}
-      <div style={{ borderTop: '1px solid #1E1E1E', paddingTop: gap }}>
-        <span
-          style={{
-            fontSize: Math.round(scale * 5.5),
-            color: '#AAAAAA',
-            letterSpacing: '0.06em',
-            display: 'block',
-            marginBottom: Math.round(scale * 3),
-          }}
-        >
-          FIRMWARE
-        </span>
-        <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+        {/* Mounting orientation — applied on save, reboots the device */}
+        <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
+          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+            {([0, 180] as const).map((deg) => {
+              const active = rotation === deg
+              return (
+                <button
+                  key={deg}
+                  onClick={() => {
+                    set({ rotation: deg })
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: `${String(Math.round(scale * 2))}px 0`,
+                    background: active ? '#1A0A0A' : '#111111',
+                    border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                    borderRadius: 3,
+                    color: active ? '#CC3333' : '#AAAAAA',
+                    fontSize: fs,
+                    cursor: 'pointer',
+                    lineHeight: 1,
+                  }}
+                >
+                  {deg === 0 ? '0°' : '180°'}
+                </button>
+              )
+            })}
+          </div>
+        </SettingRow>
+
+        {/* Touch calibration — opens crosshairs on the device */}
+        <SettingRow label="TOUCH" value="" scale={scale}>
           <button
-            onClick={handleOtaUsb}
-            disabled={!connected || otaState === 'pending'}
-            style={{
-              flex: 1,
-              padding: `${String(Math.round(scale * 2.5))}px 0`,
-              background: connected ? '#111B11' : '#111111',
-              border: `1px solid ${connected ? '#2A4A2A' : '#1E1E1E'}`,
-              borderRadius: 3,
-              color: connected ? '#55AA55' : '#333333',
-              fontSize: fs,
-              cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
-              lineHeight: 1,
+            onClick={() => {
+              void handleCalibrate()
             }}
-          >
-            {otaState === 'pending' ? '...' : 'USB'}
-          </button>
-          <button
-            disabled
-            title="Wi-Fi OTA — Phase 2"
+            disabled={!canDeviceAction || calibrating}
             style={{
-              flex: 1,
-              padding: `${String(Math.round(scale * 2.5))}px 0`,
+              width: '100%',
+              padding: `${String(Math.round(scale * 2))}px 0`,
               background: '#111111',
-              border: '1px solid #1A1A1A',
+              border: `1px solid ${canDeviceAction ? '#2A2A2A' : '#1E1E1E'}`,
               borderRadius: 3,
-              color: '#2A2A2A',
+              color: canDeviceAction ? '#AAAAAA' : '#444444',
               fontSize: fs,
-              cursor: 'default',
+              cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
               lineHeight: 1,
+              letterSpacing: '0.04em',
             }}
           >
-            Wi-Fi
+            {calibrating ? 'Starting…' : 'CALIBRATE TOUCH'}
+          </button>
+        </SettingRow>
+
+        {/* Firmware update */}
+        <div style={{ borderTop: '1px solid #1E1E1E', paddingTop: gap }}>
+          <span
+            style={{
+              fontSize: Math.round(scale * 5.5),
+              color: '#AAAAAA',
+              letterSpacing: '0.06em',
+              display: 'block',
+              marginBottom: Math.round(scale * 3),
+            }}
+          >
+            FIRMWARE
+          </span>
+          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+            <button
+              onClick={handleOtaUsb}
+              disabled={!connected || otaState === 'pending'}
+              style={{
+                flex: 1,
+                padding: `${String(Math.round(scale * 2.5))}px 0`,
+                background: connected ? '#111B11' : '#111111',
+                border: `1px solid ${connected ? '#2A4A2A' : '#1E1E1E'}`,
+                borderRadius: 3,
+                color: connected ? '#55AA55' : '#333333',
+                fontSize: fs,
+                cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
+                lineHeight: 1,
+              }}
+            >
+              {otaState === 'pending' ? '...' : 'USB'}
+            </button>
+            <button
+              disabled
+              title="Wi-Fi OTA — Phase 2"
+              style={{
+                flex: 1,
+                padding: `${String(Math.round(scale * 2.5))}px 0`,
+                background: '#111111',
+                border: '1px solid #1A1A1A',
+                borderRadius: 3,
+                color: '#2A2A2A',
+                fontSize: fs,
+                cursor: 'default',
+                lineHeight: 1,
+              }}
+            >
+              Wi-Fi
+            </button>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: Math.round(scale * 3), marginTop: 'auto' }}>
+          <button
+            onClick={reset}
+            style={{
+              flex: 1,
+              padding: `${String(Math.round(scale * 3))}px 0`,
+              background: 'transparent',
+              border: '1px solid #2A2A2A',
+              borderRadius: 4,
+              color: '#AAAAAA',
+              fontSize: fs,
+              cursor: 'pointer',
+            }}
+          >
+            RESET
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            style={{
+              flex: 2,
+              padding: `${String(Math.round(scale * 3))}px 0`,
+              background: canSave ? '#1A3A1A' : '#111111',
+              border: `1px solid ${canSave ? '#336633' : '#2A2A2A'}`,
+              borderRadius: 4,
+              color: canSave ? '#55AA55' : '#333333',
+              fontSize: fs,
+              fontWeight: 600,
+              cursor: canSave ? 'pointer' : 'default',
+            }}
+          >
+            SAVE
           </button>
         </div>
       </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: Math.round(scale * 3), marginTop: 'auto' }}>
-        <button
-          onClick={reset}
-          style={{
-            flex: 1,
-            padding: `${String(Math.round(scale * 3))}px 0`,
-            background: 'transparent',
-            border: '1px solid #2A2A2A',
-            borderRadius: 4,
-            color: '#AAAAAA',
-            fontSize: fs,
-            cursor: 'pointer',
-          }}
-        >
-          RESET
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={!canSave}
-          style={{
-            flex: 2,
-            padding: `${String(Math.round(scale * 3))}px 0`,
-            background: canSave ? '#1A3A1A' : '#111111',
-            border: `1px solid ${canSave ? '#336633' : '#2A2A2A'}`,
-            borderRadius: 4,
-            color: canSave ? '#55AA55' : '#333333',
-            fontSize: fs,
-            fontWeight: 600,
-            cursor: canSave ? 'pointer' : 'default',
-          }}
-        >
-          SAVE
-        </button>
-      </div>
-    </div>
+      <AlertDialog open={pendingRotation180} onOpenChange={setPendingRotation180}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switching mounting orientation reboots the device</AlertDialogTitle>
+            <AlertDialogDescription>
+              Switching mounting orientation to 180° reboots the device and clears the touch
+              calibration. You will be asked to re-calibrate on the next boot.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep current</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRotation180}>
+              Reboot and continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
