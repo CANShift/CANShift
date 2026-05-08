@@ -7,8 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Modal,
-  Pressable,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
@@ -19,6 +17,7 @@ import { useSignalsStore } from '../stores/signals.store'
 import * as BleService from '../services/ble.service'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
+import { Sheet, SheetContent } from './ui/sheet'
 
 type RootNav = NativeStackNavigationProp<RootStackParamList>
 
@@ -89,13 +88,8 @@ export default function DashTopBar() {
         </View>
       </View>
 
-      <Modal
-        visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => { setMenuVisible(false); }}
-      >
-        <Pressable style={styles.menuOverlay} onPress={() => { setMenuVisible(false); }}>
+      <Sheet open={menuVisible} onOpenChange={setMenuVisible}>
+        <SheetContent side="bottom" className="p-0">
           <View style={styles.menuSheet}>
             <TouchableOpacity
               style={styles.menuItem}
@@ -121,8 +115,8 @@ export default function DashTopBar() {
               <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </Pressable>
-      </Modal>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
@@ -160,17 +154,8 @@ const styles = StyleSheet.create({
   staleText: { fontSize: Typography.xs, color: Colors.accent, fontWeight: '700' },
   iconBtn: { padding: Spacing.xs },
   iconBtnText: { fontSize: Typography.lg, color: Colors.textDim },
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
   menuSheet: {
     backgroundColor: Colors.surfaceHigh,
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
     paddingBottom: Spacing.xl,
   },
   menuItem: {

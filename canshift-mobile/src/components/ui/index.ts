@@ -46,6 +46,28 @@ export type {
   SelectLabelProps,
   SelectSeparatorProps,
 } from './select'
+export {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+  sheetContentVariants,
+} from './sheet'
+export type {
+  SheetProps,
+  SheetTriggerProps,
+  SheetContentProps,
+  SheetHeaderProps,
+  SheetFooterProps,
+  SheetTitleProps,
+  SheetDescriptionProps,
+  SheetCloseProps,
+  SheetSide,
+} from './sheet'
 export { Switch } from './switch'
 export type { UISwitchProps } from './switch'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
