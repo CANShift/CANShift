@@ -1,7 +1,12 @@
 // migration-runner.test.ts
 
-import { migrateConfig, validateMigrationChain } from '../migrations/migration-runner.js'
+import {
+  BUILTIN_MIGRATIONS,
+  migrateConfig,
+  validateMigrationChain,
+} from '../migrations/migration-runner.js'
 import type { MigrationRegistry } from '../migrations/migration-runner.js'
+import { CURRENT_SCHEMA_VERSION } from '../index.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -797,5 +802,83 @@ describe('validateMigrationChain', () => {
       { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
     ]
     expect(validateMigrationChain('1.0.0', '1.1.0', registry)).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Anchor: BUILTIN_MIGRATIONS terminates at CURRENT_SCHEMA_VERSION
+// ---------------------------------------------------------------------------
+//
+// These tests fail fast at build/test time when CURRENT_SCHEMA_VERSION is
+// bumped without adding the matching migration entry, instead of failing at
+// runtime when a user opens an old config.
+
+describe('BUILTIN_MIGRATIONS chain anchor', () => {
+  it('is non-empty', () => {
+    expect(BUILTIN_MIGRATIONS.length).toBeGreaterThan(0)
+  })
+
+  it('forms a contiguous chain (every toVersion is the next fromVersion)', () => {
+    // Walk the chain in registration order. Each migration's `to` must equal
+    // the next migration's `from`. Order in the source file is descending
+    // (newest first), so we reverse to walk forward through history.
+    const ordered = [...BUILTIN_MIGRATIONS].reverse()
+    for (let i = 0; i < ordered.length - 1; i += 1) {
+      const current = ordered[i]
+      const next = ordered[i + 1]
+      expect(current).toBeDefined()
+      expect(next).toBeDefined()
+      expect(next!.fromVersion).toBe(current!.toVersion)
+    }
+  })
+
+  it('terminates at CURRENT_SCHEMA_VERSION', () => {
+    const ordered = [...BUILTIN_MIGRATIONS].reverse()
+    const terminal = ordered[ordered.length - 1]
+    expect(terminal).toBeDefined()
+    expect(terminal!.toVersion).toBe(CURRENT_SCHEMA_VERSION)
+  })
+
+  it('validateMigrationChain reports no gaps from earliest fromVersion to CURRENT_SCHEMA_VERSION', () => {
+    const ordered = [...BUILTIN_MIGRATIONS].reverse()
+    const earliest = ordered[0]
+    expect(earliest).toBeDefined()
+    const missing = validateMigrationChain(earliest!.fromVersion, CURRENT_SCHEMA_VERSION, [
+      ...BUILTIN_MIGRATIONS,
+    ])
+    expect(missing).toEqual([])
+  })
+
+  it('every entry has unique fromVersion (no forks in the chain)', () => {
+    const seen = new Set<string>()
+    for (const m of BUILTIN_MIGRATIONS) {
+      expect(seen.has(m.fromVersion)).toBe(false)
+      seen.add(m.fromVersion)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// migrateConfig deep-clones its input
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — input isolation', () => {
+  it('does not mutate nested objects on the caller', () => {
+    const page = { id: 'p1', widgets: [] as Record<string, unknown>[] }
+    const config = { version: '1.4.0', pages: [page] }
+    const snapshot = JSON.parse(JSON.stringify(config)) as typeof config
+
+    migrateConfig(config, '1.5.0')
+
+    expect(config).toEqual(snapshot)
+    expect(config.pages[0]).toBe(page) // caller still owns the same reference
+    expect(page.widgets).toEqual([])
+  })
+
+  it('returned config is independent of the input', () => {
+    const config = { version: '1.4.0', pages: [{ id: 'p1', widgets: [] }] }
+    const { config: out } = migrateConfig(config, '1.5.0')
+    expect(out).not.toBe(config)
+    expect((out as { pages: unknown[] }).pages).not.toBe(config.pages)
   })
 })

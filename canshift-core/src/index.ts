@@ -65,8 +65,17 @@ export {
 // ---------------------------------------------------------------------------
 // Migrations
 // ---------------------------------------------------------------------------
-export { migrateConfig } from './migrations/migration-runner'
-export type { MigrationResult } from './migrations/migration-runner'
+export {
+  BUILTIN_MIGRATIONS,
+  migrateConfig,
+  validateMigrationChain,
+} from './migrations/migration-runner'
+export type {
+  Migration,
+  MigrationFn,
+  MigrationRegistry,
+  MigrationResult,
+} from './migrations/migration-runner'
 
 // ---------------------------------------------------------------------------
 // Constants

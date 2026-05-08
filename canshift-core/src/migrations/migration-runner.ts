@@ -12,10 +12,20 @@
 
 export type MigrationFn = (config: Record<string, unknown>) => Record<string, unknown>
 
-interface Migration {
+export interface Migration {
   fromVersion: string
   toVersion: string
   migrate: MigrationFn
+}
+
+// Deep-clone a JSON-shaped config. Prefers the standard `structuredClone`
+// (Node 17+) and falls back to a JSON round-trip for older runtimes. Configs
+// are pure JSON, so the round-trip is safe.
+function deepClone(value: Record<string, unknown>): Record<string, unknown> {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value)
+  }
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
 }
 
 // ---------------------------------------------------------------------------
@@ -63,6 +73,8 @@ function brightenHex(hex: string, delta = 0x33): string {
   return `#${channels.join('').toUpperCase()}`
 }
 
+// All migrations receive a deep clone of the input — they can mutate freely;
+// the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
     // 1.9.0 → 1.10.0: gauge / bar widgets gain an optional `alertThreshold`
@@ -366,6 +378,13 @@ export interface MigrationResult {
 export type MigrationRegistry = Migration[]
 
 /**
+ * The built-in migration registry shipped with this package. Exposed so that
+ * consumers (and anchor tests) can verify the chain terminates at
+ * `CURRENT_SCHEMA_VERSION`. Treated as read-only — do not mutate.
+ */
+export const BUILTIN_MIGRATIONS: readonly Migration[] = MIGRATIONS
+
+/**
  * Validates that a complete migration chain exists from fromVersion to toVersion.
  * Returns an array of missing step strings (e.g. ["1.2.0→1.3.0"]).
  * An empty array means the chain is complete.
@@ -402,6 +421,11 @@ export function validateMigrationChain(
  * Apply all migrations to bring config from its current version to targetVersion.
  * Returns the migrated config and the list of migrations applied.
  *
+ * The input is deep-cloned before any migration runs, so individual migrations
+ * can mutate freely without aliasing the caller's object. Several existing
+ * migrations only shallow-spread the top level (e.g. 1.3→1.4, 1.4→1.5,
+ * 1.9→1.10) — the deep clone guarantees nested objects are not shared.
+ *
  * Throws if the migration chain has gaps — prevents partial migration.
  */
 export function migrateConfig(
@@ -409,7 +433,7 @@ export function migrateConfig(
   targetVersion: string
 ): MigrationResult {
   const currentVersion = (config.version as string | undefined) ?? '0.0.0'
-  let current = { ...config }
+  let current = deepClone(config)
   const applied: string[] = []
 
   if (currentVersion === targetVersion) {
