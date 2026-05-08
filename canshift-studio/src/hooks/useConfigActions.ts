@@ -1,6 +1,7 @@
 // useConfigActions.ts — Config open / save / burn operations shared across toolbar and menu
 
 import { useCallback } from 'react'
+import { toast } from 'sonner'
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import { validateDashboard, migrateConfig, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
@@ -143,6 +144,7 @@ export function useConfigActions() {
       if (result.success && result.filePath) {
         markSaved(result.filePath)
         log('success', `Saved to ${result.filePath}`)
+        toast.success('Config saved')
       } else if (!result.success && result.error) {
         log('error', `Save failed: ${result.error}`)
         pushError({ source: 'config', code: 'SAVE_FAILED', message: result.error })
@@ -217,6 +219,7 @@ export function useConfigActions() {
               `Config written to device — ${payloadKb} KB in ${String(elapsedMs)} ms (schema v${config.version})`
             )
             log('info', 'Device is rebooting — reconnect in a few seconds')
+            toast.success('Config sent to device')
           } else {
             const msg = result.error ?? 'Burn failed'
             setError(msg)
@@ -224,6 +227,7 @@ export function useConfigActions() {
             setBurnPhase('idle')
             log('error', `${msg} (after ${String(elapsedMs)} ms)`)
             pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
+            toast.error(`Failed to push config: ${msg}`)
           }
         })
         .catch(() => {
@@ -234,6 +238,7 @@ export function useConfigActions() {
           setBurnPhase('idle')
           log('error', msg)
           pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
+          toast.error(`Failed to push config: ${msg}`)
         })
     }
 

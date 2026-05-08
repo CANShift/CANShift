@@ -2,6 +2,7 @@
 // Also listens for unsolicited device events (unexpected disconnect, errors).
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { useCanHealthStore } from '../stores/canHealth.store'
@@ -187,6 +188,7 @@ export function useUsbConnection() {
         if (result.success) {
           setConnected(selectedPort)
           log('success', `Connected to ${selectedPort}`)
+          toast.success(`Connected to ${selectedPort}`)
         } else {
           const msg = result.error ?? 'Connection failed'
           setError(msg)
