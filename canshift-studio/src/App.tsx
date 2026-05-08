@@ -44,7 +44,6 @@ import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
 import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useDeviceStore } from './stores/device.store'
-import FirmwareDialog from './components/shared/FirmwareDialog'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
 import WelcomeModal from './components/shared/WelcomeModal'
@@ -144,7 +143,6 @@ export default function App() {
       <StatusBar />
       <UpdateBanner />
       <VersionMismatchBanner />
-      <FirmwareDialog />
       <PushDiffDialog />
       <BurnProgressModal />
       {firstRun.state === 'pending' && <WelcomeModal onDismiss={firstRun.markCompleted} />}

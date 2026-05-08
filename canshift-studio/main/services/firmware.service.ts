@@ -27,6 +27,12 @@ export interface FirmwareRelease {
   downloadUrl?: string
   /** Undefined when the SPIFFS image asset is absent from this release. */
   spiffsUrl?: string
+  /**
+   * Size of the firmware binary asset in bytes (from GitHub `assets[].size`).
+   * Used to render an estimated flash duration in the studio UI without an
+   * extra HEAD request. Undefined when the asset is missing.
+   */
+  payloadBytes?: number
   publishedAt: string
   prerelease: boolean
   notes: string
@@ -39,6 +45,7 @@ export interface FirmwareRelease {
 interface GitHubAsset {
   name: string
   browser_download_url: string
+  size: number
 }
 
 interface GitHubRelease {
@@ -55,7 +62,8 @@ function isAsset(v: unknown): v is GitHubAsset {
     typeof v === 'object' &&
     v !== null &&
     typeof a.name === 'string' &&
-    typeof a.browser_download_url === 'string'
+    typeof a.browser_download_url === 'string' &&
+    typeof a.size === 'number'
   )
 }
 
@@ -113,6 +121,7 @@ export class FirmwareService {
         tag: item.tag_name,
         ...(fwAsset ? { downloadUrl: fwAsset.browser_download_url } : {}),
         ...(spiffsAsset ? { spiffsUrl: spiffsAsset.browser_download_url } : {}),
+        ...(fwAsset ? { payloadBytes: fwAsset.size } : {}),
         publishedAt: item.published_at,
         prerelease: item.prerelease,
         notes: item.body ?? '',

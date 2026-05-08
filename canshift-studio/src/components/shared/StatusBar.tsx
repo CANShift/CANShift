@@ -1,6 +1,7 @@
 // StatusBar.tsx — Bottom status bar
 
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useDeviceStore } from '../../stores/device.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useCanHealthStore } from '../../stores/canHealth.store'
@@ -11,20 +12,30 @@ const HEALTH_STALE_MS = 6_000
 export default function StatusBar() {
   const connected = useDeviceStore((s) => s.connected)
   const portPath = useDeviceStore((s) => s.portPath)
+  const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
+  const firmwareCheckKind = useDeviceStore((s) => s.firmwareCheck.kind)
   const isDirty = useDashboardStore((s) => s.isDirty)
   const canFps = useCanHealthStore((s) => s.fps)
   const canErrors = useCanHealthStore((s) => s.errors)
   const canUpdatedAt = useCanHealthStore((s) => s.updatedAt)
+  const navigate = useNavigate()
 
-  const [version, setVersion] = useState<string | null>(null)
+  const [studioVersion, setStudioVersion] = useState<string | null>(null)
 
   useEffect(() => {
-    void appIpc.version().then(setVersion)
+    void appIpc.version().then(setStudioVersion)
   }, [])
 
   const canFresh =
     canFps !== null && canUpdatedAt !== null && Date.now() - canUpdatedAt < HEALTH_STALE_MS
   const canFpsStr = canFresh ? `${canFps.toFixed(1)}/s` : null
+
+  const showUpdateHint =
+    firmwareCheckKind === 'update_available' || firmwareCheckKind === 'no_firmware'
+
+  const goToUpdate = (): void => {
+    navigate('/update')
+  }
 
   return (
     <footer
@@ -42,10 +53,40 @@ export default function StatusBar() {
         flexShrink: 0,
       }}
     >
-      {/* Left — connection */}
-      <span style={{ minWidth: 140 }}>
-        {connected && <span style={{ color: '#3D7A4A' }}>● {portPath ?? 'connected'}</span>}
-      </span>
+      {/* Left — connection · firmware version (button → /update) */}
+      <button
+        onClick={goToUpdate}
+        title={
+          showUpdateHint
+            ? 'Firmware update available — open the update panel'
+            : 'Open the firmware update panel'
+        }
+        style={{
+          minWidth: 200,
+          textAlign: 'left',
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          fontSize: 10,
+          letterSpacing: '0.03em',
+          fontFamily: 'inherit',
+          cursor: 'pointer',
+          color: '#3A3A3A',
+        }}
+      >
+        {connected ? (
+          <>
+            <span style={{ color: '#3D7A4A' }}>● {portPath ?? 'connected'}</span>
+            <span style={{ color: '#2A2A2A', margin: '0 6px' }}>·</span>
+            <span style={{ color: showUpdateHint ? '#CC8844' : '#555555' }}>
+              {firmwareVersion ? `v${firmwareVersion}` : '—'}
+              {showUpdateHint ? ' (update)' : ''}
+            </span>
+          </>
+        ) : (
+          <span style={{ color: '#3A3A3A' }}>—</span>
+        )}
+      </button>
 
       {/* Center — CAN health + dirty flag */}
       <span style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -58,9 +99,9 @@ export default function StatusBar() {
         {isDirty && <span style={{ color: '#6A4A1A' }}>unsaved</span>}
       </span>
 
-      {/* Right — version */}
+      {/* Right — studio version */}
       <span style={{ minWidth: 140, textAlign: 'right' }}>
-        {version != null ? `CANShift Studio v${version}` : 'CANShift Studio'}
+        {studioVersion != null ? `CANShift Studio v${studioVersion}` : 'CANShift Studio'}
       </span>
     </footer>
   )

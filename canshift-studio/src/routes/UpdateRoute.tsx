@@ -1,21 +1,126 @@
-// UpdateRoute.tsx — Firmware update panel (USB OTA, Phase 1)
+// UpdateRoute.tsx — Firmware update panel.
+//
+// Replaces the old auto-popup FirmwareDialog. The panel surfaces the result
+// of the version probe (`firmwareCheck` slice on the device store), exposes
+// a "Check now" button, lets the user pick + flash a release (or a local
+// .bin), and chains into SD-prep after a successful flash.
 
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { IconUsb } from '../components/icons/Icon'
+import { Spinner } from '../components/shared/PhaseIndicator'
+import SdPrepPanel from '../components/shared/SdPrepPanel'
 import { firmwareIpc } from '../services/ipc.service'
 import { useFirmwareFlash } from '../hooks/useFirmwareFlash'
 import type { FirmwareRelease } from '../services/ipc.service'
+import type { FirmwareCheck } from '../stores/device.store'
 
 type FlashChannel = 'stable' | 'beta'
 type ActiveFlash = { type: 'release'; tag: string } | { type: 'manual' } | null
+
+// Heuristic flash speed used to render an ETA next to the Flash button.
+// Empirically the Crowpanel 2.8" target writes a ~1.4 MB merged image in
+// roughly 25 s on USB. Used only for display — not authoritative.
+const ETA_REFERENCE_BYTES = 1.4 * 1024 * 1024
+const ETA_REFERENCE_SECONDS = 25
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${String(bytes)} B`
+}
+
+function estimateFlashSeconds(bytes: number): number {
+  return Math.max(1, Math.ceil((bytes / ETA_REFERENCE_BYTES) * ETA_REFERENCE_SECONDS))
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const diffMs = Date.now() - timestamp
+  if (diffMs < 60_000) return 'just now'
+  if (diffMs < 3_600_000) return `${String(Math.floor(diffMs / 60_000))} min ago`
+  if (diffMs < 86_400_000) return `${String(Math.floor(diffMs / 3_600_000))} h ago`
+  return new Date(timestamp).toLocaleString()
+}
+
+interface CheckHeaderCopy {
+  title: string
+  detail: string
+  tone: 'idle' | 'success' | 'warn' | 'progress'
+  showRecheck: boolean
+}
+
+function checkHeaderCopy(check: FirmwareCheck, connected: boolean): CheckHeaderCopy {
+  switch (check.kind) {
+    case 'idle':
+      return {
+        title: connected ? 'Probing firmware…' : 'No device connected',
+        detail: connected
+          ? 'Reading the version reported by the device.'
+          : 'Plug in your CANShift dashboard via USB to check or update its firmware.',
+        tone: connected ? 'progress' : 'idle',
+        showRecheck: false,
+      }
+    case 'probing':
+      return {
+        title: 'Checking for updates…',
+        detail: 'Asking the device for its firmware version and comparing against GitHub.',
+        tone: 'progress',
+        showRecheck: false,
+      }
+    case 'no_firmware':
+      return {
+        title: 'No CANShift firmware detected',
+        detail:
+          'The device responded but does not run CANShift firmware. Pick a release below and flash it.',
+        tone: 'warn',
+        showRecheck: true,
+      }
+    case 'up_to_date':
+      return {
+        title: `Up to date (v${check.version})`,
+        detail: `Last checked ${formatRelativeTime(check.checkedAt)}.`,
+        tone: 'success',
+        showRecheck: true,
+      }
+    case 'update_available':
+      return {
+        title: `Update available — v${check.latestVersion}`,
+        detail: `Currently running v${check.version}. Last checked ${formatRelativeTime(check.checkedAt)}.`,
+        tone: 'warn',
+        showRecheck: true,
+      }
+    case 'check_failed':
+      return {
+        title: `Couldn't reach the release server`,
+        detail: `Running v${check.version}. Last attempt ${formatRelativeTime(check.checkedAt)}.`,
+        tone: 'warn',
+        showRecheck: true,
+      }
+  }
+}
+
+const TONE_BORDER: Record<CheckHeaderCopy['tone'], string> = {
+  idle: '#222222',
+  progress: '#444466',
+  success: '#225522',
+  warn: '#553311',
+}
+
+const TONE_ACCENT: Record<CheckHeaderCopy['tone'], string> = {
+  idle: '#666666',
+  progress: '#7788CC',
+  success: '#3DB86B',
+  warn: '#CC8844',
+}
 
 export default function UpdateRoute() {
   const connected = useDeviceStore((s) => s.connected)
   const portPath = useDeviceStore((s) => s.portPath)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
+  const firmwareCheck = useDeviceStore((s) => s.firmwareCheck)
+  const requestFirmwareRecheck = useDeviceStore((s) => s.requestFirmwareRecheck)
   const log = useLogStore((s) => s.push)
 
   const {
@@ -45,6 +150,13 @@ export default function UpdateRoute() {
   const [manualError, setManualError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ---- SD prep panel — auto-opens after a successful flash ----
+  const [sdPanelOpen, setSdPanelOpen] = useState(false)
+
+  useEffect(() => {
+    if (state === 'done') setSdPanelOpen(true)
+  }, [state])
+
   useEffect(() => {
     let cancelled = false
     setReleasesLoading(true)
@@ -72,9 +184,14 @@ export default function UpdateRoute() {
   const flashBusy = state === 'downloading' || state === 'connecting' || state === 'flashing'
   const canFlashAny = connected || simulationMode
 
+  const headerCopy = useMemo(
+    () => checkHeaderCopy(firmwareCheck, connected || simulationMode),
+    [firmwareCheck, connected, simulationMode]
+  )
+
   // ---- Release flash handlers ----
 
-  const handleFlashRelease = async (release: FirmwareRelease) => {
+  const handleFlashRelease = async (release: FirmwareRelease): Promise<void> => {
     if (flashBusy) return
     if (!portPath && !simulationMode) {
       log('error', 'No port path available — reconnect the device')
@@ -95,16 +212,17 @@ export default function UpdateRoute() {
     }
   }
 
-  const handleFlashReset = () => {
+  const handleFlashReset = (): void => {
     setActiveFlash(null)
     flashReset()
+    setSdPanelOpen(false)
   }
 
   // ---- Manual flash handlers ----
 
   const canManualFlash = (connected || simulationMode) && selectedFile !== null
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0] ?? null
     if (!file) return
     if (!file.name.endsWith('.bin')) {
@@ -115,7 +233,7 @@ export default function UpdateRoute() {
     setManualError(null)
   }
 
-  const handleManualFlash = async () => {
+  const handleManualFlash = async (): Promise<void> => {
     if (!selectedFile) return
     if (!canManualFlash) return
     if (!portPath && !simulationMode) {
@@ -134,17 +252,18 @@ export default function UpdateRoute() {
     }
   }
 
-  const handleManualReset = () => {
+  const handleManualReset = (): void => {
     setActiveFlash(null)
     flashReset()
     setSelectedFile(null)
     setManualError(null)
+    setSdPanelOpen(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   // ---- Sub-renderers ----
 
-  const renderProgress = () => (
+  const renderProgress = (): React.JSX.Element => (
     <div>
       <div style={{ height: 3, background: '#1C1C1C', borderRadius: 2, overflow: 'hidden' }}>
         <div
@@ -178,7 +297,7 @@ export default function UpdateRoute() {
     </div>
   )
 
-  const renderReleaseCard = (release: FirmwareRelease, isLatest: boolean) => {
+  const renderReleaseCard = (release: FirmwareRelease, isLatest: boolean): React.JSX.Element => {
     const isActive = activeFlash?.type === 'release' && activeFlash.tag === release.tag
     const hasBinary = !!release.downloadUrl
     const notesOpen = isLatest ? latestNotesOpen : olderNotesOpen
@@ -194,6 +313,10 @@ export default function UpdateRoute() {
     const showDone = isActive && state === 'done'
     const showError = isActive && state === 'error' && flashError
 
+    const sizeHint = release.payloadBytes
+      ? `${formatBytes(release.payloadBytes)} · ~${String(estimateFlashSeconds(release.payloadBytes))} s`
+      : null
+
     return (
       <div
         style={{
@@ -206,7 +329,7 @@ export default function UpdateRoute() {
           gap: 8,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#CCCCCC' }}>
             v{release.version}
           </span>
@@ -284,7 +407,11 @@ export default function UpdateRoute() {
         )}
         {showError && <div style={{ fontSize: 11, color: '#CC4444' }}>{flashError}</div>}
 
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {sizeHint && !showProgress && !showDone && !showError && (
+            <span style={{ fontSize: 10, color: '#555555' }}>{sizeHint}</span>
+          )}
+          <div style={{ flex: 1 }} />
           {isActive && (state === 'done' || state === 'error') && (
             <button
               onClick={handleFlashReset}
@@ -308,8 +435,7 @@ export default function UpdateRoute() {
             disabled={!canFlashAny || !hasBinary || flashBusy || (isActive && state === 'done')}
             title={!hasBinary ? 'No firmware binary attached to this release' : undefined}
             style={{
-              flex: 1,
-              padding: '5px 0',
+              padding: '5px 14px',
               background: isLatest
                 ? canFlashAny && hasBinary && !(isActive && state === 'done')
                   ? '#1A1A0D'
@@ -371,7 +497,7 @@ export default function UpdateRoute() {
         alignItems: 'center',
         justifyContent: 'flex-start',
         padding: 32,
-        gap: 24,
+        gap: 20,
         overflowY: 'auto',
       }}
     >
@@ -388,9 +514,77 @@ export default function UpdateRoute() {
         >
           Firmware Update
         </h2>
-        <p style={{ fontSize: 12, color: '#AAAAAA' }}>
+        <p style={{ fontSize: 12, color: '#888888' }}>
           Flash a new firmware binary to the connected CANShift device over USB.
         </p>
+      </div>
+
+      {/* Firmware check banner */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          background: '#161616',
+          border: `1px solid ${TONE_BORDER[headerCopy.tone]}`,
+          borderRadius: 6,
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          {firmwareCheck.kind === 'probing' ? (
+            <span style={{ flexShrink: 0, marginTop: 2 }}>
+              <Spinner color={TONE_ACCENT.progress} size={20} />
+            </span>
+          ) : (
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 8,
+                marginTop: 6,
+                borderRadius: '50%',
+                background: TONE_ACCENT[headerCopy.tone],
+                flexShrink: 0,
+              }}
+            />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 13,
+                color: TONE_ACCENT[headerCopy.tone],
+                fontWeight: 600,
+                marginBottom: 2,
+              }}
+            >
+              {headerCopy.title}
+            </div>
+            <div style={{ fontSize: 11, color: '#888888', lineHeight: 1.5 }}>
+              {headerCopy.detail}
+            </div>
+          </div>
+          {headerCopy.showRecheck && (connected || simulationMode) && (
+            <button
+              onClick={requestFirmwareRecheck}
+              disabled={firmwareCheck.kind === 'probing'}
+              style={{
+                padding: '5px 12px',
+                background: 'transparent',
+                border: '1px solid #2A2A2A',
+                borderRadius: 4,
+                color: '#AAAAAA',
+                fontSize: 11,
+                cursor: firmwareCheck.kind === 'probing' ? 'default' : 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              Check now
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Device status */}
@@ -428,6 +622,17 @@ export default function UpdateRoute() {
           )}
         </div>
       </div>
+
+      {/* SD prep panel — surfaces after a successful flash, but the user can
+          also reach it manually via the SD card row in DonePanel.            */}
+      {sdPanelOpen && (
+        <SdPrepPanel
+          expanded
+          onClose={() => {
+            setSdPanelOpen(false)
+          }}
+        />
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Release list                                                         */}
@@ -668,6 +873,30 @@ export default function UpdateRoute() {
           {isManualActive && flashBusy ? 'Flashing…' : 'Flash Firmware'}
         </button>
       </div>
+
+      {/* Manual SD prep entry — also reachable from this row when no flash
+          has happened yet (e.g. swapping cards on a working device).         */}
+      {!sdPanelOpen && (
+        <button
+          onClick={() => {
+            setSdPanelOpen(true)
+          }}
+          style={{
+            width: '100%',
+            maxWidth: 480,
+            padding: '8px 12px',
+            background: 'transparent',
+            border: '1px solid #222222',
+            borderRadius: 5,
+            color: '#888888',
+            fontSize: 11,
+            cursor: 'pointer',
+            letterSpacing: '0.03em',
+          }}
+        >
+          Prepare an SD card…
+        </button>
+      )}
 
       {/* Wi-Fi note */}
       <div

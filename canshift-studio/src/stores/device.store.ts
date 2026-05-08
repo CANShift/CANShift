@@ -17,12 +17,25 @@ export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error
  */
 export type BurnPhase = 'idle' | 'pushing' | 'rebooting' | 'done'
 
-/** Controls the firmware flash / update dialog. */
-export interface FirmwareDialogState {
-  visible: boolean
-  /** 'flash' = device has no firmware; 'update' = outdated firmware. */
-  mode: 'flash' | 'update' | null
-}
+/**
+ * Result of probing the device firmware version against the latest GitHub
+ * release. Drives the SideRail update dot, the StatusBar (update) hint and
+ * the UpdateRoute panel header.
+ *
+ *   idle             — no probe yet (no device, simulation, or already latched)
+ *   probing          — CMD_GET_STATUS in flight
+ *   no_firmware      — two consecutive misses → device has no CANShift firmware
+ *   up_to_date       — version matches latest stable release (or list unavailable)
+ *   update_available — newer release is available
+ *   check_failed     — version probed but release list lookup threw
+ */
+export type FirmwareCheck =
+  | { kind: 'idle' }
+  | { kind: 'probing' }
+  | { kind: 'no_firmware' }
+  | { kind: 'up_to_date'; version: string; checkedAt: number }
+  | { kind: 'update_available'; version: string; latestVersion: string; checkedAt: number }
+  | { kind: 'check_failed'; version: string; checkedAt: number }
 
 interface DeviceState {
   status: ConnectionStatus
@@ -38,8 +51,16 @@ interface DeviceState {
   // Simulation mode — behaves as connected without physical hardware
   simulationMode: boolean
 
-  // Firmware dialog
-  firmwareDialog: FirmwareDialogState
+  /** Result of the firmware check pipeline (probe + release comparison). */
+  firmwareCheck: FirmwareCheck
+
+  /**
+   * Bump-counter consumed by useFirmwareCheck to force a re-probe on demand
+   * (e.g. the user clicked "Check now" in UpdateRoute). Storing the trigger
+   * in the store keeps the recheck call site decoupled from the orchestrator
+   * hook, which is mounted once at App.tsx.
+   */
+  firmwareCheckTick: number
 
   /**
    * Mirrors the firmware's day/night mode. `null` until reported by
@@ -61,7 +82,9 @@ interface DeviceState {
   setError: (message: string) => void
   clearError: () => void
   setFirmwareVersion: (version: string | null) => void
-  setFirmwareDialog: (state: FirmwareDialogState) => void
+  setFirmwareCheck: (check: FirmwareCheck) => void
+  /** Trigger a re-probe — useFirmwareCheck listens on `firmwareCheckTick`. */
+  requestFirmwareRecheck: () => void
   setIsDayMode: (isDay: boolean | null) => void
   setSdState: (state: SdRuntimeState) => void
   enterSimulation: () => void
@@ -76,10 +99,9 @@ interface DeviceState {
   setBurnPhase: (phase: BurnPhase) => void
 
   /**
-   * True while `useFirmwareFlash.flash()` is in flight. Distinct from
-   * `firmwareDialog.visible` because UpdateRoute drives a flash without ever
-   * opening the firmware dialog. `useAutoConnect` checks this so its 2 s
-   * reconnect poll cannot grab the serial port back from esptool-js mid-flash.
+   * True while `useFirmwareFlash.flash()` is in flight. UpdateRoute drives a
+   * flash from the panel; `useAutoConnect` checks this so its 2 s reconnect
+   * poll cannot grab the serial port back from esptool-js mid-flash.
    */
   flashing: boolean
   setFlashing: (flashing: boolean) => void
@@ -94,7 +116,8 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   connected: false,
   syncing: false,
   simulationMode: false,
-  firmwareDialog: { visible: false, mode: null },
+  firmwareCheck: { kind: 'idle' },
+  firmwareCheckTick: 0,
   isDayMode: null,
   sdState: 'unknown',
   lastPushedConfig: null,
@@ -113,6 +136,8 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       syncing: false,
       isDayMode: null,
       sdState: 'unknown',
+      firmwareCheck: { kind: 'idle' },
+      firmwareCheckTick: 0,
     })
   },
 
@@ -142,8 +167,12 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
     set({ firmwareVersion: version })
   },
 
-  setFirmwareDialog: (state) => {
-    set({ firmwareDialog: state })
+  setFirmwareCheck: (check) => {
+    set({ firmwareCheck: check })
+  },
+
+  requestFirmwareRecheck: () => {
+    set((s) => ({ firmwareCheckTick: s.firmwareCheckTick + 1 }))
   },
 
   setIsDayMode: (isDay) => {

@@ -7,12 +7,13 @@
 import { useEffect, useState } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 import type { BurnPhase } from '../../stores/device.store'
+import PhaseIndicator from './PhaseIndicator'
+import type { PhaseTone } from './PhaseIndicator'
 
 interface PhaseCopy {
   title: string
   detail: string
-  /** Tone — drives the spinner / dot color. */
-  tone: 'progress' | 'success'
+  tone: PhaseTone
 }
 
 const PHASE_COPY: Record<Exclude<BurnPhase, 'idle'>, PhaseCopy> = {
@@ -31,39 +32,6 @@ const PHASE_COPY: Record<Exclude<BurnPhase, 'idle'>, PhaseCopy> = {
     detail: 'Device reconnected — your config is live.',
     tone: 'success',
   },
-}
-
-function Spinner({ color }: { color: string }) {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden>
-      <circle cx="16" cy="16" r="13" fill="none" stroke="#1A1A1A" strokeWidth="3" />
-      <circle
-        cx="16"
-        cy="16"
-        r="13"
-        fill="none"
-        stroke={color}
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeDasharray="22 60"
-        transform="rotate(-90 16 16)"
-        style={{
-          transformOrigin: '16px 16px',
-          animation: 'canshift-spin 1.1s linear infinite',
-        }}
-      />
-    </svg>
-  )
-}
-
-let _spinKeyframesInjected = false
-function ensureSpinKeyframes(): void {
-  if (_spinKeyframesInjected) return
-  _spinKeyframesInjected = true
-  const el = document.createElement('style')
-  el.textContent =
-    '@keyframes canshift-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
-  document.head.appendChild(el)
 }
 
 export default function BurnProgressModal() {
@@ -86,14 +54,9 @@ export default function BurnProgressModal() {
     return undefined
   }, [burnPhase])
 
-  useEffect(() => {
-    if (shown !== null) ensureSpinKeyframes()
-  }, [shown])
-
   if (shown === null) return null
 
   const copy = PHASE_COPY[shown]
-  const accent = copy.tone === 'success' ? '#3DB86B' : '#E08030'
   const visible = burnPhase !== 'idle'
 
   return (
@@ -121,39 +84,10 @@ export default function BurnProgressModal() {
           padding: '24px 32px',
           minWidth: 320,
           maxWidth: 460,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 14,
           boxShadow: '0 8px 32px #00000088',
         }}
       >
-        {copy.tone === 'success' ? (
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: accent,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#0A0A0A',
-              fontSize: 18,
-              fontWeight: 700,
-            }}
-          >
-            ✓
-          </div>
-        ) : (
-          <Spinner color={accent} />
-        )}
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 4 }}>
-            {copy.title}
-          </div>
-          <div style={{ fontSize: 12, color: '#888888', lineHeight: 1.5 }}>{copy.detail}</div>
-        </div>
+        <PhaseIndicator tone={copy.tone} title={copy.title} detail={copy.detail} />
       </div>
     </div>
   )
