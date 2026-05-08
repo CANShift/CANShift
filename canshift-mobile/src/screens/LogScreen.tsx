@@ -1,8 +1,9 @@
 // LogScreen.tsx — BLE and system event log
 
 import React from 'react'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, FlatList, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Button } from '../components/ui'
 import { Colors, Typography, Spacing } from '../theme'
 import { useLogStore, type LogEntry, type LogLevel } from '../stores/log.store'
 
@@ -40,9 +41,9 @@ export default function LogScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Log</Text>
         {entries.length > 0 && (
-          <TouchableOpacity onPress={clear} style={styles.clearBtn}>
-            <Text style={styles.clearText}>Clear</Text>
-          </TouchableOpacity>
+          <Button variant="ghost" size="sm" onPress={clear} className="px-1">
+            <Text className="text-sm text-primary">Clear</Text>
+          </Button>
         )}
       </View>
       <FlatList
@@ -68,8 +69,6 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   title: { fontSize: Typography.md, fontWeight: '600', color: Colors.text },
-  clearBtn: { padding: Spacing.xs },
-  clearText: { fontSize: Typography.sm, color: Colors.accent },
   list: { paddingVertical: Spacing.xs },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
   emptyText: { color: Colors.textMuted, fontSize: Typography.sm },
