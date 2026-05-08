@@ -1,7 +1,6 @@
 // ble.service.ts — BLE connection, telemetry subscription, settings/cmd write
 
 import { BleManager, Device, State, Characteristic, Subscription } from 'react-native-ble-plx'
-import { Buffer } from 'buffer'
 import { Platform } from 'react-native'
 import {
   BLE_SERVICE_UUID,
@@ -17,6 +16,7 @@ import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
 import { useReconnectStore } from '../stores/reconnect.store'
 import { parseTelemetry, parseStatus } from './ble.validators'
+import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 import {
   requestAndroidBlePermissions,
@@ -67,14 +67,6 @@ const STALENESS_THRESHOLD_MS = 2_000
 // ---------------------------------------------------------------------------
 // Pure helpers (no instance state)
 // ---------------------------------------------------------------------------
-
-function decodeBase64(value: string): string {
-  return Buffer.from(value, 'base64').toString('utf8')
-}
-
-function encodeBase64(value: string): string {
-  return Buffer.from(value, 'utf8').toString('base64')
-}
 
 /** Opaque read so the TS narrower doesn't treat `signal.aborted` as constant
  *  across awaits — it can flip between yields. */
