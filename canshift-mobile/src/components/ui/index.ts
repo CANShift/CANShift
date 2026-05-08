@@ -1,2 +1,8 @@
 export { Button, buttonVariants, buttonTextVariants } from './button'
 export type { ButtonProps } from './button'
+export { Input, inputVariants } from './input'
+export type { InputProps } from './input'
+export { Label } from './label'
+export type { LabelProps } from './label'
+export { Switch } from './switch'
+export type { UISwitchProps } from './switch'
