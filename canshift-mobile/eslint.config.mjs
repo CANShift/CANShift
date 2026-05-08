@@ -38,6 +38,7 @@ export default tseslint.config(
       'ios/**',
       'android/**',
       'assets/**',
+      'coverage/**',
       'plugins/**',
       'babel.config.js',
       'eslint.config.mjs',
