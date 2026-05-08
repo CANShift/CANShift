@@ -11,7 +11,7 @@ interface SignalCardProps {
   compact?: boolean
 }
 
-export default function SignalCard({ meta, value, compact = false }: SignalCardProps) {
+function SignalCard({ meta, value, compact = false }: SignalCardProps) {
   const hasValue = value !== undefined
 
   const formatted = hasValue
@@ -30,6 +30,8 @@ export default function SignalCard({ meta, value, compact = false }: SignalCardP
     </View>
   )
 }
+
+export default React.memo(SignalCard)
 
 const styles = StyleSheet.create({
   card: {

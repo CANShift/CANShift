@@ -3,6 +3,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useSignalsStore } from '../stores/signals.store'
@@ -21,7 +22,9 @@ const GRID_SIGNALS = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
 export default function DashScreen(_: Props) {
   const { width, height } = useWindowDimensions()
   const isLandscape = width > height
-  const { values, isLive } = useSignalsStore()
+  const { values, isLive } = useSignalsStore(
+    useShallow((s) => ({ values: s.values, isLive: s.isLive })),
+  )
 
   return (
     <SafeAreaView style={styles.container}>
