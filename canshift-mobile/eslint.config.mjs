@@ -41,6 +41,7 @@ export default tseslint.config(
       'plugins/**',
       'babel.config.js',
       'eslint.config.mjs',
+      'jest.config.js',
     ],
   }
 )

@@ -118,6 +118,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
       - name: Bundle check (iOS)
         run: npx expo export --platform ios --output-dir /tmp/expo-bundle
 
