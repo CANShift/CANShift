@@ -14,29 +14,12 @@
 
 import { net } from 'electron'
 import { SerialPort } from 'serialport'
+import type { FirmwareRelease } from './firmware.service.types'
 
 const GITHUB_OWNER = 'tburkhalterr'
 const GITHUB_REPO = 'CANShift'
 const FIRMWARE_ASSET_RE = /canshift-firmware-.*-crowpanel_28-merged\.bin$/
 const SPIFFS_ASSET_RE = /canshift-spiffs-.*-crowpanel_28\.bin$/
-
-export interface FirmwareRelease {
-  version: string
-  tag: string
-  /** Undefined when the firmware binary asset is absent from this release. */
-  downloadUrl?: string
-  /** Undefined when the SPIFFS image asset is absent from this release. */
-  spiffsUrl?: string
-  /**
-   * Size of the firmware binary asset in bytes (from GitHub `assets[].size`).
-   * Used to render an estimated flash duration in the studio UI without an
-   * extra HEAD request. Undefined when the asset is missing.
-   */
-  payloadBytes?: number
-  publishedAt: string
-  prerelease: boolean
-  notes: string
-}
 
 // ---------------------------------------------------------------------------
 // GitHub API type guards

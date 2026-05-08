@@ -11,8 +11,8 @@ import { firmwareService } from '../services/firmware.service'
 import { sdService } from '../services/sd.service'
 import { sessionService } from '../services/session.service'
 import { buildMenu } from '../menu'
-import type { FirmwareRelease } from '../services/firmware.service'
-import type { CanFrame } from '../services/usb.service'
+import type { FirmwareRelease } from '../services/firmware.service.types'
+import type { CanFrame } from '../services/usb.service.types'
 
 // ---------------------------------------------------------------------------
 // Renderer payload guards
