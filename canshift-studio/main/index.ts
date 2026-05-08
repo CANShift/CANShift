@@ -7,7 +7,7 @@ import { registerIpcHandlers, usbService } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
-import { installContentSecurityPolicy } from './services/security.service'
+import { installContentSecurityPolicy, isExternalUrlAllowed } from './services/security.service'
 import { IpcChannels } from './ipc/ipc-channels'
 
 let mainWindow: BrowserWindow | null = null
@@ -214,7 +214,11 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    if (isExternalUrlAllowed(url)) {
+      void shell.openExternal(url)
+    } else {
+      logMain('warn', `Blocked openExternal for disallowed URL scheme: ${url}`)
+    }
     return { action: 'deny' }
   })
 

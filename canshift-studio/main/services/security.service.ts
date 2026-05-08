@@ -1,7 +1,8 @@
-// security.ts — Renderer Content-Security-Policy header injection
+// security.service.ts — Renderer Content-Security-Policy + outbound URL guard
 //
-// Installs a strict CSP via session.webRequest.onHeadersReceived. Skipped in
-// dev because Vite HMR (ws://localhost) is incompatible with a strict prod CSP.
+// Centralises main-process security primitives:
+// - installContentSecurityPolicy(): strict CSP via webRequest headers (prod only)
+// - isExternalUrlAllowed(): scheme allowlist for shell.openExternal targets
 
 import { session } from 'electron'
 
@@ -30,4 +31,25 @@ export function installContentSecurityPolicy(): void {
       },
     })
   })
+}
+
+/**
+ * Returns true only when `url` is safe to hand to `shell.openExternal`.
+ * Allowlist: `https:` always; `http:` only when running under Vite dev
+ * (signalled by ELECTRON_RENDERER_URL — same convention as the CSP guard).
+ * Anything else (`file:`, `javascript:`, custom protocols, malformed URLs)
+ * is denied. Pass an explicit `isDev` for tests.
+ */
+export function isExternalUrlAllowed(
+  url: string,
+  isDev: boolean = process.env.ELECTRON_RENDERER_URL !== undefined
+): boolean {
+  try {
+    const { protocol } = new URL(url)
+    if (protocol === 'https:') return true
+    if (protocol === 'http:' && isDev) return true
+    return false
+  } catch {
+    return false
+  }
 }
