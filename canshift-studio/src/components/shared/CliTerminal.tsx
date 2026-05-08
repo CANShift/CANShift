@@ -1,24 +1,41 @@
-// CliTerminal.tsx — xterm-backed CLI panel (issue #378, PR 1).
+// CliTerminal.tsx — xterm-backed CLI panel (issue #378, PR 2).
 //
 // The whole component is loaded via `React.lazy` from App.tsx, so `@xterm/xterm`
 // and its addons stay out of the main renderer chunk. The classic
 // `ConsolePanel` is still rendered while this module fetches.
 //
-// Scope of PR 1: render the xterm host, stream the log store, support a
-// minimal keystroke loop (Enter / Backspace / Ctrl+C / Ctrl+L). History,
-// autocomplete, and full command set land in PR 2; resize + detach in PR 3.
+// PR 2 scope: full command set (`burn`, `push-usb`, `connect`, `disconnect`,
+// `flash`, `reboot`), command history (↑/↓), Tab autocompletion, and zsh-style
+// shortcuts (Ctrl+A/E/U/W). Resize + detach land in PR 3.
 
 import { useEffect, useRef } from 'react'
 import { useLogStore, type LogEntry } from '../../stores/log.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useCliSettingsStore } from '../../stores/cliSettings.store'
-import { dispatch } from '../../cli/commands'
+import { complete, dispatch, longestCommonPrefix } from '../../cli/commands'
 import { formatLogEntry } from '../../cli/format'
 import { parse, ParseError } from '../../cli/parse'
 import { buildPrompt } from '../../cli/prompt'
 import { CLI_FONT_FAMILY, CLI_FONT_SIZE, CLI_LINE_HEIGHT, CLI_THEME } from '../../cli/theme'
 import { useCliRuntime } from '../../cli/useCliRuntime'
+import {
+  backspace,
+  clearLine,
+  deleteForward,
+  deleteWordBack,
+  historyNext,
+  historyPrev,
+  insert,
+  makeLineEditor,
+  moveEnd,
+  moveHome,
+  moveLeft,
+  moveRight,
+  pushHistory,
+  renderActiveLine,
+  type LineEditorState,
+} from '../../cli/lineEditor'
 import type { CliTerminalHandle } from '../../cli/types'
 
 const PANEL_HEIGHT = 240
@@ -46,11 +63,31 @@ interface WebLinksAddonModule {
   WebLinksAddon: new () => object
 }
 
+// Control byte / escape sequence map for the keystroke handler. Centralised
+// here so the dispatch table stays exhaustive and readable.
+const KEY_ENTER = '\r'
+const KEY_BACKSPACE_DEL = '\x7f'
+const KEY_BACKSPACE_BS = '\x08'
+const KEY_CTRL_A = '\x01'
+const KEY_CTRL_C = '\x03'
+const KEY_CTRL_E = '\x05'
+const KEY_CTRL_L = '\x0c'
+const KEY_CTRL_U = '\x15'
+const KEY_CTRL_W = '\x17'
+const KEY_TAB = '\t'
+const ESC_ARROW_UP = '\x1b[A'
+const ESC_ARROW_DOWN = '\x1b[B'
+const ESC_ARROW_RIGHT = '\x1b[C'
+const ESC_ARROW_LEFT = '\x1b[D'
+const ESC_HOME = '\x1b[H'
+const ESC_END = '\x1b[F'
+const ESC_DELETE = '\x1b[3~'
+
 export default function CliTerminal() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const terminalRef = useRef<XtermTerminal | null>(null)
   const handleRef = useRef<CliTerminalHandle | null>(null)
-  const inputBufferRef = useRef<string>('')
+  const editorRef = useRef<LineEditorState>(makeLineEditor())
   const lastExitOkRef = useRef<boolean>(true)
   const lastWrittenIdRef = useRef<number>(0)
   const setEnabled = useCliSettingsStore((s) => s.setEnabled)
@@ -98,23 +135,24 @@ export default function CliTerminal() {
     let term: XtermTerminal | null = null
     let onDataDisposable: { dispose: () => void } | null = null
 
-    function writePrompt(): void {
-      if (term === null) return
+    function currentPrompt(): string {
       const state = useDeviceStore.getState()
       const config = useDashboardStore.getState().config
-      term.write(
-        buildPrompt({
-          connected: state.connected,
-          configName: config?.name ?? null,
-          lastExitOk: lastExitOkRef.current,
-        })
-      )
+      return buildPrompt({
+        connected: state.connected,
+        configName: config?.name ?? null,
+        lastExitOk: lastExitOkRef.current,
+      })
     }
 
-    function clearInputLine(): void {
+    function writePrompt(): void {
       if (term === null) return
-      // \r → carriage return, \x1b[K → erase to end of line.
-      term.write('\r\x1b[K')
+      term.write(currentPrompt())
+    }
+
+    function redrawActive(): void {
+      if (term === null) return
+      term.write(renderActiveLine(currentPrompt(), editorRef.current))
     }
 
     async function dispatchInput(line: string): Promise<void> {
@@ -137,6 +175,45 @@ export default function CliTerminal() {
       }
       const result = await dispatch(parsed.name, parsed.rawArgs, ctxRef.current)
       lastExitOkRef.current = result.ok
+    }
+
+    async function handleTab(): Promise<void> {
+      if (term === null) return
+      const editor = editorRef.current
+      // Tab only meaningfully completes when the cursor is at end-of-buffer;
+      // mid-buffer completion is a power-user nicety we can defer.
+      if (editor.cursor !== editor.buffer.length) return
+      // Tokenise current buffer using the same parser semantics. Trailing
+      // whitespace means the user has moved on to a fresh arg slot.
+      const trailingSpace = /\s$/.test(editor.buffer)
+      let tokens: string[]
+      try {
+        const parsed = parse(editor.buffer)
+        tokens = parsed === null ? [] : [parsed.name, ...parsed.rawArgs]
+      } catch {
+        return
+      }
+      const candidates = await complete(tokens, trailingSpace, ctxRef.current)
+      if (candidates.length === 0) return
+      const partial = trailingSpace ? '' : (tokens[tokens.length - 1] ?? '')
+      const shared = longestCommonPrefix(candidates)
+      if (candidates.length === 1) {
+        const completion = (candidates[0] ?? '').slice(partial.length) + ' '
+        editorRef.current = insert(editor, completion)
+        redrawActive()
+        return
+      }
+      // Multiple matches — extend by the unambiguous prefix if any, else
+      // print the candidates and re-render the prompt + active buffer.
+      if (shared.length > partial.length) {
+        const completion = shared.slice(partial.length)
+        editorRef.current = insert(editor, completion)
+        redrawActive()
+        return
+      }
+      term.write('\r\n' + candidates.join('  ') + '\r\n')
+      writePrompt()
+      term.write(editorRef.current.buffer)
     }
 
     async function boot(): Promise<void> {
@@ -202,49 +279,98 @@ export default function CliTerminal() {
       instance.focus()
 
       onDataDisposable = instance.onData((data) => {
-        // Ctrl+C → cancel current input.
-        if (data === '\x03') {
+        if (term === null) return
+        // Ctrl+C — cancel current input.
+        if (data === KEY_CTRL_C) {
           instance.write('^C\r\n')
-          inputBufferRef.current = ''
+          editorRef.current = makeLineEditor() // resets historyIndex too
+          // Preserve history across cancels.
+          editorRef.current = { ...editorRef.current, history: editorRef.current.history }
           writePrompt()
           return
         }
-        // Ctrl+L → clear screen and redraw.
-        if (data === '\x0c') {
+        if (data === KEY_CTRL_L) {
           instance.clear()
           writePrompt()
-          instance.write(inputBufferRef.current)
+          instance.write(editorRef.current.buffer)
           return
         }
-        // Enter
-        if (data === '\r') {
-          const line = inputBufferRef.current
-          inputBufferRef.current = ''
+        if (data === KEY_ENTER) {
+          const line = editorRef.current.buffer
+          editorRef.current = pushHistory(editorRef.current, line)
+          editorRef.current = { ...editorRef.current, buffer: '', cursor: 0 }
           void dispatchInput(line).then(() => {
             writePrompt()
           })
           return
         }
-        // Backspace (DEL = 0x7F, BS = 0x08)
-        if (data === '\x7f' || data === '\x08') {
-          if (inputBufferRef.current.length > 0) {
-            inputBufferRef.current = inputBufferRef.current.slice(0, -1)
-            instance.write('\b \b')
-          }
+        if (data === KEY_TAB) {
+          void handleTab()
           return
         }
-        // Other control sequences (history, cursor, Tab) — left for PR 2.
+        if (data === KEY_BACKSPACE_DEL || data === KEY_BACKSPACE_BS) {
+          const next = backspace(editorRef.current)
+          if (next === editorRef.current) return
+          editorRef.current = next
+          redrawActive()
+          return
+        }
+        if (data === KEY_CTRL_A || data === ESC_HOME) {
+          editorRef.current = moveHome(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === KEY_CTRL_E || data === ESC_END) {
+          editorRef.current = moveEnd(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === KEY_CTRL_U) {
+          editorRef.current = clearLine(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === KEY_CTRL_W) {
+          editorRef.current = deleteWordBack(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === ESC_ARROW_UP) {
+          editorRef.current = historyPrev(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === ESC_ARROW_DOWN) {
+          editorRef.current = historyNext(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === ESC_ARROW_LEFT) {
+          editorRef.current = moveLeft(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === ESC_ARROW_RIGHT) {
+          editorRef.current = moveRight(editorRef.current)
+          redrawActive()
+          return
+        }
+        if (data === ESC_DELETE) {
+          editorRef.current = deleteForward(editorRef.current)
+          redrawActive()
+          return
+        }
+        // Drop other control sequences (function keys, mouse, paste-bracket
+        // markers, …) — letting them through would leak escape bytes into the
+        // buffer and corrupt the rendered line.
         if (data.length === 1) {
           const code = data.charCodeAt(0)
           if (code < 0x20 || code === 0x7f) return
         } else if (data.startsWith('\x1b')) {
           return
         }
-        inputBufferRef.current += data
-        instance.write(data)
-        // Reference clearInputLine so it isn't tree-shaken away — reserved
-        // for upcoming Ctrl+U handling in PR 2.
-        void clearInputLine
+        editorRef.current = insert(editorRef.current, data)
+        redrawActive()
       })
     }
 

@@ -12,6 +12,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import { useLogStore } from '../../stores/log.store'
 
 const writes: string[] = []
@@ -61,6 +62,19 @@ vi.mock('../../services/ipc.service', () => ({
   appIpc: {
     version: () => Promise.resolve('0.7.1'),
   },
+  sessionIpc: {
+    getLastPortPath: () => Promise.resolve(null),
+  },
+  sdIpc: {
+    pushOverUsb: () => Promise.resolve({ success: true, copied: [], skipped: [] }),
+  },
+  usbService: {
+    listPorts: () => Promise.resolve([]),
+    connect: () => Promise.resolve({ success: true }),
+    disconnect: () => Promise.resolve({ success: true }),
+    pushConfig: () => Promise.resolve({ success: true }),
+    reboot: () => Promise.resolve({ success: true }),
+  },
 }))
 
 import CliTerminal from './CliTerminal'
@@ -89,7 +103,11 @@ async function mount(): Promise<void> {
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
-    root?.render(<CliTerminal />)
+    root?.render(
+      <MemoryRouter>
+        <CliTerminal />
+      </MemoryRouter>
+    )
     await Promise.resolve()
   })
   // Allow the chained dynamic imports + log replay to resolve.

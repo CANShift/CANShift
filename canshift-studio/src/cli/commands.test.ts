@@ -3,18 +3,34 @@
 // can assert on rendered output without xterm in the loop.
 
 import { describe, expect, it, vi } from 'vitest'
-import { COMMANDS, dispatch } from './commands'
-import type { CommandContext } from './types'
+import { COMMANDS, complete, dispatch, longestCommonPrefix } from './commands'
+import type { CliActions, CommandContext } from './types'
 
 interface FakeTerminal {
   written: string[]
   clear: ReturnType<typeof vi.fn>
 }
 
+const okResult = { ok: true } as const
+
+function makeActions(overrides: Partial<CliActions> = {}): CliActions {
+  return {
+    burnConfig: vi.fn(() => Promise.resolve(okResult)),
+    connect: vi.fn(() => Promise.resolve(okResult)),
+    disconnect: vi.fn(() => Promise.resolve(okResult)),
+    pushUsb: vi.fn(() => Promise.resolve(okResult)),
+    reboot: vi.fn(() => Promise.resolve(okResult)),
+    openFlashRoute: vi.fn(() => okResult),
+    listPorts: vi.fn(() => Promise.resolve<string[]>([])),
+    ...overrides,
+  }
+}
+
 function makeContext(overrides: Partial<CommandContext> = {}): {
   ctx: CommandContext
   terminal: FakeTerminal
   log: ReturnType<typeof vi.fn>
+  actions: CliActions
 } {
   const written: string[] = []
   const clearFn = vi.fn<() => void>()
@@ -23,6 +39,7 @@ function makeContext(overrides: Partial<CommandContext> = {}): {
     clear: clearFn,
   }
   const log = vi.fn()
+  const actions = overrides.actions ?? makeActions()
   const ctx: CommandContext = {
     appVersion: '0.7.1',
     device: {
@@ -30,6 +47,7 @@ function makeContext(overrides: Partial<CommandContext> = {}): {
       portPath: '/dev/tty.usbserial-0001',
       firmwareVersion: '0.7.1',
       sdState: 'ok',
+      simulationMode: false,
     },
     config: { name: 'demo' },
     log,
@@ -45,12 +63,13 @@ function makeContext(overrides: Partial<CommandContext> = {}): {
       },
     },
     commands: COMMANDS,
+    actions,
     ...overrides,
   }
-  return { ctx, terminal, log }
+  return { ctx, terminal, log, actions }
 }
 
-describe('commands', () => {
+describe('commands — informational', () => {
   it('help lists all registered commands sorted alphabetically', async () => {
     const { ctx, terminal } = makeContext()
     const res = await dispatch('help', [], ctx)
@@ -99,6 +118,7 @@ describe('commands', () => {
         portPath: null,
         firmwareVersion: null,
         sdState: 'unknown',
+        simulationMode: false,
       },
     })
     const res = await dispatch('version', [], ctx)
@@ -122,6 +142,7 @@ describe('commands', () => {
         portPath: '/dev/tty.usbserial-0001',
         firmwareVersion: null,
         sdState: 'ok',
+        simulationMode: false,
       },
     })
     const res = await dispatch('status', [], ctx)
@@ -138,6 +159,7 @@ describe('commands', () => {
         portPath: null,
         firmwareVersion: null,
         sdState: 'unknown',
+        simulationMode: false,
       },
     })
     const res = await dispatch('status', [], ctx)
@@ -150,5 +172,216 @@ describe('commands', () => {
     const res = await dispatch('foobar', [], ctx)
     expect(res.ok).toBe(false)
     expect(terminal.written.join('')).toContain('zsh: command not found: foobar')
+  })
+})
+
+describe('commands — device actions', () => {
+  it('burn refuses without a loaded config', async () => {
+    const actions = makeActions()
+    const { ctx, terminal } = makeContext({ config: null, actions })
+    const res = await dispatch('burn', [], ctx)
+    expect(res.ok).toBe(false)
+    expect(terminal.written.join('')).toContain('no config loaded')
+    expect(actions.burnConfig).not.toHaveBeenCalled()
+  })
+
+  it('burn refuses when not connected', async () => {
+    const actions = makeActions()
+    const { ctx, terminal } = makeContext({
+      device: {
+        connected: false,
+        portPath: null,
+        firmwareVersion: null,
+        sdState: 'unknown',
+        simulationMode: false,
+      },
+      actions,
+    })
+    const res = await dispatch('burn', [], ctx)
+    expect(res.ok).toBe(false)
+    expect(terminal.written.join('')).toContain('not connected')
+    expect(actions.burnConfig).not.toHaveBeenCalled()
+  })
+
+  it('burn forwards to actions.burnConfig and propagates result', async () => {
+    const actions = makeActions({
+      burnConfig: vi.fn(() => Promise.resolve({ ok: false, reason: 'sd missing' } as const)),
+    })
+    const { ctx } = makeContext({ actions })
+    const res = await dispatch('burn', [], ctx)
+    expect(res).toEqual({ ok: false, reason: 'sd missing' })
+    expect(actions.burnConfig).toHaveBeenCalledTimes(1)
+  })
+
+  it('push-usb refuses when not connected', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({
+      device: {
+        connected: false,
+        portPath: null,
+        firmwareVersion: null,
+        sdState: 'unknown',
+        simulationMode: false,
+      },
+      actions,
+    })
+    const res = await dispatch('push-usb', [], ctx)
+    expect(res.ok).toBe(false)
+    expect(actions.pushUsb).not.toHaveBeenCalled()
+  })
+
+  it('push-usb forwards to actions.pushUsb', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({ actions })
+    const res = await dispatch('push-usb', [], ctx)
+    expect(res).toEqual({ ok: true })
+    expect(actions.pushUsb).toHaveBeenCalledTimes(1)
+  })
+
+  it('connect refuses when already connected', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({ actions })
+    const res = await dispatch('connect', [], ctx)
+    expect(res.ok).toBe(false)
+    expect(actions.connect).not.toHaveBeenCalled()
+  })
+
+  it('connect with explicit port forwards the argument', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({
+      device: {
+        connected: false,
+        portPath: null,
+        firmwareVersion: null,
+        sdState: 'unknown',
+        simulationMode: false,
+      },
+      actions,
+    })
+    const res = await dispatch('connect', ['/dev/tty.usb'], ctx)
+    expect(res).toEqual({ ok: true })
+    expect(actions.connect).toHaveBeenCalledWith('/dev/tty.usb')
+  })
+
+  it('connect with no args forwards undefined for auto-pick', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({
+      device: {
+        connected: false,
+        portPath: null,
+        firmwareVersion: null,
+        sdState: 'unknown',
+        simulationMode: false,
+      },
+      actions,
+    })
+    await dispatch('connect', [], ctx)
+    expect(actions.connect).toHaveBeenCalledWith(undefined)
+  })
+
+  it('disconnect refuses when not connected', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({
+      device: {
+        connected: false,
+        portPath: null,
+        firmwareVersion: null,
+        sdState: 'unknown',
+        simulationMode: false,
+      },
+      actions,
+    })
+    const res = await dispatch('disconnect', [], ctx)
+    expect(res.ok).toBe(false)
+    expect(actions.disconnect).not.toHaveBeenCalled()
+  })
+
+  it('disconnect forwards to actions.disconnect', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({ actions })
+    const res = await dispatch('disconnect', [], ctx)
+    expect(res).toEqual({ ok: true })
+    expect(actions.disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it('reboot refuses when not connected', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({
+      device: {
+        connected: false,
+        portPath: null,
+        firmwareVersion: null,
+        sdState: 'unknown',
+        simulationMode: false,
+      },
+      actions,
+    })
+    const res = await dispatch('reboot', [], ctx)
+    expect(res.ok).toBe(false)
+    expect(actions.reboot).not.toHaveBeenCalled()
+  })
+
+  it('flash navigates to the firmware update route', async () => {
+    const actions = makeActions()
+    const { ctx } = makeContext({ actions })
+    const res = await dispatch('flash', [], ctx)
+    expect(res).toEqual({ ok: true })
+    expect(actions.openFlashRoute).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('complete', () => {
+  it('returns matching command names on first token', async () => {
+    const { ctx } = makeContext()
+    const out = await complete(['c'], false, ctx)
+    expect(out).toContain('clear')
+    expect(out).toContain('connect')
+    expect(out).not.toContain('help')
+  })
+
+  it('returns all command names for an empty line', async () => {
+    const { ctx } = makeContext()
+    const out = await complete([], false, ctx)
+    expect(out).toEqual(COMMANDS.map((c) => c.name))
+  })
+
+  it('returns the help-completer arg list when typing help <prefix>', async () => {
+    const { ctx } = makeContext()
+    const out = await complete(['help', 's'], false, ctx)
+    expect(out).toContain('status')
+    expect(out).not.toContain('clear')
+  })
+
+  it('returns connect-completer values for connect <port>', async () => {
+    const actions = makeActions({
+      listPorts: vi.fn(() => Promise.resolve(['/dev/tty.usbserial-110', '/dev/tty.usbmodem'])),
+    })
+    const { ctx } = makeContext({ actions })
+    const out = await complete(['connect', '/dev/tty.usbs'], false, ctx)
+    expect(out).toEqual(['/dev/tty.usbserial-110'])
+  })
+
+  it('returns no completions for commands without a completer past the first token', async () => {
+    const { ctx } = makeContext()
+    const out = await complete(['status', ''], false, ctx)
+    expect(out).toEqual([])
+  })
+})
+
+describe('longestCommonPrefix', () => {
+  it('returns the empty string for an empty list', () => {
+    expect(longestCommonPrefix([])).toBe('')
+  })
+
+  it('returns the only entry when the list has one item', () => {
+    expect(longestCommonPrefix(['hello'])).toBe('hello')
+  })
+
+  it('returns the shared prefix of multiple strings', () => {
+    expect(longestCommonPrefix(['connect', 'console', 'context'])).toBe('con')
+  })
+
+  it('returns the empty string when there is no shared prefix', () => {
+    expect(longestCommonPrefix(['burn', 'flash'])).toBe('')
   })
 })
