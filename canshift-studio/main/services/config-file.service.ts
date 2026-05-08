@@ -3,20 +3,8 @@
 import { dialog } from 'electron'
 import { readFile, writeFile } from 'fs/promises'
 import { resolve } from 'node:path'
+import type { OpenResult, SaveResult } from '@tmbk/canshift-core'
 import { sessionService } from './session.service'
-
-interface OpenResult {
-  success: boolean
-  filePath?: string
-  content?: unknown
-  error?: string
-}
-
-interface SaveResult {
-  success: boolean
-  filePath?: string
-  error?: string
-}
 
 // Renderer-supplied paths must match a path the user previously surfaced through
 // a dialog or recent-files entry. Without this, a compromised renderer could

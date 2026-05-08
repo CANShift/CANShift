@@ -11,26 +11,7 @@
 
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
-
-interface PortInfo {
-  path: string
-  manufacturer?: string
-  serialNumber?: string
-  vendorId?: string
-  productId?: string
-}
-
-interface ConnectionStatus {
-  connected: boolean
-  portPath?: string
-}
-
-interface UsbResult {
-  success: boolean
-  error?: string
-  /** Full parsed JSON response from the device (for commands that return extra fields). */
-  data?: Record<string, unknown>
-}
+import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
 
 export interface CanFrame {
   id: number
