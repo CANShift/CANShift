@@ -2,6 +2,8 @@
 
 import { dialog } from 'electron'
 import { readFile, writeFile } from 'fs/promises'
+import { resolve } from 'node:path'
+import { sessionService } from './session.service'
 
 interface OpenResult {
   success: boolean
@@ -16,8 +18,31 @@ interface SaveResult {
   error?: string
 }
 
+// Renderer-supplied paths must match a path the user previously surfaced through
+// a dialog or recent-files entry. Without this, a compromised renderer could
+// invoke CONFIG_OPEN_PATH to read any user-readable file (#214). The error
+// message intentionally omits the rejected path so we don't leak FS structure.
+const PATH_NOT_SURFACED_ERROR = 'blocked: path not previously surfaced'
+
 export class ConfigFileService {
   private currentFilePath: string | null = null
+  private readonly allowedPaths = new Set<string>()
+
+  constructor(getRecentFiles: () => string[] = sessionService.getRecentFiles) {
+    // Persisted recent-files survive restarts, so seeding the allowlist with
+    // them lets the menu's "Open Recent" stay functional after a relaunch.
+    for (const filePath of getRecentFiles()) {
+      this.allowPath(filePath)
+    }
+  }
+
+  private allowPath(filePath: string): void {
+    this.allowedPaths.add(resolve(filePath))
+  }
+
+  private isPathAllowed(filePath: string): boolean {
+    return this.allowedPaths.has(resolve(filePath))
+  }
 
   async openFile(): Promise<OpenResult> {
     const result = await dialog.showOpenDialog({
@@ -35,6 +60,8 @@ export class ConfigFileService {
 
     const filePath = result.filePaths[0]
     if (!filePath) return { success: false }
+
+    this.allowPath(filePath)
 
     try {
       const raw = await readFile(filePath, 'utf-8')
@@ -62,6 +89,7 @@ export class ConfigFileService {
     try {
       await writeFile(targetPath, JSON.stringify(config, null, 2), 'utf-8')
       this.currentFilePath = targetPath
+      this.allowPath(targetPath)
       return { success: true, filePath: targetPath }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -70,6 +98,10 @@ export class ConfigFileService {
   }
 
   async openFilePath(filePath: string): Promise<OpenResult> {
+    if (!this.isPathAllowed(filePath)) {
+      return { success: false, error: PATH_NOT_SURFACED_ERROR }
+    }
+
     try {
       const raw = await readFile(filePath, 'utf-8')
       const content: unknown = JSON.parse(raw)
@@ -129,6 +161,8 @@ export class ConfigFileService {
       return { success: false }
     }
 
+    this.allowPath(result.filePath)
+
     try {
       await writeFile(result.filePath, JSON.stringify(config, null, 2), 'utf-8')
       return { success: true, filePath: result.filePath }
@@ -148,6 +182,8 @@ export class ConfigFileService {
     if (result.canceled || !result.filePath) {
       return { success: false }
     }
+
+    this.allowPath(result.filePath)
 
     try {
       await writeFile(result.filePath, JSON.stringify(config, null, 2), 'utf-8')
