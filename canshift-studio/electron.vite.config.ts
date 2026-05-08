@@ -28,6 +28,8 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
       alias: {
+        '@': resolve(__dirname, 'src'),
+        '@lib': resolve(__dirname, 'src/lib'),
         '@components': resolve(__dirname, 'src/components'),
         '@stores': resolve(__dirname, 'src/stores'),
         '@services': resolve(__dirname, 'src/services'),

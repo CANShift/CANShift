@@ -17,6 +17,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["src/*"],
+      "@lib/*": ["src/lib/*"],
       "@shared/*": ["src/shared/*"],
       "@components/*": ["src/components/*"],
       "@stores/*": ["src/stores/*"],
