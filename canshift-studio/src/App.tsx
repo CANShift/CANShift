@@ -11,6 +11,10 @@ const UpdateRoute = lazy(() => import('./routes/UpdateRoute'))
 const CanScannerRoute = lazy(() => import('./routes/CanScannerRoute'))
 const DeviceConfigRoute = lazy(() => import('./routes/DeviceConfigRoute'))
 
+// CliTerminal — opt-in xterm panel (issue #378). Lazy so xterm + addons stay
+// out of the main renderer chunk and the bundle budget holds.
+const CliTerminal = lazy(() => import('./components/shared/CliTerminal'))
+
 function RouteLoading() {
   return (
     <div
@@ -44,6 +48,7 @@ import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
 import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useDeviceStore } from './stores/device.store'
+import { useCliSettingsStore } from './stores/cliSettings.store'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
 import BurnFailedDialog from './components/shared/BurnFailedDialog'
@@ -63,6 +68,7 @@ export default function App() {
   const firstRun = useFirstRunCheck()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const cliEnabled = useCliSettingsStore((s) => s.enabled)
 
   const ready = connected || simulationMode
 
@@ -140,7 +146,13 @@ export default function App() {
         <ConnectScreen />
       )}
 
-      <ConsolePanel />
+      {cliEnabled ? (
+        <Suspense fallback={<ConsolePanel />}>
+          <CliTerminal />
+        </Suspense>
+      ) : (
+        <ConsolePanel />
+      )}
       <ErrorBar />
       <StatusBar />
       <UpdateBanner />

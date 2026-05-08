@@ -15,12 +15,18 @@ export interface LogEntry {
   level: LogLevel
   message: string
   timestamp: Date
+  /**
+   * Optional logical scope — surfaced as a `[scope]` tag in the CLI panel
+   * (issue #378). The legacy ConsolePanel ignores it; existing 2-arg
+   * `push()` callers stay valid.
+   */
+  scope?: string
 }
 
 interface LogState {
   entries: LogEntry[]
   verbose: boolean
-  push: (level: LogLevel, message: string) => void
+  push: (level: LogLevel, message: string, scope?: string) => void
   setVerbose: (verbose: boolean) => void
   clear: () => void
 }
@@ -51,10 +57,14 @@ export const useLogStore = create<LogState>()((set, get) => ({
   entries: [],
   verbose: readVerboseFlag(),
 
-  push: (level, message) => {
+  push: (level, message, scope) => {
     if (level === 'debug' && !get().verbose) return
+    const entry: LogEntry =
+      scope !== undefined
+        ? { id: nextId++, level, message, timestamp: new Date(), scope }
+        : { id: nextId++, level, message, timestamp: new Date() }
     set((s) => ({
-      entries: [...s.entries, { id: nextId++, level, message, timestamp: new Date() }],
+      entries: [...s.entries, entry],
     }))
   },
 
