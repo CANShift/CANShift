@@ -1,6 +1,6 @@
 // ble.service.ts — BLE connection, telemetry subscription, settings/cmd write
 
-import { BleManager, Device, State, Characteristic } from 'react-native-ble-plx'
+import { BleManager, Device, State, Characteristic, Subscription } from 'react-native-ble-plx'
 import { Buffer } from 'buffer'
 import {
   BLE_SERVICE_UUID,
@@ -22,6 +22,9 @@ import { log } from '../stores/log.store'
 const manager = new BleManager()
 let connectedDevice: Device | null = null
 let stalenessTimer: ReturnType<typeof setInterval> | null = null
+let teleSub: Subscription | null = null
+let statusSub: Subscription | null = null
+let disconnectSub: Subscription | null = null
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,6 +60,15 @@ function stopStalenessTimer() {
     clearInterval(stalenessTimer)
     stalenessTimer = null
   }
+}
+
+function removeSubscriptions() {
+  teleSub?.remove()
+  teleSub = null
+  statusSub?.remove()
+  statusSub = null
+  disconnectSub?.remove()
+  disconnectSub = null
 }
 
 // ---------------------------------------------------------------------------
@@ -111,6 +123,9 @@ export async function connect(deviceId: string): Promise<void> {
   setConnectionState('connecting')
   log('info', `Connecting to device ${deviceId}`)
 
+  // Defensive: clear any leftover subscriptions from a prior connect attempt.
+  removeSubscriptions()
+
   try {
     const device = await manager.connectToDevice(deviceId, { autoConnect: false })
     await device.discoverAllServicesAndCharacteristics()
@@ -137,7 +152,7 @@ export async function connect(deviceId: string): Promise<void> {
     log('info', `Connected to ${device.name ?? BLE_DEVICE_NAME} (${deviceId})`)
 
     // Subscribe to TELE notifications
-    device.monitorCharacteristicForService(
+    teleSub = device.monitorCharacteristicForService(
       BLE_SERVICE_UUID,
       BLE_CHAR_TELE,
       (error: Error | null, char: Characteristic | null) => {
@@ -148,7 +163,7 @@ export async function connect(deviceId: string): Promise<void> {
     )
 
     // Subscribe to STATUS notifications
-    device.monitorCharacteristicForService(
+    statusSub = device.monitorCharacteristicForService(
       BLE_SERVICE_UUID,
       BLE_CHAR_STATUS,
       (error: Error | null, char: Characteristic | null) => {
@@ -171,15 +186,17 @@ export async function connect(deviceId: string): Promise<void> {
     )
 
     // Handle unexpected disconnection
-    device.onDisconnected(() => {
-      connectedDevice = null
+    disconnectSub = device.onDisconnected(() => {
+      removeSubscriptions()
       stopStalenessTimer()
+      connectedDevice = null
       useDeviceStore.getState().disconnect()
       log('warn', `Device ${deviceId} disconnected unexpectedly`)
     })
 
     startStalenesTimer()
   } catch (err) {
+    removeSubscriptions()
     connectedDevice = null
     const msg = err instanceof Error ? err.message : 'Connection failed'
     setError(msg)
@@ -191,6 +208,9 @@ export async function connect(deviceId: string): Promise<void> {
 /** Disconnect from the current device. */
 export async function disconnect(): Promise<void> {
   stopStalenessTimer()
+  // Remove subscriptions BEFORE cancelConnection so the SDK's disconnect
+  // callback doesn't fire into a still-registered handler.
+  removeSubscriptions()
   if (connectedDevice) {
     const id = connectedDevice.id
     await connectedDevice.cancelConnection()
