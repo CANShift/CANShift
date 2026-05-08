@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLogStore, type LogEntry } from '../../stores/log.store'
+import { useCliSettingsStore } from '../../stores/cliSettings.store'
 import { IconClear } from '../icons/Icon'
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -48,6 +49,7 @@ export default function ConsolePanel() {
   const clear = useLogStore((s) => s.clear)
   const verbose = useLogStore((s) => s.verbose)
   const setVerbose = useLogStore((s) => s.setVerbose)
+  const setCliEnabled = useCliSettingsStore((s) => s.setEnabled)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = useState(false)
   const [seenCount, setSeenCount] = useState(0)
@@ -150,7 +152,7 @@ export default function ConsolePanel() {
             />
           </svg>
 
-          {/* Verbose + Copy + Clear buttons — stop propagation so click doesn't toggle collapse */}
+          {/* Verbose + CLI + Copy + Clear buttons — stop propagation so click doesn't toggle collapse */}
           {!collapsed && (
             <>
               <button
@@ -171,6 +173,23 @@ export default function ConsolePanel() {
                 }}
               >
                 {verbose ? 'Verbose ON' : 'Verbose'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCliEnabled(true)
+                }}
+                title="Switch to the new CLI terminal (issue #378)"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#3A3A3A',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  padding: '0 2px',
+                }}
+              >
+                Try new CLI →
               </button>
               <button
                 onClick={(e) => {
