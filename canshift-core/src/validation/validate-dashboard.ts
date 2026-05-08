@@ -702,7 +702,15 @@ function validateButton(cfg: UnknownRecord, prefix: string): string[] {
 function validateButtonAction(action: unknown, prefix: string): string[] {
   if (!isRecord(action)) return []
   if (action.category !== 'ecu' || action.type !== 'can_raw') return []
-  return validateCanRawData(action.data, prefix)
+  const errors: string[] = []
+  errors.push(...validateCanRawData(action.data, prefix))
+  // `extended` is optional (issue #319); default false. Reject anything that
+  // isn't a boolean rather than coercing — Studio writes the flag and we want
+  // a parse-time signal when it gets corrupted.
+  if (action.extended !== undefined && typeof action.extended !== 'boolean') {
+    errors.push(`${prefix}: extended must be a boolean when set`)
+  }
+  return errors
 }
 
 function validateCanRawData(data: unknown, prefix: string): string[] {

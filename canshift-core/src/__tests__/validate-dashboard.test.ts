@@ -496,6 +496,66 @@ describe('validateDashboard — can_raw action data validation', () => {
       result.errors.some((e) => e.includes('actions[0]') && e.includes('data must be a string'))
     ).toBe(true)
   })
+
+  it('accepts an explicit extended=true flag (issue #319)', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              {
+                id: 'w1',
+                type: 'button',
+                label: 'Send',
+                actions: [
+                  {
+                    category: 'ecu',
+                    type: 'can_raw',
+                    frameId: 0x18ff5021,
+                    data: 'DEADBEEF',
+                    extended: true,
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('actions[0]'))).toHaveLength(0)
+  })
+
+  it('rejects a non-boolean extended value', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              {
+                id: 'w1',
+                type: 'button',
+                label: 'Send',
+                actions: [
+                  {
+                    category: 'ecu',
+                    type: 'can_raw',
+                    frameId: 0x520,
+                    data: '00',
+                    extended: 'yes',
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some(
+        (e) => e.includes('actions[0]') && e.includes('extended must be a boolean')
+      )
+    ).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
