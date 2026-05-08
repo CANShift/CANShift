@@ -12,6 +12,19 @@ import { usePushDiffStore } from '../stores/pushDiff.store'
 import { configService, usbService } from '../services/ipc.service'
 import { isSdWritable, sdStateWarning } from '../utils/sdState'
 
+// Burn timeouts usually mean the firmware isn't actively servicing the USB
+// command loop — most often because a previous flash attempt left the device
+// without a working firmware image. Surface that diagnosis instead of letting
+// the user stare at a generic "Device did not acknowledge" toast (#372).
+function burnErrorHint(rawError: string, firmwareVersion: string | null): string | null {
+  const looksLikeTimeout = /timeout|did not acknowledge|no ack|no response/i.test(rawError)
+  if (!looksLikeTimeout) return null
+  if (firmwareVersion !== null) {
+    return `Last known firmware version was ${firmwareVersion}. Device may have rebooted or stalled — try reconnecting.`
+  }
+  return 'Firmware may not be running — try flashing the firmware first.'
+}
+
 export function useConfigActions() {
   const config = useDashboardStore((s) => s.config)
   const setConfig = useDashboardStore((s) => s.setConfig)
@@ -20,6 +33,7 @@ export function useConfigActions() {
 
   const connected = useDeviceStore((s) => s.connected)
   const syncing = useDeviceStore((s) => s.syncing)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
   const setSyncing = useDeviceStore((s) => s.setSyncing)
   const setSyncComplete = useDeviceStore((s) => s.setSyncComplete)
   const setError = useDeviceStore((s) => s.setError)
@@ -27,7 +41,8 @@ export function useConfigActions() {
   const setLastPushedConfig = useDeviceStore((s) => s.setLastPushedConfig)
   const setBurnPhase = useDeviceStore((s) => s.setBurnPhase)
   const sdState = useDeviceStore((s) => s.sdState)
-  const canBurn = connected && !syncing && isSdWritable(sdState)
+  const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
+  const canBurn = connected && !syncing && !simulationMode && isSdWritable(sdState)
 
   const showDiff = usePushDiffStore((s) => s.show)
 
@@ -155,6 +170,17 @@ export function useConfigActions() {
   const burnConfig = useCallback(() => {
     if (!config || !connected || syncing) return
 
+    // Simulation mode keeps `connected: true` for UI affordances but the main
+    // process has no real serial port — pushing would fail with a confusing
+    // "Not connected to device" from the IPC layer. Fail fast with a clear
+    // message instead (#372).
+    if (simulationMode) {
+      const msg = 'Cannot burn while in simulation mode — exit simulation first.'
+      log('error', `Burn aborted — ${msg}`)
+      pushError({ source: 'system', code: 'SIMULATION_MODE', message: msg })
+      return
+    }
+
     // Refuse to burn while the device is running on built-in defaults
     // (SD missing or unmounted) — the firmware can't persist the new config
     // and the device would silently keep the defaults after reboot (#252).
@@ -222,12 +248,14 @@ export function useConfigActions() {
             toast.success('Config sent to device')
           } else {
             const msg = result.error ?? 'Burn failed'
-            setError(msg)
+            const hint = burnErrorHint(msg, firmwareVersion)
+            const detailedMsg = hint !== null ? `${msg} — ${hint}` : msg
+            setError(detailedMsg)
             setSyncing(false)
             setBurnPhase('idle')
-            log('error', `${msg} (after ${String(elapsedMs)} ms)`)
-            pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
-            toast.error(`Failed to push config: ${msg}`)
+            log('error', `${detailedMsg} (after ${String(elapsedMs)} ms)`)
+            pushError({ source: 'system', code: 'BURN_FAILED', message: detailedMsg })
+            toast.error(`Failed to push config: ${detailedMsg}`)
           }
         })
         .catch(() => {
@@ -248,6 +276,7 @@ export function useConfigActions() {
     config,
     connected,
     syncing,
+    simulationMode,
     sdState,
     setSyncing,
     setSyncComplete,
@@ -258,6 +287,7 @@ export function useConfigActions() {
     setLastPushedConfig,
     setBurnPhase,
     showDiff,
+    firmwareVersion,
   ])
 
   return {
