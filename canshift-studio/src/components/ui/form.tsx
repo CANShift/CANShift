@@ -21,10 +21,10 @@ import { cn } from '@/lib/utils'
 
 const Form = FormProvider
 
-type FormFieldContextValue<
+interface FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> = {
+> {
   name: TName
 }
 
@@ -41,7 +41,7 @@ const FormField = <
   </FormFieldContext.Provider>
 )
 
-type FormItemContextValue = {
+interface FormItemContextValue {
   id: string
 }
 
@@ -133,7 +133,7 @@ FormDescription.displayName = 'FormDescription'
 const FormMessage = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
   ({ className, children, ...props }, ref) => {
     const { error, formMessageId } = useFormField()
-    const body = error ? String(error.message ?? '') : children
+    const body = error ? (error.message ?? '') : children
     if (!body) return null
     return (
       <p
