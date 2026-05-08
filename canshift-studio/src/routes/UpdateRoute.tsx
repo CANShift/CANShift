@@ -13,6 +13,7 @@ import { Spinner } from '../components/shared/PhaseIndicator'
 import SdPrepPanel from '../components/shared/SdPrepPanel'
 import { firmwareIpc } from '../services/ipc.service'
 import { useFirmwareFlash } from '../hooks/useFirmwareFlash'
+import { Label } from '@/components/ui/label'
 import type { FirmwareRelease } from '../services/ipc.service'
 import type { FirmwareCheck } from '../stores/device.store'
 
@@ -745,19 +746,14 @@ export default function UpdateRoute() {
       {/* Manual file flash                                                    */}
       {/* ------------------------------------------------------------------ */}
       <div style={{ width: '100%', maxWidth: 480 }}>
-        <label
-          style={{
-            display: 'block',
-            fontSize: 10,
-            color: '#444444',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            marginBottom: 8,
-          }}
+        <Label
+          htmlFor="manual-flash-input"
+          className="mb-2 block text-[10px] uppercase tracking-[0.08em] text-text-muted"
         >
           Or flash a local file (.bin)
-        </label>
+        </Label>
         <input
+          id="manual-flash-input"
           ref={fileInputRef}
           type="file"
           accept=".bin"

@@ -15,6 +15,7 @@ import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
 import { IconTrash } from '../icons/Icon'
+import { Switch } from '@/components/ui/switch'
 import { WidgetPreview } from './WidgetPreview'
 import {
   SIZE_TOKENS,
@@ -953,11 +954,10 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
             cursor: 'pointer',
           }}
         >
-          <input
-            type="checkbox"
+          <Switch
             checked={cfg.isToggle === true}
-            onChange={(e) => {
-              onChange({ config: { ...cfg, isToggle: e.target.checked } })
+            onCheckedChange={(checked) => {
+              onChange({ config: { ...cfg, isToggle: checked } })
             }}
           />
           Toggle (stays active after press)
