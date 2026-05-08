@@ -47,6 +47,16 @@
     "uuid": "^11.1.0",
     "postcss": "^8.5.3"
   },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "clsx"
+        ],
+        "listUnknownPackages": false
+      }
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "@eslint/js": "^9.0.0",
