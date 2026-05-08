@@ -16,10 +16,21 @@ export interface SignalDef {
   unit: string
   min: number
   max: number
-  /** Suggested warning threshold for gauge widgets — auto-filled on signal selection */
+  /**
+   * Low-side warning threshold. Most signals only need this single side
+   * (rpm warns going up, oil pressure warns going down).
+   */
   warningLevel?: number
-  /** Suggested danger threshold for gauge widgets — auto-filled on signal selection */
+  /** Low-side danger threshold — companion to warningLevel. */
   dangerLevel?: number
+  /**
+   * High-side warning threshold for signals that alarm in BOTH directions
+   * (e.g. battery voltage: warningLevel = under-voltage, highWarningLevel = over-voltage).
+   * Firmware reads this from signals.json; absence means no high-side alert.
+   */
+  highWarningLevel?: number
+  /** High-side danger threshold — companion to highWarningLevel. */
+  highDangerLevel?: number
   timeoutMs: number
 }
 

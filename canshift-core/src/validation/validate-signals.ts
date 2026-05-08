@@ -232,30 +232,28 @@ function validateThresholds(signal: UnknownRecord, prefix: string): string[] {
   const min = minOk ? (signal.min as number) : null
   const max = maxOk ? (signal.max as number) : null
 
-  const warningOk = signal.warningLevel === undefined || isFiniteNumber(signal.warningLevel)
-  const dangerOk = signal.dangerLevel === undefined || isFiniteNumber(signal.dangerLevel)
-
-  if (signal.warningLevel !== undefined && !isFiniteNumber(signal.warningLevel)) {
-    errors.push(`${prefix}.warningLevel must be a finite number when set`)
-  }
-  if (signal.dangerLevel !== undefined && !isFiniteNumber(signal.dangerLevel)) {
-    errors.push(`${prefix}.dangerLevel must be a finite number when set`)
-  }
-
-  if (warningOk && isFiniteNumber(signal.warningLevel) && min !== null && max !== null) {
-    if (signal.warningLevel < min || signal.warningLevel > max) {
-      errors.push(`${prefix}.warningLevel must be in [min, max]`)
+  for (const key of [
+    'warningLevel',
+    'dangerLevel',
+    'highWarningLevel',
+    'highDangerLevel',
+  ] as const) {
+    const value = signal[key]
+    if (value === undefined) continue
+    if (!isFiniteNumber(value)) {
+      errors.push(`${prefix}.${key} must be a finite number when set`)
+      continue
     }
-  }
-  if (dangerOk && isFiniteNumber(signal.dangerLevel) && min !== null && max !== null) {
-    if (signal.dangerLevel < min || signal.dangerLevel > max) {
-      errors.push(`${prefix}.dangerLevel must be in [min, max]`)
+    if (min !== null && max !== null && (value < min || value > max)) {
+      errors.push(`${prefix}.${key} must be in [min, max]`)
     }
   }
 
   // Note: warningLevel vs dangerLevel ordering is intentionally NOT enforced.
   // "High" alarms (rpm, coolant temp) use warning <= danger; "low" alarms
   // (oil pressure, fuel level, battery voltage) invert them — both are valid.
+  // For high-side thresholds (battery overcharge), highWarningLevel is expected
+  // to be <= highDangerLevel, but again ordering is left to the caller.
 
   return errors
 }
