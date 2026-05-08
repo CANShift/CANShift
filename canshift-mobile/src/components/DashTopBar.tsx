@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
@@ -18,6 +17,16 @@ import * as BleService from '../services/ble.service'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 import { Sheet, SheetContent } from './ui/sheet'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog'
 
 type RootNav = NativeStackNavigationProp<RootStackParamList>
 
@@ -32,27 +41,23 @@ export default function DashTopBar() {
   const isLive = useSignalsStore((s) => s.isLive)
   const isSim = SimService.isRunning()
   const [menuVisible, setMenuVisible] = useState(false)
+  const [disconnectVisible, setDisconnectVisible] = useState(false)
 
   // Tab navigation lives here; parent is the root stack
   const tabNav = useNavigation()
   const rootNav = tabNav.getParent<RootNav>()
 
   const handleDisconnect = useCallback(() => {
-    Alert.alert('Disconnect', 'Disconnect from the dashboard?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Disconnect',
-        style: 'destructive',
-        onPress: async () => {
-          if (SimService.isRunning()) {
-            SimService.stop()
-          } else {
-            await BleService.disconnect()
-          }
-          rootNav.replace('Scan')
-        },
-      },
-    ])
+    setDisconnectVisible(true)
+  }, [])
+
+  const confirmDisconnect = useCallback(async () => {
+    if (SimService.isRunning()) {
+      SimService.stop()
+    } else {
+      await BleService.disconnect()
+    }
+    rootNav.replace('Scan')
   }, [rootNav])
 
   return (
@@ -87,6 +92,21 @@ export default function DashTopBar() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <AlertDialog open={disconnectVisible} onOpenChange={setDisconnectVisible}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect</AlertDialogTitle>
+            <AlertDialogDescription>Disconnect from the dashboard?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onPress={() => void confirmDisconnect()}>
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Sheet open={menuVisible} onOpenChange={setMenuVisible}>
         <SheetContent side="bottom" className="p-0">
