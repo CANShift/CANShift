@@ -46,7 +46,19 @@ export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
 // Validation
 // ---------------------------------------------------------------------------
 export { validateDashboard } from './validation/validate-dashboard'
-export type { ValidationResult } from './validation/validate-dashboard'
+export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard'
+
+// ---------------------------------------------------------------------------
+// Firmware caps & limits
+// ---------------------------------------------------------------------------
+export {
+  FIRMWARE_CAPS,
+  CANVAS,
+  TOPBAR_HEIGHT,
+  REV_LIMIT_RPM,
+  DECIMAL_PLACES,
+  HEX_COLOR_REGEX,
+} from './constants/firmware-caps'
 
 // ---------------------------------------------------------------------------
 // Migrations
