@@ -46,6 +46,7 @@ import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useDeviceStore } from './stores/device.store'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
+import BurnFailedDialog from './components/shared/BurnFailedDialog'
 import WelcomeModal from './components/shared/WelcomeModal'
 import { useFirstRunCheck } from './hooks/useFirstRunCheck'
 import { Toaster } from './components/ui/sonner'
@@ -146,6 +147,7 @@ export default function App() {
       <VersionMismatchBanner />
       <PushDiffDialog />
       <BurnProgressModal />
+      <BurnFailedDialog />
       {firstRun.state === 'pending' && <WelcomeModal onDismiss={firstRun.markCompleted} />}
       <Toaster />
     </div>

@@ -9,6 +9,7 @@ import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { useErrorStore } from '../stores/error.store'
 import { usePushDiffStore } from '../stores/pushDiff.store'
+import { useBurnFailureStore } from '../stores/burnFailure.store'
 import { configService, usbService } from '../services/ipc.service'
 import { isSdWritable, sdStateWarning } from '../utils/sdState'
 
@@ -23,6 +24,31 @@ function burnErrorHint(rawError: string, firmwareVersion: string | null): string
     return `Last known firmware version was ${firmwareVersion}. Device may have rebooted or stalled — try reconnecting.`
   }
   return 'Firmware may not be running — try flashing the firmware first.'
+}
+
+// Map a raw burn error to an ordered list of remediation steps surfaced in
+// the blocking failure modal (#376). Falls back to a generic prompt when
+// the error doesn't match a known code.
+function burnRemediationHints(rawError: string): string[] {
+  const lower = rawError.toLowerCase()
+  if (lower.includes('not connected')) {
+    return [
+      'Connect the device via USB before burning.',
+      'If you are in simulation mode, exit it first.',
+    ]
+  }
+  if (/timeout|did not acknowledge|no ack|no response/.test(lower)) {
+    return [
+      'Check that the firmware is running (no boot loop).',
+      'Make sure the USB cable is data-capable, not power-only.',
+      'Try unplugging and replugging the device, then reconnect.',
+      'If the issue persists, flash the firmware again from the Update screen.',
+    ]
+  }
+  return [
+    'Open the activity log for details.',
+    'If the issue persists, capture the log and file a bug.',
+  ]
 }
 
 export function useConfigActions() {
@@ -45,6 +71,8 @@ export function useConfigActions() {
   const canBurn = connected && !syncing && !simulationMode && isSdWritable(sdState)
 
   const showDiff = usePushDiffStore((s) => s.show)
+  const showBurnFailure = useBurnFailureStore((s) => s.show)
+  const dismissBurnFailure = useBurnFailureStore((s) => s.dismiss)
 
   const log = useLogStore((s) => s.push)
   const pushError = useErrorStore((s) => s.push)
@@ -217,18 +245,39 @@ export function useConfigActions() {
       log('warn', `Validation: ${w}`)
     })
 
-    const doBurn = () => {
+    // Payload size — what the firmware will actually receive over the wire.
+    // Use the same JSON.stringify the IPC layer applies so the count matches.
+    const payloadBytes = new TextEncoder().encode(JSON.stringify(config)).length
+    const payloadKb = (payloadBytes / 1024).toFixed(1)
+
+    const doBurn = (): void => {
       setSyncing(true)
       setBurnPhase('pushing')
-      // Payload size — what the firmware will actually receive over the wire.
-      // Use the same JSON.stringify the IPC layer applies so the count matches.
-      const payloadBytes = new TextEncoder().encode(JSON.stringify(config)).length
-      const payloadKb = (payloadBytes / 1024).toFixed(1)
       log(
         'info',
         `Burning config to device — schema v${config.version}, ${payloadKb} KB (${String(payloadBytes)} bytes)`
       )
       const startedAt = performance.now()
+
+      const handleFailure = (msg: string, elapsedMs: number): void => {
+        setError(msg)
+        setSyncing(false)
+        setBurnPhase('idle')
+        log('error', `${msg} (after ${String(elapsedMs)} ms)`)
+        pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
+        toast.error(`Failed to push config: ${msg}`)
+        showBurnFailure(
+          {
+            message: msg,
+            hints: burnRemediationHints(msg),
+            elapsedMs,
+            schemaVersion: config.version,
+            payloadBytes,
+          },
+          doBurn
+        )
+      }
+
       void usbService
         .pushConfig(config)
         .then((result) => {
@@ -246,27 +295,18 @@ export function useConfigActions() {
             )
             log('info', 'Device is rebooting — reconnect in a few seconds')
             toast.success('Config sent to device')
+            // Auto-close the failure modal if a previous attempt left it open.
+            dismissBurnFailure()
           } else {
-            const msg = result.error ?? 'Burn failed'
-            const hint = burnErrorHint(msg, firmwareVersion)
-            const detailedMsg = hint !== null ? `${msg} — ${hint}` : msg
-            setError(detailedMsg)
-            setSyncing(false)
-            setBurnPhase('idle')
-            log('error', `${detailedMsg} (after ${String(elapsedMs)} ms)`)
-            pushError({ source: 'system', code: 'BURN_FAILED', message: detailedMsg })
-            toast.error(`Failed to push config: ${detailedMsg}`)
+            const rawMsg = result.error ?? 'Burn failed'
+            const hint = burnErrorHint(rawMsg, firmwareVersion)
+            const detailedMsg = hint !== null ? `${rawMsg} — ${hint}` : rawMsg
+            handleFailure(detailedMsg, elapsedMs)
           }
         })
         .catch(() => {
           const elapsedMs = Math.round(performance.now() - startedAt)
-          const msg = `Config burn error (after ${String(elapsedMs)} ms)`
-          setError(msg)
-          setSyncing(false)
-          setBurnPhase('idle')
-          log('error', msg)
-          pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
-          toast.error(`Failed to push config: ${msg}`)
+          handleFailure('Config burn error', elapsedMs)
         })
     }
 
@@ -287,6 +327,8 @@ export function useConfigActions() {
     setLastPushedConfig,
     setBurnPhase,
     showDiff,
+    showBurnFailure,
+    dismissBurnFailure,
     firmwareVersion,
   ])
 
