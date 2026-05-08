@@ -47,10 +47,14 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "modes": ["peripheral", "central"],
+          "modes": [
+            "peripheral",
+            "central"
+          ],
           "bluetoothAlwaysPermission": "CANShift uses Bluetooth to connect to the dashboard device."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }
