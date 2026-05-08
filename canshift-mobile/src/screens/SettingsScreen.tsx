@@ -9,6 +9,7 @@ import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
+import { Label } from '@/components/ui'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>
@@ -112,7 +113,7 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* Brightness */}
         <View style={styles.section}>
           <View style={styles.rowHeader}>
-            <Text style={styles.label}>BRIGHTNESS</Text>
+            <Label>BRIGHTNESS</Label>
             <Text style={styles.value}>{brightness}%</Text>
           </View>
           <Slider
@@ -130,7 +131,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Sleep */}
         <View style={styles.section}>
-          <Text style={styles.label}>SLEEP</Text>
+          <Label>SLEEP</Label>
           <View style={styles.segRow}>
             {SLEEP_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -148,7 +149,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Day / Night */}
         <View style={styles.section}>
-          <Text style={styles.label}>THEME</Text>
+          <Label>THEME</Label>
           <View style={styles.segRow}>
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
@@ -171,7 +172,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Touch calibration */}
         <View style={styles.section}>
-          <Text style={styles.label}>TOUCH</Text>
+          <Label>TOUCH</Label>
           <TouchableOpacity
             style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
             onPress={handleCalibrate}
@@ -214,7 +215,6 @@ const styles = StyleSheet.create({
   scroll: { padding: Spacing.lg, gap: Spacing.xl },
   section: { gap: Spacing.sm },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 0.8 },
   value: { fontSize: Typography.xs, color: Colors.text },
   slider: { width: '100%', height: 32 },
   segRow: { flexDirection: 'row', gap: Spacing.sm },

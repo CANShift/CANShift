@@ -1,5 +1,6 @@
 import type { Config } from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate'
+import { Colors } from './src/theme'
 
 // nativewind/preset ships an empty .d.ts, so TS treats it as "not a module".
 // Use require() and cast to Config — the runtime export is a valid preset.
@@ -12,28 +13,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#0D0D0D',
-        surface: '#111111',
-        'surface-2': '#1A1A1A',
-        border: '#2A2A2A',
-        primary: '#E03030',
-        'primary-foreground': '#FFFFFF',
-        destructive: '#FF4444',
-        'destructive-foreground': '#FFFFFF',
-        accent: '#E03030',
-        'accent-foreground': '#FFFFFF',
-        text: '#CCCCCC',
-        'text-dim': '#888888',
-        'text-muted': '#555555',
-        success: '#55AA55',
-        warning: '#FF8800',
-        danger: '#FF4444',
+        bg: Colors.bg,
+        surface: Colors.surface,
+        'surface-2': Colors.surface2,
+        border: Colors.border,
+        primary: Colors.primary,
+        'primary-foreground': Colors.primaryForeground,
+        destructive: Colors.destructive,
+        'destructive-foreground': Colors.destructiveForeground,
+        accent: Colors.accent,
+        'accent-foreground': Colors.accentForeground,
+        text: Colors.text,
+        'text-dim': Colors.textDim,
+        'text-muted': Colors.textMuted,
+        success: Colors.success,
+        warning: Colors.warning,
+        danger: Colors.danger,
       },
-      borderRadius: {
-        sm: '4px',
-        md: '8px',
-        lg: '12px',
-      },
+      borderRadius: { sm: '4px', md: '8px', lg: '12px' },
     },
   },
   plugins: [tailwindcssAnimate],
