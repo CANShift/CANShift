@@ -4,7 +4,7 @@
 
 import { useRef, useCallback, useEffect, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, TopBarItem, Widget } from '@tmbk/canshift-core'
-import { DEFAULT_TOP_BAR_LAYOUT } from '@tmbk/canshift-core'
+import { DEFAULT_TOP_BAR_LAYOUT, TopBarMetrics } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -427,13 +427,15 @@ function DashTopBar({
   const status = useDeviceStore((s) => s.status)
   const swipeStartY = useRef<number | null>(null)
 
+  // Proportions come from canshift-core/src/topbar-metrics.ts — same table the
+  // firmware mirrors in C++. Edit there, not here, to keep WYSIWYG parity.
   const h = topBar.height * SCALE
-  const dot = Math.round(h * 0.3)
-  const fs = Math.round(h * 0.45)
-  const sep = Math.round(h * 0.55)
-  const gap = Math.round(h * 0.25)
-  const px = Math.round(h * 0.4)
-  const iconSz = Math.round(fs * 1.15)
+  const dot = Math.round(h * TopBarMetrics.dotRatio)
+  const fs = Math.round(h * TopBarMetrics.fontSizeRatio)
+  const sep = Math.round(h * TopBarMetrics.separatorRatio)
+  const gap = Math.round(h * TopBarMetrics.gapRatio)
+  const px = Math.round(h * TopBarMetrics.paddingRatio)
+  const iconSz = Math.round(fs * TopBarMetrics.iconSizeRatio)
 
   const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#AAAAAA'
 
