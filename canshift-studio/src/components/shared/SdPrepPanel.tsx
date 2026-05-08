@@ -7,8 +7,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
+import { useLogStore } from '../../stores/log.store'
+import { useErrorStore } from '../../stores/error.store'
 import { sdIpc } from '../../services/ipc.service'
-import type { SdVolume } from '../../services/ipc.service'
+import type { SdVolume, SdPushProgress } from '../../services/ipc.service'
 
 type SdState = 'idle' | 'copying' | 'done' | 'error'
 
@@ -31,6 +33,8 @@ interface SdPrepPanelProps {
 
 export default function SdPrepPanel({ expanded, onClose }: SdPrepPanelProps) {
   const connected = useDeviceStore((s) => s.connected)
+  const log = useLogStore((s) => s.push)
+  const pushError = useErrorStore((s) => s.push)
 
   const [sdVolumes, setSdVolumes] = useState<SdVolume[]>([])
   const [selectedVolume, setSelectedVolume] = useState<string>('')
@@ -40,22 +44,46 @@ export default function SdPrepPanel({ expanded, onClose }: SdPrepPanelProps) {
   const [sdCopied, setSdCopied] = useState<{ copied: number; skipped: number } | null>(null)
   const [picking, setPicking] = useState(false)
 
+  // Subscribe to per-chunk SD push progress while the panel is mounted —
+  // each chunk emits a `debug` line so the verbose toggle can surface a
+  // detailed trace without flooding the default view.
+  useEffect(() => {
+    const off = sdIpc.onPushProgress((progress: SdPushProgress) => {
+      log(
+        'debug',
+        `[sd] push: chunk ${String(progress.fileIndex + 1)}/${String(progress.totalFiles)} ${progress.relPath}`
+      )
+    })
+    return off
+  }, [log])
+
   const scanVolumes = useCallback(() => {
     setLoadingVolumes(true)
+    log('info', '[sd] Scanning for mounted SD volumes…')
+    const startedAt = performance.now()
     sdIpc
       .listVolumes()
       .then((vols) => {
+        const elapsedMs = Math.round(performance.now() - startedAt)
         setSdVolumes(vols)
         if (vols.length === 1 && vols[0]) setSelectedVolume(vols[0].path)
         else setSelectedVolume('')
+        log(
+          'info',
+          `[sd] Volume scan ok — found ${String(vols.length)} volume${vols.length !== 1 ? 's' : ''} (${String(elapsedMs)} ms)`
+        )
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        const elapsedMs = Math.round(performance.now() - startedAt)
+        const msg = err instanceof Error ? err.message : String(err)
         setSdVolumes([])
+        log('error', `[sd] Volume scan failed: ${msg} (after ${String(elapsedMs)} ms)`)
+        pushError({ source: 'system', code: 'SD_LIST_FAILED', message: msg })
       })
       .finally(() => {
         setLoadingVolumes(false)
       })
-  }, [])
+  }, [log, pushError])
 
   useEffect(() => {
     if (!expanded) {
@@ -70,30 +98,50 @@ export default function SdPrepPanel({ expanded, onClose }: SdPrepPanelProps) {
     setSdState('copying')
     setSdError('')
     setSdCopied(null)
+    log('info', '[sd] SD push over USB started')
+    const startedAt = performance.now()
     const result = await sdIpc.pushOverUsb()
+    const elapsedMs = Math.round(performance.now() - startedAt)
     if (result.success) {
       setSdCopied({ copied: result.copied.length, skipped: result.skipped.length })
       setSdState('done')
+      log(
+        'success',
+        `[sd] SD push over USB ok — copied ${String(result.copied.length)}, skipped ${String(result.skipped.length)} in ${String(elapsedMs)} ms`
+      )
     } else {
-      setSdError(result.error ?? 'Push over USB failed')
+      const msg = result.error ?? 'Push over USB failed'
+      setSdError(msg)
       setSdState('error')
+      log('error', `[sd] SD push over USB failed: ${msg} (after ${String(elapsedMs)} ms)`)
+      pushError({ source: 'usb', code: 'SD_PUSH_FAILED', message: msg })
     }
-  }, [])
+  }, [log, pushError])
 
   const handleConfirmSdVolume = useCallback(async () => {
     if (!selectedVolume) return
     setSdState('copying')
     setSdError('')
     setSdCopied(null)
+    log('info', `[sd] SD prep started for ${selectedVolume}`)
+    const startedAt = performance.now()
     const result = await sdIpc.prepare(selectedVolume)
+    const elapsedMs = Math.round(performance.now() - startedAt)
     if (result.success) {
       setSdCopied({ copied: result.copied.length, skipped: result.skipped.length })
       setSdState('done')
+      log(
+        'success',
+        `[sd] SD prep ok — copied ${String(result.copied.length)}, skipped ${String(result.skipped.length)} in ${String(elapsedMs)} ms`
+      )
     } else {
-      setSdError(result.error ?? 'Failed to copy SD contents')
+      const msg = result.error ?? 'Failed to copy SD contents'
+      setSdError(msg)
       setSdState('error')
+      log('error', `[sd] SD prep failed: ${msg} (after ${String(elapsedMs)} ms)`)
+      pushError({ source: 'system', code: 'SD_PREP_FAILED', message: msg })
     }
-  }, [selectedVolume])
+  }, [selectedVolume, log, pushError])
 
   const handleStartPickVolume = useCallback(() => {
     setPicking(true)

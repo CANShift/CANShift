@@ -9,6 +9,7 @@ const LEVEL_COLOR: Record<string, string> = {
   warn: '#CC8800',
   error: '#CC3333',
   success: '#44CC66',
+  debug: '#555555',
 }
 
 const LEVEL_PREFIX: Record<string, string> = {
@@ -16,6 +17,7 @@ const LEVEL_PREFIX: Record<string, string> = {
   warn: 'WARN',
   error: 'ERR ',
   success: ' OK ',
+  debug: 'DBG ',
 }
 
 function pad2(n: number): string {
@@ -44,6 +46,8 @@ function ConsoleLine({ entry }: { entry: LogEntry }) {
 export default function ConsolePanel() {
   const entries = useLogStore((s) => s.entries)
   const clear = useLogStore((s) => s.clear)
+  const verbose = useLogStore((s) => s.verbose)
+  const setVerbose = useLogStore((s) => s.setVerbose)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = useState(false)
   const [seenCount, setSeenCount] = useState(0)
@@ -146,9 +150,28 @@ export default function ConsolePanel() {
             />
           </svg>
 
-          {/* Copy + Clear buttons — stop propagation so click doesn't toggle collapse */}
+          {/* Verbose + Copy + Clear buttons — stop propagation so click doesn't toggle collapse */}
           {!collapsed && (
             <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setVerbose(!verbose)
+                }}
+                title={
+                  verbose ? 'Hide debug entries' : 'Show debug entries (per-chunk progress, etc.)'
+                }
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: verbose ? '#CC8800' : '#3A3A3A',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  padding: '0 2px',
+                }}
+              >
+                {verbose ? 'Verbose ON' : 'Verbose'}
+              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation()

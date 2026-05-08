@@ -22,6 +22,8 @@
 import { useEffect, useRef } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import type { FirmwareCheck } from '../stores/device.store'
+import { useLogStore } from '../stores/log.store'
+import type { LogLevel } from '../stores/log.store'
 import { firmwareIpc } from '../services/ipc.service'
 import type { FirmwareRelease, FirmwareStatus, SdRuntimeState } from '../services/ipc.service'
 
@@ -49,18 +51,29 @@ function sleep(ms: number): Promise<void> {
  * would otherwise push into the device store, plus a `cancelled` callback
  * for cooperative cancellation when the port changes mid-probe.
  */
+export type ProbeLogger = (level: LogLevel, message: string) => void
+
 export interface ProbeReport {
   setFirmwareCheck: (check: FirmwareCheck) => void
   setFirmwareVersion: (version: string | null) => void
   setIsDayMode: (isDay: boolean | null) => void
   setSdState: (state: SdRuntimeState) => void
+  /**
+   * Optional sink for activity-log entries. The hook wires this to
+   * `useLogStore.push`; tests can omit it for a silent run.
+   */
+  log?: ProbeLogger
 }
 
 export async function runFirmwareProbe(
   report: ProbeReport,
   isCancelled: () => boolean
 ): Promise<void> {
+  const log: ProbeLogger = report.log ?? ((): void => undefined)
   report.setFirmwareCheck({ kind: 'probing' })
+
+  log('info', '[status] Probing firmware version…')
+  const startedAt = Date.now()
 
   // 1. Query device version. queryVersion() does not throw on timeout —
   // it resolves with { version: null }. A single null can be a transient
@@ -70,16 +83,20 @@ export async function runFirmwareProbe(
   if (isCancelled()) return
 
   if (!status.version) {
+    log('warn', '[status] Probe returned no version — retrying once')
     await sleep(POST_TIMEOUT_RETRY_DELAY_MS)
     if (isCancelled()) return
     status = await firmwareIpc.queryVersion()
     if (isCancelled()) return
   }
 
+  const elapsedMs = Date.now() - startedAt
+
   if (!status.version) {
     // Two consecutive misses — the device genuinely has no CANShift firmware.
     report.setFirmwareVersion(null)
     report.setFirmwareCheck({ kind: 'no_firmware' })
+    log('warn', `[status] No CANShift firmware detected (after ${String(elapsedMs)} ms)`)
     return
   }
 
@@ -87,6 +104,10 @@ export async function runFirmwareProbe(
   report.setFirmwareVersion(version)
   report.setIsDayMode(status.isDay)
   report.setSdState(status.sdState)
+  log(
+    'info',
+    `[status] Firmware v${version} — sd=${status.sdState}, day=${status.isDay === null ? 'unknown' : String(status.isDay)} (${String(elapsedMs)} ms)`
+  )
 
   // 2. Check for updates against stable releases. If the API throws we
   // fall back to `up_to_date` (best effort) so an offline studio doesn't
@@ -94,8 +115,10 @@ export async function runFirmwareProbe(
   let releases: FirmwareRelease[]
   try {
     releases = await firmwareIpc.listReleases('stable')
-  } catch {
+  } catch (err) {
     if (isCancelled()) return
+    const msg = err instanceof Error ? err.message : String(err)
+    log('warn', `[status] Release server unreachable: ${msg} — assuming up to date`)
     report.setFirmwareCheck({ kind: 'up_to_date', version, checkedAt: Date.now() })
     return
   }
@@ -115,8 +138,10 @@ export async function runFirmwareProbe(
       latestVersion: latest.version,
       checkedAt: Date.now(),
     })
+    log('info', `[status] Update available — v${latest.version} (current v${version})`)
   } else {
     report.setFirmwareCheck({ kind: 'up_to_date', version, checkedAt: Date.now() })
+    log('info', `[status] Up to date — v${version}`)
   }
 }
 
@@ -130,6 +155,7 @@ export function useFirmwareCheck(): void {
   const setFirmwareCheck = useDeviceStore((s) => s.setFirmwareCheck)
   const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
   const setSdState = useDeviceStore((s) => s.setSdState)
+  const log = useLogStore((s) => s.push)
 
   // Last portPath we successfully probed. Reconnects to the same port skip the
   // check so a post-flash reboot doesn't re-prompt the flash dialog (#215).
@@ -179,6 +205,7 @@ export function useFirmwareCheck(): void {
       setFirmwareVersion,
       setIsDayMode,
       setSdState,
+      log,
     }
 
     void runFirmwareProbe(report, () => cancelled || inFlightPortRef.current !== currentPort)
@@ -196,5 +223,6 @@ export function useFirmwareCheck(): void {
     setFirmwareCheck,
     setIsDayMode,
     setSdState,
+    log,
   ])
 }

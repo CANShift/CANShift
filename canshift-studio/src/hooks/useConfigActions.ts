@@ -204,7 +204,7 @@ export function useConfigActions() {
     // message instead (#372).
     if (simulationMode) {
       const msg = 'Cannot burn while in simulation mode — exit simulation first.'
-      log('error', `Burn aborted — ${msg}`)
+      log('error', `[burn] aborted — ${msg}`)
       pushError({ source: 'system', code: 'SIMULATION_MODE', message: msg })
       return
     }
@@ -214,7 +214,7 @@ export function useConfigActions() {
     // and the device would silently keep the defaults after reboot (#252).
     if (!isSdWritable(sdState)) {
       const warning = sdStateWarning(sdState) ?? 'SD card unavailable.'
-      log('error', `Burn aborted — ${warning}`)
+      log('error', `[burn] aborted — ${warning}`)
       pushError({
         source: 'system',
         code: 'SD_UNAVAILABLE',
@@ -227,9 +227,9 @@ export function useConfigActions() {
     const validation = validateDashboard(config)
     if (!validation.valid) {
       validation.errors.forEach((err) => {
-        log('error', `Validation: ${err}`)
+        log('error', `[burn] validation: ${err}`)
       })
-      const summary = `Burn aborted — ${String(validation.errors.length)} validation error(s)`
+      const summary = `[burn] aborted — ${String(validation.errors.length)} validation error(s)`
       log('error', summary)
       pushError({
         source: 'config',
@@ -242,7 +242,7 @@ export function useConfigActions() {
 
     // Surface warnings even when valid
     validation.warnings.forEach((w) => {
-      log('warn', `Validation: ${w}`)
+      log('warn', `[burn] validation: ${w}`)
     })
 
     // Payload size — what the firmware will actually receive over the wire.
@@ -255,7 +255,7 @@ export function useConfigActions() {
       setBurnPhase('pushing')
       log(
         'info',
-        `Burning config to device — schema v${config.version}, ${payloadKb} KB (${String(payloadBytes)} bytes)`
+        `[burn] started — schema v${config.version}, ${payloadKb} KB (${String(payloadBytes)} bytes)`
       )
       const startedAt = performance.now()
 
@@ -263,7 +263,7 @@ export function useConfigActions() {
         setError(msg)
         setSyncing(false)
         setBurnPhase('idle')
-        log('error', `${msg} (after ${String(elapsedMs)} ms)`)
+        log('error', `[burn] failed: ${msg} (after ${String(elapsedMs)} ms)`)
         pushError({ source: 'system', code: 'BURN_FAILED', message: msg })
         toast.error(`Failed to push config: ${msg}`)
         showBurnFailure(
@@ -291,9 +291,9 @@ export function useConfigActions() {
             setBurnPhase('rebooting')
             log(
               'success',
-              `Config written to device — ${payloadKb} KB in ${String(elapsedMs)} ms (schema v${config.version})`
+              `[burn] ok — wrote ${payloadKb} KB in ${String(elapsedMs)} ms (schema v${config.version})`
             )
-            log('info', 'Device is rebooting — reconnect in a few seconds')
+            log('info', '[burn] device is rebooting — reconnect in a few seconds')
             toast.success('Config sent to device')
             // Auto-close the failure modal if a previous attempt left it open.
             dismissBurnFailure()
