@@ -69,6 +69,15 @@ interface PendingAck {
 
 const ACK_TIMEOUT_MS = 5_000
 
+// CMD_PUT_CONFIG ack scaling — the firmware writes the full JSON to SD
+// synchronously before acking, so a slow CH340 link plus a slow SD card can
+// easily exceed the default 5 s ack window for 5+ KB configs (issue #217).
+// Add a generous per-KB margin on top of the base timeout, and cap the total
+// so a runaway payload can't hang the UI indefinitely.
+const PUT_CONFIG_BASE_TIMEOUT_MS = ACK_TIMEOUT_MS
+const PUT_CONFIG_PER_KB_MS = 50
+const PUT_CONFIG_MAX_TIMEOUT_MS = 60_000
+
 // Heartbeat: a single \n every 2s while connected. The firmware updates its
 // "host active" timer on any byte received, but a bare \n produces no command
 // (rxPos=0 → no handleCommand call) so it doesn't pollute the response stream
@@ -81,6 +90,18 @@ const HEARTBEAT_INTERVAL_MS = 2_000
 const PUT_FILE_CHUNK_SIZE = 2048
 // CMD_PUT_FILE acks come back fast — 1 s is generous on a healthy link.
 const PUT_FILE_CHUNK_TIMEOUT_MS = 5_000
+
+const BYTES_PER_KB = 1024
+
+/**
+ * Compute the ack timeout for CMD_PUT_CONFIG given the wire payload length in
+ * bytes. Scales linearly with size, clamped to [base, max]. Exported for tests.
+ */
+export function putConfigTimeoutMs(payloadBytes: number): number {
+  const sizeKB = payloadBytes / BYTES_PER_KB
+  const scaled = Math.ceil(sizeKB * PUT_CONFIG_PER_KB_MS) + PUT_CONFIG_BASE_TIMEOUT_MS
+  return Math.min(PUT_CONFIG_MAX_TIMEOUT_MS, Math.max(PUT_CONFIG_BASE_TIMEOUT_MS, scaled))
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -218,7 +239,9 @@ export class UsbService {
 
   async pushConfig(config: unknown): Promise<UsbResult> {
     const payload = JSON.stringify({ cmd: 2, payload: config }) + '\n'
-    return this.sendCommand(payload)
+    // Firmware writes to SD synchronously before acking — scale with size.
+    const timeoutMs = putConfigTimeoutMs(Buffer.byteLength(payload, 'utf8'))
+    return this.sendCommand(payload, timeoutMs)
   }
 
   async pushScreenSettings(settings: {

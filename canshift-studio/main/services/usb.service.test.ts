@@ -74,7 +74,7 @@ const fakes = vi.hoisted(() => {
 vi.mock('serialport', () => ({ SerialPort: fakes.FakeSerialPort }))
 vi.mock('@serialport/parser-readline', () => ({ ReadlineParser: fakes.FakeReadlineParser }))
 
-import { UsbService } from './usb.service'
+import { UsbService, putConfigTimeoutMs } from './usb.service'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -186,6 +186,30 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
     port?.emit('close')
 
     expect(onConnectionChanged).toHaveBeenCalledWith({ connected: false })
+  })
+})
+
+describe('putConfigTimeoutMs — CMD_PUT_CONFIG ack timeout scaling (issue #217)', () => {
+  it('never returns less than the 5 s base timeout', () => {
+    expect(putConfigTimeoutMs(0)).toBe(5_000)
+    expect(putConfigTimeoutMs(1)).toBeGreaterThanOrEqual(5_000)
+    expect(putConfigTimeoutMs(1024)).toBeGreaterThanOrEqual(5_000)
+  })
+
+  it('scales linearly with payload size — 5 KB adds ~250 ms', () => {
+    // 5 KB * 50 ms/KB = 250 ms on top of the 5 s base = 5.25 s
+    const fiveKB = 5 * 1024
+    expect(putConfigTimeoutMs(fiveKB)).toBe(5_250)
+  })
+
+  it('clamps very large payloads to the 60 s ceiling', () => {
+    // 50 KB * 50 ms/KB = 2.5 s + 5 s base = 7.5 s — well under the cap.
+    // The cap kicks in around (60_000 - 5_000) / 50 = 1100 KB.
+    const fiftyKB = 50 * 1024
+    expect(putConfigTimeoutMs(fiftyKB)).toBe(7_500)
+
+    const huge = 2_000 * 1024 // 2 MB → would scale past the cap
+    expect(putConfigTimeoutMs(huge)).toBe(60_000)
   })
 })
 
