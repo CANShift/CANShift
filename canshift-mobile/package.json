@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "preinstall": "node -e \"const p=require('./package.json');if(p.overrides&&p.overrides.tar){console.error('\\n[canshift-mobile] ERROR: tar override re-introduced.\\nExpo SDK 52 prebuild breaks with tar v7 (Cannot read properties of undefined reading extract).\\nRemove overrides.tar from package.json before reinstalling.\\n');process.exit(1);}\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -41,8 +42,8 @@
     "zod": "^4.4.3",
     "zustand": "^5.0.0"
   },
+  "//overrides": "Do NOT add 'tar' here. Expo SDK 52 prebuild fails on tar v7 (Cannot read properties of undefined reading 'extract'). The preinstall script blocks it.",
   "overrides": {
-    "tar": "^7.4.3",
     "@xmldom/xmldom": "^0.9.8",
     "uuid": "^11.1.0",
     "postcss": "^8.5.3"
