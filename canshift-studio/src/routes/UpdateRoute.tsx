@@ -11,6 +11,7 @@ import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { IconUsb } from '../components/icons/Icon'
 import { Spinner } from '../components/shared/PhaseIndicator'
+import { SafeMarkdown } from '../components/shared/SafeMarkdown'
 import SdPrepPanel from '../components/shared/SdPrepPanel'
 import { firmwareIpc } from '../services/ipc.service'
 import { useFirmwareFlash } from '../hooks/useFirmwareFlash'
@@ -392,15 +393,11 @@ export default function UpdateRoute() {
             style={{
               borderTop: '1px solid #1E1E1E',
               paddingTop: 8,
-              fontSize: 11,
-              color: '#888888',
-              lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
-              maxHeight: 180,
+              maxHeight: 240,
               overflowY: 'auto',
             }}
           >
-            {release.notes}
+            <SafeMarkdown source={release.notes} className="text-xs" />
           </div>
         )}
 
