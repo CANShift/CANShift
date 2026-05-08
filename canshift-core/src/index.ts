@@ -42,6 +42,9 @@ export type { SignalConfig, SignalDef } from './types/signal'
 export type { DeviceConfig, CanSpeedKbps } from './types/device'
 export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
 
+// IPC return-shape contracts (renderer ↔ main)
+export type { PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult } from './types/ipc'
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------

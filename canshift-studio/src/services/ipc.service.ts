@@ -1,47 +1,33 @@
 // ipc.service.ts — Type-safe wrapper around the Electron IPC bridge.
 // All renderer → main communication goes through here.
 
-import type { DashboardConfig, SignalConfig, DeviceConfig } from '@tmbk/canshift-core'
+import type {
+  DashboardConfig,
+  SignalConfig,
+  DeviceConfig,
+  ConnectionStatus,
+  OpenResult,
+  PortInfo,
+  SaveResult,
+  UsbResult,
+} from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
 import type { CanFrame, CanHealth } from '../../main/services/usb.service'
 import type { SdVolume, SdPrepareResult, SdPushProgress } from '../../main/services/sd.service'
 
-export type { FirmwareRelease, CanFrame, CanHealth, SdVolume, SdPrepareResult, SdPushProgress }
-
-// ---------------------------------------------------------------------------
-// Response shapes (must mirror main/services/* return types)
-// ---------------------------------------------------------------------------
-
-export interface OpenResult {
-  success: boolean
-  filePath?: string
-  content?: unknown
-  error?: string
-}
-
-export interface SaveResult {
-  success: boolean
-  filePath?: string
-  error?: string
-}
-
-export interface PortInfo {
-  path: string
-  manufacturer?: string
-  serialNumber?: string
-  vendorId?: string
-  productId?: string
-}
-
-export interface UsbResult {
-  success: boolean
-  error?: string
-}
-
-export interface ConnectionStatus {
-  connected: boolean
-  portPath?: string
+export type {
+  FirmwareRelease,
+  CanFrame,
+  CanHealth,
+  SdVolume,
+  SdPrepareResult,
+  SdPushProgress,
+  ConnectionStatus,
+  OpenResult,
+  PortInfo,
+  SaveResult,
+  UsbResult,
 }
 
 // ---------------------------------------------------------------------------
