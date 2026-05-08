@@ -203,6 +203,11 @@ jobs:
             deriveddata-${{ runner.os }}-
 
       - name: xcodebuild (iOS Simulator)
+        # Pipe through xcbeautify (preinstalled on macos-latest) to filter
+        # the hundreds of upstream React Native + Pods warnings that mask
+        # real failures in the CI log. `-quiet` cuts xcodebuild noise at the
+        # source; `COMPILER_INDEX_STORE_ENABLE=NO` skips index-store work
+        # CI never reads. Real errors (build failures) still surface.
         run: |
           set -o pipefail
           xcodebuild \
@@ -211,8 +216,10 @@ jobs:
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -quiet \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build 2>&1 | xcbeautify --quiet --is-ci
         working-directory: canshift-mobile/ios
 
   # ─── Firmware — clang-format ────────────────────────────────────────────────
