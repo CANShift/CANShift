@@ -9,7 +9,7 @@ import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
-import { Label } from '@/components/ui'
+import { Label, Toast } from '@/components/ui'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>
@@ -53,7 +53,11 @@ export default function SettingsScreen({ navigation }: Props) {
     setSaving(true)
     try {
       await BleService.pushSettings({ brightness, sleep })
-      Alert.alert('Saved', 'Settings applied to dashboard.')
+      Toast.show({
+        type: 'success',
+        text1: 'Saved',
+        text2: 'Settings applied to dashboard.',
+      })
       navigation.goBack()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to push settings')
