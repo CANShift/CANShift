@@ -42,6 +42,11 @@ export default tseslint.config(
       'babel.config.js',
       'eslint.config.mjs',
       'jest.config.js',
+      'nativewind-env.d.ts',
+      'tailwind.config.ts',
+      'metro.config.js',
+      'global.css',
+      '__mocks__/**',
     ],
   }
 )
