@@ -127,7 +127,10 @@ export interface MapSwitchAction {
 /**
  * Send a raw CAN frame.
  * frameId: decimal or 0x-prefixed hex CAN ID
- * data: hex-encoded payload bytes, e.g. "0102030405060708"
+ * data: hex-encoded payload bytes, e.g. "0102030405060708".
+ *   Must be even-length, contain only hex characters (0-9, a-f, A-F),
+ *   and be at most 16 characters (8 bytes — the CAN 2.0 DLC ceiling).
+ *   An empty string is allowed and represents a zero-byte frame.
  */
 export interface CanRawAction {
   category: 'ecu'

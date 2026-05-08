@@ -423,6 +423,82 @@ describe('validateDashboard — button widget type fields', () => {
 })
 
 // ---------------------------------------------------------------------------
+// CanRawAction.data validation
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — can_raw action data validation', () => {
+  function buttonWithCanRaw(data: unknown): Record<string, unknown> {
+    return {
+      id: 'w1',
+      type: 'button',
+      label: 'Send',
+      actions: [{ category: 'ecu', type: 'can_raw', frameId: 0x520, data }],
+    }
+  }
+
+  it('accepts an empty string (zero-byte frame)', () => {
+    const result = validateDashboard(
+      minimalConfig({ pages: [minimalPage({ widgets: [buttonWithCanRaw('')] })] })
+    )
+    expect(result.errors.filter((e) => e.includes('can_raw') || e.includes('data'))).toHaveLength(0)
+  })
+
+  it('accepts a valid 8-character hex payload (DEADBEEF)', () => {
+    const result = validateDashboard(
+      minimalConfig({ pages: [minimalPage({ widgets: [buttonWithCanRaw('DEADBEEF')] })] })
+    )
+    expect(result.errors.filter((e) => e.includes('actions[0]'))).toHaveLength(0)
+  })
+
+  it('accepts a maximum-length 16-character hex payload', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [buttonWithCanRaw('0102030405060708')] })],
+      })
+    )
+    expect(result.errors.filter((e) => e.includes('actions[0]'))).toHaveLength(0)
+  })
+
+  it('rejects a non-hex string (GG)', () => {
+    const result = validateDashboard(
+      minimalConfig({ pages: [minimalPage({ widgets: [buttonWithCanRaw('GG')] })] })
+    )
+    expect(
+      result.errors.some((e) => e.includes('actions[0]') && e.includes('even-length hex'))
+    ).toBe(true)
+  })
+
+  it('rejects an odd-length hex string (012)', () => {
+    const result = validateDashboard(
+      minimalConfig({ pages: [minimalPage({ widgets: [buttonWithCanRaw('012')] })] })
+    )
+    expect(
+      result.errors.some((e) => e.includes('actions[0]') && e.includes('even-length hex'))
+    ).toBe(true)
+  })
+
+  it('rejects a payload longer than 16 hex characters', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [buttonWithCanRaw('0102030405060708090A')] })],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('actions[0]') && e.includes('at most 16 hex characters'))
+    ).toBe(true)
+  })
+
+  it('rejects a non-string data value', () => {
+    const result = validateDashboard(
+      minimalConfig({ pages: [minimalPage({ widgets: [buttonWithCanRaw(42)] })] })
+    )
+    expect(
+      result.errors.some((e) => e.includes('actions[0]') && e.includes('data must be a string'))
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Bar widget validation
 // ---------------------------------------------------------------------------
 
