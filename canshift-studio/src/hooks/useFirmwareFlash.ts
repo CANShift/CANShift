@@ -1,4 +1,4 @@
-// useFirmwareFlash.ts — Shared esptool-js flash logic for FirmwareDialog and UpdateRoute.
+// useFirmwareFlash.ts — Shared esptool-js flash logic used by UpdateRoute.
 //
 // Uses the Web Serial API in the renderer — no esptool CLI required.
 // Simulation mode runs a fake progress sequence without touching the port.

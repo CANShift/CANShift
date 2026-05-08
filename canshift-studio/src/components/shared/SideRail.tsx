@@ -1,33 +1,36 @@
 // SideRail.tsx — Vertical icon navigation rail
 
+import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { IconEditor, IconSignals, IconCanScanner, IconFirmware, IconSettings } from '../icons/Icon'
+import { useDeviceStore } from '../../stores/device.store'
+import { ensureSpinKeyframes } from './PhaseIndicator'
 
 const TOP_ITEMS = [
   { to: '/editor', label: 'Editor', Icon: IconEditor },
   { to: '/signals', label: 'Signals', Icon: IconSignals },
   { to: '/scanner', label: 'CAN', Icon: IconCanScanner },
-]
+] as const
 
 const BOTTOM_ITEMS = [
   { to: '/update', label: 'Firmware', Icon: IconFirmware },
   { to: '/device-config', label: 'Device', Icon: IconSettings },
-]
+] as const
 
-function NavItem({
-  to,
-  label,
-  Icon,
-}: {
+interface NavItemProps {
   to: string
   label: string
   Icon: (props: { size?: number; color?: string }) => React.JSX.Element
-}) {
+  showAlert?: boolean
+}
+
+function NavItem({ to, label, Icon, showAlert = false }: NavItemProps) {
   return (
     <NavLink
       to={to}
       title={label}
       style={({ isActive }) => ({
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -42,12 +45,40 @@ function NavItem({
         flexShrink: 0,
       })}
     >
-      {({ isActive }) => <Icon size={17} color={isActive ? '#E03030' : '#555555'} />}
+      {({ isActive }) => (
+        <>
+          <Icon size={17} color={isActive ? '#E03030' : '#555555'} />
+          {showAlert && (
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: 6,
+                right: 6,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#E03030',
+                boxShadow: '0 0 0 2px #0A0A0A',
+                animation: 'canshift-pulse 1.6s ease-in-out infinite',
+              }}
+            />
+          )}
+        </>
+      )}
     </NavLink>
   )
 }
 
 export default function SideRail() {
+  const firmwareCheckKind = useDeviceStore((s) => s.firmwareCheck.kind)
+  const updateAlert =
+    firmwareCheckKind === 'no_firmware' || firmwareCheckKind === 'update_available'
+
+  useEffect(() => {
+    if (updateAlert) ensureSpinKeyframes()
+  }, [updateAlert])
+
   return (
     <nav
       style={{
@@ -75,7 +106,7 @@ export default function SideRail() {
       {/* Bottom group — hardware/setup */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {BOTTOM_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} />
+          <NavItem key={item.to} {...item} showAlert={item.to === '/update' && updateAlert} />
         ))}
       </div>
     </nav>

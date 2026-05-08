@@ -5,8 +5,8 @@
 //   2. Pick a candidate: last-known port if present, else a unique CH340/CP210x port.
 //   3. Attempt connect.
 //
-// Disabled in simulation mode and when the user is on the firmware flash dialog
-// (which takes over the serial port via Web Serial).
+// Disabled in simulation mode and while the firmware check is probing or a
+// flash is in flight — both own the serial port and would race the connect.
 
 import { useEffect, useRef } from 'react'
 import { useDeviceStore } from '../stores/device.store'
@@ -44,10 +44,10 @@ function pickCandidate(ports: PortInfo[], lastPortPath: string | null): PortInfo
 export function useAutoConnect(): void {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const flashDialogVisible = useDeviceStore((s) => s.firmwareDialog.visible)
-  // `flashing` covers UpdateRoute, which kicks off a flash without ever
-  // opening FirmwareDialog. Without this guard, the 2 s reconnect poll grabs
-  // the serial port back from esptool-js mid-flash and the write times out.
+  const probing = useDeviceStore((s) => s.firmwareCheck.kind === 'probing')
+  // `flashing` covers UpdateRoute, which kicks off a flash directly from the
+  // panel. Without this guard, the 2 s reconnect poll grabs the serial port
+  // back from esptool-js mid-flash and the write times out.
   const flashing = useDeviceStore((s) => s.flashing)
   const setConnected = useDeviceStore((s) => s.setConnected)
   const log = useLogStore((s) => s.push)
@@ -56,7 +56,7 @@ export function useAutoConnect(): void {
   const inFlight = useRef(false)
 
   useEffect(() => {
-    if (connected || simulationMode || flashDialogVisible || flashing) return
+    if (connected || simulationMode || probing || flashing) return
 
     let cancelled = false
 
@@ -100,5 +100,5 @@ export function useAutoConnect(): void {
       cancelled = true
       clearInterval(interval)
     }
-  }, [connected, simulationMode, flashDialogVisible, flashing, setConnected, log])
+  }, [connected, simulationMode, probing, flashing, setConnected, log])
 }
