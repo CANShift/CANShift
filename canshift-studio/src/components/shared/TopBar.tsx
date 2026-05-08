@@ -6,7 +6,8 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
-import { IconLoad, IconExport, IconBurn, IconExit, IconUsb } from '../icons/Icon'
+import { IconLoad, IconExport, IconBurn, IconExit, IconUsb, IconSdAlert } from '../icons/Icon'
+import { sdBurnDisabledTooltip, sdStateWarning } from '../../utils/sdState'
 
 const STATUS_COLOR: Record<string, string> = {
   connected: '#3DB86B',
@@ -68,12 +69,31 @@ export default function TopBar() {
   const portPath = useDeviceStore((s) => s.portPath)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const exitSimulation = useDeviceStore((s) => s.exitSimulation)
+  const sdState = useDeviceStore((s) => s.sdState)
   const log = useLogStore((s) => s.push)
 
-  const { openConfig, saveConfig, burnConfig, config, connected, syncing } = useConfigActions()
+  const {
+    openConfig,
+    saveConfig,
+    burnConfig,
+    config,
+    connected,
+    syncing,
+    canBurn: deviceCanBurn,
+  } = useConfigActions()
 
   const canSave = config !== null
-  const canBurn = config !== null && connected && !syncing
+  const canBurn = config !== null && deviceCanBurn
+
+  const sdWarning = sdStateWarning(sdState)
+  const burnBlockedReason = !connected
+    ? 'Connect a device first'
+    : syncing
+      ? 'Burn already in progress'
+      : (sdBurnDisabledTooltip(sdState) ?? null)
+  const burnTooltip = canBurn
+    ? 'Push config to device'
+    : (burnBlockedReason ?? 'Push config to device')
 
   const statusColor = simulationMode ? '#8844FF' : (STATUS_COLOR[status] ?? '#3A3A3A')
   const statusLabel = simulationMode
@@ -133,15 +153,36 @@ export default function TopBar() {
             Export
           </ToolBtn>
 
-          <ToolBtn
-            onClick={burnConfig}
-            disabled={!canBurn}
-            title="Push config to device"
-            accent={canBurn}
-          >
+          <ToolBtn onClick={burnConfig} disabled={!canBurn} title={burnTooltip} accent={canBurn}>
             <IconBurn size={12} color={canBurn ? '#E03030' : '#3A3A3A'} />
             {syncing ? 'Burning…' : 'Burn'}
           </ToolBtn>
+
+          {/* SD-state degraded indicator — surfaces missing/failed SD card so the
+              user understands why Burn is disabled (issue #252). */}
+          {connected && sdWarning !== null && (
+            <span
+              data-testid="sd-warning-indicator"
+              title={sdWarning}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 6px',
+                marginLeft: 4,
+                border: '1px solid #5A3A12',
+                borderRadius: 5,
+                background: '#221610',
+                color: '#E08030',
+                fontSize: 11,
+                lineHeight: 1,
+                cursor: 'help',
+              }}
+            >
+              <IconSdAlert size={12} color="#E08030" />
+              No SD
+            </span>
+          )}
 
           <div style={{ width: 1, height: 18, background: '#1E1E1E', margin: '0 4px' }} />
 

@@ -9,6 +9,7 @@ import { useLogStore } from '../stores/log.store'
 import { useErrorStore } from '../stores/error.store'
 import { usePushDiffStore } from '../stores/pushDiff.store'
 import { configService, usbService } from '../services/ipc.service'
+import { isSdWritable, sdStateWarning } from '../utils/sdState'
 
 export function useConfigActions() {
   const config = useDashboardStore((s) => s.config)
@@ -24,6 +25,8 @@ export function useConfigActions() {
   const lastPushedConfig = useDeviceStore((s) => s.lastPushedConfig)
   const setLastPushedConfig = useDeviceStore((s) => s.setLastPushedConfig)
   const setBurnPhase = useDeviceStore((s) => s.setBurnPhase)
+  const sdState = useDeviceStore((s) => s.sdState)
+  const canBurn = connected && !syncing && isSdWritable(sdState)
 
   const showDiff = usePushDiffStore((s) => s.show)
 
@@ -150,6 +153,20 @@ export function useConfigActions() {
   const burnConfig = useCallback(() => {
     if (!config || !connected || syncing) return
 
+    // Refuse to burn while the device is running on built-in defaults
+    // (SD missing or unmounted) — the firmware can't persist the new config
+    // and the device would silently keep the defaults after reboot (#252).
+    if (!isSdWritable(sdState)) {
+      const warning = sdStateWarning(sdState) ?? 'SD card unavailable.'
+      log('error', `Burn aborted — ${warning}`)
+      pushError({
+        source: 'system',
+        code: 'SD_UNAVAILABLE',
+        message: warning,
+      })
+      return
+    }
+
     // Validate before pushing — refuse to burn an invalid config
     const validation = validateDashboard(config)
     if (!validation.valid) {
@@ -226,6 +243,7 @@ export function useConfigActions() {
     config,
     connected,
     syncing,
+    sdState,
     setSyncing,
     setSyncComplete,
     setError,
@@ -247,5 +265,7 @@ export function useConfigActions() {
     config,
     connected,
     syncing,
+    sdState,
+    canBurn,
   }
 }
