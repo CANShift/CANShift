@@ -12,17 +12,7 @@
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
 import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
-
-export interface CanFrame {
-  id: number
-  len: number
-  data: number[]
-}
-
-export interface CanHealth {
-  fps: number
-  errors: number
-}
+import type { CanFrame, CanHealth, SdRuntimeState } from './usb.service.types'
 
 /**
  * Structured log entry forwarded from the firmware.
@@ -87,18 +77,6 @@ export function putConfigTimeoutMs(payloadBytes: number): number {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
-
-/**
- * Runtime SD-card state reported by CMD_GET_STATUS.
- *
- * - 'ok'             — SD mounted, persistent writes work.
- * - 'no_card'        — no card inserted, device is on built-in defaults.
- * - 'mount_failed'   — card present but unreadable, defaults active.
- * - 'unknown'        — older firmware that doesn't include `sd_state` in its
- *                      status response. Treat as best-effort OK so the UI
- *                      doesn't regress on devices we haven't reflashed yet.
- */
-export type SdRuntimeState = 'ok' | 'no_card' | 'mount_failed' | 'unknown'
 
 /**
  * Parse the additive `sd` / `sd_state` fields from a CMD_GET_STATUS response.

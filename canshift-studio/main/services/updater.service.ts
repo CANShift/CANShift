@@ -15,17 +15,7 @@ import { autoUpdater, UpdateInfo } from 'electron-updater'
 import type { BrowserWindow } from 'electron'
 import { IpcChannels } from '../ipc/ipc-channels'
 import { markdownToPlainText } from '../utils/markdown-to-plain-text'
-
-export interface UpdateAvailablePayload {
-  version: string
-  releaseDate: string
-  /** Plain text only — sanitized in main; never raw markdown or HTML. */
-  releaseNotesPlain: string
-}
-
-export interface UpdateErrorPayload {
-  message: string
-}
+import type { UpdateAvailablePayload, UpdateErrorPayload } from './updater.service.types'
 
 function buildPayload(info: UpdateInfo): UpdateAvailablePayload {
   return {

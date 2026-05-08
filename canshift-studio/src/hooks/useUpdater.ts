@@ -7,6 +7,7 @@
 // `react-markdown` with `disallowedElements: ['script']` and NO `rehype-raw`.
 
 import { useEffect, useState } from 'react'
+import type { UpdateAvailablePayload, UpdateErrorPayload } from '../services/ipc.service'
 
 export type UpdateStatus = 'idle' | 'available' | 'downloaded' | 'error'
 
@@ -14,17 +15,6 @@ export interface UpdateState {
   status: UpdateStatus
   version: string | null
   errorMessage: string | null
-}
-
-interface UpdatePayload {
-  version: string
-  releaseDate: string
-  /** Plain text only — sanitized in main process. */
-  releaseNotesPlain: string
-}
-
-interface ErrorPayload {
-  message: string
 }
 
 export function useUpdater(): UpdateState & {
@@ -38,15 +28,15 @@ export function useUpdater(): UpdateState & {
   })
 
   useEffect(() => {
-    const onAvailable = (payload: UpdatePayload) => {
+    const onAvailable = (payload: UpdateAvailablePayload) => {
       setState({ status: 'available', version: payload.version, errorMessage: null })
     }
 
-    const onDownloaded = (payload: UpdatePayload) => {
+    const onDownloaded = (payload: UpdateAvailablePayload) => {
       setState({ status: 'downloaded', version: payload.version, errorMessage: null })
     }
 
-    const onError = (payload: ErrorPayload) => {
+    const onError = (payload: UpdateErrorPayload) => {
       setState((prev) => ({ ...prev, status: 'error', errorMessage: payload.message }))
     }
 

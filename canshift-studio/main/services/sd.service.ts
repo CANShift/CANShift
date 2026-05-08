@@ -3,6 +3,7 @@ import { join, dirname, relative, resolve } from 'node:path'
 import { platform } from 'node:os'
 import { app } from 'electron'
 import type { UsbService } from './usb.service'
+import type { SdVolume, SdPrepareResult, SdPushProgress } from './sd.service.types'
 
 // Renderer-supplied volume paths must match a volume returned by listVolumes()
 // at the moment the operation runs. Without this, a compromised renderer could
@@ -10,24 +11,6 @@ import type { UsbService } from './usb.service'
 // directory (#214). The error message intentionally omits the rejected path so
 // we don't leak FS structure.
 const VOLUME_NOT_LISTED_ERROR = 'blocked: volumePath not in current volume list'
-
-export interface SdVolume {
-  path: string
-  label: string
-}
-
-export interface SdPrepareResult {
-  success: boolean
-  copied: string[]
-  skipped: string[]
-  error?: string
-}
-
-export interface SdPushProgress {
-  fileIndex: number
-  totalFiles: number
-  relPath: string
-}
 
 export type SdPushProgressCallback = (progress: SdPushProgress) => void
 

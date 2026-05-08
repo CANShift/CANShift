@@ -12,9 +12,17 @@ import type {
   UsbResult,
 } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
-import type { FirmwareRelease } from '../../main/services/firmware.service'
-import type { CanFrame, CanHealth, SdRuntimeState } from '../../main/services/usb.service'
-import type { SdVolume, SdPrepareResult, SdPushProgress } from '../../main/services/sd.service'
+import type { FirmwareRelease } from '../../main/services/firmware.service.types'
+import type { CanFrame, CanHealth, SdRuntimeState } from '../../main/services/usb.service.types'
+import type {
+  SdVolume,
+  SdPrepareResult,
+  SdPushProgress,
+} from '../../main/services/sd.service.types'
+import type {
+  UpdateAvailablePayload,
+  UpdateErrorPayload,
+} from '../../main/services/updater.service.types'
 
 export type {
   FirmwareRelease,
@@ -24,6 +32,8 @@ export type {
   SdVolume,
   SdPrepareResult,
   SdPushProgress,
+  UpdateAvailablePayload,
+  UpdateErrorPayload,
   ConnectionStatus,
   OpenResult,
   PortInfo,
