@@ -158,6 +158,8 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
   const [max, setMax] = useState(65535)
   const [warningLevel, setWarningLevel] = useState('')
   const [dangerLevel, setDangerLevel] = useState('')
+  const [highWarningLevel, setHighWarningLevel] = useState('')
+  const [highDangerLevel, setHighDangerLevel] = useState('')
   const [timeoutMs, setTimeoutMs] = useState(500)
 
   const rawValue = readRaw(prefill.frameData, startByte, byteLength, bigEndian)
@@ -181,6 +183,8 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
       timeoutMs,
       ...(warningLevel !== '' ? { warningLevel: parseFloat(warningLevel) } : {}),
       ...(dangerLevel !== '' ? { dangerLevel: parseFloat(dangerLevel) } : {}),
+      ...(highWarningLevel !== '' ? { highWarningLevel: parseFloat(highWarningLevel) } : {}),
+      ...(highDangerLevel !== '' ? { highDangerLevel: parseFloat(highDangerLevel) } : {}),
     }
     onSave(signal)
   }, [
@@ -198,6 +202,8 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
     timeoutMs,
     warningLevel,
     dangerLevel,
+    highWarningLevel,
+    highDangerLevel,
     onSave,
   ])
 
@@ -323,6 +329,24 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
               onChange={(v) => {
                 setTimeoutMs(Math.max(0, Math.floor(v)))
               }}
+            />
+          </Field>
+        </div>
+
+        {/* High-side thresholds — for signals that alarm in BOTH directions (e.g. battery overcharge) */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <Field label="High warning">
+            <TextInput
+              value={highWarningLevel}
+              onChange={setHighWarningLevel}
+              placeholder="optional"
+            />
+          </Field>
+          <Field label="High danger">
+            <TextInput
+              value={highDangerLevel}
+              onChange={setHighDangerLevel}
+              placeholder="optional"
             />
           </Field>
         </div>

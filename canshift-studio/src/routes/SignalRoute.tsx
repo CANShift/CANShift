@@ -105,7 +105,7 @@ export default function SignalRoute() {
 
   function handleOptionalNumber(
     index: number,
-    key: 'warningLevel' | 'dangerLevel',
+    key: 'warningLevel' | 'dangerLevel' | 'highWarningLevel' | 'highDangerLevel',
     raw: string
   ): void {
     if (raw === '') {
@@ -216,7 +216,7 @@ export default function SignalRoute() {
           style={{
             borderCollapse: 'collapse',
             width: '100%',
-            minWidth: 1100,
+            minWidth: 1250,
             tableLayout: 'fixed',
           }}
         >
@@ -234,6 +234,8 @@ export default function SignalRoute() {
             <col style={{ width: 65 }} />
             <col style={{ width: 65 }} />
             <col style={{ width: 65 }} />
+            <col style={{ width: 75 }} />
+            <col style={{ width: 75 }} />
             <col style={{ width: 70 }} />
             <col style={{ width: 80 }} />
             <col style={{ width: 32 }} />
@@ -254,6 +256,8 @@ export default function SignalRoute() {
                 'max',
                 'warn',
                 'danger',
+                'highWarn',
+                'highDanger',
                 'timeout',
                 'mask',
                 '',
@@ -294,7 +298,10 @@ export default function SignalRoute() {
 interface SignalRowProps {
   signal: SignalDef
   onUpdate: (patch: Partial<SignalDef>) => void
-  onUpdateOptionalNumber: (key: 'warningLevel' | 'dangerLevel', raw: string) => void
+  onUpdateOptionalNumber: (
+    key: 'warningLevel' | 'dangerLevel' | 'highWarningLevel' | 'highDangerLevel',
+    raw: string
+  ) => void
   onUpdateOptionalString: (key: 'bitMask', raw: string) => void
   onDelete: () => void
 }
@@ -465,6 +472,32 @@ function SignalRow({
           value={signal.dangerLevel ?? ''}
           onChange={(e) => {
             onUpdateOptionalNumber('dangerLevel', e.target.value)
+          }}
+          style={inputStyle}
+          placeholder="—"
+        />
+      </td>
+
+      {/* highWarningLevel */}
+      <td style={tdStyle}>
+        <input
+          type="number"
+          value={signal.highWarningLevel ?? ''}
+          onChange={(e) => {
+            onUpdateOptionalNumber('highWarningLevel', e.target.value)
+          }}
+          style={inputStyle}
+          placeholder="—"
+        />
+      </td>
+
+      {/* highDangerLevel */}
+      <td style={tdStyle}>
+        <input
+          type="number"
+          value={signal.highDangerLevel ?? ''}
+          onChange={(e) => {
+            onUpdateOptionalNumber('highDangerLevel', e.target.value)
           }}
           style={inputStyle}
           placeholder="—"

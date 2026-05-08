@@ -294,6 +294,60 @@ describe('validateSignals — per-signal fields', () => {
       )
       expect(r.errors.some((e) => e.includes('warningLevel must be a finite number'))).toBe(true)
     })
+
+    it('accepts absent highWarningLevel/highDangerLevel', () => {
+      const r = validateSignals(minimalConfig({ signals: [minimalSignal()] }))
+      expect(r.valid).toBe(true)
+    })
+
+    it('accepts both low-side and high-side thresholds together (battery semantics)', () => {
+      const r = validateSignals(
+        minimalConfig({
+          signals: [
+            minimalSignal({
+              name: 'battery_volts',
+              min: 8,
+              max: 18,
+              warningLevel: 12,
+              dangerLevel: 11.5,
+              highWarningLevel: 15,
+              highDangerLevel: 16,
+            }),
+          ],
+        })
+      )
+      expect(r.valid).toBe(true)
+    })
+
+    it('rejects highWarningLevel out of [min, max]', () => {
+      const r = validateSignals(
+        minimalConfig({ signals: [minimalSignal({ highWarningLevel: 9000 })] })
+      )
+      expect(r.errors.some((e) => e.includes('highWarningLevel must be in [min, max]'))).toBe(true)
+    })
+
+    it('rejects highDangerLevel out of [min, max]', () => {
+      const r = validateSignals(
+        minimalConfig({ signals: [minimalSignal({ highDangerLevel: -1 })] })
+      )
+      expect(r.errors.some((e) => e.includes('highDangerLevel must be in [min, max]'))).toBe(true)
+    })
+
+    it('rejects non-finite highWarningLevel when set', () => {
+      const r = validateSignals(
+        minimalConfig({ signals: [minimalSignal({ highWarningLevel: 'high' })] })
+      )
+      expect(r.errors.some((e) => e.includes('highWarningLevel must be a finite number'))).toBe(
+        true
+      )
+    })
+
+    it('rejects non-finite highDangerLevel when set', () => {
+      const r = validateSignals(
+        minimalConfig({ signals: [minimalSignal({ highDangerLevel: NaN })] })
+      )
+      expect(r.errors.some((e) => e.includes('highDangerLevel must be a finite number'))).toBe(true)
+    })
   })
 
   describe('unit', () => {
