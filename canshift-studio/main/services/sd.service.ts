@@ -1,8 +1,15 @@
 import { readdir, copyFile, access, mkdir, readFile } from 'node:fs/promises'
-import { join, dirname, relative } from 'node:path'
+import { join, dirname, relative, resolve } from 'node:path'
 import { platform } from 'node:os'
 import { app } from 'electron'
 import type { UsbService } from './usb.service'
+
+// Renderer-supplied volume paths must match a volume returned by listVolumes()
+// at the moment the operation runs. Without this, a compromised renderer could
+// invoke SD_PREPARE to write the sd_contents/ tree into any user-writable
+// directory (#214). The error message intentionally omits the rejected path so
+// we don't leak FS structure.
+const VOLUME_NOT_LISTED_ERROR = 'blocked: volumePath not in current volume list'
 
 export interface SdVolume {
   path: string
@@ -109,6 +116,12 @@ async function listVolumes(): Promise<SdVolume[]> {
 async function prepareSD(volumePath: string, forceRefresh = false): Promise<SdPrepareResult> {
   const copied: string[] = []
   const skipped: string[] = []
+
+  const volumes = await listVolumes()
+  const validVolumePaths = new Set(volumes.map((v) => resolve(v.path)))
+  if (!validVolumePaths.has(resolve(volumePath))) {
+    return { success: false, copied, skipped, error: VOLUME_NOT_LISTED_ERROR }
+  }
 
   try {
     const files = await walkDirectory(sdContentsPath(), sdContentsPath())
