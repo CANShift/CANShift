@@ -7,6 +7,7 @@
 import { useState, useCallback } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,6 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 // ---------------------------------------------------------------------------
 // Partial pre-fill shape from ByteInterpreter
@@ -63,28 +71,12 @@ function applySignedness(raw: number, byteLength: 1 | 2 | 4, signed: boolean): n
 }
 
 // ---------------------------------------------------------------------------
-// Field styles
+// Field helpers
 // ---------------------------------------------------------------------------
 
-const INPUT: React.CSSProperties = {
-  background: '#1A1A1A',
-  border: '1px solid #2A2A2A',
-  borderRadius: 4,
-  color: '#DDDDDD',
-  fontSize: 12,
-  padding: '4px 8px',
-  width: '100%',
-  boxSizing: 'border-box',
-}
-
-const LABEL: React.CSSProperties = {
-  fontSize: 10,
-  color: '#555',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.06em',
-  marginBottom: 3,
-  display: 'block',
-}
+const FIELD_LABEL_CLASS =
+  'text-[10px] font-normal uppercase tracking-[0.06em] text-text-muted leading-none'
+const FIELD_INPUT_CLASS = 'h-8 text-xs'
 
 function Field({
   label,
@@ -94,8 +86,8 @@ function Field({
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={LABEL}>{label}</span>
+    <div className="flex flex-col gap-1">
+      <Label className={FIELD_LABEL_CLASS}>{label}</Label>
       {children}
     </div>
   )
@@ -114,7 +106,7 @@ function TextInput({
 }): React.ReactElement {
   return (
     <Input
-      className="h-8 text-xs"
+      className={FIELD_INPUT_CLASS}
       type={type}
       value={value}
       placeholder={placeholder}
@@ -136,7 +128,7 @@ function NumberInput({
 }): React.ReactElement {
   return (
     <Input
-      className="h-8 text-xs"
+      className={FIELD_INPUT_CLASS}
       type="number"
       step={step ?? 'any'}
       value={value}
@@ -226,9 +218,12 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
         </Field>
 
         {/* Read-only frame info */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div className="grid grid-cols-3 gap-2.5">
           <Field label="Frame ID">
-            <div style={{ ...INPUT, color: '#FF8888', fontFamily: 'monospace', cursor: 'default' }}>
+            <div
+              className="flex h-8 w-full cursor-default items-center rounded-md border border-input bg-background px-3 font-mono text-xs text-primary"
+              aria-readonly="true"
+            >
               {canFrameId}
             </div>
           </Field>
@@ -241,48 +236,60 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
             />
           </Field>
           <Field label="Byte length">
-            <select
-              style={{ ...INPUT, cursor: 'pointer' }}
-              value={byteLength}
-              onChange={(e) => {
-                setByteLength(parseInt(e.target.value) as 1 | 2 | 4)
+            <Select
+              value={String(byteLength)}
+              onValueChange={(v) => {
+                setByteLength(parseInt(v, 10) as 1 | 2 | 4)
               }}
             >
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={4}>4</option>
-            </select>
+              <SelectTrigger className={FIELD_INPUT_CLASS}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="4">4</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="grid grid-cols-2 gap-2.5">
           <Field label="Byte order">
-            <select
-              style={{ ...INPUT, cursor: 'pointer' }}
+            <Select
               value={bigEndian ? 'be' : 'le'}
-              onChange={(e) => {
-                setBigEndian(e.target.value === 'be')
+              onValueChange={(v) => {
+                setBigEndian(v === 'be')
               }}
             >
-              <option value="be">Big-endian</option>
-              <option value="le">Little-endian</option>
-            </select>
+              <SelectTrigger className={FIELD_INPUT_CLASS}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="be">Big-endian</SelectItem>
+                <SelectItem value="le">Little-endian</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Signed">
-            <select
-              style={{ ...INPUT, cursor: 'pointer' }}
+            <Select
               value={signed ? 'yes' : 'no'}
-              onChange={(e) => {
-                setSigned(e.target.value === 'yes')
+              onValueChange={(v) => {
+                setSigned(v === 'yes')
               }}
             >
-              <option value="no">Unsigned</option>
-              <option value="yes">Signed</option>
-            </select>
+              <SelectTrigger className={FIELD_INPUT_CLASS}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no">Unsigned</SelectItem>
+                <SelectItem value="yes">Signed</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div className="grid grid-cols-3 gap-2.5">
           <Field label="Scale">
             <NumberInput value={scale} onChange={setScale} step={0.001} />
           </Field>
@@ -294,7 +301,7 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="grid grid-cols-2 gap-2.5">
           <Field label="Min">
             <NumberInput value={min} onChange={setMin} />
           </Field>
@@ -303,7 +310,7 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <div className="grid grid-cols-3 gap-2.5">
           <Field label="Warning level">
             <TextInput value={warningLevel} onChange={setWarningLevel} placeholder="optional" />
           </Field>
@@ -321,33 +328,13 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
         </div>
 
         {/* Live preview */}
-        <div
-          style={{
-            background: '#0C0C0C',
-            border: '1px solid #1E1E1E',
-            borderRadius: 4,
-            padding: '8px 12px',
-            fontSize: 11,
-            display: 'flex',
-            gap: 16,
-            alignItems: 'center',
-          }}
-        >
-          <span
-            style={{
-              color: '#444',
-              textTransform: 'uppercase',
-              fontSize: 9,
-              letterSpacing: '0.06em',
-            }}
-          >
-            Preview
-          </span>
-          <span style={{ fontFamily: 'monospace', color: '#888' }}>raw: {rawValue}</span>
+        <div className="flex items-center gap-4 rounded-md border border-border bg-bg px-3 py-2 text-[11px]">
+          <span className="text-[9px] uppercase tracking-[0.06em] text-text-muted">Preview</span>
+          <span className="font-mono text-text-dim">raw: {rawValue}</span>
           {signed && rawValue !== signedValue && (
-            <span style={{ fontFamily: 'monospace', color: '#888' }}>signed: {signedValue}</span>
+            <span className="font-mono text-text-dim">signed: {signedValue}</span>
           )}
-          <span style={{ fontFamily: 'monospace', color: '#FFAA44', fontWeight: 700 }}>
+          <span className="font-mono font-bold text-accent">
             {scaledValue.toFixed(scale < 1 ? 3 : 1)} {unit}
           </span>
         </div>
