@@ -24,7 +24,6 @@ export function useDeviceConfigLoad(): void {
   const portPath = useDeviceStore((s) => s.portPath)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const setConfig = useDashboardStore((s) => s.setConfig)
   const log = useLogStore((s) => s.push)
   const pushError = useErrorStore((s) => s.push)
 
@@ -73,12 +72,14 @@ export function useDeviceConfigLoad(): void {
 
       // validateDashboard guarantees structural conformance; cast through
       // unknown to satisfy the TS structural mismatch on Record<string, unknown>.
-      setConfig(raw as unknown as DashboardConfig)
+      // Route through the store action so the device-vs-editor decision reads
+      // the LATEST state, not a closure captured before the user's edits (#216).
+      useDashboardStore.getState().loadFromDeviceOrDemo(raw as unknown as DashboardConfig)
       log('success', 'Loaded dashboard config from device SD')
     })()
 
     return () => {
       cancelled = true
     }
-  }, [connected, portPath, firmwareVersion, simulationMode, setConfig, log, pushError])
+  }, [connected, portPath, firmwareVersion, simulationMode, log, pushError])
 }
