@@ -2,6 +2,7 @@
 
 import { BleManager, Device, State, Characteristic, Subscription } from 'react-native-ble-plx'
 import { Buffer } from 'buffer'
+import { Platform } from 'react-native'
 import {
   BLE_SERVICE_UUID,
   BLE_CHAR_TELE,
@@ -17,6 +18,7 @@ import { log } from '../stores/log.store'
 import { useReconnectStore } from '../stores/reconnect.store'
 import { parseTelemetry, parseStatus } from './ble.validators'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
+import { requestAndroidBlePermissions } from './ble-permissions'
 
 // ---------------------------------------------------------------------------
 // Singleton BleManager
@@ -241,10 +243,13 @@ async function runReconnectLoop(deviceId: string): Promise<void> {
 export interface ScanResult { id: string; name: string }
 
 /** Scan for CANShift BLE devices. Returns list of found devices after timeoutMs. */
-export function scan(
+export async function scan(
   onFound: (device: ScanResult) => void,
   timeoutMs = 10000
 ): Promise<void> {
+  // Android 12+: must request runtime BLE permissions before scanning.
+  // No-op on iOS and Android < 12.
+  await ensureAndroidBlePermissions()
   // A user-initiated scan implies they want to control connections themselves.
   cancelReconnect()
   return new Promise((resolve, reject) => {
@@ -284,6 +289,10 @@ export function stopScan() {
 export async function connect(deviceId: string): Promise<void> {
   const { setConnectionState, setDevice, setFirmwareStatus, setError } =
     useDeviceStore.getState()
+
+  // Android 12+: must request runtime BLE permissions before connecting.
+  // No-op on iOS and Android < 12. Errors propagate to the caller.
+  await ensureAndroidBlePermissions()
 
   setConnectionState('connecting')
   log('info', `Connecting to device ${deviceId}`)
@@ -452,14 +461,21 @@ export async function sendCmd(cmd: string, payload?: CmdPayload): Promise<void> 
  * Discriminated state describing whether the app can use BLE right now.
  * Mirrors `react-native-ble-plx`'s `State` enum but collapses the cases the
  * UI cares about and adds a value the UI can switch on exhaustively.
+ *
+ * The `unauthorized` variant carries a `platform` tag so the UI can render
+ * platform-appropriate copy and CTAs (iOS Settings vs Android nearby-devices).
  */
 export type BlePermissionState =
   | { kind: 'ok' }
   | { kind: 'powered_off' }
-  | { kind: 'unauthorized' }
+  | { kind: 'unauthorized'; platform: 'ios' | 'android' }
   | { kind: 'unsupported' }
   | { kind: 'resetting' }
   | { kind: 'unknown' }
+
+function currentPlatform(): 'ios' | 'android' {
+  return Platform.OS === 'android' ? 'android' : 'ios'
+}
 
 /** Classify the current adapter state for UI consumers. */
 export async function getBlePermissionState(): Promise<BlePermissionState> {
@@ -470,7 +486,7 @@ export async function getBlePermissionState(): Promise<BlePermissionState> {
     case State.PoweredOff:
       return { kind: 'powered_off' }
     case State.Unauthorized:
-      return { kind: 'unauthorized' }
+      return { kind: 'unauthorized', platform: currentPlatform() }
     case State.Unsupported:
       return { kind: 'unsupported' }
     case State.Resetting:
@@ -479,6 +495,32 @@ export async function getBlePermissionState(): Promise<BlePermissionState> {
       return { kind: 'unknown' }
     default: {
       const _exhaustive: never = state
+      return _exhaustive
+    }
+  }
+}
+
+/**
+ * Ensure Android 12+ runtime BLE permissions are granted before a BLE op.
+ * No-op on iOS and Android < 12. Throws a tagged error on denial so callers
+ * (and the UI) can surface platform-specific copy.
+ */
+async function ensureAndroidBlePermissions(): Promise<void> {
+  const result = await requestAndroidBlePermissions()
+  switch (result.kind) {
+    case 'granted':
+    case 'not_applicable':
+      return
+    case 'denied':
+    case 'never_ask_again': {
+      const err = new Error('android_ble_permission_denied') as Error & {
+        code?: string
+      }
+      err.code = 'android_ble_permission_denied'
+      throw err
+    }
+    default: {
+      const _exhaustive: never = result
       return _exhaustive
     }
   }

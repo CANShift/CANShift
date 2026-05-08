@@ -28,20 +28,28 @@ interface Props {
 
 interface FoundDevice { id: string; name: string }
 
+function promptUnauthorized(platform: 'ios' | 'android'): void {
+  const message =
+    platform === 'android'
+      ? 'CANShift needs nearby devices permission. Open app settings to grant it.'
+      : 'CANShift needs Bluetooth access to find your dashboard. Open Settings to grant permission.'
+  Alert.alert(
+    'Bluetooth permission needed',
+    message,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+    ]
+  )
+}
+
 function promptForBleState(state: Exclude<BlePermissionState, { kind: 'ok' }>): void {
   switch (state.kind) {
     case 'powered_off':
       Alert.alert('Bluetooth is off', 'Turn Bluetooth on to scan for your dashboard.')
       return
     case 'unauthorized':
-      Alert.alert(
-        'Bluetooth permission needed',
-        'CANShift needs Bluetooth access to find your dashboard. Open Settings to grant permission.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-        ]
-      )
+      promptUnauthorized(state.platform)
       return
     case 'unsupported':
       Alert.alert(
@@ -63,6 +71,15 @@ function promptForBleState(state: Exclude<BlePermissionState, { kind: 'ok' }>): 
   }
 }
 
+function isAndroidPermissionDeniedError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const code = (err as Error & { code?: string }).code
+    return code === 'android_ble_permission_denied' ||
+      err.message === 'android_ble_permission_denied'
+  }
+  return false
+}
+
 export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<FoundDevice[]>([])
@@ -79,12 +96,21 @@ export default function ScanScreen({ navigation }: Props) {
     }
     setDevices([])
     setScanning(true)
-    await BleService.scan((device) => {
-      setDevices((prev) =>
-        prev.find((d) => d.id === device.id) ? prev : [...prev, device]
-      )
-    }, 10000)
-    setScanning(false)
+    try {
+      await BleService.scan((device) => {
+        setDevices((prev) =>
+          prev.find((d) => d.id === device.id) ? prev : [...prev, device]
+        )
+      }, 10000)
+    } catch (err) {
+      if (isAndroidPermissionDeniedError(err)) {
+        promptUnauthorized('android')
+      } else {
+        Alert.alert('Scan failed', err instanceof Error ? err.message : 'Unknown error')
+      }
+    } finally {
+      setScanning(false)
+    }
   }, [])
 
   const connectTo = useCallback(
@@ -95,6 +121,10 @@ export default function ScanScreen({ navigation }: Props) {
         await BleService.connect(device.id)
         navigation.replace('Connected')
       } catch (err) {
+        if (isAndroidPermissionDeniedError(err)) {
+          promptUnauthorized('android')
+          return
+        }
         Alert.alert('Connection failed', err instanceof Error ? err.message : 'Unknown error')
       }
     },
