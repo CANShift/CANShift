@@ -8,6 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FirmwareCheck } from '../stores/device.store'
+import type { LogLevel } from '../stores/log.store'
 import type { SdRuntimeState } from '../services/ipc.service'
 import { runFirmwareProbe, POST_TIMEOUT_RETRY_DELAY_MS } from './useFirmwareCheck'
 
@@ -30,6 +31,7 @@ interface CapturedReport {
   versions: (string | null)[]
   isDayValues: (boolean | null)[]
   sdStates: SdRuntimeState[]
+  logs: { level: LogLevel; message: string }[]
 }
 
 function makeCapturedReport(): {
@@ -39,6 +41,7 @@ function makeCapturedReport(): {
     setFirmwareVersion: (v: string | null) => void
     setIsDayMode: (d: boolean | null) => void
     setSdState: (s: SdRuntimeState) => void
+    log: (level: LogLevel, message: string) => void
   }
 } {
   const capture: CapturedReport = {
@@ -46,6 +49,7 @@ function makeCapturedReport(): {
     versions: [],
     isDayValues: [],
     sdStates: [],
+    logs: [],
   }
   return {
     capture,
@@ -54,6 +58,7 @@ function makeCapturedReport(): {
       setFirmwareVersion: (v) => capture.versions.push(v),
       setIsDayMode: (d) => capture.isDayValues.push(d),
       setSdState: (s) => capture.sdStates.push(s),
+      log: (level, message) => capture.logs.push({ level, message }),
     },
   }
 }
@@ -149,6 +154,35 @@ describe('runFirmwareProbe', () => {
     await runFirmwareProbe(second.report, () => false)
     expect(second.capture.checks.at(-1)?.kind).toBe('up_to_date')
     expect(mockedQueryVersion).toHaveBeenCalledTimes(2)
+  })
+
+  it('emits start + result log entries with the [status] prefix (#377)', async () => {
+    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: true, sdState: 'ok' })
+    mockedListReleases.mockResolvedValue([
+      { version: '1.0.0', tag: 'v1.0.0', publishedAt: '', prerelease: false, notes: '' },
+    ])
+
+    const { capture, report } = makeCapturedReport()
+    await runFirmwareProbe(report, () => false)
+
+    const messages = capture.logs.map((l) => l.message)
+    expect(messages.some((m) => m.startsWith('[status] Probing'))).toBe(true)
+    expect(messages.some((m) => m.startsWith('[status] Firmware v1.0.0'))).toBe(true)
+    expect(messages.some((m) => m.startsWith('[status] Up to date'))).toBe(true)
+  })
+
+  it('logs no-firmware as a warn entry after two misses (#377)', async () => {
+    vi.useFakeTimers()
+    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null, sdState: 'unknown' })
+
+    const { capture, report } = makeCapturedReport()
+    const promise = runFirmwareProbe(report, () => false)
+    await vi.advanceTimersByTimeAsync(POST_TIMEOUT_RETRY_DELAY_MS + 50)
+    await promise
+
+    const warnMessages = capture.logs.filter((l) => l.level === 'warn').map((l) => l.message)
+    expect(warnMessages.some((m) => m.includes('retrying once'))).toBe(true)
+    expect(warnMessages.some((m) => m.includes('No CANShift firmware detected'))).toBe(true)
   })
 
   it('cooperatively cancels mid-probe when the port latch flips', async () => {
