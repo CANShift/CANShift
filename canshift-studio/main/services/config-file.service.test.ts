@@ -5,7 +5,7 @@
 // @vitest-environment node
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -141,5 +141,125 @@ describe('ConfigFileService — openFilePath path allowlist (#214)', () => {
     const equivalent = join(workDir, '.', 'same.json')
     const result = await service.openFilePath(equivalent)
     expect(result.success).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Issue #219 — openFile / saveFile error-path coverage
+// ---------------------------------------------------------------------------
+//
+// The renderer's session-restore flow swallows errors silently, so without
+// these tests a regression where `openFile` returns the wrong shape (e.g. a
+// thrown exception instead of `{ success: false, error }`) would only surface
+// as a confused empty editor at runtime.
+
+describe('ConfigFileService.openFile — dialog and FS error paths (#219)', () => {
+  it('resolves with success:false when the user cancels the open dialog', async () => {
+    dialogMock.showOpenDialog.mockResolvedValueOnce({ canceled: true, filePaths: [] })
+    const service = new ConfigFileService(() => [])
+
+    const result = await service.openFile()
+
+    expect(result).toEqual({ success: false })
+  })
+
+  it('resolves with success:false when the dialog returns an empty filePaths array', async () => {
+    // Some platforms return canceled:false but no path (rare, but observed).
+    dialogMock.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [] })
+    const service = new ConfigFileService(() => [])
+
+    const result = await service.openFile()
+
+    expect(result).toEqual({ success: false })
+  })
+
+  it('parses the JSON content and surfaces it on success', async () => {
+    const target = join(workDir, 'dashboard.json')
+    await writeJson(target, { schemaVersion: 5, name: 'test' })
+
+    dialogMock.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [target] })
+    const service = new ConfigFileService(() => [])
+
+    const result = await service.openFile()
+
+    expect(result.success).toBe(true)
+    expect(result.filePath).toBe(target)
+    expect(result.content).toEqual({ schemaVersion: 5, name: 'test' })
+  })
+
+  it('reports a parse error for malformed JSON without throwing', async () => {
+    const target = join(workDir, 'broken.json')
+    await writeFile(target, '{ not valid json', 'utf-8')
+
+    dialogMock.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [target] })
+    const service = new ConfigFileService(() => [])
+
+    const result = await service.openFile()
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/Failed to read config:/)
+  })
+
+  it('reports a missing-file error without throwing', async () => {
+    const missing = join(workDir, 'does-not-exist.json')
+
+    dialogMock.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [missing] })
+    const service = new ConfigFileService(() => [])
+
+    const result = await service.openFile()
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/Failed to read config:/)
+  })
+
+  it('persists currentFilePath so a subsequent saveFile reuses it (no dialog)', async () => {
+    const target = join(workDir, 'live.json')
+    await writeJson(target, { schemaVersion: 1 })
+
+    dialogMock.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [target] })
+
+    const service = new ConfigFileService(() => [])
+    await service.openFile()
+
+    // After openFile, save should write to `target` without showing a dialog.
+    const saved = await service.saveFile({ schemaVersion: 1, updated: true })
+
+    expect(saved).toEqual({ success: true, filePath: target })
+    expect(dialogMock.showSaveDialog).not.toHaveBeenCalled()
+
+    const written = await readFile(target, 'utf-8')
+    expect(JSON.parse(written)).toEqual({ schemaVersion: 1, updated: true })
+  })
+
+  it('saveFile with no currentFilePath delegates to saveFileAs (shows save dialog)', async () => {
+    const target = join(workDir, 'fresh-save.json')
+    dialogMock.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
+
+    const service = new ConfigFileService(() => [])
+    const result = await service.saveFile({ schemaVersion: 1 })
+
+    expect(result.success).toBe(true)
+    expect(dialogMock.showSaveDialog).toHaveBeenCalledOnce()
+  })
+
+  it('saveFileAs reports an error when the destination cannot be written', async () => {
+    // Picking a path under a non-existent directory triggers ENOENT on write.
+    const unwritable = join(workDir, 'no-such-dir', 'out.json')
+    dialogMock.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: unwritable })
+
+    const service = new ConfigFileService(() => [])
+    const result = await service.saveFileAs({ schemaVersion: 1 })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/Failed to save config:/)
+  })
+
+  it('saveFileAs returns success:false on dialog cancel', async () => {
+    dialogMock.showSaveDialog.mockResolvedValueOnce({ canceled: true, filePath: undefined })
+
+    const service = new ConfigFileService(() => [])
+    const result = await service.saveFileAs({ schemaVersion: 1 })
+
+    expect(result).toEqual({ success: false })
   })
 })

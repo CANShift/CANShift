@@ -111,3 +111,107 @@ describe('sessionService — first-run onboarding', () => {
     expect(parsed.firstRunCompleted).toBe(true)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Issue #219 — recent-files dedupe + cap and lastPortPath round-trip
+// ---------------------------------------------------------------------------
+
+describe('sessionService.addRecentFile — dedupe and cap (#219)', () => {
+  it('deduplicates the same path so it appears once at the head', async () => {
+    const service = await loadService()
+    service.addRecentFile('/Users/me/a.json')
+    service.addRecentFile('/Users/me/b.json')
+    service.addRecentFile('/Users/me/a.json') // re-add — should move to head
+
+    expect(service.getRecentFiles()).toEqual(['/Users/me/a.json', '/Users/me/b.json'])
+  })
+
+  it('caps recent files at 10 entries — oldest evicted first', async () => {
+    const service = await loadService()
+    for (let i = 0; i < 12; i++) {
+      service.addRecentFile(`/Users/me/file-${String(i)}.json`)
+    }
+    const recents = service.getRecentFiles()
+    expect(recents).toHaveLength(10)
+    // Newest at the head, oldest two evicted (file-0 and file-1).
+    expect(recents[0]).toBe('/Users/me/file-11.json')
+    expect(recents).not.toContain('/Users/me/file-0.json')
+    expect(recents).not.toContain('/Users/me/file-1.json')
+  })
+
+  it('also updates lastFilePath on each add', async () => {
+    const service = await loadService()
+    service.addRecentFile('/Users/me/a.json')
+    expect(service.getLastFilePath()).toBe('/Users/me/a.json')
+    service.addRecentFile('/Users/me/b.json')
+    expect(service.getLastFilePath()).toBe('/Users/me/b.json')
+  })
+})
+
+describe('sessionService.lastPortPath round-trip (#219)', () => {
+  it('returns null on a fresh install', async () => {
+    const service = await loadService()
+    expect(service.getLastPortPath()).toBeNull()
+  })
+
+  it('persists a port path through setLastPortPath', async () => {
+    const service = await loadService()
+    service.setLastPortPath('/dev/tty.usbserial-A1B2')
+    expect(service.getLastPortPath()).toBe('/dev/tty.usbserial-A1B2')
+  })
+
+  it('clears the port path when set to null', async () => {
+    const service = await loadService()
+    service.setLastPortPath('/dev/tty.test')
+    service.setLastPortPath(null)
+    expect(service.getLastPortPath()).toBeNull()
+  })
+
+  it('survives a module reload', async () => {
+    const service = await loadService()
+    service.setLastPortPath('/dev/tty.persistent')
+
+    vi.resetModules()
+    const reloaded = await loadService()
+    expect(reloaded.getLastPortPath()).toBe('/dev/tty.persistent')
+  })
+})
+
+describe('sessionService — corrupt session.json (#219)', () => {
+  it('returns defaults when the file is malformed JSON', async () => {
+    await writeFile(join(workDir, 'session.json'), '{ not json', 'utf-8')
+    const service = await loadService()
+
+    expect(service.getLastFilePath()).toBeNull()
+    expect(service.getRecentFiles()).toEqual([])
+    expect(service.getLastPortPath()).toBeNull()
+    expect(service.getFirstRunCompleted()).toBe(false)
+  })
+
+  it('coerces a non-array recentFiles field to []', async () => {
+    await writeSession({ recentFiles: 'not an array', lastFilePath: '/foo.json' })
+    const service = await loadService()
+    expect(service.getRecentFiles()).toEqual([])
+    // Other fields still survive the coercion.
+    expect(service.getLastFilePath()).toBe('/foo.json')
+  })
+
+  it('does not crash on writes when the userData dir is missing', async () => {
+    // Point app.getPath at a directory we just deleted — every write should
+    // swallow ENOENT silently and getters fall back to defaults.
+    await rm(workDir, { recursive: true, force: true })
+    const service = await loadService()
+
+    expect(() => {
+      service.markFirstRunCompleted()
+      service.setLastPortPath('/dev/tty.x')
+      service.addRecentFile('/Users/me/a.json')
+    }).not.toThrow()
+
+    // Reads also fall through to defaults — best-effort persistence is the
+    // documented contract.
+    expect(service.getFirstRunCompleted()).toBe(false)
+    expect(service.getLastPortPath()).toBeNull()
+    expect(service.getRecentFiles()).toEqual([])
+  })
+})

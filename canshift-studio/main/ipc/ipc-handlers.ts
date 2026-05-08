@@ -25,21 +25,22 @@ import type { CanFrame } from '../services/usb.service.types'
 // (e.g. dashboard config) still runs inside the relevant service or in
 // canshift-core's validateDashboard.
 
-function isNonEmptyString(v: unknown): v is string {
+// Exported for direct unit testing — see ipc-handlers.test.ts.
+export function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.length > 0
 }
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
+export function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
-interface ScreenSettingsPayload {
+export interface ScreenSettingsPayload {
   brightness: number
   sleep: number
   rotation?: 0 | 180
 }
 
-function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
+export function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
   if (!isPlainObject(v)) return null
   const brightness = v.brightness
   const sleep = v.sleep
