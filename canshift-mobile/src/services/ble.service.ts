@@ -261,6 +261,42 @@ export async function sendCmd(cmd: string): Promise<void> {
   )
 }
 
+/**
+ * Discriminated state describing whether the app can use BLE right now.
+ * Mirrors `react-native-ble-plx`'s `State` enum but collapses the cases the
+ * UI cares about and adds a value the UI can switch on exhaustively.
+ */
+export type BlePermissionState =
+  | { kind: 'ok' }
+  | { kind: 'powered_off' }
+  | { kind: 'unauthorized' }
+  | { kind: 'unsupported' }
+  | { kind: 'resetting' }
+  | { kind: 'unknown' }
+
+/** Classify the current adapter state for UI consumers. */
+export async function getBlePermissionState(): Promise<BlePermissionState> {
+  const state = await manager.state()
+  switch (state) {
+    case State.PoweredOn:
+      return { kind: 'ok' }
+    case State.PoweredOff:
+      return { kind: 'powered_off' }
+    case State.Unauthorized:
+      return { kind: 'unauthorized' }
+    case State.Unsupported:
+      return { kind: 'unsupported' }
+    case State.Resetting:
+      return { kind: 'resetting' }
+    case State.Unknown:
+      return { kind: 'unknown' }
+    default: {
+      const _exhaustive: never = state
+      return _exhaustive
+    }
+  }
+}
+
 /** Check if BLE is powered on. Returns true if ready. */
 export async function isBlePowered(): Promise<boolean> {
   const state = await manager.state()
