@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
 import * as BleService from '../services/ble.service'
+import type { BlePermissionState } from '../services/ble.service'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 
@@ -25,15 +27,50 @@ interface Props {
 
 interface FoundDevice { id: string; name: string }
 
+function promptForBleState(state: Exclude<BlePermissionState, { kind: 'ok' }>): void {
+  switch (state.kind) {
+    case 'powered_off':
+      Alert.alert('Bluetooth is off', 'Turn Bluetooth on to scan for your dashboard.')
+      return
+    case 'unauthorized':
+      Alert.alert(
+        'Bluetooth permission needed',
+        'CANShift needs Bluetooth access to find your dashboard. Open Settings to grant permission.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+        ]
+      )
+      return
+    case 'unsupported':
+      Alert.alert(
+        'Bluetooth unavailable',
+        "This device doesn't support Bluetooth Low Energy."
+      )
+      return
+    case 'resetting':
+      Alert.alert('Bluetooth restarting', 'Bluetooth is resetting. Try again in a moment.')
+      return
+    case 'unknown':
+      Alert.alert('Checking Bluetooth', 'Bluetooth state is not yet available. Try again in a moment.')
+      return
+    default: {
+      const _exhaustive: never = state
+      void _exhaustive
+      return
+    }
+  }
+}
+
 export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<FoundDevice[]>([])
   const connectionState = useDeviceStore((s) => s.connectionState)
 
   const startScan = useCallback(async () => {
-    const ready = await BleService.isBlePowered()
-    if (!ready) {
-      Alert.alert('Bluetooth', 'Please enable Bluetooth and try again.')
+    const state = await BleService.getBlePermissionState()
+    if (state.kind !== 'ok') {
+      promptForBleState(state)
       return
     }
     setDevices([])
