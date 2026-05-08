@@ -32,7 +32,8 @@ function LogEntryRow({ entry }: { entry: LogEntry }) {
 }
 
 export default function LogScreen() {
-  const { entries, clear } = useLogStore()
+  const entries = useLogStore((s) => s.entries)
+  const clear = useLogStore((s) => s.clear)
 
   return (
     <SafeAreaView style={styles.container}>

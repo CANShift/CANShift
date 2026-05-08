@@ -11,6 +11,7 @@ import {
   Pressable,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
+import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
@@ -22,8 +23,14 @@ import type { RootStackParamList } from '../navigation'
 type RootNav = NativeStackNavigationProp<RootStackParamList>
 
 export default function DashTopBar() {
-  const { deviceName, firmwareVersion, canHealthy } = useDeviceStore()
-  const { isLive } = useSignalsStore()
+  const { deviceName, firmwareVersion, canHealthy } = useDeviceStore(
+    useShallow((s) => ({
+      deviceName: s.deviceName,
+      firmwareVersion: s.firmwareVersion,
+      canHealthy: s.canHealthy,
+    })),
+  )
+  const isLive = useSignalsStore((s) => s.isLive)
   const isSim = SimService.isRunning()
   const [menuVisible, setMenuVisible] = useState(false)
 

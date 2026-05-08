@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as OtaService from '../services/ota.service'
@@ -144,7 +145,9 @@ function ReleaseRow({
 // ---------------------------------------------------------------------------
 
 export default function UpdateScreen({ navigation }: Props) {
-  const { firmwareVersion, wifiApSsid } = useDeviceStore()
+  const { firmwareVersion, wifiApSsid } = useDeviceStore(
+    useShallow((s) => ({ firmwareVersion: s.firmwareVersion, wifiApSsid: s.wifiApSsid })),
+  )
   const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('releases')
