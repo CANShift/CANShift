@@ -1,6 +1,8 @@
 // validate-dashboard.ts — Dashboard config validation
 
 import {
+  CAN_RAW_DATA_MAX_HEX_CHARS,
+  CAN_RAW_DATA_REGEX,
   CANVAS,
   DECIMAL_PLACES,
   FIRMWARE_CAPS,
@@ -668,6 +670,12 @@ function validateButton(cfg: UnknownRecord, prefix: string): string[] {
     errors.push(`${prefix} (button): targetPageId must be a non-empty string`)
   }
 
+  if (Array.isArray(cfg.actions)) {
+    cfg.actions.forEach((action: unknown, idx: number) => {
+      errors.push(...validateButtonAction(action, `${prefix} (button).actions[${idx.toString()}]`))
+    })
+  }
+
   // Optional colors block
   if (isRecord(cfg.colors)) {
     if (cfg.colors.normal !== undefined && !isHexColor(cfg.colors.normal)) {
@@ -678,6 +686,28 @@ function validateButton(cfg: UnknownRecord, prefix: string): string[] {
     }
   }
 
+  return errors
+}
+
+function validateButtonAction(action: unknown, prefix: string): string[] {
+  if (!isRecord(action)) return []
+  if (action.category !== 'ecu' || action.type !== 'can_raw') return []
+  return validateCanRawData(action.data, prefix)
+}
+
+function validateCanRawData(data: unknown, prefix: string): string[] {
+  if (typeof data !== 'string') {
+    return [`${prefix}: data must be a string`]
+  }
+  const errors: string[] = []
+  if (data.length > CAN_RAW_DATA_MAX_HEX_CHARS) {
+    errors.push(
+      `${prefix}: data must be at most ${CAN_RAW_DATA_MAX_HEX_CHARS.toString()} hex characters (8 bytes)`
+    )
+  }
+  if (!CAN_RAW_DATA_REGEX.test(data)) {
+    errors.push(`${prefix}: data must be even-length hex (e.g. "DEADBEEF")`)
+  }
   return errors
 }
 
