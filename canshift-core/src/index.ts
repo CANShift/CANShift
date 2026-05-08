@@ -67,6 +67,12 @@ export {
 } from './constants/firmware-caps'
 
 // ---------------------------------------------------------------------------
+// TopBar proportion table — shared with firmware (mirrored in top_bar.cpp)
+// ---------------------------------------------------------------------------
+export { TopBarMetrics } from './topbar-metrics'
+export type { TopBarMetricsRatios } from './topbar-metrics'
+
+// ---------------------------------------------------------------------------
 // Migrations
 // ---------------------------------------------------------------------------
 export {
