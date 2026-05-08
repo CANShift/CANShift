@@ -5,6 +5,7 @@ import type { SignalDef, SignalConfig } from '@tmbk/canshift-core'
 import { CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { signalIpc } from '../services/ipc.service'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const inputStyle: React.CSSProperties = {
   background: '#111111',
@@ -15,11 +16,6 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 3,
   width: '100%',
   boxSizing: 'border-box',
-}
-
-const checkboxStyle: React.CSSProperties = {
-  accentColor: '#CC3333',
-  cursor: 'pointer',
 }
 
 const thStyle: React.CSSProperties = {
@@ -368,25 +364,21 @@ function SignalRow({
 
       {/* bigEndian */}
       <td style={{ ...tdStyle, textAlign: 'center' }}>
-        <input
-          type="checkbox"
+        <Checkbox
           checked={signal.bigEndian}
-          onChange={(e) => {
-            onUpdate({ bigEndian: e.target.checked })
+          onCheckedChange={(checked) => {
+            onUpdate({ bigEndian: checked === true })
           }}
-          style={checkboxStyle}
         />
       </td>
 
       {/* signed */}
       <td style={{ ...tdStyle, textAlign: 'center' }}>
-        <input
-          type="checkbox"
+        <Checkbox
           checked={signal.signed}
-          onChange={(e) => {
-            onUpdate({ signed: e.target.checked })
+          onCheckedChange={(checked) => {
+            onUpdate({ signed: checked === true })
           }}
-          style={checkboxStyle}
         />
       </td>
 

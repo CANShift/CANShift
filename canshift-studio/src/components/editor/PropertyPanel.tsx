@@ -16,6 +16,7 @@ import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
 import { IconTrash } from '../icons/Icon'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { WidgetPreview } from './WidgetPreview'
 import {
   SIZE_TOKENS,
@@ -622,20 +623,18 @@ function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) {
                 </div>
               </Field>
               <Field label="Needle">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={cfg.showNeedle ?? false}
-                  onChange={(e) => {
-                    onChange({ config: { ...cfg, showNeedle: e.target.checked } })
+                  onCheckedChange={(checked) => {
+                    onChange({ config: { ...cfg, showNeedle: checked === true } })
                   }}
                 />
               </Field>
               <Field label="Rev flash">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={cfg.revFlash ?? false}
-                  onChange={(e) => {
-                    onChange({ config: { ...cfg, revFlash: e.target.checked } })
+                  onCheckedChange={(checked) => {
+                    onChange({ config: { ...cfg, revFlash: checked === true } })
                   }}
                 />
               </Field>
@@ -977,21 +976,19 @@ function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
       <Field label="Show">
         <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#AAAAAA' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
+            <Checkbox
               checked={cfg.showLabel !== false}
-              onChange={(e) => {
-                onChange({ config: { ...cfg, showLabel: e.target.checked } })
+              onCheckedChange={(checked) => {
+                onChange({ config: { ...cfg, showLabel: checked === true } })
               }}
             />
             Text
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
+            <Checkbox
               checked={cfg.showIcon === true}
-              onChange={(e) => {
-                onChange({ config: { ...cfg, showIcon: e.target.checked } })
+              onCheckedChange={(checked) => {
+                onChange({ config: { ...cfg, showIcon: checked === true } })
               }}
             />
             Icon
@@ -1167,11 +1164,10 @@ function WarningFields({ widget, onChange }: ConfigFieldsProps) {
         />
       </Field>
       <Field label="Invert Logic">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={cfg.invertLogic ?? false}
-          onChange={(e) => {
-            onChange({ config: { ...cfg, invertLogic: e.target.checked } })
+          onCheckedChange={(checked) => {
+            onChange({ config: { ...cfg, invertLogic: checked === true } })
           }}
         />
       </Field>
@@ -1229,11 +1225,10 @@ function TimerFields({ widget, onChange }: ConfigFieldsProps) {
         </div>
       </Field>
       <Field label="Auto-start">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={cfg.autoStart ?? false}
-          onChange={(e) => {
-            onChange({ config: { ...cfg, autoStart: e.target.checked } })
+          onCheckedChange={(checked) => {
+            onChange({ config: { ...cfg, autoStart: checked === true } })
           }}
         />
       </Field>
@@ -1253,11 +1248,10 @@ function GearFields({ widget, onChange }: ConfigFieldsProps) {
   return (
     <>
       <Field label="Hide if invalid">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={cfg.hideWhenInvalid ?? false}
-          onChange={(e) => {
-            onChange({ config: { ...cfg, hideWhenInvalid: e.target.checked } })
+          onCheckedChange={(checked) => {
+            onChange({ config: { ...cfg, hideWhenInvalid: checked === true } })
           }}
         />
       </Field>
