@@ -1,5 +1,7 @@
 # CI — runs on every pull request targeting main.
-# Checks: lint, typecheck, build for canshift-core, canshift-studio, and canshift-mobile.
+# Checks: lint, typecheck, build for canshift-core, canshift-studio, canshift-mobile,
+# plus a macOS-hosted iOS native build (prebuild + pod install + xcodebuild) and
+# firmware compile via PlatformIO.
 # No deployment happens here — releases are triggered by merging to main (see release.yml).
 
 name: CI
@@ -7,6 +9,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ─── Shared core ────────────────────────────────────────────────────────────
@@ -126,6 +132,79 @@ jobs:
 
       - name: Bundle check (iOS)
         run: npx expo export --platform ios --output-dir /tmp/expo-bundle
+
+  # ─── Mobile — iOS native build ──────────────────────────────────────────────
+  # Runs on macOS so it exercises the full native pipeline that
+  # `mobile — typecheck + bundle` cannot (prebuild + CocoaPods + xcodebuild).
+  # macOS minutes cost ~10x ubuntu — keep this lean and cache aggressively.
+  mobile-ios-build:
+    name: mobile — iOS native build
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: canshift-mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: canshift-mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo prebuild (iOS)
+        run: npx expo prebuild --clean --platform ios
+
+      - name: Resolve iOS workspace + scheme
+        id: ios
+        run: |
+          WORKSPACE=$(ls ios | grep '\.xcworkspace$' | head -n 1)
+          SCHEME="${WORKSPACE%.xcworkspace}"
+          if [ -z "$WORKSPACE" ] || [ -z "$SCHEME" ]; then
+            echo "Failed to locate generated .xcworkspace under ios/" >&2
+            ls -la ios || true
+            exit 1
+          fi
+          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+          echo "Resolved workspace=$WORKSPACE scheme=$SCHEME"
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: canshift-mobile/ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('canshift-mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            pods-${{ runner.os }}-
+
+      - name: Pod install
+        run: pod install
+        working-directory: canshift-mobile/ios
+
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ hashFiles('canshift-mobile/ios/Podfile.lock', 'canshift-mobile/package-lock.json') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-
+
+      - name: xcodebuild (iOS Simulator)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace "${{ steps.ios.outputs.workspace }}" \
+            -scheme "${{ steps.ios.outputs.scheme }}" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+        working-directory: canshift-mobile/ios
 
   # ─── Firmware — clang-format ────────────────────────────────────────────────
   firmware:
