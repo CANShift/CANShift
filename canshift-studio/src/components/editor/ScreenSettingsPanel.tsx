@@ -34,6 +34,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const [otaState, setOtaState] = useState<'idle' | 'pending'>('idle')
   const [calibrating, setCalibrating] = useState(false)
   const [pendingRotation180, setPendingRotation180] = useState(false)
+  const [pendingCalibration, setPendingCalibration] = useState(false)
 
   const fs = Math.round(scale * 6)
   const fsLg = Math.round(scale * 7)
@@ -97,12 +98,13 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     }
   }
 
-  const handleCalibrate = async () => {
+  const handleCalibrate = () => {
     if (!canDeviceAction) return
-    const ok = window.confirm(
-      'Calibration starts on the device.\nTap each crosshair on the dashboard screen.\n\nContinue?'
-    )
-    if (!ok) return
+    setPendingCalibration(true)
+  }
+
+  const handleConfirmCalibration = async () => {
+    setPendingCalibration(false)
     setCalibrating(true)
     const result = await usbService.calibrateTouch()
     setCalibrating(false)
@@ -277,9 +279,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
         {/* Touch calibration — opens crosshairs on the device */}
         <SettingRow label="TOUCH" value="" scale={scale}>
           <button
-            onClick={() => {
-              void handleCalibrate()
-            }}
+            onClick={handleCalibrate}
             disabled={!canDeviceAction || calibrating}
             style={{
               width: '100%',
@@ -398,6 +398,26 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             <AlertDialogCancel>Keep current</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmRotation180}>
               Reboot and continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={pendingCalibration} onOpenChange={setPendingCalibration}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start touch calibration on the device</AlertDialogTitle>
+            <AlertDialogDescription>
+              Calibration starts on the device. Tap each crosshair on the dashboard screen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void handleConfirmCalibration()
+              }}
+            >
+              Continue
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

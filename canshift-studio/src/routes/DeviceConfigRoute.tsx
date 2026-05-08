@@ -10,6 +10,7 @@ import type { SdVolume, SdPushProgress } from '../services/ipc.service'
 import type { DeviceConfig, CanSpeedKbps } from '@tmbk/canshift-core'
 import { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from '@tmbk/canshift-core'
 import { useDeviceStore } from '../stores/device.store'
+import { Checkbox } from '@/components/ui/checkbox'
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -351,11 +352,10 @@ export default function DeviceConfigRoute() {
               cursor: 'pointer',
             }}
           >
-            <input
-              type="checkbox"
+            <Checkbox
               checked={forceRefresh}
-              onChange={(e) => {
-                setForceRefresh(e.target.checked)
+              onCheckedChange={(checked) => {
+                setForceRefresh(checked === true)
               }}
             />
             Force refresh — also overwrite <code style={{ color: '#AAAAAA' }}>/config/</code>{' '}
