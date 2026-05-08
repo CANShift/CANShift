@@ -14,6 +14,7 @@ import { useDeviceStore } from '../stores/device.store'
 import { useSignalsStore } from '../stores/signals.store'
 import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
+import { parseTelemetry, parseStatus } from './ble.validators'
 
 // ---------------------------------------------------------------------------
 // Singleton BleManager
@@ -36,14 +37,6 @@ function decodeBase64(value: string): string {
 
 function encodeBase64(value: string): string {
   return Buffer.from(value, 'utf8').toString('base64')
-}
-
-function parseTelemetry(raw: string): Record<string, number> {
-  try {
-    return JSON.parse(raw) as Record<string, number>
-  } catch {
-    return {}
-  }
 }
 
 function startStalenesTimer() {
@@ -137,14 +130,14 @@ export async function connect(deviceId: string): Promise<void> {
       BLE_CHAR_STATUS
     )
     if (statusChar.value) {
-      const status = JSON.parse(decodeBase64(statusChar.value)) as {
-        ver?: string
-        can?: number
-        is_day?: number
-      }
-      setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
-      if (status.is_day !== undefined) {
-        useDeviceStore.getState().setIsDayMode(status.is_day === 1)
+      const status = parseStatus(decodeBase64(statusChar.value))
+      if (status) {
+        setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
+        if (status.is_day !== undefined) {
+          useDeviceStore.getState().setIsDayMode(status.is_day === 1)
+        }
+      } else {
+        log('warn', 'BLE: rejected malformed initial status payload')
       }
     }
 
@@ -158,6 +151,10 @@ export async function connect(deviceId: string): Promise<void> {
       (error: Error | null, char: Characteristic | null) => {
         if (error || !char?.value) return
         const payload = parseTelemetry(decodeBase64(char.value))
+        if (!payload) {
+          log('warn', 'BLE: rejected malformed telemetry payload')
+          return
+        }
         useSignalsStore.getState().update(payload)
       }
     )
@@ -168,20 +165,15 @@ export async function connect(deviceId: string): Promise<void> {
       BLE_CHAR_STATUS,
       (error: Error | null, char: Characteristic | null) => {
         if (error || !char?.value) return
-        try {
-          const s = JSON.parse(decodeBase64(char.value)) as {
-            ver?: string
-            can?: number
-            ap_ssid?: string
-            is_day?: number
-          }
-          const store = useDeviceStore.getState()
-          store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
-          store.setWifiAp(s.ap_ssid ?? null)
-          if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
-        } catch {
-          // Drop malformed status payloads silently — the next valid one wins.
+        const s = parseStatus(decodeBase64(char.value))
+        if (!s) {
+          log('warn', 'BLE: rejected malformed status payload')
+          return
         }
+        const store = useDeviceStore.getState()
+        store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
+        store.setWifiAp(s.ap_ssid ?? null)
+        if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
       }
     )
 

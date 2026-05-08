@@ -80,9 +80,11 @@ function buildPoints(
   const valueSpan = range.max - range.min
   const pts: string[] = []
   for (const s of buffer) {
-    if (s.t < windowStart || s.v[key] === undefined) continue
+    if (s.t < windowStart) continue
+    const value = s.v[key]
+    if (value === undefined || !Number.isFinite(value)) continue
     const x = ((s.t - windowStart) / span) * w
-    const norm = Math.max(0, Math.min(1, (s.v[key] - range.min) / valueSpan))
+    const norm = Math.max(0, Math.min(1, (value - range.min) / valueSpan))
     pts.push(`${x.toFixed(1)},${((1 - norm) * h).toFixed(1)}`)
   }
   return pts.join(' ')
