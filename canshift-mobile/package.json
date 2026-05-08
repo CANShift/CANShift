@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "preinstall": "node -e \"const p=require('./package.json');const o=p.overrides||{};const banned={tar:'tar v7 breaks Expo prebuild (Cannot read properties of undefined reading extract)','@xmldom/xmldom':'xmldom v0.9 breaks @expo/plist parseFromString (mimeType undefined)'};const hit=Object.keys(banned).find(k=>o[k]);if(hit){console.error('\\n[canshift-mobile] ERROR: incompatible override re-introduced: '+hit+'\\n'+banned[hit]+'\\nRemove overrides.'+hit+' from package.json before reinstalling.\\n');process.exit(1);}\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -41,9 +42,8 @@
     "zod": "^4.4.3",
     "zustand": "^5.0.0"
   },
+  "//overrides": "Do NOT add 'tar' (>=7) or '@xmldom/xmldom' (>=0.9) here. Both break Expo SDK 52 internals (tar.extract undefined / DOMParser.parseFromString mimeType undefined). The preinstall script blocks them.",
   "overrides": {
-    "tar": "^7.4.3",
-    "@xmldom/xmldom": "^0.9.8",
     "uuid": "^11.1.0",
     "postcss": "^8.5.3"
   },

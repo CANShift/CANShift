@@ -1,38 +1,60 @@
-// Patches glog's Podfile target to disable FMT_USE_CONSTEVAL.
-// Required for clang 26 (Xcode 26) where FMT_STRING is treated as consteval.
+// Patches the Podfile post_install hook so fmt and glog pods build with
+// C++17 instead of C++20. Required for Xcode 16+ / Clang 18+ where
+// __cpp_consteval is defined under C++20, which makes fmt's FMT_STRING
+// consteval-only and breaks RN 0.76's bundled fmt usage.
+//
+// Symptom without this fix:
+//   error: call to consteval function 'fmt::basic_format_string<...>'
+//   is not a constant expression
+//   in ios/Pods/fmt/include/fmt/format-inl.h
 const { withDangerousMod } = require('@expo/config-plugins')
 const fs = require('fs')
 const path = require('path')
 
-const PATCH_MARKER = 'gnu++17'
+const PATCH_MARKER = '# canshift-fmt-glog-cxx17-fix'
 const PATCH = `
-    # Fix: libfmt base.h redefines FMT_USE_CONSTEVAL=1 via __cpp_consteval under clang 26 / C++20.
-    # Downgrade fmt and glog to C++17 so __cpp_consteval is not defined → FMT_USE_CONSTEVAL=0.
+    ${PATCH_MARKER}
+    # Downgrade fmt + glog to gnu++17 so __cpp_consteval is undefined →
+    # FMT_USE_CONSTEVAL=0 → FMT_STRING macros stop tripping Clang 18+.
     ['fmt', 'glog'].each do |pod_name|
-      ['debug', 'release'].each do |cfg|
+      ['Debug', 'Release'].each do |cfg|
         xcconfig_path = File.join(
           installer.sandbox.root,
-          "Target Support Files/\#{pod_name}/\#{pod_name}.\#{cfg}.xcconfig"
+          "Target Support Files/#{pod_name}/#{pod_name}.#{cfg.downcase}.xcconfig"
         )
         next unless File.exist?(xcconfig_path)
         content = File.read(xcconfig_path)
         content.gsub!('CLANG_CXX_LANGUAGE_STANDARD = c++20', 'CLANG_CXX_LANGUAGE_STANDARD = gnu++17')
         File.write(xcconfig_path, content)
       end
-    end`
+    end
+`
 
 module.exports = function withGlogFmtFix(config) {
   return withDangerousMod(config, [
     'ios',
     (config) => {
       const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile')
-      let podfile = fs.readFileSync(podfilePath, 'utf8')
+      const podfile = fs.readFileSync(podfilePath, 'utf8')
 
-      if (!podfile.includes(PATCH_MARKER)) {
-        podfile = podfile.replace(/(\n\s+end\n\nend\n?)$/, `${PATCH}\n$1`)
-        fs.writeFileSync(podfilePath, podfile)
+      if (podfile.includes(PATCH_MARKER)) {
+        return config
       }
 
+      // Insert the patch just before the final `end` that closes the
+      // `post_install do |installer|` block. The block always ends with a
+      // line containing `  end` (two-space indent) followed by the outer
+      // target's `end`. Match that pair and inject our patch above it.
+      const insertionRegex = /\n( {2}end\nend\s*\n?)$/
+      if (!insertionRegex.test(podfile)) {
+        throw new Error(
+          'withGlogFmtFix: could not locate post_install closing in Podfile. ' +
+            'The plugin needs an update for the current Expo template.'
+        )
+      }
+
+      const patched = podfile.replace(insertionRegex, `${PATCH}\n$1`)
+      fs.writeFileSync(podfilePath, patched)
       return config
     },
   ])
