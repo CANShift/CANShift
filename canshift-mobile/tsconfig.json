@@ -6,7 +6,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "jsxImportSource": "nativewind"
   },
   "exclude": [
     "node_modules",
