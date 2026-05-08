@@ -141,17 +141,24 @@ export interface MapSwitchAction {
 
 /**
  * Send a raw CAN frame.
- * frameId: decimal or 0x-prefixed hex CAN ID
+ * frameId: decimal or 0x-prefixed hex CAN ID. Standard 11-bit IDs cover the
+ *   range [0, 0x7FF]; values above that require the extended (29-bit) frame
+ *   format and are valid up to 0x1FFFFFFF.
  * data: hex-encoded payload bytes, e.g. "0102030405060708".
  *   Must be even-length, contain only hex characters (0-9, a-f, A-F),
  *   and be at most 16 characters (8 bytes — the CAN 2.0 DLC ceiling).
  *   An empty string is allowed and represents a zero-byte frame.
+ * extended: when true, transmit as a 29-bit extended ID frame (issue #319).
+ *   Optional and defaults to false. Firmware auto-promotes to extended when
+ *   `frameId > 0x7FF` so legacy configs without the flag still emit valid
+ *   frames.
  */
 export interface CanRawAction {
   category: 'ecu'
   type: 'can_raw'
   frameId: number
   data: string
+  extended?: boolean
 }
 
 export type DashboardButtonAction = NavigateAction

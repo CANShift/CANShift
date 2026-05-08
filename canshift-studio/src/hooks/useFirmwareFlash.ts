@@ -231,6 +231,20 @@ export function useFirmwareFlash() {
         setPhase('flashing')
         appendLog('Creating Transport(port) and ESPLoader…')
         const transport = new Transport(port, false)
+        // The ROM bootloader prints `Flash ID: ffffff` when the chip can't
+        // talk to its own flash chip — usually a damaged USB cable, an unpowered
+        // hub, or a peripheral pulling on GPIO 6-11 (the SPI flash bus).
+        // Detect it from the terminal stream so we can abort before the 60s
+        // writeFlash timeout (#371). A mutable ref keeps TS from narrowing the
+        // value to a literal `false` after the closure assignment.
+        const flashIdState: { bad: boolean } = { bad: false }
+        const checkForBadFlashId = (text: string): void => {
+          if (flashIdState.bad) return
+          if (/Flash ID:\s*ffffff/i.test(text)) {
+            flashIdState.bad = true
+            appendLog(`Detected bad Flash ID in terminal stream: "${text.trim()}"`, 'error')
+          }
+        }
         // Upload baudrate intentionally conservative — 921600 causes Timeouts on
         // many CH340 + USB cable combinations. 460800 is reliable and only ~25%
         // slower for a 1.4 MB image.
@@ -245,9 +259,11 @@ export function useFirmwareFlash() {
           enableTracing: false,
           terminal: {
             write: (text: string) => {
+              checkForBadFlashId(text)
               appendLog(text)
             },
             writeLine: (line: string) => {
+              checkForBadFlashId(line)
               appendLog(line)
             },
             clean: () => {
@@ -266,6 +282,14 @@ export function useFirmwareFlash() {
         appendLog('Calling loader.main(no_reset) — chip should already be in bootloader')
         await loader.main('no_reset')
         appendLog('loader.main() OK — bootloader synced')
+
+        // Abort before writeFlash if the bootloader reported a bad Flash ID.
+        // Continuing would just hang for the full 60s flash-command timeout.
+        if (flashIdState.bad) {
+          throw new Error(
+            "Flash ID is ffffff — the chip can't reach its own flash. Try: another USB cable, a powered hub, no peripherals on GPIO 6-11."
+          )
+        }
 
         // -----------------------------------------------------------------
         // Workaround for the esptool-js 0.6.0 stub timeout bug — flash
