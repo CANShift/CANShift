@@ -222,6 +222,13 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return usbService.toggleDayNight()
   })
 
+  ipcMain.handle(IpcChannels.USB_SET_DAY_NIGHT, async (_event, day: unknown) => {
+    if (typeof day !== 'boolean') {
+      return { success: false, error: 'set-day-night payload must be a boolean' }
+    }
+    return usbService.setDayNight(day)
+  })
+
   ipcMain.handle(IpcChannels.USB_CALIBRATE_TOUCH, async () => {
     return usbService.calibrateTouch()
   })

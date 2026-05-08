@@ -433,10 +433,14 @@ export async function readSettings(): Promise<{ brightness: number; sleep: numbe
   }
 }
 
-/** Send a command to the device. */
-export async function sendCmd(cmd: string): Promise<void> {
+/** Extra payload fields to send alongside the command name. */
+export type CmdPayload = Record<string, boolean | number | string>
+
+/** Send a command to the device. Optional `payload` is merged into the JSON. */
+export async function sendCmd(cmd: string, payload?: CmdPayload): Promise<void> {
   if (!connectedDevice) throw new Error('Not connected')
-  const json = JSON.stringify({ cmd })
+  const body: Record<string, boolean | number | string> = { cmd, ...(payload ?? {}) }
+  const json = JSON.stringify(body)
   await connectedDevice.writeCharacteristicWithoutResponseForService(
     BLE_SERVICE_UUID,
     BLE_CHAR_CMD,
