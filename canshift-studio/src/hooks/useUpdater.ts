@@ -7,6 +7,7 @@
 // `react-markdown` with `disallowedElements: ['script']` and NO `rehype-raw`.
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import type { UpdateAvailablePayload, UpdateErrorPayload } from '../services/ipc.service'
 
 export type UpdateStatus = 'idle' | 'available' | 'downloaded' | 'error'
@@ -30,10 +31,12 @@ export function useUpdater(): UpdateState & {
   useEffect(() => {
     const onAvailable = (payload: UpdateAvailablePayload) => {
       setState({ status: 'available', version: payload.version, errorMessage: null })
+      toast.info(`Update v${payload.version} available — downloading…`)
     }
 
     const onDownloaded = (payload: UpdateAvailablePayload) => {
       setState({ status: 'downloaded', version: payload.version, errorMessage: null })
+      toast.success(`Update v${payload.version} ready — restart to install`)
     }
 
     const onError = (payload: UpdateErrorPayload) => {

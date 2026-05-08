@@ -6,6 +6,7 @@
 // .bin), and chains into SD-prep after a successful flash.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { IconUsb } from '../components/icons/Icon'
@@ -208,8 +209,10 @@ export default function UpdateRoute() {
     )
     if (result.success) {
       log('success', `Firmware v${release.version} flashed — reboot the device`)
+      toast.success(`Firmware v${release.version} flashed`)
     } else {
       log('error', `Firmware flash failed: ${result.error ?? 'unknown'}`)
+      toast.error(`Firmware flash failed: ${result.error ?? 'unknown'}`)
     }
   }
 
@@ -247,9 +250,11 @@ export default function UpdateRoute() {
     const result = await flash({ type: 'file', file: selectedFile }, portPath ?? '')
     if (result.success) {
       log('success', `Firmware flashed — reboot the device`)
+      toast.success('Firmware flashed')
     } else {
       setManualError(result.error ?? 'Flash failed')
       log('error', `Firmware flash failed: ${result.error ?? 'unknown'}`)
+      toast.error(`Firmware flash failed: ${result.error ?? 'unknown'}`)
     }
   }
 
