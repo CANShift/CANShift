@@ -6,18 +6,152 @@
 // having to first open a file from disk that may have diverged from the
 // device's actual state (issue #100).
 //
-// Failures are surfaced through the log + error stores so the user can tell
-// the difference between a device with no config, a corrupt config, and a
-// successful empty load. The editor's existing state is preserved on failure
-// (#180).
+// When the device acks but reports `config_not_found` (e.g. fresh device, SD
+// not mounted, file deleted) we auto-load the bundled demo so the editor
+// doesn't sit empty (issue #418). Transport-level failures keep the editor
+// untouched — we don't want a flaky link to clobber unsaved edits.
 
 import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { validateDashboard, type DashboardConfig } from '@tmbk/canshift-core'
 import { useDeviceStore } from '../stores/device.store'
 import { useDashboardStore } from '../stores/dashboard.store'
-import { useLogStore } from '../stores/log.store'
+import { useLogStore, type LogLevel } from '../stores/log.store'
 import { useErrorStore } from '../stores/error.store'
-import { deviceIpc } from '../services/ipc.service'
+import { deviceIpc, type DeviceConfigResult } from '../services/ipc.service'
+
+/**
+ * Pure outcome of the device-config probe — what the renderer should do
+ * with the result. Extracted so the decision logic stays testable without
+ * pulling in React, Zustand, or the toast UI.
+ */
+export type DeviceConfigAction =
+  | { kind: 'auto-load-demo' }
+  | { kind: 'no-config-but-editor-has-edits' }
+  | { kind: 'transport-failure' }
+  | { kind: 'apply-device-config'; config: DashboardConfig }
+  | { kind: 'invalid-device-config'; errors: string[]; warnings: string[] }
+  | { kind: 'stage-pending-device-config'; config: DashboardConfig; warnings: string[] }
+  | { kind: 'apply-device-config-with-warnings'; config: DashboardConfig; warnings: string[] }
+
+interface DecideContext {
+  result: DeviceConfigResult
+  /** True when the editor currently has no config loaded. */
+  isEditorEmpty: boolean
+  /**
+   * True when the editor is currently displaying the auto-demo seeded by
+   * a previous "no-config" branch — drives the post-recovery prompt (#418).
+   */
+  loadedFromDemoFallback: boolean
+}
+
+/**
+ * Decide what to do based on the IPC result and the current editor state.
+ * Pure; no side effects. Validates device config and surfaces warnings.
+ */
+export function decideDeviceConfigAction(ctx: DecideContext): DeviceConfigAction {
+  const { result, isEditorEmpty, loadedFromDemoFallback } = ctx
+  if (!result.ok) {
+    if (result.reason === 'no-config') {
+      return isEditorEmpty ? { kind: 'auto-load-demo' } : { kind: 'no-config-but-editor-has-edits' }
+    }
+    return { kind: 'transport-failure' }
+  }
+
+  const validation = validateDashboard(result.config)
+  if (validation.errors.length > 0) {
+    return {
+      kind: 'invalid-device-config',
+      errors: validation.errors,
+      warnings: validation.warnings,
+    }
+  }
+  // validateDashboard guarantees structural conformance; cast through unknown.
+  const config = result.config as unknown as DashboardConfig
+  if (loadedFromDemoFallback) {
+    return {
+      kind: 'stage-pending-device-config',
+      config,
+      warnings: validation.warnings,
+    }
+  }
+  return {
+    kind: 'apply-device-config-with-warnings',
+    config,
+    warnings: validation.warnings,
+  }
+}
+
+interface ApplyContext {
+  log: (level: LogLevel, message: string) => void
+  pushError: (entry: { source: 'config'; code: string; message: string; detail?: string }) => void
+}
+
+/**
+ * Apply a {@link DeviceConfigAction} to the global stores. Side-effectful —
+ * the pure decision is in {@link decideDeviceConfigAction} so tests can
+ * cover it without faking the entire store graph.
+ */
+export function applyDeviceConfigAction(
+  action: DeviceConfigAction,
+  { log, pushError }: ApplyContext
+): void {
+  switch (action.kind) {
+    case 'auto-load-demo': {
+      const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(null)
+      if (outcome === 'demo') {
+        log('info', 'No dashboard config on device — loaded demo so the editor is not empty')
+        toast.info('Loaded demo dashboard — device has no config saved.')
+      } else {
+        // Race: another caller seeded a config between probe and apply.
+        log('info', 'No dashboard config on device — keeping current editor state')
+      }
+      return
+    }
+    case 'no-config-but-editor-has-edits': {
+      log('info', 'No dashboard config on device — keeping current editor state')
+      toast.info('Device has no config saved — keeping your in-progress edits.')
+      return
+    }
+    case 'transport-failure': {
+      log('info', 'No dashboard config on device — keeping current editor state')
+      return
+    }
+    case 'invalid-device-config': {
+      const summary = `Device config failed validation — ${String(action.errors.length)} error(s), keeping editor state`
+      log('error', summary)
+      pushError({
+        source: 'config',
+        code: 'DEVICE_CONFIG_INVALID',
+        message: summary,
+        detail: action.errors.join('\n'),
+      })
+      return
+    }
+    case 'apply-device-config-with-warnings': {
+      action.warnings.forEach((w) => {
+        log('warn', `Device config: ${w}`)
+      })
+      useDashboardStore.getState().loadFromDeviceOrDemo(action.config)
+      log('success', 'Loaded dashboard config from device SD')
+      return
+    }
+    case 'stage-pending-device-config': {
+      action.warnings.forEach((w) => {
+        log('warn', `Device config: ${w}`)
+      })
+      useDashboardStore.getState().stagePendingDeviceConfig(action.config)
+      log('info', 'Device config available — kept demo until you confirm')
+      return
+    }
+    case 'apply-device-config': {
+      // Reserved for future direct-apply paths; treat like the warnings variant.
+      useDashboardStore.getState().loadFromDeviceOrDemo(action.config)
+      log('success', 'Loaded dashboard config from device SD')
+      return
+    }
+  }
+}
 
 export function useDeviceConfigLoad(): void {
   const connected = useDeviceStore((s) => s.connected)
@@ -41,41 +175,19 @@ export function useDeviceConfigLoad(): void {
     let cancelled = false
 
     void (async () => {
-      const raw = await deviceIpc.getConfig()
+      const result = await deviceIpc.getConfig()
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (cancelled) return
 
-      if (raw === null) {
-        // Firmware returned no config (missing file, SD not mounted, parse
-        // error, or timeout). Keep this at info level — it's the expected
-        // state for a freshly-flashed device.
-        log('info', 'No dashboard config on device — keeping current editor state')
-        return
-      }
-
-      const result = validateDashboard(raw)
-      if (result.errors.length > 0) {
-        // Bad config on device — leave the editor's current state alone.
-        const summary = `Device config failed validation — ${String(result.errors.length)} error(s), keeping editor state`
-        log('error', summary)
-        pushError({
-          source: 'config',
-          code: 'DEVICE_CONFIG_INVALID',
-          message: summary,
-          detail: result.errors.join('\n'),
-        })
-        return
-      }
-      result.warnings.forEach((w) => {
-        log('warn', `Device config: ${w}`)
+      // Read the LATEST store state inside the async callback — never a
+      // closure captured before the user typed something (#216).
+      const dashboardState = useDashboardStore.getState()
+      const action = decideDeviceConfigAction({
+        result,
+        isEditorEmpty: dashboardState.config === null,
+        loadedFromDemoFallback: dashboardState.loadedFromDemoFallback,
       })
-
-      // validateDashboard guarantees structural conformance; cast through
-      // unknown to satisfy the TS structural mismatch on Record<string, unknown>.
-      // Route through the store action so the device-vs-editor decision reads
-      // the LATEST state, not a closure captured before the user's edits (#216).
-      useDashboardStore.getState().loadFromDeviceOrDemo(raw as unknown as DashboardConfig)
-      log('success', 'Loaded dashboard config from device SD')
+      applyDeviceConfigAction(action, { log, pushError })
     })()
 
     return () => {

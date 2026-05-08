@@ -39,6 +39,7 @@ import StatusBar from './components/shared/StatusBar'
 import ErrorBar from './components/shared/ErrorBar'
 import UpdateBanner from './components/shared/UpdateBanner'
 import VersionMismatchBanner from './components/shared/VersionMismatchBanner'
+import DemoFallbackBanner from './components/shared/DemoFallbackBanner'
 import ErrorBoundary from './components/shared/ErrorBoundary'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useFirmwareCheck } from './hooks/useFirmwareCheck'
@@ -157,6 +158,7 @@ export default function App() {
       <StatusBar />
       <UpdateBanner />
       <VersionMismatchBanner />
+      <DemoFallbackBanner />
       <PushDiffDialog />
       <BurnProgressModal />
       <BurnFailedDialog />

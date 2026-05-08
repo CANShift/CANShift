@@ -24,6 +24,15 @@ export interface DeviceLogEntry {
   message: string
 }
 
+/**
+ * Outcome of a CMD_GET_CONFIG round-trip — discriminates the empty-device
+ * branch (firmware reports `config_not_found`) from any transport-level
+ * failure (port closed, ack timeout, malformed response). Issue #418.
+ */
+export type DeviceConfigResult =
+  | { ok: true; config: Record<string, unknown> }
+  | { ok: false; reason: 'no-config' | 'transport' }
+
 interface UsbEventHandlers {
   onConnectionChanged?: (status: ConnectionStatus) => void
   onError?: (message: string) => void
@@ -284,10 +293,16 @@ export class UsbService {
 
   /**
    * Read the current dashboard.json content from the device's SD card.
-   * Returns null on any failure (firmware too old, missing file, parse error)
-   * — caller decides whether to fall back to local state.
+   *
+   * Distinguishes three outcomes so the caller (renderer) can react properly
+   * to a fresh device with no config (auto-load demo) vs a flaky link
+   * (preserve editor state) — see issue #418.
+   *
+   *   - `{ ok: true, config }`             → device returned a config object
+   *   - `{ ok: false, reason: 'no-config' }` → firmware reported config_not_found
+   *   - `{ ok: false, reason: 'transport' }` → port closed, ack timeout, parse miss
    */
-  async getConfig(): Promise<Record<string, unknown> | null> {
+  async getConfig(): Promise<DeviceConfigResult> {
     // CMD_GET_CONFIG = 0x01 — response:
     //   {"status":"ok","config":{...}}  on success (whole dashboard.json)
     //   {"status":"error","message":"config_not_found"} when the file is missing
@@ -295,9 +310,16 @@ export class UsbService {
     // The full dashboard.json can run > 10 KB; allow extra read time so the
     // ReadlineParser has the whole frame before the ack timer fires.
     const result = await this.sendCommand(payload, 8_000)
-    if (!result.success || !result.data) return null
-    const cfg = result.data.config
-    return isRecord(cfg) ? cfg : null
+    if (result.success) {
+      if (!result.data) return { ok: false, reason: 'transport' }
+      const cfg = result.data.config
+      return isRecord(cfg) ? { ok: true, config: cfg } : { ok: false, reason: 'transport' }
+    }
+    // Firmware acked the command but reported an error. Only treat the
+    // explicit "config_not_found" sentinel as the empty-device branch —
+    // anything else (timeout, port closed, unexpected error) is transport.
+    if (result.error === 'config_not_found') return { ok: false, reason: 'no-config' }
+    return { ok: false, reason: 'transport' }
   }
 
   async toggleDayNight(): Promise<UsbResult> {

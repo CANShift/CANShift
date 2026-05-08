@@ -89,6 +89,8 @@ describe('useDashboardStore.duplicateWidgets', () => {
       past: [],
       future: [],
       isPreviewDayMode: false,
+      loadedFromDemoFallback: false,
+      pendingDeviceConfig: null,
     })
   })
 
@@ -194,6 +196,8 @@ describe('useDashboardStore.loadImported', () => {
       past: [],
       future: [],
       isPreviewDayMode: false,
+      loadedFromDemoFallback: false,
+      pendingDeviceConfig: null,
     })
   })
 
@@ -228,6 +232,8 @@ describe('useDashboardStore.loadFromDeviceOrDemo', () => {
       past: [],
       future: [],
       isPreviewDayMode: false,
+      loadedFromDemoFallback: false,
+      pendingDeviceConfig: null,
     })
   })
 
@@ -297,5 +303,133 @@ describe('useDashboardStore.loadFromDeviceOrDemo', () => {
 
     expect(outcome).toBe('kept-edits')
     expect(useDashboardStore.getState().config).toBe(userEdits)
+  })
+
+  it('marks loadedFromDemoFallback when seeding the demo for an empty editor (#418)', () => {
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+
+    expect(useDashboardStore.getState().loadedFromDemoFallback).toBe(true)
+    expect(useDashboardStore.getState().pendingDeviceConfig).toBeNull()
+  })
+
+  it('clears loadedFromDemoFallback when a real device config eventually lands', () => {
+    // First call seeds the demo (editor was empty).
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    expect(useDashboardStore.getState().loadedFromDemoFallback).toBe(true)
+
+    // Second call replaces the demo with a real device config.
+    const device = makeConfig([makeWidget('device_w')])
+    useDashboardStore.getState().loadFromDeviceOrDemo(device)
+
+    expect(useDashboardStore.getState().loadedFromDemoFallback).toBe(false)
+    expect(useDashboardStore.getState().pendingDeviceConfig).toBeNull()
+    expect(useDashboardStore.getState().config).toBe(device)
+  })
+
+  it('does NOT mark loadedFromDemoFallback when keeping in-progress edits', () => {
+    const userEdits = makeConfig([makeWidget('user_edit')])
+    useDashboardStore.getState().setConfig(userEdits)
+
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+
+    expect(useDashboardStore.getState().loadedFromDemoFallback).toBe(false)
+  })
+})
+
+describe('useDashboardStore.pendingDeviceConfig (#418 post-recovery prompt)', () => {
+  beforeEach(() => {
+    useDashboardStore.setState({
+      config: null,
+      filePath: null,
+      isDirty: false,
+      selectedPageId: null,
+      selectedWidgetId: null,
+      selectedWidgetIds: [],
+      past: [],
+      future: [],
+      isPreviewDayMode: false,
+      loadedFromDemoFallback: false,
+      pendingDeviceConfig: null,
+    })
+  })
+
+  it('stagePendingDeviceConfig parks the config without touching the editor', () => {
+    // Editor is showing the demo as a fallback.
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    const demoConfig = useDashboardStore.getState().config
+
+    const incoming = makeConfig([makeWidget('device_w')])
+    useDashboardStore.getState().stagePendingDeviceConfig(incoming)
+
+    const state = useDashboardStore.getState()
+    expect(state.pendingDeviceConfig).toBe(incoming)
+    // Editor still shows the demo, untouched.
+    expect(state.config).toBe(demoConfig)
+    expect(state.loadedFromDemoFallback).toBe(true)
+  })
+
+  it('acceptPendingDeviceConfig swaps the demo for the staged config', () => {
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    const incoming = makeConfig([makeWidget('device_w')])
+    useDashboardStore.getState().stagePendingDeviceConfig(incoming)
+
+    useDashboardStore.getState().acceptPendingDeviceConfig()
+
+    const state = useDashboardStore.getState()
+    expect(state.config).toBe(incoming)
+    expect(state.pendingDeviceConfig).toBeNull()
+    expect(state.loadedFromDemoFallback).toBe(false)
+    expect(state.isDirty).toBe(false)
+  })
+
+  it('acceptPendingDeviceConfig is a no-op when nothing is staged', () => {
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    const before = useDashboardStore.getState().config
+
+    useDashboardStore.getState().acceptPendingDeviceConfig()
+
+    expect(useDashboardStore.getState().config).toBe(before)
+    expect(useDashboardStore.getState().loadedFromDemoFallback).toBe(true)
+  })
+
+  it('dismissPendingDeviceConfig clears the prompt but keeps the demo flag', () => {
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    const incoming = makeConfig([makeWidget('device_w')])
+    useDashboardStore.getState().stagePendingDeviceConfig(incoming)
+
+    useDashboardStore.getState().dismissPendingDeviceConfig()
+
+    const state = useDashboardStore.getState()
+    expect(state.pendingDeviceConfig).toBeNull()
+    // Still on the demo — and the flag stays so a *later* probe can re-prompt.
+    expect(state.loadedFromDemoFallback).toBe(true)
+  })
+
+  it('setConfig clears every demo-fallback flag (user explicitly opens a config)', () => {
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    const incoming = makeConfig([makeWidget('device_w')])
+    useDashboardStore.getState().stagePendingDeviceConfig(incoming)
+
+    const opened = makeConfig([makeWidget('opened_w')])
+    useDashboardStore.getState().setConfig(opened, '/tmp/file.json')
+
+    const state = useDashboardStore.getState()
+    expect(state.loadedFromDemoFallback).toBe(false)
+    expect(state.pendingDeviceConfig).toBeNull()
+    expect(state.config).toBe(opened)
+  })
+
+  it('loadImported clears every demo-fallback flag', () => {
+    useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    const incoming = makeConfig([makeWidget('device_w')])
+    useDashboardStore.getState().stagePendingDeviceConfig(incoming)
+
+    const imported = makeConfig([makeWidget('imported_w')])
+    useDashboardStore.getState().loadImported(imported)
+
+    const state = useDashboardStore.getState()
+    expect(state.loadedFromDemoFallback).toBe(false)
+    expect(state.pendingDeviceConfig).toBeNull()
+    expect(state.config).toBe(imported)
   })
 })
