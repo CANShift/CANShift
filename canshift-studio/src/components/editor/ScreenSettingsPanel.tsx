@@ -311,42 +311,23 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           >
             FIRMWARE
           </span>
-          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-            <button
-              onClick={handleOtaUsb}
-              disabled={!connected || otaState === 'pending'}
-              style={{
-                flex: 1,
-                padding: `${String(Math.round(scale * 2.5))}px 0`,
-                background: connected ? '#111B11' : '#111111',
-                border: `1px solid ${connected ? '#2A4A2A' : '#1E1E1E'}`,
-                borderRadius: 3,
-                color: connected ? '#55AA55' : '#333333',
-                fontSize: fs,
-                cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
-                lineHeight: 1,
-              }}
-            >
-              {otaState === 'pending' ? '...' : 'USB'}
-            </button>
-            <button
-              disabled
-              title="Wi-Fi OTA — Phase 2"
-              style={{
-                flex: 1,
-                padding: `${String(Math.round(scale * 2.5))}px 0`,
-                background: '#111111',
-                border: '1px solid #1A1A1A',
-                borderRadius: 3,
-                color: '#2A2A2A',
-                fontSize: fs,
-                cursor: 'default',
-                lineHeight: 1,
-              }}
-            >
-              Wi-Fi
-            </button>
-          </div>
+          <button
+            onClick={handleOtaUsb}
+            disabled={!connected || otaState === 'pending'}
+            style={{
+              width: '100%',
+              padding: `${String(Math.round(scale * 2.5))}px 0`,
+              background: connected ? '#111B11' : '#111111',
+              border: `1px solid ${connected ? '#2A4A2A' : '#1E1E1E'}`,
+              borderRadius: 3,
+              color: connected ? '#55AA55' : '#333333',
+              fontSize: fs,
+              cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
+              lineHeight: 1,
+            }}
+          >
+            {otaState === 'pending' ? '...' : 'USB'}
+          </button>
         </div>
 
         {/* Actions */}
