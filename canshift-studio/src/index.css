@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* CANShift Studio — global styles */
 
 *, *::before, *::after {
