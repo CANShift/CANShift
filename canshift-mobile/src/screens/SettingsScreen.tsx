@@ -9,7 +9,18 @@ import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
-import { Label, Toast } from '@/components/ui'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Label,
+  Toast,
+} from '@/components/ui'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>
@@ -28,6 +39,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [sleep, setSleep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
+  const [calibrateConfirmOpen, setCalibrateConfirmOpen] = useState(false)
 
   // Pull current values from the device on mount so sliders/segments don't
   // open at hardcoded defaults that misrepresent the device state (#26).
@@ -81,26 +93,18 @@ export default function SettingsScreen({ navigation }: Props) {
   }
 
   const handleCalibrate = () => {
-    Alert.alert(
-      'Calibrate Touch',
-      'The dashboard screen will display calibration crosshairs. Tap each point accurately.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start',
-          onPress: async () => {
-            setCalibrating(true)
-            try {
-              await BleService.sendCmd('start_calibration')
-            } catch (err) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
-            } finally {
-              setCalibrating(false)
-            }
-          },
-        },
-      ]
-    )
+    setCalibrateConfirmOpen(true)
+  }
+
+  const startCalibration = async () => {
+    setCalibrating(true)
+    try {
+      await BleService.sendCmd('start_calibration')
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
+    } finally {
+      setCalibrating(false)
+    }
   }
 
   return (
@@ -199,6 +203,24 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'SAVE'}</Text>
         </TouchableOpacity>
       </View>
+
+      <AlertDialog open={calibrateConfirmOpen} onOpenChange={setCalibrateConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Calibrate Touch</AlertDialogTitle>
+            <AlertDialogDescription>
+              The dashboard screen will display calibration crosshairs. Tap each point
+              accurately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="default" onPress={() => void startCalibration()}>
+              Start
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SafeAreaView>
   )
 }

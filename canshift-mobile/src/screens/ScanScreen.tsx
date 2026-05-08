@@ -21,6 +21,16 @@ import * as BleService from '../services/ble.service'
 import type { BlePermissionState } from '../services/ble.service'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Scan'>
@@ -28,47 +38,12 @@ interface Props {
 
 interface FoundDevice { id: string; name: string }
 
-function promptUnauthorized(platform: 'ios' | 'android'): void {
-  const message =
-    platform === 'android'
-      ? 'CANShift needs nearby devices permission. Open app settings to grant it.'
-      : 'CANShift needs Bluetooth access to find your dashboard. Open Settings to grant permission.'
-  Alert.alert(
-    'Bluetooth permission needed',
-    message,
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-    ]
-  )
-}
+type UnauthorizedPlatform = 'ios' | 'android'
 
-function promptForBleState(state: Exclude<BlePermissionState, { kind: 'ok' }>): void {
-  switch (state.kind) {
-    case 'powered_off':
-      Alert.alert('Bluetooth is off', 'Turn Bluetooth on to scan for your dashboard.')
-      return
-    case 'unauthorized':
-      promptUnauthorized(state.platform)
-      return
-    case 'unsupported':
-      Alert.alert(
-        'Bluetooth unavailable',
-        "This device doesn't support Bluetooth Low Energy."
-      )
-      return
-    case 'resetting':
-      Alert.alert('Bluetooth restarting', 'Bluetooth is resetting. Try again in a moment.')
-      return
-    case 'unknown':
-      Alert.alert('Checking Bluetooth', 'Bluetooth state is not yet available. Try again in a moment.')
-      return
-    default: {
-      const _exhaustive: never = state
-      void _exhaustive
-      return
-    }
-  }
+function unauthorizedMessage(platform: UnauthorizedPlatform): string {
+  return platform === 'android'
+    ? 'CANShift needs nearby devices permission. Open app settings to grant it.'
+    : 'CANShift needs Bluetooth access to find your dashboard. Open Settings to grant permission.'
 }
 
 function isAndroidPermissionDeniedError(err: unknown): boolean {
@@ -83,10 +58,53 @@ function isAndroidPermissionDeniedError(err: unknown): boolean {
 export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<FoundDevice[]>([])
+  const [unauthorizedPlatform, setUnauthorizedPlatform] =
+    useState<UnauthorizedPlatform | null>(null)
   const connectionState = useDeviceStore((s) => s.connectionState)
   const isReconnecting = useReconnectStore((s) => s.isReconnecting)
   const reconnectAttempt = useReconnectStore((s) => s.attempt)
   const reconnectMaxAttempts = useReconnectStore((s) => s.maxAttempts)
+
+  const promptUnauthorized = useCallback((platform: UnauthorizedPlatform): void => {
+    setUnauthorizedPlatform(platform)
+  }, [])
+
+  const promptForBleState = useCallback(
+    (state: Exclude<BlePermissionState, { kind: 'ok' }>): void => {
+      switch (state.kind) {
+        case 'powered_off':
+          Alert.alert('Bluetooth is off', 'Turn Bluetooth on to scan for your dashboard.')
+          return
+        case 'unauthorized':
+          promptUnauthorized(state.platform)
+          return
+        case 'unsupported':
+          Alert.alert(
+            'Bluetooth unavailable',
+            "This device doesn't support Bluetooth Low Energy.",
+          )
+          return
+        case 'resetting':
+          Alert.alert(
+            'Bluetooth restarting',
+            'Bluetooth is resetting. Try again in a moment.',
+          )
+          return
+        case 'unknown':
+          Alert.alert(
+            'Checking Bluetooth',
+            'Bluetooth state is not yet available. Try again in a moment.',
+          )
+          return
+        default: {
+          const _exhaustive: never = state
+          void _exhaustive
+          return
+        }
+      }
+    },
+    [promptUnauthorized],
+  )
 
   const startScan = useCallback(async () => {
     const state = await BleService.getBlePermissionState()
@@ -111,7 +129,7 @@ export default function ScanScreen({ navigation }: Props) {
     } finally {
       setScanning(false)
     }
-  }, [])
+  }, [promptForBleState, promptUnauthorized])
 
   const connectTo = useCallback(
     async (device: FoundDevice) => {
@@ -128,7 +146,7 @@ export default function ScanScreen({ navigation }: Props) {
         Alert.alert('Connection failed', err instanceof Error ? err.message : 'Unknown error')
       }
     },
-    [navigation]
+    [navigation, promptUnauthorized]
   )
 
   const startDemo = useCallback(() => {
@@ -208,6 +226,33 @@ export default function ScanScreen({ navigation }: Props) {
       <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
         <Text style={styles.demoBtnText}>Demo mode</Text>
       </TouchableOpacity>
+
+      <AlertDialog
+        open={unauthorizedPlatform !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setUnauthorizedPlatform(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bluetooth permission needed</AlertDialogTitle>
+            <AlertDialogDescription>
+              {unauthorizedPlatform !== null ? unauthorizedMessage(unauthorizedPlatform) : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="default"
+              onPress={() => void Linking.openSettings()}
+            >
+              Open Settings
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SafeAreaView>
   )
 }
