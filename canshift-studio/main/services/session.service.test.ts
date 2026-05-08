@@ -111,3 +111,122 @@ describe('sessionService — first-run onboarding', () => {
     expect(parsed.firstRunCompleted).toBe(true)
   })
 })
+
+describe('sessionService — recent files (dedup, cap, ordering)', () => {
+  it('addRecentFile prepends and dedupes the path', async () => {
+    const service = await loadService()
+    service.addRecentFile('/a/dashboard-1.json')
+    service.addRecentFile('/a/dashboard-2.json')
+    service.addRecentFile('/a/dashboard-3.json')
+
+    expect(service.getRecentFiles()).toEqual([
+      '/a/dashboard-3.json',
+      '/a/dashboard-2.json',
+      '/a/dashboard-1.json',
+    ])
+
+    // Re-adding an existing entry hoists it to the front without duplicating.
+    service.addRecentFile('/a/dashboard-1.json')
+    expect(service.getRecentFiles()).toEqual([
+      '/a/dashboard-1.json',
+      '/a/dashboard-3.json',
+      '/a/dashboard-2.json',
+    ])
+  })
+
+  it('caps the list at 10 entries (drops the oldest)', async () => {
+    const service = await loadService()
+    for (let i = 0; i < 12; i++) {
+      service.addRecentFile(`/a/dashboard-${String(i)}.json`)
+    }
+    const recent = service.getRecentFiles()
+    expect(recent).toHaveLength(10)
+    expect(recent[0]).toBe('/a/dashboard-11.json')
+    // The two oldest entries (0 and 1) must have fallen off.
+    expect(recent).not.toContain('/a/dashboard-0.json')
+    expect(recent).not.toContain('/a/dashboard-1.json')
+  })
+
+  it('addRecentFile also updates lastFilePath', async () => {
+    const service = await loadService()
+    service.addRecentFile('/a/dashboard.json')
+    expect(service.getLastFilePath()).toBe('/a/dashboard.json')
+  })
+
+  it('clearRecentFiles wipes the list but preserves lastFilePath and lastPortPath', async () => {
+    const service = await loadService()
+    service.addRecentFile('/a/dashboard.json')
+    service.setLastPortPath('/dev/tty.usbserial')
+
+    service.clearRecentFiles()
+
+    expect(service.getRecentFiles()).toEqual([])
+    expect(service.getLastFilePath()).toBe('/a/dashboard.json')
+    expect(service.getLastPortPath()).toBe('/dev/tty.usbserial')
+  })
+})
+
+describe('sessionService — last port path', () => {
+  it('setLastPortPath persists across module reloads', async () => {
+    const service = await loadService()
+    service.setLastPortPath('/dev/tty.usbserial-A1')
+    expect(service.getLastPortPath()).toBe('/dev/tty.usbserial-A1')
+
+    vi.resetModules()
+    const reloaded = await loadService()
+    expect(reloaded.getLastPortPath()).toBe('/dev/tty.usbserial-A1')
+  })
+
+  it('setLastPortPath(null) clears the saved port', async () => {
+    const service = await loadService()
+    service.setLastPortPath('/dev/tty.usbserial')
+    service.setLastPortPath(null)
+    expect(service.getLastPortPath()).toBeNull()
+  })
+
+  it('returns null on a fresh install with no session.json', async () => {
+    const service = await loadService()
+    expect(service.getLastPortPath()).toBeNull()
+    expect(service.getLastFilePath()).toBeNull()
+    expect(service.getRecentFiles()).toEqual([])
+  })
+})
+
+describe('sessionService — corrupt/partial session.json fallbacks', () => {
+  it('returns the safe defaults when session.json is unparseable', async () => {
+    await writeFile(join(workDir, 'session.json'), '{ not json', 'utf-8')
+    const service = await loadService()
+
+    expect(service.getLastFilePath()).toBeNull()
+    expect(service.getRecentFiles()).toEqual([])
+    expect(service.getLastPortPath()).toBeNull()
+    expect(service.getFirstRunCompleted()).toBe(false)
+  })
+
+  it('coerces a non-array recentFiles field into an empty array', async () => {
+    // Writes from older or buggy versions could land here. The service must
+    // never expose a non-array to callers — downstream UI assumes array shape.
+    await writeFile(
+      join(workDir, 'session.json'),
+      JSON.stringify({ recentFiles: 'not an array' }),
+      'utf-8'
+    )
+    const service = await loadService()
+    expect(service.getRecentFiles()).toEqual([])
+  })
+
+  it('clear() overwrites a corrupt session.json with safe defaults', async () => {
+    await writeFile(join(workDir, 'session.json'), '%%%', 'utf-8')
+    const service = await loadService()
+    service.clear()
+
+    const raw = await readFile(join(workDir, 'session.json'), 'utf-8')
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    expect(parsed).toEqual({
+      lastFilePath: null,
+      recentFiles: [],
+      lastPortPath: null,
+      firstRunCompleted: false,
+    })
+  })
+})

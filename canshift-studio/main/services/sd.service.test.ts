@@ -79,3 +79,195 @@ describe('sdService.prepareSD — volume allowlist (#214)', () => {
     expect(result.error).toBe('blocked: volumePath not in current volume list')
   })
 })
+
+describe('sdService.listVolumes — platform branches', () => {
+  it('lists /Volumes entries on macOS, excluding system volumes', async () => {
+    osMock.platform.mockReturnValue('darwin')
+    fsMock.readdir.mockResolvedValueOnce([
+      'Macintosh HD',
+      'Macintosh HD - Data',
+      'Recovery',
+      'VM',
+      'Preboot',
+      'Update',
+      '.Spotlight-V100', // dotfile
+      'CANSHIFT_SD',
+      'My Backup Drive',
+    ])
+
+    const volumes = await sdService.listVolumes()
+    expect(volumes).toEqual([
+      { path: '/Volumes/CANSHIFT_SD', label: 'CANSHIFT_SD' },
+      { path: '/Volumes/My Backup Drive', label: 'My Backup Drive' },
+    ])
+  })
+
+  it('returns an empty list on Linux (unsupported)', async () => {
+    osMock.platform.mockReturnValue('linux')
+    const volumes = await sdService.listVolumes()
+    expect(volumes).toEqual([])
+    // Must not even probe /Volumes on Linux.
+    expect(fsMock.readdir).not.toHaveBeenCalled()
+  })
+
+  it('swallows readdir errors and returns an empty list (no propagated throw)', async () => {
+    osMock.platform.mockReturnValue('darwin')
+    fsMock.readdir.mockRejectedValueOnce(new Error('EACCES /Volumes'))
+
+    const volumes = await sdService.listVolumes()
+    expect(volumes).toEqual([])
+  })
+
+  it('probes drive letters D-Z on Windows via access()', async () => {
+    osMock.platform.mockReturnValue('win32')
+    // access() resolves for present drives, rejects for missing ones. Our
+    // helper uses .then(()=>true).catch(()=>false), so a single resolve is
+    // sufficient. Make D: and F: resolve, the rest reject.
+    fsMock.access.mockImplementation((p: unknown) => {
+      const path = String(p)
+      if (path === 'D:\\' || path === 'F:\\') return Promise.resolve()
+      return Promise.reject(new Error('ENOENT'))
+    })
+
+    const volumes = await sdService.listVolumes()
+    expect(volumes).toEqual([
+      { path: 'D:\\', label: 'D:' },
+      { path: 'F:\\', label: 'F:' },
+    ])
+  })
+})
+
+describe('sdService.pushOverUsb — push events and user-data preservation', () => {
+  beforeEach(() => {
+    fsMock.readdir.mockReset()
+    fsMock.copyFile.mockReset()
+    fsMock.access.mockReset()
+    fsMock.mkdir.mockReset()
+    fsMock.readFile.mockReset()
+  })
+
+  it('emits per-file progress events and skips config/* user data', async () => {
+    // Walk: top-level returns assets/ + config/. Fake file tree:
+    //   assets/font.bin
+    //   assets/icon.bin
+    //   config/dashboard.json
+    fsMock.readdir.mockImplementation((dir: unknown) => {
+      const path = String(dir)
+      if (path.endsWith('sd_contents')) {
+        return Promise.resolve([
+          { name: 'assets', isDirectory: (): boolean => true },
+          { name: 'config', isDirectory: (): boolean => true },
+        ] as unknown)
+      }
+      if (path.endsWith('assets')) {
+        return Promise.resolve([
+          { name: 'font.bin', isDirectory: (): boolean => false },
+          { name: 'icon.bin', isDirectory: (): boolean => false },
+        ] as unknown)
+      }
+      if (path.endsWith('config')) {
+        return Promise.resolve([
+          { name: 'dashboard.json', isDirectory: (): boolean => false },
+        ] as unknown)
+      }
+      return Promise.resolve([] as unknown)
+    })
+    fsMock.readFile.mockResolvedValue(Buffer.from('binary content'))
+
+    const pushFile = vi.fn().mockResolvedValue({ success: true })
+    const usbService = { pushFile } as unknown as Parameters<typeof sdService.pushOverUsb>[0]
+    const onProgress = vi.fn()
+
+    const result = await sdService.pushOverUsb(usbService, onProgress)
+
+    expect(result.success).toBe(true)
+    // assets/* pushed, config/* skipped.
+    expect(result.copied.sort()).toEqual(['assets/font.bin', 'assets/icon.bin'])
+    expect(result.skipped).toEqual(['config/dashboard.json'])
+
+    // Two progress events, one per pushed file, with monotonic indexes.
+    expect(onProgress).toHaveBeenCalledTimes(2)
+    expect(onProgress).toHaveBeenNthCalledWith(1, {
+      fileIndex: 0,
+      totalFiles: 2,
+      relPath: expect.stringMatching(/^assets\//) as unknown,
+    })
+    expect(onProgress).toHaveBeenNthCalledWith(2, {
+      fileIndex: 1,
+      totalFiles: 2,
+      relPath: expect.stringMatching(/^assets\//) as unknown,
+    })
+
+    // pushFile must receive a leading slash in the destination path.
+    for (const call of pushFile.mock.calls) {
+      const dest = call[0] as string
+      expect(dest.startsWith('/')).toBe(true)
+      expect(dest.startsWith('/config/')).toBe(false)
+    }
+  })
+
+  it('aborts on the first pushFile failure and surfaces the error', async () => {
+    fsMock.readdir.mockImplementation((dir: unknown) => {
+      const path = String(dir)
+      if (path.endsWith('sd_contents')) {
+        return Promise.resolve([{ name: 'assets', isDirectory: (): boolean => true }] as unknown)
+      }
+      if (path.endsWith('assets')) {
+        return Promise.resolve([
+          { name: 'a.bin', isDirectory: (): boolean => false },
+          { name: 'b.bin', isDirectory: (): boolean => false },
+        ] as unknown)
+      }
+      return Promise.resolve([] as unknown)
+    })
+    fsMock.readFile.mockResolvedValue(Buffer.from(''))
+
+    const pushFile = vi.fn().mockResolvedValueOnce({ success: false, error: 'firmware NACK' })
+    const usbService = { pushFile } as unknown as Parameters<typeof sdService.pushOverUsb>[0]
+
+    const result = await sdService.pushOverUsb(usbService)
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('firmware NACK')
+    expect(result.copied).toEqual([])
+    // The push stops at the first failure — only one pushFile call should
+    // have been made even though there were two files to process.
+    expect(pushFile).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to a synthetic error message when pushFile fails without one', async () => {
+    fsMock.readdir.mockImplementation((dir: unknown) => {
+      const path = String(dir)
+      if (path.endsWith('sd_contents')) {
+        return Promise.resolve([{ name: 'assets', isDirectory: (): boolean => true }] as unknown)
+      }
+      if (path.endsWith('assets')) {
+        return Promise.resolve([
+          { name: 'silent.bin', isDirectory: (): boolean => false },
+        ] as unknown)
+      }
+      return Promise.resolve([] as unknown)
+    })
+    fsMock.readFile.mockResolvedValue(Buffer.from(''))
+
+    const pushFile = vi.fn().mockResolvedValueOnce({ success: false })
+    const usbService = { pushFile } as unknown as Parameters<typeof sdService.pushOverUsb>[0]
+
+    const result = await sdService.pushOverUsb(usbService)
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/Failed to push assets\/silent\.bin/)
+  })
+
+  it('surfaces an error when reading sd_contents/ fails', async () => {
+    fsMock.readdir.mockRejectedValueOnce(new Error('ENOENT sd_contents'))
+
+    const usbService = { pushFile: vi.fn() } as unknown as Parameters<
+      typeof sdService.pushOverUsb
+    >[0]
+    const result = await sdService.pushOverUsb(usbService)
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('ENOENT sd_contents')
+    expect(result.copied).toEqual([])
+  })
+})
