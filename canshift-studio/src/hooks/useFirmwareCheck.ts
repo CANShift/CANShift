@@ -44,6 +44,7 @@ export function useFirmwareCheck(): void {
   const setFirmwareVersion = useDeviceStore((s) => s.setFirmwareVersion)
   const setFirmwareDialog = useDeviceStore((s) => s.setFirmwareDialog)
   const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
+  const setSdState = useDeviceStore((s) => s.setSdState)
 
   // Last portPath we successfully probed. Reconnects to the same port skip the
   // check so a post-flash reboot doesn't re-prompt the flash dialog (#215).
@@ -75,7 +76,7 @@ export function useFirmwareCheck(): void {
       // 1. Query device version. queryVersion() does not throw on timeout —
       // it resolves with { version: null }. A single null can be a transient
       // boot-time miss after a successful flash, so retry once before giving up.
-      let { version, isDay } = await firmwareIpc.queryVersion()
+      let { version, isDay, sdState } = await firmwareIpc.queryVersion()
 
       if (cancelled || inFlightPortRef.current !== currentPort) return
 
@@ -83,7 +84,7 @@ export function useFirmwareCheck(): void {
         await sleep(POST_TIMEOUT_RETRY_DELAY_MS)
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (cancelled || inFlightPortRef.current !== currentPort) return
-        ;({ version, isDay } = await firmwareIpc.queryVersion())
+        ;({ version, isDay, sdState } = await firmwareIpc.queryVersion())
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (cancelled || inFlightPortRef.current !== currentPort) return
       }
@@ -98,6 +99,7 @@ export function useFirmwareCheck(): void {
       checkedPortRef.current = currentPort
       setFirmwareVersion(version)
       setIsDayMode(isDay)
+      setSdState(sdState)
 
       // 2. Check for updates against stable releases (best-effort — ignore errors)
       let releases: FirmwareRelease[]
@@ -132,5 +134,6 @@ export function useFirmwareCheck(): void {
     setFirmwareVersion,
     setFirmwareDialog,
     setIsDayMode,
+    setSdState,
   ])
 }

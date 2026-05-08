@@ -13,13 +13,14 @@ import type {
 } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service'
-import type { CanFrame, CanHealth } from '../../main/services/usb.service'
+import type { CanFrame, CanHealth, SdRuntimeState } from '../../main/services/usb.service'
 import type { SdVolume, SdPrepareResult, SdPushProgress } from '../../main/services/sd.service'
 
 export type {
   FirmwareRelease,
   CanFrame,
   CanHealth,
+  SdRuntimeState,
   SdVolume,
   SdPrepareResult,
   SdPushProgress,
@@ -28,6 +29,16 @@ export type {
   PortInfo,
   SaveResult,
   UsbResult,
+}
+
+/**
+ * Renderer-side mirror of the `queryVersion()` payload. Kept as a type alias
+ * so renderer call sites and tests don't reach into `main/services` directly.
+ */
+export interface FirmwareStatus {
+  version: string | null
+  isDay: boolean | null
+  sdState: SdRuntimeState
 }
 
 // ---------------------------------------------------------------------------
@@ -161,8 +172,7 @@ const FIRMWARE_DOWNLOAD_TIMEOUT_MS = 300_000
 const ENTER_FLASH_TIMEOUT_MS = 60_000
 
 export const firmwareIpc = {
-  queryVersion: () =>
-    invoke<{ version: string | null; isDay: boolean | null }>(IpcChannels.FIRMWARE_QUERY_VERSION),
+  queryVersion: () => invoke<FirmwareStatus>(IpcChannels.FIRMWARE_QUERY_VERSION),
   listReleases: (channel: 'stable' | 'beta') =>
     invoke<FirmwareRelease[]>(IpcChannels.FIRMWARE_LIST_RELEASES, channel),
   enterFlash: (portPath: string) =>

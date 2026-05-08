@@ -88,6 +88,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+/**
+ * Runtime SD-card state reported by CMD_GET_STATUS.
+ *
+ * - 'ok'             — SD mounted, persistent writes work.
+ * - 'no_card'        — no card inserted, device is on built-in defaults.
+ * - 'mount_failed'   — card present but unreadable, defaults active.
+ * - 'unknown'        — older firmware that doesn't include `sd_state` in its
+ *                      status response. Treat as best-effort OK so the UI
+ *                      doesn't regress on devices we haven't reflashed yet.
+ */
+export type SdRuntimeState = 'ok' | 'no_card' | 'mount_failed' | 'unknown'
+
+/**
+ * Parse the additive `sd` / `sd_state` fields from a CMD_GET_STATUS response.
+ *
+ * The `sd_state` string is the source of truth on current firmware. We fall
+ * back to `sd === 0` (degraded, exact failure mode unknown) for the brief
+ * window where firmware shipped `sd` without `sd_state`. Pre-#201 firmware
+ * that ships neither field maps to 'unknown' so the renderer can keep the
+ * existing UX (no warning, all actions enabled).
+ */
+export function parseSdState(response: Record<string, unknown>): SdRuntimeState {
+  const stateRaw = response.sd_state
+  if (typeof stateRaw === 'string') {
+    if (stateRaw === 'ok' || stateRaw === 'no_card' || stateRaw === 'mount_failed') {
+      return stateRaw
+    }
+    // Unrecognised string from a future firmware revision — treat conservatively
+    // as a known degraded state so config writes are blocked, not silently lost.
+    return 'mount_failed'
+  }
+  const sdRaw = response.sd
+  if (sdRaw === 0) return 'mount_failed'
+  if (sdRaw === 1) return 'ok'
+  return 'unknown'
+}
+
 function safeJsonParse(line: string): unknown {
   try {
     return JSON.parse(line) as unknown
@@ -237,22 +274,33 @@ export class UsbService {
   }
 
   /**
-   * Query the device firmware version + day/night state.
+   * Query the device firmware version + day/night state + SD card state.
    * Returns { version: null } on timeout (device has no CANShift firmware,
    * or pre-v0.2 firmware without CMD_GET_STATUS support).
    * `isDay` is null on firmware older than 0.7.0 which didn't expose it.
+   * `sdState` is 'unknown' on firmware older than the issue #201/#254/#269
+   * batch which didn't expose `sd_state`. Treat 'unknown' as best-effort OK
+   * to keep the older-firmware UX intact.
    */
-  async queryVersion(): Promise<{ version: string | null; isDay: boolean | null }> {
-    // CMD_GET_STATUS = 0x10 — response:
-    //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1}
+  async queryVersion(): Promise<{
+    version: string | null
+    isDay: boolean | null
+    sdState: SdRuntimeState
+  }> {
+    // CMD_GET_STATUS = 0x10 — response (current firmware):
+    //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1,
+    //    "sd":0|1,"sd_state":"ok"|"no_card"|"mount_failed"}
     const payload = JSON.stringify({ cmd: 0x10 }) + '\n'
     const result = await this.sendCommand(payload, 2_000) // shorter timeout for probe
-    if (!result.success || !result.data) return { version: null, isDay: null }
+    if (!result.success || !result.data) {
+      return { version: null, isDay: null, sdState: 'unknown' }
+    }
     const v = result.data.version
     const isDayRaw = result.data.is_day
     return {
       version: typeof v === 'string' ? v : null,
       isDay: isDayRaw === 1 ? true : isDayRaw === 0 ? false : null,
+      sdState: parseSdState(result.data),
     }
   }
 

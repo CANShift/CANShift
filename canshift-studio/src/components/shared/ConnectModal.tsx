@@ -3,7 +3,8 @@
 import { useEffect } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 import { useUsbConnection } from '../../hooks/useUsbConnection'
-import { IconRefresh, IconDisconnect, IconUsb } from '../icons/Icon'
+import { IconRefresh, IconDisconnect, IconUsb, IconSdAlert } from '../icons/Icon'
+import { sdStateWarning } from '../../utils/sdState'
 
 interface ConnectModalProps {
   onClose: () => void
@@ -54,6 +55,8 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
   const portPath = useDeviceStore((s) => s.portPath)
   const errorMessage = useDeviceStore((s) => s.errorMessage)
   const clearError = useDeviceStore((s) => s.clearError)
+  const sdState = useDeviceStore((s) => s.sdState)
+  const sdWarning = sdStateWarning(sdState)
 
   const {
     ports,
@@ -150,6 +153,30 @@ export default function ConnectModal({ onClose }: ConnectModalProps) {
                 </button>
               )}
             </div>
+
+            {/* SD-state warning — visible whenever the firmware reports a
+                degraded persistence state (issue #252). */}
+            {connected && sdWarning !== null && (
+              <div
+                data-testid="sd-warning-banner"
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  padding: '8px 10px',
+                  marginBottom: 14,
+                  background: '#221610',
+                  border: '1px solid #5A3A12',
+                  borderRadius: 6,
+                  color: '#E08030',
+                  fontSize: 11,
+                  lineHeight: 1.4,
+                }}
+              >
+                <IconSdAlert size={14} color="#E08030" style={{ marginTop: 1 }} />
+                <span>{sdWarning} Insert an SD card and reboot the device to restore writes.</span>
+              </div>
+            )}
 
             {/* Port selector — only when disconnected / error */}
             {!connected && (

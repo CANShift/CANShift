@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import type { DashboardConfig } from '@tmbk/canshift-core'
+import type { SdRuntimeState } from '../services/ipc.service'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
 
@@ -46,6 +47,13 @@ interface DeviceState {
    */
   isDayMode: boolean | null
 
+  /**
+   * Mirrors the firmware's runtime SD-card state from CMD_GET_STATUS (issue #252).
+   * 'unknown' is the default both before the first probe and on firmware that
+   * predates the additive field — see `isSdWritable()` for the policy.
+   */
+  sdState: SdRuntimeState
+
   setConnected: (portPath: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
@@ -55,6 +63,7 @@ interface DeviceState {
   setFirmwareVersion: (version: string | null) => void
   setFirmwareDialog: (state: FirmwareDialogState) => void
   setIsDayMode: (isDay: boolean | null) => void
+  setSdState: (state: SdRuntimeState) => void
   enterSimulation: () => void
   exitSimulation: () => void
 
@@ -87,6 +96,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   simulationMode: false,
   firmwareDialog: { visible: false, mode: null },
   isDayMode: null,
+  sdState: 'unknown',
   lastPushedConfig: null,
   burnPhase: 'idle',
   flashing: false,
@@ -102,6 +112,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       connected: false,
       syncing: false,
       isDayMode: null,
+      sdState: 'unknown',
     })
   },
 
@@ -137,6 +148,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setIsDayMode: (isDay) => {
     set({ isDayMode: isDay })
+  },
+
+  setSdState: (state) => {
+    set({ sdState: state })
   },
 
   enterSimulation: () => {
