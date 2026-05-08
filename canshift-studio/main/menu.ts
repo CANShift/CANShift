@@ -1,7 +1,7 @@
 // menu.ts — Native Electron application menu.
 // File operations dispatch IPC events that the renderer listens for.
 
-import { Menu, BrowserWindow, app } from 'electron'
+import { Menu, BrowserWindow, app, dialog } from 'electron'
 import { basename } from 'node:path'
 import { IpcChannels } from './ipc/ipc-channels'
 import { sessionService } from './services/session.service'
@@ -156,6 +156,25 @@ export function buildMenu(win: BrowserWindow): void {
         ...(isMac
           ? [{ type: 'separator' as const }, { role: 'front' as const }]
           : [{ role: 'close' as const }]),
+      ],
+    },
+
+    // Help menu
+    {
+      role: 'help',
+      submenu: [
+        {
+          label: 'Reset First-Run Onboarding',
+          click: () => {
+            sessionService.resetFirstRun()
+            void dialog.showMessageBox(win, {
+              type: 'info',
+              message: 'First-run onboarding has been reset.',
+              detail: 'Restart CANShift Studio to see the welcome flow again.',
+              buttons: ['OK'],
+            })
+          },
+        },
       ],
     },
   ]

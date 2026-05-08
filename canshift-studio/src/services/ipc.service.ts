@@ -121,6 +121,11 @@ export const configService = {
 export const sessionIpc = {
   getLastFilePath: () => invoke<string | null>(IpcChannels.SESSION_GET_LAST_FILE),
   getLastPortPath: () => invoke<string | null>(IpcChannels.SESSION_GET_LAST_PORT),
+  getFirstRunCompleted: () => invoke<boolean>(IpcChannels.SESSION_GET_FIRST_RUN_COMPLETED),
+  markFirstRunCompleted: (): Promise<void> =>
+    invoke<undefined>(IpcChannels.SESSION_MARK_FIRST_RUN_COMPLETED).then(() => undefined),
+  resetFirstRun: (): Promise<void> =>
+    invoke<undefined>(IpcChannels.SESSION_RESET_FIRST_RUN).then(() => undefined),
 }
 
 // ---------------------------------------------------------------------------
