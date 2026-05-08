@@ -1,4 +1,10 @@
-// useUpdater.ts — Subscribe to auto-update IPC events from the main process
+// useUpdater.ts — Subscribe to auto-update IPC events from the main process.
+//
+// Security note (#240): `releaseNotesPlain` is sanitized to plain text in the
+// main process (see markdown-to-plain-text.ts). Any future "What's new" dialog
+// that renders this field MUST treat it as plain text only — never feed it to
+// `dangerouslySetInnerHTML`, and if a richer renderer is ever desired use
+// `react-markdown` with `disallowedElements: ['script']` and NO `rehype-raw`.
 
 import { useEffect, useState } from 'react'
 
@@ -13,7 +19,8 @@ export interface UpdateState {
 interface UpdatePayload {
   version: string
   releaseDate: string
-  releaseNotes: string
+  /** Plain text only — sanitized in main process. */
+  releaseNotesPlain: string
 }
 
 interface ErrorPayload {
