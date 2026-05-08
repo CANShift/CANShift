@@ -895,22 +895,6 @@ export default function UpdateRoute() {
           Prepare an SD card…
         </button>
       )}
-
-      {/* Wi-Fi note */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 480,
-          padding: '8px 12px',
-          background: '#111111',
-          border: '1px solid #1A1A1A',
-          borderRadius: 5,
-          fontSize: 11,
-          color: '#2A2A2A',
-        }}
-      >
-        Wi-Fi OTA — Phase 2
-      </div>
     </div>
   )
 }
