@@ -6,6 +6,7 @@
 
 import { useState, useCallback } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
+import { Input } from '@/components/ui/input'
 
 // ---------------------------------------------------------------------------
 // Partial pre-fill shape from ByteInterpreter
@@ -104,8 +105,8 @@ function TextInput({
   type?: string
 }): React.ReactElement {
   return (
-    <input
-      style={INPUT}
+    <Input
+      className="h-8 text-xs"
       type={type}
       value={value}
       placeholder={placeholder}
@@ -126,8 +127,8 @@ function NumberInput({
   step?: number
 }): React.ReactElement {
   return (
-    <input
-      style={INPUT}
+    <Input
+      className="h-8 text-xs"
       type="number"
       step={step ?? 'any'}
       value={value}
