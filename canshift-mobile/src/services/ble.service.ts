@@ -14,7 +14,9 @@ import { useDeviceStore } from '../stores/device.store'
 import { useSignalsStore } from '../stores/signals.store'
 import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
+import { useReconnectStore } from '../stores/reconnect.store'
 import { parseTelemetry, parseStatus } from './ble.validators'
+import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 
 // ---------------------------------------------------------------------------
 // Singleton BleManager
@@ -26,6 +28,19 @@ let stalenessTimer: ReturnType<typeof setInterval> | null = null
 let teleSub: Subscription | null = null
 let statusSub: Subscription | null = null
 let disconnectSub: Subscription | null = null
+
+// ---------------------------------------------------------------------------
+// Auto-reconnect state (module-level singleton, only one loop at a time)
+// ---------------------------------------------------------------------------
+
+const RECONNECT_INITIAL_DELAY_MS = 1_000
+const RECONNECT_MAX_DELAY_MS = 30_000
+const RECONNECT_BACKOFF_FACTOR = 2
+const RECONNECT_JITTER_RATIO = 0.2
+const RECONNECT_MAX_ATTEMPTS = 6
+const RECONNECT_SCAN_TIMEOUT_MS = 5_000
+
+let reconnectController: AbortController | null = null
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +80,161 @@ function removeSubscriptions() {
 }
 
 // ---------------------------------------------------------------------------
+// Reconnect helpers
+// ---------------------------------------------------------------------------
+
+/** Opaque read so the TS narrower doesn't treat `signal.aborted` as constant
+ *  across awaits — it can flip between yields. */
+function isAborted(signal: AbortSignal): boolean {
+  return signal.aborted
+}
+
+function computeBackoffDelay(attempt: number): number {
+  const exponential =
+    RECONNECT_INITIAL_DELAY_MS * Math.pow(RECONNECT_BACKOFF_FACTOR, attempt)
+  const capped = Math.min(exponential, RECONNECT_MAX_DELAY_MS)
+  const jitter = capped * RECONNECT_JITTER_RATIO * (Math.random() * 2 - 1)
+  return Math.max(0, Math.round(capped + jitter))
+}
+
+/** Sleep that resolves early if the abort signal fires. */
+function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve()
+      return
+    }
+    const handle = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(handle)
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }
+    signal.addEventListener('abort', onAbort)
+  })
+}
+
+/**
+ * Briefly scan for `deviceId` and return true if the device is observed.
+ * Resolves false on timeout or abort.
+ */
+function scanForDevice(deviceId: string, signal: AbortSignal): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve(false)
+      return
+    }
+
+    let settled = false
+    const finish = (found: boolean) => {
+      if (settled) return
+      settled = true
+      void manager.stopDeviceScan()
+      signal.removeEventListener('abort', onAbort)
+      clearTimeout(timer)
+      resolve(found)
+    }
+    const onAbort = () => { finish(false) }
+    signal.addEventListener('abort', onAbort)
+
+    const timer = setTimeout(() => { finish(false) }, RECONNECT_SCAN_TIMEOUT_MS)
+
+    void manager.startDeviceScan(
+      [BLE_SERVICE_UUID],
+      { allowDuplicates: false },
+      (error, device) => {
+        if (error) {
+          finish(false)
+          return
+        }
+        if (device?.id === deviceId) {
+          finish(true)
+        }
+      }
+    )
+  })
+}
+
+/**
+ * Cancel any in-flight reconnect loop. Safe to call when nothing is running.
+ * Also clears the reconnect store and any leftover scan.
+ */
+export function cancelReconnect(): void {
+  if (reconnectController) {
+    reconnectController.abort()
+    reconnectController = null
+  }
+  void manager.stopDeviceScan()
+  useReconnectStore.getState().stop()
+}
+
+/**
+ * Attempt to reconnect to `deviceId` with bounded exponential backoff + jitter.
+ * Cancelable via `cancelReconnect()`. Only one loop runs at a time — additional
+ * calls while a loop is active are ignored.
+ */
+async function runReconnectLoop(deviceId: string): Promise<void> {
+  if (reconnectController) {
+    log('warn', 'Reconnect loop already running — ignoring duplicate trigger')
+    return
+  }
+
+  const controller = new AbortController()
+  reconnectController = controller
+  const { signal } = controller
+  const reconnectStore = useReconnectStore.getState()
+  reconnectStore.start(deviceId, RECONNECT_MAX_ATTEMPTS)
+
+  log('info', `Auto-reconnect: starting for ${deviceId}`)
+
+  try {
+    for (let attempt = 1; attempt <= RECONNECT_MAX_ATTEMPTS; attempt++) {
+      if (isAborted(signal)) return
+
+      const delay = computeBackoffDelay(attempt - 1)
+      useReconnectStore.getState().setAttempt(attempt)
+      log(
+        'info',
+        `Auto-reconnect: attempt ${String(attempt)}/${String(RECONNECT_MAX_ATTEMPTS)} in ${String(delay)}ms`
+      )
+      await sleepWithAbort(delay, signal)
+      if (isAborted(signal)) return
+
+      const found = await scanForDevice(deviceId, signal)
+      if (isAborted(signal)) return
+      if (!found) {
+        log('warn', `Auto-reconnect: device ${deviceId} not seen on attempt ${String(attempt)}`)
+        continue
+      }
+
+      try {
+        await connect(deviceId)
+        if (isAborted(signal)) return
+        log('info', `Auto-reconnect: succeeded on attempt ${String(attempt)}`)
+        return
+      } catch (err) {
+        if (isAborted(signal)) return
+        const msg = err instanceof Error ? err.message : 'unknown error'
+        log('warn', `Auto-reconnect: connect failed on attempt ${String(attempt)}: ${msg}`)
+      }
+    }
+
+    if (!isAborted(signal)) {
+      log('error', 'Auto-reconnect: max attempts reached, giving up')
+      useDeviceStore.getState().setError('Reconnect failed')
+    }
+  } finally {
+    if (reconnectController === controller) {
+      reconnectController = null
+    }
+    useReconnectStore.getState().stop()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -75,6 +245,8 @@ export function scan(
   onFound: (device: ScanResult) => void,
   timeoutMs = 10000
 ): Promise<void> {
+  // A user-initiated scan implies they want to control connections themselves.
+  cancelReconnect()
   return new Promise((resolve, reject) => {
     const found = new Set<string>()
 
@@ -144,6 +316,11 @@ export async function connect(deviceId: string): Promise<void> {
     setDevice(deviceId, device.name ?? BLE_DEVICE_NAME)
     log('info', `Connected to ${device.name ?? BLE_DEVICE_NAME} (${deviceId})`)
 
+    // Persist for auto-reconnect on next launch / drop. Fire-and-forget.
+    void rememberDevice(deviceId)
+    // A successful connect supersedes any in-flight reconnect loop.
+    useReconnectStore.getState().stop()
+
     // Subscribe to TELE notifications
     teleSub = device.monitorCharacteristicForService(
       BLE_SERVICE_UUID,
@@ -177,13 +354,16 @@ export async function connect(deviceId: string): Promise<void> {
       }
     )
 
-    // Handle unexpected disconnection
+    // Handle unexpected disconnection — kick off the auto-reconnect loop.
     disconnectSub = device.onDisconnected(() => {
       removeSubscriptions()
       stopStalenessTimer()
       connectedDevice = null
       useDeviceStore.getState().disconnect()
       log('warn', `Device ${deviceId} disconnected unexpectedly`)
+      // If a loop is already running (e.g. rapid bounce), runReconnectLoop
+      // is a no-op; otherwise it starts a fresh bounded backoff sequence.
+      void runReconnectLoop(deviceId)
     })
 
     startStalenesTimer()
@@ -197,8 +377,10 @@ export async function connect(deviceId: string): Promise<void> {
   }
 }
 
-/** Disconnect from the current device. */
+/** Disconnect from the current device. Forgets the device and cancels any
+ *  in-flight auto-reconnect — explicit user intent overrides persistence. */
 export async function disconnect(): Promise<void> {
+  cancelReconnect()
   stopStalenessTimer()
   // Remove subscriptions BEFORE cancelConnection so the SDK's disconnect
   // callback doesn't fire into a still-registered handler.
@@ -211,6 +393,7 @@ export async function disconnect(): Promise<void> {
   }
   clearBuffer()
   useDeviceStore.getState().disconnect()
+  await forgetDevice()
 }
 
 /** Push screen settings to the device. */
@@ -301,4 +484,17 @@ export async function getBlePermissionState(): Promise<BlePermissionState> {
 export async function isBlePowered(): Promise<boolean> {
   const state = await manager.state()
   return state === State.PoweredOn
+}
+
+/**
+ * Attempt to reconnect to the last-known device, if one is persisted and BLE
+ * is ready. Returns true if a reconnect loop was started, false otherwise.
+ * Safe to call at app startup.
+ */
+export async function tryReconnectLastDevice(): Promise<boolean> {
+  if (!(await isBlePowered())) return false
+  const lastId = await getLastDevice()
+  if (!lastId) return false
+  void runReconnectLoop(lastId)
+  return true
 }

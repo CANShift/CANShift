@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
+import { useReconnectStore } from '../stores/reconnect.store'
 import * as BleService from '../services/ble.service'
 import type { BlePermissionState } from '../services/ble.service'
 import * as SimService from '../services/sim.service'
@@ -66,6 +67,9 @@ export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<FoundDevice[]>([])
   const connectionState = useDeviceStore((s) => s.connectionState)
+  const isReconnecting = useReconnectStore((s) => s.isReconnecting)
+  const reconnectAttempt = useReconnectStore((s) => s.attempt)
+  const reconnectMaxAttempts = useReconnectStore((s) => s.maxAttempts)
 
   const startScan = useCallback(async () => {
     const state = await BleService.getBlePermissionState()
@@ -113,6 +117,15 @@ export default function ScanScreen({ navigation }: Props) {
           resizeMode="contain"
         />
         <Text style={styles.subtitle}>Connect to your dashboard</Text>
+
+        {isReconnecting && (
+          <View style={styles.reconnectBanner}>
+            <ActivityIndicator color={Colors.accent} size="small" />
+            <Text style={styles.reconnectText}>
+              {`Reconnecting to dashboard… (${String(reconnectAttempt)}/${String(reconnectMaxAttempts)})`}
+            </Text>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[styles.scanBtn, scanning && styles.scanBtnActive]}
@@ -201,6 +214,24 @@ const styles = StyleSheet.create({
   },
   scanBtnActive: { borderColor: Colors.accent },
   scanBtnText: { fontSize: Typography.md, color: Colors.text },
+  reconnectBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  reconnectText: {
+    fontSize: Typography.sm,
+    color: Colors.text,
+    flex: 1,
+  },
   scanHint: {
     fontSize: Typography.xs,
     color: Colors.textMuted,
