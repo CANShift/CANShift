@@ -150,9 +150,9 @@ function createWindow(): void {
     const target = firmwareService.getFlashPort()
 
     // CrowPanel and similar boards expose a CH340 / CP210x / CH9102 USB-to-UART chip.
-    // We rely on VID/PID detection because the renderer must call requestPort()
-    // synchronously after the user gesture (before any await — including enterFlash IPC),
-    // so `target` may not be set yet when this event fires.
+    // VID/PID auto-pick is only used when no explicit target is set — when a target is
+    // selected we must NEVER guess by VID/PID, otherwise esptool could be handed the
+    // wrong device (e.g. a second CH340) and brick it.
     // Electron reports vendorId/productId as decimal strings on macOS — convert to hex.
     const toHex4 = (v: string | undefined): string => {
       const n = parseInt(v ?? '0', 10)
@@ -167,21 +167,52 @@ function createWindow(): void {
     // Strip the prefix so 'tty.usbserial-2130' matches Chromium's 'cu.usbserial-2130'.
     const tail = (s: string | undefined): string => basename(s ?? '').replace(/^(?:tty|cu)\./, '')
 
-    let found: Electron.SerialPort | undefined
     if (target) {
       const targetTail = tail(target)
-      found =
+      const matched =
         portList.find((p) => p.portId === target) ??
         portList.find((p) => tail(p.portName) === targetTail) ??
         portList.find((p) => tail(p.portId) === targetTail)
-    }
-    found = found ?? portList.find(isCanShiftBridge)
 
-    logMain(
-      'info',
-      `select-serial-port: target=${target ?? 'null'} match=${found?.portId ?? 'none'} portList=${JSON.stringify(portList)}`
-    )
-    callback(found?.portId ?? '')
+      if (matched) {
+        logMain(
+          'info',
+          `select-serial-port: target=${target} match=${matched.portId} portList=${JSON.stringify(portList)}`
+        )
+        callback(matched.portId)
+        return
+      }
+
+      logMain(
+        'warn',
+        `select-serial-port: target ${target} not found among ${String(portList.length)} ports — letting user choose (no VID/PID fallback) portList=${JSON.stringify(portList)}`
+      )
+      callback('')
+      return
+    }
+
+    // No target set — fall back to VID/PID auto-pick. Surface ambiguity so the user
+    // can spot when multiple compatible bridges are connected at once.
+    const bridgeMatches = portList.filter(isCanShiftBridge)
+    const picked = bridgeMatches[0]
+
+    if (bridgeMatches.length > 1) {
+      logMain(
+        'warn',
+        `select-serial-port: ${String(bridgeMatches.length)} VID/PID matches — auto-picked ${picked?.portId ?? 'none'} (set a target to disambiguate) portList=${JSON.stringify(portList)}`
+      )
+    } else if (picked && portList.length > 0 && picked.portId !== portList[0]?.portId) {
+      logMain(
+        'info',
+        `select-serial-port: auto-picked ${picked.portId} (not first in list) portList=${JSON.stringify(portList)}`
+      )
+    } else {
+      logMain(
+        'info',
+        `select-serial-port: target=null match=${picked?.portId ?? 'none'} portList=${JSON.stringify(portList)}`
+      )
+    }
+    callback(picked?.portId ?? '')
   })
 
   mainWindow.on('ready-to-show', () => {
