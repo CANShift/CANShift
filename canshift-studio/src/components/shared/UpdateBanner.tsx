@@ -1,6 +1,7 @@
 // UpdateBanner.tsx — Non-intrusive banner shown when a studio update is available
 
 import { useUpdater } from '../../hooks/useUpdater'
+import { Button } from '@/components/ui/button'
 
 export default function UpdateBanner() {
   const { status, version, installUpdate } = useUpdater()
@@ -32,22 +33,9 @@ export default function UpdateBanner() {
         {isReady ? `v${version ?? ''} ready to install` : `Downloading v${version ?? ''}…`}
       </span>
       {isReady && (
-        <button
-          onClick={installUpdate}
-          style={{
-            padding: '4px 10px',
-            background: '#1A0D0D',
-            border: '1px solid #CC3333',
-            borderRadius: 4,
-            color: '#CC4444',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-            letterSpacing: '0.04em',
-          }}
-        >
+        <Button variant="default" size="sm" onClick={installUpdate} className="tracking-wider">
           Restart &amp; Install
-        </button>
+        </Button>
       )}
     </div>
   )

@@ -10,25 +10,32 @@
   padding: 0;
 }
 
+/* HSL channels — consumed via hsl(var(--x) / <alpha-value>) */
 :root {
-  --bg:         #111111;
-  --surface:    #1E1E1E;
-  --surface-2:  #2A2A2A;
-  --border:     #333333;
-  --primary:    #FF4444;
-  --accent:     #FF8800;
-  --text:       #FFFFFF;
-  --text-dim:   #BBBBBB;
-  --text-muted: #909090;
-  --warning:    #FF8800;
-  --danger:     #FF0000;
-  --success:    #00CC44;
+  --bg:                    0 0% 7%;
+  --surface:               0 0% 12%;
+  --surface-2:             0 0% 16%;
+  --border:                0 0% 20%;
+  --primary:               0 100% 64%;
+  --primary-foreground:    0 0% 100%;
+  --accent:                32 100% 50%;
+  --text:                  0 0% 100%;
+  --text-dim:              0 0% 73%;
+  --text-muted:            0 0% 56%;
+  --warning:               32 100% 50%;
+  --danger:                0 100% 50%;
+  --destructive:           0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --secondary:             0 0% 16%;
+  --secondary-foreground:  0 0% 100%;
+  --success:               136 100% 40%;
+  --ring:                  0 100% 64%;
 }
 
 html, body, #root {
   height: 100%;
-  background: var(--bg);
-  color: var(--text);
+  background: hsl(var(--bg));
+  color: hsl(var(--text));
 }
 
 body {
@@ -40,6 +47,6 @@ body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border); }
+::-webkit-scrollbar-track { background: hsl(var(--bg)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--surface-2)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--border)); }
