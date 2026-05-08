@@ -9,6 +9,52 @@ import { SensorIcon } from '../icons/SensorIcons'
 import { displayLabelForSignal } from '../../utils/signalLabels'
 
 // ---------------------------------------------------------------------------
+// Gradient helper (issue #175) — green → orange → red across [0,1].
+// Mirrors firmware's interpolateGreenOrangeRed() exactly. Returns a CSS
+// "#RRGGBB" string suitable for SVG `stroke`.
+// ---------------------------------------------------------------------------
+
+const GRADIENT_GREEN = { r: 0x00, g: 0xcc, b: 0x44 }
+const GRADIENT_ORANGE = { r: 0xff, g: 0x88, b: 0x00 }
+const GRADIENT_RED = { r: 0xff, g: 0x44, b: 0x44 }
+
+function clamp01(value: number): number {
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
+}
+
+function lerpChannel(a: number, b: number, t: number): number {
+  const v = a + (b - a) * t
+  if (v < 0) return 0
+  if (v > 255) return 255
+  return Math.round(v)
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const hex = (n: number): string => n.toString(16).padStart(2, '0')
+  return `#${hex(r)}${hex(g)}${hex(b)}`
+}
+
+export function interpolateGreenOrangeRed(pct: number): string {
+  const p = clamp01(pct)
+  if (p <= 0.5) {
+    const t = p * 2
+    return rgbToHex(
+      lerpChannel(GRADIENT_GREEN.r, GRADIENT_ORANGE.r, t),
+      lerpChannel(GRADIENT_GREEN.g, GRADIENT_ORANGE.g, t),
+      lerpChannel(GRADIENT_GREEN.b, GRADIENT_ORANGE.b, t)
+    )
+  }
+  const t = (p - 0.5) * 2
+  return rgbToHex(
+    lerpChannel(GRADIENT_ORANGE.r, GRADIENT_RED.r, t),
+    lerpChannel(GRADIENT_ORANGE.g, GRADIENT_RED.g, t),
+    lerpChannel(GRADIENT_ORANGE.b, GRADIENT_RED.b, t)
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Palette → widget style resolver
 // When a page palette is provided, its semantic colors override the per-widget
 // style defaults. This lets page-level color changes reflect on all widgets.
@@ -192,12 +238,23 @@ function GaugeArcPreview({
 
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
 
-  const valueColor =
+  // Arc fill style — issue #175. Defaults to 'zones' (legacy behaviour).
+  const arcFillStyle = cfg.arcFillStyle ?? 'zones'
+  const isGradient = arcFillStyle === 'gradient'
+
+  // Threshold-tinted text colour stays unchanged in BOTH modes — separate
+  // concern from arc fill. Firmware does the same.
+  const textValueColor =
     valuePct >= dangerPct
       ? st.criticalColor
       : valuePct >= warnPct
         ? st.warningColor
         : st.primaryColor
+
+  // Arc fill colour:
+  //   zones    — same threshold-tinted colour as the text (legacy behaviour).
+  //   gradient — interpolated green→orange→red across the value range.
+  const arcValueColor = isGradient ? interpolateGreenOrangeRed(valuePct) : textValueColor
 
   const cx = w / 2
   // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
@@ -230,7 +287,7 @@ function GaugeArcPreview({
           strokeDasharray={showRevFlash ? undefined : '4 3'}
         />
       )}
-      {/* Background arc */}
+      {/* Background arc — gray base track in both modes. */}
       <path
         d={gaugeArcD(cx, cy, r, 0, 1)}
         fill="none"
@@ -238,8 +295,8 @@ function GaugeArcPreview({
         strokeWidth={strokeW}
         strokeLinecap="butt"
       />
-      {/* Warning zone */}
-      {dangerPct > warnPct && (
+      {/* Zones mode only: warning + danger sector tinting */}
+      {!isGradient && dangerPct > warnPct && (
         <path
           d={gaugeArcD(cx, cy, r, warnPct, dangerPct)}
           fill="none"
@@ -247,18 +304,19 @@ function GaugeArcPreview({
           strokeWidth={strokeW}
         />
       )}
-      {/* Danger zone */}
-      <path
-        d={gaugeArcD(cx, cy, r, dangerPct, 1)}
-        fill="none"
-        stroke={st.criticalColor + '55'}
-        strokeWidth={strokeW}
-      />
-      {/* Value arc */}
+      {!isGradient && (
+        <path
+          d={gaugeArcD(cx, cy, r, dangerPct, 1)}
+          fill="none"
+          stroke={st.criticalColor + '55'}
+          strokeWidth={strokeW}
+        />
+      )}
+      {/* Value arc — gradient mode tints with interpolated colour */}
       <path
         d={gaugeArcD(cx, cy, r, 0, valuePct)}
         fill="none"
-        stroke={valueColor}
+        stroke={arcValueColor}
         strokeWidth={strokeW}
         strokeLinecap="butt"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
@@ -266,13 +324,13 @@ function GaugeArcPreview({
       {/* Inner circle, top-of-arc duplicate label and the white indicator
           needle were all dropped per user spec — the arc trace + the centred
           numeric value carry the read on their own. */}
-      {/* Value text — center of arc */}
+      {/* Value text — center of arc. Threshold-tinted in BOTH modes. */}
       <text
         x={cx}
         y={cy}
         textAnchor="middle"
         dominantBaseline="middle"
-        fill={valueColor}
+        fill={textValueColor}
         fontSize={valueFontSize}
         fontWeight="700"
         fontFamily="Montserrat, sans-serif"

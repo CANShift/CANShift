@@ -29,6 +29,7 @@ const VALID_WIDGET_TYPES = ['gauge', 'warning', 'button', 'timer', 'bar', 'gear'
 type KnownWidgetType = (typeof VALID_WIDGET_TYPES)[number]
 
 const VALID_GAUGE_DISPLAY_STYLES = ['numeric', 'arc', 'bar'] as const
+const VALID_GAUGE_ARC_FILL_STYLES = ['zones', 'gradient'] as const
 const VALID_BAR_ORIENTATIONS = ['vertical', 'horizontal'] as const
 const VALID_TIMER_FORMATS = ['mm:ss', 'ss.mmm'] as const
 
@@ -641,6 +642,15 @@ function validateGauge(cfg: UnknownRecord, prefix: string): string[] {
       !(VALID_GAUGE_DISPLAY_STYLES as readonly string[]).includes(cfg.displayStyle)
     ) {
       errors.push(`${prefix} (gauge): displayStyle must be 'numeric' | 'arc' | 'bar'`)
+    }
+  }
+
+  if (cfg.arcFillStyle !== undefined) {
+    if (
+      typeof cfg.arcFillStyle !== 'string' ||
+      !(VALID_GAUGE_ARC_FILL_STYLES as readonly string[]).includes(cfg.arcFillStyle)
+    ) {
+      errors.push(`${prefix} (gauge): arcFillStyle must be 'zones' or 'gradient'`)
     }
   }
 

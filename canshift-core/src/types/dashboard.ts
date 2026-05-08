@@ -54,6 +54,15 @@ export type SensorIconName =
 /** Visual presentation of a gauge widget */
 export type GaugeDisplayStyle = 'numeric' | 'arc' | 'bar'
 
+/**
+ * Arc fill rendering mode (issue #175).
+ * 'zones'    — legacy behaviour: warn/danger sector tinting on the background track.
+ * 'gradient' — gray base arc + single value arc whose colour interpolates
+ *              green → orange → red across [minValue, maxValue].
+ * Arc display style only — ignored by 'numeric' and 'bar' display styles.
+ */
+export type GaugeArcFillStyle = 'zones' | 'gradient'
+
 export interface GaugeWidgetConfig {
   type: 'gauge'
   /** How the value is rendered: plain number, semicircle arc, or vertical bar */
@@ -69,6 +78,12 @@ export interface GaugeWidgetConfig {
   hideWhenInvalid?: boolean
   /** Show needle pointer — arc style only */
   showNeedle?: boolean
+  /**
+   * Arc fill rendering mode (issue #175). Defaults to 'zones' for backward
+   * compatibility — existing arc gauges keep the warn/danger sector tinting.
+   * Arc display style only — ignored by 'numeric' and 'bar'.
+   */
+  arcFillStyle?: GaugeArcFillStyle
   /**
    * Flash the widget red when the signal value reaches revLimitRpm.
    * Firmware triggers a full-screen red blink; preview shows a red ring.

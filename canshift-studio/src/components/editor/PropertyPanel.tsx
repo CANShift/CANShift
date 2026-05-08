@@ -584,6 +584,42 @@ function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) {
           </Row>
           {style === 'arc' && (
             <>
+              <Field label="Fill style">
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(['zones', 'gradient'] as const).map((fill) => {
+                    const activeFill = cfg.arcFillStyle ?? 'zones'
+                    const isActive = activeFill === fill
+                    return (
+                      <button
+                        key={fill}
+                        onClick={() => {
+                          const next = { ...cfg }
+                          if (fill === 'zones') {
+                            // Drop the field so legacy configs stay clean.
+                            delete next.arcFillStyle
+                          } else {
+                            next.arcFillStyle = fill
+                          }
+                          onChange({ config: next })
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '3px 0',
+                          background: isActive ? '#2A2A3A' : '#111111',
+                          border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
+                          borderRadius: 3,
+                          color: isActive ? '#7788CC' : '#AAAAAA',
+                          cursor: 'pointer',
+                          fontSize: 10,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {fill === 'zones' ? 'Zones' : 'Gradient'}
+                      </button>
+                    )
+                  })}
+                </div>
+              </Field>
               <Field label="Needle">
                 <input
                   type="checkbox"
