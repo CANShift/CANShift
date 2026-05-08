@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DashboardConfig, Widget } from '@tmbk/canshift-core'
 import { useDashboardStore } from './dashboard.store'
+import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
 
 function makeWidget(id: string, overrides: Partial<Widget> = {}): Widget {
   return {
@@ -212,5 +213,89 @@ describe('useDashboardStore.loadImported', () => {
     expect(state.past).toHaveLength(0)
     expect(state.future).toHaveLength(0)
     expect(state.selectedPageId).toBe(imported.defaultPageId)
+  })
+})
+
+describe('useDashboardStore.loadFromDeviceOrDemo', () => {
+  beforeEach(() => {
+    useDashboardStore.setState({
+      config: null,
+      filePath: null,
+      isDirty: false,
+      selectedPageId: null,
+      selectedWidgetId: null,
+      selectedWidgetIds: [],
+      past: [],
+      future: [],
+      isPreviewDayMode: false,
+    })
+  })
+
+  it('loads DEFAULT_SIM_CONFIG when editor is empty and no device config is provided', () => {
+    const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(null)
+
+    expect(outcome).toBe('demo')
+    const state = useDashboardStore.getState()
+    expect(state.config).toBe(DEFAULT_SIM_CONFIG)
+    expect(state.filePath).toBeNull()
+    expect(state.isDirty).toBe(false)
+    expect(state.selectedPageId).toBe(DEFAULT_SIM_CONFIG.defaultPageId)
+  })
+
+  it('loads the device config when the editor is empty', () => {
+    const device = makeConfig([makeWidget('device_w')])
+
+    const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(device)
+
+    expect(outcome).toBe('device')
+    const state = useDashboardStore.getState()
+    expect(state.config).toBe(device)
+    expect(state.isDirty).toBe(false)
+    expect(state.selectedPageId).toBe(device.defaultPageId)
+  })
+
+  it('keeps the user edits when device returns null and editor already has a config', () => {
+    const userEdits = makeConfig([makeWidget('user_edit')])
+    useDashboardStore.getState().setConfig(userEdits)
+    // Simulate an in-progress edit having dirtied the store.
+    useDashboardStore.setState({ isDirty: true })
+
+    const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(null)
+
+    expect(outcome).toBe('kept-edits')
+    const state = useDashboardStore.getState()
+    expect(state.config).toBe(userEdits)
+    expect(state.isDirty).toBe(true)
+  })
+
+  it('lets the device config win over user edits (device is the source of truth on connect)', () => {
+    const userEdits = makeConfig([makeWidget('user_edit')])
+    useDashboardStore.getState().setConfig(userEdits)
+    useDashboardStore.setState({ isDirty: true })
+
+    const device = makeConfig([makeWidget('device_w')])
+    const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(device)
+
+    expect(outcome).toBe('device')
+    const state = useDashboardStore.getState()
+    expect(state.config).toBe(device)
+    expect(state.isDirty).toBe(false)
+  })
+
+  it('reads the LATEST state, not a stale closure (regression test for #216)', () => {
+    // Capture the action ONCE — the bug pattern was a callsite that read
+    // `state.config` via a closure captured before the user typed something.
+    const action = useDashboardStore.getState().loadFromDeviceOrDemo
+
+    // After the action reference was captured, the user starts editing.
+    const userEdits = makeConfig([makeWidget('mid_edit')])
+    useDashboardStore.getState().setConfig(userEdits)
+    useDashboardStore.setState({ isDirty: true })
+
+    // Device returns null — must observe the new state and keep edits.
+    const outcome = action(null)
+
+    expect(outcome).toBe('kept-edits')
+    expect(useDashboardStore.getState().config).toBe(userEdits)
   })
 })

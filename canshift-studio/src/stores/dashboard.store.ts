@@ -12,6 +12,13 @@ import type {
   WidgetLayout,
 } from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
+import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
+
+/**
+ * Outcome of {@link DashboardState.loadFromDeviceOrDemo} — lets callers log
+ * what happened without re-implementing the decision they just delegated.
+ */
+export type LoadFromDeviceOrDemoResult = 'device' | 'demo' | 'kept-edits'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,6 +69,17 @@ interface DashboardState {
    * Save As, resets history. The next Save will land in a new file.
    */
   loadImported: (config: DashboardConfig) => void
+  /**
+   * Atomically pick between the device's config, the demo fallback, and
+   * keeping the user's current in-progress edits — reads the latest store
+   * state inside the setter so concurrent edits aren't clobbered (#216).
+   *
+   * Decision (latest state, never a stale closure):
+   * - `deviceConfig` provided → device wins, replace editor state.
+   * - `deviceConfig === null` and editor is empty → load DEFAULT_SIM_CONFIG.
+   * - `deviceConfig === null` and editor has a config → keep edits, no-op.
+   */
+  loadFromDeviceOrDemo: (deviceConfig: DashboardConfig | null) => LoadFromDeviceOrDemoResult
   markSaved: (filePath: string) => void
 
   // Edit history
@@ -161,6 +179,38 @@ export const useDashboardStore = create<DashboardState>()(
         s.selectedWidgetId = null
         s.selectedWidgetIds = []
       })
+    },
+
+    loadFromDeviceOrDemo: (deviceConfig) => {
+      let outcome: LoadFromDeviceOrDemoResult = 'kept-edits'
+      set((s) => {
+        if (deviceConfig) {
+          s.past = []
+          s.future = []
+          s.config = deviceConfig
+          s.filePath = null
+          s.isDirty = false
+          s.selectedPageId = deviceConfig.defaultPageId
+          s.selectedWidgetId = null
+          s.selectedWidgetIds = []
+          outcome = 'device'
+          return
+        }
+        if (s.config === null) {
+          s.past = []
+          s.future = []
+          s.config = DEFAULT_SIM_CONFIG
+          s.filePath = null
+          s.isDirty = false
+          s.selectedPageId = DEFAULT_SIM_CONFIG.defaultPageId
+          s.selectedWidgetId = null
+          s.selectedWidgetIds = []
+          outcome = 'demo'
+          return
+        }
+        outcome = 'kept-edits'
+      })
+      return outcome
     },
 
     markSaved: (filePath) => {

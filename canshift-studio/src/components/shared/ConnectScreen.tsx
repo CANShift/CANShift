@@ -5,28 +5,25 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useLogStore } from '../../stores/log.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
-import { DEFAULT_SIM_CONFIG } from '../../config/defaultSimConfig'
 import ConnectModal from './ConnectModal'
 import { IconUsb, IconSimulation, IconLoad } from '../icons/Icon'
 
 export default function ConnectScreen() {
   const [modalOpen, setModalOpen] = useState(false)
   const enterSimulation = useDeviceStore((s) => s.enterSimulation)
-  const config = useDashboardStore((s) => s.config)
-  const setConfig = useDashboardStore((s) => s.setConfig)
+  const loadFromDeviceOrDemo = useDashboardStore((s) => s.loadFromDeviceOrDemo)
   const log = useLogStore((s) => s.push)
   const { openConfig } = useConfigActions()
 
   const handleSimulation = () => {
-    if (config) {
-      // Config already loaded — enter simulation directly
-      enterSimulation()
-      log('info', 'Simulation mode — using loaded config')
-    } else {
-      // No config — load default then enter simulation
-      setConfig(DEFAULT_SIM_CONFIG)
-      enterSimulation()
+    // Atomic decision against the latest store state (#216): keeps mid-edit
+    // work, falls back to the demo only when the editor is empty.
+    const outcome = loadFromDeviceOrDemo(null)
+    enterSimulation()
+    if (outcome === 'demo') {
       log('info', 'Simulation mode — default config loaded')
+    } else {
+      log('info', 'Simulation mode — using loaded config')
     }
   }
 
