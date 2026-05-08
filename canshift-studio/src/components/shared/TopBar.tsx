@@ -89,9 +89,11 @@ export default function TopBar() {
   const sdWarning = sdStateWarning(sdState)
   const burnBlockedReason = !connected
     ? 'Connect a device first'
-    : syncing
-      ? 'Burn already in progress'
-      : (sdBurnDisabledTooltip(sdState) ?? null)
+    : simulationMode
+      ? 'Exit simulation to burn to real hardware'
+      : syncing
+        ? 'Burn already in progress'
+        : (sdBurnDisabledTooltip(sdState) ?? null)
   const burnTooltip = canBurn
     ? 'Push config to device'
     : (burnBlockedReason ?? 'Push config to device')
