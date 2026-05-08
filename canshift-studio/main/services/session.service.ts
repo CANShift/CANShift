@@ -1,4 +1,4 @@
-// session.service.ts — Persist session state (last file, recent files) across restarts.
+// session.service.ts — Persist session state (last file, recent files, first-run) across restarts.
 //
 // Writes a small JSON file to Electron's userData directory.
 // Errors are silently ignored — session restore is best-effort.
@@ -11,6 +11,7 @@ interface SessionData {
   lastFilePath: string | null
   recentFiles: string[]
   lastPortPath: string | null
+  firstRunCompleted: boolean
 }
 
 const MAX_RECENT = 10
@@ -19,17 +20,34 @@ function sessionPath(): string {
   return path.join(app.getPath('userData'), 'session.json')
 }
 
+/**
+ * Treat any of these signals as "this user has used Studio before" and skip
+ * onboarding on upgrade. Avoids re-onboarding power users when the firstRun
+ * field is added to existing session.json files.
+ */
+function hasLegacyUsageSignals(parsed: Partial<SessionData>): boolean {
+  const hasLastFile = typeof parsed.lastFilePath === 'string' && parsed.lastFilePath.length > 0
+  const hasRecent = Array.isArray(parsed.recentFiles) && parsed.recentFiles.length > 0
+  const hasLastPort = typeof parsed.lastPortPath === 'string' && parsed.lastPortPath.length > 0
+  return hasLastFile || hasRecent || hasLastPort
+}
+
 function read(): SessionData {
   try {
     const raw = fs.readFileSync(sessionPath(), 'utf8')
     const data = JSON.parse(raw) as Partial<SessionData>
+    const firstRunCompleted =
+      typeof data.firstRunCompleted === 'boolean'
+        ? data.firstRunCompleted
+        : hasLegacyUsageSignals(data)
     return {
       lastFilePath: data.lastFilePath ?? null,
       recentFiles: Array.isArray(data.recentFiles) ? data.recentFiles : [],
       lastPortPath: data.lastPortPath ?? null,
+      firstRunCompleted,
     }
   } catch {
-    return { lastFilePath: null, recentFiles: [], lastPortPath: null }
+    return { lastFilePath: null, recentFiles: [], lastPortPath: null, firstRunCompleted: false }
   }
 }
 
@@ -49,6 +67,9 @@ export const sessionService: {
   clearRecentFiles: () => void
   getLastPortPath: () => string | null
   setLastPortPath: (portPath: string | null) => void
+  getFirstRunCompleted: () => boolean
+  markFirstRunCompleted: () => void
+  resetFirstRun: () => void
   clear: () => void
 } = {
   getLastFilePath: (): string | null => read().lastFilePath,
@@ -82,7 +103,24 @@ export const sessionService: {
     write({ ...data, lastPortPath: portPath })
   },
 
+  getFirstRunCompleted: (): boolean => read().firstRunCompleted,
+
+  markFirstRunCompleted: (): void => {
+    const data = read()
+    write({ ...data, firstRunCompleted: true })
+  },
+
+  resetFirstRun: (): void => {
+    const data = read()
+    write({ ...data, firstRunCompleted: false })
+  },
+
   clear: (): void => {
-    write({ lastFilePath: null, recentFiles: [], lastPortPath: null })
+    write({
+      lastFilePath: null,
+      recentFiles: [],
+      lastPortPath: null,
+      firstRunCompleted: false,
+    })
   },
 }

@@ -64,6 +64,9 @@ export const IpcChannels = {
   // Session persistence
   SESSION_GET_LAST_FILE: 'session:get-last-file',
   SESSION_GET_LAST_PORT: 'session:get-last-port',
+  SESSION_GET_FIRST_RUN_COMPLETED: 'session:get-first-run-completed',
+  SESSION_MARK_FIRST_RUN_COMPLETED: 'session:mark-first-run-completed',
+  SESSION_RESET_FIRST_RUN: 'session:reset-first-run',
 
   // Config file — open by path (no dialog)
   CONFIG_OPEN_PATH: 'config:open-path',

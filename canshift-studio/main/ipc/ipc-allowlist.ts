@@ -27,6 +27,9 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   // Session persistence
   C.SESSION_GET_LAST_FILE,
   C.SESSION_GET_LAST_PORT,
+  C.SESSION_GET_FIRST_RUN_COMPLETED,
+  C.SESSION_MARK_FIRST_RUN_COMPLETED,
+  C.SESSION_RESET_FIRST_RUN,
   // USB device operations
   C.USB_LIST_PORTS,
   C.USB_CONNECT,

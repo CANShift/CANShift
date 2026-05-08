@@ -47,6 +47,8 @@ import { useDeviceStore } from './stores/device.store'
 import FirmwareDialog from './components/shared/FirmwareDialog'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
+import WelcomeModal from './components/shared/WelcomeModal'
+import { useFirstRunCheck } from './hooks/useFirstRunCheck'
 
 export default function App() {
   useMenuEvents()
@@ -57,6 +59,7 @@ export default function App() {
   useDirtySync()
   useBurnPhaseTracker()
 
+  const firstRun = useFirstRunCheck()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
 
@@ -144,6 +147,7 @@ export default function App() {
       <FirmwareDialog />
       <PushDiffDialog />
       <BurnProgressModal />
+      {firstRun.state === 'pending' && <WelcomeModal onDismiss={firstRun.markCompleted} />}
     </div>
   )
 }

@@ -164,6 +164,18 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return sessionService.getLastPortPath()
   })
 
+  ipcMain.handle(IpcChannels.SESSION_GET_FIRST_RUN_COMPLETED, () => {
+    return sessionService.getFirstRunCompleted()
+  })
+
+  ipcMain.handle(IpcChannels.SESSION_MARK_FIRST_RUN_COMPLETED, () => {
+    sessionService.markFirstRunCompleted()
+  })
+
+  ipcMain.handle(IpcChannels.SESSION_RESET_FIRST_RUN, () => {
+    sessionService.resetFirstRun()
+  })
+
   // ---------------------------------------------------------------------------
   // USB operations
   // ---------------------------------------------------------------------------
