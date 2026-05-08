@@ -22,6 +22,7 @@ export const IpcChannels = {
   USB_GET_STATUS: 'usb:get-status',
   USB_REBOOT: 'usb:reboot',
   USB_TOGGLE_DAY_NIGHT: 'usb:toggle-day-night',
+  USB_SET_DAY_NIGHT: 'usb:set-day-night',
   USB_CALIBRATE_TOUCH: 'usb:calibrate-touch',
 
   // USB events (main → renderer)

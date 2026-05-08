@@ -276,6 +276,15 @@ export class UsbService {
     return this.sendCommand(payload)
   }
 
+  async setDayNight(day: boolean): Promise<UsbResult> {
+    // CMD_SET_DAY_NIGHT = 0x09 — explicit, idempotent variant of toggleDayNight.
+    // Older firmware (no handler) will respond with the default {"status":"ok"}
+    // ack and no theme change; the caller can fall back to toggleDayNight when
+    // desired by checking the device's reported is_day after a status refresh.
+    const payload = JSON.stringify({ cmd: 0x09, day }) + '\n'
+    return this.sendCommand(payload)
+  }
+
   async calibrateTouch(): Promise<UsbResult> {
     // CMD_CALIBRATE_TOUCH = 0x08 — fires the on-device crosshair flow.
     // The firmware acks immediately and runs the blocking calibration on the UI task.

@@ -152,6 +152,7 @@ export const usbService = {
   getStatus: () => invoke<ConnectionStatus>(IpcChannels.USB_GET_STATUS),
   reboot: () => invoke<UsbResult>(IpcChannels.USB_REBOOT),
   toggleDayNight: () => invoke<UsbResult>(IpcChannels.USB_TOGGLE_DAY_NIGHT),
+  setDayNight: (day: boolean) => invoke<UsbResult>(IpcChannels.USB_SET_DAY_NIGHT, day),
   calibrateTouch: () => invoke<UsbResult>(IpcChannels.USB_CALIBRATE_TOUCH),
 }
 

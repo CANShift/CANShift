@@ -36,6 +36,7 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.USB_GET_STATUS,
   C.USB_REBOOT,
   C.USB_TOGGLE_DAY_NIGHT,
+  C.USB_SET_DAY_NIGHT,
   C.USB_CALIBRATE_TOUCH,
   // CAN scanner
   C.CAN_SCAN_START,

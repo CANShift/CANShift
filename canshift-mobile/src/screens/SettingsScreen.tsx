@@ -61,9 +61,15 @@ export default function SettingsScreen({ navigation }: Props) {
     }
   }
 
-  const handleToggleDayNight = async () => {
+  const handleSetDayNight = async (target: boolean) => {
+    // Idempotent at the UI level — tapping the active segment is a no-op.
+    if (isDayMode === target) return
     try {
-      await BleService.sendCmd('toggle_day_night')
+      // Prefer the explicit command. Older firmware (no set_day_night handler)
+      // ignores it gracefully (logs a warning), so we don't double-fire by
+      // also sending toggle_day_night — that would defeat the idempotency
+      // guarantee the new command exists to provide.
+      await BleService.sendCmd('set_day_night', { day: target })
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
     }
@@ -146,7 +152,7 @@ export default function SettingsScreen({ navigation }: Props) {
           <View style={styles.segRow}>
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
-              onPress={() => void handleToggleDayNight()}
+              onPress={() => void handleSetDayNight(false)}
             >
               <Text style={[styles.segLabel, isDayMode === false && styles.segLabelActive]}>
                 Night
@@ -154,7 +160,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === true && styles.segBtnActive]}
-              onPress={() => void handleToggleDayNight()}
+              onPress={() => void handleSetDayNight(true)}
             >
               <Text style={[styles.segLabel, isDayMode === true && styles.segLabelActive]}>
                 Day

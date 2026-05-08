@@ -61,18 +61,21 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const canSave = connected || simulationMode
   const canDeviceAction = connected && !simulationMode
 
-  // Day/Night toggle — fires immediately, optimistically flips local state.
-  // The firmware response is the next CMD_GET_STATUS (re-fetched on reconnect),
-  // so a stale toggle would self-correct on the next probe.
+  // Day/Night selection — fires immediately, optimistically flips local state.
+  // Uses the explicit CMD_SET_DAY_NIGHT so tapping the active segment is a
+  // no-op even on the device side. The firmware response is the next
+  // CMD_GET_STATUS (re-fetched on reconnect), so a stale value self-corrects
+  // on the next probe.
   const handleSelectMode = async (target: 'night' | 'day') => {
     if (!canDeviceAction) return
-    if (isDayMode === (target === 'day')) return
-    const result = await usbService.toggleDayNight()
+    const day = target === 'day'
+    if (isDayMode === day) return
+    const result = await usbService.setDayNight(day)
     if (result.success) {
-      setIsDayMode(target === 'day')
+      setIsDayMode(day)
       log('success', `Theme set to ${target}`)
     } else {
-      log('error', `Theme toggle failed: ${result.error ?? 'unknown error'}`)
+      log('error', `Theme set failed: ${result.error ?? 'unknown error'}`)
     }
   }
 
