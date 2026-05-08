@@ -263,4 +263,43 @@ jobs:
 
       - name: Build production environment
         # Compiles the production target to catch any #if branch divergence.
-        run: platformio run -e crowpanel_28
+        # Output is teed to build.log so the next step can parse the flash usage.
+        run: |
+          set -o pipefail
+          platformio run -e crowpanel_28 2>&1 | tee build.log
+
+      - name: Flash budget gate (fail >85%, warn >80%)
+        # Parses the PlatformIO size summary from the production build and
+        # enforces the flash budget agreed in the audit (#305).
+        # Format emitted by PlatformIO:
+        #   Flash: [========  ]  82.8% (used 1303025 bytes from 1572864 bytes)
+        run: |
+          set -euo pipefail
+          if [ ! -f build.log ]; then
+            echo "::error::build.log not found — production build step did not run"
+            exit 1
+          fi
+          FLASH_PCT=$(grep -E '^(RAM|Flash):' build.log \
+            | grep -E '^Flash:' \
+            | grep -oE '[0-9]+\.[0-9]+%' \
+            | head -n 1 \
+            | tr -d '%')
+          if [ -z "${FLASH_PCT:-}" ]; then
+            echo "::error::Could not parse flash usage from build.log"
+            grep -E '^(RAM|Flash):' build.log || true
+            exit 1
+          fi
+          FAIL_THRESHOLD=85
+          WARN_THRESHOLD=80
+          echo "Parsed flash usage: ${FLASH_PCT}% (fail >${FAIL_THRESHOLD}%, warn >${WARN_THRESHOLD}%)"
+          # Use awk for float comparison (bc is not always installed on minimal runners).
+          OVER_FAIL=$(awk -v p="$FLASH_PCT" -v t="$FAIL_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
+          OVER_WARN=$(awk -v p="$FLASH_PCT" -v t="$WARN_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
+          if [ "$OVER_FAIL" = "1" ]; then
+            echo "::error::Flash usage ${FLASH_PCT}% exceeds budget (>${FAIL_THRESHOLD}%) — see audit #305"
+            exit 1
+          elif [ "$OVER_WARN" = "1" ]; then
+            echo "::warning::Flash usage ${FLASH_PCT}% above target (>${WARN_THRESHOLD}%) — approaching budget ceiling (#305)"
+          else
+            echo "Flash usage ${FLASH_PCT}% within budget"
+          fi
