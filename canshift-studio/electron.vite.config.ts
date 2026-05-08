@@ -2,7 +2,25 @@
 
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
+import type { PluginOption } from 'vite'
 import { resolve } from 'path'
+
+const analyze = process.env.ANALYZE === '1'
+
+const rendererPlugins: PluginOption[] = [react()]
+if (analyze) {
+  rendererPlugins.push(
+    visualizer({
+      filename: resolve(__dirname, 'dist/renderer-stats.html'),
+      template: 'treemap',
+      gzipSize: true,
+      brotliSize: true,
+      // Open the report only when running interactively (skip on CI/scripted runs).
+      open: process.env.CI !== 'true',
+    }) as PluginOption
+  )
+}
 
 export default defineConfig({
   main: {
@@ -25,7 +43,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, '.'),
-    plugins: [react()],
+    plugins: rendererPlugins,
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src'),

@@ -83,7 +83,14 @@ npm run dist         # Build + electron-builder package
 npm run test         # Vitest run (one-shot)
 npm run test:watch   # Vitest watch mode
 npm run test:coverage
+npm run analyze      # Build with rollup-plugin-visualizer; opens dist/renderer-stats.html (treemap)
+npm run size:check   # Fail if dist/renderer/assets/index-*.js exceeds the budget (see scripts/check-renderer-size.mjs)
 ```
+
+`npm run size:check` runs in CI after the studio build. The current budget for
+the renderer main chunk lives in `scripts/check-renderer-size.mjs` — bump it
+deliberately when a real feature lands, and use `npm run analyze` to identify
+trimming candidates first.
 
 ---
 
