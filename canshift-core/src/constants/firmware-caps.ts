@@ -9,6 +9,7 @@ export const FIRMWARE_CAPS = {
   MAX_WIDGETS_PER_PAGE: 12,
   MAX_TOPBAR_ITEMS: 16,
   MAX_SIGNALS: 32,
+  MAX_BUTTON_ACTIONS: 4,
 } as const
 
 export const CANVAS = {
