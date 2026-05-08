@@ -1,0 +1,60 @@
+name: mobile — iOS native build
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'canshift-mobile/**'
+      - '.github/workflows/mobile-ios-build.yml'
+
+jobs:
+  build:
+    name: mobile — iOS native build
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: canshift-mobile
+    concurrency:
+      group: mobile-ios-build-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: canshift-mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo prebuild (iOS)
+        run: npx expo prebuild --clean --platform ios
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: canshift-mobile/ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('canshift-mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            pods-${{ runner.os }}-
+
+      - name: Pod install
+        working-directory: canshift-mobile/ios
+        run: pod install
+
+      - name: Xcode build (iOS Simulator, Debug)
+        working-directory: canshift-mobile/ios
+        run: |
+          xcodebuild \
+            -workspace CANShift.xcworkspace \
+            -scheme CANShift \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcpretty && exit ${PIPESTATUS[0]}
