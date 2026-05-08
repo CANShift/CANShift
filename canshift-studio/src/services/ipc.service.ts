@@ -51,6 +51,16 @@ export interface FirmwareStatus {
   sdState: SdRuntimeState
 }
 
+/**
+ * Outcome of `deviceIpc.getConfig()` — mirrored from main-process
+ * `DeviceConfigResult` so the renderer can branch on the empty-device
+ * vs transport-failure cases without leaking transport details.
+ * Issue #418.
+ */
+export type DeviceConfigResult =
+  | { ok: true; config: Record<string, unknown> }
+  | { ok: false; reason: 'no-config' | 'transport' }
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -207,8 +217,12 @@ export const firmwareIpc = {
 }
 
 export const deviceIpc = {
-  /** Reads the on-device dashboard.json (returns null when unavailable). */
-  getConfig: () => invoke<Record<string, unknown> | null>(IpcChannels.DEVICE_GET_CONFIG),
+  /**
+   * Reads the on-device dashboard.json. Returns a discriminated union so the
+   * caller can tell "device has no config" from "transport failure" — issue
+   * #418.
+   */
+  getConfig: () => invoke<DeviceConfigResult>(IpcChannels.DEVICE_GET_CONFIG),
 }
 
 // ---------------------------------------------------------------------------

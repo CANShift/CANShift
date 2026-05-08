@@ -61,6 +61,23 @@ interface DashboardState {
    */
   isPreviewDayMode: boolean
 
+  /**
+   * Set when {@link DashboardState.loadFromDeviceOrDemo} seeds the demo
+   * because the device had no config and the editor was empty (issue #418).
+   * Drives the post-recovery banner: if a later device probe returns a real
+   * config, we ask the user before clobbering their preview-only demo.
+   * Cleared as soon as the user explicitly picks a real config (device,
+   * imported, opened from disk) or dismisses the prompt.
+   */
+  loadedFromDemoFallback: boolean
+
+  /**
+   * Device config returned by a probe AFTER {@link loadedFromDemoFallback}
+   * was set — held aside so the user can decide between swapping in or
+   * keeping the demo (issue #418). `null` when nothing is pending.
+   */
+  pendingDeviceConfig: DashboardConfig | null
+
   // Config lifecycle
   setConfig: (config: DashboardConfig, filePath?: string) => void
   /**
@@ -80,6 +97,17 @@ interface DashboardState {
    * - `deviceConfig === null` and editor has a config → keep edits, no-op.
    */
   loadFromDeviceOrDemo: (deviceConfig: DashboardConfig | null) => LoadFromDeviceOrDemoResult
+  /**
+   * Stage a real device config behind the demo fallback prompt — used by
+   * the device-config-load hook when the editor is currently showing the
+   * auto-loaded demo (issue #418). Caller must check {@link loadedFromDemoFallback}
+   * before invoking; otherwise prefer {@link loadFromDeviceOrDemo} directly.
+   */
+  stagePendingDeviceConfig: (deviceConfig: DashboardConfig) => void
+  /** User accepts the staged device config — replaces the demo, clears flags. */
+  acceptPendingDeviceConfig: () => void
+  /** User keeps the demo — discards the staged device config and clears the prompt. */
+  dismissPendingDeviceConfig: () => void
   markSaved: (filePath: string) => void
 
   // Edit history
@@ -154,6 +182,8 @@ export const useDashboardStore = create<DashboardState>()(
     past: [],
     future: [],
     isPreviewDayMode: false,
+    loadedFromDemoFallback: false,
+    pendingDeviceConfig: null,
 
     setConfig: (config, filePath) => {
       set((s) => {
@@ -165,6 +195,9 @@ export const useDashboardStore = create<DashboardState>()(
         s.selectedPageId = config.defaultPageId
         s.selectedWidgetId = null
         s.selectedWidgetIds = []
+        // User picked a real config — clear any auto-demo bookkeeping.
+        s.loadedFromDemoFallback = false
+        s.pendingDeviceConfig = null
       })
     },
 
@@ -178,6 +211,8 @@ export const useDashboardStore = create<DashboardState>()(
         s.selectedPageId = config.defaultPageId
         s.selectedWidgetId = null
         s.selectedWidgetIds = []
+        s.loadedFromDemoFallback = false
+        s.pendingDeviceConfig = null
       })
     },
 
@@ -193,6 +228,9 @@ export const useDashboardStore = create<DashboardState>()(
           s.selectedPageId = deviceConfig.defaultPageId
           s.selectedWidgetId = null
           s.selectedWidgetIds = []
+          // Real device config landed — drop the demo-fallback bookkeeping.
+          s.loadedFromDemoFallback = false
+          s.pendingDeviceConfig = null
           outcome = 'device'
           return
         }
@@ -205,12 +243,47 @@ export const useDashboardStore = create<DashboardState>()(
           s.selectedPageId = DEFAULT_SIM_CONFIG.defaultPageId
           s.selectedWidgetId = null
           s.selectedWidgetIds = []
+          // Tag the editor so we know to prompt before clobbering this demo
+          // if the device's SD comes back online with a real config (#418).
+          s.loadedFromDemoFallback = true
+          s.pendingDeviceConfig = null
           outcome = 'demo'
           return
         }
         outcome = 'kept-edits'
       })
       return outcome
+    },
+
+    stagePendingDeviceConfig: (deviceConfig) => {
+      set((s) => {
+        s.pendingDeviceConfig = deviceConfig
+      })
+    },
+
+    acceptPendingDeviceConfig: () => {
+      set((s) => {
+        const pending = s.pendingDeviceConfig
+        if (!pending) return
+        s.past = []
+        s.future = []
+        s.config = pending
+        s.filePath = null
+        s.isDirty = false
+        s.selectedPageId = pending.defaultPageId
+        s.selectedWidgetId = null
+        s.selectedWidgetIds = []
+        s.loadedFromDemoFallback = false
+        s.pendingDeviceConfig = null
+      })
+    },
+
+    dismissPendingDeviceConfig: () => {
+      set((s) => {
+        s.pendingDeviceConfig = null
+        // Keep loadedFromDemoFallback true — the editor still shows the demo,
+        // and any FUTURE device probe with a real config should still prompt.
+      })
     },
 
     markSaved: (filePath) => {

@@ -1,0 +1,89 @@
+// useDeviceConfigLoad.test.ts — Locks the pure decision step that drives
+// the post-connect dashboard load. Covers issue #418 acceptance criteria:
+//
+//   1. no-config + empty editor      → auto-load demo
+//   2. no-config + non-empty editor  → keep edits, no clobber
+//   3. transport failure             → no-op, no auto-load
+//   4. valid device config           → apply
+//   5. valid device config + demo-fallback active → stage for swap prompt
+//   6. invalid device config         → keep editor, surface error
+//
+// We test the pure helper (no React, no Zustand, no toast UI) so the test
+// stays a true unit and won't drag the whole renderer harness in.
+
+import { describe, expect, it } from 'vitest'
+import type { DashboardConfig } from '@tmbk/canshift-core'
+import { decideDeviceConfigAction } from './useDeviceConfigLoad'
+import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
+
+function makeValidDeviceResponse(): Record<string, unknown> {
+  // The store's DEFAULT_SIM_CONFIG is already validateDashboard-clean —
+  // reuse it as a known-good wire payload so we don't reinvent the schema.
+  return DEFAULT_SIM_CONFIG as unknown as Record<string, unknown>
+}
+
+describe('decideDeviceConfigAction', () => {
+  it('auto-loads the demo when device reports no config and editor is empty', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: false, reason: 'no-config' },
+      isEditorEmpty: true,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('auto-load-demo')
+  })
+
+  it('keeps editor edits when device reports no config but editor is non-empty', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: false, reason: 'no-config' },
+      isEditorEmpty: false,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('no-config-but-editor-has-edits')
+  })
+
+  it('treats transport failures as no-op (does NOT auto-load demo) — AC #4', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: false, reason: 'transport' },
+      isEditorEmpty: true,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('transport-failure')
+  })
+
+  it('applies a valid device config directly when no demo fallback is active', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: true, config: makeValidDeviceResponse() },
+      isEditorEmpty: false,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('apply-device-config-with-warnings')
+    if (action.kind === 'apply-device-config-with-warnings') {
+      const cfg: DashboardConfig = action.config
+      expect(cfg.defaultPageId).toBe(DEFAULT_SIM_CONFIG.defaultPageId)
+    }
+  })
+
+  it('stages the device config behind the prompt when demo fallback is active — AC #5', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: true, config: makeValidDeviceResponse() },
+      isEditorEmpty: false,
+      loadedFromDemoFallback: true,
+    })
+    expect(action.kind).toBe('stage-pending-device-config')
+    if (action.kind === 'stage-pending-device-config') {
+      expect(action.config.defaultPageId).toBe(DEFAULT_SIM_CONFIG.defaultPageId)
+    }
+  })
+
+  it('flags an invalid device config without clobbering the editor', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: true, config: { not: 'a-dashboard' } },
+      isEditorEmpty: false,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('invalid-device-config')
+    if (action.kind === 'invalid-device-config') {
+      expect(action.errors.length).toBeGreaterThan(0)
+    }
+  })
+})
