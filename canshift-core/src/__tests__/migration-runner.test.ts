@@ -627,12 +627,95 @@ describe('migrateConfig — 1.9.0 → 1.10.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.10.0 → 1.11.0: arc gauges gain an optional `arcFillStyle` field
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.10.0 → 1.11.0', () => {
+  it('bumps version with no data transformation', () => {
+    const config = {
+      version: '1.10.0',
+      pages: wrapInPages([
+        {
+          id: 'g1',
+          type: 'gauge',
+          config: { type: 'gauge', displayStyle: 'arc', minValue: 0, maxValue: 100 },
+        },
+      ]),
+    }
+    const { config: out, applied } = migrateConfig(config, '1.11.0')
+    expect(applied).toEqual(['1.10.0 → 1.11.0'])
+    expect(out.version).toBe('1.11.0')
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    // No defaulting on the migration side — undefined stays undefined.
+    expect(cfg.arcFillStyle).toBeUndefined()
+    // Existing fields are preserved.
+    expect(cfg.displayStyle).toBe('arc')
+    expect(cfg.minValue).toBe(0)
+    expect(cfg.maxValue).toBe(100)
+  })
+
+  it('preserves an explicit arcFillStyle through the bump', () => {
+    const config = {
+      version: '1.10.0',
+      pages: wrapInPages([
+        {
+          id: 'g1',
+          type: 'gauge',
+          config: {
+            type: 'gauge',
+            displayStyle: 'arc',
+            minValue: 0,
+            maxValue: 8000,
+            arcFillStyle: 'gradient',
+          },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.11.0')
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect(cfg.arcFillStyle).toBe('gradient')
+  })
+
+  it('preserves other widget fields and top-level config keys', () => {
+    const config = {
+      version: '1.10.0',
+      name: 'My Dashboard',
+      revLimitRpm: 7000,
+      pages: wrapInPages([
+        {
+          id: 'g1',
+          type: 'gauge',
+          config: {
+            type: 'gauge',
+            displayStyle: 'arc',
+            minValue: 0,
+            maxValue: 100,
+            alertThreshold: 90,
+          },
+        },
+      ]),
+    }
+    const { config: out } = migrateConfig(config, '1.11.0')
+    expect(out.name).toBe('My Dashboard')
+    expect(out.revLimitRpm).toBe(7000)
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect(cfg.alertThreshold).toBe(90)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Full chain regression — load a 1.0.0 config and walk it to the latest
 // schema. Guards against silent breakage of the chain when adding migrations.
 // ---------------------------------------------------------------------------
 
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.10.0 without losing data', () => {
+  it('walks a 1.0.0 config all the way to 1.11.0 without losing data', () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -689,8 +772,8 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.10.0')
-    expect(out.version).toBe('1.10.0')
+    const { config: out, applied } = migrateConfig(config, '1.11.0')
+    expect(out.version).toBe('1.11.0')
     expect(applied).toEqual([
       '1.0.0 → 1.1.0',
       '1.1.0 → 1.2.0',
@@ -702,6 +785,7 @@ describe('migrateConfig — full chain to current', () => {
       '1.7.0 → 1.8.0',
       '1.8.0 → 1.9.0',
       '1.9.0 → 1.10.0',
+      '1.10.0 → 1.11.0',
     ])
 
     const page = (out.pages as Record<string, unknown>[])[0]!
@@ -734,12 +818,12 @@ describe('migrateConfig — full chain to current', () => {
     expect(tpsLayout.h).toBe(56)
   })
 
-  it('a fresh 1.10.0 config is a no-op through the runner', () => {
+  it('a fresh 1.11.0 config is a no-op through the runner', () => {
     const config = {
-      version: '1.10.0',
+      version: '1.11.0',
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.10.0')
+    const { config: out, applied } = migrateConfig(config, '1.11.0')
     expect(applied).toEqual([])
     expect(out).toEqual(config)
   })

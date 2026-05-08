@@ -1126,6 +1126,52 @@ describe('validateDashboard — gauge.barOrientation enum', () => {
 })
 
 // ---------------------------------------------------------------------------
+// arcFillStyle enum (issue #175)
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — gauge.arcFillStyle enum', () => {
+  function gaugeFill(arcFillStyle: unknown): Record<string, unknown> {
+    return {
+      id: 'w1',
+      type: 'gauge',
+      minValue: 0,
+      maxValue: 100,
+      decimalPlaces: 0,
+      arcFillStyle,
+    }
+  }
+
+  it('accepts undefined (legacy configs)', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [{ id: 'w1', type: 'gauge', minValue: 0, maxValue: 100, decimalPlaces: 0 }],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('arcFillStyle'))).toBe(false)
+  })
+
+  it('accepts zones and gradient', () => {
+    for (const style of ['zones', 'gradient']) {
+      const result = validateDashboard(
+        minimalConfig({ pages: [minimalPage({ widgets: [gaugeFill(style)] })] })
+      )
+      expect(result.errors.filter((e) => e.includes('arcFillStyle'))).toHaveLength(0)
+    }
+  })
+
+  it('rejects unknown values', () => {
+    const result = validateDashboard(
+      minimalConfig({ pages: [minimalPage({ widgets: [gaugeFill('foobar')] })] })
+    )
+    expect(result.errors.some((e) => e.includes('arcFillStyle'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Gauge thresholds within range
 // ---------------------------------------------------------------------------
 
