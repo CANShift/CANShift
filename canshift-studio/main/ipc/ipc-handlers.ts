@@ -13,6 +13,16 @@ import { buildMenu } from '../menu'
 import type { FirmwareRelease } from '../services/firmware.service.types'
 import type { CanFrame } from '../services/usb.service.types'
 
+// Allowed hosts for FIRMWARE_DOWNLOAD — defence in depth so a compromised
+// renderer cannot turn the main process into an open HTTP fetcher. The CSP
+// already restricts renderer outbound, but the IPC bridge skips that path.
+const FIRMWARE_DOWNLOAD_ALLOWED_HOSTS: ReadonlySet<string> = new Set([
+  'github.com',
+  'api.github.com',
+  'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com',
+])
+
 // ---------------------------------------------------------------------------
 // Renderer payload guards
 // ---------------------------------------------------------------------------
@@ -51,6 +61,29 @@ export function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
   if (typeof sleep !== 'number' || !Number.isFinite(sleep)) return null
   if (rotation !== undefined && rotation !== 0 && rotation !== 180) return null
   return rotation === undefined ? { brightness, sleep } : { brightness, sleep, rotation }
+}
+
+export function isFirmwareChannel(v: unknown): v is 'stable' | 'beta' {
+  return v === 'stable' || v === 'beta'
+}
+
+/**
+ * Validate the URL of a firmware download request from the renderer. Only
+ * `https:` URLs whose hostname is in the GitHub-release allowlist pass —
+ * this guards against a compromised renderer turning main into an open
+ * HTTP fetcher and against cleartext downloads of signed binaries.
+ * Exported for table-driven tests.
+ */
+export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
+  if (typeof url !== 'string' || url.length === 0) return false
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== 'https:') return false
+  return FIRMWARE_DOWNLOAD_ALLOWED_HOSTS.has(parsed.hostname)
 }
 
 /**
@@ -111,7 +144,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return result
   })
 
-  ipcMain.handle(IpcChannels.CONFIG_OPEN_PATH, async (_event, filePath: string) => {
+  ipcMain.handle(IpcChannels.CONFIG_OPEN_PATH, async (_event, filePath: unknown) => {
+    if (!isNonEmptyString(filePath)) {
+      return { success: false, error: 'filePath must be a non-empty string' }
+    }
     const result = await configService.openFilePath(filePath)
     if (result.success && result.filePath) {
       sessionService.addRecentFile(result.filePath)
@@ -272,12 +308,18 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return usbService.getConfig()
   })
 
-  ipcMain.handle(IpcChannels.FIRMWARE_LIST_RELEASES, async (_event, channel: 'stable' | 'beta') => {
+  ipcMain.handle(IpcChannels.FIRMWARE_LIST_RELEASES, async (_event, channel: unknown) => {
+    if (!isFirmwareChannel(channel)) {
+      throw new Error('channel must be "stable" or "beta"')
+    }
     const releases: FirmwareRelease[] = await firmwareService.listReleases(channel)
     return releases
   })
 
-  ipcMain.handle(IpcChannels.FIRMWARE_ENTER_FLASH, async (_event, portPath: string) => {
+  ipcMain.handle(IpcChannels.FIRMWARE_ENTER_FLASH, async (_event, portPath: unknown) => {
+    if (!isNonEmptyString(portPath)) {
+      return { success: false, error: 'portPath must be a non-empty string' }
+    }
     // Disconnect the Node.js serial port so the renderer can use Web Serial API on the same port
     await usbService.disconnect()
     // Drive the BOOT-mode reset from the main process — Web Serial's setSignals
@@ -315,7 +357,13 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // Renderer subscribes to FIRMWARE_DOWNLOAD_PROGRESS with the same downloadId for live progress.
   ipcMain.handle(
     IpcChannels.FIRMWARE_DOWNLOAD,
-    async (event, url: string, downloadId: string): Promise<ArrayBuffer> => {
+    async (event, url: unknown, downloadId: unknown): Promise<ArrayBuffer> => {
+      if (!isFirmwareDownloadUrlAllowed(url)) {
+        throw new Error('blocked: firmware download URL not on allowlist')
+      }
+      if (!isNonEmptyString(downloadId)) {
+        throw new Error('downloadId must be a non-empty string')
+      }
       return firmwareService.downloadBinary(url, (received, total) => {
         event.sender.send(IpcChannels.FIRMWARE_DOWNLOAD_PROGRESS, { downloadId, received, total })
       })

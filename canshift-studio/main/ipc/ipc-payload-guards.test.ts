@@ -33,7 +33,13 @@ vi.mock('electron-updater', () => ({
 vi.mock('serialport', () => ({ SerialPort: stubs.EmptyStub }))
 vi.mock('@serialport/parser-readline', () => ({ ReadlineParser: stubs.EmptyStub }))
 
-import { isNonEmptyString, isPlainObject, parseScreenSettings } from './ipc-handlers'
+import {
+  isFirmwareChannel,
+  isFirmwareDownloadUrlAllowed,
+  isNonEmptyString,
+  isPlainObject,
+  parseScreenSettings,
+} from './ipc-handlers'
 
 describe('isNonEmptyString — payload guard for portPath / volumePath', () => {
   const cases: { label: string; value: unknown; expected: boolean }[] = [
@@ -183,4 +189,57 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
       sleep: -5,
     })
   })
+})
+
+describe('isFirmwareChannel — payload guard for FIRMWARE_LIST_RELEASES', () => {
+  const cases: { label: string; value: unknown; expected: boolean }[] = [
+    { label: '"stable"', value: 'stable', expected: true },
+    { label: '"beta"', value: 'beta', expected: true },
+    { label: '"nightly"', value: 'nightly', expected: false },
+    { label: '"STABLE" (case-sensitive)', value: 'STABLE', expected: false },
+    { label: 'empty string', value: '', expected: false },
+    { label: 'number', value: 1, expected: false },
+    { label: 'null', value: null, expected: false },
+    { label: 'undefined', value: undefined, expected: false },
+    { label: 'object wrapper', value: { channel: 'stable' }, expected: false },
+  ]
+  for (const { label, value, expected } of cases) {
+    it(`${expected ? 'accepts' : 'rejects'} ${label}`, () => {
+      expect(isFirmwareChannel(value)).toBe(expected)
+    })
+  }
+})
+
+describe('isFirmwareDownloadUrlAllowed — host + protocol allowlist', () => {
+  const allowed: string[] = [
+    'https://github.com/foo/bar/releases/download/v1/firmware.bin',
+    'https://api.github.com/repos/foo/bar/releases',
+    'https://objects.githubusercontent.com/abc/def.bin',
+    'https://release-assets.githubusercontent.com/abc/def.bin',
+  ]
+  for (const url of allowed) {
+    it(`accepts ${url}`, () => {
+      expect(isFirmwareDownloadUrlAllowed(url)).toBe(true)
+    })
+  }
+
+  const rejected: { label: string; value: unknown }[] = [
+    { label: 'http:// on github.com (cleartext)', value: 'http://github.com/foo/bar.bin' },
+    { label: 'https on evil host', value: 'https://evil.example/firmware.bin' },
+    { label: 'https on subdomain not in allowlist', value: 'https://raw.github.com/foo/bar.bin' },
+    { label: 'file:// path', value: 'file:///etc/passwd' },
+    { label: 'javascript: URL', value: 'javascript:alert(1)' },
+    { label: 'data: URL', value: 'data:application/octet-stream;base64,AAAA' },
+    { label: 'malformed URL', value: 'not-a-url' },
+    { label: 'empty string', value: '' },
+    { label: 'null', value: null },
+    { label: 'undefined', value: undefined },
+    { label: 'number', value: 42 },
+    { label: 'object', value: { url: 'https://github.com' } },
+  ]
+  for (const { label, value } of rejected) {
+    it(`rejects ${label}`, () => {
+      expect(isFirmwareDownloadUrlAllowed(value)).toBe(false)
+    })
+  }
 })

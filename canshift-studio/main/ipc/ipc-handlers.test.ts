@@ -443,6 +443,23 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
     await getHandler(IpcChannels.CONFIG_OPEN_PATH)(makeEvent(), '/a.json')
     expect(configFileMock.openFilePath).toHaveBeenCalledWith('/a.json')
   })
+
+  it('CONFIG_OPEN_PATH rejects a non-string payload without touching the service', async () => {
+    const handler = getHandler(IpcChannels.CONFIG_OPEN_PATH)
+    expect(await handler(makeEvent(), 42)).toEqual({
+      success: false,
+      error: 'filePath must be a non-empty string',
+    })
+    expect(await handler(makeEvent(), '')).toEqual({
+      success: false,
+      error: 'filePath must be a non-empty string',
+    })
+    expect(await handler(makeEvent(), null)).toEqual({
+      success: false,
+      error: 'filePath must be a non-empty string',
+    })
+    expect(configFileMock.openFilePath).not.toHaveBeenCalled()
+  })
 })
 
 describe('Session IPC handlers — pure delegation', () => {
@@ -491,6 +508,16 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
     expect(firmwareMock.listReleases).toHaveBeenCalledWith('beta')
   })
 
+  it('FIRMWARE_LIST_RELEASES rejects an unknown channel without touching the service', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_LIST_RELEASES)
+    await expect(handler(makeEvent(), 'nightly')).rejects.toThrow(
+      'channel must be "stable" or "beta"'
+    )
+    await expect(handler(makeEvent(), null)).rejects.toThrow()
+    await expect(handler(makeEvent(), 42)).rejects.toThrow()
+    expect(firmwareMock.listReleases).not.toHaveBeenCalled()
+  })
+
   it('FIRMWARE_ENTER_FLASH disconnects USB, resets bootloader, and locks the flash port', async () => {
     usbServiceMock.disconnect.mockResolvedValueOnce({ success: true })
     firmwareMock.resetIntoBootloader.mockResolvedValueOnce({ success: true })
@@ -506,10 +533,72 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
     expect(result).toEqual({ success: true })
   })
 
+  it('FIRMWARE_ENTER_FLASH rejects a non-string portPath without touching services', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_ENTER_FLASH)
+    expect(await handler(makeEvent(), 0)).toEqual({
+      success: false,
+      error: 'portPath must be a non-empty string',
+    })
+    expect(await handler(makeEvent(), '')).toEqual({
+      success: false,
+      error: 'portPath must be a non-empty string',
+    })
+    expect(usbServiceMock.disconnect).not.toHaveBeenCalled()
+    expect(firmwareMock.resetIntoBootloader).not.toHaveBeenCalled()
+    expect(firmwareMock.setFlashPort).not.toHaveBeenCalled()
+  })
+
   it('FIRMWARE_EXIT_FLASH clears the flash port', async () => {
     const result = await getHandler(IpcChannels.FIRMWARE_EXIT_FLASH)(makeEvent())
     expect(firmwareMock.setFlashPort).toHaveBeenCalledWith(null)
     expect(result).toEqual({ success: true })
+  })
+
+  it('FIRMWARE_DOWNLOAD rejects a non-allowlisted URL host', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    await expect(handler(makeEvent(), 'https://evil.example/firmware.bin', 'dl-1')).rejects.toThrow(
+      'blocked: firmware download URL not on allowlist'
+    )
+    expect(firmwareMock.downloadBinary).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD rejects http:// URLs even on allowlisted hosts', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    await expect(
+      handler(makeEvent(), 'http://github.com/foo/bar/release.bin', 'dl-1')
+    ).rejects.toThrow('blocked: firmware download URL not on allowlist')
+    expect(firmwareMock.downloadBinary).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD rejects a malformed URL', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    await expect(handler(makeEvent(), 'not-a-url', 'dl-1')).rejects.toThrow(
+      'blocked: firmware download URL not on allowlist'
+    )
+  })
+
+  it('FIRMWARE_DOWNLOAD rejects a non-string downloadId', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    await expect(handler(makeEvent(), 'https://github.com/foo/bar/release.bin', 7)).rejects.toThrow(
+      'downloadId must be a non-empty string'
+    )
+    expect(firmwareMock.downloadBinary).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD forwards an allowlisted https URL to the service', async () => {
+    const buf = new ArrayBuffer(8)
+    firmwareMock.downloadBinary.mockResolvedValueOnce(buf)
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    const result = await handler(
+      makeEvent(),
+      'https://objects.githubusercontent.com/abc/def.bin',
+      'dl-1'
+    )
+    expect(result).toBe(buf)
+    expect(firmwareMock.downloadBinary).toHaveBeenCalledWith(
+      'https://objects.githubusercontent.com/abc/def.bin',
+      expect.any(Function)
+    )
   })
 })
 

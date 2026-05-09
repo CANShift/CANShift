@@ -189,6 +189,116 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
   })
 })
 
+describe('UsbService — disconnect leaves no dangling listeners (regression for #157)', () => {
+  beforeEach(() => {
+    fakes.FakeSerialPort.instances.length = 0
+    fakes.FakeSerialPort.listResult = [{ path: '/dev/tty.test' }]
+  })
+
+  // Counts listeners across the events the service attaches to during connect.
+  // Bumps on every connect, must drop back to zero on disconnect.
+  function portListenerCount(port: EventEmitter): number {
+    return port.listenerCount('close') + port.listenerCount('error') + port.listenerCount('data')
+  }
+
+  it('removes every port listener after a voluntary disconnect', async () => {
+    const service = new UsbService()
+    await service.connect('/dev/tty.test')
+
+    const port = fakes.FakeSerialPort.instances.at(-1)
+    expect(port).toBeDefined()
+    if (!port) return
+
+    // Baseline after connect: at least one 'close' and one 'error' attached.
+    expect(port.listenerCount('close')).toBeGreaterThan(0)
+    expect(port.listenerCount('error')).toBeGreaterThan(0)
+
+    await service.disconnect()
+
+    // After disconnect, the port must be completely detached — otherwise a late
+    // OS-level 'close' would re-fire onConnectionChanged on a half-torn-down
+    // service (#139 regression vector).
+    expect(portListenerCount(port)).toBe(0)
+  })
+
+  it('removes every port listener after an involuntary disconnect', async () => {
+    const service = new UsbService()
+    await service.connect('/dev/tty.test')
+    const port = fakes.FakeSerialPort.instances.at(-1)
+    expect(port).toBeDefined()
+    if (!port) return
+
+    await service.disconnect(false)
+
+    expect(portListenerCount(port)).toBe(0)
+  })
+
+  it('connect → disconnect → connect leaves listener counts at the per-session baseline', async () => {
+    // The bug class this guards against: each disconnect that fails to detach
+    // a listener bumps the steady-state count on the next connect's port. After
+    // a few cycles the same 'close' event would call onConnectionChanged
+    // multiple times, double-logging unplug events and confusing the UI.
+    const service = new UsbService()
+
+    await service.connect('/dev/tty.test')
+    const firstPort = fakes.FakeSerialPort.instances.at(-1)
+    expect(firstPort).toBeDefined()
+    if (!firstPort) return
+    const baseline = portListenerCount(firstPort)
+    expect(baseline).toBeGreaterThan(0)
+
+    await service.disconnect()
+    expect(portListenerCount(firstPort)).toBe(0)
+
+    await service.connect('/dev/tty.test')
+    const secondPort = fakes.FakeSerialPort.instances.at(-1)
+    expect(secondPort).toBeDefined()
+    if (!secondPort) return
+    expect(secondPort).not.toBe(firstPort)
+    expect(portListenerCount(secondPort)).toBe(baseline)
+
+    await service.disconnect()
+    expect(portListenerCount(secondPort)).toBe(0)
+    // First port must still be at zero — no listener should have leaked across.
+    expect(portListenerCount(firstPort)).toBe(0)
+  })
+
+  it('disconnect() detaches the parser before close so late data is dropped', async () => {
+    const service = new UsbService()
+    const onTelemetry = vi.fn()
+    service.setEventHandlers({ onTelemetry })
+
+    await service.connect('/dev/tty.test')
+    const parser = (service as unknown as { parser: EventEmitter | null }).parser
+    expect(parser).not.toBeNull()
+    if (!parser) return
+    expect(parser.listenerCount('data')).toBeGreaterThan(0)
+
+    await service.disconnect()
+
+    // Parser listeners must be gone — a late telemetry frame from a stuck
+    // driver would otherwise resolve a fresh ack on the next connect.
+    expect(parser.listenerCount('data')).toBe(0)
+
+    // Belt-and-braces: emitting after disconnect must not call any handler.
+    parser.emit('data', '{"tele":1,"v":{"rpm":4500}}')
+    expect(onTelemetry).not.toHaveBeenCalled()
+  })
+
+  it('disconnect() before any connect is a no-op without firing handlers (idempotent)', async () => {
+    const service = new UsbService()
+    const onConnectionChanged = vi.fn()
+    const onError = vi.fn()
+    service.setEventHandlers({ onConnectionChanged, onError })
+
+    expect(await service.disconnect()).toEqual({ success: true })
+    expect(await service.disconnect()).toEqual({ success: true })
+
+    expect(onConnectionChanged).not.toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+})
+
 describe('putConfigTimeoutMs — CMD_PUT_CONFIG ack timeout scaling (issue #217)', () => {
   it('never returns less than the 5 s base timeout', () => {
     expect(putConfigTimeoutMs(0)).toBe(5_000)
