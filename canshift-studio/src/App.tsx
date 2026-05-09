@@ -74,6 +74,7 @@ import { useAutoConnect } from './hooks/useAutoConnect'
 import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
 import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
+import { useUsbEvents } from './hooks/useUsbEvents'
 import { useDeviceStore } from './stores/device.store'
 import { useCliDetach } from './cli/useCliDetach'
 import { useCliLogBridge } from './cli/useCliLogBridge'
@@ -89,6 +90,7 @@ function assertNever(value: never): never {
 }
 
 export default function App() {
+  useUsbEvents()
   useMenuEvents()
   useFirmwareCheck()
   useDeviceConfigLoad()

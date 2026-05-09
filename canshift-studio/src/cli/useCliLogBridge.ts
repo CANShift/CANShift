@@ -107,6 +107,10 @@ export function useCliLogBridge(): void {
       for (const entry of s.entries) {
         if (entry.id <= lastForwardedIdRef.current) continue
         lastForwardedIdRef.current = entry.id
+        // Skip entries that originated from another window — re-broadcasting
+        // them would produce a feedback loop where the originating window
+        // receives its own log back, doubling every line in the store (#484).
+        if (entry.bridged === true) continue
         try {
           window.ipc.send(IpcChannels.CLI_LOG_PUSH, entryToPayload(entry))
         } catch {

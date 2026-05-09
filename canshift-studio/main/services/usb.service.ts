@@ -233,6 +233,13 @@ export class UsbService {
    * Returns { version: null } on timeout (device has no CANShift firmware,
    * or pre-v0.2 firmware without CMD_GET_STATUS support).
    * `isDay` is null on firmware older than 0.7.0 which didn't expose it.
+   *
+   * Per-attempt timeout is sized for the post-flash boot path: the firmware
+   * emits its `[BOOT] CANShift vX.Y.Z starting` line *before* `taskUSBComm`
+   * comes up, so a CMD_GET_STATUS issued during that window won't ack until
+   * the USB task starts ticking. The runtime-fonts boot path (#453) extends
+   * that gap, which made the previous 2 s timeout fire before the device
+   * was ready to answer (#485).
    */
   async queryVersion(): Promise<{
     version: string | null
@@ -241,7 +248,7 @@ export class UsbService {
     // CMD_GET_STATUS = 0x10 — response:
     //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1}
     const payload = JSON.stringify({ cmd: 0x10 }) + '\n'
-    const result = await this.sendCommand(payload, 2_000) // shorter timeout for probe
+    const result = await this.sendCommand(payload, 4_000)
     if (!result.success || !result.data) {
       return { version: null, isDay: null }
     }
