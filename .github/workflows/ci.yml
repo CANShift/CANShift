@@ -133,6 +133,15 @@ jobs:
       - name: Bundle check (iOS)
         run: npx expo export --platform ios --output-dir /tmp/expo-bundle
 
+      # Soft check — surfaces SDK / schema / dependency drift without blocking the PR.
+      # Policy: warning-only. expo-doctor findings are tracked as their own issues
+      # (e.g. unmaintained-package or unknown-metadata advisories are policy decisions,
+      # not auto-blockers). Output stays visible in CI logs; promote to a hard check
+      # once the audit backlog (#384) is fully cleared.
+      - name: Expo doctor (soft)
+        continue-on-error: true
+        run: npx expo-doctor
+
   # ─── Mobile — iOS native build ──────────────────────────────────────────────
   # Runs on macOS so it exercises the full native pipeline that
   # `mobile — typecheck + bundle` cannot (prebuild + CocoaPods + xcodebuild).
