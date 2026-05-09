@@ -80,7 +80,7 @@ describe('decideDeviceConfigAction', () => {
     // path is exercised — without a version, migrateConfig would catch this
     // first as a chain failure (#157).
     const action = decideDeviceConfigAction({
-      result: { ok: true, config: { version: '1.11.0', not: 'a-dashboard' } },
+      result: { ok: true, config: { version: '1.12.0', not: 'a-dashboard' } },
       isEditorEmpty: false,
       loadedFromDemoFallback: false,
     })
@@ -108,11 +108,11 @@ describe('decideDeviceConfigAction', () => {
   })
 
   it('migrates an older device config up to the current schema before applying — #157', () => {
-    // A 1.10.0 → 1.11.0 step is a no-op data migration; the version must
+    // A 1.11.0 → 1.12.0 step is a no-op data migration; the version must
     // still flip on the returned config so downstream burns are clean.
     const olderConfig: Record<string, unknown> = {
       ...makeValidDeviceResponse(),
-      version: '1.10.0',
+      version: '1.11.0',
     }
     const action = decideDeviceConfigAction({
       result: { ok: true, config: olderConfig },
@@ -121,7 +121,7 @@ describe('decideDeviceConfigAction', () => {
     })
     expect(action.kind).toBe('apply-device-config-with-warnings')
     if (action.kind === 'apply-device-config-with-warnings') {
-      expect(action.config.version).toBe('1.11.0')
+      expect(action.config.version).toBe('1.12.0')
     }
   })
 })

@@ -710,12 +710,52 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.11.0 → 1.12.0: default topBar.height bumped 24 → 30 (issue #379)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.11.0 → 1.12.0', () => {
+  it('preserves explicit topBar.height: 24 (KEEP semantics — does NOT rewrite)', () => {
+    const config = {
+      version: '1.11.0',
+      topBar: { height: 24, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+    }
+    const { config: out, applied } = migrateConfig(config, '1.12.0')
+    expect(applied).toEqual(['1.11.0 → 1.12.0'])
+    expect(out.version).toBe('1.12.0')
+    const topBar = out.topBar as Record<string, unknown>
+    expect(topBar.height).toBe(24)
+  })
+
+  it('preserves explicit topBar.height: 30 unchanged', () => {
+    const config = {
+      version: '1.11.0',
+      topBar: { height: 30, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+    }
+    const { config: out } = migrateConfig(config, '1.12.0')
+    const topBar = out.topBar as Record<string, unknown>
+    expect(topBar.height).toBe(30)
+  })
+
+  it('bumps version to 1.12.0', () => {
+    const config = { version: '1.11.0', pages: [] }
+    const { config: out } = migrateConfig(config, '1.12.0')
+    expect(out.version).toBe('1.12.0')
+  })
+
+  it('chain test: 1.0.0 → 1.12.0 includes the new step at the end of applied[]', () => {
+    const config = { version: '1.0.0', pages: [] }
+    const { applied } = migrateConfig(config, '1.12.0')
+    expect(applied[applied.length - 1]).toBe('1.11.0 → 1.12.0')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Full chain regression — load a 1.0.0 config and walk it to the latest
 // schema. Guards against silent breakage of the chain when adding migrations.
 // ---------------------------------------------------------------------------
 
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.11.0 without losing data', () => {
+  it('walks a 1.0.0 config all the way to 1.12.0 without losing data', () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -772,8 +812,8 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.11.0')
-    expect(out.version).toBe('1.11.0')
+    const { config: out, applied } = migrateConfig(config, '1.12.0')
+    expect(out.version).toBe('1.12.0')
     expect(applied).toEqual([
       '1.0.0 → 1.1.0',
       '1.1.0 → 1.2.0',
@@ -786,6 +826,7 @@ describe('migrateConfig — full chain to current', () => {
       '1.8.0 → 1.9.0',
       '1.9.0 → 1.10.0',
       '1.10.0 → 1.11.0',
+      '1.11.0 → 1.12.0',
     ])
 
     const page = (out.pages as Record<string, unknown>[])[0]!
@@ -818,12 +859,12 @@ describe('migrateConfig — full chain to current', () => {
     expect(tpsLayout.h).toBe(56)
   })
 
-  it('a fresh 1.11.0 config is a no-op through the runner', () => {
+  it('a fresh 1.12.0 config is a no-op through the runner', () => {
     const config = {
-      version: '1.11.0',
+      version: '1.12.0',
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.11.0')
+    const { config: out, applied } = migrateConfig(config, '1.12.0')
     expect(applied).toEqual([])
     expect(out).toEqual(config)
   })

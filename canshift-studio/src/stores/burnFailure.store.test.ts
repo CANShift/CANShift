@@ -23,7 +23,7 @@ describe('burnFailure.store', () => {
         message: 'Device did not acknowledge (timeout)',
         hints: ['Check that the firmware is running.'],
         elapsedMs: 2400,
-        schemaVersion: '1.11.0',
+        schemaVersion: '1.12.0',
         payloadBytes: 1234,
       },
       retry
@@ -34,7 +34,7 @@ describe('burnFailure.store', () => {
     expect(state.details?.message).toBe('Device did not acknowledge (timeout)')
     expect(state.details?.hints).toHaveLength(1)
     expect(state.details?.elapsedMs).toBe(2400)
-    expect(state.details?.schemaVersion).toBe('1.11.0')
+    expect(state.details?.schemaVersion).toBe('1.12.0')
     expect(state.details?.payloadBytes).toBe(1234)
     expect(state.onRetry).toBe(retry)
   })
@@ -45,7 +45,7 @@ describe('burnFailure.store', () => {
         message: 'Burn failed',
         hints: [],
         elapsedMs: 0,
-        schemaVersion: '1.11.0',
+        schemaVersion: '1.12.0',
         payloadBytes: 0,
       },
       () => {
