@@ -1511,3 +1511,232 @@ describe('validateDashboard — signalCatalog option', () => {
     )
   })
 })
+
+// ---------------------------------------------------------------------------
+// Coverage gap fillers — exercise the remaining error branches that the
+// existing tests above don't reach (line-coverage push to ≥95%).
+// ---------------------------------------------------------------------------
+
+describe('validateDashboard — colour and shape branches', () => {
+  it('rejects topBar.bgColor that is not a hex string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: { height: 20, bgColor: 'red' },
+      })
+    )
+    expect(result.errors.some((e) => e.startsWith('topBar.bgColor must be a 6-digit hex'))).toBe(
+      true
+    )
+  })
+
+  it('rejects dayTheme.bgColor that is not a hex string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        dayTheme: { bgColor: 'not-a-hex' },
+      })
+    )
+    expect(result.errors).toContain('dayTheme.bgColor must be a 6-digit hex color')
+  })
+
+  it('rejects a non-object page entry inside the pages array', () => {
+    const result = validateDashboard(minimalConfig({ pages: [42] }))
+    expect(result.errors).toContain('pages[0] must be an object')
+  })
+
+  it('rejects page.backgroundColor that is not a hex string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ backgroundColor: 'cornflowerblue' })],
+      })
+    )
+    expect(result.errors).toContain('pages[0].backgroundColor must be a 6-digit hex color')
+  })
+
+  it('rejects a widget whose layout is not an object', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [minimalWidget({ layout: 'not-an-object' })],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('layout must be an object'))).toBe(true)
+  })
+
+  it('rejects style.borderColor that is neither null nor a hex string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              minimalWidget({
+                style: {
+                  primaryColor: '#FF4444',
+                  borderColor: 'mauve',
+                },
+              }),
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('style.borderColor') && e.includes('hex color or null'))
+    ).toBe(true)
+  })
+
+  it('accepts style.borderColor === null without an error', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              minimalWidget({
+                style: {
+                  primaryColor: '#FF4444',
+                  borderColor: null,
+                },
+              }),
+            ],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('borderColor'))).toBe(false)
+  })
+})
+
+describe('validateDashboard — topBar.layout shape errors', () => {
+  it('rejects a layout entry that is not an object', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [42],
+        },
+      })
+    )
+    expect(result.errors).toContain('topBar.layout[0] must be an object')
+  })
+
+  it('rejects a layout entry with no type field', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        topBar: {
+          height: 16,
+          layout: [{ position: 'left' }],
+        },
+      })
+    )
+    expect(result.errors).toContain('topBar.layout[0].type is required')
+  })
+})
+
+describe('validateDashboard — widget config branches', () => {
+  it('rejects gauge.alertThreshold that is not a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [minimalWidget({ alertThreshold: 'high' })],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('alertThreshold must be a number'))).toBe(true)
+  })
+
+  it('rejects gauge.displayStyle that is not a known string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [minimalWidget({ displayStyle: 'pie' })],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some(
+        (e) => e.includes('displayStyle') && e.includes("'numeric' | 'arc' | 'bar'")
+      )
+    ).toBe(true)
+  })
+
+  it('rejects bar.alertThreshold that is not a number', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              {
+                id: 'b1',
+                type: 'bar',
+                signal: 'rpm',
+                minValue: 0,
+                maxValue: 100,
+                decimalPlaces: 0,
+                alertThreshold: 'spicy',
+              },
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some(
+        (e) => e.includes('(bar)') && e.includes('alertThreshold must be a number')
+      )
+    ).toBe(true)
+  })
+
+  it('rejects button.colors.normal that is not a hex string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              {
+                id: 'b1',
+                type: 'button',
+                targetPageId: 'p1',
+                colors: { normal: 'red' },
+              },
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some(
+        (e) => e.includes('(button)') && e.includes('colors.normal must be a 6-digit hex color')
+      )
+    ).toBe(true)
+  })
+
+  it('rejects button.colors.active that is not a hex string', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              {
+                id: 'b1',
+                type: 'button',
+                targetPageId: 'p1',
+                colors: { active: 'green' },
+              },
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some(
+        (e) => e.includes('(button)') && e.includes('colors.active must be a 6-digit hex color')
+      )
+    ).toBe(true)
+  })
+})
