@@ -715,7 +715,7 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 // ---------------------------------------------------------------------------
 
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.12.0 without losing data', () => {
+  it('walks a 1.0.0 config all the way to 1.13.0 without losing data', () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -772,8 +772,8 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.12.0')
-    expect(out.version).toBe('1.12.0')
+    const { config: out, applied } = migrateConfig(config, '1.13.0')
+    expect(out.version).toBe('1.13.0')
     expect(applied).toEqual([
       '1.0.0 → 1.1.0',
       '1.1.0 → 1.2.0',
@@ -787,6 +787,7 @@ describe('migrateConfig — full chain to current', () => {
       '1.9.0 → 1.10.0',
       '1.10.0 → 1.11.0',
       '1.11.0 → 1.12.0',
+      '1.12.0 → 1.13.0',
     ])
 
     const page = (out.pages as Record<string, unknown>[])[0]!
@@ -819,14 +820,51 @@ describe('migrateConfig — full chain to current', () => {
     expect(tpsLayout.h).toBe(56)
   })
 
-  it('a fresh 1.12.0 config is a no-op through the runner', () => {
+  it('a fresh 1.13.0 config is a no-op through the runner', () => {
     const config = {
-      version: '1.12.0',
+      version: '1.13.0',
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.12.0')
+    const { config: out, applied } = migrateConfig(config, '1.13.0')
     expect(applied).toEqual([])
     expect(out).toEqual(config)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 1.12.0 → 1.13.0: SignalDef gains optional colorRamp (issue #430)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.12.0 → 1.13.0', () => {
+  it('bumps the version on a config without any explicit ramps', () => {
+    const config = { version: '1.12.0', name: 'Plain', pages: [] }
+    const { config: out, applied } = migrateConfig(config, '1.13.0')
+    expect(applied).toEqual(['1.12.0 → 1.13.0'])
+    expect(out.version).toBe('1.13.0')
+    expect(out.name).toBe('Plain')
+  })
+
+  it('preserves an explicit colorRamp on a signal definition', () => {
+    const ramp = {
+      interpolate: 'linear',
+      stops: [
+        { value: 0, color: '#44CC66' },
+        { value: 100, color: '#CC3333' },
+      ],
+    }
+    const config = {
+      version: '1.12.0',
+      signals: [{ name: 'rpm', colorRamp: ramp }],
+    }
+    const { config: out } = migrateConfig(config, '1.13.0')
+    expect(out.version).toBe('1.13.0')
+    expect((out.signals as Record<string, unknown>[])[0]?.colorRamp).toEqual(ramp)
+  })
+
+  it('walks 1.11.0 → 1.13.0 through the chain', () => {
+    const config = { version: '1.11.0', topBar: { height: 30 } }
+    const { applied } = migrateConfig(config, '1.13.0')
+    expect(applied).toEqual(['1.11.0 → 1.12.0', '1.12.0 → 1.13.0'])
   })
 })
 

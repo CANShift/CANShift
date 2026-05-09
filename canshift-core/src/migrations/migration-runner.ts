@@ -77,6 +77,16 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.12.0 → 1.13.0: SignalDef gains an optional `colorRamp` field
+    // (issue #430). KEEP semantics — existing configs are bumped without any
+    // data transformation. Signals without a ramp continue to render with the
+    // legacy static color path. The firmware resolves a default ramp from the
+    // signal name when none is configured.
+    fromVersion: '1.12.0',
+    toVersion: '1.13.0',
+    migrate: (config) => ({ ...config, version: '1.13.0' }),
+  },
+  {
     // 1.11.0 → 1.12.0: default `topBar.height` bumped from 24 → 30 (issue #379).
     // Configs that explicitly persist the old default (`height === 24`) are
     // rewritten so users see the new, more legible bar without surprise. Any

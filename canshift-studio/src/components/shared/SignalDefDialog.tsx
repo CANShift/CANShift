@@ -5,7 +5,9 @@
 // Shows a live decoded preview using the current frame data.
 
 import { useState, useCallback } from 'react'
-import type { SignalDef } from '@tmbk/canshift-core'
+import type { ColorRamp, SignalDef } from '@tmbk/canshift-core'
+import { resolveSensorKind } from '@tmbk/canshift-core'
+import ColorRampEditor from '@/components/editor/ColorRampEditor'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -161,6 +163,7 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
   const [highWarningLevel, setHighWarningLevel] = useState('')
   const [highDangerLevel, setHighDangerLevel] = useState('')
   const [timeoutMs, setTimeoutMs] = useState(500)
+  const [colorRamp, setColorRamp] = useState<ColorRamp | undefined>(undefined)
 
   const rawValue = readRaw(prefill.frameData, startByte, byteLength, bigEndian)
   const signedValue = applySignedness(rawValue, byteLength, signed)
@@ -185,6 +188,7 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
       ...(dangerLevel !== '' ? { dangerLevel: parseFloat(dangerLevel) } : {}),
       ...(highWarningLevel !== '' ? { highWarningLevel: parseFloat(highWarningLevel) } : {}),
       ...(highDangerLevel !== '' ? { highDangerLevel: parseFloat(highDangerLevel) } : {}),
+      ...(colorRamp !== undefined ? { colorRamp } : {}),
     }
     onSave(signal)
   }, [
@@ -204,6 +208,7 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
     dangerLevel,
     highWarningLevel,
     highDangerLevel,
+    colorRamp,
     onSave,
   ])
 
@@ -350,6 +355,15 @@ export default function SignalDefDialog({ prefill, onSave, onClose }: Props): Re
             />
           </Field>
         </div>
+
+        {/* Color ramp (issue #430) */}
+        <ColorRampEditor
+          ramp={colorRamp}
+          sensorKind={resolveSensorKind(name)}
+          min={min}
+          max={max}
+          onChange={setColorRamp}
+        />
 
         {/* Live preview */}
         <div className="flex items-center gap-4 rounded-md border border-border bg-bg px-3 py-2 text-[11px]">

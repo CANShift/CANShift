@@ -10,7 +10,16 @@ export const FIRMWARE_CAPS = {
   MAX_TOPBAR_ITEMS: 16,
   MAX_SIGNALS: 32,
   MAX_BUTTON_ACTIONS: 4,
+  MAX_RAMP_STOPS: 8,
 } as const
+
+/**
+ * Maximum number of stops a `ColorRamp` may carry (issue #430). Mirrored as
+ * `CFG_MAX_RAMP_STOPS` in `canshift-firmware/include/app_config.h` — keep in
+ * sync. The cap is generous enough for green→orange→red gradients with extra
+ * intermediate hues while keeping the firmware-side fixed array small.
+ */
+export const MAX_RAMP_STOPS = 8
 
 export const CANVAS = {
   WIDTH: 320,

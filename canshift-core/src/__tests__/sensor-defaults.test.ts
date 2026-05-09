@@ -1,0 +1,109 @@
+// sensor-defaults.test.ts — Validate the built-in ramp catalog and the
+// value→color sampler. The ramps cross the firmware/studio boundary, so the
+// shape invariants (sorted stops, in-range count, valid hex) MUST hold for
+// every ship-with-the-firmware default.
+
+import {
+  SENSOR_DEFAULT_RAMPS,
+  colorAtValue,
+  resolveDefaultRamp,
+  resolveSensorKind,
+} from '../sensorDefaults.js'
+import type { SensorKind } from '../sensorDefaults.js'
+import { HEX_COLOR_REGEX, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
+import type { ColorRamp } from '../types/signal.js'
+
+describe('SENSOR_DEFAULT_RAMPS', () => {
+  const entries = Object.entries(SENSOR_DEFAULT_RAMPS) as [
+    SensorKind,
+    (typeof SENSOR_DEFAULT_RAMPS)[SensorKind],
+  ][]
+
+  it.each(entries)('%s has 2..MAX stops, sorted ascending, valid hex', (_kind, ramp) => {
+    expect(ramp.stops.length).toBeGreaterThanOrEqual(2)
+    expect(ramp.stops.length).toBeLessThanOrEqual(MAX_RAMP_STOPS)
+
+    for (let i = 1; i < ramp.stops.length; i++) {
+      expect(ramp.stops[i]!.value).toBeGreaterThan(ramp.stops[i - 1]!.value)
+    }
+
+    for (const stop of ramp.stops) {
+      expect(HEX_COLOR_REGEX.test(stop.color)).toBe(true)
+    }
+  })
+
+  it('uses linear interpolation for every shipped sensor', () => {
+    for (const ramp of Object.values(SENSOR_DEFAULT_RAMPS)) {
+      expect(ramp.interpolate).toBe('linear')
+    }
+  })
+})
+
+describe('resolveSensorKind / resolveDefaultRamp', () => {
+  it.each([
+    ['coolant_temp_c', 'coolant_temp'],
+    ['coolant_temp', 'coolant_temp'],
+    ['oil_pressure_bar', 'oil_press'],
+    ['oil_press', 'oil_press'],
+    ['oil_temp_c', 'oil_temp'],
+    ['battery_volts', 'battery_volts'],
+    ['rpm', 'rpm'],
+    ['afr', 'afr'],
+    ['lambda', 'afr'],
+    ['boost_bar', 'boost'],
+    ['iat', 'intake_temp'],
+    ['intake_temp_c', 'intake_temp'],
+    ['egt_c', 'egt'],
+  ])('"%s" resolves to %s', (input, expected) => {
+    expect(resolveSensorKind(input)).toBe(expected)
+    expect(resolveDefaultRamp(input)).toBe(SENSOR_DEFAULT_RAMPS[expected as SensorKind])
+  })
+
+  it('returns undefined for unknown signal names', () => {
+    expect(resolveSensorKind('throttle_pos_pct')).toBeUndefined()
+    expect(resolveDefaultRamp('throttle_pos_pct')).toBeUndefined()
+  })
+
+  it('is case-insensitive', () => {
+    expect(resolveSensorKind('COOLANT_TEMP_C')).toBe('coolant_temp')
+  })
+})
+
+describe('colorAtValue', () => {
+  const ramp = SENSOR_DEFAULT_RAMPS.coolant_temp
+
+  it('clamps below the first stop to the first color', () => {
+    expect(colorAtValue(ramp, 30)).toBe(ramp.stops[0]!.color)
+  })
+
+  it('clamps above the last stop to the last color', () => {
+    expect(colorAtValue(ramp, 200)).toBe(ramp.stops[ramp.stops.length - 1]!.color)
+  })
+
+  it('returns the exact stop color when value matches a stop', () => {
+    expect(colorAtValue(ramp, 90)).toBe('#44CC66')
+  })
+
+  it('lerps channel-wise between two stops in linear mode', () => {
+    // Mid between 90 (#44CC66) and 100 (#CC8800) at value=95.
+    // R: 0x44 + (0xCC-0x44)/2 = 0x88, G: 0xCC + (0x88-0xCC)/2 = 0xAA, B: 0x66+(0x00-0x66)/2=0x33
+    const out = colorAtValue(ramp, 95)
+    expect(out).toBe('#88AA33')
+  })
+
+  it('returns the lower stop color for the entire segment in step mode', () => {
+    const stepRamp: ColorRamp = {
+      interpolate: 'step',
+      stops: [
+        { value: 0, color: '#44CC66' },
+        { value: 50, color: '#CC8800' },
+        { value: 100, color: '#CC3333' },
+      ],
+    }
+    expect(colorAtValue(stepRamp, 25)).toBe('#44CC66')
+    expect(colorAtValue(stepRamp, 49.99)).toBe('#44CC66')
+    expect(colorAtValue(stepRamp, 50)).toBe('#CC8800')
+    expect(colorAtValue(stepRamp, 75)).toBe('#CC8800')
+    expect(colorAtValue(stepRamp, 100)).toBe('#CC3333')
+  })
+})

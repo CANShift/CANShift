@@ -1,6 +1,29 @@
 // signal.ts — CAN signal mapping configuration types
 
-import type { SemVer } from './common'
+import type { HexColor, SemVer } from './common'
+
+/** Single stop on a color ramp — value in the signal's native unit, color in #RRGGBB. */
+export interface ColorRampStop {
+  value: number
+  color: HexColor
+}
+
+/**
+ * How a `ColorRamp` blends between adjacent stops.
+ *  - `linear` — channel-wise lerp between the two surrounding stops.
+ *  - `step`   — the lower stop's color is used for the entire segment.
+ */
+export type RampInterpolation = 'linear' | 'step'
+
+/**
+ * Per-signal value→color mapping. Stops MUST be sorted ascending by `value`
+ * and contain between 2 and `MAX_RAMP_STOPS` entries. Below the first stop
+ * the first color is used; above the last stop the last color is used.
+ */
+export interface ColorRamp {
+  stops: ColorRampStop[]
+  interpolate: RampInterpolation
+}
 
 /** Individual CAN signal definition */
 export interface SignalDef {
@@ -32,6 +55,13 @@ export interface SignalDef {
   /** High-side danger threshold — companion to highWarningLevel. */
   highDangerLevel?: number
   timeoutMs: number
+  /**
+   * Optional dynamic color ramp (issue #430). When present, widget renderers
+   * map the live value through the ramp instead of using static threshold
+   * colors. When absent, the firmware falls back to a sensor-name heuristic
+   * (see `resolveDefaultRamp`) and finally to the existing static color path.
+   */
+  colorRamp?: ColorRamp
 }
 
 /** Root signal configuration (signals.json) */
