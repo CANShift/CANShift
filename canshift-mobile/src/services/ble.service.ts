@@ -22,6 +22,7 @@ import {
   requestAndroidBlePermissions,
   type AndroidBlePermissionResult,
 } from './ble-permissions'
+import { mapBleError, describeBleError } from './ble.errors'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -129,6 +130,29 @@ export class BleService {
   private disconnectSub: Subscription | null = null
   private reconnectController: AbortController | null = null
 
+  /**
+   * FIFO serializer for GATT request/response operations (read + write).
+   * Concurrent reads/writes against the same `Device` race in the underlying
+   * stack and silently drop or reorder; chaining them through this single
+   * promise guarantees one-at-a-time execution while keeping each caller's
+   * resolved/rejected value isolated.
+   *
+   * Notification subscriptions are *not* routed through this queue — they're
+   * stream registrations, not request/response, and can run concurrently.
+   */
+  private gattQueue: Promise<unknown> = Promise.resolve()
+
+  /**
+   * Schedule a GATT operation behind every previously-queued one. The returned
+   * promise mirrors the operation's outcome; the queue itself swallows
+   * rejections so a failed op cannot poison subsequent ones.
+   */
+  private runGatt<T>(op: () => Promise<T>): Promise<T> {
+    const next = this.gattQueue.then(op, op)
+    this.gattQueue = next.catch(() => undefined)
+    return next
+  }
+
   constructor(deps: BleServiceDeps = {}) {
     const factory = deps.managerFactory ?? (() => new BleManager())
     this.manager = factory()
@@ -231,10 +255,10 @@ export class BleService {
       await device.discoverAllServicesAndCharacteristics()
       this.connectedDevice = device
 
-      // Read STATUS characteristic
-      const statusChar = await device.readCharacteristicForService(
-        BLE_SERVICE_UUID,
-        BLE_CHAR_STATUS
+      // Read STATUS characteristic — routed through the GATT serializer so it
+      // doesn't race a write that fires immediately after connect.
+      const statusChar = await this.runGatt(() =>
+        device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS),
       )
       if (statusChar.value) {
         const status = parseStatus(decodeBase64(statusChar.value))
@@ -305,9 +329,9 @@ export class BleService {
     } catch (err) {
       this.removeSubscriptions()
       this.connectedDevice = null
-      const msg = err instanceof Error ? err.message : 'Connection failed'
-      setError(msg)
-      log('error', `Connection failed: ${msg}`)
+      const mapped = mapBleError(err)
+      setError(mapped)
+      log('error', `Connection failed: ${describeBleError(mapped)}`)
       throw err
     }
   }
@@ -337,12 +361,15 @@ export class BleService {
 
   /** Push screen settings to the device. */
   async pushSettings(settings: { brightness: number; sleep: number }): Promise<void> {
-    if (!this.connectedDevice) throw new Error('Not connected')
+    const device = this.connectedDevice
+    if (!device) throw new Error('Not connected')
     const json = JSON.stringify(settings)
-    await this.connectedDevice.writeCharacteristicWithResponseForService(
-      BLE_SERVICE_UUID,
-      BLE_CHAR_SETTINGS,
-      encodeBase64(json)
+    await this.runGatt(() =>
+      device.writeCharacteristicWithResponseForService(
+        BLE_SERVICE_UUID,
+        BLE_CHAR_SETTINGS,
+        encodeBase64(json),
+      ),
     )
   }
 
@@ -351,10 +378,10 @@ export class BleService {
    * Returns null if the characteristic value is missing or unparseable.
    */
   async readSettings(): Promise<{ brightness: number; sleep: number } | null> {
-    if (!this.connectedDevice) throw new Error('Not connected')
-    const char = await this.connectedDevice.readCharacteristicForService(
-      BLE_SERVICE_UUID,
-      BLE_CHAR_SETTINGS
+    const device = this.connectedDevice
+    if (!device) throw new Error('Not connected')
+    const char = await this.runGatt(() =>
+      device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_SETTINGS),
     )
     if (!char.value) return null
     try {
@@ -371,14 +398,27 @@ export class BleService {
 
   /** Send a command to the device. Optional `payload` is merged into the JSON. */
   async sendCmd(cmd: string, payload?: CmdPayload): Promise<void> {
-    if (!this.connectedDevice) throw new Error('Not connected')
+    const device = this.connectedDevice
+    if (!device) throw new Error('Not connected')
     const body: Record<string, boolean | number | string> = { cmd, ...(payload ?? {}) }
     const json = JSON.stringify(body)
-    await this.connectedDevice.writeCharacteristicWithoutResponseForService(
-      BLE_SERVICE_UUID,
-      BLE_CHAR_CMD,
-      encodeBase64(json)
+    await this.runGatt(() =>
+      device.writeCharacteristicWithoutResponseForService(
+        BLE_SERVICE_UUID,
+        BLE_CHAR_CMD,
+        encodeBase64(json),
+      ),
     )
+  }
+
+  /**
+   * @internal Test seam: inject a stub `Device` so unit tests can exercise
+   * `pushSettings` / `sendCmd` / `readSettings` without going through a real
+   * `connect()` flow. Not part of the public API; the underscore prefix and
+   * `@internal` tag mark it as such.
+   */
+  _test_setConnectedDevice(device: Device | null): void {
+    this.connectedDevice = device
   }
 
   // -------------------------------------------------------------------------
@@ -497,7 +537,7 @@ export class BleService {
 
       if (!isAborted(signal)) {
         log('error', 'Auto-reconnect: max attempts reached, giving up')
-        useDeviceStore.getState().setError('Reconnect failed')
+        useDeviceStore.getState().setError({ kind: 'not-in-range' })
       }
     } finally {
       if (this.reconnectController === controller) {

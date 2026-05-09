@@ -17,9 +17,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
+import { mapBleError } from '../services/ble.errors'
 import { useDeviceStore } from '../stores/device.store'
 import { ESP32_AP_PASSWORD } from '../constants/ota'
 import type { RootStackParamList } from '../navigation'
+import {
+  BlePermissionDialog,
+  type BlePermissionPlatform,
+} from '../components/ble-permission-dialog'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Update'>
@@ -156,6 +161,19 @@ export default function UpdateScreen({ navigation }: Props) {
   const [selectedRelease, setSelectedRelease] = useState<OtaService.FirmwareRelease | null>(null)
   const [localPath, setLocalPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [unauthorizedPlatform, setUnauthorizedPlatform] =
+    useState<BlePermissionPlatform | null>(null)
+
+  /** Returns true if the error was a permission denial (and the dialog opened);
+   *  callers can short-circuit and skip setting a redundant inline error. */
+  const handleBleFailure = useCallback((err: unknown): boolean => {
+    const mapped = mapBleError(err)
+    if (mapped.kind === 'permission-denied') {
+      setUnauthorizedPlatform(mapped.platform)
+      return true
+    }
+    return false
+  }, [])
 
   useEffect(() => {
     void OtaService.fetchReleases()
@@ -185,10 +203,14 @@ export default function UpdateScreen({ navigation }: Props) {
       await BleService.sendCmd('start_wifi_ap')
       setStep('wifi_wait')
     } catch (e) {
+      if (handleBleFailure(e)) {
+        setStep('releases')
+        return
+      }
       setError(e instanceof Error ? e.message : 'Download failed')
       setStep('releases')
     }
-  }, [])
+  }, [handleBleFailure])
 
   const handlePush = useCallback(async () => {
     if (!localPath) return
@@ -198,10 +220,14 @@ export default function UpdateScreen({ navigation }: Props) {
       await OtaService.pushFirmware(localPath, setProgress)
       setStep('done')
     } catch (e) {
+      if (handleBleFailure(e)) {
+        setStep('wifi_wait')
+        return
+      }
       setError(e instanceof Error ? e.message : 'Push failed')
       setStep('wifi_wait')
     }
-  }, [localPath])
+  }, [localPath, handleBleFailure])
 
   const normalizedInstalled = firmwareVersion?.replace(/^v/, '') ?? null
 
@@ -320,6 +346,11 @@ export default function UpdateScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       )}
+
+      <BlePermissionDialog
+        platform={unauthorizedPlatform}
+        onDismiss={() => { setUnauthorizedPlatform(null) }}
+      />
     </SafeAreaView>
   )
 }
