@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
+import { Card } from '../components/ui'
 import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
@@ -111,7 +112,7 @@ function ReleaseRow({
   })
 
   return (
-    <View style={[styles.releaseCard, isCurrent && styles.releaseCardCurrent]}>
+    <Card className="gap-2" style={isCurrent ? styles.releaseCardCurrent : undefined}>
       <View style={styles.releaseHeader}>
         <View style={styles.releaseLeft}>
           <Text style={styles.releaseVersion}>v{release.version}</Text>
@@ -147,7 +148,7 @@ function ReleaseRow({
       {notesOpen && release.notes.length > 0 && (
         <Text style={styles.notesBody}>{release.notes}</Text>
       )}
-    </View>
+    </Card>
   )
 }
 
@@ -305,12 +306,12 @@ export default function UpdateScreen({ navigation }: Props) {
           <Text style={styles.stepTitle}>Connect to CANShift Wi-Fi</Text>
           {wifiApSsid != null ? (
             <>
-              <View style={styles.ssidCard}>
+              <Card padding="lg" className="w-full items-center gap-1">
                 <Text style={styles.ssidLabel}>NETWORK</Text>
                 <Text style={styles.ssidValue}>{wifiApSsid}</Text>
                 <View style={styles.ssidDivider} />
                 <Text style={styles.ssidPwd}>{`Password · ${ESP32_AP_PASSWORD}`}</Text>
-              </View>
+              </Card>
               <Text style={styles.hint}>
                 {'Go to Settings → Wi-Fi → select the network above,\nthen come back and tap Push.'}
               </Text>
@@ -430,14 +431,6 @@ const styles = StyleSheet.create({
   installedLabel: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 0.5 },
   installedVersion: { fontSize: Typography.sm, color: Colors.text, fontWeight: '600' },
 
-  releaseCard: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
   releaseCardCurrent: { opacity: 0.55 },
   releaseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   releaseLeft: { gap: 2 },
@@ -489,16 +482,6 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: '100%', backgroundColor: Colors.accent },
 
-  ssidCard: {
-    width: '100%',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
   ssidLabel: { fontSize: Typography.xs, color: Colors.textMuted, letterSpacing: 1 },
   ssidValue: { fontSize: Typography.lg, fontWeight: '700', color: Colors.text },
   ssidDivider: { width: 40, height: 1, backgroundColor: Colors.border, marginVertical: 4 },
