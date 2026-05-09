@@ -1,50 +1,17 @@
 // useUsbConnection.ts — Shared USB connect / disconnect / refresh logic.
-// Also listens for unsolicited device events (unexpected disconnect, errors).
+//
+// Unsolicited device events (unexpected disconnect, errors, device logs)
+// live in `useUsbEvents` which is mounted ONCE at the App root. Mounting
+// the listeners here would duplicate every device log line for each
+// concurrently-mounted ConnectModal (#484).
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
-import { useCanHealthStore } from '../stores/canHealth.store'
 import { useErrorStore } from '../stores/error.store'
 import { usbService } from '../services/ipc.service'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
-import type { PortInfo, CanHealth } from '../services/ipc.service'
-import type { LogLevel } from '../stores/log.store'
-
-interface ConnectionChangedPayload {
-  connected: boolean
-  portPath?: string
-}
-
-interface AppLogPayload {
-  level: LogLevel
-  message: string
-  ts: number
-}
-
-interface DeviceLogPayload {
-  level: string
-  tag: string
-  message: string
-}
-
-// Map a firmware log level letter to the renderer's LogLevel.
-// Debug/verbose collapse to 'info' because the renderer's log panel does not
-// have a debug rung — keeping all messages visible is preferable to dropping.
-function mapDeviceLevel(level: string): LogLevel {
-  switch (level) {
-    case 'E':
-      return 'error'
-    case 'W':
-      return 'warn'
-    case 'I':
-    case 'D':
-    case 'V':
-    default:
-      return 'info'
-  }
-}
+import type { PortInfo } from '../services/ipc.service'
 
 export function useUsbConnection() {
   const [ports, setPorts] = useState<PortInfo[]>([])
@@ -57,103 +24,7 @@ export function useUsbConnection() {
   const setError = useDeviceStore((s) => s.setError)
   const clearError = useDeviceStore((s) => s.clearError)
   const log = useLogStore((s) => s.push)
-  const updateCanHealth = useCanHealthStore((s) => s.update)
   const pushError = useErrorStore((s) => s.push)
-  const pushOrUpdateError = useErrorStore((s) => s.pushOrUpdate)
-
-  // Track last seen CAN error count to detect increases (firmware reports cumulative total)
-  const prevCanErrors = useRef<number | null>(null)
-
-  // Listen for unsolicited device events (cable pulled, device reset, errors)
-  useEffect(() => {
-    const handleConnectionChanged = (payload: unknown) => {
-      const status = payload as ConnectionChangedPayload
-      if (!status.connected) {
-        setDisconnected()
-        log('warn', 'Device disconnected unexpectedly')
-      }
-    }
-
-    const handleError = (message: unknown) => {
-      const msg = typeof message === 'string' ? message : 'USB error'
-      setError(msg)
-      log('error', `USB: ${msg}`)
-      pushOrUpdateError({ source: 'usb', code: 'USB_ERROR', message: msg })
-    }
-
-    const handleCanHealth = (payload: unknown) => {
-      const h = payload as CanHealth
-      updateCanHealth(h.fps, h.errors)
-
-      // Only surface CAN errors when the cumulative count increases
-      if (h.errors > 0) {
-        const prev = prevCanErrors.current
-        if (prev === null || h.errors > prev) {
-          const delta = prev !== null ? h.errors - prev : h.errors
-          pushOrUpdateError({
-            source: 'can',
-            code: 'CAN_BUS_ERRORS',
-            message: `CAN bus: ${String(h.errors)} error${h.errors !== 1 ? 's' : ''} cumulative`,
-            detail: `+${String(delta)} new · ${h.fps.toFixed(1)} frames/s`,
-          })
-        }
-      }
-      prevCanErrors.current = h.errors
-    }
-
-    // Forward structured log messages from the main process to the console panel
-    const handleAppLog = (payload: unknown) => {
-      if (
-        typeof payload !== 'object' ||
-        payload === null ||
-        !('message' in payload) ||
-        !('level' in payload)
-      ) {
-        return
-      }
-      const entry = payload as AppLogPayload
-      log(entry.level, `[main] ${entry.message}`)
-      if (entry.level === 'error') {
-        pushError({ source: 'system', code: 'MAIN_ERROR', message: entry.message })
-      }
-    }
-
-    // Forward structured firmware log lines (issue #199) — replaces the
-    // pre-#199 plain-text "[I][TAG] msg" stream that polluted the JSON-line
-    // wire protocol.
-    const handleDeviceLog = (payload: unknown) => {
-      if (
-        typeof payload !== 'object' ||
-        payload === null ||
-        !('level' in payload) ||
-        !('tag' in payload) ||
-        !('message' in payload)
-      ) {
-        return
-      }
-      const entry = payload as DeviceLogPayload
-      const mapped = mapDeviceLevel(entry.level)
-      const formatted = `[device][${entry.tag}] ${entry.message}`
-      log(mapped, formatted)
-      if (mapped === 'error') {
-        pushError({ source: 'usb', code: 'DEVICE_ERROR', message: formatted })
-      }
-    }
-
-    window.ipc.on(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
-    window.ipc.on(IpcChannels.USB_ERROR, handleError)
-    window.ipc.on(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
-    window.ipc.on(IpcChannels.APP_LOG, handleAppLog)
-    window.ipc.on(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
-
-    return () => {
-      window.ipc.off(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
-      window.ipc.off(IpcChannels.USB_ERROR, handleError)
-      window.ipc.off(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
-      window.ipc.off(IpcChannels.APP_LOG, handleAppLog)
-      window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
-    }
-  }, [setDisconnected, setError, log, updateCanHealth, pushError, pushOrUpdateError])
 
   const refreshPorts = useCallback(() => {
     setLoading(true)

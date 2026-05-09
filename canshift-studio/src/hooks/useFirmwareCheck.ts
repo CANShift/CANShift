@@ -2,11 +2,19 @@
 // and writes the discriminated `firmwareCheck` slice on the device store.
 //
 // On connect:
-//   - Sends CMD_GET_STATUS to the device (2s timeout).
-//   - If no response → retry once after a short delay to absorb a transient
-//     post-flash reboot timeout. Only after the second miss do we conclude the
-//     device has no CANShift firmware (`no_firmware`).
-//   - If version received → store it; compare against the latest GitHub
+//   - Sends CMD_GET_STATUS to the device (per-attempt timeout in usb.service).
+//   - If no response → retry up to PROBE_MAX_ATTEMPTS times with backoff to
+//     absorb the post-flash boot window. The runtime-fonts boot path (#453)
+//     pushed `taskUSBComm` initialisation past the previous 5.5 s budget,
+//     so the probe declared "no firmware" while the device was still booting
+//     (#485).
+//   - If a `[BOOT] CANShift vX.Y.Z starting` line shows up on the wire while
+//     the probe is still retrying, we accept the embedded version directly —
+//     the firmware emits it from `setup()` before the USB task is up, so
+//     it's the earliest reliable version signal we can observe. `isDay` stays
+//     unknown in that branch; the caller's per-port latch keeps a follow-up
+//     CMD_GET_STATUS from re-running on the same reconnect.
+//   - If a version is received → store it; compare against the latest GitHub
 //     release. `up_to_date` / `update_available` / `check_failed` accordingly.
 //
 // Reconnects to the same port (e.g. after a reboot following a successful
@@ -25,11 +33,52 @@ import type { FirmwareCheck } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
 import { firmwareIpc } from '../services/ipc.service'
+import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease, FirmwareStatus } from '../services/ipc.service'
 
-// Delay between the first failed probe and the retry. Long enough to clear a
-// post-reboot CMD_GET_STATUS timeout, short enough to keep the UI responsive.
-export const POST_TIMEOUT_RETRY_DELAY_MS = 1_500
+/**
+ * Backoff delays (ms) inserted BEFORE attempts 2..N. Length defines the
+ * total number of retry waits — see `PROBE_MAX_ATTEMPTS` for the attempt
+ * count. Tuned so a healthy boot lands inside attempt 2 while still tolerating
+ * the slow runtime-fonts path.
+ */
+export const PROBE_BACKOFF_MS = [1_000, 1_500, 2_500] as const
+
+/** Maximum number of CMD_GET_STATUS attempts before giving up. */
+export const PROBE_MAX_ATTEMPTS = PROBE_BACKOFF_MS.length + 1
+
+/**
+ * Backwards-compatible alias for the first retry delay. Kept exported so
+ * existing consumers (and `useFirmwareCheck.test.ts`) keep compiling without
+ * needing to track the new backoff array directly.
+ */
+export const POST_TIMEOUT_RETRY_DELAY_MS = PROBE_BACKOFF_MS[0]
+
+/**
+ * Pattern for the firmware's earliest boot-banner log message
+ * (`LOG_INFO("BOOT", "CANShift v" APP_VERSION_STR " starting")`). Matched
+ * against the formatted device-log entry the renderer emits, which is
+ * `[device][BOOT] CANShift vX.Y.Z starting`.
+ */
+const BOOT_VERSION_RE = /\bCANShift v(\d+\.\d+\.\d+)\b/
+
+interface DeviceLogPayload {
+  level: string
+  tag: string
+  message: string
+}
+
+function isDeviceLogPayload(v: unknown): v is DeviceLogPayload {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    'level' in v &&
+    'tag' in v &&
+    'message' in v &&
+    typeof (v as { tag?: unknown }).tag === 'string' &&
+    typeof (v as { message?: unknown }).message === 'string'
+  )
+}
 
 function compareSemver(a: string, b: string): number {
   const parse = (s: string): number[] => s.split('.').map((n) => parseInt(n, 10))
@@ -62,6 +111,13 @@ export interface ProbeReport {
    * `useLogStore.push`; tests can omit it for a silent run.
    */
   log?: ProbeLogger
+  /**
+   * Optional getter for the latest version observed on the firmware boot-log
+   * stream (`CANShift vX.Y.Z starting`). When the CMD_GET_STATUS round-trip
+   * fails but the boot log already named a version, we adopt it as a last
+   * resort — `isDay` stays unknown in that case (#485).
+   */
+  getBootLogVersion?: () => string | null
 }
 
 export async function runFirmwareProbe(
@@ -69,30 +125,50 @@ export async function runFirmwareProbe(
   isCancelled: () => boolean
 ): Promise<void> {
   const log: ProbeLogger = report.log ?? ((): void => undefined)
+  const getBootVersion: () => string | null = report.getBootLogVersion ?? ((): null => null)
   report.setFirmwareCheck({ kind: 'probing' })
 
   log('info', '[status] Probing firmware version…')
   const startedAt = Date.now()
 
-  // 1. Query device version. queryVersion() does not throw on timeout —
-  // it resolves with { version: null }. A single null can be a transient
-  // boot-time miss after a successful flash, so retry once before giving up.
-  let status: FirmwareStatus = await firmwareIpc.queryVersion()
-
-  if (isCancelled()) return
-
-  if (!status.version) {
-    log('warn', '[status] Probe returned no version — retrying once')
-    await sleep(POST_TIMEOUT_RETRY_DELAY_MS)
-    if (isCancelled()) return
+  // Attempt the probe up to PROBE_MAX_ATTEMPTS times. The first call has no
+  // backoff in front of it; later attempts wait PROBE_BACKOFF_MS[i-1] first.
+  let status: FirmwareStatus = { version: null, isDay: null }
+  let waitedNotice = false
+  for (let attempt = 0; attempt < PROBE_MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      if (!waitedNotice) {
+        log('info', '[status] Device booting — waiting for ready')
+        waitedNotice = true
+      }
+      const backoff = PROBE_BACKOFF_MS[attempt - 1] ?? 0
+      await sleep(backoff)
+      if (isCancelled()) return
+    }
     status = await firmwareIpc.queryVersion()
     if (isCancelled()) return
+    if (status.version) break
   }
 
   const elapsedMs = Date.now() - startedAt
 
   if (!status.version) {
-    // Two consecutive misses — the device genuinely has no CANShift firmware.
+    // Probe never round-tripped. As a last resort, adopt a version we may
+    // have captured from the boot-banner log line — that path doesn't go
+    // through the USB command queue, so it can land while the firmware is
+    // still bringing up `taskUSBComm`.
+    const fromLog = getBootVersion()
+    if (fromLog !== null) {
+      report.setFirmwareVersion(fromLog)
+      report.setIsDayMode(null)
+      log(
+        'info',
+        `[status] Firmware v${fromLog} (boot log) — day=unknown (${String(elapsedMs)} ms)`
+      )
+      await classifyAgainstReleases(fromLog, report, isCancelled, log)
+      return
+    }
+
     report.setFirmwareVersion(null)
     report.setFirmwareCheck({ kind: 'no_firmware' })
     log('warn', `[status] No CANShift firmware detected (after ${String(elapsedMs)} ms)`)
@@ -107,9 +183,15 @@ export async function runFirmwareProbe(
     `[status] Firmware v${version} — day=${status.isDay === null ? 'unknown' : String(status.isDay)} (${String(elapsedMs)} ms)`
   )
 
-  // 2. Check for updates against stable releases. If the API throws we
-  // fall back to `up_to_date` (best effort) so an offline studio doesn't
-  // permanently flag the device as needing an update.
+  await classifyAgainstReleases(version, report, isCancelled, log)
+}
+
+async function classifyAgainstReleases(
+  version: string,
+  report: ProbeReport,
+  isCancelled: () => boolean,
+  log: ProbeLogger
+): Promise<void> {
   let releases: FirmwareRelease[]
   try {
     releases = await firmwareIpc.listReleases('stable')
@@ -163,11 +245,38 @@ export function useFirmwareCheck(): void {
   // Last tick we acted on — bumped externally via requestFirmwareRecheck().
   const lastHandledTickRef = useRef(0)
 
+  // Most recent version captured from the firmware boot-banner log line.
+  // Populated by the listener below, consumed by the probe orchestrator as a
+  // last-resort fallback when CMD_GET_STATUS never round-trips (#485).
+  const bootLogVersionRef = useRef<string | null>(null)
+
+  // Listen for the `[BOOT] CANShift vX.Y.Z starting` device log so the probe
+  // can short-circuit when the device is still booting up its USB command
+  // task. The listener is mounted unconditionally — it's a tiny cost compared
+  // to the value of catching the version banner before `useFirmwareCheck`'s
+  // effect re-runs on the connect transition.
+  useEffect(() => {
+    const handleDeviceLog = (payload: unknown): void => {
+      if (!isDeviceLogPayload(payload)) return
+      if (payload.tag !== 'BOOT') return
+      const match = BOOT_VERSION_RE.exec(payload.message)
+      if (!match?.[1]) return
+      bootLogVersionRef.current = match[1]
+    }
+    window.ipc.on(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
+    return () => {
+      window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
+    }
+  }, [])
+
   useEffect(() => {
     // Reset the latch when the device is gone so the next fresh connect probes.
     if (!connected || !portPath || simulationMode) {
       checkedPortRef.current = null
       inFlightPortRef.current = null
+      // A fresh connect may bring a new device — drop the stale boot-log
+      // version so it can't leak across boards.
+      bootLogVersionRef.current = null
       return
     }
 
@@ -202,6 +311,7 @@ export function useFirmwareCheck(): void {
       setFirmwareVersion,
       setIsDayMode,
       log,
+      getBootLogVersion: () => bootLogVersionRef.current,
     }
 
     void runFirmwareProbe(report, () => cancelled || inFlightPortRef.current !== currentPort)

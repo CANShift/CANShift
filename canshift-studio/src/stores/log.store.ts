@@ -20,6 +20,13 @@ export interface LogEntry {
    * (issue #378). Existing 2-arg `push()` callers stay valid.
    */
   scope?: string
+  /**
+   * True for entries injected by `pushFromBridge` (cross-window CLI sync —
+   * #433). The outbound bridge subscriber in `useCliLogBridge` skips these
+   * so a bridged entry isn't re-broadcast back to the originating window,
+   * which previously produced duplicate device log lines (#484).
+   */
+  bridged?: boolean
 }
 
 interface LogState {
@@ -77,10 +84,17 @@ export const useLogStore = create<LogState>()((set, get) => ({
     if (entry.level === 'debug' && !get().verbose) return
     // Reserve a fresh local id so xterm's "skip already-written" guard in
     // CliTerminal (`lastWrittenIdRef`) treats the bridged entry as new.
-    const local: LogEntry =
-      entry.scope !== undefined
-        ? { ...entry, id: nextId++ }
-        : { id: nextId++, level: entry.level, message: entry.message, timestamp: entry.timestamp }
+    // The `bridged: true` marker lets the outbound bridge in
+    // `useCliLogBridge` skip this entry to avoid the echo loop that produced
+    // duplicate device log lines (#484).
+    const base: LogEntry = {
+      id: nextId++,
+      level: entry.level,
+      message: entry.message,
+      timestamp: entry.timestamp,
+      bridged: true,
+    }
+    const local: LogEntry = entry.scope !== undefined ? { ...base, scope: entry.scope } : base
     set((s) => ({
       entries: [...s.entries, local],
     }))
