@@ -324,7 +324,8 @@ function GaugeArcPreview({
       {/* Inner circle, top-of-arc duplicate label and the white indicator
           needle were all dropped per user spec — the arc trace + the centred
           numeric value carry the read on their own. */}
-      {/* Value text — center of arc. Threshold-tinted in BOTH modes. */}
+      {/* Value text — center of arc. Threshold-tinted in BOTH modes.
+          Primary value tier — Black 900 matches FontManager::primary. */}
       <text
         x={cx}
         y={cy}
@@ -332,8 +333,8 @@ function GaugeArcPreview({
         dominantBaseline="middle"
         fill={textValueColor}
         fontSize={valueFontSize}
-        fontWeight="700"
-        fontFamily="Montserrat, sans-serif"
+        fontWeight="900"
+        fontFamily="Orbitron, sans-serif"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
@@ -347,7 +348,7 @@ function GaugeArcPreview({
           dominantBaseline="middle"
           fill={st.textColor + '77'}
           fontSize={unitFontSize}
-          fontFamily="Montserrat, sans-serif"
+          fontFamily="Orbitron, sans-serif"
         >
           {cfg.suffix}
         </text>
@@ -365,8 +366,8 @@ function GaugeArcPreview({
               dominantBaseline={lAttrs.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(6, Math.min(9, w * 0.1))}
-              fontFamily="Montserrat, sans-serif"
-              fontWeight="600"
+              fontFamily="Orbitron, sans-serif"
+              fontWeight="500"
               letterSpacing="0.04em"
             >
               {cfg.label}
@@ -424,7 +425,7 @@ function GaugeBarPreview({
     const labelIsTop = labelPos.startsWith('top')
 
     // Reserve a label band on one side; track takes the rest. The 14-px floor
-    // matches the firmware's Montserrat 12 line height — anything tighter
+    // matches the firmware's Orbitron Medium 12 line height — anything tighter
     // clips the value and signal name. Cap at 24 so the bar stays dominant
     // on tall widgets.
     const labelBandH = Math.max(14, Math.min(24, h * 0.25))
@@ -489,14 +490,16 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#888888"
             fontSize={sigFontSize}
-            fontFamily="Montserrat, sans-serif"
-            fontWeight="600"
+            fontFamily="Orbitron, sans-serif"
+            fontWeight="500"
             letterSpacing="0.05em"
           >
             {signalLabel}
           </text>
         )}
-        {/* Value — white, centred ON the bar track (over the fill). */}
+        {/* Value — white, centred ON the bar track (over the fill).
+            Label tier (Medium 500) — matches FontManager::label on the
+            firmware horizontal bar where the value sits in the 12–14 px band. */}
         {barH >= 14 && (
           <text
             x={w / 2}
@@ -505,8 +508,8 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#FFFFFF"
             fontSize={Math.max(10, Math.min(barH * 0.55, 14))}
-            fontWeight="700"
-            fontFamily="Montserrat, sans-serif"
+            fontWeight="500"
+            fontFamily="Orbitron, sans-serif"
             style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {valueStr}
@@ -524,8 +527,8 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill={st.textColor + '77'}
             fontSize={sigFontSize}
-            fontFamily="Montserrat, sans-serif"
-            fontWeight="600"
+            fontFamily="Orbitron, sans-serif"
+            fontWeight="500"
             letterSpacing="0.05em"
           >
             {cfg.label}
@@ -584,8 +587,8 @@ function GaugeBarPreview({
           dominantBaseline="hanging"
           fill="#888888"
           fontSize={sigFontSize}
-          fontFamily="Montserrat, sans-serif"
-          fontWeight="600"
+          fontFamily="Orbitron, sans-serif"
+          fontWeight="500"
           letterSpacing="0.04em"
         >
           {signalLabel}
@@ -640,7 +643,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#383838"
             fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily="Montserrat, sans-serif"
+            fontFamily="Orbitron, sans-serif"
           >
             {cfg.minValue}
           </text>
@@ -651,13 +654,15 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#383838"
             fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily="Montserrat, sans-serif"
+            fontFamily="Orbitron, sans-serif"
           >
             {cfg.maxValue}
           </text>
         </>
       )}
-      {/* Value — white for max readability, warning/danger state changes color */}
+      {/* Value — white for max readability, warning/danger state changes color.
+          Label tier (Medium 500) — vertical bar values render at 14–16 px,
+          which is the FontManager::label band on the firmware. */}
       <text
         x={w / 2}
         y={h - padBot + valLineH * 0.88}
@@ -665,8 +670,8 @@ function GaugeBarPreview({
         dominantBaseline="auto"
         fill={valTextColor}
         fontSize={valFontSize}
-        fontWeight="700"
-        fontFamily="Montserrat, sans-serif"
+        fontWeight="500"
+        fontFamily="Orbitron, sans-serif"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
@@ -679,8 +684,8 @@ function GaugeBarPreview({
           dominantBaseline="auto"
           fill={unitTextColor}
           fontSize={unitFontSize}
-          fontFamily="Montserrat, sans-serif"
-          fontWeight="600"
+          fontFamily="Orbitron, sans-serif"
+          fontWeight="500"
           letterSpacing="0.03em"
           style={{ animation: danger ? BLINK_ANIM : undefined }}
         >
@@ -700,8 +705,8 @@ function GaugeBarPreview({
               dominantBaseline={lAttrs.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(5, Math.min(8, w * 0.22))}
-              fontFamily="Montserrat, sans-serif"
-              fontWeight="600"
+              fontFamily="Orbitron, sans-serif"
+              fontWeight="500"
             >
               {cfg.label}
             </text>
@@ -750,8 +755,8 @@ function GaugeNumericPreview({
 
   // Signal name shown bottom-left when no custom label — matches firmware
   // applySignalHeader() position so studio preview reads identically to the
-  // device. The auto-header reserves a 14-px band at the bottom (Montserrat
-  // 12 line height) and the value floats above it.
+  // device. The auto-header reserves a 14-px band at the bottom (Orbitron
+  // Medium 12 line height) and the value floats above it.
   const showSignalHeader = labelText === null
   const signalLabel = formatSignalLabel(widget.signal)
   const sigHeaderH = showSignalHeader ? 14 : 0
@@ -793,8 +798,8 @@ function GaugeNumericPreview({
             bottom: 1,
             left: 4,
             fontSize: 11,
-            fontFamily: 'Montserrat, sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
@@ -819,8 +824,8 @@ function GaugeNumericPreview({
                 ? { right: 3 }
                 : { left: 3 }),
             fontSize: labelFontSize,
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
@@ -847,10 +852,11 @@ function GaugeNumericPreview({
           style={{
             color: valueColor,
             fontSize,
-            // Montserrat to match firmware's compiled-in fonts (FontManager).
-            // System sans-serif fallback for environments without Montserrat.
-            fontFamily: 'Montserrat, sans-serif',
-            fontWeight: 700,
+            // Orbitron to match firmware's runtime-loaded fonts (FontManager).
+            // System sans-serif fallback for environments without Orbitron.
+            // Black 900 — primary value tier (matches FontManager::primary).
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 900,
             lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -919,8 +925,8 @@ function BarWidgetPreview({
           dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
           fill="#888888"
           fontSize={Math.max(5, Math.min(7, h * 0.22))}
-          fontFamily="Montserrat, sans-serif"
-          fontWeight="600"
+          fontFamily="Orbitron, sans-serif"
+          fontWeight="500"
           letterSpacing="0.05em"
         >
           {signalLabel}
@@ -935,7 +941,7 @@ function BarWidgetPreview({
           dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
           fill={st.textColor + 'BB'}
           fontSize={Math.max(7, Math.min(10, h * 0.28))}
-          fontFamily="Montserrat, sans-serif"
+          fontFamily="Orbitron, sans-serif"
         >
           {valueStr}
         </text>
@@ -949,8 +955,8 @@ function BarWidgetPreview({
           dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
           fill={st.textColor + '77'}
           fontSize={Math.max(6, Math.min(9, h * 0.22))}
-          fontFamily="Montserrat, sans-serif"
-          fontWeight="600"
+          fontFamily="Orbitron, sans-serif"
+          fontWeight="500"
           letterSpacing="0.04em"
         >
           {cfg.label}
@@ -1011,8 +1017,8 @@ function WarningPreview({
         <span
           style={{
             fontSize: sigFontSize,
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: st.criticalColor + '99',
             lineHeight: 1,
             whiteSpace: 'nowrap',
@@ -1027,8 +1033,8 @@ function WarningPreview({
           style={{
             ...htmlLabelStyle(labelPos),
             fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
             letterSpacing: '0.04em',
@@ -1101,7 +1107,7 @@ function ButtonPreview({
           style={{
             color: textColor,
             fontSize,
-            fontWeight: 600,
+            fontWeight: 500,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -1157,8 +1163,8 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
             right: 0,
             textAlign: 'center',
             fontSize: sigFontSize,
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
             letterSpacing: '0.05em',
@@ -1171,8 +1177,10 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
         style={{
           color: st.primaryColor,
           fontSize,
-          fontWeight: 700,
-          fontFamily: 'monospace',
+          // Primary value tier — gear digit is the focal element. Black 900
+          // matches FontManager::primary on the device.
+          fontWeight: 900,
+          fontFamily: 'Orbitron, sans-serif',
           lineHeight: 1,
         }}
       >
@@ -1183,8 +1191,8 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
           style={{
             ...htmlLabelStyle(labelPos),
             fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
             letterSpacing: '0.04em',
@@ -1228,9 +1236,13 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
         style={{
           color: st.textColor,
           fontSize,
-          fontWeight: 600,
-          fontFamily: 'monospace',
+          // Secondary tier (Bold 700) — matches FontManager::secondary on the
+          // device; firmware switches to primary (Black 900) at ≥110 px height.
+          // Orbitron's tabular digits keep the read aligned without `monospace`.
+          fontWeight: fontSize >= 32 ? 900 : 700,
+          fontFamily: 'Orbitron, sans-serif',
           letterSpacing: '0.06em',
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {timeStr}
@@ -1242,8 +1254,8 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
             top: 2,
             left: 3,
             fontSize: sigFontSize,
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
             letterSpacing: '0.05em',
@@ -1257,8 +1269,8 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
           style={{
             ...htmlLabelStyle(labelPos),
             fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: 'sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
             letterSpacing: '0.04em',
@@ -1303,8 +1315,8 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
         dominantBaseline="auto"
         fill="#2A2A2A"
         fontSize={Math.max(5, Math.min(7, w * 0.07))}
-        fontFamily="Montserrat, sans-serif"
-        fontWeight="600"
+        fontFamily="Orbitron, sans-serif"
+        fontWeight="500"
         letterSpacing="0.05em"
       >
         IMAGE
@@ -1320,8 +1332,8 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
               dominantBaseline={a.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(6, Math.min(9, w * 0.12))}
-              fontFamily="Montserrat, sans-serif"
-              fontWeight="600"
+              fontFamily="Orbitron, sans-serif"
+              fontWeight="500"
               letterSpacing="0.04em"
             >
               {labelText}
