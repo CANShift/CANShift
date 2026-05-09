@@ -19,6 +19,7 @@ import { Card } from '../components/ui'
 import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
+import { describeOtaErrorForUser, mapOtaError, OtaServiceError } from '../services/ota.errors'
 import { useDeviceStore } from '../stores/device.store'
 import { ESP32_AP_PASSWORD } from '../constants/ota'
 import type { RootStackParamList } from '../navigation'
@@ -31,7 +32,13 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Update'>
 }
 
-type Step = 'releases' | 'downloading' | 'wifi_wait' | 'pushing' | 'done'
+type Step =
+  | 'releases'
+  | 'downloading'
+  | 'verifying'
+  | 'wifi_wait'
+  | 'pushing'
+  | 'done'
 
 // ---------------------------------------------------------------------------
 // Step indicator
@@ -193,10 +200,21 @@ export default function UpdateScreen({ navigation }: Props) {
   const stepIndex: Record<Step, number> = {
     releases: 0,
     downloading: 1,
+    verifying: 1,
     wifi_wait: 2,
     pushing: 3,
     done: 3,
   }
+
+  /** Translate any thrown value during the OTA flow into an inline error
+   *  string. BLE permission denials open the platform dialog and return true
+   *  so the caller can short-circuit. */
+  const describeFlowError = useCallback((err: unknown): string => {
+    if (err instanceof OtaServiceError) {
+      return describeOtaErrorForUser(mapOtaError(err))
+    }
+    return err instanceof Error ? err.message : 'Update failed'
+  }, [])
 
   const handleSelectRelease = useCallback(async (release: OtaService.FirmwareRelease) => {
     setSelectedRelease(release)
@@ -205,6 +223,9 @@ export default function UpdateScreen({ navigation }: Props) {
     setError(null)
     try {
       const path = await OtaService.downloadFirmware(release, setProgress)
+      setStep('verifying')
+      setProgress(0)
+      await OtaService.verifyFirmware(path, release)
       setLocalPath(path)
       await BleService.sendCmd('start_wifi_ap')
       setStep('wifi_wait')
@@ -213,10 +234,10 @@ export default function UpdateScreen({ navigation }: Props) {
         setStep('releases')
         return
       }
-      setError(e instanceof Error ? e.message : 'Download failed')
+      setError(describeFlowError(e))
       setStep('releases')
     }
-  }, [handleBleFailure])
+  }, [handleBleFailure, describeFlowError])
 
   const handlePush = useCallback(async () => {
     if (!localPath) return
@@ -230,10 +251,10 @@ export default function UpdateScreen({ navigation }: Props) {
         setStep('wifi_wait')
         return
       }
-      setError(e instanceof Error ? e.message : 'Push failed')
+      setError(describeFlowError(e))
       setStep('wifi_wait')
     }
-  }, [localPath, handleBleFailure])
+  }, [localPath, handleBleFailure, describeFlowError])
 
   const normalizedInstalled = firmwareVersion?.replace(/^v/, '') ?? null
 
@@ -297,6 +318,15 @@ export default function UpdateScreen({ navigation }: Props) {
           <Text style={styles.stepTitle}>Downloading v{selectedRelease?.version}</Text>
           <ProgressBar value={progress} />
           <Text style={styles.hint}>{Math.round(progress * 100)}%</Text>
+        </View>
+      )}
+
+      {/* ── Verifying ── */}
+      {step === 'verifying' && (
+        <View style={styles.center}>
+          <Text style={styles.stepTitle}>Verifying firmware…</Text>
+          <ActivityIndicator color={Colors.accent} />
+          <Text style={styles.hint}>Checking size and SHA-256 against the published release.</Text>
         </View>
       )}
 
