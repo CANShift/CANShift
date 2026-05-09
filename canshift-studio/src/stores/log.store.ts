@@ -17,8 +17,7 @@ export interface LogEntry {
   timestamp: Date
   /**
    * Optional logical scope — surfaced as a `[scope]` tag in the CLI panel
-   * (issue #378). The legacy ConsolePanel ignores it; existing 2-arg
-   * `push()` callers stay valid.
+   * (issue #378). Existing 2-arg `push()` callers stay valid.
    */
   scope?: string
 }
