@@ -1,6 +1,6 @@
 // App.tsx — Root component and route definitions
 
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactElement } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import EditorRoute from './routes/EditorRoute'
 
@@ -14,6 +14,9 @@ const DeviceConfigRoute = lazy(() => import('./routes/DeviceConfigRoute'))
 // CliTerminal — xterm-backed CLI panel (issue #378). Lazy so xterm + addons
 // stay out of the main renderer chunk and the bundle budget holds.
 const CliTerminal = lazy(() => import('./components/shared/CliTerminal'))
+// Tiny re-attach button rendered in the in-app slot while the CLI is detached
+// (issue #433). Lazy too so the typical attached path doesn't pay for it.
+const CliReattachStub = lazy(() => import('./components/shared/CliReattachStub'))
 
 function CliPanelFallback() {
   // Lightweight placeholder while the xterm chunk is fetching. Matches the
@@ -72,12 +75,18 @@ import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
 import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useDeviceStore } from './stores/device.store'
+import { useCliDetach } from './cli/useCliDetach'
+import { useCliLogBridge } from './cli/useCliLogBridge'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
 import BurnFailedDialog from './components/shared/BurnFailedDialog'
 import WelcomeModal from './components/shared/WelcomeModal'
 import { useFirstRunCheck } from './hooks/useFirstRunCheck'
 import { Toaster } from './components/ui/sonner'
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled CLI panel state: ${JSON.stringify(value)}`)
+}
 
 export default function App() {
   useMenuEvents()
@@ -87,12 +96,34 @@ export default function App() {
   useAutoConnect()
   useDirtySync()
   useBurnPhaseTracker()
+  useCliLogBridge()
 
   const firstRun = useFirstRunCheck()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const { state: cliState, reattach } = useCliDetach()
 
   const ready = connected || simulationMode
+
+  let cliSurface: ReactElement
+  switch (cliState.kind) {
+    case 'inApp':
+      cliSurface = (
+        <Suspense fallback={<CliPanelFallback />}>
+          <CliTerminal />
+        </Suspense>
+      )
+      break
+    case 'detached':
+      cliSurface = (
+        <Suspense fallback={null}>
+          <CliReattachStub onReattach={reattach} />
+        </Suspense>
+      )
+      break
+    default:
+      cliSurface = assertNever(cliState)
+  }
 
   return (
     <div
@@ -168,9 +199,7 @@ export default function App() {
         <ConnectScreen />
       )}
 
-      <Suspense fallback={<CliPanelFallback />}>
-        <CliTerminal />
-      </Suspense>
+      {cliSurface}
       <ErrorBar />
       <StatusBar />
       <UpdateBanner />

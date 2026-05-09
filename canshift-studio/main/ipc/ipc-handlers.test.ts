@@ -17,13 +17,19 @@ import { IpcChannels } from './ipc-channels'
 // ---------------------------------------------------------------------------
 
 type IpcHandler = (event: unknown, ...args: unknown[]) => unknown
+type IpcSendListener = (event: unknown, ...args: unknown[]) => void
 
 const handlerRegistry = vi.hoisted(() => {
   const handlers = new Map<string, IpcHandler>()
+  const sendListeners = new Map<string, IpcSendListener>()
   return {
     handlers,
+    sendListeners,
     handle: vi.fn((channel: string, handler: IpcHandler) => {
       handlers.set(channel, handler)
+    }),
+    on: vi.fn((channel: string, listener: IpcSendListener) => {
+      sendListeners.set(channel, listener)
     }),
   }
 })
@@ -39,7 +45,7 @@ const stubs = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
-  ipcMain: { handle: handlerRegistry.handle },
+  ipcMain: { handle: handlerRegistry.handle, on: handlerRegistry.on },
   app: {
     getVersion: (): string => '0.0.0-test',
     getPath: (): string => '/tmp/canshift-studio-test',
@@ -127,6 +133,26 @@ vi.mock('../services/session.service', () => ({ sessionService: sessionMock }))
 
 vi.mock('../menu', () => ({ buildMenu: vi.fn() }))
 
+const cliWindowMock = vi.hoisted(() => ({
+  openCliWindow: vi.fn<(getMainWindow: () => unknown) => number>(() => 42),
+  closeCliWindow: vi.fn(),
+  getCliWindowState: vi.fn<() => { kind: 'inApp' } | { kind: 'detached'; windowId: number }>(
+    () => ({
+      kind: 'inApp',
+    })
+  ),
+  disposeCliWindow: vi.fn(),
+}))
+vi.mock('../windows/cli-window', () => cliWindowMock)
+
+const cliLogBusMock = vi.hoisted(() => ({
+  getBacklog: vi.fn<() => readonly unknown[]>(() => []),
+  publish: vi.fn(),
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+}))
+vi.mock('../services/cli-log-bus', () => cliLogBusMock)
+
 vi.mock('node:fs/promises', async () => {
   const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
   return { ...actual, writeFile: vi.fn(), readFile: vi.fn() }
@@ -178,11 +204,18 @@ function makeEvent(): { sender: { send: (c: string, p: unknown) => void } } {
 
 beforeEach(() => {
   handlerRegistry.handlers.clear()
+  handlerRegistry.sendListeners.clear()
   handlerRegistry.handle.mockClear()
+  handlerRegistry.on.mockClear()
   for (const fn of Object.values(configFileMock)) fn.mockReset()
   for (const fn of Object.values(usbServiceMock)) fn.mockReset()
   for (const fn of Object.values(firmwareMock)) fn.mockReset()
   for (const fn of Object.values(sessionMock)) fn.mockReset()
+  for (const fn of Object.values(cliWindowMock)) fn.mockReset()
+  for (const fn of Object.values(cliLogBusMock)) fn.mockReset()
+  cliWindowMock.openCliWindow.mockImplementation(() => 42)
+  cliWindowMock.getCliWindowState.mockImplementation(() => ({ kind: 'inApp' }))
+  cliLogBusMock.getBacklog.mockImplementation(() => [])
   updaterMock.checkForUpdates.mockReset()
   updaterMock.installUpdate.mockReset()
 })
@@ -645,5 +678,65 @@ describe('App-info IPC handler', () => {
     const { win } = makeWindow()
     registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
     expect(await getHandler(IpcChannels.APP_VERSION)(makeEvent())).toBe('0.0.0-test')
+  })
+})
+
+describe('CLI detach IPC handlers (issue #433)', () => {
+  beforeEach(() => {
+    const { win } = makeWindow()
+    registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
+  })
+
+  it('CLI_DETACH returns { windowId } and opens the detached window', async () => {
+    cliWindowMock.openCliWindow.mockReturnValue(99)
+    const result = await getHandler(IpcChannels.CLI_DETACH)(makeEvent())
+    expect(result).toEqual({ windowId: 99 })
+    expect(cliWindowMock.openCliWindow).toHaveBeenCalledTimes(1)
+  })
+
+  it('CLI_REATTACH closes the detached window', async () => {
+    const result = await getHandler(IpcChannels.CLI_REATTACH)(makeEvent())
+    expect(result).toEqual({ success: true })
+    expect(cliWindowMock.closeCliWindow).toHaveBeenCalledTimes(1)
+  })
+
+  it('CLI_GET_STATE returns the live state and the backlog', async () => {
+    cliWindowMock.getCliWindowState.mockReturnValueOnce({ kind: 'detached', windowId: 7 })
+    cliLogBusMock.getBacklog.mockReturnValueOnce([
+      { id: 1, level: 'info', message: 'hello', timestampMs: 12345 },
+    ])
+    const result = await getHandler(IpcChannels.CLI_GET_STATE)(makeEvent())
+    expect(result).toEqual({
+      state: { kind: 'detached', windowId: 7 },
+      backlog: [{ id: 1, level: 'info', message: 'hello', timestampMs: 12345 }],
+    })
+  })
+
+  it('CLI_LOG_PUSH validates the payload and rebroadcasts excluding the sender', () => {
+    const listener = handlerRegistry.sendListeners.get(IpcChannels.CLI_LOG_PUSH)
+    expect(listener).toBeDefined()
+
+    const event = { sender: { id: 555 } }
+    listener?.(event, {
+      id: 9,
+      level: 'info',
+      message: 'log from window A',
+      timestampMs: 1000,
+      scope: 'usb',
+    })
+
+    expect(cliLogBusMock.publish).toHaveBeenCalledWith(
+      { id: 9, level: 'info', message: 'log from window A', timestampMs: 1000, scope: 'usb' },
+      555
+    )
+  })
+
+  it('CLI_LOG_PUSH drops malformed payloads silently', () => {
+    const listener = handlerRegistry.sendListeners.get(IpcChannels.CLI_LOG_PUSH)
+    expect(listener).toBeDefined()
+    listener?.({ sender: { id: 1 } }, { id: 'not a number', level: 'info' })
+    listener?.({ sender: { id: 1 } }, null)
+    listener?.({ sender: { id: 1 } }, { id: 1, level: 'invalid', message: 'x', timestampMs: 1 })
+    expect(cliLogBusMock.publish).not.toHaveBeenCalled()
   })
 })

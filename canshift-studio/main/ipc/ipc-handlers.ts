@@ -4,12 +4,20 @@ import { ipcMain, app, BrowserWindow, dialog } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { IpcChannels } from './ipc-channels'
+import type { CliLogPayload, CliPanelState } from './cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
 import { sessionService } from '../services/session.service'
 import { buildMenu } from '../menu'
+import { closeCliWindow, getCliWindowState, openCliWindow } from '../windows/cli-window'
+import {
+  getBacklog,
+  publish as publishLog,
+  subscribe as subscribeLog,
+  unsubscribe as unsubscribeLog,
+} from '../services/cli-log-bus'
 import type { FirmwareRelease } from '../services/firmware.service.types'
 import type { CanFrame } from '../services/usb.service.types'
 
@@ -84,6 +92,30 @@ export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
   }
   if (parsed.protocol !== 'https:') return false
   return FIRMWARE_DOWNLOAD_ALLOWED_HOSTS.has(parsed.hostname)
+}
+
+const CLI_LOG_LEVELS: ReadonlySet<string> = new Set(['info', 'warn', 'error', 'success', 'debug'])
+
+/** Validates an inbound `CLI_LOG_PUSH` payload from the renderer. */
+export function parseCliLogPayload(v: unknown): CliLogPayload | null {
+  if (!isPlainObject(v)) return null
+  const id = v.id
+  const level = v.level
+  const message = v.message
+  const timestampMs = v.timestampMs
+  const scope = v.scope
+  if (typeof id !== 'number' || !Number.isFinite(id)) return null
+  if (typeof level !== 'string' || !CLI_LOG_LEVELS.has(level)) return null
+  if (typeof message !== 'string') return null
+  if (typeof timestampMs !== 'number' || !Number.isFinite(timestampMs)) return null
+  if (scope !== undefined && typeof scope !== 'string') return null
+  const base: CliLogPayload = {
+    id,
+    level: level as CliLogPayload['level'],
+    message,
+    timestampMs,
+  }
+  return scope === undefined ? base : { ...base, scope }
 }
 
 /**
@@ -435,5 +467,49 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
+  })
+
+  // ---------------------------------------------------------------------------
+  // CLI panel detach (issue #433)
+  // ---------------------------------------------------------------------------
+
+  // The main window is always a log-bus subscriber so detached entries flow
+  // back into the in-app surface even after a re-attach round trip. The
+  // detached window subscribes itself in cli-window.ts on construction.
+  let mainWindowSubscribed: BrowserWindow | null = null
+  const ensureMainWindowSubscribed = (): void => {
+    const main = getWindow()
+    if (main === null) return
+    if (mainWindowSubscribed === main) return
+    if (mainWindowSubscribed !== null && !mainWindowSubscribed.isDestroyed()) {
+      unsubscribeLog(mainWindowSubscribed.webContents)
+    }
+    subscribeLog(main.webContents)
+    mainWindowSubscribed = main
+  }
+
+  ipcMain.handle(IpcChannels.CLI_DETACH, (): { windowId: number } => {
+    ensureMainWindowSubscribed()
+    const windowId = openCliWindow(getWindow)
+    return { windowId }
+  })
+
+  ipcMain.handle(IpcChannels.CLI_REATTACH, (): { success: true } => {
+    closeCliWindow()
+    return { success: true }
+  })
+
+  ipcMain.handle(
+    IpcChannels.CLI_GET_STATE,
+    (): { state: CliPanelState; backlog: readonly CliLogPayload[] } => {
+      ensureMainWindowSubscribed()
+      return { state: getCliWindowState(), backlog: getBacklog() }
+    }
+  )
+
+  ipcMain.on(IpcChannels.CLI_LOG_PUSH, (event, payload: unknown) => {
+    const parsed = parseCliLogPayload(payload)
+    if (parsed === null) return
+    publishLog(parsed, event.sender.id)
   })
 }
