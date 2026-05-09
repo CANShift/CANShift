@@ -13,7 +13,12 @@
 
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { validateDashboard, type DashboardConfig } from '@tmbk/canshift-core'
+import {
+  CURRENT_SCHEMA_VERSION,
+  migrateConfig,
+  validateDashboard,
+  type DashboardConfig,
+} from '@tmbk/canshift-core'
 import { useDeviceStore } from '../stores/device.store'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useLogStore, type LogLevel } from '../stores/log.store'
@@ -31,6 +36,7 @@ export type DeviceConfigAction =
   | { kind: 'transport-failure' }
   | { kind: 'apply-device-config'; config: DashboardConfig }
   | { kind: 'invalid-device-config'; errors: string[]; warnings: string[] }
+  | { kind: 'migration-failed-device-config'; message: string }
   | { kind: 'stage-pending-device-config'; config: DashboardConfig; warnings: string[] }
   | { kind: 'apply-device-config-with-warnings'; config: DashboardConfig; warnings: string[] }
 
@@ -47,7 +53,9 @@ interface DecideContext {
 
 /**
  * Decide what to do based on the IPC result and the current editor state.
- * Pure; no side effects. Validates device config and surfaces warnings.
+ * Pure; no side effects. Migrates older schemas up to the current version
+ * before validation so a device running an older firmware (with a config
+ * written at an older schema) still loads cleanly (#157).
  */
 export function decideDeviceConfigAction(ctx: DecideContext): DeviceConfigAction {
   const { result, isEditorEmpty, loadedFromDemoFallback } = ctx
@@ -58,7 +66,18 @@ export function decideDeviceConfigAction(ctx: DecideContext): DeviceConfigAction
     return { kind: 'transport-failure' }
   }
 
-  const validation = validateDashboard(result.config)
+  // Bring the device config up to the current schema before validating.
+  // A future-version config (impossible chain) will throw — surface that
+  // explicitly so the user is never silently editing a stale shape.
+  let migrated: Record<string, unknown>
+  try {
+    migrated = migrateConfig(result.config, CURRENT_SCHEMA_VERSION).config
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { kind: 'migration-failed-device-config', message }
+  }
+
+  const validation = validateDashboard(migrated)
   if (validation.errors.length > 0) {
     return {
       kind: 'invalid-device-config',
@@ -67,7 +86,7 @@ export function decideDeviceConfigAction(ctx: DecideContext): DeviceConfigAction
     }
   }
   // validateDashboard guarantees structural conformance; cast through unknown.
-  const config = result.config as unknown as DashboardConfig
+  const config = migrated as unknown as DashboardConfig
   if (loadedFromDemoFallback) {
     return {
       kind: 'stage-pending-device-config',
@@ -125,6 +144,16 @@ export function applyDeviceConfigAction(
         code: 'DEVICE_CONFIG_INVALID',
         message: summary,
         detail: action.errors.join('\n'),
+      })
+      return
+    }
+    case 'migration-failed-device-config': {
+      const summary = `Device config migration failed: ${action.message}`
+      log('error', summary)
+      pushError({
+        source: 'config',
+        code: 'DEVICE_CONFIG_MIGRATION_FAILED',
+        message: summary,
       })
       return
     }

@@ -32,8 +32,14 @@ export function useSessionRestore(): void {
           if (applied.length > 0) {
             log('info', `Config migrated on restore: ${applied.join(', ')}`)
           }
-        } catch {
-          // Silent — use config as-is if migration fails on session restore
+        } catch (err) {
+          // Skip restore when migration fails — better to start with a clean
+          // editor than to silently load a config the user cannot trust. The
+          // file is still on disk; the user can open it explicitly and see
+          // the proper error path in useConfigActions (#157).
+          const msg = err instanceof Error ? err.message : String(err)
+          log('warn', `Session restore skipped — migration failed for ${lastPath}: ${msg}`)
+          return
         }
         setConfig(config, result.filePath)
         log('info', `Restored session: ${result.filePath ?? lastPath}`)
