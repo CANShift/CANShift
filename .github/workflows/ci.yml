@@ -146,6 +146,10 @@ jobs:
   # Runs on macOS so it exercises the full native pipeline that
   # `mobile — typecheck + bundle` cannot (prebuild + CocoaPods + xcodebuild).
   # macOS minutes cost ~10x ubuntu — keep this lean and cache aggressively.
+  #
+  # Runtime path-gate: only proceeds when the PR touches files that can affect
+  # the native build (package.json, plugins/, app.json, babel.config.js). TS-
+  # only changes under src/ are already covered by the ubuntu typecheck job.
   mobile-ios-build:
     name: mobile — iOS native build
     runs-on: macos-latest
@@ -155,20 +159,40 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect native-impacting changes
+        id: gate
+        working-directory: ${{ github.workspace }}
+        run: |
+          BASE="origin/${{ github.base_ref || 'main' }}"
+          git fetch origin "${{ github.base_ref || 'main' }}" --depth=1 >/dev/null 2>&1 || true
+          if git diff --name-only "$BASE"...HEAD | grep -qE '^canshift-mobile/(package\.json|package-lock\.json|app\.json|babel\.config\.js|plugins/)|^\.github/workflows/'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Native-impacting files changed — running iOS build"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No native-impacting files changed — skipping iOS build"
+          fi
 
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: canshift-mobile/package-lock.json
 
       - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
         run: npm ci
 
       - name: Expo prebuild (iOS)
+        if: steps.gate.outputs.run == 'true'
         run: npx expo prebuild --clean --platform ios
 
       - name: Resolve iOS workspace + scheme
+        if: steps.gate.outputs.run == 'true'
         id: ios
         run: |
           WORKSPACE=$(ls ios | grep '\.xcworkspace$' | head -n 1)
@@ -183,6 +207,7 @@ jobs:
           echo "Resolved workspace=$WORKSPACE scheme=$SCHEME"
 
       - name: Cache CocoaPods
+        if: steps.gate.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: canshift-mobile/ios/Pods
@@ -191,10 +216,12 @@ jobs:
             pods-${{ runner.os }}-
 
       - name: Pod install
+        if: steps.gate.outputs.run == 'true'
         run: pod install
         working-directory: canshift-mobile/ios
 
       - name: Cache Xcode DerivedData
+        if: steps.gate.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
@@ -203,6 +230,7 @@ jobs:
             deriveddata-${{ runner.os }}-
 
       - name: xcodebuild (iOS Simulator)
+        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
           xcodebuild \
