@@ -1,10 +1,10 @@
 // dashboard-fixture.test.ts — pinned drift guard against bundled firmware dashboards
 //
-// Loads the dashboard.json shipped with the firmware (data/config and sd_contents)
-// and asserts each one validates clean against the canonical signal catalog and
-// is already at CURRENT_SCHEMA_VERSION. This is the automated guard requested in
-// issue #265: future TS field additions cannot slip past without breaking a
-// fixture or being matched by a migration step.
+// Loads the dashboard.json shipped with the firmware (data/config) and asserts
+// it validates clean against the canonical signal catalog and is already at
+// CURRENT_SCHEMA_VERSION. This is the automated guard requested in issue #265:
+// future TS field additions cannot slip past without breaking the fixture or
+// being matched by a migration step.
 
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -29,11 +29,6 @@ const FIXTURES: Fixture[] = [
     label: 'canshift-firmware/data/config/dashboard.json',
     dashboardPath: resolve(REPO_ROOT, 'canshift-firmware/data/config/dashboard.json'),
     signalsPath: resolve(REPO_ROOT, 'canshift-firmware/data/config/signals.json'),
-  },
-  {
-    label: 'canshift-firmware/sd_contents/config/dashboard.json',
-    dashboardPath: resolve(REPO_ROOT, 'canshift-firmware/sd_contents/config/dashboard.json'),
-    signalsPath: resolve(REPO_ROOT, 'canshift-firmware/sd_contents/config/signals.json'),
   },
 ]
 

@@ -162,11 +162,11 @@ docs/                Architecture documentation
 - Explicit `set_day_night` USB command for theme toggling (#288)
 - ESP32 TWAI CAN reception, configurable speed and TX/RX pins via `device.json`
 - Dynamic CAN signal loading from `signals.json` at boot
-- Default `dashboard.json` / `signals.json` / `device.json` written to SD on first boot when missing (#302)
-- SD probe before every `lv_img_set_src` call to keep the UI alive on degraded media (#303)
-- Boot continues without halting when the SD card is missing or unreadable (#254)
+- Default `dashboard.json` / `signals.json` / `device.json` written to SPIFFS on first boot when missing (#302)
+- Storage probe before every `lv_img_set_src` call to keep the UI alive on missing assets (#303)
+- Boot continues without halting when SPIFFS fails to mount (#254)
 - Atomic `dashboard.json` writes via temp file + rename (#256)
-- SD diagnostics burn-in overlay surfaces I/O failures on-screen (#297)
+- Burn-in overlay surfaces storage I/O failures on-screen (#297)
 - Touch calibration with NVS persistence
 - Day/night theme toggle
 - USB serial protocol — push config, screen settings, version query, CAN scan, reboot
@@ -184,12 +184,11 @@ docs/                Architecture documentation
 - Live telemetry display with LIVE / SIM / NO DATA indicator
 - CAN bus scanner — live table of all frame IDs, data, count, fps
 - CAN health indicator in the status bar
-- Degraded SD state surfaced from the firmware (#293)
 - IPC return shapes deduplicated into `canshift-core/src/types/ipc.ts` (#292)
 - Strict CSP and renderer sandboxing (#241)
 - Manual firmware flash from a local `.bin` file
 - Screen settings — brightness, sleep timeout
-- Device config tab — CAN bus speed and TWAI GPIO pins, written to `device.json` on the SD card
+- Device config tab — CAN bus speed and TWAI GPIO pins, written to `device.json` on SPIFFS
 - Studio auto-update via electron-updater
 - Simulation mode — work without physical hardware
 
@@ -215,7 +214,7 @@ docs/                Architecture documentation
 - CAN speed: 500 kbps default, configurable in Studio → Device Config
 - MaxxECU CAN frame IDs in `signals.json` are **unverified** — confirm in MaxxECU software before driving
 - All GPIO assignments live in [`canshift-firmware/include/board_config.h`](canshift-firmware/include/board_config.h) — verify against your CrowPanel 2.8" schematic
-- Config storage: SD card (user configs) + SPIFFS (fonts and bundled defaults)
+- Config storage: SPIFFS (configs, fonts, and bundled defaults)
 - First-flash checklist: [`docs/FIRST_FLASH.md`](docs/FIRST_FLASH.md)
 
 ---

@@ -38,7 +38,6 @@ export function useCliRuntime(terminal: CliTerminalHandle): {
   const connected = useDeviceStore((s) => s.connected)
   const portPath = useDeviceStore((s) => s.portPath)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
-  const sdState = useDeviceStore((s) => s.sdState)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const configName = useDashboardStore((s) => s.config?.name ?? null)
 
@@ -51,7 +50,7 @@ export function useCliRuntime(terminal: CliTerminalHandle): {
   const ctx: CommandContext = useMemo(
     () => ({
       appVersion,
-      device: { connected, portPath, firmwareVersion, sdState, simulationMode },
+      device: { connected, portPath, firmwareVersion, simulationMode },
       config,
       log: (level, message, scope) => {
         useLogStore.getState().push(level, message, scope)
@@ -60,17 +59,7 @@ export function useCliRuntime(terminal: CliTerminalHandle): {
       commands: COMMANDS,
       actions,
     }),
-    [
-      appVersion,
-      connected,
-      portPath,
-      firmwareVersion,
-      sdState,
-      simulationMode,
-      config,
-      terminal,
-      actions,
-    ]
+    [appVersion, connected, portPath, firmwareVersion, simulationMode, config, terminal, actions]
   )
 
   const ctxRef = useRef<CommandContext>(ctx)

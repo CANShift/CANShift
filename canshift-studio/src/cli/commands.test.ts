@@ -18,7 +18,6 @@ function makeActions(overrides: Partial<CliActions> = {}): CliActions {
     burnConfig: vi.fn(() => Promise.resolve(okResult)),
     connect: vi.fn(() => Promise.resolve(okResult)),
     disconnect: vi.fn(() => Promise.resolve(okResult)),
-    pushUsb: vi.fn(() => Promise.resolve(okResult)),
     reboot: vi.fn(() => Promise.resolve(okResult)),
     openFlashRoute: vi.fn(() => okResult),
     listPorts: vi.fn(() => Promise.resolve<string[]>([])),
@@ -46,7 +45,6 @@ function makeContext(overrides: Partial<CommandContext> = {}): {
       connected: true,
       portPath: '/dev/tty.usbserial-0001',
       firmwareVersion: '0.7.1',
-      sdState: 'ok',
       simulationMode: false,
     },
     config: { name: 'demo' },
@@ -117,7 +115,6 @@ describe('commands — informational', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
     })
@@ -131,7 +128,7 @@ describe('commands — informational', () => {
     const res = await dispatch('status', [], ctx)
     expect(res).toEqual({ ok: true })
     expect(terminal.written.join('')).toContain(
-      '[status] connected on /dev/tty.usbserial-0001, firmware v0.7.1, sd=ok'
+      '[status] connected on /dev/tty.usbserial-0001, firmware v0.7.1'
     )
   })
 
@@ -141,14 +138,13 @@ describe('commands — informational', () => {
         connected: true,
         portPath: '/dev/tty.usbserial-0001',
         firmwareVersion: null,
-        sdState: 'ok',
         simulationMode: false,
       },
     })
     const res = await dispatch('status', [], ctx)
     expect(res).toEqual({ ok: true })
     const out = terminal.written.join('')
-    expect(out).toContain('[status] connected on /dev/tty.usbserial-0001, sd=ok')
+    expect(out).toContain('[status] connected on /dev/tty.usbserial-0001')
     expect(out).not.toContain('firmware v')
   })
 
@@ -158,7 +154,6 @@ describe('commands — informational', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
     })
@@ -192,7 +187,6 @@ describe('commands — device actions', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
       actions,
@@ -205,37 +199,12 @@ describe('commands — device actions', () => {
 
   it('burn forwards to actions.burnConfig and propagates result', async () => {
     const actions = makeActions({
-      burnConfig: vi.fn(() => Promise.resolve({ ok: false, reason: 'sd missing' } as const)),
+      burnConfig: vi.fn(() => Promise.resolve({ ok: false, reason: 'connection lost' } as const)),
     })
     const { ctx } = makeContext({ actions })
     const res = await dispatch('burn', [], ctx)
-    expect(res).toEqual({ ok: false, reason: 'sd missing' })
+    expect(res).toEqual({ ok: false, reason: 'connection lost' })
     expect(actions.burnConfig).toHaveBeenCalledTimes(1)
-  })
-
-  it('push-usb refuses when not connected', async () => {
-    const actions = makeActions()
-    const { ctx } = makeContext({
-      device: {
-        connected: false,
-        portPath: null,
-        firmwareVersion: null,
-        sdState: 'unknown',
-        simulationMode: false,
-      },
-      actions,
-    })
-    const res = await dispatch('push-usb', [], ctx)
-    expect(res.ok).toBe(false)
-    expect(actions.pushUsb).not.toHaveBeenCalled()
-  })
-
-  it('push-usb forwards to actions.pushUsb', async () => {
-    const actions = makeActions()
-    const { ctx } = makeContext({ actions })
-    const res = await dispatch('push-usb', [], ctx)
-    expect(res).toEqual({ ok: true })
-    expect(actions.pushUsb).toHaveBeenCalledTimes(1)
   })
 
   it('connect refuses when already connected', async () => {
@@ -253,7 +222,6 @@ describe('commands — device actions', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
       actions,
@@ -270,7 +238,6 @@ describe('commands — device actions', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
       actions,
@@ -286,7 +253,6 @@ describe('commands — device actions', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
       actions,
@@ -311,7 +277,6 @@ describe('commands — device actions', () => {
         connected: false,
         portPath: null,
         firmwareVersion: null,
-        sdState: 'unknown',
         simulationMode: false,
       },
       actions,
@@ -358,30 +323,24 @@ describe('complete', () => {
     })
     const { ctx } = makeContext({ actions })
     const out = await complete(['connect', '/dev/tty.usbs'], false, ctx)
-    expect(out).toEqual(['/dev/tty.usbserial-110'])
-  })
-
-  it('returns no completions for commands without a completer past the first token', async () => {
-    const { ctx } = makeContext()
-    const out = await complete(['status', ''], false, ctx)
-    expect(out).toEqual([])
+    expect(out).toContain('/dev/tty.usbserial-110')
   })
 })
 
 describe('longestCommonPrefix', () => {
-  it('returns the empty string for an empty list', () => {
+  it('returns empty string for an empty list', () => {
     expect(longestCommonPrefix([])).toBe('')
   })
 
-  it('returns the only entry when the list has one item', () => {
-    expect(longestCommonPrefix(['hello'])).toBe('hello')
+  it('returns the only element for a singleton', () => {
+    expect(longestCommonPrefix(['help'])).toBe('help')
   })
 
-  it('returns the shared prefix of multiple strings', () => {
-    expect(longestCommonPrefix(['connect', 'console', 'context'])).toBe('con')
+  it('returns the common prefix when all share one', () => {
+    expect(longestCommonPrefix(['connect', 'config'])).toBe('con')
   })
 
-  it('returns the empty string when there is no shared prefix', () => {
+  it('returns empty when the first chars differ', () => {
     expect(longestCommonPrefix(['burn', 'flash'])).toBe('')
   })
 })

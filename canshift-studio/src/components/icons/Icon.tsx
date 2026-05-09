@@ -67,11 +67,8 @@ export const IconExit = icon('M10 3h3v10h-3M7 10l3-3-3-3M2 8h8')
 
 // Status
 export const IconCheck = icon('M3 8l4 4 6-7')
-// Triangle-warning glyph — used for SD card / persistence degradations
+// Triangle-warning glyph — generic warning indicator
 export const IconWarning = icon('M8 2 1.5 13.5h13L8 2ZM8 6.5v3.5M8 12v.5')
-// SD card with a stroke + warning triangle baked into the cut corner — keeps
-// the SD-state indicator visually distinct from generic warnings (issue #252).
-export const IconSdAlert = icon('M3 2h7l3 3v9H3V2ZM10 2v3h3M8 7v3M8 11.5v.5')
 
 // Settings gear — needs circle + path, so defined as a standalone component
 export function IconSettings({ size = 14, color = 'currentColor', style }: IconProps) {

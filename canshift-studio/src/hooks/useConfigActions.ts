@@ -11,7 +11,6 @@ import { useErrorStore } from '../stores/error.store'
 import { usePushDiffStore } from '../stores/pushDiff.store'
 import { useBurnFailureStore } from '../stores/burnFailure.store'
 import { configService, usbService } from '../services/ipc.service'
-import { isSdWritable, sdStateWarning } from '../utils/sdState'
 
 // Burn timeouts usually mean the firmware isn't actively servicing the USB
 // command loop — most often because a previous flash attempt left the device
@@ -66,9 +65,8 @@ export function useConfigActions() {
   const lastPushedConfig = useDeviceStore((s) => s.lastPushedConfig)
   const setLastPushedConfig = useDeviceStore((s) => s.setLastPushedConfig)
   const setBurnPhase = useDeviceStore((s) => s.setBurnPhase)
-  const sdState = useDeviceStore((s) => s.sdState)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
-  const canBurn = connected && !syncing && !simulationMode && isSdWritable(sdState)
+  const canBurn = connected && !syncing && !simulationMode
 
   const showDiff = usePushDiffStore((s) => s.show)
   const showBurnFailure = useBurnFailureStore((s) => s.show)
@@ -209,20 +207,6 @@ export function useConfigActions() {
       return
     }
 
-    // Refuse to burn while the device is running on built-in defaults
-    // (SD missing or unmounted) — the firmware can't persist the new config
-    // and the device would silently keep the defaults after reboot (#252).
-    if (!isSdWritable(sdState)) {
-      const warning = sdStateWarning(sdState) ?? 'SD card unavailable.'
-      log('error', `[burn] aborted — ${warning}`)
-      pushError({
-        source: 'system',
-        code: 'SD_UNAVAILABLE',
-        message: warning,
-      })
-      return
-    }
-
     // Validate before pushing — refuse to burn an invalid config
     const validation = validateDashboard(config)
     if (!validation.valid) {
@@ -285,9 +269,9 @@ export function useConfigActions() {
           if (result.success) {
             setSyncComplete(new Date())
             setLastPushedConfig(config)
-            // Firmware acked → it now writes to SD and reboots. Connection
-            // will drop within ~1 s; auto-connect picks it back up after the
-            // splash. The 'done' transition lives in useUsbConnection.
+            // Firmware acked → it now writes to storage and reboots.
+            // Connection will drop within ~1 s; auto-connect picks it back up
+            // after the splash. The 'done' transition lives in useUsbConnection.
             setBurnPhase('rebooting')
             log(
               'success',
@@ -317,7 +301,6 @@ export function useConfigActions() {
     connected,
     syncing,
     simulationMode,
-    sdState,
     setSyncing,
     setSyncComplete,
     setError,
@@ -342,7 +325,6 @@ export function useConfigActions() {
     config,
     connected,
     syncing,
-    sdState,
     canBurn,
   }
 }

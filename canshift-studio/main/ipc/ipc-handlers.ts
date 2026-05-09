@@ -8,7 +8,6 @@ import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
-import { sdService } from '../services/sd.service'
 import { sessionService } from '../services/session.service'
 import { buildMenu } from '../menu'
 import type { FirmwareRelease } from '../services/firmware.service.types'
@@ -344,25 +343,6 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
-
-  // ---------------------------------------------------------------------------
-  // SD card preparation
-  // ---------------------------------------------------------------------------
-
-  ipcMain.handle(IpcChannels.SD_LIST_VOLUMES, () => sdService.listVolumes())
-
-  ipcMain.handle(IpcChannels.SD_PREPARE, (_event, volumePath: unknown, forceRefresh: unknown) => {
-    if (!isNonEmptyString(volumePath)) {
-      return Promise.resolve({ success: false, error: 'volumePath must be a non-empty string' })
-    }
-    return sdService.prepareSD(volumePath, forceRefresh === true)
-  })
-
-  ipcMain.handle(IpcChannels.SD_PUSH_OVER_USB, () =>
-    sdService.pushOverUsb(usbService, (progress) => {
-      getWindow()?.webContents.send(IpcChannels.SD_PUSH_PROGRESS, progress)
-    })
-  )
 
   // ---------------------------------------------------------------------------
   // App info

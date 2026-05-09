@@ -1,11 +1,8 @@
 // DeviceConfigRoute.tsx — CAN bus and GPIO hardware configuration
 //
-// Settings are stored in userData/device.json and written to the SD card
-// during SD preparation. The firmware reads device.json at boot and uses
-// these values instead of the board_config.h compile-time defaults.
-//
-// SD asset flashing lives in UpdateRoute (see SdPrepPanel) — this route
-// only edits the device.json that the SD-prep flow then bundles.
+// Settings are stored in userData/device.json. The firmware reads
+// device.json at boot from SPIFFS and uses these values instead of the
+// board_config.h compile-time defaults.
 
 import { useState, useEffect, useCallback } from 'react'
 import { deviceConfigIpc } from '../services/ipc.service'
@@ -210,11 +207,6 @@ export default function DeviceConfigRoute() {
           </button>
           {saved && <span style={{ fontSize: 12, color: '#44CC44' }}>Saved</span>}
           {saveError && <span style={{ fontSize: 12, color: '#CC3333' }}>{saveError}</span>}
-        </div>
-
-        <div style={{ fontSize: 11, color: '#555555' }}>
-          To copy this device config plus fonts and assets to the SD card, run the asset flow from
-          the firmware update screen.
         </div>
       </div>
     </div>

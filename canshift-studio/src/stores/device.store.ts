@@ -2,7 +2,6 @@
 
 import { create } from 'zustand'
 import type { DashboardConfig } from '@tmbk/canshift-core'
-import type { SdRuntimeState } from '../services/ipc.service'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
 
@@ -10,7 +9,7 @@ export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error
  * Visible stage of the burn cycle, drives BurnProgressModal:
  *   idle       — no burn in flight
  *   pushing    — sending the JSON over USB; waiting for firmware ack
- *   rebooting  — firmware has acked + is now writing to SD and rebooting;
+ *   rebooting  — firmware has acked + is now writing to storage and rebooting;
  *                connection has dropped, auto-connect is trying to come back
  *   done       — device reconnected after the reboot; modal shows a short
  *                success state then returns to idle
@@ -68,13 +67,6 @@ interface DeviceState {
    */
   isDayMode: boolean | null
 
-  /**
-   * Mirrors the firmware's runtime SD-card state from CMD_GET_STATUS (issue #252).
-   * 'unknown' is the default both before the first probe and on firmware that
-   * predates the additive field — see `isSdWritable()` for the policy.
-   */
-  sdState: SdRuntimeState
-
   setConnected: (portPath: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
@@ -86,7 +78,6 @@ interface DeviceState {
   /** Trigger a re-probe — useFirmwareCheck listens on `firmwareCheckTick`. */
   requestFirmwareRecheck: () => void
   setIsDayMode: (isDay: boolean | null) => void
-  setSdState: (state: SdRuntimeState) => void
   enterSimulation: () => void
   exitSimulation: () => void
 
@@ -119,7 +110,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   firmwareCheck: { kind: 'idle' },
   firmwareCheckTick: 0,
   isDayMode: null,
-  sdState: 'unknown',
   lastPushedConfig: null,
   burnPhase: 'idle',
   flashing: false,
@@ -135,7 +125,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       connected: false,
       syncing: false,
       isDayMode: null,
-      sdState: 'unknown',
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
     })
@@ -177,10 +166,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setIsDayMode: (isDay) => {
     set({ isDayMode: isDay })
-  },
-
-  setSdState: (state) => {
-    set({ sdState: state })
   },
 
   enterSimulation: () => {

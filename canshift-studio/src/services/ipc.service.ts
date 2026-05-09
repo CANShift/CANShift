@@ -13,12 +13,7 @@ import type {
 } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { FirmwareRelease } from '../../main/services/firmware.service.types'
-import type { CanFrame, CanHealth, SdRuntimeState } from '../../main/services/usb.service.types'
-import type {
-  SdVolume,
-  SdPrepareResult,
-  SdPushProgress,
-} from '../../main/services/sd.service.types'
+import type { CanFrame, CanHealth } from '../../main/services/usb.service.types'
 import type {
   UpdateAvailablePayload,
   UpdateErrorPayload,
@@ -28,10 +23,6 @@ export type {
   FirmwareRelease,
   CanFrame,
   CanHealth,
-  SdRuntimeState,
-  SdVolume,
-  SdPrepareResult,
-  SdPushProgress,
   UpdateAvailablePayload,
   UpdateErrorPayload,
   ConnectionStatus,
@@ -48,7 +39,6 @@ export type {
 export interface FirmwareStatus {
   version: string | null
   isDay: boolean | null
-  sdState: SdRuntimeState
 }
 
 /**
@@ -69,8 +59,8 @@ export type DeviceConfigResult =
  * Default timeout for renderer→main IPC invoke() calls.
  * If a main-side handler hangs (deadlock, lost serial port, missing ack…),
  * the wrapped Promise rejects with `IpcTimeoutError` instead of leaving the
- * UI awaiting forever. Callers that legitimately take longer (chunked SD
- * push, large config push, firmware download) override via `invokeWithTimeout`.
+ * UI awaiting forever. Callers that legitimately take longer (large config
+ * push, firmware download) override via `invokeWithTimeout`.
  */
 export const DEFAULT_IPC_TIMEOUT_MS = 30_000
 
@@ -232,36 +222,6 @@ export const deviceIpc = {
 export const canScannerIpc = {
   start: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_START),
   stop: () => invoke<{ success: boolean; error?: string }>(IpcChannels.CAN_SCAN_STOP),
-}
-
-// ---------------------------------------------------------------------------
-// SD card preparation
-// ---------------------------------------------------------------------------
-
-// SD prep + push stream many chunked acks; assets total a few MB at ~32 KB
-// chunks. The whole flow can run several minutes on slow SD cards.
-const SD_PREPARE_TIMEOUT_MS = 300_000
-const SD_PUSH_TIMEOUT_MS = 600_000
-
-export const sdIpc = {
-  listVolumes: () => invoke<SdVolume[]>(IpcChannels.SD_LIST_VOLUMES),
-  prepare: (volumePath: string, forceRefresh = false) =>
-    invokeWithTimeout<SdPrepareResult>(
-      IpcChannels.SD_PREPARE,
-      [volumePath, forceRefresh],
-      SD_PREPARE_TIMEOUT_MS
-    ),
-  pushOverUsb: () =>
-    invokeWithTimeout<SdPrepareResult>(IpcChannels.SD_PUSH_OVER_USB, [], SD_PUSH_TIMEOUT_MS),
-  onPushProgress: (handler: (progress: SdPushProgress) => void) => {
-    const wrapped = (...args: unknown[]): void => {
-      handler(args[0] as SdPushProgress)
-    }
-    window.ipc.on(IpcChannels.SD_PUSH_PROGRESS, wrapped)
-    return () => {
-      window.ipc.off(IpcChannels.SD_PUSH_PROGRESS, wrapped)
-    }
-  },
 }
 
 // ---------------------------------------------------------------------------

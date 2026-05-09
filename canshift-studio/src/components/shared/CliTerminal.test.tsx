@@ -65,9 +65,6 @@ vi.mock('../../services/ipc.service', () => ({
   sessionIpc: {
     getLastPortPath: () => Promise.resolve(null),
   },
-  sdIpc: {
-    pushOverUsb: () => Promise.resolve({ success: true, copied: [], skipped: [] }),
-  },
   usbService: {
     listPorts: () => Promise.resolve([]),
     connect: () => Promise.resolve({ success: true }),

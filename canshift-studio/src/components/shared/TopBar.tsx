@@ -6,9 +6,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
-import { IconLoad, IconExport, IconBurn, IconExit, IconUsb, IconSdAlert } from '../icons/Icon'
-import { sdBurnDisabledTooltip, sdStateWarning } from '../../utils/sdState'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { IconLoad, IconExport, IconBurn, IconExit, IconUsb } from '../icons/Icon'
 
 const STATUS_COLOR: Record<string, string> = {
   connected: '#3DB86B',
@@ -70,7 +68,6 @@ export default function TopBar() {
   const portPath = useDeviceStore((s) => s.portPath)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const exitSimulation = useDeviceStore((s) => s.exitSimulation)
-  const sdState = useDeviceStore((s) => s.sdState)
   const log = useLogStore((s) => s.push)
 
   const {
@@ -86,14 +83,13 @@ export default function TopBar() {
   const canSave = config !== null
   const canBurn = config !== null && deviceCanBurn
 
-  const sdWarning = sdStateWarning(sdState)
   const burnBlockedReason = !connected
     ? 'Connect a device first'
     : simulationMode
       ? 'Exit simulation to burn to real hardware'
       : syncing
         ? 'Burn already in progress'
-        : (sdBurnDisabledTooltip(sdState) ?? null)
+        : null
   const burnTooltip = canBurn
     ? 'Push config to device'
     : (burnBlockedReason ?? 'Push config to device')
@@ -160,38 +156,6 @@ export default function TopBar() {
             <IconBurn size={12} color={canBurn ? '#E03030' : '#3A3A3A'} />
             {syncing ? 'Burning…' : 'Burn'}
           </ToolBtn>
-
-          {/* SD-state degraded indicator — surfaces missing/failed SD card so the
-              user understands why Burn is disabled (issue #252). */}
-          {connected && sdWarning !== null && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    data-testid="sd-warning-indicator"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 6px',
-                      marginLeft: 4,
-                      border: '1px solid #5A3A12',
-                      borderRadius: 5,
-                      background: '#221610',
-                      color: '#E08030',
-                      fontSize: 11,
-                      lineHeight: 1,
-                      cursor: 'help',
-                    }}
-                  >
-                    <IconSdAlert size={12} color="#E08030" />
-                    No SD
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{sdWarning}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
 
           <div style={{ width: 1, height: 18, background: '#1E1E1E', margin: '0 4px' }} />
 

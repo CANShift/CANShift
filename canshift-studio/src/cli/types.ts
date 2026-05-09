@@ -27,8 +27,6 @@ export interface CliActions {
   connect: (portPath: string | undefined) => Promise<CliResult>
   /** Drop the active serial connection. */
   disconnect: () => Promise<CliResult>
-  /** Push the SD assets to the on-device card over USB. */
-  pushUsb: () => Promise<CliResult>
   /** Reboot the firmware over USB. */
   reboot: () => Promise<CliResult>
   /**
@@ -54,8 +52,6 @@ export interface CommandContext {
     connected: boolean
     portPath: string | null
     firmwareVersion: string | null
-    /** SD card runtime state from `useDeviceStore`. */
-    sdState: 'unknown' | 'ok' | 'no_card' | 'mount_failed'
     simulationMode: boolean
   }
   /** Loaded dashboard config (used for the prompt host slug). */

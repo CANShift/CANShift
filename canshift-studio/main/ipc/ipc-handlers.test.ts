@@ -92,7 +92,6 @@ const usbServiceMock = vi.hoisted(() => ({
   stopCanScan: vi.fn(),
   queryVersion: vi.fn(),
   getConfig: vi.fn(),
-  pushFile: vi.fn(),
 }))
 vi.mock('../services/usb.service', () => ({
   UsbService: function UsbService(): unknown {
@@ -114,13 +113,6 @@ const firmwareMock = vi.hoisted(() => ({
   downloadBinary: vi.fn(),
 }))
 vi.mock('../services/firmware.service', () => ({ firmwareService: firmwareMock }))
-
-const sdMock = vi.hoisted(() => ({
-  listVolumes: vi.fn(),
-  prepareSD: vi.fn(),
-  pushOverUsb: vi.fn(),
-}))
-vi.mock('../services/sd.service', () => ({ sdService: sdMock }))
 
 const sessionMock = vi.hoisted(() => ({
   addRecentFile: vi.fn(),
@@ -190,7 +182,6 @@ beforeEach(() => {
   for (const fn of Object.values(configFileMock)) fn.mockReset()
   for (const fn of Object.values(usbServiceMock)) fn.mockReset()
   for (const fn of Object.values(firmwareMock)) fn.mockReset()
-  for (const fn of Object.values(sdMock)) fn.mockReset()
   for (const fn of Object.values(sessionMock)) fn.mockReset()
   updaterMock.checkForUpdates.mockReset()
   updaterMock.installUpdate.mockReset()
@@ -201,8 +192,8 @@ describe('registerIpcHandlers — channel registration', () => {
     const { win } = makeWindow()
     registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
 
-    // Renderer→main one-shot calls. Channels prefixed with USB_/CAN_/UPDATE_/SD_PUSH_PROGRESS
-    // ending in events (main→renderer) are excluded.
+    // Renderer→main one-shot calls. Channels ending in events (main→renderer)
+    // are excluded.
     const expectedChannels = [
       IpcChannels.CONFIG_OPEN,
       IpcChannels.CONFIG_OPEN_PATH,
@@ -234,9 +225,6 @@ describe('registerIpcHandlers — channel registration', () => {
       IpcChannels.FIRMWARE_EXIT_FLASH,
       IpcChannels.FIRMWARE_DOWNLOAD,
       IpcChannels.SIGNAL_EXPORT,
-      IpcChannels.SD_LIST_VOLUMES,
-      IpcChannels.SD_PREPARE,
-      IpcChannels.SD_PUSH_OVER_USB,
       IpcChannels.APP_VERSION,
       IpcChannels.UPDATE_CHECK,
       IpcChannels.UPDATE_INSTALL,
@@ -454,45 +442,6 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
     })
     await getHandler(IpcChannels.CONFIG_OPEN_PATH)(makeEvent(), '/a.json')
     expect(configFileMock.openFilePath).toHaveBeenCalledWith('/a.json')
-  })
-})
-
-describe('SD IPC handlers — volumePath validation', () => {
-  beforeEach(() => {
-    const { win } = makeWindow()
-    registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
-  })
-
-  it('SD_PREPARE rejects a non-string volumePath', async () => {
-    expect(await getHandler(IpcChannels.SD_PREPARE)(makeEvent(), null, false)).toEqual({
-      success: false,
-      error: 'volumePath must be a non-empty string',
-    })
-    expect(sdMock.prepareSD).not.toHaveBeenCalled()
-  })
-
-  it('SD_PREPARE forwards the boolean force flag (true/false/any non-true)', async () => {
-    sdMock.prepareSD.mockResolvedValue({ success: true, copied: [], skipped: [] })
-    const handler = getHandler(IpcChannels.SD_PREPARE)
-
-    await handler(makeEvent(), '/Volumes/CANSHIFT', true)
-    expect(sdMock.prepareSD).toHaveBeenLastCalledWith('/Volumes/CANSHIFT', true)
-
-    await handler(makeEvent(), '/Volumes/CANSHIFT', false)
-    expect(sdMock.prepareSD).toHaveBeenLastCalledWith('/Volumes/CANSHIFT', false)
-
-    // Any non-strict-true value falls back to false (no forced refresh).
-    await handler(makeEvent(), '/Volumes/CANSHIFT', 'true')
-    expect(sdMock.prepareSD).toHaveBeenLastCalledWith('/Volumes/CANSHIFT', false)
-
-    await handler(makeEvent(), '/Volumes/CANSHIFT', 1)
-    expect(sdMock.prepareSD).toHaveBeenLastCalledWith('/Volumes/CANSHIFT', false)
-  })
-
-  it('SD_LIST_VOLUMES delegates without args', () => {
-    sdMock.listVolumes.mockResolvedValue([])
-    void getHandler(IpcChannels.SD_LIST_VOLUMES)(makeEvent())
-    expect(sdMock.listVolumes).toHaveBeenCalledTimes(1)
   })
 })
 
