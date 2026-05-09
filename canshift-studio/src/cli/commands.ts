@@ -1,11 +1,9 @@
-// src/cli/commands.ts — Initial CLI command registry.
+// src/cli/commands.ts — CLI command registry.
 //
-// The full set lands in PR 2; this scaffold ships the four commands needed to
-// validate the shell loop end-to-end:
-//   • help     — list commands or show usage for one
-//   • clear    — clear the xterm scrollback (does NOT touch the log store)
-//   • version  — studio + firmware versions
-//   • status   — current device snapshot
+// Each command is a `CommandSpec` that returns `CliResult` so the prompt's
+// trailing `%` flips colour on failure. Side-effects (IPC, navigation) live
+// behind `ctx.actions` — wired by `useCliRuntime` against the live stores —
+// so handlers stay free of React imports and trivially unit-testable.
 
 import type { CliResult, CommandContext, CommandSpec } from './types'
 
@@ -49,6 +47,10 @@ const HELP: CommandSpec = {
     writeLine(ctx, `${found.name} — ${found.summary}`)
     writeLine(ctx, `Usage: ${found.usage}`)
     return ok()
+  },
+  complete: (args, ctx) => {
+    if (args.length > 1) return []
+    return ctx.commands.map((c) => c.name)
   },
 }
 
@@ -107,10 +109,135 @@ const STATUS: CommandSpec = {
 }
 
 // ---------------------------------------------------------------------------
+// burn
+// ---------------------------------------------------------------------------
+
+const BURN: CommandSpec = {
+  name: 'burn',
+  summary: 'Push the loaded config to the connected device',
+  usage: 'burn',
+  run: async (_args, ctx) => {
+    if (ctx.config === null) {
+      writeLine(ctx, '[burn] no config loaded — open or import one first')
+      return fail()
+    }
+    if (!ctx.device.connected) {
+      writeLine(ctx, '[burn] not connected')
+      return fail()
+    }
+    return ctx.actions.burnConfig()
+  },
+}
+
+// ---------------------------------------------------------------------------
+// push-usb
+// ---------------------------------------------------------------------------
+
+const PUSH_USB: CommandSpec = {
+  name: 'push-usb',
+  summary: 'Push SD assets (signals, dashboards, fonts) to the device over USB',
+  usage: 'push-usb',
+  run: async (_args, ctx) => {
+    if (!ctx.device.connected) {
+      writeLine(ctx, '[push-usb] not connected')
+      return fail()
+    }
+    return ctx.actions.pushUsb()
+  },
+}
+
+// ---------------------------------------------------------------------------
+// connect
+// ---------------------------------------------------------------------------
+
+const CONNECT: CommandSpec = {
+  name: 'connect',
+  summary: 'Connect to a serial port (auto-pick if omitted)',
+  usage: 'connect [port]',
+  run: async (args, ctx) => {
+    if (ctx.device.connected) {
+      writeLine(ctx, `[connect] already connected on ${ctx.device.portPath ?? 'unknown'}`)
+      return fail()
+    }
+    return ctx.actions.connect(args[0])
+  },
+  complete: async (args, ctx) => {
+    if (args.length > 1) return []
+    try {
+      return await ctx.actions.listPorts()
+    } catch {
+      return []
+    }
+  },
+}
+
+// ---------------------------------------------------------------------------
+// disconnect
+// ---------------------------------------------------------------------------
+
+const DISCONNECT: CommandSpec = {
+  name: 'disconnect',
+  summary: 'Drop the active serial connection',
+  usage: 'disconnect',
+  run: async (_args, ctx) => {
+    if (!ctx.device.connected) {
+      writeLine(ctx, '[disconnect] not connected')
+      return fail()
+    }
+    return ctx.actions.disconnect()
+  },
+}
+
+// ---------------------------------------------------------------------------
+// reboot
+// ---------------------------------------------------------------------------
+
+const REBOOT: CommandSpec = {
+  name: 'reboot',
+  summary: 'Reboot the connected device',
+  usage: 'reboot',
+  run: async (_args, ctx) => {
+    if (!ctx.device.connected) {
+      writeLine(ctx, '[reboot] not connected')
+      return fail()
+    }
+    return ctx.actions.reboot()
+  },
+}
+
+// ---------------------------------------------------------------------------
+// flash
+// ---------------------------------------------------------------------------
+
+const FLASH: CommandSpec = {
+  name: 'flash',
+  summary: 'Open the firmware update panel',
+  usage: 'flash',
+  run: (_args, ctx) => {
+    writeLine(
+      ctx,
+      '[flash] opening firmware update panel — pick a release and start the flash there'
+    )
+    return ctx.actions.openFlashRoute()
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
-export const COMMANDS: readonly CommandSpec[] = [HELP, CLEAR, VERSION, STATUS]
+export const COMMANDS: readonly CommandSpec[] = [
+  HELP,
+  CLEAR,
+  VERSION,
+  STATUS,
+  BURN,
+  PUSH_USB,
+  CONNECT,
+  DISCONNECT,
+  REBOOT,
+  FLASH,
+]
 
 /**
  * Resolve a command name and run it. Unknown commands print a zsh-style
@@ -128,4 +255,54 @@ export async function dispatch(
     return fail()
   }
   return spec.run(args, ctx)
+}
+
+/**
+ * Compute Tab-completion candidates for the partially typed line. Returns:
+ *   • command names matching the prefix when the cursor is on the first token,
+ *   • the active spec's `complete()` results (filtered by prefix) for arg
+ *     positions if the spec defines one,
+ *   • `[]` otherwise.
+ */
+export async function complete(
+  tokens: readonly string[],
+  trailingSpace: boolean,
+  ctx: CommandContext
+): Promise<string[]> {
+  // Empty line or first-word prefix → suggest commands.
+  if (tokens.length === 0 || (tokens.length === 1 && !trailingSpace)) {
+    const prefix = tokens[0] ?? ''
+    return ctx.commands.map((c) => c.name).filter((n) => n.startsWith(prefix))
+  }
+
+  const [name, ...restTokens] = tokens
+  if (name === undefined) return []
+  const spec = ctx.commands.find((c) => c.name === name)
+  const completer = spec?.complete
+  if (completer === undefined) return []
+
+  // The arg the user is currently typing — empty string when a trailing
+  // space pushed us onto a fresh slot.
+  const argsForCompleter = trailingSpace ? [...restTokens, ''] : restTokens
+  const partial = argsForCompleter[argsForCompleter.length - 1] ?? ''
+
+  const candidates = await completer(argsForCompleter, ctx)
+  return candidates.filter((c) => c.startsWith(partial))
+}
+
+/**
+ * Compute the longest shared prefix of a non-empty list of strings.
+ * Used to extend the input by the unambiguous portion of multiple matches.
+ */
+export function longestCommonPrefix(values: readonly string[]): string {
+  if (values.length === 0) return ''
+  let prefix = values[0] ?? ''
+  for (let i = 1; i < values.length; i++) {
+    const v = values[i] ?? ''
+    let j = 0
+    while (j < prefix.length && j < v.length && prefix[j] === v[j]) j++
+    prefix = prefix.slice(0, j)
+    if (prefix.length === 0) break
+  }
+  return prefix
 }

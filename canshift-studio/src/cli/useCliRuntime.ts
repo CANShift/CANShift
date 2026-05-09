@@ -4,11 +4,13 @@
 // keystroke handler) read from the ref synchronously to avoid stale closures.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { appIpc } from '../services/ipc.service'
 import { COMMANDS } from './commands'
+import { buildActions } from './actions'
 import type { CliTerminalHandle, CommandContext } from './types'
 
 /**
@@ -23,6 +25,7 @@ export function useCliRuntime(terminal: CliTerminalHandle): {
 } {
   const [appVersion, setAppVersion] = useState<string>('')
   const fetchedVersion = useRef<boolean>(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (fetchedVersion.current) return
@@ -36,22 +39,38 @@ export function useCliRuntime(terminal: CliTerminalHandle): {
   const portPath = useDeviceStore((s) => s.portPath)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const sdState = useDeviceStore((s) => s.sdState)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
   const configName = useDashboardStore((s) => s.config?.name ?? null)
 
   const config = useMemo(() => (configName !== null ? { name: configName } : null), [configName])
 
+  // Actions are stable across renders because each impl reads live state
+  // through `useXxxStore.getState()`, never closing over stale snapshots.
+  const actions = useMemo(() => buildActions(navigate), [navigate])
+
   const ctx: CommandContext = useMemo(
     () => ({
       appVersion,
-      device: { connected, portPath, firmwareVersion, sdState },
+      device: { connected, portPath, firmwareVersion, sdState, simulationMode },
       config,
       log: (level, message, scope) => {
         useLogStore.getState().push(level, message, scope)
       },
       terminal,
       commands: COMMANDS,
+      actions,
     }),
-    [appVersion, connected, portPath, firmwareVersion, sdState, config, terminal]
+    [
+      appVersion,
+      connected,
+      portPath,
+      firmwareVersion,
+      sdState,
+      simulationMode,
+      config,
+      terminal,
+      actions,
+    ]
   )
 
   const ctxRef = useRef<CommandContext>(ctx)
