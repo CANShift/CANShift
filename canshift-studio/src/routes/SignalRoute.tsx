@@ -72,7 +72,8 @@ function omitKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K
 }
 
 export default function SignalRoute() {
-  const { signals, setSignals } = useSignalStore()
+  const signals = useSignalStore((s) => s.signals)
+  const setSignals = useSignalStore((s) => s.setSignals)
   const tableEndRef = useRef<HTMLDivElement>(null)
 
   const handleExport = useCallback(async () => {
