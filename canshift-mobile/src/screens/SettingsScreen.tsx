@@ -1,14 +1,19 @@
 // SettingsScreen.tsx — Screen settings pushed to device via BLE
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native'
 import Slider from '@react-native-community/slider'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
+import { mapBleError } from '../services/ble.errors'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
+import {
+  BlePermissionDialog,
+  type BlePermissionPlatform,
+} from '../components/ble-permission-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +45,22 @@ export default function SettingsScreen({ navigation }: Props) {
   const [saving, setSaving] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
   const [calibrateConfirmOpen, setCalibrateConfirmOpen] = useState(false)
+  const [unauthorizedPlatform, setUnauthorizedPlatform] =
+    useState<BlePermissionPlatform | null>(null)
+
+  /** Route a thrown BLE error: permission denials open the shared Settings
+   *  dialog, everything else falls back to a generic Alert. Returns true
+   *  when the error was a permission denial (so callers can short-circuit). */
+  const handleBleFailure = useCallback((err: unknown, fallbackTitle: string): boolean => {
+    const mapped = mapBleError(err)
+    if (mapped.kind === 'permission-denied') {
+      setUnauthorizedPlatform(mapped.platform)
+      return true
+    }
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    Alert.alert(fallbackTitle, message)
+    return false
+  }, [])
 
   // Pull current values from the device on mount so sliders/segments don't
   // open at hardcoded defaults that misrepresent the device state (#26).
@@ -72,7 +93,7 @@ export default function SettingsScreen({ navigation }: Props) {
       })
       navigation.goBack()
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to push settings')
+      handleBleFailure(err, 'Error')
     } finally {
       setSaving(false)
     }
@@ -88,7 +109,7 @@ export default function SettingsScreen({ navigation }: Props) {
       // guarantee the new command exists to provide.
       await BleService.sendCmd('set_day_night', { day: target })
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
+      handleBleFailure(err, 'Error')
     }
   }
 
@@ -101,7 +122,7 @@ export default function SettingsScreen({ navigation }: Props) {
     try {
       await BleService.sendCmd('start_calibration')
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Command failed')
+      handleBleFailure(err, 'Error')
     } finally {
       setCalibrating(false)
     }
@@ -221,6 +242,11 @@ export default function SettingsScreen({ navigation }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BlePermissionDialog
+        platform={unauthorizedPlatform}
+        onDismiss={() => { setUnauthorizedPlatform(null) }}
+      />
     </SafeAreaView>
   )
 }

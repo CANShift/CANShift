@@ -1,6 +1,7 @@
 // device.store.ts — BLE connection state
 
 import { create } from 'zustand'
+import type { BleConnectionError } from '../services/ble.errors'
 
 export type ConnectionState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'error'
 
@@ -12,14 +13,14 @@ interface DeviceState {
   canHealthy: boolean
   wifiApSsid: string | null
   isDayMode: boolean | null
-  error: string | null
+  error: BleConnectionError | null
 
   setConnectionState: (s: ConnectionState) => void
   setDevice: (id: string, name: string) => void
   setFirmwareStatus: (version: string, canHealthy: boolean) => void
   setWifiAp: (ssid: string | null) => void
   setIsDayMode: (v: boolean) => void
-  setError: (msg: string | null) => void
+  setError: (err: BleConnectionError | null) => void
   disconnect: () => void
 }
 

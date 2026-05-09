@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -19,18 +18,14 @@ import { useDeviceStore } from '../stores/device.store'
 import { useReconnectStore } from '../stores/reconnect.store'
 import * as BleService from '../services/ble.service'
 import type { BlePermissionState } from '../services/ble.service'
+import { mapBleError } from '../services/ble.errors'
+import type { BleConnectionError } from '../services/ble.errors'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui'
+  BlePermissionDialog,
+  type BlePermissionPlatform,
+} from '../components/ble-permission-dialog'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Scan'>
@@ -38,34 +33,71 @@ interface Props {
 
 interface FoundDevice { id: string; name: string }
 
-type UnauthorizedPlatform = 'ios' | 'android'
-
-function unauthorizedMessage(platform: UnauthorizedPlatform): string {
-  return platform === 'android'
-    ? 'CANShift needs nearby devices permission. Open app settings to grant it.'
-    : 'CANShift needs Bluetooth access to find your dashboard. Open Settings to grant permission.'
-}
-
-function isAndroidPermissionDeniedError(err: unknown): boolean {
-  if (err instanceof Error) {
-    const code = (err as Error & { code?: string }).code
-    return code === 'android_ble_permission_denied' ||
-      err.message === 'android_ble_permission_denied'
+/**
+ * Render copy for any non-permission BLE error. Permission denials are routed
+ * through `BlePermissionDialog` (with "Open Settings" CTA) instead of this
+ * helper.
+ */
+function bleErrorMessage(err: BleConnectionError): { title: string; body: string } {
+  switch (err.kind) {
+    case 'bluetooth-off':
+      return { title: 'Bluetooth is off', body: 'Turn Bluetooth on to connect to your dashboard.' }
+    case 'not-paired':
+      return {
+        title: 'Device not found',
+        body: 'The dashboard is not advertising. Power-cycle it and scan again.',
+      }
+    case 'not-in-range':
+      return {
+        title: 'Device out of range',
+        body: 'Move closer to the dashboard and try again.',
+      }
+    case 'disconnected':
+      return {
+        title: 'Disconnected',
+        body: 'The dashboard disconnected. Try connecting again.',
+      }
+    case 'characteristic-missing':
+      return {
+        title: 'Incompatible firmware',
+        body: 'This dashboard is missing required BLE services. Update the firmware.',
+      }
+    case 'write-failed':
+      return {
+        title: 'Connection failed',
+        body: err.reason ?? 'A BLE write failed. Try again in a moment.',
+      }
+    case 'permission-denied':
+      // Caller should route to the unauthorized dialog instead — this is a
+      // safety net for the exhaustive switch.
+      return {
+        title: 'Bluetooth permission needed',
+        body:
+          err.platform === 'android'
+            ? 'CANShift needs nearby devices permission. Open app settings to grant it.'
+            : 'CANShift needs Bluetooth access to find your dashboard.',
+      }
+    case 'unknown':
+      return { title: 'Connection failed', body: err.message }
+    default: {
+      const _exhaustive: never = err
+      void _exhaustive
+      return { title: 'Connection failed', body: 'Unknown error' }
+    }
   }
-  return false
 }
 
 export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<FoundDevice[]>([])
   const [unauthorizedPlatform, setUnauthorizedPlatform] =
-    useState<UnauthorizedPlatform | null>(null)
+    useState<BlePermissionPlatform | null>(null)
   const connectionState = useDeviceStore((s) => s.connectionState)
   const isReconnecting = useReconnectStore((s) => s.isReconnecting)
   const reconnectAttempt = useReconnectStore((s) => s.attempt)
   const reconnectMaxAttempts = useReconnectStore((s) => s.maxAttempts)
 
-  const promptUnauthorized = useCallback((platform: UnauthorizedPlatform): void => {
+  const promptUnauthorized = useCallback((platform: BlePermissionPlatform): void => {
     setUnauthorizedPlatform(platform)
   }, [])
 
@@ -121,10 +153,12 @@ export default function ScanScreen({ navigation }: Props) {
         )
       }, 10000)
     } catch (err) {
-      if (isAndroidPermissionDeniedError(err)) {
-        promptUnauthorized('android')
+      const mapped = mapBleError(err)
+      if (mapped.kind === 'permission-denied') {
+        promptUnauthorized(mapped.platform)
       } else {
-        Alert.alert('Scan failed', err instanceof Error ? err.message : 'Unknown error')
+        const { title, body } = bleErrorMessage(mapped)
+        Alert.alert(title, body)
       }
     } finally {
       setScanning(false)
@@ -139,11 +173,13 @@ export default function ScanScreen({ navigation }: Props) {
         await BleService.connect(device.id)
         navigation.replace('Connected')
       } catch (err) {
-        if (isAndroidPermissionDeniedError(err)) {
-          promptUnauthorized('android')
+        const mapped = mapBleError(err)
+        if (mapped.kind === 'permission-denied') {
+          promptUnauthorized(mapped.platform)
           return
         }
-        Alert.alert('Connection failed', err instanceof Error ? err.message : 'Unknown error')
+        const { title, body } = bleErrorMessage(mapped)
+        Alert.alert(title, body)
       }
     },
     [navigation, promptUnauthorized]
@@ -227,32 +263,10 @@ export default function ScanScreen({ navigation }: Props) {
         <Text style={styles.demoBtnText}>Demo mode</Text>
       </TouchableOpacity>
 
-      <AlertDialog
-        open={unauthorizedPlatform !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setUnauthorizedPlatform(null)
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Bluetooth permission needed</AlertDialogTitle>
-            <AlertDialogDescription>
-              {unauthorizedPlatform !== null ? unauthorizedMessage(unauthorizedPlatform) : ''}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="default"
-              onPress={() => void Linking.openSettings()}
-            >
-              Open Settings
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <BlePermissionDialog
+        platform={unauthorizedPlatform}
+        onDismiss={() => { setUnauthorizedPlatform(null) }}
+      />
     </SafeAreaView>
   )
 }
