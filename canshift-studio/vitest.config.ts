@@ -17,6 +17,7 @@ export default defineConfig({
       '@services': resolve(__dirname, 'src/services'),
       '@hooks': resolve(__dirname, 'src/hooks'),
       '@shared': resolve(__dirname, 'src/shared'),
+      '@': resolve(__dirname, 'src'),
     },
   },
 })
