@@ -11,9 +11,33 @@ const UpdateRoute = lazy(() => import('./routes/UpdateRoute'))
 const CanScannerRoute = lazy(() => import('./routes/CanScannerRoute'))
 const DeviceConfigRoute = lazy(() => import('./routes/DeviceConfigRoute'))
 
-// CliTerminal — opt-in xterm panel (issue #378). Lazy so xterm + addons stay
-// out of the main renderer chunk and the bundle budget holds.
+// CliTerminal — xterm-backed CLI panel (issue #378). Lazy so xterm + addons
+// stay out of the main renderer chunk and the bundle budget holds.
 const CliTerminal = lazy(() => import('./components/shared/CliTerminal'))
+
+function CliPanelFallback() {
+  // Lightweight placeholder while the xterm chunk is fetching. Matches the
+  // panel chrome (dark background, top border) so the layout doesn't jump.
+  return (
+    <div
+      style={{
+        height: 240,
+        flexShrink: 0,
+        background: '#0A0A0A',
+        borderTop: '1px solid #222222',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#3A3A3A',
+        fontSize: 10,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+      }}
+    >
+      Loading CLI…
+    </div>
+  )
+}
 
 function RouteLoading() {
   return (
@@ -34,7 +58,6 @@ function RouteLoading() {
 import TopBar from './components/shared/TopBar'
 import SideRail from './components/shared/SideRail'
 import ConnectScreen from './components/shared/ConnectScreen'
-import ConsolePanel from './components/shared/ConsolePanel'
 import StatusBar from './components/shared/StatusBar'
 import ErrorBar from './components/shared/ErrorBar'
 import UpdateBanner from './components/shared/UpdateBanner'
@@ -49,7 +72,6 @@ import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
 import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useDeviceStore } from './stores/device.store'
-import { useCliSettingsStore } from './stores/cliSettings.store'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
 import BurnFailedDialog from './components/shared/BurnFailedDialog'
@@ -69,7 +91,6 @@ export default function App() {
   const firstRun = useFirstRunCheck()
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const cliEnabled = useCliSettingsStore((s) => s.enabled)
 
   const ready = connected || simulationMode
 
@@ -147,13 +168,9 @@ export default function App() {
         <ConnectScreen />
       )}
 
-      {cliEnabled ? (
-        <Suspense fallback={<ConsolePanel />}>
-          <CliTerminal />
-        </Suspense>
-      ) : (
-        <ConsolePanel />
-      )}
+      <Suspense fallback={<CliPanelFallback />}>
+        <CliTerminal />
+      </Suspense>
       <ErrorBar />
       <StatusBar />
       <UpdateBanner />

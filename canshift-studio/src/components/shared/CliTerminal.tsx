@@ -1,18 +1,19 @@
-// CliTerminal.tsx — xterm-backed CLI panel (issue #378, PR 2).
+// CliTerminal.tsx — xterm-backed CLI panel (issue #378).
 //
 // The whole component is loaded via `React.lazy` from App.tsx, so `@xterm/xterm`
-// and its addons stay out of the main renderer chunk. The classic
-// `ConsolePanel` is still rendered while this module fetches.
+// and its addons stay out of the main renderer chunk. A lightweight loading
+// placeholder keeps the layout stable while the chunk fetches.
 //
-// PR 2 scope: full command set (`burn`, `push-usb`, `connect`, `disconnect`,
-// `flash`, `reboot`), command history (↑/↓), Tab autocompletion, and zsh-style
-// shortcuts (Ctrl+A/E/U/W). Resize + detach land in PR 3.
+// PR 3 scope: top-edge drag handle to resize the panel (persisted in
+// localStorage via `useCliPanelHeight`) and removal of the legacy "Try new
+// CLI" feature flag — the terminal is now the default surface. Detach into a
+// separate Electron `BrowserWindow` is tracked separately and lands in a
+// follow-up PR; the IPC + window plumbing are too invasive to bundle here.
 
 import { useEffect, useRef } from 'react'
 import { useLogStore, type LogEntry } from '../../stores/log.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
-import { useCliSettingsStore } from '../../stores/cliSettings.store'
 import { complete, dispatch, longestCommonPrefix } from '../../cli/commands'
 import { formatLogEntry } from '../../cli/format'
 import { parse, ParseError } from '../../cli/parse'
@@ -37,8 +38,10 @@ import {
   type LineEditorState,
 } from '../../cli/lineEditor'
 import type { CliTerminalHandle } from '../../cli/types'
+import { useCliPanelHeight } from './useCliPanelHeight'
 
-const PANEL_HEIGHT = 240
+const RESIZE_HANDLE_HEIGHT = 4
+const HEADER_HEIGHT = 24
 
 interface XtermModule {
   Terminal: new (options: object) => XtermTerminal
@@ -90,7 +93,8 @@ export default function CliTerminal() {
   const editorRef = useRef<LineEditorState>(makeLineEditor())
   const lastExitOkRef = useRef<boolean>(true)
   const lastWrittenIdRef = useRef<number>(0)
-  const setEnabled = useCliSettingsStore((s) => s.setEnabled)
+  const fitRef = useRef<{ fit: () => void } | null>(null)
+  const { height, beginDrag, isDragging } = useCliPanelHeight()
 
   // The runtime hook is mounted unconditionally so it can subscribe to the
   // stores; it will start emitting useful values once `terminal` is set on
@@ -242,6 +246,7 @@ export default function CliTerminal() {
       instance.loadAddon(fit)
       instance.loadAddon(links)
       instance.open(containerRef.current)
+      fitRef.current = fit
       try {
         fit.fit()
       } catch {
@@ -386,13 +391,29 @@ export default function CliTerminal() {
       }
       terminalRef.current = null
       handleRef.current = null
+      fitRef.current = null
     }
   }, [ctxRef])
+
+  // Re-fit xterm whenever the panel height changes so character grid stays in
+  // sync with the visible area. Skipping while a drag is in progress keeps
+  // the rapid mousemove updates cheap; the final fit on `mouseup` is what
+  // actually matters visually.
+  useEffect(() => {
+    if (isDragging) return
+    const fit = fitRef.current
+    if (fit === null) return
+    try {
+      fit.fit()
+    } catch {
+      // Container may not have a measurable size yet; ignore.
+    }
+  }, [height, isDragging])
 
   return (
     <div
       style={{
-        height: PANEL_HEIGHT,
+        height,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -401,14 +422,29 @@ export default function CliTerminal() {
         overflow: 'hidden',
       }}
     >
-      {/* Header — mirrors ConsolePanel layout for visual continuity. */}
+      {/* Resize handle — drag the top edge to grow/shrink the panel. */}
+      <div
+        role="separator"
+        aria-label="Resize CLI panel"
+        aria-orientation="horizontal"
+        onMouseDown={beginDrag}
+        style={{
+          height: RESIZE_HANDLE_HEIGHT,
+          flexShrink: 0,
+          cursor: 'row-resize',
+          background: isDragging ? '#2A2A2A' : 'transparent',
+          transition: isDragging ? 'none' : 'background 0.15s ease',
+        }}
+      />
+
+      {/* Header */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 12px',
-          height: 24,
+          height: HEADER_HEIGHT,
           borderBottom: '1px solid #1A1A1A',
           flexShrink: 0,
           userSelect: 'none',
@@ -424,22 +460,6 @@ export default function CliTerminal() {
         >
           CLI
         </span>
-        <button
-          onClick={() => {
-            setEnabled(false)
-          }}
-          title="Switch back to the classic console"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#3A3A3A',
-            cursor: 'pointer',
-            fontSize: 10,
-            padding: '0 2px',
-          }}
-        >
-          Classic console ←
-        </button>
       </div>
 
       <div

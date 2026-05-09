@@ -1,9 +1,9 @@
 // src/cli/theme.ts — xterm theme matching the studio's dark UI palette.
 
 /**
- * Mirrors the colour set used by `ConsolePanel` so log streaming reads the
- * same regardless of the surface. ANSI sequences from `format.ts` map onto
- * these colours.
+ * Palette shared with the rest of the studio dark UI so log streaming reads
+ * the same regardless of where it surfaces. ANSI sequences from `format.ts`
+ * map onto these colours.
  */
 export const CLI_THEME = {
   background: '#0A0A0A',
