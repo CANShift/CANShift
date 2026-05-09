@@ -133,7 +133,6 @@ canshift-studio/
     │   ├── SignalRoute.tsx            # Signal binding editor
     │   ├── CanScannerRoute.tsx        # Live CAN frame scanner
     │   ├── UpdateRoute.tsx            # Firmware update UI (Flash Latest + manual)
-    │   ├── DeviceRoute.tsx            # Device status, day/night, touch calibration
     │   └── DeviceConfigRoute.tsx      # On-device hardware config read/write
     ├── components/                    # editor/ + shared/ UI
     ├── hooks/
