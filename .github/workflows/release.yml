@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
       should_release: ${{ steps.check.outputs.should_release }}
 
     steps:
