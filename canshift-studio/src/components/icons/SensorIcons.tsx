@@ -1,5 +1,8 @@
-// SensorIcons.tsx — Built-in SVG icon set for common automotive sensors.
-// Used in the canvas preview, widget palette, and property panel.
+// canshift-studio/src/components/icons/SensorIcons.tsx
+// Sensor icon set sourced from Phosphor Icons (Fill weight, MIT).
+// Mirrors the firmware bundle in canshift-firmware/data/assets/sensor_*.bin.
+// Public API (SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS, ICON_MAP)
+// is byte-stable so widget palette / property panel / preview compile unchanged.
 
 import type { SensorIconName } from '@tmbk/canshift-core'
 
@@ -8,550 +11,90 @@ interface IconProps {
   color?: string
 }
 
-// ---------------------------------------------------------------------------
-// Individual icons
-// ---------------------------------------------------------------------------
+// Phosphor Fill paths — viewBox 0 0 256 256, single <path d="..."/>, fill=currentColor.
+// Source: github.com/phosphor-icons/core @ 2b75f3ad12b420c9504ef05df8d2564a28f8500e
+const SENSOR_ICON_PATHS: Record<SensorIconName, string> = {
+  rpm: 'M240,152v24a16,16,0,0,1-16,16H115.93a4,4,0,0,1-3.24-6.35L174.27,101a8.21,8.21,0,0,0-1.37-11.3,8,8,0,0,0-11.37,1.61l-72,99.06A4,4,0,0,1,86.25,192H32a16,16,0,0,1-16-16V153.13c0-1.79,0-3.57.13-5.33a4,4,0,0,1,4-3.8H48a8,8,0,0,0,8-8.53A8.17,8.17,0,0,0,47.73,128H23.92a4,4,0,0,1-3.87-5c12-43.84,49.66-77.13,95.52-82.28a4,4,0,0,1,4.43,4V72a8,8,0,0,0,8.53,8A8.17,8.17,0,0,0,136,71.73V44.67a4,4,0,0,1,4.43-4A112.18,112.18,0,0,1,236.23,123a4,4,0,0,1-3.88,5H208.27a8.17,8.17,0,0,0-8.25,7.47,8,8,0,0,0,8,8.53h27.92a4,4,0,0,1,4,3.86C240,149.23,240,150.61,240,152Z',
+  speed:
+    'M221.87,90.86a4,4,0,0,0-6.17-.62l-75.42,75.42A8,8,0,0,1,129,154.35l92.7-92.69a8,8,0,0,0-11.32-11.32L197,63.73A112.05,112.05,0,0,0,22.34,189.25,16.09,16.09,0,0,0,37.46,200H218.53a16,16,0,0,0,15.11-10.71,112.28,112.28,0,0,0-11.77-98.43ZM57.44,166.41a8,8,0,0,1-6.25,9.43,7.89,7.89,0,0,1-1.6.16,8,8,0,0,1-7.83-6.41A88.06,88.06,0,0,1,143.59,65.38a8,8,0,0,1-2.82,15.75,72.07,72.07,0,0,0-83.33,85.28Z',
+  coolant:
+    'M248.91,77.72l-20,6.49,12.34,17a8,8,0,1,1-12.94,9.4L216,93.61l-12.34,17a8,8,0,0,1-12.94-9.4l12.34-17-20-6.49A8,8,0,0,1,188,62.5L208,69V48a8,8,0,0,1,16,0V69l20-6.49a8,8,0,0,1,4.95,15.22ZM176,192a56,56,0,1,1-88-46V40a32,32,0,0,1,64,0V146A56.23,56.23,0,0,1,176,192Zm-95.18-8h78.36A40.16,40.16,0,0,0,140,157.35a8,8,0,0,1-4-6.93V40a16,16,0,0,0-32,0V150.42a8,8,0,0,1-4,6.93A40.16,40.16,0,0,0,80.82,184Z',
+  oil_pressure:
+    'M174,47.75a254.19,254.19,0,0,0-41.45-38.3,8,8,0,0,0-9.18,0A254.19,254.19,0,0,0,82,47.75C54.51,79.32,40,112.6,40,144a88,88,0,0,0,176,0C216,112.6,201.49,79.32,174,47.75Zm9.85,105.59a57.6,57.6,0,0,1-46.56,46.55A8.75,8.75,0,0,1,136,200a8,8,0,0,1-1.32-15.89c16.57-2.79,30.63-16.85,33.44-33.45a8,8,0,0,1,15.78,2.68Z',
+  oil_temp:
+    'M152,146.08V40a32,32,0,0,0-64,0V146.08a56,56,0,1,0,64,0ZM136,56H104V40a16,16,0,0,1,32,0Zm41.3,24.77a8,8,0,0,1,2.33-11.07c15-9.79,26.87-4.75,35.51-1.06C223,72,227.76,74,235.63,68.89a8,8,0,0,1,8.74,13.41C237.88,86.53,232,88,226.69,88c-7,0-12.92-2.54-17.83-4.63C201,80,196.24,78,188.37,83.11A8,8,0,0,1,177.3,80.77Zm69.4,22.46a8,8,0,0,1-2.33,11.07C237.88,118.53,232,120,226.69,120c-7,0-12.92-2.54-17.83-4.63-7.87-3.36-12.62-5.38-20.49-.25a8,8,0,0,1-8.74-13.41c15-9.79,26.87-4.75,35.51-1.06,7.87,3.36,12.62,5.39,20.49.25A8,8,0,0,1,246.7,103.23Z',
+  battery:
+    'M224,72H208V56a16,16,0,0,0-16-16H160a16,16,0,0,0-16,16V72H112V56A16,16,0,0,0,96,40H64A16,16,0,0,0,48,56V72H32A16,16,0,0,0,16,88v96a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V88A16,16,0,0,0,224,72ZM64,56H96V72H64Zm40,88H72a8,8,0,0,1,0-16h32a8,8,0,0,1,0,16Zm80,0h-8v8a8,8,0,0,1-16,0v-8h-8a8,8,0,0,1,0-16h8v-8a8,8,0,0,1,16,0v8h8a8,8,0,0,1,0,16Zm8-72H160V56h32Z',
+  fuel: 'M241,69.66,221.66,50.34a8,8,0,0,0-11.32,11.32L229.66,81A8,8,0,0,1,232,86.63V168a8,8,0,0,1-16,0V128a24,24,0,0,0-24-24H176V56a24,24,0,0,0-24-24H72A24,24,0,0,0,48,56V208H32a8,8,0,0,0,0,16H192a8,8,0,0,0,0-16H176V120h16a8,8,0,0,1,8,8v40a24,24,0,0,0,48,0V86.63A23.85,23.85,0,0,0,241,69.66ZM144,120H80a8,8,0,0,1,0-16h64a8,8,0,0,1,0,16Z',
+  afr: 'M173.79,51.48a221.25,221.25,0,0,0-41.67-34.34,8,8,0,0,0-8.24,0A221.25,221.25,0,0,0,82.21,51.48C54.59,80.48,40,112.47,40,144a88,88,0,0,0,176,0C216,112.47,201.41,80.48,173.79,51.48ZM96,184c0-27.67,22.53-47.28,32-54.3,9.48,7,32,26.63,32,54.3a32,32,0,0,1-64,0Z',
+  boost:
+    'M120,104H24a8,8,0,0,1-8-8.53A8.17,8.17,0,0,1,24.27,88H112a8,8,0,0,0,8-8.53A8.17,8.17,0,0,0,111.73,72H92.29a4,4,0,0,1-4-4.58A32,32,0,1,1,120,104Zm119.92-2.29a32,32,0,0,0-63.59-2.29,4,4,0,0,0,4,4.58h19.44a8.17,8.17,0,0,1,8.25,7.47,8,8,0,0,1-8,8.53H32.27A8.17,8.17,0,0,0,24,127.47,8,8,0,0,0,32,136H208A32,32,0,0,0,239.92,101.71ZM152,152H40.27A8.17,8.17,0,0,0,32,159.47,8,8,0,0,0,40,168H143.73a8.17,8.17,0,0,1,8.25,7.47,8,8,0,0,1-8,8.53H124.29a4,4,0,0,0-4,4.58A32,32,0,1,0,152,152Z',
+  throttle:
+    'M231.39,123.06A8,8,0,0,1,224,128H184v80a16,16,0,0,1-16,16H88a16,16,0,0,1-16-16V128H32a8,8,0,0,1-5.66-13.66l96-96a8,8,0,0,1,11.32,0l96,96A8,8,0,0,1,231.39,123.06Z',
+  iat: 'M160,146.08V40a32,32,0,0,0-64,0V146.08a56,56,0,1,0,64,0ZM128,24a16,16,0,0,1,16,16v64H112V40A16,16,0,0,1,128,24Z',
+  gear: 'M237.94,107.21a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A111.92,111.92,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.63a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z',
+  timer:
+    'M128,40a96,96,0,1,0,96,96A96.11,96.11,0,0,0,128,40Zm45.66,61.66-40,40a8,8,0,0,1-11.32-11.32l40-40a8,8,0,0,1,11.32,11.32ZM96,16a8,8,0,0,1,8-8h48a8,8,0,0,1,0,16H104A8,8,0,0,1,96,16Z',
+  warning:
+    'M227.31,80.23,175.77,28.69A16.13,16.13,0,0,0,164.45,24H91.55a16.13,16.13,0,0,0-11.32,4.69L28.69,80.23A16.13,16.13,0,0,0,24,91.55v72.9a16.13,16.13,0,0,0,4.69,11.32l51.54,51.54A16.13,16.13,0,0,0,91.55,232h72.9a16.13,16.13,0,0,0,11.32-4.69l51.54-51.54A16.13,16.13,0,0,0,232,164.45V91.55A16.13,16.13,0,0,0,227.31,80.23ZM120,80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm8,104a12,12,0,1,1,12-12A12,12,0,0,1,128,184Z',
+  flame:
+    'M173.79,51.48a221.25,221.25,0,0,0-41.67-34.34,8,8,0,0,0-8.24,0A221.25,221.25,0,0,0,82.21,51.48C54.59,80.48,40,112.47,40,144a88,88,0,0,0,176,0C216,112.47,201.41,80.48,173.79,51.48ZM96,184c0-27.67,22.53-47.28,32-54.3,9.48,7,32,26.63,32,54.3a32,32,0,0,1-64,0Z',
+  turbo:
+    'M233,135a60,60,0,0,0-89.62-35.45l16.39-65.44a8,8,0,0,0-3.45-8.68A60,60,0,1,0,95.69,128.91L30.82,147.44a8,8,0,0,0-5.8,7.32,60,60,0,0,0,44.42,60.66,60.52,60.52,0,0,0,15.62,2.07,60.07,60.07,0,0,0,59.88-62l48.48,46.92a8,8,0,0,0,9.25,1.35A60,60,0,0,0,233,135ZM130.44,147.85a20,20,0,1,1,17.41-22.29A20,20,0,0,1,130.44,147.85Z',
+  engine:
+    'M256,120v48a16,16,0,0,1-16,16H227.31L192,219.31A15.86,15.86,0,0,1,180.69,224H103.31A15.86,15.86,0,0,1,92,219.31L52.69,180A15.86,15.86,0,0,1,48,168.69V148H24v24a8,8,0,0,1-16,0V108a8,8,0,0,1,16,0v24H48V80A16,16,0,0,1,64,64h60V40H100a8,8,0,0,1,0-16h64a8,8,0,0,1,0,16H140V64h40.69A15.86,15.86,0,0,1,192,68.69L227.31,104H240A16,16,0,0,1,256,120Z',
+  brake:
+    'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM40,128A88,88,0,0,1,190.2,65.8L65.8,190.2A87.76,87.76,0,0,1,40,128Z',
+  launch:
+    'M101.85,191.14C97.34,201,82.29,224,40,224a8,8,0,0,1-8-8c0-42.29,23-57.34,32.86-61.85a8,8,0,0,1,6.64,14.56c-6.43,2.93-20.62,12.36-23.12,38.91,26.55-2.5,36-16.69,38.91-23.12a8,8,0,1,1,14.56,6.64Zm122-144a16,16,0,0,0-15-15c-12.58-.75-44.73.4-71.4,27.07h0L88,108.7A8,8,0,0,1,76.67,97.39l26.56-26.57A4,4,0,0,0,100.41,64H74.35A15.9,15.9,0,0,0,63,68.68L28.7,103a16,16,0,0,0,9.07,27.16l38.47,5.37,44.21,44.21,5.37,38.49a15.94,15.94,0,0,0,10.78,12.92,16.11,16.11,0,0,0,5.1.83A15.91,15.91,0,0,0,153,227.3L187.32,193A16,16,0,0,0,192,181.65V155.59a4,4,0,0,0-6.83-2.82l-26.57,26.56a8,8,0,0,1-11.71-.42,8.2,8.2,0,0,1,.6-11.1l49.27-49.27h0C223.45,91.86,224.6,59.71,223.85,47.12Z',
+  traction:
+    'M184,128c0,22.09-7.16,40-16,40s-16-17.91-16-40,7.16-40,16-40S184,105.91,184,128Zm56,96a8,8,0,0,1-8,8H92c-33.64,0-60-45.68-60-104S58.36,24,92,24h72c33.64,0,60,45.68,60,104,0,37.47-10.88,69.73-27.59,88H232A8,8,0,0,1,240,224ZM57.87,111.81a7.93,7.93,0,0,0,4.64-1.49L80,97.83l13.28,9.49a8,8,0,0,0,9.3-13L84.65,81.49a8,8,0,0,0-9.3,0L53.21,97.3a8,8,0,0,0,4.66,14.51Zm46.67,47.89L84.65,145.49a8,8,0,0,0-9.3,0L56,159.29a8,8,0,1,0,9.3,13L80,161.83l15.24,10.88a8,8,0,1,0,9.3-13Zm89.2,32.37c9.19-17,14.26-39.74,14.26-64.07s-5.07-47.09-14.26-64.07C185.38,48.5,174.82,40,164,40s-21.38,8.5-29.74,23.93C125.07,80.91,120,103.67,120,128s5.07,47.09,14.26,64.07C142.62,207.5,153.18,216,164,216S185.38,207.5,193.74,192.07Z',
+  map_icon:
+    'M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69ZM96,176a8,8,0,0,0-1.94.24L40,189.75V62.25L95.07,48.48l.93.46Zm120,17.75-55.07,13.77-.93-.46V80a8,8,0,0,0,1.94-.23L216,66.25Z',
+  exhaust:
+    'M168,232a8,8,0,0,1-8,8H104a8,8,0,0,1,0-16h56A8,8,0,0,1,168,232Zm-40-32a8,8,0,0,0-8-8H72a8,8,0,0,0,0,16h48A8,8,0,0,0,128,200Zm56-8H160a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Zm47.87-96.45a76,76,0,0,0-151.78.73A8.18,8.18,0,0,1,72,104l-.6,0A8.14,8.14,0,0,1,64,95.39a92.48,92.48,0,0,1,2.33-16.51,4,4,0,0,0-5-4.78A52.09,52.09,0,0,0,24,124.36C24.2,153.07,48.12,176,76.84,176H156A76.08,76.08,0,0,0,231.87,95.55Z',
+  cog: 'M216,130.16q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.29,107.29,0,0,0-26.25-10.86,8,8,0,0,0-7.06,1.48L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z',
+}
 
-function RpmIcon({ size = 20, color = 'currentColor' }: IconProps) {
+const PHOSPHOR_VIEWBOX = '0 0 256 256' as const
+
+function PhosphorIcon({
+  d,
+  size = 20,
+  color = 'currentColor',
+}: IconProps & { d: string }): React.JSX.Element {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 12 L12 6" />
-      <path d="M12 12 L16 9" strokeWidth={2.5} />
-      <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
-      <path d="M5.5 17 a8 8 0 0 1 0-10" strokeDasharray="2 1.5" />
+    <svg width={size} height={size} viewBox={PHOSPHOR_VIEWBOX} fill={color} aria-hidden="true">
+      <path d={d} />
     </svg>
   )
 }
 
-function SpeedIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <path d="M5 12 a7 7 0 0 1 14 0" />
-      <path d="M12 12 L15 8" strokeWidth={2.2} />
-      <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
-      <path d="M8 17 h8" />
-    </svg>
-  )
-}
-
-function CoolantIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <path d="M12 3 C12 3 7 9 7 14 a5 5 0 0 0 10 0 C17 9 12 3 12 3z" />
-      <path d="M9.5 14 a2.5 2.5 0 0 0 5 0" strokeDasharray="2 1" />
-    </svg>
-  )
-}
-
-function OilPressureIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <ellipse cx="12" cy="16" rx="5" ry="4" />
-      <path d="M12 12 L12 5" />
-      <path d="M9 8 L12 5 L15 8" />
-      <path d="M7 14 Q5 10 8 7" strokeDasharray="2 1.5" />
-    </svg>
-  )
-}
-
-function OilTempIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <rect x="9" y="3" width="6" height="12" rx="3" />
-      <circle cx="12" cy="18" r="3" />
-      <path d="M12 15 L12 10" strokeWidth={2.5} stroke={color} />
-      <path d="M14 7 h2 M14 10 h2" strokeWidth={1.2} />
-    </svg>
-  )
-}
-
-function BatteryIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <rect x="2" y="7" width="18" height="10" rx="2" />
-      <path d="M20 11 L22 11 L22 13 L20 13" />
-      <path d="M7 11 L10 11 L9 13 L12 13 L9 13 M12 11 L11 13" strokeWidth={1.5} />
-    </svg>
-  )
-}
-
-function FuelIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <rect x="3" y="6" width="11" height="15" rx="2" />
-      <path d="M14 9 L17 9 Q19 9 19 11 L19 14 Q19 15 18 15 L17 15" />
-      <path d="M17 15 L17 20" />
-      <path d="M6 11 h5" />
-    </svg>
-  )
-}
-
-function AfrIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <text
-        x="3"
-        y="18"
-        fontSize="18"
-        fontFamily="serif"
-        fontStyle="italic"
-        fill={color}
-        stroke="none"
-      >
-        λ
-      </text>
-    </svg>
-  )
-}
-
-function BoostIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <path d="M4 18 a8 8 0 0 1 16 0" />
-      <path d="M12 10 L12 5 M10 7 L12 5 L14 7" />
-      <path d="M8 18 L8 15 M16 18 L16 15" strokeWidth={1.2} />
-      <circle cx="12" cy="18" r="1.5" fill={color} stroke="none" />
-    </svg>
-  )
-}
-
-function ThrottleIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <ellipse cx="12" cy="12" rx="9" ry="3" />
-      <path d="M12 3 L12 21" strokeWidth={1.2} />
-    </svg>
-  )
-}
-
-function IatIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <path d="M4 8 Q8 4 12 8 Q16 12 20 8" />
-      <rect x="9" y="10" width="6" height="9" rx="3" />
-      <circle cx="12" cy="21" r="0.5" fill={color} />
-    </svg>
-  )
-}
-
-function GearIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // H-pattern gear selector: two rails (columns), three positions each
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      {/* Vertical rails */}
-      <line x1="8" y1="3" x2="8" y2="21" />
-      <line x1="16" y1="3" x2="16" y2="21" />
-      {/* Horizontal gate */}
-      <line x1="8" y1="12" x2="16" y2="12" />
-      {/* Gear positions: circles at 1,2,3,4,5,R */}
-      <circle cx="8" cy="5" r="1.6" fill={color} stroke="none" />
-      <circle cx="16" cy="5" r="1.6" stroke={color} strokeWidth={1.4} />
-      <circle cx="8" cy="19" r="1.6" stroke={color} strokeWidth={1.4} />
-      <circle cx="16" cy="19" r="1.6" stroke={color} strokeWidth={1.4} />
-    </svg>
-  )
-}
-
-function TimerIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <circle cx="12" cy="13" r="8" />
-      <path d="M12 9 L12 13 L15 15" />
-      <path d="M9 2 L15 2 M12 2 L12 5" />
-    </svg>
-  )
-}
-
-function WarningIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10.3 4 L2 20 h20 L13.7 4 a2 2 0 0 0-3.4 0z" />
-      <path d="M12 10 L12 14 M12 17 L12 17.5" strokeWidth={2} />
-    </svg>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Automotive control icons
-// ---------------------------------------------------------------------------
-
-function FlameIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // Classic multi-lobe flame: rounded base, three tapering tongues
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Left tongue */}
-      <path d="M8 20C5 18 4 14 6 11C6.5 14 8 15 8 15C8 12 9 9 9 7C10.5 10 10 13 10 14" />
-      {/* Right tongue */}
-      <path d="M16 20C19 18 20 14 18 11C17.5 14 16 15 16 15C16 12 15 9 15 7C13.5 10 14 13 14 14" />
-      {/* Center main flame */}
-      <path d="M10 14C10 11 11 8 12 4C13 8 14 11 14 14C14 17.3 13.1 20 12 20C10.9 20 10 17.3 10 14Z" />
-    </svg>
-  )
-}
-
-function TurboIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // Turbocharger: scroll/snail housing silhouette + compressor wheel
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      {/* Compressor housing (outer ring) */}
-      <circle cx="11" cy="13" r="7" />
-      {/* Shaft center */}
-      <circle cx="11" cy="13" r="1.8" fill={color} stroke="none" />
-      {/* 4 backward-swept impeller blades */}
-      <path d="M11 11.2C13 10 15 10.8 13.2 13" strokeWidth={2} strokeLinecap="round" />
-      <path d="M12.8 14.8C14 16.8 13.2 18.8 11 17" strokeWidth={2} strokeLinecap="round" />
-      <path d="M11 14.8C9 16 7 15.2 8.8 13" strokeWidth={2} strokeLinecap="round" />
-      <path d="M9.2 11.2C8 9.2 8.8 7.2 11 9" strokeWidth={2} strokeLinecap="round" />
-      {/* Inlet duct pipe at top-right */}
-      <path d="M16.5 7.5L20 4" />
-      <path d="M14.5 6L16.5 7.5L15 9.5" />
-    </svg>
-  )
-}
-
-function EngineIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // Engine: piston + connecting rod cross-section — universally recognizable
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Cylinder block */}
-      <rect x="7" y="2" width="10" height="12" rx="1.5" />
-      {/* Piston inside cylinder */}
-      <rect x="9" y="5" width="6" height="4" rx="1" />
-      {/* Connecting rod */}
-      <line x1="12" y1="9" x2="12" y2="16" />
-      {/* Crankshaft */}
-      <circle cx="12" cy="19" r="3" />
-      <circle cx="12" cy="19" r="1" fill={color} stroke="none" />
-      {/* Crank pin offset */}
-      <line x1="12" y1="16" x2="14" y2="18" />
-    </svg>
-  )
-}
-
-function BrakeIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // Disc brake: rotor disc with caliper — clear automotive symbol
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      {/* Rotor disc */}
-      <circle cx="12" cy="12" r="9" />
-      {/* Hub */}
-      <circle cx="12" cy="12" r="3.5" />
-      {/* Vent slots (6 equally spaced) */}
-      <line x1="12" y1="8.5" x2="12" y2="5" strokeWidth={2.5} />
-      <line x1="15.5" y1="10" x2="18.5" y2="8.2" strokeWidth={2.5} />
-      <line x1="15.5" y1="14" x2="18.5" y2="15.8" strokeWidth={2.5} />
-      <line x1="12" y1="15.5" x2="12" y2="19" strokeWidth={2.5} />
-      <line x1="8.5" y1="14" x2="5.5" y2="15.8" strokeWidth={2.5} />
-      <line x1="8.5" y1="10" x2="5.5" y2="8.2" strokeWidth={2.5} />
-      {/* Caliper */}
-      <path d="M3 9 L3 15 Q3 16 4 16 L5 16 L5 8 L4 8 Q3 8 3 9Z" />
-    </svg>
-  )
-}
-
-function LaunchIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // Launch control: traffic light / countdown — clear racing symbol
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Traffic light housing */}
-      <rect x="8" y="2" width="8" height="18" rx="3" />
-      {/* Red light (top) */}
-      <circle cx="12" cy="7" r="2" fill={color} stroke="none" />
-      {/* Amber (mid) */}
-      <circle cx="12" cy="12" r="2" />
-      {/* Green (bottom — active) */}
-      <circle cx="12" cy="17" r="2" />
-      {/* Stand */}
-      <line x1="12" y1="20" x2="12" y2="22" />
-    </svg>
-  )
-}
-
-function TractionIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // TC: car with wavy skid marks — the universal traction control symbol
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Car body side silhouette */}
-      <path d="M2 14 L2 12 L6 9 L10 8 L16 8 L20 10 L22 12 L22 14 L2 14Z" />
-      {/* Roof */}
-      <path d="M7 8 L9 5 L15 5 L17 8" />
-      {/* Wheels */}
-      <circle cx="7" cy="15" r="2.5" />
-      <circle cx="17" cy="15" r="2.5" />
-      {/* Skid / slip marks */}
-      <path d="M6 20 Q7 18 8 20 Q9 22 10 20" strokeWidth={1.4} />
-      <path d="M14 20 Q15 18 16 20 Q17 22 18 20" strokeWidth={1.4} />
-    </svg>
-  )
-}
-
-function MapIconIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // ECU map / tune: grid table with a highlighted cell — recognizable "map table"
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Table border */}
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      {/* Column dividers */}
-      <line x1="9" y1="3" x2="9" y2="21" />
-      <line x1="15" y1="3" x2="15" y2="21" />
-      {/* Row dividers */}
-      <line x1="3" y1="9" x2="21" y2="9" />
-      <line x1="3" y1="15" x2="21" y2="15" />
-      {/* Highlighted active cell */}
-      <rect x="9" y="9" width="6" height="6" fill={color} stroke="none" rx="0.5" />
-    </svg>
-  )
-}
-
-function ExhaustIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  // Exhaust: pipe exit with smoke puffs — recognizable EGT / exhaust symbol
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      {/* Exhaust pipe (horizontal, exit right) */}
-      <path d="M2 15 L12 15" />
-      <path d="M12 15 Q14 15 14 12 L14 8 Q14 6 16 6 L20 6" />
-      {/* Pipe flanges */}
-      <line x1="2" y1="13" x2="2" y2="17" />
-      {/* Smoke puffs coming out the top */}
-      <path d="M17 4 Q18 2 19 4 Q20 6 21 4" strokeWidth={1.5} />
-      <path d="M15 2 Q16 0.5 17 2" strokeWidth={1.3} />
-    </svg>
-  )
-}
-
-function CogIcon({ size = 20, color = 'currentColor' }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Icon map
-// ---------------------------------------------------------------------------
-
+// Public API: name -> component, kept stable for PropertyPanel / WidgetPalette / WidgetPreview.
 const ICON_MAP: Record<SensorIconName, (props: IconProps) => React.JSX.Element> = {
-  // Sensors
-  rpm: RpmIcon,
-  speed: SpeedIcon,
-  coolant: CoolantIcon,
-  oil_pressure: OilPressureIcon,
-  oil_temp: OilTempIcon,
-  battery: BatteryIcon,
-  fuel: FuelIcon,
-  afr: AfrIcon,
-  boost: BoostIcon,
-  throttle: ThrottleIcon,
-  iat: IatIcon,
-  gear: GearIcon,
-  timer: TimerIcon,
-  warning: WarningIcon,
-  // Automotive controls
-  flame: FlameIcon,
-  turbo: TurboIcon,
-  engine: EngineIcon,
-  brake: BrakeIcon,
-  launch: LaunchIcon,
-  traction: TractionIcon,
-  map_icon: MapIconIcon,
-  exhaust: ExhaustIcon,
-  // Mechanical
-  cog: CogIcon,
+  rpm: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.rpm} />,
+  speed: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.speed} />,
+  coolant: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.coolant} />,
+  oil_pressure: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.oil_pressure} />,
+  oil_temp: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.oil_temp} />,
+  battery: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.battery} />,
+  fuel: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.fuel} />,
+  afr: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.afr} />,
+  boost: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.boost} />,
+  throttle: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.throttle} />,
+  iat: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.iat} />,
+  gear: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.gear} />,
+  timer: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.timer} />,
+  warning: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.warning} />,
+  flame: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.flame} />,
+  turbo: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.turbo} />,
+  engine: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.engine} />,
+  brake: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.brake} />,
+  launch: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.launch} />,
+  traction: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.traction} />,
+  map_icon: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.map_icon} />,
+  exhaust: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.exhaust} />,
+  cog: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.cog} />,
 }
 
 export const SENSOR_ICON_NAMES = Object.keys(ICON_MAP) as SensorIconName[]
