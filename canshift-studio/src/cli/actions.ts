@@ -14,8 +14,7 @@ import { validateDashboard } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
-import { sdIpc, sessionIpc, usbService } from '../services/ipc.service'
-import { isSdWritable, sdStateWarning } from '../utils/sdState'
+import { sessionIpc, usbService } from '../services/ipc.service'
 import type { CliActions, CliResult } from './types'
 
 const okResult: CliResult = { ok: true }
@@ -74,11 +73,6 @@ async function burnConfig(): Promise<CliResult> {
     log('error', `aborted — ${reason}`, 'burn')
     return failResult(reason)
   }
-  if (!isSdWritable(device.sdState)) {
-    const warning = sdStateWarning(device.sdState) ?? 'SD card unavailable'
-    log('error', `aborted — ${warning}`, 'burn')
-    return failResult(warning)
-  }
 
   const validation = validateDashboard(config)
   if (!validation.valid) {
@@ -120,39 +114,6 @@ async function burnConfig(): Promise<CliResult> {
     device.setError(msg)
     device.setBurnPhase('idle')
     log('error', `failed: ${msg} (after ${String(elapsedMs)} ms)`, 'burn')
-    return failResult(msg)
-  }
-}
-
-async function pushUsb(): Promise<CliResult> {
-  const log = useLogStore.getState().push
-  const device = useDeviceStore.getState()
-  if (!device.connected || device.simulationMode) {
-    const reason = device.simulationMode ? 'simulation mode' : 'not connected'
-    log('error', `aborted — ${reason}`, 'sd')
-    return failResult(reason)
-  }
-
-  log('info', 'SD push over USB started', 'sd')
-  const startedAt = performance.now()
-  try {
-    const result = await sdIpc.pushOverUsb()
-    const elapsedMs = Math.round(performance.now() - startedAt)
-    if (result.success) {
-      log(
-        'success',
-        `SD push ok — copied ${String(result.copied.length)}, skipped ${String(result.skipped.length)} in ${String(elapsedMs)} ms`,
-        'sd'
-      )
-      return okResult
-    }
-    const msg = result.error ?? 'push over USB failed'
-    log('error', `SD push failed: ${msg} (after ${String(elapsedMs)} ms)`, 'sd')
-    return failResult(msg)
-  } catch (err) {
-    const elapsedMs = Math.round(performance.now() - startedAt)
-    const msg = err instanceof Error ? err.message : 'push over USB error'
-    log('error', `SD push failed: ${msg} (after ${String(elapsedMs)} ms)`, 'sd')
     return failResult(msg)
   }
 }
@@ -243,7 +204,6 @@ async function listPortsAction(): Promise<string[]> {
 export function buildActions(navigate: NavigateFunction): CliActions {
   return {
     burnConfig,
-    pushUsb,
     connect: connectAction,
     disconnect: disconnectAction,
     reboot: rebootAction,

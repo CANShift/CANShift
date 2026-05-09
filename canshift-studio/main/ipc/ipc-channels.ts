@@ -47,7 +47,7 @@ export const IpcChannels = {
   // Main → renderer (download progress events for FIRMWARE_DOWNLOAD)
   FIRMWARE_DOWNLOAD_PROGRESS: 'firmware:download-progress',
 
-  // Read the current dashboard.json from the connected device's SD card.
+  // Read the current dashboard.json from the connected device's storage.
   DEVICE_GET_CONFIG: 'device:get-config',
 
   // Edit history (main → renderer)
@@ -87,14 +87,6 @@ export const IpcChannels = {
   // Auto-update (renderer → main)
   UPDATE_CHECK: 'update:check',
   UPDATE_INSTALL: 'update:install',
-
-  // SD card preparation (renderer → main)
-  SD_LIST_VOLUMES: 'sd:list-volumes',
-  SD_PREPARE: 'sd:prepare',
-  // Stream sd_contents/ to the connected board over USB (no card removal needed)
-  SD_PUSH_OVER_USB: 'sd:push-over-usb',
-  // Main → renderer: per-file progress while SD_PUSH_OVER_USB runs
-  SD_PUSH_PROGRESS: 'sd:push-progress',
 
   // Device hardware config (renderer → main)
   DEVICE_CONFIG_READ: 'device:read',

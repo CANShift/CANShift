@@ -54,10 +54,6 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.DEVICE_GET_CONFIG,
   // Signal mapping
   C.SIGNAL_EXPORT,
-  // SD card preparation
-  C.SD_LIST_VOLUMES,
-  C.SD_PREPARE,
-  C.SD_PUSH_OVER_USB,
   // App info / auto-update controls
   C.APP_VERSION,
   C.UPDATE_CHECK,
@@ -92,8 +88,6 @@ export const LISTEN_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.CAN_HEALTH_UPDATE,
   // Firmware download progress
   C.FIRMWARE_DOWNLOAD_PROGRESS,
-  // SD card push progress
-  C.SD_PUSH_PROGRESS,
   // Main-process log forwarding
   C.APP_LOG,
   // Auto-update

@@ -90,7 +90,7 @@ const VERSION: CommandSpec = {
 
 const STATUS: CommandSpec = {
   name: 'status',
-  summary: 'Show device connection, firmware version, and SD state',
+  summary: 'Show device connection and firmware version',
   usage: 'status',
   run: (_args, ctx) => {
     if (!ctx.device.connected) {
@@ -102,7 +102,6 @@ const STATUS: CommandSpec = {
     if (ctx.device.firmwareVersion !== null) {
       segments.push(`firmware v${ctx.device.firmwareVersion}`)
     }
-    segments.push(`sd=${ctx.device.sdState}`)
     writeLine(ctx, `[status] ${segments.join(', ')}`)
     return ok()
   },
@@ -126,23 +125,6 @@ const BURN: CommandSpec = {
       return fail()
     }
     return ctx.actions.burnConfig()
-  },
-}
-
-// ---------------------------------------------------------------------------
-// push-usb
-// ---------------------------------------------------------------------------
-
-const PUSH_USB: CommandSpec = {
-  name: 'push-usb',
-  summary: 'Push SD assets (signals, dashboards, fonts) to the device over USB',
-  usage: 'push-usb',
-  run: async (_args, ctx) => {
-    if (!ctx.device.connected) {
-      writeLine(ctx, '[push-usb] not connected')
-      return fail()
-    }
-    return ctx.actions.pushUsb()
   },
 }
 
@@ -232,7 +214,6 @@ export const COMMANDS: readonly CommandSpec[] = [
   VERSION,
   STATUS,
   BURN,
-  PUSH_USB,
   CONNECT,
   DISCONNECT,
   REBOOT,

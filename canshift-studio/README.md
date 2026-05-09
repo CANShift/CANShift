@@ -19,15 +19,13 @@ flasher — all over a single USB serial cable. See the
 | Signal binding editor + signals export | Working |
 | USB device connection (list ports, connect, disconnect) | Working |
 | Push config to device with diff preview + adaptive ack timeout | Working |
-| Read live `dashboard.json` from device SD card | Working |
+| Read live `dashboard.json` from device storage | Working |
 | Session restore (reopens last file + last port on launch) | Working |
 | First-run onboarding (welcome → connect → optional demo burn) | Working |
 | CAN bus scanner (live frame table with fps + per-id rate) | Working |
 | CAN health indicator in status bar | Working |
 | Live telemetry display (LIVE / SIM / NO DATA badge) | Working |
 | Structured device-log viewer (level/tag/message) | Working |
-| SD-card preparation: prepare a removable card or push assets over USB | Working |
-| SD-state surface (`ok` / `no_card` / `mount_failed` / `unknown`) | Working |
 | Flash Latest (fetch from GitHub + flash via Web Serial in renderer) | Working |
 | Manual firmware flash from local merged `.bin` | Working |
 | Day/night and touch-calibration commands | Working |
@@ -124,9 +122,8 @@ canshift-studio/
 │   │   └── ipc-handlers.ts            # All ipcMain.handle / ipcMain.on registrations
 │   └── services/
 │       ├── config-file.service.ts     # Open / save / import / export config JSON
-│       ├── usb.service.ts             # USB serial — connect, push config, CAN scan, SD push
+│       ├── usb.service.ts             # USB serial — connect, push config, CAN scan
 │       ├── firmware.service.ts        # GitHub releases, bootloader DTR/RTS pulse, downloads
-│       ├── sd.service.ts              # Removable-card detection + sd_contents preparation
 │       ├── session.service.ts         # Persist last file / last port / first-run flag
 │       └── updater.service.ts         # electron-updater integration
 └── src/                               # Renderer (React 18 + Vite)
@@ -211,7 +208,7 @@ Opcodes match `main/services/usb.service.ts` and the firmware `signal_map`:
 | `CMD_TOGGLE_DAY_NIGHT` | `0x07` | Legacy toggle — kept for older firmware |
 | `CMD_CALIBRATE_TOUCH` | `0x08` | Run the on-device crosshair flow |
 | `CMD_SET_DAY_NIGHT` | `0x09` | Explicit, idempotent — **preferred over `0x07` for new code** (#288) |
-| `CMD_GET_STATUS` | `0x10` | Query firmware version + SD state |
+| `CMD_GET_STATUS` | `0x10` | Query firmware version + day/night state |
 | `CMD_CAN_SCAN_START` | `0x20` | Start forwarding raw CAN frames |
 | `CMD_CAN_SCAN_STOP` | `0x21` | Stop CAN scan |
 
@@ -222,21 +219,7 @@ Opcodes match `main/services/usb.service.ts` and the firmware `signal_map`:
 | Telemetry | `{"tele":1,"v":{…}}` | All live signal values (~5 Hz) |
 | CAN frame | `{"can":1,"id":888,"len":8,"d":[…]}` | Raw frame in scan mode |
 | CAN health | `{"can_stat":1,"fps":125,"errors":0}` | Bus stats every ~2 s |
-| Device log | `{"level":"warn","tag":"sd","message":"…"}` | Forwarded as `usb:device-log` |
-
-### SD-card status surface
-
-`CMD_GET_STATUS` returns an `sd_state` field parsed by `parseSdState` (#293):
-
-| Value | Meaning |
-|-------|---------|
-| `ok` | SD mounted, persistent writes work |
-| `no_card` | No card inserted — device runs on built-in defaults |
-| `mount_failed` | Card present but unreadable — defaults active |
-| `unknown` | Older firmware that omits `sd_state` — UI treats as best-effort OK |
-
-Older firmware that ships only the integer `sd` field maps `0 → mount_failed`
-and `1 → ok` for compatibility.
+| Device log | `{"level":"warn","tag":"USB","message":"…"}` | Forwarded as `usb:device-log` |
 
 ---
 

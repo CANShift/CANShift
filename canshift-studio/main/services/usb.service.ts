@@ -12,7 +12,7 @@
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
 import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
-import type { CanFrame, CanHealth, SdRuntimeState } from './usb.service.types'
+import type { CanFrame, CanHealth } from './usb.service.types'
 
 /**
  * Structured log entry forwarded from the firmware.
@@ -49,9 +49,9 @@ interface PendingAck {
 
 const ACK_TIMEOUT_MS = 5_000
 
-// CMD_PUT_CONFIG ack scaling — the firmware writes the full JSON to SD
-// synchronously before acking, so a slow CH340 link plus a slow SD card can
-// easily exceed the default 5 s ack window for 5+ KB configs (issue #217).
+// CMD_PUT_CONFIG ack scaling — the firmware writes the full JSON to storage
+// synchronously before acking, so a slow CH340 link plus a slow SPIFFS write
+// can exceed the default 5 s ack window for 5+ KB configs (issue #217).
 // Add a generous per-KB margin on top of the base timeout, and cap the total
 // so a runaway payload can't hang the UI indefinitely.
 const PUT_CONFIG_BASE_TIMEOUT_MS = ACK_TIMEOUT_MS
@@ -63,13 +63,6 @@ const PUT_CONFIG_MAX_TIMEOUT_MS = 60_000
 // (rxPos=0 → no handleCommand call) so it doesn't pollute the response stream
 // or interfere with pending acks. Drives the top-bar USB icon (issue #53).
 const HEARTBEAT_INTERVAL_MS = 2_000
-
-// CMD_PUT_FILE chunking. 2 KB raw → ~2.7 KB base64 → ~2.9 KB JSON line, well
-// below the firmware's 6.4 KB receive buffer. Each chunk is acked individually
-// so a 76 KB asset takes ~38 round-trips at 115 200 baud (~10 s end-to-end).
-const PUT_FILE_CHUNK_SIZE = 2048
-// CMD_PUT_FILE acks come back fast — 1 s is generous on a healthy link.
-const PUT_FILE_CHUNK_TIMEOUT_MS = 5_000
 
 const BYTES_PER_KB = 1024
 
@@ -85,31 +78,6 @@ export function putConfigTimeoutMs(payloadBytes: number): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-/**
- * Parse the additive `sd` / `sd_state` fields from a CMD_GET_STATUS response.
- *
- * The `sd_state` string is the source of truth on current firmware. We fall
- * back to `sd === 0` (degraded, exact failure mode unknown) for the brief
- * window where firmware shipped `sd` without `sd_state`. Pre-#201 firmware
- * that ships neither field maps to 'unknown' so the renderer can keep the
- * existing UX (no warning, all actions enabled).
- */
-export function parseSdState(response: Record<string, unknown>): SdRuntimeState {
-  const stateRaw = response.sd_state
-  if (typeof stateRaw === 'string') {
-    if (stateRaw === 'ok' || stateRaw === 'no_card' || stateRaw === 'mount_failed') {
-      return stateRaw
-    }
-    // Unrecognised string from a future firmware revision — treat conservatively
-    // as a known degraded state so config writes are blocked, not silently lost.
-    return 'mount_failed'
-  }
-  const sdRaw = response.sd
-  if (sdRaw === 0) return 'mount_failed'
-  if (sdRaw === 1) return 'ok'
-  return 'unknown'
 }
 
 function safeJsonParse(line: string): unknown {
@@ -261,38 +229,32 @@ export class UsbService {
   }
 
   /**
-   * Query the device firmware version + day/night state + SD card state.
+   * Query the device firmware version + day/night state.
    * Returns { version: null } on timeout (device has no CANShift firmware,
    * or pre-v0.2 firmware without CMD_GET_STATUS support).
    * `isDay` is null on firmware older than 0.7.0 which didn't expose it.
-   * `sdState` is 'unknown' on firmware older than the issue #201/#254/#269
-   * batch which didn't expose `sd_state`. Treat 'unknown' as best-effort OK
-   * to keep the older-firmware UX intact.
    */
   async queryVersion(): Promise<{
     version: string | null
     isDay: boolean | null
-    sdState: SdRuntimeState
   }> {
-    // CMD_GET_STATUS = 0x10 — response (current firmware):
-    //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1,
-    //    "sd":0|1,"sd_state":"ok"|"no_card"|"mount_failed"}
+    // CMD_GET_STATUS = 0x10 — response:
+    //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1}
     const payload = JSON.stringify({ cmd: 0x10 }) + '\n'
     const result = await this.sendCommand(payload, 2_000) // shorter timeout for probe
     if (!result.success || !result.data) {
-      return { version: null, isDay: null, sdState: 'unknown' }
+      return { version: null, isDay: null }
     }
     const v = result.data.version
     const isDayRaw = result.data.is_day
     return {
       version: typeof v === 'string' ? v : null,
       isDay: isDayRaw === 1 ? true : isDayRaw === 0 ? false : null,
-      sdState: parseSdState(result.data),
     }
   }
 
   /**
-   * Read the current dashboard.json content from the device's SD card.
+   * Read the current dashboard.json content from the device's storage.
    *
    * Distinguishes three outcomes so the caller (renderer) can react properly
    * to a fresh device with no config (auto-load demo) vs a flaky link
@@ -352,49 +314,6 @@ export class UsbService {
   async stopCanScan(): Promise<UsbResult> {
     const payload = JSON.stringify({ cmd: 0x21 }) + '\n'
     return this.sendCommand(payload)
-  }
-
-  /**
-   * Stream a file to the SD card over USB in base64-encoded chunks.
-   * Each chunk is acked by the firmware before the next is sent — so a slow
-   * SD write or a stalled link can't run ahead of the device.
-   *
-   * @param devicePath absolute path on the SD ("/assets/icon_day.bin")
-   * @param content    file bytes to write
-   */
-  async pushFile(devicePath: string, content: Buffer): Promise<UsbResult> {
-    if (!this.port?.isOpen) {
-      return { success: false, error: 'Not connected to device' }
-    }
-    if (!devicePath.startsWith('/')) {
-      return { success: false, error: `Invalid device path: ${devicePath}` }
-    }
-
-    const totalChunks = Math.max(1, Math.ceil(content.length / PUT_FILE_CHUNK_SIZE))
-
-    for (let idx = 0; idx < totalChunks; idx++) {
-      const start = idx * PUT_FILE_CHUNK_SIZE
-      const end = Math.min(start + PUT_FILE_CHUNK_SIZE, content.length)
-      const chunk = content.subarray(start, end)
-      const payload =
-        JSON.stringify({
-          cmd: 0x06,
-          path: devicePath,
-          total: totalChunks,
-          idx,
-          data: chunk.toString('base64'),
-        }) + '\n'
-
-      const ack = await this.sendCommand(payload, PUT_FILE_CHUNK_TIMEOUT_MS)
-      if (!ack.success) {
-        return {
-          success: false,
-          error: `chunk ${String(idx + 1)}/${String(totalChunks)} of ${devicePath}: ${ack.error ?? 'unknown error'}`,
-        }
-      }
-    }
-
-    return { success: true }
   }
 
   async rebootDevice(): Promise<UsbResult> {

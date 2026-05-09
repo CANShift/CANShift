@@ -2,8 +2,8 @@
 //
 // Replaces the old auto-popup FirmwareDialog. The panel surfaces the result
 // of the version probe (`firmwareCheck` slice on the device store), exposes
-// a "Check now" button, lets the user pick + flash a release (or a local
-// .bin), and chains into SD-prep after a successful flash.
+// a "Check now" button, and lets the user pick + flash a release (or a local
+// .bin).
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -12,7 +12,6 @@ import { useLogStore } from '../stores/log.store'
 import { IconUsb } from '../components/icons/Icon'
 import { Spinner } from '../components/shared/PhaseIndicator'
 import { SafeMarkdown } from '../components/shared/SafeMarkdown'
-import SdPrepPanel from '../components/shared/SdPrepPanel'
 import { firmwareIpc } from '../services/ipc.service'
 import { useFirmwareFlash } from '../hooks/useFirmwareFlash'
 import { Label } from '@/components/ui/label'
@@ -153,13 +152,6 @@ export default function UpdateRoute() {
   const [manualError, setManualError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ---- SD prep panel — auto-opens after a successful flash ----
-  const [sdPanelOpen, setSdPanelOpen] = useState(false)
-
-  useEffect(() => {
-    if (state === 'done') setSdPanelOpen(true)
-  }, [state])
-
   useEffect(() => {
     let cancelled = false
     setReleasesLoading(true)
@@ -220,7 +212,6 @@ export default function UpdateRoute() {
   const handleFlashReset = (): void => {
     setActiveFlash(null)
     flashReset()
-    setSdPanelOpen(false)
   }
 
   // ---- Manual flash handlers ----
@@ -264,7 +255,6 @@ export default function UpdateRoute() {
     flashReset()
     setSelectedFile(null)
     setManualError(null)
-    setSdPanelOpen(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -626,17 +616,6 @@ export default function UpdateRoute() {
         </div>
       </div>
 
-      {/* SD prep panel — surfaces after a successful flash, but the user can
-          also reach it manually via the SD card row in DonePanel.            */}
-      {sdPanelOpen && (
-        <SdPrepPanel
-          expanded
-          onClose={() => {
-            setSdPanelOpen(false)
-          }}
-        />
-      )}
-
       {/* ------------------------------------------------------------------ */}
       {/* Release list                                                         */}
       {/* ------------------------------------------------------------------ */}
@@ -871,30 +850,6 @@ export default function UpdateRoute() {
           {isManualActive && flashBusy ? 'Flashing…' : 'Flash Firmware'}
         </button>
       </div>
-
-      {/* Manual SD prep entry — also reachable from this row when no flash
-          has happened yet (e.g. swapping cards on a working device).         */}
-      {!sdPanelOpen && (
-        <button
-          onClick={() => {
-            setSdPanelOpen(true)
-          }}
-          style={{
-            width: '100%',
-            maxWidth: 480,
-            padding: '8px 12px',
-            background: 'transparent',
-            border: '1px solid #222222',
-            borderRadius: 5,
-            color: '#888888',
-            fontSize: 11,
-            cursor: 'pointer',
-            letterSpacing: '0.03em',
-          }}
-        >
-          Prepare an SD card…
-        </button>
-      )}
     </div>
   )
 }

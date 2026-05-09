@@ -25,7 +25,7 @@ import type { FirmwareCheck } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
 import { firmwareIpc } from '../services/ipc.service'
-import type { FirmwareRelease, FirmwareStatus, SdRuntimeState } from '../services/ipc.service'
+import type { FirmwareRelease, FirmwareStatus } from '../services/ipc.service'
 
 // Delay between the first failed probe and the retry. Long enough to clear a
 // post-reboot CMD_GET_STATUS timeout, short enough to keep the UI responsive.
@@ -57,7 +57,6 @@ export interface ProbeReport {
   setFirmwareCheck: (check: FirmwareCheck) => void
   setFirmwareVersion: (version: string | null) => void
   setIsDayMode: (isDay: boolean | null) => void
-  setSdState: (state: SdRuntimeState) => void
   /**
    * Optional sink for activity-log entries. The hook wires this to
    * `useLogStore.push`; tests can omit it for a silent run.
@@ -103,10 +102,9 @@ export async function runFirmwareProbe(
   const version = status.version
   report.setFirmwareVersion(version)
   report.setIsDayMode(status.isDay)
-  report.setSdState(status.sdState)
   log(
     'info',
-    `[status] Firmware v${version} — sd=${status.sdState}, day=${status.isDay === null ? 'unknown' : String(status.isDay)} (${String(elapsedMs)} ms)`
+    `[status] Firmware v${version} — day=${status.isDay === null ? 'unknown' : String(status.isDay)} (${String(elapsedMs)} ms)`
   )
 
   // 2. Check for updates against stable releases. If the API throws we
@@ -154,7 +152,6 @@ export function useFirmwareCheck(): void {
   const setFirmwareVersion = useDeviceStore((s) => s.setFirmwareVersion)
   const setFirmwareCheck = useDeviceStore((s) => s.setFirmwareCheck)
   const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
-  const setSdState = useDeviceStore((s) => s.setSdState)
   const log = useLogStore((s) => s.push)
 
   // Last portPath we successfully probed. Reconnects to the same port skip the
@@ -204,7 +201,6 @@ export function useFirmwareCheck(): void {
       },
       setFirmwareVersion,
       setIsDayMode,
-      setSdState,
       log,
     }
 
@@ -222,7 +218,6 @@ export function useFirmwareCheck(): void {
     setFirmwareVersion,
     setFirmwareCheck,
     setIsDayMode,
-    setSdState,
     log,
   ])
 }

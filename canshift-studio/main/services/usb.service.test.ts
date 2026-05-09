@@ -74,7 +74,7 @@ const fakes = vi.hoisted(() => {
 vi.mock('serialport', () => ({ SerialPort: fakes.FakeSerialPort }))
 vi.mock('@serialport/parser-readline', () => ({ ReadlineParser: fakes.FakeReadlineParser }))
 
-import { UsbService, parseSdState, putConfigTimeoutMs } from './usb.service'
+import { UsbService, putConfigTimeoutMs } from './usb.service'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -213,35 +213,7 @@ describe('putConfigTimeoutMs — CMD_PUT_CONFIG ack timeout scaling (issue #217)
   })
 })
 
-describe('parseSdState — CMD_GET_STATUS additive SD fields (issue #252)', () => {
-  it('returns the canonical state when sd_state is one of the three known values', () => {
-    expect(parseSdState({ sd_state: 'ok', sd: 1 })).toBe('ok')
-    expect(parseSdState({ sd_state: 'no_card', sd: 0 })).toBe('no_card')
-    expect(parseSdState({ sd_state: 'mount_failed', sd: 0 })).toBe('mount_failed')
-  })
-
-  it('falls back to sd:0/1 when only the boolean field is present', () => {
-    // Pre-#269 firmware shipped `sd` without `sd_state`. We can't tell why
-    // it failed, so a coarse "mount_failed" keeps writes blocked.
-    expect(parseSdState({ sd: 0 })).toBe('mount_failed')
-    expect(parseSdState({ sd: 1 })).toBe('ok')
-  })
-
-  it('returns "unknown" for old firmware that ships neither field', () => {
-    // Treating absent fields as "unknown" lets the renderer keep the legacy
-    // UX (no warning, burn enabled) on devices we haven't reflashed yet.
-    expect(parseSdState({})).toBe('unknown')
-    expect(parseSdState({ version: '0.6.0' })).toBe('unknown')
-  })
-
-  it('quarantines unrecognised sd_state strings as "mount_failed"', () => {
-    // Future firmware revisions that introduce a new state must NOT be
-    // silently treated as OK — block writes until the studio gains support.
-    expect(parseSdState({ sd_state: 'wedged' })).toBe('mount_failed')
-  })
-})
-
-describe('UsbService.queryVersion — SD state plumbing (issue #252)', () => {
+describe('UsbService.queryVersion — status plumbing', () => {
   beforeEach(() => {
     fakes.FakeSerialPort.instances.length = 0
     fakes.FakeSerialPort.listResult = [{ path: '/dev/tty.test' }]
@@ -250,7 +222,6 @@ describe('UsbService.queryVersion — SD state plumbing (issue #252)', () => {
   async function probe(line: string): Promise<{
     version: string | null
     isDay: boolean | null
-    sdState: string
   }> {
     const service = new UsbService()
     await service.connect('/dev/tty.test')
@@ -261,32 +232,27 @@ describe('UsbService.queryVersion — SD state plumbing (issue #252)', () => {
     return promise
   }
 
-  it('parses the full GET_STATUS payload including sd + sd_state', async () => {
-    const result = await probe(
-      '{"status":"ok","version":"0.7.1","protocol":1,"is_day":1,"sd":1,"sd_state":"ok"}'
-    )
-    expect(result).toEqual({ version: '0.7.1', isDay: true, sdState: 'ok' })
+  it('parses the GET_STATUS payload (version + is_day)', async () => {
+    const result = await probe('{"status":"ok","version":"0.7.1","protocol":2,"is_day":1}')
+    expect(result).toEqual({ version: '0.7.1', isDay: true })
   })
 
-  it('exposes a degraded sd_state to the renderer', async () => {
-    const result = await probe(
-      '{"status":"ok","version":"0.7.1","protocol":1,"is_day":0,"sd":0,"sd_state":"no_card"}'
-    )
-    expect(result.sdState).toBe('no_card')
+  it('reports isDay false when the firmware is in night mode', async () => {
+    const result = await probe('{"status":"ok","version":"0.7.1","protocol":2,"is_day":0}')
+    expect(result).toEqual({ version: '0.7.1', isDay: false })
   })
 
-  it('reports sdState "unknown" on responses from older firmware', async () => {
-    const result = await probe('{"status":"ok","version":"0.6.0","protocol":1,"is_day":1}')
-    expect(result).toEqual({ version: '0.6.0', isDay: true, sdState: 'unknown' })
+  it('reports isDay null when the field is absent (older firmware)', async () => {
+    const result = await probe('{"status":"ok","version":"0.6.0","protocol":1}')
+    expect(result).toEqual({ version: '0.6.0', isDay: null })
   })
 
-  it('returns sdState "unknown" when the device responds with a non-ok status', async () => {
+  it('returns nulls when the device responds with a non-ok status', async () => {
     // sendCommand resolves with success:false / no data on error frames,
     // which queryVersion converts to the no-info fallback. Old firmware that
-    // doesn't recognise the command lands here, and we must not falsely
-    // report SD as "ok".
+    // doesn't recognise the command lands here.
     const result = await probe('{"status":"error","message":"unknown_cmd"}')
-    expect(result).toEqual({ version: null, isDay: null, sdState: 'unknown' })
+    expect(result).toEqual({ version: null, isDay: null })
   })
 })
 

@@ -102,15 +102,6 @@
       "dist/**/*",
       "assets/icon.png"
     ],
-    "extraResources": [
-      {
-        "from": "../canshift-firmware/sd_contents",
-        "to": "sd_contents",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
     "mac": {
       "target": [
         {

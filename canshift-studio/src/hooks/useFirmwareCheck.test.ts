@@ -9,7 +9,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FirmwareCheck } from '../stores/device.store'
 import type { LogLevel } from '../stores/log.store'
-import type { SdRuntimeState } from '../services/ipc.service'
 import { runFirmwareProbe, POST_TIMEOUT_RETRY_DELAY_MS } from './useFirmwareCheck'
 
 // firmwareIpc is mocked module-level — every test installs its own resolved
@@ -30,7 +29,6 @@ interface CapturedReport {
   checks: FirmwareCheck[]
   versions: (string | null)[]
   isDayValues: (boolean | null)[]
-  sdStates: SdRuntimeState[]
   logs: { level: LogLevel; message: string }[]
 }
 
@@ -40,7 +38,6 @@ function makeCapturedReport(): {
     setFirmwareCheck: (c: FirmwareCheck) => void
     setFirmwareVersion: (v: string | null) => void
     setIsDayMode: (d: boolean | null) => void
-    setSdState: (s: SdRuntimeState) => void
     log: (level: LogLevel, message: string) => void
   }
 } {
@@ -48,7 +45,6 @@ function makeCapturedReport(): {
     checks: [],
     versions: [],
     isDayValues: [],
-    sdStates: [],
     logs: [],
   }
   return {
@@ -57,7 +53,6 @@ function makeCapturedReport(): {
       setFirmwareCheck: (c) => capture.checks.push(c),
       setFirmwareVersion: (v) => capture.versions.push(v),
       setIsDayMode: (d) => capture.isDayValues.push(d),
-      setSdState: (s) => capture.sdStates.push(s),
       log: (level, message) => capture.logs.push({ level, message }),
     },
   }
@@ -74,7 +69,7 @@ describe('runFirmwareProbe', () => {
 
   it("flags 'no_firmware' after two consecutive misses", async () => {
     vi.useFakeTimers()
-    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null, sdState: 'unknown' })
+    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null })
 
     const { capture, report } = makeCapturedReport()
     const promise = runFirmwareProbe(report, () => false)
@@ -90,7 +85,7 @@ describe('runFirmwareProbe', () => {
   })
 
   it("flags 'up_to_date' when the device version matches the latest release", async () => {
-    mockedQueryVersion.mockResolvedValue({ version: '1.2.3', isDay: true, sdState: 'ok' })
+    mockedQueryVersion.mockResolvedValue({ version: '1.2.3', isDay: true })
     mockedListReleases.mockResolvedValue([
       { version: '1.2.3', tag: 'v1.2.3', publishedAt: '', prerelease: false, notes: '' },
     ])
@@ -105,11 +100,10 @@ describe('runFirmwareProbe', () => {
     }
     expect(capture.versions).toContain('1.2.3')
     expect(capture.isDayValues).toContain(true)
-    expect(capture.sdStates).toContain('ok')
   })
 
   it("flags 'update_available' when a newer release exists", async () => {
-    mockedQueryVersion.mockResolvedValue({ version: '0.9.0', isDay: false, sdState: 'ok' })
+    mockedQueryVersion.mockResolvedValue({ version: '0.9.0', isDay: false })
     mockedListReleases.mockResolvedValue([
       { version: '1.0.0', tag: 'v1.0.0', publishedAt: '', prerelease: false, notes: '' },
     ])
@@ -126,7 +120,7 @@ describe('runFirmwareProbe', () => {
   })
 
   it("falls back to 'up_to_date' when listReleases throws (best-effort)", async () => {
-    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: null, sdState: 'unknown' })
+    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: null })
     mockedListReleases.mockRejectedValue(new Error('offline'))
 
     const { capture, report } = makeCapturedReport()
@@ -140,7 +134,7 @@ describe('runFirmwareProbe', () => {
     // Mirrors what the React effect does when requestFirmwareRecheck() bumps
     // the tick: clear the latch and call runFirmwareProbe again. Each call
     // must contact the device and emit a fresh terminal state.
-    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: null, sdState: 'unknown' })
+    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: null })
     mockedListReleases.mockResolvedValue([
       { version: '1.0.0', tag: 'v1.0.0', publishedAt: '', prerelease: false, notes: '' },
     ])
@@ -157,7 +151,7 @@ describe('runFirmwareProbe', () => {
   })
 
   it('emits start + result log entries with the [status] prefix (#377)', async () => {
-    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: true, sdState: 'ok' })
+    mockedQueryVersion.mockResolvedValue({ version: '1.0.0', isDay: true })
     mockedListReleases.mockResolvedValue([
       { version: '1.0.0', tag: 'v1.0.0', publishedAt: '', prerelease: false, notes: '' },
     ])
@@ -173,7 +167,7 @@ describe('runFirmwareProbe', () => {
 
   it('logs no-firmware as a warn entry after two misses (#377)', async () => {
     vi.useFakeTimers()
-    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null, sdState: 'unknown' })
+    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null })
 
     const { capture, report } = makeCapturedReport()
     const promise = runFirmwareProbe(report, () => false)
@@ -187,7 +181,7 @@ describe('runFirmwareProbe', () => {
 
   it('cooperatively cancels mid-probe when the port latch flips', async () => {
     vi.useFakeTimers()
-    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null, sdState: 'unknown' })
+    mockedQueryVersion.mockResolvedValue({ version: null, isDay: null })
 
     const { capture, report } = makeCapturedReport()
     let cancelled = false
