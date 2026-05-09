@@ -996,6 +996,21 @@ const WarningPreview = memo(function WarningPreview({
 // Button widget
 // ---------------------------------------------------------------------------
 
+/**
+ * Compute icon and font-size metrics for the button preview. Exported so unit
+ * tests can lock in the formula without rendering. Identical for idle/active.
+ */
+export function computeButtonPreviewMetrics(
+  w: number,
+  h: number,
+  showIcon: boolean
+): { iconSize: number; fontSize: number } {
+  const iconSize = Math.max(12, Math.min(h * 0.6, h - 6, 32))
+  const labelBudget = showIcon ? Math.max(20, w - iconSize - 16) : w - 12
+  const fontSize = Math.max(8, Math.min(h * 0.38, labelBudget * 0.28))
+  return { iconSize, fontSize }
+}
+
 const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: ButtonRendererProps) {
   if (widget.config.type !== 'button') return null
   const cfg = widget.config
@@ -1004,8 +1019,7 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
   const showIcon = cfg.showIcon === true && iconName !== null
   const showLabel = cfg.showLabel !== false
   // Scale icon and label font to fill the assigned widget dimensions
-  const iconSize = Math.min(h * 0.48, w * 0.3)
-  const fontSize = Math.max(8, Math.min(h * 0.38, w * 0.28))
+  const { iconSize, fontSize } = computeButtonPreviewMetrics(w, h, showIcon)
 
   // Two-state button colours (#146): cfg.colors.normal / cfg.colors.active.
   // Older configs without `colors` still fall back to the legacy widget.style.
@@ -1035,7 +1049,11 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
         transition: 'background 0.1s, border-color 0.1s',
       }}
     >
-      {showIcon && <SensorIcon name={iconName} size={iconSize} color={textColor + 'CC'} />}
+      {showIcon && (
+        <div style={{ flexShrink: 0, display: 'flex' }}>
+          <SensorIcon name={iconName} size={iconSize} color={textColor + 'CC'} />
+        </div>
+      )}
       {showLabel && (
         <span
           style={{
@@ -1046,6 +1064,9 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             letterSpacing: '0.04em',
+            minWidth: 0,
+            flex: '1 1 auto',
+            textAlign: 'center',
           }}
         >
           {cfg.label}
