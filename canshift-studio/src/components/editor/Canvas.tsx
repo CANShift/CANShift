@@ -2,7 +2,7 @@
 // Supports click/Shift+click selection, rubber-band multi-select, drag-to-move,
 // alignment tools, and swipe gestures for page navigation.
 
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { memo, useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, TopBarItem, Widget } from '@tmbk/canshift-core'
 import { DEFAULT_TOP_BAR_LAYOUT, TopBarMetrics } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -291,7 +291,11 @@ interface WidgetBoxProps {
   onDragStart: (e: React.MouseEvent, widget: Widget) => void
 }
 
-function WidgetBox({
+// Memoized so dragging one widget doesn't re-render every other widget on the
+// page. Since the parent passes stable handler refs (useCallback) and immer
+// keeps unchanged widget refs identical across store updates, default shallow
+// comparison is correct here — only the moved widget's `widget` prop changes.
+const WidgetBox = memo(function WidgetBox({
   widget,
   palette,
   isSelected,
@@ -376,7 +380,7 @@ function WidgetBox({
       )}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Dashboard top bar (rendered inside the canvas)
@@ -636,11 +640,32 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const widgetAreaH = 240 - topBar.height
 
+  // Ref-based snapshot of values consumed inside drag callbacks. Keeps the
+  // memoized handlers (handleDragStart, selection helpers) ref-stable across
+  // renders so per-widget React.memo on WidgetBox is not invalidated every
+  // drag tick. The drag handler reads from .current at mousedown time.
+  const dragInputsRef = useRef({
+    pageId: page.id,
+    pageWidgets: page.widgets,
+    selectedWidgetIds,
+    widgetAreaH,
+  })
+  dragInputsRef.current = {
+    pageId: page.id,
+    pageWidgets: page.widgets,
+    selectedWidgetIds,
+    widgetAreaH,
+  }
+
   // Effective palette and background — follow the preview day/night toggle.
   // Falls back to built-in defaults when config.dayTheme hasn't been configured yet.
-  const effectivePalette: PagePalette = isPreviewDayMode
-    ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT)
-    : page.palette
+  // Memoized so the reference stays stable across drag ticks (otherwise every
+  // mouse move would invalidate the WidgetPreview React.memo cache via a new
+  // palette object literal even though contents are unchanged).
+  const effectivePalette: PagePalette = useMemo(
+    () => (isPreviewDayMode ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT) : page.palette),
+    [isPreviewDayMode, dayTheme?.palette, page.palette]
+  )
   const effectiveBgColor: string = isPreviewDayMode
     ? (dayTheme?.bgColor ?? DAY_BG_DEFAULT)
     : page.backgroundColor
@@ -723,13 +748,23 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent, widget: Widget) => {
+      // Read snapshot values via ref so this callback can stay ref-stable
+      // across renders (the per-widget WidgetBox React.memo otherwise breaks
+      // every drag tick when page.widgets gets a fresh reference).
+      const {
+        pageId,
+        pageWidgets,
+        selectedWidgetIds: selIds,
+        widgetAreaH: areaH,
+      } = dragInputsRef.current
+
       // Gather all widgets to drag: if the widget is part of multi-selection, drag all.
       // Otherwise drag only this widget (and set it as sole selection).
-      const isMulti = selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
+      const isMulti = selIds.length > 1 && selIds.includes(widget.id)
 
       const dragging: DraggingWidget[] = isMulti
-        ? page.widgets
-            .filter((w) => selectedWidgetIds.includes(w.id))
+        ? pageWidgets
+            .filter((w) => selIds.includes(w.id))
             .map((w) => ({
               id: w.id,
               startX: w.layout.x,
@@ -749,7 +784,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
       drag = {
         primaryId: widget.id,
-        pageId: page.id,
+        pageId,
         startMouseX: e.clientX,
         startMouseY: e.clientY,
         widgets: dragging,
@@ -771,7 +806,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
             return {
               id: dw.id,
               x: Math.max(0, Math.min(320 - dw.w, snappedX)),
-              y: Math.max(0, Math.min(widgetAreaH - dw.h, snappedY)),
+              y: Math.max(0, Math.min(areaH - dw.h, snappedY)),
             }
           })
           moveWidgets(drag.pageId, moves)
@@ -783,7 +818,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
           const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
           const newX = Math.max(0, Math.min(320 - dw.w, snappedX))
-          const newY = Math.max(0, Math.min(widgetAreaH - dw.h, snappedY))
+          const newY = Math.max(0, Math.min(areaH - dw.h, snappedY))
           moveWidget(drag.pageId, drag.primaryId, { x: newX, y: newY })
         }
       }
@@ -804,16 +839,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
     },
-    [
-      page.id,
-      page.widgets,
-      selectedWidgetIds,
-      moveWidget,
-      moveWidgets,
-      resolveWidgetCollisions,
-      commitDrag,
-      widgetAreaH,
-    ]
+    [moveWidget, moveWidgets, resolveWidgetCollisions, commitDrag]
   )
 
   // Rubber-band: starts on background mousedown, selects widgets on mouseup

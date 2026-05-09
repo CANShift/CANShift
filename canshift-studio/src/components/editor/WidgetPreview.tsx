@@ -2,11 +2,23 @@
 // Renders at the widget's display size (firmware px × SCALE).
 // All previews use a fixed demo value at ~65 % of range so the shape is clear.
 
+import * as React from 'react'
 import { memo } from 'react'
-import type { CSSProperties } from 'react'
-import type { Widget, WidgetLabelPosition, PagePalette } from '@tmbk/canshift-core'
+import type { ComponentType } from 'react'
+import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 import { displayLabelForSignal } from '../../utils/signalLabels'
+import {
+  FONT_FAMILY,
+  BLINK_ANIM,
+  ensureBlinkStyle,
+  ZONE_WARNING,
+  ZONE_DANGER,
+  zoneColorFor,
+  thresholdPct,
+  svgLabelAttrs,
+  htmlLabelStyle,
+} from './widgetPreview.styles'
 
 // ---------------------------------------------------------------------------
 // Gradient helper (issue #175) — green → orange → red across [0,1].
@@ -99,27 +111,11 @@ function effectiveValue(
   return { pct, raw: testValue }
 }
 
-// ---------------------------------------------------------------------------
-// Danger blink — inject keyframe once, use as CSS animation string
-// ---------------------------------------------------------------------------
-
-const BLINK_ANIM = 'canshift-blink 0.7s step-end infinite'
-
-let _blinkStyleInjected = false
-function ensureBlinkStyle(): void {
-  if (_blinkStyleInjected) return
-  _blinkStyleInjected = true
-  const el = document.createElement('style')
-  el.textContent = '@keyframes canshift-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }'
-  document.head.appendChild(el)
-}
-
 function isDangerState(widget: Widget, testValue: number | null | undefined): boolean {
   const cfg = widget.config
   if (cfg.type !== 'gauge') return false
   const { pct } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
-  const range = cfg.maxValue - cfg.minValue || 1
-  const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
+  const dangerPct = thresholdPct(cfg.dangerLevel, cfg.minValue, cfg.maxValue)
   return pct >= dangerPct
 }
 
@@ -132,51 +128,6 @@ function isDangerState(widget: Widget, testValue: number | null | undefined): bo
 // with firmware's `displayLabelForSignal()`.
 function formatSignalLabel(signal: string): string {
   return displayLabelForSignal(signal)
-}
-
-// ---------------------------------------------------------------------------
-// Label overlay helpers
-// ---------------------------------------------------------------------------
-
-function svgLabelAttrs(
-  pos: WidgetLabelPosition,
-  w: number,
-  h: number,
-  // 4-px horizontal inset matches firmware's kEdgeInsetX in widget_label.h.
-  pad = 4
-): {
-  x: number
-  y: number
-  textAnchor: 'start' | 'middle' | 'end'
-  dominantBaseline: 'hanging' | 'auto'
-} {
-  const isTop = pos.startsWith('top')
-  const isCenter = pos.endsWith('center')
-  const isRight = pos.endsWith('right')
-  return {
-    x: isCenter ? w / 2 : isRight ? w - pad : pad,
-    y: isTop ? pad + 6 : h - pad - 1,
-    textAnchor: isCenter ? 'middle' : isRight ? 'end' : 'start',
-    dominantBaseline: isTop ? 'hanging' : 'auto',
-  }
-}
-
-// HTML-side equivalent — absolute-positioned span style for the four corners +
-// top/bottom centre. Used by HTML-rendered previews (warning, gear, timer).
-function htmlLabelStyle(pos: WidgetLabelPosition, pad = 3): CSSProperties {
-  const isTop = pos.startsWith('top')
-  const isCenter = pos.endsWith('center')
-  const isRight = pos.endsWith('right')
-  return {
-    position: 'absolute',
-    ...(isTop ? { top: pad } : { bottom: pad }),
-    ...(isCenter
-      ? { left: '50%', transform: 'translateX(-50%)' }
-      : isRight
-        ? { right: pad }
-        : { left: pad }),
-    pointerEvents: 'none',
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -209,31 +160,63 @@ function gaugeArcD(cx: number, cy: number, r: number, fromPct: number, toPct: nu
 }
 
 // ---------------------------------------------------------------------------
+// Per-renderer prop types — every renderer takes the same base shape, with a
+// few flags layered on for variants that need them. Renderers narrow the
+// `widget.config.type` discriminator inside their own body.
+// ---------------------------------------------------------------------------
+
+interface BaseRendererProps {
+  widget: Widget
+  w: number
+  h: number
+}
+
+interface GaugeArcRendererProps extends BaseRendererProps {
+  revLimiting: boolean
+  danger: boolean
+  testValue?: number | null
+}
+
+interface GaugeBarRendererProps extends BaseRendererProps {
+  danger: boolean
+  testValue?: number | null
+}
+
+interface GaugeNumericRendererProps extends BaseRendererProps {
+  danger: boolean
+  testValue?: number | null
+}
+
+interface BarRendererProps extends BaseRendererProps {
+  testValue?: number | null
+}
+
+interface WarningRendererProps extends BaseRendererProps {
+  noAnimate: boolean
+}
+
+interface ButtonRendererProps extends BaseRendererProps {
+  active: boolean
+}
+
+// ---------------------------------------------------------------------------
 // Gauge — Arc style
 // ---------------------------------------------------------------------------
 
-function GaugeArcPreview({
+const GaugeArcPreview = memo(function GaugeArcPreview({
   widget,
   w,
   h,
   revLimiting,
   danger,
   testValue,
-}: {
-  widget: Widget
-  w: number
-  h: number
-  revLimiting: boolean
-  danger: boolean
-  testValue?: number | null
-}) {
+}: GaugeArcRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
 
-  const range = cfg.maxValue - cfg.minValue || 1
-  const warnPct = Math.max(0, Math.min(1, (cfg.warningLevel - cfg.minValue) / range))
-  const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
+  const warnPct = thresholdPct(cfg.warningLevel, cfg.minValue, cfg.maxValue)
+  const dangerPct = thresholdPct(cfg.dangerLevel, cfg.minValue, cfg.maxValue)
   const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
 
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
@@ -334,7 +317,7 @@ function GaugeArcPreview({
         fill={textValueColor}
         fontSize={valueFontSize}
         fontWeight="900"
-        fontFamily="Orbitron, sans-serif"
+        fontFamily={FONT_FAMILY}
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
@@ -348,7 +331,7 @@ function GaugeArcPreview({
           dominantBaseline="middle"
           fill={st.textColor + '77'}
           fontSize={unitFontSize}
-          fontFamily="Orbitron, sans-serif"
+          fontFamily={FONT_FAMILY}
         >
           {cfg.suffix}
         </text>
@@ -366,7 +349,7 @@ function GaugeArcPreview({
               dominantBaseline={lAttrs.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(6, Math.min(9, w * 0.1))}
-              fontFamily="Orbitron, sans-serif"
+              fontFamily={FONT_FAMILY}
               fontWeight="500"
               letterSpacing="0.04em"
             >
@@ -376,47 +359,34 @@ function GaugeArcPreview({
         })()}
     </svg>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Gauge — Vertical bar style (also renders horizontal when barOrientation='horizontal')
 // ---------------------------------------------------------------------------
 
-function GaugeBarPreview({
+const GaugeBarPreview = memo(function GaugeBarPreview({
   widget,
   w,
   h,
   danger,
   testValue,
-}: {
-  widget: Widget
-  w: number
-  h: number
-  danger: boolean
-  testValue?: number | null
-}) {
+}: GaugeBarRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
 
   const isHorizontal = cfg.barOrientation === 'horizontal'
 
-  const range = cfg.maxValue - cfg.minValue || 1
-  const warnPct = Math.max(0, Math.min(1, (cfg.warningLevel - cfg.minValue) / range))
-  const dangerPct = Math.max(0, Math.min(1, (cfg.dangerLevel - cfg.minValue) / range))
+  const warnPct = thresholdPct(cfg.warningLevel, cfg.minValue, cfg.maxValue)
+  const dangerPct = thresholdPct(cfg.dangerLevel, cfg.minValue, cfg.maxValue)
   const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
 
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
   const signalLabel = formatSignalLabel(widget.signal)
 
   if (isHorizontal) {
-    // Zone-based fill colour — automotive green/orange/red regardless of the
-    // widget's primaryColor. Mirrors firmware bar_widget.cpp.
-    const ZONE_NORMAL = '#00CC44'
-    const ZONE_WARNING = '#FF8800'
-    const ZONE_DANGER = '#FF4444'
-    const fillColor =
-      valuePct >= dangerPct ? ZONE_DANGER : valuePct >= warnPct ? ZONE_WARNING : ZONE_NORMAL
+    const fillColor = zoneColorFor(valuePct, warnPct, dangerPct)
 
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     // Label band sits below the bar by default (issue #137). Users can still
@@ -490,7 +460,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#888888"
             fontSize={sigFontSize}
-            fontFamily="Orbitron, sans-serif"
+            fontFamily={FONT_FAMILY}
             fontWeight="500"
             letterSpacing="0.05em"
           >
@@ -509,7 +479,7 @@ function GaugeBarPreview({
             fill="#FFFFFF"
             fontSize={Math.max(10, Math.min(barH * 0.55, 14))}
             fontWeight="500"
-            fontFamily="Orbitron, sans-serif"
+            fontFamily={FONT_FAMILY}
             style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {valueStr}
@@ -527,7 +497,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill={st.textColor + '77'}
             fontSize={sigFontSize}
-            fontFamily="Orbitron, sans-serif"
+            fontFamily={FONT_FAMILY}
             fontWeight="500"
             letterSpacing="0.05em"
           >
@@ -539,11 +509,7 @@ function GaugeBarPreview({
   }
 
   // Vertical bar — zone colours green/orange/red regardless of primaryColor.
-  const ZONE_NORMAL_V = '#00CC44'
-  const ZONE_WARNING_V = '#FF8800'
-  const ZONE_DANGER_V = '#FF4444'
-  const valueColor =
-    valuePct >= dangerPct ? ZONE_DANGER_V : valuePct >= warnPct ? ZONE_WARNING_V : ZONE_NORMAL_V
+  const valueColor = zoneColorFor(valuePct, warnPct, dangerPct)
 
   // Bar track: 60 % of widget width, centered
   const bw = Math.max(10, w * 0.6)
@@ -587,7 +553,7 @@ function GaugeBarPreview({
           dominantBaseline="hanging"
           fill="#888888"
           fontSize={sigFontSize}
-          fontFamily="Orbitron, sans-serif"
+          fontFamily={FONT_FAMILY}
           fontWeight="500"
           letterSpacing="0.04em"
         >
@@ -603,24 +569,18 @@ function GaugeBarPreview({
           y={warnY}
           width={bw}
           height={(warnPct - dangerPct) * trackH}
-          fill={ZONE_WARNING_V + '35'}
+          fill={ZONE_WARNING + '35'}
         />
       )}
       {/* Danger zone */}
-      <rect
-        x={padX}
-        y={dangerY}
-        width={bw}
-        height={dangerPct * trackH}
-        fill={ZONE_DANGER_V + '35'}
-      />
+      <rect x={padX} y={dangerY} width={bw} height={dangerPct * trackH} fill={ZONE_DANGER + '35'} />
       {/* Danger line tick */}
       <line
         x1={padX - 3}
         y1={dangerY}
         x2={padX + bw + 3}
         y2={dangerY}
-        stroke={ZONE_DANGER_V}
+        stroke={ZONE_DANGER}
         strokeWidth={1}
         strokeDasharray="2 2"
       />
@@ -643,7 +603,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#383838"
             fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily="Orbitron, sans-serif"
+            fontFamily={FONT_FAMILY}
           >
             {cfg.minValue}
           </text>
@@ -654,7 +614,7 @@ function GaugeBarPreview({
             dominantBaseline="middle"
             fill="#383838"
             fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily="Orbitron, sans-serif"
+            fontFamily={FONT_FAMILY}
           >
             {cfg.maxValue}
           </text>
@@ -671,7 +631,7 @@ function GaugeBarPreview({
         fill={valTextColor}
         fontSize={valFontSize}
         fontWeight="500"
-        fontFamily="Orbitron, sans-serif"
+        fontFamily={FONT_FAMILY}
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
         {valueStr}
@@ -684,7 +644,7 @@ function GaugeBarPreview({
           dominantBaseline="auto"
           fill={unitTextColor}
           fontSize={unitFontSize}
-          fontFamily="Orbitron, sans-serif"
+          fontFamily={FONT_FAMILY}
           fontWeight="500"
           letterSpacing="0.03em"
           style={{ animation: danger ? BLINK_ANIM : undefined }}
@@ -705,7 +665,7 @@ function GaugeBarPreview({
               dominantBaseline={lAttrs.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(5, Math.min(8, w * 0.22))}
-              fontFamily="Orbitron, sans-serif"
+              fontFamily={FONT_FAMILY}
               fontWeight="500"
             >
               {cfg.label}
@@ -714,25 +674,19 @@ function GaugeBarPreview({
         })()}
     </svg>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Gauge — Numeric style
 // ---------------------------------------------------------------------------
 
-function GaugeNumericPreview({
+const GaugeNumericPreview = memo(function GaugeNumericPreview({
   widget,
   w,
   h,
   danger,
   testValue,
-}: {
-  widget: Widget
-  w: number
-  h: number
-  danger: boolean
-  testValue?: number | null
-}) {
+}: GaugeNumericRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
@@ -798,7 +752,7 @@ function GaugeNumericPreview({
             bottom: 1,
             left: 4,
             fontSize: 11,
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
@@ -824,7 +778,7 @@ function GaugeNumericPreview({
                 ? { right: 3 }
                 : { left: 3 }),
             fontSize: labelFontSize,
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
@@ -855,7 +809,7 @@ function GaugeNumericPreview({
             // Orbitron to match firmware's runtime-loaded fonts (FontManager).
             // System sans-serif fallback for environments without Orbitron.
             // Black 900 — primary value tier (matches FontManager::primary).
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 900,
             lineHeight: 1,
             whiteSpace: 'nowrap',
@@ -873,23 +827,18 @@ function GaugeNumericPreview({
       </div>
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Bar widget — horizontal progress bar
 // ---------------------------------------------------------------------------
 
-function BarWidgetPreview({
+const BarWidgetPreview = memo(function BarWidgetPreview({
   widget,
   w,
   h,
   testValue,
-}: {
-  widget: Widget
-  w: number
-  h: number
-  testValue?: number | null
-}) {
+}: BarRendererProps) {
   if (widget.config.type !== 'bar') return null
   const cfg = widget.config
   const st = widget.style
@@ -925,7 +874,7 @@ function BarWidgetPreview({
           dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
           fill="#888888"
           fontSize={Math.max(5, Math.min(7, h * 0.22))}
-          fontFamily="Orbitron, sans-serif"
+          fontFamily={FONT_FAMILY}
           fontWeight="500"
           letterSpacing="0.05em"
         >
@@ -941,7 +890,7 @@ function BarWidgetPreview({
           dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
           fill={st.textColor + 'BB'}
           fontSize={Math.max(7, Math.min(10, h * 0.28))}
-          fontFamily="Orbitron, sans-serif"
+          fontFamily={FONT_FAMILY}
         >
           {valueStr}
         </text>
@@ -955,7 +904,7 @@ function BarWidgetPreview({
           dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
           fill={st.textColor + '77'}
           fontSize={Math.max(6, Math.min(9, h * 0.22))}
-          fontFamily="Orbitron, sans-serif"
+          fontFamily={FONT_FAMILY}
           fontWeight="500"
           letterSpacing="0.04em"
         >
@@ -964,23 +913,18 @@ function BarWidgetPreview({
       )}
     </svg>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Warning widget
 // ---------------------------------------------------------------------------
 
-function WarningPreview({
+const WarningPreview = memo(function WarningPreview({
   widget,
   w,
   h,
   noAnimate,
-}: {
-  widget: Widget
-  w: number
-  h: number
-  noAnimate: boolean
-}) {
+}: WarningRendererProps) {
   if (widget.config.type !== 'warning') return null
   const cfg = widget.config
   const st = widget.style
@@ -1017,7 +961,7 @@ function WarningPreview({
         <span
           style={{
             fontSize: sigFontSize,
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: st.criticalColor + '99',
             lineHeight: 1,
@@ -1033,7 +977,7 @@ function WarningPreview({
           style={{
             ...htmlLabelStyle(labelPos),
             fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
@@ -1046,23 +990,13 @@ function WarningPreview({
       )}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Button widget
 // ---------------------------------------------------------------------------
 
-function ButtonPreview({
-  widget,
-  w,
-  h,
-  active,
-}: {
-  widget: Widget
-  w: number
-  h: number
-  active: boolean
-}) {
+const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: ButtonRendererProps) {
   if (widget.config.type !== 'button') return null
   const cfg = widget.config
   const st = widget.style
@@ -1119,13 +1053,13 @@ function ButtonPreview({
       )}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Gear widget — large gear-position digit
 // ---------------------------------------------------------------------------
 
-function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProps) {
   if (widget.config.type !== 'gear') return null
   const cfg = widget.config
   const st = widget.style
@@ -1163,7 +1097,7 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
             right: 0,
             textAlign: 'center',
             fontSize: sigFontSize,
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
@@ -1180,7 +1114,7 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
           // Primary value tier — gear digit is the focal element. Black 900
           // matches FontManager::primary on the device.
           fontWeight: 900,
-          fontFamily: 'Orbitron, sans-serif',
+          fontFamily: FONT_FAMILY,
           lineHeight: 1,
         }}
       >
@@ -1191,7 +1125,7 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
           style={{
             ...htmlLabelStyle(labelPos),
             fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
@@ -1204,13 +1138,13 @@ function GearPreview({ widget, w, h }: { widget: Widget; w: number; h: number })
       )}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Timer widget
 // ---------------------------------------------------------------------------
 
-function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+const TimerPreview = memo(function TimerPreview({ widget, w, h }: BaseRendererProps) {
   if (widget.config.type !== 'timer') return null
   const cfg = widget.config
   const st = widget.style
@@ -1240,7 +1174,7 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
           // device; firmware switches to primary (Black 900) at ≥110 px height.
           // Orbitron's tabular digits keep the read aligned without `monospace`.
           fontWeight: fontSize >= 32 ? 900 : 700,
-          fontFamily: 'Orbitron, sans-serif',
+          fontFamily: FONT_FAMILY,
           letterSpacing: '0.06em',
           fontVariantNumeric: 'tabular-nums',
         }}
@@ -1254,7 +1188,7 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
             top: 2,
             left: 3,
             fontSize: sigFontSize,
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
@@ -1269,7 +1203,7 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
           style={{
             ...htmlLabelStyle(labelPos),
             fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
@@ -1282,13 +1216,13 @@ function TimerPreview({ widget, w, h }: { widget: Widget; w: number; h: number }
       )}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Image widget
 // ---------------------------------------------------------------------------
 
-function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }) {
+const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRendererProps) {
   if (widget.config.type !== 'image') return null
   const cfg = widget.config
   const st = widget.style
@@ -1315,7 +1249,7 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
         dominantBaseline="auto"
         fill="#2A2A2A"
         fontSize={Math.max(5, Math.min(7, w * 0.07))}
-        fontFamily="Orbitron, sans-serif"
+        fontFamily={FONT_FAMILY}
         fontWeight="500"
         letterSpacing="0.05em"
       >
@@ -1332,7 +1266,7 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
               dominantBaseline={a.dominantBaseline}
               fill={st.textColor + '77'}
               fontSize={Math.max(6, Math.min(9, w * 0.12))}
-              fontFamily="Orbitron, sans-serif"
+              fontFamily={FONT_FAMILY}
               fontWeight="500"
               letterSpacing="0.04em"
             >
@@ -1342,6 +1276,75 @@ function ImagePreview({ widget, w, h }: { widget: Widget; w: number; h: number }
         })()}
     </svg>
   )
+})
+
+// ---------------------------------------------------------------------------
+// Renderer dispatch — keyed by WidgetConfig['type']. Each entry receives the
+// fully-resolved widget plus the variant flags it cares about. The map shape
+// gives O(1) lookup, exhaustiveness via discriminated-union narrowing, and
+// makes adding a new widget type a single-line change.
+// ---------------------------------------------------------------------------
+
+interface RenderContext {
+  w: number
+  h: number
+  revLimiting: boolean
+  buttonActive: boolean
+  noAnimate: boolean
+  testValue: number | null
+  danger: boolean
+}
+
+type WidgetTypeKey = WidgetConfig['type']
+
+type RendererDispatch = Record<
+  WidgetTypeKey,
+  (widget: Widget, ctx: RenderContext) => React.JSX.Element | null
+>
+
+// Gauge has three sub-styles; pick the matching memoized renderer.
+const gaugeRendererByDisplay: Record<
+  'arc' | 'bar' | 'numeric',
+  ComponentType<GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps>
+> = {
+  arc: GaugeArcPreview as ComponentType<
+    GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps
+  >,
+  bar: GaugeBarPreview as ComponentType<
+    GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps
+  >,
+  numeric: GaugeNumericPreview as ComponentType<
+    GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps
+  >,
+}
+
+const RENDERERS: RendererDispatch = {
+  gauge: (widget, ctx) => {
+    if (widget.config.type !== 'gauge') return null
+    const Renderer = gaugeRendererByDisplay[widget.config.displayStyle]
+    return (
+      <Renderer
+        widget={widget}
+        w={ctx.w}
+        h={ctx.h}
+        revLimiting={ctx.revLimiting}
+        danger={ctx.danger}
+        testValue={ctx.testValue}
+      />
+    )
+  },
+  bar: (widget, ctx) => (
+    <BarWidgetPreview widget={widget} w={ctx.w} h={ctx.h} testValue={ctx.testValue} />
+  ),
+  warning: (widget, ctx) => (
+    <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
+  ),
+  button: (widget, ctx) => (
+    <ButtonPreview widget={widget} w={ctx.w} h={ctx.h} active={ctx.buttonActive} />
+  ),
+  gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} />,
+  timer: (widget, ctx) => <TimerPreview widget={widget} w={ctx.w} h={ctx.h} />,
+  image: (widget, ctx) => <ImagePreview widget={widget} w={ctx.w} h={ctx.h} />,
 }
 
 // ---------------------------------------------------------------------------
@@ -1383,40 +1386,28 @@ function WidgetPreviewImpl({
   if (!noAnimate) ensureBlinkStyle()
 
   const resolved = palette ? applyPalette(widget, palette) : widget
-  const { config } = resolved
   const danger = noAnimate ? false : isDangerState(resolved, testValue)
 
-  if (config.type === 'gauge') {
-    if (config.displayStyle === 'arc')
-      return (
-        <GaugeArcPreview
-          widget={resolved}
-          w={w}
-          h={h}
-          revLimiting={noAnimate ? false : revLimiting}
-          danger={danger}
-          testValue={testValue}
-        />
-      )
-    if (config.displayStyle === 'bar')
-      return <GaugeBarPreview widget={resolved} w={w} h={h} danger={danger} testValue={testValue} />
-    return (
-      <GaugeNumericPreview widget={resolved} w={w} h={h} danger={danger} testValue={testValue} />
-    )
+  const ctx: RenderContext = {
+    w,
+    h,
+    revLimiting: noAnimate ? false : revLimiting,
+    buttonActive,
+    noAnimate,
+    testValue,
+    danger,
   }
-  if (config.type === 'bar')
-    return <BarWidgetPreview widget={resolved} w={w} h={h} testValue={testValue} />
-  if (config.type === 'warning')
-    return <WarningPreview widget={resolved} w={w} h={h} noAnimate={noAnimate} />
-  if (config.type === 'button')
-    return <ButtonPreview widget={resolved} w={w} h={h} active={buttonActive} />
-  if (config.type === 'gear') return <GearPreview widget={resolved} w={w} h={h} />
-  if (config.type === 'timer') return <TimerPreview widget={resolved} w={w} h={h} />
-  return <ImagePreview widget={resolved} w={w} h={h} />
+
+  // Exhaustive dispatch — TypeScript enforces every WidgetConfig['type'] has
+  // a renderer entry; missing entries fail typecheck on the RENDERERS object.
+  const render = RENDERERS[resolved.config.type]
+  return render(resolved, ctx)
 }
 
 // React.memo with shallow prop comparison — `widget` and `palette` are stable
 // across store updates thanks to immer (unchanged entries keep the same ref),
 // so unrelated changes (selection, drag of another widget) no longer rerun
-// every preview's SVG path math.
+// every preview's SVG path math. The leaf renderers are individually memoized
+// so even when this wrapper rerenders, only the renderer whose own props
+// changed will actually do work.
 export const WidgetPreview = memo(WidgetPreviewImpl)
