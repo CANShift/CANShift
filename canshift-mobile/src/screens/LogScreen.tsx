@@ -18,7 +18,7 @@ function formatTime(ms: number): string {
   return d.toLocaleTimeString('en-US', { hour12: false })
 }
 
-function LogEntryRow({ entry }: { entry: LogEntry }) {
+const LogEntryRow = React.memo(function LogEntryRow({ entry }: { entry: LogEntry }) {
   return (
     <View style={styles.row}>
       <Text style={styles.timestamp}>{formatTime(entry.timestamp)}</Text>
@@ -30,7 +30,7 @@ function LogEntryRow({ entry }: { entry: LogEntry }) {
       </Text>
     </View>
   )
-}
+})
 
 export default function LogScreen() {
   const entries = useLogStore((s) => s.entries)

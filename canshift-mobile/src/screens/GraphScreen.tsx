@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
-import { Colors, Typography, Spacing, Radius } from '../theme'
+import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
 import { getBuffer, clearBuffer } from '../stores/telemetry.store'
 import { SIGNAL_META } from '../constants/ble'
 import DashTopBar from '../components/DashTopBar'
@@ -183,6 +183,7 @@ function ChartPanel({
               key={key}
               style={[styles.pill, active && { borderColor: color, backgroundColor: `${color}22` }]}
               onPress={() => { onToggleSignal(key); }}
+              hitSlop={HitSlop.default}
             >
               <View style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]} />
               <Text style={[styles.pillLabel, active && { color }]}>
@@ -195,7 +196,11 @@ function ChartPanel({
 
       {/* Controls */}
       <View style={[styles.controls, { paddingVertical: vGap }]}>
-        <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause}>
+        <TouchableOpacity
+          style={styles.pauseBtn}
+          onPress={onTogglePause}
+          hitSlop={HitSlop.default}
+        >
           <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
         </TouchableOpacity>
         <View style={styles.windowRow}>
@@ -204,6 +209,7 @@ function ChartPanel({
               key={opt.value}
               style={[styles.windowBtn, windowSecs === opt.value && styles.windowBtnActive]}
               onPress={() => { onSetWindow(opt.value); }}
+              hitSlop={HitSlop.default}
             >
               <Text style={[styles.windowBtnText, windowSecs === opt.value && styles.windowBtnTextActive]}>
                 {opt.label}
@@ -211,7 +217,11 @@ function ChartPanel({
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={onClear}>
+        <TouchableOpacity
+          style={{ marginLeft: 'auto' }}
+          onPress={onClear}
+          hitSlop={HitSlop.default}
+        >
           <Text style={styles.clearText}>Clear</Text>
         </TouchableOpacity>
       </View>

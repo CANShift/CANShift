@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Colors, Typography, Spacing, Radius } from '../theme'
+import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
 import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
@@ -123,7 +123,11 @@ function ReleaseRow({
               <Text style={styles.installedText}>Installed</Text>
             </View>
           ) : (
-            <TouchableOpacity style={styles.flashBtn} onPress={onSelect}>
+            <TouchableOpacity
+              style={styles.flashBtn}
+              onPress={onSelect}
+              hitSlop={HitSlop.default}
+            >
               <Text style={styles.flashBtnText}>Flash</Text>
             </TouchableOpacity>
           )}
@@ -133,6 +137,7 @@ function ReleaseRow({
         <TouchableOpacity
           style={styles.notesToggle}
           onPress={() => { setNotesOpen((o) => !o) }}
+          hitSlop={HitSlop.default}
         >
           <Text style={styles.notesToggleText}>
             {notesOpen ? '▲ Hide notes' : '▼ Release notes'}
@@ -235,7 +240,11 @@ export default function UpdateScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { navigation.goBack() }} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => { navigation.goBack() }}
+          style={styles.backBtn}
+          hitSlop={HitSlop.default}
+        >
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Firmware Update</Text>

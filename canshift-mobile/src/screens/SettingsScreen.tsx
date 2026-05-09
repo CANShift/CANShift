@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'rea
 import Slider from '@react-native-community/slider'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Colors, Typography, Spacing, Radius } from '../theme'
+import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
 import { useDeviceStore } from '../stores/device.store'
@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Label,
+  Section,
   Toast,
 } from '@/components/ui'
 
@@ -131,7 +132,10 @@ export default function SettingsScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { navigation.goBack(); }}>
+        <TouchableOpacity
+          onPress={() => { navigation.goBack(); }}
+          hitSlop={HitSlop.default}
+        >
           <Text style={styles.back}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>SCREEN SETTINGS</Text>
@@ -140,7 +144,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Brightness */}
-        <View style={styles.section}>
+        <Section>
           <View style={styles.rowHeader}>
             <Label>BRIGHTNESS</Label>
             <Text style={styles.value}>{brightness}%</Text>
@@ -156,11 +160,10 @@ export default function SettingsScreen({ navigation }: Props) {
             maximumTrackTintColor={Colors.border}
             thumbTintColor={Colors.text}
           />
-        </View>
+        </Section>
 
         {/* Sleep */}
-        <View style={styles.section}>
-          <Label>SLEEP</Label>
+        <Section title="SLEEP">
           <View style={styles.segRow}>
             {SLEEP_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -174,11 +177,10 @@ export default function SettingsScreen({ navigation }: Props) {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </Section>
 
         {/* Day / Night */}
-        <View style={styles.section}>
-          <Label>THEME</Label>
+        <Section title="THEME">
           <View style={styles.segRow}>
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
@@ -197,11 +199,10 @@ export default function SettingsScreen({ navigation }: Props) {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Section>
 
         {/* Touch calibration */}
-        <View style={styles.section}>
-          <Label>TOUCH</Label>
+        <Section title="TOUCH">
           <TouchableOpacity
             style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
             onPress={handleCalibrate}
@@ -211,7 +212,7 @@ export default function SettingsScreen({ navigation }: Props) {
               {calibrating ? 'Calibrating…' : 'Calibrate Touch Screen'}
             </Text>
           </TouchableOpacity>
-        </View>
+        </Section>
       </ScrollView>
 
       {/* Save */}
@@ -265,7 +266,6 @@ const styles = StyleSheet.create({
   back: { fontSize: Typography.md, color: Colors.accent, width: 48 },
   title: { fontSize: Typography.sm, fontWeight: '700', color: Colors.textDim, letterSpacing: 1 },
   scroll: { padding: Spacing.lg, gap: Spacing.xl },
-  section: { gap: Spacing.sm },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   value: { fontSize: Typography.xs, color: Colors.text },
   slider: { width: '100%', height: 32 },
@@ -273,6 +273,8 @@ const styles = StyleSheet.create({
   segBtn: {
     flex: 1,
     paddingVertical: Spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -284,6 +286,8 @@ const styles = StyleSheet.create({
   segLabelActive: { color: Colors.accent, fontWeight: '600' },
   actionBtn: {
     paddingVertical: Spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
