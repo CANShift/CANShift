@@ -299,6 +299,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   scanBtnActive: { borderColor: Colors.accent },

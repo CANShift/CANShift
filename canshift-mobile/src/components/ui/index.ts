@@ -22,6 +22,8 @@ export type {
 } from './alert-dialog'
 export { Button, buttonVariants, buttonTextVariants } from './button'
 export type { ButtonProps } from './button'
+export { Card, CardHeader, CardTitle, CardContent, cardVariants } from './card'
+export type { CardProps, CardHeaderProps, CardTitleProps, CardContentProps } from './card'
 export { Checkbox } from './checkbox'
 export type { CheckboxProps } from './checkbox'
 export {
@@ -90,6 +92,8 @@ export type {
   SheetCloseProps,
   SheetSide,
 } from './sheet'
+export { Section } from './section'
+export type { SectionProps } from './section'
 export { Switch } from './switch'
 export type { UISwitchProps } from './switch'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'

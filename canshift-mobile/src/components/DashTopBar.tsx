@@ -10,7 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Colors, Typography, Spacing, Radius } from '../theme'
+import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalsStore } from '../stores/signals.store'
 import * as BleService from '../services/ble.service'
@@ -84,10 +84,18 @@ export default function DashTopBar() {
               <Text style={styles.staleText}>NO DATA</Text>
             </View>
           )}
-          <TouchableOpacity onPress={() => { setMenuVisible(true); }} style={styles.iconBtn}>
+          <TouchableOpacity
+            onPress={() => { setMenuVisible(true); }}
+            style={styles.iconBtn}
+            hitSlop={HitSlop.default}
+          >
             <Text style={styles.iconBtnText}>☰</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDisconnect} style={styles.iconBtn}>
+          <TouchableOpacity
+            onPress={handleDisconnect}
+            style={styles.iconBtn}
+            hitSlop={HitSlop.default}
+          >
             <Text style={[styles.iconBtnText, { color: Colors.accent }]}>⏻</Text>
           </TouchableOpacity>
         </View>
