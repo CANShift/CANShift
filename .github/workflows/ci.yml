@@ -340,3 +340,39 @@ jobs:
           else
             echo "Flash usage ${FLASH_PCT}% within budget"
           fi
+
+  # ─── Firmware — native unit tests ───────────────────────────────────────────
+  # Compiles a subset of the firmware sources (config loader, JSON reader,
+  # signal store, MaxxECU parser, signal map) on the host via the [env:native]
+  # PlatformIO environment and runs the Unity test suite. No ESP32 toolchain
+  # required — purely host-side coverage of decode + storage logic. See
+  # canshift-firmware/test/README.md.
+  firmware-native-tests:
+    name: firmware — native tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+          key: pio-native-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: |
+            pio-native-${{ runner.os }}-
+
+      - name: Install PlatformIO CLI
+        run: pip install platformio
+
+      - name: Run native unit tests
+        run: platformio test -e native
