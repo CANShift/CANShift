@@ -12,7 +12,7 @@
 // stays a true unit and won't drag the whole renderer harness in.
 
 import { describe, expect, it } from 'vitest'
-import type { DashboardConfig } from '@tmbk/canshift-core'
+import { CURRENT_SCHEMA_VERSION, type DashboardConfig } from '@tmbk/canshift-core'
 import { decideDeviceConfigAction } from './useDeviceConfigLoad'
 import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
 
@@ -108,8 +108,9 @@ describe('decideDeviceConfigAction', () => {
   })
 
   it('migrates an older device config up to the current schema before applying — #157', () => {
-    // A 1.10.0 → 1.11.0 step is a no-op data migration; the version must
-    // still flip on the returned config so downstream burns are clean.
+    // The migration steps from 1.10.0 onward are largely no-op (other than
+    // version flips); the returned config must reach CURRENT_SCHEMA_VERSION
+    // so downstream burns are clean.
     const olderConfig: Record<string, unknown> = {
       ...makeValidDeviceResponse(),
       version: '1.10.0',
@@ -121,7 +122,7 @@ describe('decideDeviceConfigAction', () => {
     })
     expect(action.kind).toBe('apply-device-config-with-warnings')
     if (action.kind === 'apply-device-config-with-warnings') {
-      expect(action.config.version).toBe('1.11.0')
+      expect(action.config.version).toBe(CURRENT_SCHEMA_VERSION)
     }
   })
 })

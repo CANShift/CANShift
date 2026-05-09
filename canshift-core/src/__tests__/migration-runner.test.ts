@@ -715,7 +715,7 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 // ---------------------------------------------------------------------------
 
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.11.0 without losing data', () => {
+  it('walks a 1.0.0 config all the way to 1.12.0 without losing data', () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -772,8 +772,8 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.11.0')
-    expect(out.version).toBe('1.11.0')
+    const { config: out, applied } = migrateConfig(config, '1.12.0')
+    expect(out.version).toBe('1.12.0')
     expect(applied).toEqual([
       '1.0.0 → 1.1.0',
       '1.1.0 → 1.2.0',
@@ -786,6 +786,7 @@ describe('migrateConfig — full chain to current', () => {
       '1.8.0 → 1.9.0',
       '1.9.0 → 1.10.0',
       '1.10.0 → 1.11.0',
+      '1.11.0 → 1.12.0',
     ])
 
     const page = (out.pages as Record<string, unknown>[])[0]!
@@ -818,14 +819,62 @@ describe('migrateConfig — full chain to current', () => {
     expect(tpsLayout.h).toBe(56)
   })
 
-  it('a fresh 1.11.0 config is a no-op through the runner', () => {
+  it('a fresh 1.12.0 config is a no-op through the runner', () => {
     const config = {
-      version: '1.11.0',
+      version: '1.12.0',
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.11.0')
+    const { config: out, applied } = migrateConfig(config, '1.12.0')
     expect(applied).toEqual([])
     expect(out).toEqual(config)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 1.11.0 → 1.12.0: bump default topBar.height 24 → 30 (issue #379)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.11.0 → 1.12.0', () => {
+  it('rewrites topBar.height from the previous default 24 to 30', () => {
+    const config = {
+      version: '1.11.0',
+      topBar: { height: 24, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+    }
+    const { config: out, applied } = migrateConfig(config, '1.12.0')
+    expect(applied).toEqual(['1.11.0 → 1.12.0'])
+    const topBar = out.topBar as Record<string, unknown>
+    expect(topBar.height).toBe(30)
+    expect(topBar.bgColor).toBe('#0D0D0D')
+    expect(topBar.textColor).toBe('#AAAAAA')
+    expect(out.version).toBe('1.12.0')
+  })
+
+  it('preserves a custom topBar.height that does not match the previous default', () => {
+    const config = {
+      version: '1.11.0',
+      topBar: { height: 16, bgColor: '#000', textColor: '#FFF' },
+    }
+    const { config: out } = migrateConfig(config, '1.12.0')
+    const topBar = out.topBar as Record<string, unknown>
+    expect(topBar.height).toBe(16)
+    expect(out.version).toBe('1.12.0')
+  })
+
+  it('preserves a topBar.height already bumped to 30', () => {
+    const config = {
+      version: '1.11.0',
+      topBar: { height: 30 },
+    }
+    const { config: out } = migrateConfig(config, '1.12.0')
+    const topBar = out.topBar as Record<string, unknown>
+    expect(topBar.height).toBe(30)
+  })
+
+  it('handles a config without a topBar block', () => {
+    const config = { version: '1.11.0', pages: [] }
+    const { config: out } = migrateConfig(config, '1.12.0')
+    expect(out.version).toBe('1.12.0')
+    expect(out.topBar).toBeUndefined()
   })
 })
 
