@@ -25,7 +25,11 @@ interface ScreenSettingsPanelProps {
 
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
   const navigate = useNavigate()
-  const { brightness, sleepTimeoutS, rotation, set, reset } = useScreenSettingsStore()
+  const brightness = useScreenSettingsStore((s) => s.brightness)
+  const sleepTimeoutS = useScreenSettingsStore((s) => s.sleepTimeoutS)
+  const rotation = useScreenSettingsStore((s) => s.rotation)
+  const set = useScreenSettingsStore((s) => s.set)
+  const reset = useScreenSettingsStore((s) => s.reset)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
