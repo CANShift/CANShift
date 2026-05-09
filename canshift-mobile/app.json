@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -55,8 +56,7 @@
           "bluetoothAlwaysPermission": "CANShift uses Bluetooth to connect to the dashboard device."
         }
       ],
-      "expo-secure-store",
-      "expo-font"
+      "expo-secure-store"
     ]
   }
 }
