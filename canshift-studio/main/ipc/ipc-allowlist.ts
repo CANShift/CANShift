@@ -61,11 +61,17 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   // Device hardware config
   C.DEVICE_CONFIG_READ,
   C.DEVICE_CONFIG_WRITE,
+  // CLI panel detach (issue #433) — renderer → main control surface
+  C.CLI_DETACH,
+  C.CLI_REATTACH,
+  C.CLI_GET_STATE,
 ])
 
 export const SEND_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   // Renderer → main: latest dirty flag
   C.WINDOW_SET_DIRTY,
+  // Renderer → main: forward a freshly-pushed log entry to other CLI surfaces
+  C.CLI_LOG_PUSH,
 ])
 
 export const LISTEN_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
@@ -94,6 +100,9 @@ export const LISTEN_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.UPDATE_AVAILABLE,
   C.UPDATE_DOWNLOADED,
   C.UPDATE_ERROR,
+  // CLI panel detach (issue #433) — main → renderer broadcasts
+  C.CLI_STATE_CHANGED,
+  C.CLI_LOG_BROADCAST,
 ])
 
 /** Throws when `channel` is not in the renderer→main invoke allowlist. */

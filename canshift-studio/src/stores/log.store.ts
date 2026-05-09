@@ -26,6 +26,12 @@ interface LogState {
   entries: LogEntry[]
   verbose: boolean
   push: (level: LogLevel, message: string, scope?: string) => void
+  /**
+   * Inject an entry produced in another renderer process (e.g. forwarded from
+   * the detached CLI window via `CLI_LOG_BROADCAST` — issue #433). Bypasses
+   * the bridge-out path so we don't echo it back through main.
+   */
+  pushFromBridge: (entry: LogEntry) => void
   setVerbose: (verbose: boolean) => void
   clear: () => void
 }
@@ -64,6 +70,19 @@ export const useLogStore = create<LogState>()((set, get) => ({
         : { id: nextId++, level, message, timestamp: new Date() }
     set((s) => ({
       entries: [...s.entries, entry],
+    }))
+  },
+
+  pushFromBridge: (entry) => {
+    if (entry.level === 'debug' && !get().verbose) return
+    // Reserve a fresh local id so xterm's "skip already-written" guard in
+    // CliTerminal (`lastWrittenIdRef`) treats the bridged entry as new.
+    const local: LogEntry =
+      entry.scope !== undefined
+        ? { ...entry, id: nextId++ }
+        : { id: nextId++, level: entry.level, message: entry.message, timestamp: entry.timestamp }
+    set((s) => ({
+      entries: [...s.entries, local],
     }))
   },
 

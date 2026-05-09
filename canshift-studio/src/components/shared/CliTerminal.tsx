@@ -10,7 +10,7 @@
 // separate Electron `BrowserWindow` is tracked separately and lands in a
 // follow-up PR; the IPC + window plumbing are too invasive to bundle here.
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type ReactElement } from 'react'
 import { useLogStore, type LogEntry } from '../../stores/log.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -20,6 +20,7 @@ import { parse, ParseError } from '../../cli/parse'
 import { buildPrompt } from '../../cli/prompt'
 import { CLI_FONT_FAMILY, CLI_FONT_SIZE, CLI_LINE_HEIGHT, CLI_THEME } from '../../cli/theme'
 import { useCliRuntime } from '../../cli/useCliRuntime'
+import { useCliDetach } from '../../cli/useCliDetach'
 import {
   backspace,
   clearLine,
@@ -86,7 +87,16 @@ const ESC_HOME = '\x1b[H'
 const ESC_END = '\x1b[F'
 const ESC_DELETE = '\x1b[3~'
 
-export default function CliTerminal() {
+interface CliTerminalProps {
+  /**
+   * Renders in standalone mode: the resize handle is hidden, the panel
+   * stretches to 100% height, and the header button switches to "Re-attach"
+   * (issue #433). Defaults to the embedded in-app surface.
+   */
+  detached?: boolean
+}
+
+export default function CliTerminal({ detached = false }: CliTerminalProps = {}): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const terminalRef = useRef<XtermTerminal | null>(null)
   const handleRef = useRef<CliTerminalHandle | null>(null)
@@ -95,6 +105,17 @@ export default function CliTerminal() {
   const lastWrittenIdRef = useRef<number>(0)
   const fitRef = useRef<{ fit: () => void } | null>(null)
   const { height, beginDrag, isDragging } = useCliPanelHeight()
+  const { state: cliState, detach, reattach } = useCliDetach()
+  const isDetachedSurface = detached
+  const isDetachedState = cliState.kind === 'detached'
+
+  const handleToggleDetach = useCallback((): void => {
+    if (isDetachedSurface || isDetachedState) {
+      void reattach()
+    } else {
+      void detach()
+    }
+  }, [detach, reattach, isDetachedSurface, isDetachedState])
 
   // The runtime hook is mounted unconditionally so it can subscribe to the
   // stores; it will start emitting useful values once `terminal` is set on
@@ -410,10 +431,19 @@ export default function CliTerminal() {
     }
   }, [height, isDragging])
 
+  // The detached surface fills its own BrowserWindow viewport — no need to
+  // honour the in-app panel height, and the resize handle has no purpose.
+  const containerHeight: number | string = isDetachedSurface ? '100%' : height
+  const showResizeHandle = !isDetachedSurface
+  // The Detach button doubles as Re-attach when the user has already
+  // detached. Disabled while a detach is mid-flight to keep clicks idempotent.
+  const detachLabel = isDetachedSurface || isDetachedState ? 'Re-attach' : 'Detach'
+  const detachDisabled = !isDetachedSurface && isDetachedState
+
   return (
     <div
       style={{
-        height,
+        height: containerHeight,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -422,20 +452,22 @@ export default function CliTerminal() {
         overflow: 'hidden',
       }}
     >
-      {/* Resize handle — drag the top edge to grow/shrink the panel. */}
-      <div
-        role="separator"
-        aria-label="Resize CLI panel"
-        aria-orientation="horizontal"
-        onMouseDown={beginDrag}
-        style={{
-          height: RESIZE_HANDLE_HEIGHT,
-          flexShrink: 0,
-          cursor: 'row-resize',
-          background: isDragging ? '#2A2A2A' : 'transparent',
-          transition: isDragging ? 'none' : 'background 0.15s ease',
-        }}
-      />
+      {showResizeHandle && (
+        // Resize handle — drag the top edge to grow/shrink the panel.
+        <div
+          role="separator"
+          aria-label="Resize CLI panel"
+          aria-orientation="horizontal"
+          onMouseDown={beginDrag}
+          style={{
+            height: RESIZE_HANDLE_HEIGHT,
+            flexShrink: 0,
+            cursor: 'row-resize',
+            background: isDragging ? '#2A2A2A' : 'transparent',
+            transition: isDragging ? 'none' : 'background 0.15s ease',
+          }}
+        />
+      )}
 
       {/* Header */}
       <div
@@ -460,6 +492,25 @@ export default function CliTerminal() {
         >
           CLI
         </span>
+        <button
+          type="button"
+          onClick={handleToggleDetach}
+          disabled={detachDisabled}
+          aria-label={detachLabel}
+          style={{
+            background: 'transparent',
+            color: detachDisabled ? '#444444' : '#AAAAAA',
+            border: '1px solid #333333',
+            borderRadius: 3,
+            padding: '2px 8px',
+            fontSize: 9,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            cursor: detachDisabled ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {detachLabel}
+        </button>
       </div>
 
       <div

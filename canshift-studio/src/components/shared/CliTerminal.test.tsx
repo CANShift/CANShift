@@ -9,14 +9,19 @@
 // we drive the React tree through a raw `react-dom/client` root and let act()
 // flush effects.
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { useLogStore } from '../../stores/log.store'
+import { IpcChannels } from '../../../main/ipc/ipc-channels'
 
 const writes: string[] = []
 const clearMock = vi.fn()
+const ipcInvoke = vi.fn<(channel: string, ...args: unknown[]) => Promise<unknown>>()
+const ipcSend = vi.fn<(channel: string, ...args: unknown[]) => void>()
+const ipcOn = vi.fn<(channel: string, listener: (...args: unknown[]) => void) => void>()
+const ipcOff = vi.fn<(channel: string, listener: (...args: unknown[]) => void) => void>()
 
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 
@@ -79,6 +84,25 @@ import CliTerminal from './CliTerminal'
 let container: HTMLDivElement | null = null
 let root: Root | null = null
 
+beforeEach(() => {
+  ipcInvoke.mockReset()
+  ipcSend.mockReset()
+  ipcOn.mockReset()
+  ipcOff.mockReset()
+  ipcInvoke.mockResolvedValue({ state: { kind: 'inApp' }, backlog: [] })
+  Object.defineProperty(window, 'ipc', {
+    configurable: true,
+    writable: true,
+    value: {
+      invoke: ipcInvoke,
+      send: ipcSend,
+      on: ipcOn,
+      off: ipcOff,
+      channels: IpcChannels,
+    },
+  })
+})
+
 afterEach(() => {
   if (root !== null) {
     act(() => {
@@ -95,15 +119,13 @@ afterEach(() => {
   useLogStore.setState({ entries: [] })
 })
 
-async function mount(): Promise<void> {
+async function mount(detached = false): Promise<void> {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
     root?.render(
-      <MemoryRouter>
-        <CliTerminal />
-      </MemoryRouter>
+      <MemoryRouter>{detached ? <CliTerminal detached /> : <CliTerminal />}</MemoryRouter>
     )
     await Promise.resolve()
   })
@@ -138,5 +160,30 @@ describe('CliTerminal', () => {
     const out = writes.join('')
     expect(out).toContain('hello from test')
     expect(out).toContain('[usb]')
+  })
+
+  it('clicking the Detach button invokes CLI_DETACH', async () => {
+    await mount()
+    const button = container?.querySelector(
+      'button[aria-label="Detach"]'
+    ) as HTMLButtonElement | null
+    expect(button).toBeTruthy()
+
+    await act(async () => {
+      button?.click()
+      await Promise.resolve()
+    })
+
+    expect(ipcInvoke).toHaveBeenCalledWith(IpcChannels.CLI_DETACH)
+  })
+
+  it('hides the resize handle when rendered in detached mode', async () => {
+    await mount(true)
+    const handle = container?.querySelector('div[aria-label="Resize CLI panel"]')
+    expect(handle).toBeNull()
+
+    // Header button reads "Re-attach" in detached mode.
+    const reattachBtn = container?.querySelector('button[aria-label="Re-attach"]')
+    expect(reattachBtn).toBeTruthy()
   })
 })

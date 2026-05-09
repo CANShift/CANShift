@@ -91,6 +91,18 @@ export const IpcChannels = {
   // Device hardware config (renderer → main)
   DEVICE_CONFIG_READ: 'device:read',
   DEVICE_CONFIG_WRITE: 'device:write',
+
+  // CLI panel detach (issue #433)
+  // Renderer → main: spawn / close the detached BrowserWindow, query state.
+  CLI_DETACH: 'cli:detach',
+  CLI_REATTACH: 'cli:reattach',
+  CLI_GET_STATE: 'cli:get-state',
+  // Main → renderer: state changes broadcast to every CLI surface.
+  CLI_STATE_CHANGED: 'cli:state-changed',
+  // Main → renderer: rebroadcast log entries to other CLI surfaces.
+  CLI_LOG_BROADCAST: 'cli:log-broadcast',
+  // Renderer → main (fire-and-forget): forward a freshly-pushed log entry.
+  CLI_LOG_PUSH: 'cli:log-push',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

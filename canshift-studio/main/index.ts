@@ -9,6 +9,7 @@ import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
 import { installContentSecurityPolicy, isExternalUrlAllowed } from './services/security.service'
 import { IpcChannels } from './ipc/ipc-channels'
+import { disposeCliWindow } from './windows/cli-window'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
@@ -224,6 +225,12 @@ function createWindow(): void {
 
   // Prompt before closing the window if there are unsaved config changes.
   // The renderer keeps `configIsDirty` in sync via WINDOW_SET_DIRTY.
+  // Keep the detached CLI window in lockstep with the main window — closing
+  // the main app should never leave a phantom CLI window alive.
+  mainWindow.on('closed', () => {
+    disposeCliWindow()
+  })
+
   mainWindow.on('close', (event) => {
     if (!configIsDirty || confirmedClose) return
     event.preventDefault()
@@ -293,6 +300,8 @@ app.on('before-quit', () => {
   })
   // Clear flash port so Web Serial auto-select is reset on next launch
   firmwareService.setFlashPort(null)
+  // Tear down the detached CLI window so it doesn't keep the app alive.
+  disposeCliWindow()
 })
 
 app.on('window-all-closed', () => {
