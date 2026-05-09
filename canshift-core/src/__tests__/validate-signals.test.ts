@@ -484,6 +484,73 @@ describe('validateSignals — colorRamp', () => {
     expect(result.valid).toBe(false)
     expect(result.errors.some((e) => e.includes('interpolate must be one of'))).toBe(true)
   })
+
+  it('rejects colorRamp that is not an object (e.g. a string)', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [minimalSignal({ colorRamp: 'rainbow' })],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('colorRamp must be an object when set'))).toBe(true)
+  })
+
+  it('rejects colorRamp.stops that is not an array', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: { interpolate: 'linear', stops: 'not-an-array' },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('colorRamp.stops must be an array'))).toBe(true)
+  })
+
+  it('rejects a stop entry that is not an object', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: {
+              interpolate: 'linear',
+              stops: [42, { value: 100, color: '#CC3333' }],
+            },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(
+      result.errors.some((e) => e.includes('colorRamp.stops[0]') && e.includes('must be an object'))
+    ).toBe(true)
+  })
+
+  it('rejects a stop with a non-finite value', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: {
+              interpolate: 'linear',
+              stops: [
+                { value: 'low', color: '#44CC66' },
+                { value: 100, color: '#CC3333' },
+              ],
+            },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(
+      result.errors.some(
+        (e) => e.includes('colorRamp.stops[0].value') && e.includes('finite number')
+      )
+    ).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
