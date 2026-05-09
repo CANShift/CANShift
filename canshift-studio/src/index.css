@@ -4,6 +4,30 @@
 
 /* CANShift Studio — global styles */
 
+/* Orbitron — self-hosted at three weights so the editor canvas matches the
+   firmware's Orbitron tier (issue #431). NO CDN at runtime. */
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+  src: url('./assets/fonts/Orbitron-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+  src: url('./assets/fonts/Orbitron-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 900;
+  font-style: normal;
+  font-display: block;
+  src: url('./assets/fonts/Orbitron-Black.woff2') format('woff2');
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
