@@ -51,6 +51,7 @@
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
+          "buffer",
           "clsx"
         ],
         "listUnknownPackages": false
