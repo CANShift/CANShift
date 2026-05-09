@@ -3,7 +3,7 @@
 // Mirrors the structure of validate-dashboard.ts: pure function, no I/O,
 // returns ValidationResult with accumulated errors and warnings.
 
-import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
+import { FIRMWARE_CAPS, HEX_COLOR_REGEX, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
 import { CAN_SPEED_OPTIONS } from '../types/device.js'
 import type { ValidationResult } from './validate-dashboard.js'
 
@@ -133,6 +133,67 @@ function validateSignal(signal: unknown, idx: number): string[] {
   errors.push(...validateThresholds(signal, prefix))
   errors.push(...validateUnit(signal.unit, prefix))
   errors.push(...validateTimeoutMs(signal.timeoutMs, prefix))
+  errors.push(...validateColorRamp(signal.colorRamp, prefix))
+
+  return errors
+}
+
+const VALID_RAMP_INTERPOLATIONS = ['linear', 'step'] as const
+
+function validateColorRamp(value: unknown, prefix: string): string[] {
+  if (value === undefined) return []
+  if (!isRecord(value)) {
+    return [`${prefix}.colorRamp must be an object when set`]
+  }
+
+  const errors: string[] = []
+  const interpolate = value.interpolate
+  if (
+    typeof interpolate !== 'string' ||
+    !(VALID_RAMP_INTERPOLATIONS as readonly string[]).includes(interpolate)
+  ) {
+    errors.push(
+      `${prefix}.colorRamp.interpolate must be one of: ${VALID_RAMP_INTERPOLATIONS.join(' | ')}`
+    )
+  }
+
+  const stops = value.stops
+  if (!Array.isArray(stops)) {
+    errors.push(`${prefix}.colorRamp.stops must be an array`)
+    return errors
+  }
+
+  if (stops.length < 2 || stops.length > MAX_RAMP_STOPS) {
+    errors.push(
+      `${prefix}.colorRamp.stops must contain between 2 and ${MAX_RAMP_STOPS.toString()} entries (got ${stops.length.toString()})`
+    )
+  }
+
+  let prevValue: number | null = null
+  for (let i = 0; i < stops.length; i++) {
+    const stop: unknown = stops[i]
+    const stopPrefix = `${prefix}.colorRamp.stops[${i.toString()}]`
+    if (!isRecord(stop)) {
+      errors.push(`${stopPrefix} must be an object`)
+      prevValue = null
+      continue
+    }
+    const stopValue = stop.value
+    if (!isFiniteNumber(stopValue)) {
+      errors.push(`${stopPrefix}.value must be a finite number`)
+      prevValue = null
+      continue
+    }
+    if (prevValue !== null && stopValue <= prevValue) {
+      errors.push(`${stopPrefix}.value must be strictly greater than the previous stop`)
+    }
+    prevValue = stopValue
+
+    const color = stop.color
+    if (typeof color !== 'string' || !HEX_COLOR_REGEX.test(color)) {
+      errors.push(`${stopPrefix}.color must be a 6-digit hex string (e.g. "#44CC66")`)
+    }
+  }
 
   return errors
 }

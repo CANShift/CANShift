@@ -22,7 +22,8 @@
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "export:sensor-defaults": "npm run build && node --experimental-strip-types scripts/export-sensor-defaults.ts"
   },
   "keywords": [
     "canshift",

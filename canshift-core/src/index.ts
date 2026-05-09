@@ -39,9 +39,24 @@ export type {
 } from './types/dashboard'
 
 export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
-export type { SignalConfig, SignalDef } from './types/signal'
+export type {
+  SignalConfig,
+  SignalDef,
+  ColorRamp,
+  ColorRampStop,
+  RampInterpolation,
+} from './types/signal'
 export type { DeviceConfig, CanSpeedKbps } from './types/device'
 export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
+
+// Sensor color-ramp defaults (issue #430)
+export {
+  SENSOR_DEFAULT_RAMPS,
+  resolveDefaultRamp,
+  resolveSensorKind,
+  colorAtValue,
+} from './sensorDefaults'
+export type { SensorKind } from './sensorDefaults'
 
 // IPC return-shape contracts (renderer ↔ main)
 export type { PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult } from './types/ipc'
@@ -64,6 +79,7 @@ export {
   REV_LIMIT_RPM,
   DECIMAL_PLACES,
   HEX_COLOR_REGEX,
+  MAX_RAMP_STOPS,
 } from './constants/firmware-caps'
 
 // ---------------------------------------------------------------------------
@@ -92,7 +108,7 @@ export type {
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.12.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.13.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const

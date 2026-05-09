@@ -385,6 +385,108 @@ describe('validateSignals — per-signal fields', () => {
 })
 
 // ---------------------------------------------------------------------------
+// colorRamp (issue #430)
+// ---------------------------------------------------------------------------
+
+describe('validateSignals — colorRamp', () => {
+  const validRamp = {
+    interpolate: 'linear',
+    stops: [
+      { value: 0, color: '#44CC66' },
+      { value: 100, color: '#CC3333' },
+    ],
+  }
+
+  it('accepts a signal without colorRamp', () => {
+    const result = validateSignals(minimalConfig())
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts a valid colorRamp', () => {
+    const result = validateSignals(
+      minimalConfig({ signals: [minimalSignal({ colorRamp: validRamp })] })
+    )
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects fewer than 2 stops', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: { interpolate: 'linear', stops: [{ value: 0, color: '#44CC66' }] },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('colorRamp.stops must contain'))).toBe(true)
+  })
+
+  it('rejects more than MAX_RAMP_STOPS stops', () => {
+    const stops = Array.from({ length: 9 }, (_, i) => ({ value: i, color: '#44CC66' }))
+    const result = validateSignals(
+      minimalConfig({ signals: [minimalSignal({ colorRamp: { interpolate: 'linear', stops } })] })
+    )
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects stops not sorted ascending', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: {
+              interpolate: 'linear',
+              stops: [
+                { value: 100, color: '#44CC66' },
+                { value: 0, color: '#CC3333' },
+              ],
+            },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('strictly greater'))).toBe(true)
+  })
+
+  it('rejects an invalid hex color', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: {
+              interpolate: 'linear',
+              stops: [
+                { value: 0, color: '#GGG' },
+                { value: 100, color: '#CC3333' },
+              ],
+            },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('6-digit hex'))).toBe(true)
+  })
+
+  it('rejects an unknown interpolate mode', () => {
+    const result = validateSignals(
+      minimalConfig({
+        signals: [
+          minimalSignal({
+            colorRamp: { interpolate: 'cubic', stops: validRamp.stops },
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('interpolate must be one of'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error accumulation
 // ---------------------------------------------------------------------------
 
