@@ -18,6 +18,7 @@ import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
 import { useDeviceStore } from '../stores/device.store'
+import { ESP32_AP_PASSWORD } from '../constants/ota'
 import type { RootStackParamList } from '../navigation'
 
 interface Props {
@@ -273,7 +274,7 @@ export default function UpdateScreen({ navigation }: Props) {
                 <Text style={styles.ssidLabel}>NETWORK</Text>
                 <Text style={styles.ssidValue}>{wifiApSsid}</Text>
                 <View style={styles.ssidDivider} />
-                <Text style={styles.ssidPwd}>Password · canshift</Text>
+                <Text style={styles.ssidPwd}>{`Password · ${ESP32_AP_PASSWORD}`}</Text>
               </View>
               <Text style={styles.hint}>
                 {'Go to Settings → Wi-Fi → select the network above,\nthen come back and tap Push.'}

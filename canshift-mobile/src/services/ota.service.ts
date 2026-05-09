@@ -1,9 +1,14 @@
 // ota.service.ts — Firmware release download + WiFi OTA push
 
 import * as FileSystem from 'expo-file-system'
-
-const GITHUB_API = 'https://api.github.com/repos/tburkhalterr/CANShift/releases'
-const ESP32_OTA_URL = 'http://192.168.4.1/ota' // ESP32 softAP default IP
+import {
+  ESP32_OTA_URL,
+  GITHUB_RELEASES_API,
+  GITHUB_RELEASES_PER_PAGE,
+  OTA_UPLOAD_FIELD_NAME,
+  OTA_UPLOAD_FILE_NAME,
+  OTA_UPLOAD_MIME_TYPE,
+} from '../constants/ota'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,7 +27,9 @@ export interface FirmwareRelease {
 // ---------------------------------------------------------------------------
 
 export async function fetchReleases(): Promise<FirmwareRelease[]> {
-  const response = await fetch(`${GITHUB_API}?per_page=10`)
+  const response = await fetch(
+    `${GITHUB_RELEASES_API}?per_page=${String(GITHUB_RELEASES_PER_PAGE)}`,
+  )
   if (!response.ok) throw new Error(`GitHub API error: ${String(response.status)}`)
 
   const data = (await response.json()) as {
@@ -93,10 +100,10 @@ export async function pushFirmware(
   onProgress?: (progress: number) => void
 ): Promise<void> {
   const formData = new FormData()
-  formData.append('firmware', {
+  formData.append(OTA_UPLOAD_FIELD_NAME, {
     uri: localPath,
-    type: 'application/octet-stream',
-    name: 'firmware.bin',
+    type: OTA_UPLOAD_MIME_TYPE,
+    name: OTA_UPLOAD_FILE_NAME,
   } as unknown as Blob)
 
   const xhr = new XMLHttpRequest()
