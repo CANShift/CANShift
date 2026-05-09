@@ -89,9 +89,17 @@ export function useConfigActions() {
             log('info', `Config migrated: ${applied.join(', ')}`)
           }
         } catch (err) {
+          // Refuse to load a config we cannot bring up to the current schema —
+          // letting it through risks silently mis-rendering or pushing a
+          // stale shape to firmware. Surface the failure and bail out (#157).
           const msg = err instanceof Error ? err.message : String(err)
-          log('error', `Migration failed: ${msg}`)
-          pushError({ source: 'config', code: 'MIGRATION_FAILED', message: msg })
+          log('error', `Migration failed for ${result.filePath ?? 'config'}: ${msg}`)
+          pushError({
+            source: 'config',
+            code: 'MIGRATION_FAILED',
+            message: `Cannot open ${result.filePath ?? 'config'} — migration failed: ${msg}`,
+          })
+          return
         }
         setConfig(config, result.filePath)
         log('info', `Opened ${result.filePath ?? 'config'}`)

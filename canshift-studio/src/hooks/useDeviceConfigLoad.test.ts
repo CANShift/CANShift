@@ -76,14 +76,52 @@ describe('decideDeviceConfigAction', () => {
   })
 
   it('flags an invalid device config without clobbering the editor', () => {
+    // Pin the version to the current schema so the structural-validation
+    // path is exercised — without a version, migrateConfig would catch this
+    // first as a chain failure (#157).
     const action = decideDeviceConfigAction({
-      result: { ok: true, config: { not: 'a-dashboard' } },
+      result: { ok: true, config: { version: '1.11.0', not: 'a-dashboard' } },
       isEditorEmpty: false,
       loadedFromDemoFallback: false,
     })
     expect(action.kind).toBe('invalid-device-config')
     if (action.kind === 'invalid-device-config') {
       expect(action.errors.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('flags a migration failure when device reports a future schema version — #157', () => {
+    // A version that no migration can reach from the current chain.
+    const futureConfig: Record<string, unknown> = {
+      ...makeValidDeviceResponse(),
+      version: '99.0.0',
+    }
+    const action = decideDeviceConfigAction({
+      result: { ok: true, config: futureConfig },
+      isEditorEmpty: false,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('migration-failed-device-config')
+    if (action.kind === 'migration-failed-device-config') {
+      expect(action.message.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('migrates an older device config up to the current schema before applying — #157', () => {
+    // A 1.10.0 → 1.11.0 step is a no-op data migration; the version must
+    // still flip on the returned config so downstream burns are clean.
+    const olderConfig: Record<string, unknown> = {
+      ...makeValidDeviceResponse(),
+      version: '1.10.0',
+    }
+    const action = decideDeviceConfigAction({
+      result: { ok: true, config: olderConfig },
+      isEditorEmpty: false,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('apply-device-config-with-warnings')
+    if (action.kind === 'apply-device-config-with-warnings') {
+      expect(action.config.version).toBe('1.11.0')
     }
   })
 })
