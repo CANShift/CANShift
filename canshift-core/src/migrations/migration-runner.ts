@@ -77,6 +77,21 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.11.0 → 1.12.0: default `topBar.height` bumped from 24 → 30 (issue #379).
+    // Configs that explicitly persist the old default (`height === 24`) are
+    // rewritten so users see the new, more legible bar without surprise. Any
+    // other value (custom or already-bumped) is left untouched.
+    fromVersion: '1.11.0',
+    toVersion: '1.12.0',
+    migrate: (config) => {
+      const topBar = config.topBar as Record<string, unknown> | undefined
+      if (topBar?.height !== 24) {
+        return { ...config, version: '1.12.0' }
+      }
+      return { ...config, version: '1.12.0', topBar: { ...topBar, height: 30 } }
+    },
+  },
+  {
     // 1.10.0 → 1.11.0: arc gauges gain an optional `arcFillStyle` field
     // (issue #175). No data transformation needed — undefined defaults to
     // 'zones' on the read side, preserving legacy behaviour.
