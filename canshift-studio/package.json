@@ -4,6 +4,7 @@
   "description": "CANShift Desktop Configuration Studio — visual dashboard editor for CANShift firmware",
   "main": "dist/main/index.js",
   "scripts": {
+    "predev": "npm --prefix ../canshift-core run build",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "analyze": "ANALYZE=1 electron-vite build",
