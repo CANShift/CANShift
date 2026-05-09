@@ -26,6 +26,7 @@ import {
   BlePermissionDialog,
   type BlePermissionPlatform,
 } from '../components/ble-permission-dialog'
+import { Card } from '../components/ui'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Scan'>
@@ -203,12 +204,16 @@ export default function ScanScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>Connect to your dashboard</Text>
 
         {isReconnecting && (
-          <View style={styles.reconnectBanner}>
+          <Card
+            variant="accent"
+            padding="none"
+            className="w-full flex-row items-center gap-2 mb-3 px-3 py-2"
+          >
             <ActivityIndicator color={Colors.accent} size="small" />
             <Text style={styles.reconnectText}>
               {`Reconnecting to dashboard… (${String(reconnectAttempt)}/${String(reconnectMaxAttempts)})`}
             </Text>
-          </View>
+          </Card>
         )}
 
         <TouchableOpacity
@@ -237,20 +242,21 @@ export default function ScanScreen({ navigation }: Props) {
               scrollEnabled={devices.length > 3}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.deviceRow}
                   onPress={() => void connectTo(item)}
                   disabled={connectionState === 'connecting'}
                 >
-                  <View style={styles.deviceDot} />
-                  <View style={styles.deviceInfo}>
-                    <Text style={styles.deviceName}>{item.name}</Text>
-                    <Text style={styles.deviceId}>{item.id}</Text>
-                  </View>
-                  {connectionState === 'connecting' ? (
-                    <ActivityIndicator color={Colors.accent} size="small" />
-                  ) : (
-                    <Text style={styles.arrow}>›</Text>
-                  )}
+                  <Card className="flex-row items-center gap-3">
+                    <View style={styles.deviceDot} />
+                    <View style={styles.deviceInfo}>
+                      <Text style={styles.deviceName}>{item.name}</Text>
+                      <Text style={styles.deviceId}>{item.id}</Text>
+                    </View>
+                    {connectionState === 'connecting' ? (
+                      <ActivityIndicator color={Colors.accent} size="small" />
+                    ) : (
+                      <Text style={styles.arrow}>›</Text>
+                    )}
+                  </Card>
                 </TouchableOpacity>
               )}
             />
@@ -305,19 +311,6 @@ const styles = StyleSheet.create({
   },
   scanBtnActive: { borderColor: Colors.accent },
   scanBtnText: { fontSize: Typography.md, color: Colors.text },
-  reconnectBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.accent,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
   reconnectText: {
     fontSize: Typography.sm,
     color: Colors.text,
@@ -335,16 +328,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
   list: { gap: Spacing.sm },
-  deviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.md,
-  },
   deviceDot: {
     width: 8,
     height: 8,
