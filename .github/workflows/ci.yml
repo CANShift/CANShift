@@ -229,10 +229,19 @@ jobs:
           restore-keys: |
             deriveddata-${{ runner.os }}-
 
+      # Log noise strategy (#415): pipe xcodebuild through xcbeautify (or xcpretty
+      # fallback) to collapse upstream RN/Pods chatter, and rely on the
+      # withSilencePodsWarnings config plugin to silence noisy Clang categories
+      # on Pods targets only — our app code's warnings still surface.
       - name: xcodebuild (iOS Simulator)
         if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
+          if command -v xcbeautify >/dev/null; then
+            FMT='xcbeautify --quieter'
+          else
+            FMT='xcpretty -c'
+          fi
           xcodebuild \
             -workspace "${{ steps.ios.outputs.workspace }}" \
             -scheme "${{ steps.ios.outputs.scheme }}" \
@@ -240,7 +249,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build | $FMT
         working-directory: canshift-mobile/ios
 
   # ─── Firmware — clang-format ────────────────────────────────────────────────

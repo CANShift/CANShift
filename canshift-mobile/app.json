@@ -43,6 +43,7 @@
     },
     "plugins": [
       "./plugins/withGlogFmtFix",
+      "./plugins/withSilencePodsWarnings",
       [
         "react-native-ble-plx",
         {
