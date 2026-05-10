@@ -18,13 +18,10 @@ export interface Migration {
   migrate: MigrationFn
 }
 
-// Deep-clone a JSON-shaped config. Prefers the standard `structuredClone`
-// (Node 17+) and falls back to a JSON round-trip for older runtimes. Configs
-// are pure JSON, so the round-trip is safe.
+// Deep-clone a JSON-shaped config via a JSON round-trip. Configs are pure JSON,
+// so the round-trip is safe. We don't use `structuredClone` here to keep
+// canshift-core's build dependency-free (no @types/node required).
 function deepClone(value: Record<string, unknown>): Record<string, unknown> {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value)
-  }
   return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
 }
 

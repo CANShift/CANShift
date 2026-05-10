@@ -44,6 +44,7 @@ export default tseslint.config(
       'babel.config.js',
       'eslint.config.mjs',
       'jest.config.js',
+      'scripts/**',
       'nativewind-env.d.ts',
       'tailwind.config.ts',
       'metro.config.js',
