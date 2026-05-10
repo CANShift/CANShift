@@ -53,8 +53,8 @@ jobs:
       # Pinned Espressif QEMU prebuilt — keeps the gate reproducible.
       # Bump deliberately: a new tag means re-validating the assertion logic
       # against the new fork's serial output.
-      QEMU_TAG: esp-develop-9.0.0-20240606
-      QEMU_ASSET: qemu-xtensa-softmmu-esp_develop_9.0.0_20240606-x86_64-linux-gnu.tar.xz
+      QEMU_TAG: esp-develop-9.2.2-20260417
+      QEMU_ASSET: qemu-xtensa-softmmu-esp_develop_9.2.2_20260417-x86_64-linux-gnu.tar.xz
 
     steps:
       - uses: actions/checkout@v4
@@ -166,6 +166,7 @@ jobs:
           qemu-system-xtensa \
             -nographic \
             -machine esp32 \
+            -cpu esp32 \
             -drive file=flash.bin,if=mtd,format=raw \
             -serial file:serial.log \
             -no-reboot &
