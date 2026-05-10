@@ -43,6 +43,7 @@ export const IpcChannels = {
   FIRMWARE_LIST_RELEASES: 'firmware:list-releases',
   FIRMWARE_ENTER_FLASH: 'firmware:enter-flash',
   FIRMWARE_EXIT_FLASH: 'firmware:exit-flash',
+  FIRMWARE_RETRY_RESET: 'firmware:retry-reset',
   FIRMWARE_DOWNLOAD: 'firmware:download',
   // Main → renderer (download progress events for FIRMWARE_DOWNLOAD)
   FIRMWARE_DOWNLOAD_PROGRESS: 'firmware:download-progress',

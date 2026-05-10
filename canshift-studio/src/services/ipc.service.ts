@@ -197,6 +197,17 @@ export const firmwareIpc = {
       ENTER_FLASH_TIMEOUT_MS
     ),
   exitFlash: () => invoke<{ success: boolean }>(IpcChannels.FIRMWARE_EXIT_FLASH),
+  /**
+   * Re-run the BOOT-mode reset on demand (#482). Used by the renderer when
+   * esptool's first sync attempt fails — gives the chip one more clean shot
+   * at entering the bootloader before surfacing the manual-BOOT guidance.
+   */
+  retryResetIntoBootloader: (portPath: string) =>
+    invokeWithTimeout<{ success: boolean; error?: string }>(
+      IpcChannels.FIRMWARE_RETRY_RESET,
+      [portPath],
+      ENTER_FLASH_TIMEOUT_MS
+    ),
   /** Downloads firmware via the main process to bypass renderer CORS. */
   download: (url: string, downloadId: string) =>
     invokeWithTimeout<ArrayBuffer>(

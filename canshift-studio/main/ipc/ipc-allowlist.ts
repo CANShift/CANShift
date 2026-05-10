@@ -49,6 +49,7 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.FIRMWARE_LIST_RELEASES,
   C.FIRMWARE_ENTER_FLASH,
   C.FIRMWARE_EXIT_FLASH,
+  C.FIRMWARE_RETRY_RESET,
   C.FIRMWARE_DOWNLOAD,
   // On-device config
   C.DEVICE_GET_CONFIG,
