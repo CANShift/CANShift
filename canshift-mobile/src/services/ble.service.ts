@@ -264,6 +264,9 @@ export class BleService {
         const status = parseStatus(decodeBase64(statusChar.value))
         if (status) {
           setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
+          useDeviceStore
+            .getState()
+            .setWifiAp(status.ap_ssid ?? null, status.ap_password ?? null)
           if (status.is_day !== undefined) {
             useDeviceStore.getState().setIsDayMode(status.is_day === 1)
           }
@@ -308,7 +311,7 @@ export class BleService {
           }
           const store = useDeviceStore.getState()
           store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
-          store.setWifiAp(s.ap_ssid ?? null)
+          store.setWifiAp(s.ap_ssid ?? null, s.ap_password ?? null)
           if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
         }
       )
