@@ -40,6 +40,7 @@ export default tseslint.config(
       'assets/**',
       'coverage/**',
       'plugins/**',
+      'app.config.ts',
       'babel.config.js',
       'eslint.config.mjs',
       'jest.config.js',

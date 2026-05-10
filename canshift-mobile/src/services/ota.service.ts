@@ -23,6 +23,8 @@ import {
   OTA_UPLOAD_MIME_TYPE,
 } from '../constants/ota'
 import { OtaServiceError, type OtaError } from './ota.errors'
+import { appendHmacTrailer } from './ota-hmac'
+import { getOtaHmacSecretBytes } from './ota-secret'
 import { Sha256 } from './sha256'
 
 // ---------------------------------------------------------------------------
@@ -223,18 +225,63 @@ async function sha256OfFile(uri: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
+// HMAC-trailer staging for push
+// ---------------------------------------------------------------------------
+
+/** Suffix used for the HMAC-trailered staging file. Distinct from the verified
+ *  download so re-runs don't have to re-download — only re-stage. */
+const HMAC_STAGED_SUFFIX = '.hmac.bin'
+
+/**
+ * Read the verified firmware off disk, append the HMAC-SHA256 trailer using
+ * the configured secret, and write the result to a sibling staging file.
+ * Returns the staging URI. The original `localPath` is left untouched so the
+ * cached download can still be reused on a retry.
+ *
+ * The secret is loaded from `ota-secret.ts` and passed straight into the
+ * HMAC primitive — it is never logged, copied to disk, or returned.
+ */
+async function stageFirmwareWithHmac(localPath: string): Promise<string> {
+  const stagedPath = `${localPath}${HMAC_STAGED_SUFFIX}`
+  try {
+    const base64 = await FileSystem.readAsStringAsync(localPath, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+    const body = new Uint8Array(Buffer.from(base64, 'base64'))
+    const trailered = appendHmacTrailer(body, getOtaHmacSecretBytes())
+    const stagedBase64 = Buffer.from(trailered).toString('base64')
+    await FileSystem.writeAsStringAsync(stagedPath, stagedBase64, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+    return stagedPath
+  } catch (e) {
+    // Map any FS / encoding failure to a typed error. Reason text comes from
+    // the underlying error message — never from the secret material.
+    throw new OtaServiceError({
+      kind: 'hmac-prepare-failed',
+      reason: e instanceof Error ? e.message : 'unknown error',
+    })
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Push firmware to ESP32 over WiFi AP
 // The device must be in WiFi AP mode (triggered via BLE CMD start_wifi_ap).
 // Phone must be connected to the CANShift-XXXX WiFi network.
+//
+// Wire contract: `<firmware bytes> || HMAC_SHA256(firmware bytes, secret)`.
+// The 32-byte trailer is appended in `stageFirmwareWithHmac` before the
+// multipart upload. Firmware verifier lives in `hal/wifi/ota_hmac.cpp`.
 // ---------------------------------------------------------------------------
 
 export async function pushFirmware(
   localPath: string,
   onProgress?: (progress: number) => void,
 ): Promise<void> {
+  const stagedPath = await stageFirmwareWithHmac(localPath)
   const formData = new FormData()
   formData.append(OTA_UPLOAD_FIELD_NAME, {
-    uri: localPath,
+    uri: stagedPath,
     type: OTA_UPLOAD_MIME_TYPE,
     name: OTA_UPLOAD_FILE_NAME,
   } as unknown as Blob)
