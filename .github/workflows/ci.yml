@@ -350,6 +350,95 @@ jobs:
             echo "Flash usage ${FLASH_PCT}% within budget"
           fi
 
+  # ─── Firmware — QEMU boot smoke test ────────────────────────────────────────
+  # Boots the production crowpanel_28 image under espressif/qemu and asserts
+  # that the firmware reaches steady state within 30 s. Path-gated to PRs that
+  # touch canshift-firmware/** (mirrors the mobile-ios-build runtime gate).
+  #
+  # Two log markers must appear in the QEMU serial output:
+  #   - "CANShift v* starting" — main.cpp setup() (exactly once)
+  #   - "[BOOT] Ready"         — page_manager.cpp first frame (>= 1)
+  #
+  # See: canshift-firmware/scripts/ci/qemu_boot_smoke.sh + issue #486 (#483).
+  firmware-boot-smoke:
+    name: firmware — boot smoke test
+    runs-on: ubuntu-latest
+    needs: firmware-build
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect firmware-impacting changes
+        id: gate
+        working-directory: ${{ github.workspace }}
+        run: |
+          BASE="origin/${{ github.base_ref || 'main' }}"
+          git fetch origin "${{ github.base_ref || 'main' }}" --depth=1 >/dev/null 2>&1 || true
+          if git diff --name-only "$BASE"...HEAD | grep -qE '^canshift-firmware/|^\.github/workflows/ci\.yml$'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Firmware files changed — running QEMU boot smoke test"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No firmware files changed — skipping QEMU boot smoke test"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO packages
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+          key: platformio-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: |
+            platformio-${{ runner.os }}-
+
+      - name: Install PlatformIO CLI
+        if: steps.gate.outputs.run == 'true'
+        run: pip install platformio
+
+      - name: Install esptool
+        if: steps.gate.outputs.run == 'true'
+        run: pip install esptool
+
+      - name: Build production firmware (crowpanel_28)
+        if: steps.gate.outputs.run == 'true'
+        run: platformio run -e crowpanel_28
+
+      - name: Build SPIFFS image (crowpanel_28)
+        if: steps.gate.outputs.run == 'true'
+        run: platformio run -e crowpanel_28 -t buildfs
+
+      - name: Merge bin into 4 MB flash image
+        if: steps.gate.outputs.run == 'true'
+        # Layout matches ota_4mb.csv:
+        #   0x1000   bootloader
+        #   0x8000   partition table
+        #   0x10000  app0 (firmware)
+        #   0x310000 spiffs
+        run: |
+          esptool.py --chip esp32 merge_bin \
+            --fill-flash-size 4MB \
+            --output merged.bin \
+            0x1000 .pio/build/crowpanel_28/bootloader.bin \
+            0x8000 .pio/build/crowpanel_28/partitions.bin \
+            0x10000 .pio/build/crowpanel_28/firmware.bin \
+            0x310000 .pio/build/crowpanel_28/spiffs.bin
+
+      - name: Run QEMU boot smoke test
+        if: steps.gate.outputs.run == 'true'
+        run: ./scripts/ci/qemu_boot_smoke.sh merged.bin
+
   # ─── Firmware — native unit tests ───────────────────────────────────────────
   # Compiles a subset of the firmware sources (config loader, JSON reader,
   # signal store, MaxxECU parser, signal map) on the host via the [env:native]

@@ -40,6 +40,10 @@ static uint8_t s_currentIdx = 0;
 static lv_obj_t *s_revOverlay = nullptr; // Red flash overlay, global
 static bool s_rebuildRequested = false;  // Set by ThemeManager::toggleDayMode()
 static bool s_reloadRequested = false;   // Set by USB CMD_PUT_CONFIG handler
+// Emitted exactly once after the first widget update tick completes — sentinel
+// for the QEMU boot smoke-test gate (issue #486 / regression #483). Do not
+// remove this marker without updating scripts/ci/qemu_boot_smoke.sh.
+static bool s_firstFrameRendered = false;
 
 void applyPageBackground(lv_obj_t *screen, const CfgPage &cfg) {
     lv_obj_set_style_bg_color(screen, lv_color_hex(cfg.bgColor.rgb), LV_PART_MAIN);
@@ -615,6 +619,15 @@ void PageManager::updateWidgets() {
     {
         PERF_SCOPE(::PerfCounters::WIDGETS);
         WidgetFactory::updateAll(currentScreen);
+    }
+
+    // Boot-complete sentinel — emitted exactly once after the first widget
+    // update tick succeeds. The QEMU boot smoke-test gate (issue #486) greps
+    // for this string to prove the UI loop reached steady state; do not remove
+    // it without updating scripts/ci/qemu_boot_smoke.sh.
+    if (!s_firstFrameRendered) {
+        s_firstFrameRendered = true;
+        LOG_INFO("BOOT", "[BOOT] Ready");
     }
 
     // Refresh top bar status (ECU/CAN dots, voltage, page name, USB icon).
