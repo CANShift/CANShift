@@ -15,7 +15,10 @@ const config: Config = {
           DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
           foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
         },
-        accent: 'hsl(var(--accent) / <alpha-value>)',
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
+        },
         text: 'hsl(var(--text) / <alpha-value>)',
         'text-dim': 'hsl(var(--text-dim) / <alpha-value>)',
         'text-muted': 'hsl(var(--text-muted) / <alpha-value>)',
