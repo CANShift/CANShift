@@ -139,6 +139,16 @@ export default function DashTopBar() {
               <Text style={styles.menuItemText}>Firmware Update</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false)
+                rootNav.navigate('About')
+              }}
+            >
+              <Text style={styles.menuItemText}>About</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
             <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); }}>
               <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
