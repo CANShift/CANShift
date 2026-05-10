@@ -104,6 +104,12 @@ export type {
 } from './migrations/migration-runner'
 
 // ---------------------------------------------------------------------------
+// Design tokens — canonical UI palette/spacing/typography (issue #526)
+// ---------------------------------------------------------------------------
+export type { DesignTokens } from './design-tokens'
+export { DARK_TOKENS, LIGHT_TOKENS, tokensToCssVars } from './design-tokens'
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
