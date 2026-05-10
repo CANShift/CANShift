@@ -21,6 +21,8 @@ import {
   OTA_UPLOAD_FIELD_NAME,
   OTA_UPLOAD_FILE_NAME,
   OTA_UPLOAD_MIME_TYPE,
+  RELEASE_MERGED_ASSET_SUFFIX,
+  RELEASE_OTA_ASSET_SUFFIX,
 } from '../constants/ota'
 import { OtaServiceError, type OtaError } from './ota.errors'
 import { appendHmacTrailer } from './ota-hmac'
@@ -86,6 +88,22 @@ function fail(cause: OtaError): never {
   throw new OtaServiceError(cause)
 }
 
+/**
+ * Pick the firmware-partition asset (`*-firmware.bin`) from a release. Skips
+ * the merged factory image (`*-merged.bin`) and the SPIFFS image — those are
+ * NOT valid OTA payloads and pushing them through `Update.write` would brick
+ * the device. Returns `null` if no suitable asset is published.
+ */
+function pickOtaAsset(assets: GitHubAsset[]): GitHubAsset | null {
+  return (
+    assets.find(
+      (a) =>
+        a.name.endsWith(RELEASE_OTA_ASSET_SUFFIX) &&
+        !a.name.endsWith(RELEASE_MERGED_ASSET_SUFFIX),
+    ) ?? null
+  )
+}
+
 // ---------------------------------------------------------------------------
 // GitHub release fetch
 // ---------------------------------------------------------------------------
@@ -108,7 +126,7 @@ export async function fetchReleases(): Promise<FirmwareRelease[]> {
   return data
     .filter((r) => !r.draft && !r.prerelease)
     .map((r): FirmwareRelease | null => {
-      const asset = r.assets.find((a) => a.name.endsWith('.bin'))
+      const asset = pickOtaAsset(r.assets)
       if (!asset) return null
       return {
         version: r.tag_name.replace(/^v/, ''),

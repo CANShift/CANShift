@@ -180,7 +180,7 @@ function mockFetchNetworkError(): jest.Mock {
 describe('fetchReleases', () => {
   beforeEach(resetMocks)
 
-  it('parses stable releases with .bin asset and digest', async () => {
+  it('parses stable releases with the firmware-partition asset and digest', async () => {
     mockFetchReleases([
       {
         tag_name: 'v0.7.1',
@@ -191,9 +191,21 @@ describe('fetchReleases', () => {
         assets: [
           {
             name: 'canshift-firmware-v0.7.1-crowpanel_28-merged.bin',
+            browser_download_url: 'https://example.com/merged.bin',
+            size: 1000,
+            digest: `sha256:${'b'.repeat(64)}`,
+          },
+          {
+            name: 'canshift-firmware-v0.7.1-crowpanel_28-firmware.bin',
             browser_download_url: 'https://example.com/fw.bin',
             size: 100,
             digest: `sha256:${'a'.repeat(64)}`,
+          },
+          {
+            name: 'canshift-spiffs-v0.7.1-crowpanel_28.bin',
+            browser_download_url: 'https://example.com/spiffs.bin',
+            size: 500,
+            digest: `sha256:${'c'.repeat(64)}`,
           },
         ],
       },
@@ -211,6 +223,34 @@ describe('fetchReleases', () => {
     })
   })
 
+  it('skips releases that publish only the merged factory image (legacy)', async () => {
+    mockFetchReleases([
+      {
+        tag_name: 'v0.7.0',
+        published_at: '2026-04-01T10:00:00Z',
+        body: '',
+        draft: false,
+        prerelease: false,
+        assets: [
+          {
+            name: 'canshift-firmware-v0.7.0-crowpanel_28-merged.bin',
+            browser_download_url: 'https://example.com/merged.bin',
+            size: 1000,
+            digest: null,
+          },
+          {
+            name: 'canshift-spiffs-v0.7.0-crowpanel_28.bin',
+            browser_download_url: 'https://example.com/spiffs.bin',
+            size: 500,
+            digest: null,
+          },
+        ],
+      },
+    ])
+
+    expect(await fetchReleases()).toEqual([])
+  })
+
   it('skips drafts and prereleases', async () => {
     mockFetchReleases([
       {
@@ -221,7 +261,7 @@ describe('fetchReleases', () => {
         prerelease: false,
         assets: [
           {
-            name: 'fw.bin',
+            name: 'canshift-firmware-v0.8.0-crowpanel_28-firmware.bin',
             browser_download_url: 'https://x',
             size: 1,
             digest: null,
@@ -236,7 +276,7 @@ describe('fetchReleases', () => {
         prerelease: true,
         assets: [
           {
-            name: 'fw.bin',
+            name: 'canshift-firmware-v0.8.0-rc1-crowpanel_28-firmware.bin',
             browser_download_url: 'https://x',
             size: 1,
             digest: null,
@@ -248,7 +288,7 @@ describe('fetchReleases', () => {
     expect(await fetchReleases()).toEqual([])
   })
 
-  it('skips releases with no .bin asset', async () => {
+  it('skips releases with no firmware-partition asset', async () => {
     mockFetchReleases([
       {
         tag_name: 'v0.7.0',
@@ -280,7 +320,7 @@ describe('fetchReleases', () => {
         prerelease: false,
         assets: [
           {
-            name: 'fw.bin',
+            name: 'canshift-firmware-v0.6.0-crowpanel_28-firmware.bin',
             browser_download_url: 'https://x',
             size: 1,
             // no digest field at all
@@ -303,7 +343,7 @@ describe('fetchReleases', () => {
         prerelease: false,
         assets: [
           {
-            name: 'fw.bin',
+            name: 'canshift-firmware-v0.6.1-crowpanel_28-firmware.bin',
             browser_download_url: 'https://x',
             size: 1,
             digest: 'sha512:deadbeef',
