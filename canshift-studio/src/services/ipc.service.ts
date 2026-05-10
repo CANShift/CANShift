@@ -19,18 +19,11 @@ import type {
   UpdateErrorPayload,
 } from '../../main/services/updater.service.types'
 
-export type {
-  FirmwareRelease,
-  CanFrame,
-  CanHealth,
-  UpdateAvailablePayload,
-  UpdateErrorPayload,
-  ConnectionStatus,
-  OpenResult,
-  PortInfo,
-  SaveResult,
-  UsbResult,
-}
+// Studio-local IPC payload types (not part of canshift-core). Core IPC return
+// shapes (PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult) are
+// imported directly from '@tmbk/canshift-core' at every call site — do not
+// re-export them through this barrel.
+export type { FirmwareRelease, CanFrame, CanHealth, UpdateAvailablePayload, UpdateErrorPayload }
 
 /**
  * Renderer-side mirror of the `queryVersion()` payload. Kept as a type alias
