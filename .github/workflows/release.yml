@@ -157,22 +157,6 @@ jobs:
             0x10000 .pio/build/crowpanel_28/firmware.bin
           cp .pio/build/crowpanel_28/spiffs.bin canshift-spiffs-${TAG}-crowpanel_28.bin
 
-      # Append HMAC-SHA256 trailer (#519) so the firmware OTA verifier (#205)
-      # can authenticate the image before applying the update. The secret is
-      # injected from the OTA_HMAC_SECRET repo secret; if it's unset, the script
-      # falls back to DEV_INSECURE_REPLACE_BEFORE_PROD (matches firmware fallback)
-      # so dev/PR builds still produce a verifiable trailer.
-      - name: Append OTA HMAC-SHA256 trailer
-        working-directory: .
-        env:
-          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
-        run: |
-          TAG=${{ needs.check-version.outputs.tag }}
-          IN="canshift-firmware/canshift-firmware-${TAG}-crowpanel_28-merged.bin"
-          OUT="canshift-firmware/canshift-firmware-${TAG}-crowpanel_28-merged.bin.signed"
-          node canshift-studio/scripts/append-ota-hmac.mjs "${IN}" "${OUT}"
-          mv "${OUT}" "${IN}"
-
       - name: Attach firmware and SPIFFS to GitHub Release
         run: |
           TAG=${{ needs.check-version.outputs.tag }}
