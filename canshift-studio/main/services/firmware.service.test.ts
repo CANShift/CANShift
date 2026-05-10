@@ -13,17 +13,78 @@ const netMock = vi.hoisted(() => ({
   fetch: vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
 }))
 
-// Hoisted block — vi.mock factories run before module-level imports, so the
-// stub class must live where they can reach it.
-const stubs = vi.hoisted(() => {
-  class SerialPortStub {
-    readonly _stub = true
+// Hoisted block — vi.mock factories run before module-level imports. The
+// recording stub captures every open/set/close call against the SerialPort
+// mock so the reset-sequence tests (#482) can assert the exact call order.
+const serialRecorder = vi.hoisted(() => {
+  interface Signals {
+    dtr: boolean
+    rts: boolean
   }
-  return { SerialPortStub }
+  type Call =
+    | { kind: 'open' }
+    | { kind: 'set'; signals: Signals }
+    | { kind: 'close' }
+    | { kind: 'sleep'; ms: number }
+  const calls: Call[] = []
+
+  // Per-instance counters so a test can target the Nth instance specifically
+  // (instance 1 = first reset pass, instance 2 = second reset pass).
+  let instanceIndex = 0
+
+  // Failure injectors — keyed by `${instanceIndex}:${stage}`.
+  // stage ∈ { 'open', 'set', 'close' }
+  const failures = new Map<string, Error>()
+
+  const failKey = (idx: number, stage: 'open' | 'set' | 'close'): string =>
+    `${String(idx)}:${stage}`
+
+  function reset(): void {
+    calls.length = 0
+    failures.clear()
+    instanceIndex = 0
+  }
+
+  function injectFailure(idx: number, stage: 'open' | 'set' | 'close', err: Error): void {
+    failures.set(failKey(idx, stage), err)
+  }
+
+  class SerialPortStub {
+    private readonly idx: number
+    constructor(_opts: { path: string; baudRate: number; autoOpen: boolean }) {
+      instanceIndex += 1
+      this.idx = instanceIndex
+    }
+    open(cb: (err: Error | null) => void): void {
+      calls.push({ kind: 'open' })
+      const err = failures.get(failKey(this.idx, 'open'))
+      // Async ack to mirror the real serialport library — handlers on
+      // process.nextTick avoid leaking call-order races into the recorder.
+      queueMicrotask(() => {
+        cb(err ?? null)
+      })
+    }
+    set(signals: Signals, cb: (err: Error | null) => void): void {
+      calls.push({ kind: 'set', signals })
+      const err = failures.get(failKey(this.idx, 'set'))
+      queueMicrotask(() => {
+        cb(err ?? null)
+      })
+    }
+    close(cb: (err: Error | null) => void): void {
+      calls.push({ kind: 'close' })
+      const err = failures.get(failKey(this.idx, 'close'))
+      queueMicrotask(() => {
+        cb(err ?? null)
+      })
+    }
+  }
+
+  return { calls, reset, injectFailure, SerialPortStub }
 })
 
 vi.mock('electron', () => ({ net: netMock }))
-vi.mock('serialport', () => ({ SerialPort: stubs.SerialPortStub }))
+vi.mock('serialport', () => ({ SerialPort: serialRecorder.SerialPortStub }))
 
 import { FirmwareService } from './firmware.service'
 
@@ -306,5 +367,109 @@ describe('FirmwareService.flashPort bookkeeping', () => {
 
     service.setFlashPort(null)
     expect(service.getFlashPort()).toBeNull()
+  })
+})
+
+describe('FirmwareService.resetIntoBootloader — two-pass classic reset (#482)', () => {
+  beforeEach(() => {
+    serialRecorder.reset()
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+  })
+
+  // Helper: run resetIntoBootloader against the recorder while flushing every
+  // microtask + scheduled timer. The reset sequence interleaves callback
+  // microtasks (port.set / port.close acks) with setTimeout waits — a naive
+  // `runAllTimersAsync` only flushes one wave. Loop until the promise settles.
+  async function runReset(
+    service: FirmwareService,
+    portPath: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const settled = { done: false }
+    const promise = service.resetIntoBootloader(portPath)
+    const tracked = promise.then(
+      (v) => {
+        settled.done = true
+        return v
+      },
+      (e: unknown) => {
+        settled.done = true
+        throw e instanceof Error ? e : new Error(String(e))
+      }
+    )
+    // Bound the loop — 50 iterations is plenty for two passes (3 set + 1
+    // close + 1 inter-pass sleep × 2 = ~12 waves).
+    for (let i = 0; i < 50 && !settled.done; i += 1) {
+      await vi.advanceTimersByTimeAsync(500)
+    }
+    return tracked
+  }
+
+  it('runs the classic sequence twice in order on a healthy port', async () => {
+    const service = new FirmwareService()
+    const result = await runReset(service, '/dev/tty.usbserial')
+
+    expect(result).toEqual({ success: true })
+
+    // Expected per pass: open, set(D0R1), set(D1R0), set(D0R0), close.
+    // Two passes back-to-back → 10 entries total.
+    const calls = serialRecorder.calls
+    expect(calls).toEqual([
+      { kind: 'open' },
+      { kind: 'set', signals: { dtr: false, rts: true } },
+      { kind: 'set', signals: { dtr: true, rts: false } },
+      { kind: 'set', signals: { dtr: false, rts: false } },
+      { kind: 'close' },
+      { kind: 'open' },
+      { kind: 'set', signals: { dtr: false, rts: true } },
+      { kind: 'set', signals: { dtr: true, rts: false } },
+      { kind: 'set', signals: { dtr: false, rts: false } },
+      { kind: 'close' },
+    ])
+  })
+
+  it('returns success with a 2nd-pass-failed caveat when set() rejects on the second pass', async () => {
+    // Fail the very first set() of pass 2 (instance index 2).
+    serialRecorder.injectFailure(2, 'set', new Error('EBUSY on second pass'))
+    const service = new FirmwareService()
+
+    const result = await runReset(service, '/dev/tty.usbserial')
+
+    expect(result.success).toBe(true)
+    expect(result.error).toMatch(/2nd pass failed/)
+    expect(result.error).toMatch(/EBUSY on second pass/)
+  })
+
+  it('returns failure when the first-pass open() fails — no second pass attempted', async () => {
+    serialRecorder.injectFailure(1, 'open', new Error('ENOENT'))
+    const service = new FirmwareService()
+
+    const result = await runReset(service, '/dev/tty.usbserial')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/Open \/dev\/tty\.usbserial failed/)
+    expect(result.error).toMatch(/ENOENT/)
+
+    // Only one open() call — second pass must not have run.
+    const opens = serialRecorder.calls.filter((c) => c.kind === 'open')
+    expect(opens).toHaveLength(1)
+  })
+
+  it('still calls close() on a best-effort basis when set() throws on the first pass', async () => {
+    serialRecorder.injectFailure(1, 'set', new Error('IOCTL failed'))
+    const service = new FirmwareService()
+
+    const result = await runReset(service, '/dev/tty.usbserial')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/IOCTL failed/)
+
+    // Pass 1: open, set (failed), close (best-effort cleanup).
+    // Pass 2 must not have started.
+    const calls = serialRecorder.calls
+    expect(calls[0]).toEqual({ kind: 'open' })
+    expect(calls[1]).toEqual({ kind: 'set', signals: { dtr: false, rts: true } })
+    expect(calls.some((c) => c.kind === 'close')).toBe(true)
+    const opens = calls.filter((c) => c.kind === 'open')
+    expect(opens).toHaveLength(1)
   })
 })

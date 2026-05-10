@@ -230,7 +230,6 @@ export function useFirmwareFlash() {
         setState('flashing')
         setPhase('flashing')
         appendLog('Creating Transport(port) and ESPLoader…')
-        const transport = new Transport(port, false)
         // The ROM bootloader prints `Flash ID: ffffff` when the chip can't
         // talk to its own flash chip — usually a damaged USB cable, an unpowered
         // hub, or a peripheral pulling on GPIO 6-11 (the SPI flash bus).
@@ -245,52 +244,6 @@ export function useFirmwareFlash() {
             appendLog(`Detected bad Flash ID in terminal stream: "${text.trim()}"`, 'error')
           }
         }
-        // Upload baudrate intentionally conservative — 921600 causes Timeouts on
-        // many CH340 + USB cable combinations. 460800 is reliable and only ~25%
-        // slower for a 1.4 MB image.
-        const loader = new ESPLoader({
-          transport,
-          // 230400 chosen empirically — esptool-js 0.6.0 added a Flash ID
-          // read step that fails with `Flash ID: ffffff` on CH340 + macOS
-          // at 460800 (the stub itself prints "consider using a lower baud
-          // rate" in that scenario). 230400 keeps SPI bus comms reliable on
-          // this board with only ~50% extra wall-clock per flash.
-          baudrate: 230400,
-          enableTracing: false,
-          terminal: {
-            write: (text: string) => {
-              checkForBadFlashId(text)
-              appendLog(text)
-            },
-            writeLine: (line: string) => {
-              checkForBadFlashId(line)
-              appendLog(line)
-            },
-            clean: () => {
-              setLogs([])
-            },
-          },
-        })
-
-        // The main-process reset (firmware.service.resetIntoBootloader) ran
-        // inside firmwareIpc.enterFlash() before this point — chip should
-        // already be in ROM bootloader. Tell esptool-js to skip its own
-        // (Web-Serial-based, flaky on macOS CH340) reset sequence and just
-        // sync up. If the main-process reset failed for any reason, mode is
-        // still 'no_reset' here — the user will see a sync timeout in 7
-        // attempts (~50 s) and we'll have a clear log to diagnose with.
-        appendLog('Calling loader.main(no_reset) — chip should already be in bootloader')
-        await loader.main('no_reset')
-        appendLog('loader.main() OK — bootloader synced')
-
-        // Abort before writeFlash if the bootloader reported a bad Flash ID.
-        // Continuing would just hang for the full 60s flash-command timeout.
-        if (flashIdState.bad) {
-          throw new Error(
-            "Flash ID is ffffff — the chip can't reach its own flash. Try: another USB cable, a powered hub, no peripherals on GPIO 6-11."
-          )
-        }
-
         // -----------------------------------------------------------------
         // Workaround for the esptool-js 0.6.0 stub timeout bug — flash
         // commands hardcode `timeout = DEFAULT_TIMEOUT` (3000 ms) when
@@ -323,31 +276,145 @@ export function useFirmwareFlash() {
           ESP_FLASH_DEFL_END: number
           IS_STUB: boolean
         }
-        const loaderI = loader as unknown as EsploaderInternals
-        const flashCmds = new Set([
-          loaderI.ESP_FLASH_BEGIN,
-          loaderI.ESP_FLASH_DATA,
-          loaderI.ESP_FLASH_END,
-          loaderI.ESP_FLASH_DEFL_BEGIN,
-          loaderI.ESP_FLASH_DEFL_DATA,
-          loaderI.ESP_FLASH_DEFL_END,
-        ])
         const FLASH_MIN_TIMEOUT_MS = 60_000
-        const origCheckCommand = loaderI.checkCommand.bind(loaderI)
-        let firstFlashCmdLogged = false
-        loaderI.checkCommand = async (op, cmd, data, chk, responseDataLength, timeout) => {
-          let effectiveTimeout = timeout
-          if (loaderI.IS_STUB && flashCmds.has(cmd) && effectiveTimeout < FLASH_MIN_TIMEOUT_MS) {
-            effectiveTimeout = FLASH_MIN_TIMEOUT_MS
-            if (!firstFlashCmdLogged) {
-              appendLog(
-                `Patched flash-command timeouts to ${String(FLASH_MIN_TIMEOUT_MS)}ms (esptool-js 0.6.0 stub-timeout workaround)`,
-                'info'
-              )
-              firstFlashCmdLogged = true
+
+        // Build a fresh Transport + ESPLoader bound to `port`. Pulled into a
+        // helper so the retry path (#482) can rebuild both after the chip
+        // is reset a second time. esptool-js doesn't support reconnecting
+        // an existing transport, so a successful retry needs new instances.
+        const buildLoader = (
+          targetPort: SerialPort
+        ): { loader: ESPLoader; transport: Transport } => {
+          const t = new Transport(targetPort, false)
+          // 230400 chosen empirically — esptool-js 0.6.0 added a Flash ID
+          // read step that fails with `Flash ID: ffffff` on CH340 + macOS
+          // at 460800 (the stub itself prints "consider using a lower baud
+          // rate" in that scenario). 230400 keeps SPI bus comms reliable on
+          // this board with only ~50% extra wall-clock per flash.
+          const l = new ESPLoader({
+            transport: t,
+            baudrate: 230400,
+            enableTracing: false,
+            terminal: {
+              write: (text: string) => {
+                checkForBadFlashId(text)
+                appendLog(text)
+              },
+              writeLine: (line: string) => {
+                checkForBadFlashId(line)
+                appendLog(line)
+              },
+              clean: () => {
+                setLogs([])
+              },
+            },
+          })
+          // Patch flash-command timeouts on every loader instance — the
+          // stub's hard-coded 3 s ceiling is a per-instance issue.
+          const lI = l as unknown as EsploaderInternals
+          const cmds = new Set([
+            lI.ESP_FLASH_BEGIN,
+            lI.ESP_FLASH_DATA,
+            lI.ESP_FLASH_END,
+            lI.ESP_FLASH_DEFL_BEGIN,
+            lI.ESP_FLASH_DEFL_DATA,
+            lI.ESP_FLASH_DEFL_END,
+          ])
+          const orig = lI.checkCommand.bind(lI)
+          let logged = false
+          lI.checkCommand = async (op, cmd, data, chk, responseDataLength, timeout) => {
+            let effective = timeout
+            if (lI.IS_STUB && cmds.has(cmd) && effective < FLASH_MIN_TIMEOUT_MS) {
+              effective = FLASH_MIN_TIMEOUT_MS
+              if (!logged) {
+                appendLog(
+                  `Patched flash-command timeouts to ${String(FLASH_MIN_TIMEOUT_MS)}ms (esptool-js 0.6.0 stub-timeout workaround)`,
+                  'info'
+                )
+                logged = true
+              }
             }
+            return orig(op, cmd, data, chk, responseDataLength, effective)
           }
-          return origCheckCommand(op, cmd, data, chk, responseDataLength, effectiveTimeout)
+          return { loader: l, transport: t }
+        }
+
+        // Active refs — swapped on a successful retry so writeFlash() and
+        // the cleanup block downstream target the live instance.
+        let { loader, transport } = buildLoader(port)
+
+        // The main-process reset (firmware.service.resetIntoBootloader) ran
+        // inside firmwareIpc.enterFlash() before this point — chip should
+        // already be in ROM bootloader. Tell esptool-js to skip its own
+        // (Web-Serial-based, flaky on macOS CH340) reset sequence and just
+        // sync up.
+        //
+        // #482 — wrap the sync in a one-shot retry: on the first failure,
+        // close the port for esptool, ask main to drive the reset sequence
+        // again, reopen, and retry. Two attempts is the right ceiling: more
+        // adds latency without changing the outcome on truly stuck boards
+        // (charge-only cable, dead chip, etc.) — better to surface the
+        // manual-BOOT guidance instead.
+        appendLog('Calling loader.main(no_reset) — chip should already be in bootloader')
+        try {
+          await loader.main('no_reset')
+          appendLog('loader.main() OK — bootloader synced')
+        } catch (syncErr: unknown) {
+          const syncMsg = syncErr instanceof Error ? syncErr.message : String(syncErr)
+          appendLog('Sync failed, retrying with fresh reset…', 'warn')
+          appendLog(`First sync error: ${syncMsg}`, 'warn')
+
+          // Close the renderer-side port so the main-process serialport can
+          // open it without an EBUSY. esptool's transport may have left
+          // streams open mid-handshake — best-effort close.
+          await transport.disconnect().catch(() => {
+            /* best-effort */
+          })
+          if (port.readable !== null) {
+            await port.close().catch(() => {
+              /* best-effort */
+            })
+          }
+
+          const retryReset = await firmwareIpc.retryResetIntoBootloader(portPath)
+          if (!retryReset.success) {
+            appendLog(`Retry reset failed: ${retryReset.error ?? 'unknown'}`, 'error')
+          } else if (retryReset.error) {
+            appendLog(`Retry reset caveat: ${retryReset.error}`, 'warn')
+          } else {
+            appendLog('Retry reset OK — re-attempting sync')
+          }
+
+          // Reopen via Web Serial. The handle is the one Chromium already
+          // authorised in STAGE 1, so requestPort() is not needed.
+          await port.open({ baudRate: 115200 }).catch((openErr: unknown) => {
+            const m = openErr instanceof Error ? openErr.message : String(openErr)
+            appendLog(`port.open after retry-reset failed: ${m}`, 'warn')
+          })
+
+          const retry = buildLoader(port)
+          loader = retry.loader
+          transport = retry.transport
+
+          try {
+            await loader.main('no_reset')
+            appendLog('loader.main() OK on retry — bootloader synced')
+          } catch (retryErr: unknown) {
+            const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+            appendLog(`Retry sync also failed: ${retryMsg}`, 'error')
+            throw new Error(
+              'Could not enter ESP32 bootloader automatically after 2 attempts. Hold the BOOT button on the device, press RESET (or unplug/replug USB while holding BOOT), then click Retry. — issue #482',
+              { cause: retryErr }
+            )
+          }
+        }
+
+        // Abort before writeFlash if the bootloader reported a bad Flash ID.
+        // Continuing would just hang for the full 60s flash-command timeout.
+        if (flashIdState.bad) {
+          throw new Error(
+            "Flash ID is ffffff — the chip can't reach its own flash. Try: another USB cable, a powered hub, no peripherals on GPIO 6-11."
+          )
         }
 
         // The merged binary (built via `esptool merge_bin 0x1000 bootloader 0x8000

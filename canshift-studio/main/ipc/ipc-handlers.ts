@@ -385,6 +385,38 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return { success: true }
   })
 
+  // Re-run the bootloader reset (#482) — used by the renderer when esptool's
+  // first sync attempt fails. Same shape as the reset embedded in
+  // FIRMWARE_ENTER_FLASH, but standalone so the renderer can chain it
+  // between two `loader.main('no_reset')` calls without re-entering the
+  // full enter-flash dance.
+  ipcMain.handle(IpcChannels.FIRMWARE_RETRY_RESET, async (_event, portPath: unknown) => {
+    if (!isNonEmptyString(portPath)) {
+      return { success: false, error: 'portPath must be a non-empty string' }
+    }
+    const reset = await firmwareService.resetIntoBootloader(portPath)
+    if (!reset.success) {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'warn',
+        message: `Retry reset failed: ${reset.error ?? 'unknown'}`,
+        ts: Date.now(),
+      })
+    } else if (reset.error) {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'warn',
+        message: `Retry reset succeeded with caveat: ${reset.error}`,
+        ts: Date.now(),
+      })
+    } else {
+      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+        level: 'info',
+        message: `Retry reset OK on ${portPath}`,
+        ts: Date.now(),
+      })
+    }
+    return reset
+  })
+
   // Download firmware binaries in main to bypass renderer CORS on GitHub release CDN.
   // Renderer subscribes to FIRMWARE_DOWNLOAD_PROGRESS with the same downloadId for live progress.
   ipcMain.handle(

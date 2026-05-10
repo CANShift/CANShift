@@ -256,6 +256,7 @@ describe('registerIpcHandlers — channel registration', () => {
       IpcChannels.FIRMWARE_LIST_RELEASES,
       IpcChannels.FIRMWARE_ENTER_FLASH,
       IpcChannels.FIRMWARE_EXIT_FLASH,
+      IpcChannels.FIRMWARE_RETRY_RESET,
       IpcChannels.FIRMWARE_DOWNLOAD,
       IpcChannels.SIGNAL_EXPORT,
       IpcChannels.APP_VERSION,
@@ -585,6 +586,23 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
     const result = await getHandler(IpcChannels.FIRMWARE_EXIT_FLASH)(makeEvent())
     expect(firmwareMock.setFlashPort).toHaveBeenCalledWith(null)
     expect(result).toEqual({ success: true })
+  })
+
+  it('FIRMWARE_RETRY_RESET re-runs resetIntoBootloader and validates the port path (#482)', async () => {
+    firmwareMock.resetIntoBootloader.mockResolvedValueOnce({ success: true })
+    const handler = getHandler(IpcChannels.FIRMWARE_RETRY_RESET)
+
+    // Reject non-string portPath — service must not be called.
+    expect(await handler(makeEvent(), 0)).toEqual({
+      success: false,
+      error: 'portPath must be a non-empty string',
+    })
+    expect(firmwareMock.resetIntoBootloader).not.toHaveBeenCalled()
+
+    // Valid portPath delegates and surfaces the service result verbatim.
+    const result = await handler(makeEvent(), '/dev/tty.usbserial')
+    expect(result).toEqual({ success: true })
+    expect(firmwareMock.resetIntoBootloader).toHaveBeenCalledWith('/dev/tty.usbserial')
   })
 
   it('FIRMWARE_DOWNLOAD rejects a non-allowlisted URL host', async () => {

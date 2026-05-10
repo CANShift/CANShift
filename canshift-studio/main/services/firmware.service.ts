@@ -22,6 +22,68 @@ const FIRMWARE_ASSET_RE = /canshift-firmware-.*-crowpanel_28-merged\.bin$/
 const SPIFFS_ASSET_RE = /canshift-spiffs-.*-crowpanel_28\.bin$/
 
 // ---------------------------------------------------------------------------
+// Reset sequence (#482)
+// ---------------------------------------------------------------------------
+
+/** Strategy for driving DTR/RTS to enter the ESP32 ROM bootloader. */
+export type ResetVariant = 'classic' | 'inverted' | 'usb-jtag'
+
+interface ResetStep {
+  readonly signals: { dtr: boolean; rts: boolean }
+  /** Wait after asserting these signals before the next step. */
+  readonly waitMs: number
+}
+
+// Widened from the original esptool defaults (100 / 50 ms) — slow CH340
+// boards on macOS need extra latch time on the boot pin (#482).
+const CLASSIC_RESET_STEPS: readonly ResetStep[] = [
+  // D0 R1 — release boot, hold reset
+  { signals: { dtr: false, rts: true }, waitMs: 120 },
+  // D1 R0 — pull boot LOW, release reset (chip enters bootloader)
+  { signals: { dtr: true, rts: false }, waitMs: 80 },
+  // D0 R0 — release boot pin (chip stays in bootloader)
+  { signals: { dtr: false, rts: false }, waitMs: 0 },
+]
+
+// Inverted variant — RTS toggles the boot pin, DTR toggles reset. Some
+// FTDI/PL2303 wirings differ from the canonical CH340 layout.
+const INVERTED_RESET_STEPS: readonly ResetStep[] = [
+  { signals: { dtr: true, rts: false }, waitMs: 120 },
+  { signals: { dtr: false, rts: true }, waitMs: 80 },
+  { signals: { dtr: false, rts: false }, waitMs: 0 },
+]
+
+// USB-JTAG (ESP32-S3 native USB) — a single brief reset pulse, no boot pin.
+const USB_JTAG_RESET_STEPS: readonly ResetStep[] = [
+  { signals: { dtr: false, rts: true }, waitMs: 100 },
+  { signals: { dtr: false, rts: false }, waitMs: 0 },
+]
+
+function resetSequenceFor(variant: ResetVariant): readonly ResetStep[] {
+  switch (variant) {
+    case 'classic':
+      return CLASSIC_RESET_STEPS
+    case 'inverted':
+      return INVERTED_RESET_STEPS
+    case 'usb-jtag':
+      return USB_JTAG_RESET_STEPS
+    default: {
+      const _exhaustive: never = variant
+      return _exhaustive
+    }
+  }
+}
+
+/** Settle window between the two reset passes (#482). */
+const RESET_PASS_GAP_MS = 250
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+// ---------------------------------------------------------------------------
 // GitHub API type guards
 // ---------------------------------------------------------------------------
 
@@ -124,14 +186,20 @@ export class FirmwareService {
 
   /**
    * Hardware-reset the ESP32 into download mode by toggling DTR/RTS via the
-   * native serialport library. Mirrors esptool's "default_reset" sequence
-   * (D0 R1 W100 D1 R0 W50 D0) but runs in the main process so macOS doesn't
-   * fight us on Web Serial's setSignals throttling.
+   * native serialport library. Mirrors esptool's "default_reset" sequence but
+   * runs in the main process so macOS doesn't fight us on Web Serial's
+   * setSignals throttling.
    *
-   * Always closes the port before returning so the renderer's Web Serial can
-   * grab it without an "already open" error. Errors are non-fatal — esptool-js
-   * will fall back to its own (less reliable) reset attempt and pretend
-   * nothing happened.
+   * Two-pass strategy (#482): some CH340 boards miss the boot-pin sample on
+   * the first attempt — particularly right after a USB replug. Running the
+   * classic sequence twice with widened timings catches the slow boards
+   * without penalising healthy ones.
+   *
+   * Always closes the port between passes so the renderer's Web Serial can
+   * grab it without an "already open" error. The first pass's outcome is
+   * authoritative — if it fails, the call surfaces that error. The second
+   * pass is best-effort: its failure is logged via the `error` field but
+   * `success` stays true.
    *
    * Convention on the ESP32 auto-program circuit:
    *   DTR=true  → IO0 LOW (boot pin pulled low — enter download mode)
@@ -140,22 +208,47 @@ export class FirmwareService {
    *   RTS=false → EN HIGH (release reset)
    */
   async resetIntoBootloader(portPath: string): Promise<{ success: boolean; error?: string }> {
+    const first = await this.runResetSequence(portPath, 'classic')
+    if (!first.success) {
+      // First-pass failure (open / serial error) — surface it directly.
+      return first
+    }
+    // Settle window between passes — long enough for the chip to fully boot
+    // into ROM and for any USB-CDC re-enumeration to finish on macOS CH340.
+    await sleepMs(RESET_PASS_GAP_MS)
+    const second = await this.runResetSequence(portPath, 'classic')
+    if (!second.success) {
+      return {
+        success: true,
+        error: `2nd pass failed: ${second.error ?? 'unknown'}`,
+      }
+    }
+    if (second.error) {
+      return { success: true, error: `2nd pass: ${second.error}` }
+    }
+    return first
+  }
+
+  /**
+   * One full reset attempt with the requested signal variant. Variants:
+   *   - `classic`   — D0 R1 wait → D1 R0 wait → D0 R0 (CH340 / CP210x USB-CDC)
+   *   - `inverted`  — RTS/DTR swapped; some FTDI cables in odd wirings
+   *   - `usb-jtag`  — single-step pulse for ESP32-S3 native USB-JTAG
+   *
+   * Only `classic` is invoked from `resetIntoBootloader` today — the other
+   * two are coded for a future per-port "bootloader entry mode" setting
+   * (deferred from #482).
+   */
+  private runResetSequence(
+    portPath: string,
+    variant: ResetVariant
+  ): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
       const port = new SerialPort({
         path: portPath,
         baudRate: 115200,
         autoOpen: false,
       })
-      const fail = (err: Error | null | undefined): void => {
-        // Best-effort close, then surface the error
-        port.close(() => {
-          /* swallow */
-        })
-        resolve({
-          success: false,
-          error: err?.message ?? 'Failed to reset device into bootloader',
-        })
-      }
       port.open((err) => {
         if (err) {
           resolve({
@@ -164,10 +257,14 @@ export class FirmwareService {
           })
           return
         }
-        const setSignals = (signals: { dtr: boolean; rts: boolean }, cb: () => void): void => {
+        const setSignals = (
+          signals: { dtr: boolean; rts: boolean },
+          cb: () => void,
+          onError: (e: Error) => void
+        ): void => {
           port.set(signals, (setErr) => {
             if (setErr) {
-              fail(setErr)
+              onError(setErr)
               return
             }
             cb()
@@ -176,28 +273,50 @@ export class FirmwareService {
         const sleep = (ms: number, cb: () => void): void => {
           setTimeout(cb, ms)
         }
-        // D0 R1 — release boot, hold reset
-        setSignals({ dtr: false, rts: true }, () => {
-          sleep(100, () => {
-            // D1 R0 — pull boot LOW, release reset (chip enters bootloader)
-            setSignals({ dtr: true, rts: false }, () => {
-              sleep(50, () => {
-                // D0 — release boot pin (chip stays in bootloader)
-                setSignals({ dtr: false, rts: false }, () => {
-                  port.close((closeErr) => {
-                    if (closeErr) {
-                      // Closing failed but the reset itself worked — log
-                      // upstream by surfacing as success with caveat.
-                      resolve({ success: true, error: `close: ${closeErr.message}` })
-                      return
-                    }
-                    resolve({ success: true })
-                  })
-                })
-              })
-            })
+        const fail = (e: Error): void => {
+          // Best-effort close, then surface the error.
+          port.close(() => {
+            /* swallow */
           })
-        })
+          resolve({
+            success: false,
+            error: e.message,
+          })
+        }
+        const finish = (): void => {
+          port.close((closeErr) => {
+            if (closeErr) {
+              resolve({ success: true, error: `close: ${closeErr.message}` })
+              return
+            }
+            resolve({ success: true })
+          })
+        }
+        const steps = resetSequenceFor(variant)
+        // Walk the (signals, waitMs) script in order — every step calls the
+        // next via continuation so timing stays sequential without unbounded
+        // promise chains in the failure path.
+        const runStep = (i: number): void => {
+          if (i >= steps.length) {
+            finish()
+            return
+          }
+          const step = steps[i]
+          if (!step) {
+            finish()
+            return
+          }
+          setSignals(
+            step.signals,
+            () => {
+              sleep(step.waitMs, () => {
+                runStep(i + 1)
+              })
+            },
+            fail
+          )
+        }
+        runStep(0)
       })
     })
   }
