@@ -21,7 +21,7 @@
 
 // Native (unrotated) panel pixel dimensions — what the controller reports.
 // Logical (post-rotation) dims live in HW_DISPLAY_WIDTH/HEIGHT.
-#define HW_PANEL_NATIVE_WIDTH 240  // ILI9341 portrait native
+#define HW_PANEL_NATIVE_WIDTH 240 // ILI9341 portrait native
 #define HW_PANEL_NATIVE_HEIGHT 320
 
 // Touch raw extents — derive from native dims minus 1.
