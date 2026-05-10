@@ -146,24 +146,29 @@ jobs:
       - name: Build SPIFFS image
         run: platformio run --target buildfs -e crowpanel_28
 
-      - name: Create merged firmware binary
+      - name: Stage release assets (firmware partition, merged image, SPIFFS)
         run: |
           TAG=${{ needs.check-version.outputs.tag }}
           pip install esptool
+          # Merged factory image — USB esptool flashing only (bootloader + partitions + firmware).
           python -m esptool --chip esp32 merge_bin \
             -o canshift-firmware-${TAG}-crowpanel_28-merged.bin \
             0x1000 .pio/build/crowpanel_28/bootloader.bin \
             0x8000 .pio/build/crowpanel_28/partitions.bin \
             0x10000 .pio/build/crowpanel_28/firmware.bin
+          # Firmware-partition image — what mobile / studio OTA must consume.
+          cp .pio/build/crowpanel_28/firmware.bin canshift-firmware-${TAG}-crowpanel_28-firmware.bin
+          # SPIFFS image — flashed to the data partition.
           cp .pio/build/crowpanel_28/spiffs.bin canshift-spiffs-${TAG}-crowpanel_28.bin
 
-      - name: Attach firmware and SPIFFS to GitHub Release
+      - name: Attach firmware, OTA partition image and SPIFFS to GitHub Release
         run: |
           TAG=${{ needs.check-version.outputs.tag }}
-          FW="canshift-firmware-${TAG}-crowpanel_28-merged.bin"
+          MERGED="canshift-firmware-${TAG}-crowpanel_28-merged.bin"
+          OTA="canshift-firmware-${TAG}-crowpanel_28-firmware.bin"
           FS="canshift-spiffs-${TAG}-crowpanel_28.bin"
           for i in 1 2 3 4 5; do
-            gh release upload "${TAG}" "${FW}" "${FS}" --clobber && break
+            gh release upload "${TAG}" "${MERGED}" "${OTA}" "${FS}" --clobber && break
             echo "Attempt ${i}: release not ready, retrying in 30s..."
             sleep 30
           done
