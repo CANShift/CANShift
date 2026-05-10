@@ -11,6 +11,9 @@
 
 #include <lvgl.h>
 
+static_assert(HW_DISPLAY_WIDTH == 320 && HW_DISPLAY_HEIGHT == 240,
+              "expected CrowPanel 2.8\" 320×240 — override BoardProfile if changing");
+
 static lv_disp_draw_buf_t s_drawBuf;
 static lv_disp_drv_t s_dispDrv;
 
