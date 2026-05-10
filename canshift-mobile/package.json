@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "main": "index.ts",
   "scripts": {
+    "prestart": "npm --prefix ../canshift-core run build",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild --clean",
+    "pretypecheck": "npm --prefix ../canshift-core run build",
+    "pretest": "npm --prefix ../canshift-core run build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
@@ -15,6 +18,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@tmbk/canshift-core": "file:../canshift-core",
     "@react-native-community/slider": "4.5.5",
     "@react-navigation/bottom-tabs": "^7.15.11",
     "@react-navigation/native": "^7.2.2",

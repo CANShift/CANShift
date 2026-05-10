@@ -15,6 +15,13 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^.+\\.css$': '<rootDir>/__mocks__/styleMock.js',
+    // canshift-core publishes ESM-only "exports" (import/types only) and the
+    // dist files use ESM syntax that jest's CJS resolver can't load directly.
+    // Map to the design-tokens module directly — that's the only symbol the
+    // theme module reads at test time, and it sidesteps the validation/
+    // migration barrel chain (which pulls in @babel/runtime helpers that
+    // jest can't locate from outside mobile's node_modules tree).
+    '^@tmbk/canshift-core$': '<rootDir>/../canshift-core/src/design-tokens.ts',
   },
   transformIgnorePatterns: [
     '/node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|nativewind|react-native-css-interop)',
