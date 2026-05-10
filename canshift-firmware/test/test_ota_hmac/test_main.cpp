@@ -16,6 +16,7 @@
 
 #include "hal/wifi/ota_hmac.h"
 
+#include <cstdio>
 #include <string.h>
 #include <unity.h>
 #include <vector>
