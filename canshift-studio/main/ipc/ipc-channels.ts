@@ -93,6 +93,10 @@ export const IpcChannels = {
   DEVICE_CONFIG_READ: 'device:read',
   DEVICE_CONFIG_WRITE: 'device:write',
 
+  // GitHub releases info card (issue #571)
+  // Renderer → main: fetch latest stable + pre-release info, cached.
+  RELEASES_GET_LATEST: 'releases:get-latest',
+
   // CLI panel detach (issue #433)
   // Renderer → main: spawn / close the detached BrowserWindow, query state.
   CLI_DETACH: 'cli:detach',
