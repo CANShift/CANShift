@@ -1,55 +1,37 @@
-// theme/index.ts — Visual design tokens, mirrors canshift-studio palette
+// theme/index.ts — Re-exports of canshift-core design tokens (issue #526).
+//
+// `@tmbk/canshift-core` is the single source of truth for visual tokens
+// shared between studio and mobile. This module exposes the same legacy
+// named exports (`Colors`, `Spacing`, `Radius`, `Typography`) so existing
+// callers keep working without touching them. Phase 3 will align variants.
 
-export const Colors = {
-  bg: '#0D0D0D',
-  surface: '#111111',
-  surfaceHigh: '#1A1A1A',
-  surface2: '#1A1A1A',
-  border: '#2A2A2A',
-  accent: '#E03030',
+import { DARK_TOKENS } from '@tmbk/canshift-core'
+
+/**
+ * Mobile-only color aliases not (yet) part of the shared SoT. They cover
+ * legacy mobile screens (success surface backgrounds, dimmed accent fills,
+ * a "white" alias used by switches). Keeping them here avoids a sweep of
+ * component files in this PR — Phase 3 will fold them into the SoT or
+ * replace them at the call sites.
+ */
+const LEGACY_MOBILE_COLORS = {
+  surfaceHigh: DARK_TOKENS.colors.surface2,
   accentDim: '#1A0808',
-  accentForeground: '#FFFFFF',
-  primary: '#E03030',
-  primaryForeground: '#FFFFFF',
-  destructive: '#FF4444',
-  destructiveForeground: '#FFFFFF',
-  text: '#CCCCCC',
-  textDim: '#888888',
-  textMuted: '#555555',
-  success: '#55AA55',
   successBg: '#1A3A1A',
   successBorder: '#336633',
-  warning: '#FF8800',
-  danger: '#FF4444',
   white: '#FFFFFF',
 } as const
 
-export const Typography = {
-  // Sizes scaled for phone — slightly larger than studio's 320×240 canvas
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 18,
-  xl: 24,
-  xxl: 32,
-  display: 48,
+export const Colors = {
+  ...DARK_TOKENS.colors,
+  ...LEGACY_MOBILE_COLORS,
 } as const
 
-export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-} as const
+export const Spacing = DARK_TOKENS.spacing
+export const Radius = DARK_TOKENS.radii
+export const Typography = DARK_TOKENS.typography
 
-export const Radius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  full: 999,
-} as const
+export type { DesignTokens } from '@tmbk/canshift-core'
 
 /**
  * Minimum interactive hit target on iOS (Human Interface Guidelines).

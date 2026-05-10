@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate'
-import { Colors } from './src/theme'
+import { Colors, Radius } from './src/theme'
 
 // nativewind/preset ships an empty .d.ts, so TS treats it as "not a module".
 // Use require() and cast to Config — the runtime export is a valid preset.
@@ -13,24 +13,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // SoT colors — all 19 keys from DARK_TOKENS.colors
         bg: Colors.bg,
         surface: Colors.surface,
         'surface-2': Colors.surface2,
         border: Colors.border,
         primary: Colors.primary,
         'primary-foreground': Colors.primaryForeground,
-        destructive: Colors.destructive,
-        'destructive-foreground': Colors.destructiveForeground,
+        secondary: Colors.secondary,
+        'secondary-foreground': Colors.secondaryForeground,
         accent: Colors.accent,
         'accent-foreground': Colors.accentForeground,
+        destructive: Colors.destructive,
+        'destructive-foreground': Colors.destructiveForeground,
         text: Colors.text,
         'text-dim': Colors.textDim,
         'text-muted': Colors.textMuted,
         success: Colors.success,
         warning: Colors.warning,
         danger: Colors.danger,
+        ring: Colors.ring,
       },
-      borderRadius: { sm: '4px', md: '8px', lg: '12px' },
+      borderRadius: {
+        sm: `${Radius.sm}px`,
+        md: `${Radius.md}px`,
+        lg: `${Radius.lg}px`,
+      },
     },
   },
   plugins: [tailwindcssAnimate],
