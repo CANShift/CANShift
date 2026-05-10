@@ -18,6 +18,7 @@ describe('useDeviceStore', () => {
     expect(state.firmwareVersion).toBeNull()
     expect(state.canHealthy).toBe(false)
     expect(state.wifiApSsid).toBeNull()
+    expect(state.wifiApPassword).toBeNull()
     expect(state.isDayMode).toBeNull()
     expect(state.error).toBeNull()
   })
@@ -54,11 +55,23 @@ describe('useDeviceStore', () => {
     expect(state.canHealthy).toBe(false)
   })
 
-  it('setWifiAp accepts an SSID or clears it with null', () => {
-    useDeviceStore.getState().setWifiAp('CANShift-AP')
-    expect(useDeviceStore.getState().wifiApSsid).toBe('CANShift-AP')
-    useDeviceStore.getState().setWifiAp(null)
-    expect(useDeviceStore.getState().wifiApSsid).toBeNull()
+  it('setWifiAp accepts an SSID + password pair and clears both with nulls', () => {
+    useDeviceStore.getState().setWifiAp('CANShift-AP', 'abcDEF12')
+    let state = useDeviceStore.getState()
+    expect(state.wifiApSsid).toBe('CANShift-AP')
+    expect(state.wifiApPassword).toBe('abcDEF12')
+
+    useDeviceStore.getState().setWifiAp(null, null)
+    state = useDeviceStore.getState()
+    expect(state.wifiApSsid).toBeNull()
+    expect(state.wifiApPassword).toBeNull()
+  })
+
+  it('setWifiAp accepts an SSID without a password (firmware older than v0.8.x)', () => {
+    useDeviceStore.getState().setWifiAp('CANShift-AP', null)
+    const state = useDeviceStore.getState()
+    expect(state.wifiApSsid).toBe('CANShift-AP')
+    expect(state.wifiApPassword).toBeNull()
   })
 
   it('setIsDayMode toggles day/night flag', () => {
@@ -88,7 +101,7 @@ describe('useDeviceStore', () => {
   it('disconnect resets every field back to the initial idle state', () => {
     useDeviceStore.getState().setDevice('AA:BB:CC', 'CANShift-01')
     useDeviceStore.getState().setFirmwareStatus('1.2.3', true)
-    useDeviceStore.getState().setWifiAp('CANShift-AP')
+    useDeviceStore.getState().setWifiAp('CANShift-AP', 'abcDEF12')
     useDeviceStore.getState().setIsDayMode(true)
     useDeviceStore.getState().setError({ kind: 'unknown', message: 'boom' })
 
@@ -101,6 +114,7 @@ describe('useDeviceStore', () => {
     expect(state.firmwareVersion).toBeNull()
     expect(state.canHealthy).toBe(false)
     expect(state.wifiApSsid).toBeNull()
+    expect(state.wifiApPassword).toBeNull()
     expect(state.isDayMode).toBeNull()
     expect(state.error).toBeNull()
   })
