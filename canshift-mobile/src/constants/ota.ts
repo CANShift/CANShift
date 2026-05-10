@@ -64,3 +64,14 @@ export const GITHUB_RELEASES_API =
 
 /** Page size used when listing releases. */
 export const GITHUB_RELEASES_PER_PAGE = 10 as const
+
+/**
+ * Suffix of the GitHub release asset that holds the firmware-partition image
+ * (the only file `Update.write` on the ESP32 will accept). Released alongside
+ * a `-merged.bin` (USB esptool factory image) and a `-spiffs.bin` (data
+ * partition) which OTA must NOT consume — pushing those would brick the dash.
+ */
+export const RELEASE_OTA_ASSET_SUFFIX = '-firmware.bin' as const
+
+/** Suffix of the merged factory image — USB esptool flashing only. */
+export const RELEASE_MERGED_ASSET_SUFFIX = '-merged.bin' as const
