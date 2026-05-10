@@ -1128,19 +1128,37 @@ const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProp
           {signalLabel}
         </span>
       )}
-      <span
+      {/* Centering wrapper — Orbitron Black single-digit side bearings are
+          asymmetric, so flex `alignItems: center` alone shifts the glyph off
+          the visual axis. Wrapping the span in a full-width flex row and
+          giving the span `width: 100%` + `textAlign: center` anchors the
+          digit on the container midline (issue #513). */}
+      <div
         style={{
-          color: st.primaryColor,
-          fontSize,
-          // Primary value tier — gear digit is the focal element. Black 900
-          // matches FontManager::primary on the device.
-          fontWeight: 900,
-          fontFamily: FONT_FAMILY,
-          lineHeight: 1,
+          display: 'flex',
+          width: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexShrink: 0,
         }}
       >
-        3
-      </span>
+        <span
+          style={{
+            color: st.primaryColor,
+            fontSize,
+            // Primary value tier — gear digit is the focal element. Black 900
+            // matches FontManager::primary on the device.
+            fontWeight: 900,
+            fontFamily: FONT_FAMILY,
+            lineHeight: 1,
+            textAlign: 'center',
+            width: '100%',
+            display: 'inline-block',
+          }}
+        >
+          3
+        </span>
+      </div>
       {labelText !== null && (
         <span
           style={{
