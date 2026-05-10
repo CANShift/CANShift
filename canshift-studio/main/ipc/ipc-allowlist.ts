@@ -62,6 +62,8 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   // Device hardware config
   C.DEVICE_CONFIG_READ,
   C.DEVICE_CONFIG_WRITE,
+  // GitHub releases info card (issue #571)
+  C.RELEASES_GET_LATEST,
   // CLI panel detach (issue #433) — renderer → main control surface
   C.CLI_DETACH,
   C.CLI_REATTACH,

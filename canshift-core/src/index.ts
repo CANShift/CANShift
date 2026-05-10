@@ -61,6 +61,9 @@ export type { SensorKind } from './sensorDefaults'
 // IPC return-shape contracts (renderer ↔ main)
 export type { PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult } from './types/ipc'
 
+// GitHub release info (shared by studio + mobile — issue #571)
+export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/releases'
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import type {
   SignalConfig,
   DeviceConfig,
   ConnectionStatus,
+  LatestReleaseResult,
   OpenResult,
   PortInfo,
   SaveResult,
@@ -245,6 +246,19 @@ export const deviceConfigIpc = {
 
 export const appIpc = {
   version: () => invoke<string>(IpcChannels.APP_VERSION),
+}
+
+// ---------------------------------------------------------------------------
+// GitHub releases info card (issue #571)
+// ---------------------------------------------------------------------------
+
+export const releasesIpc = {
+  /**
+   * Fetches the latest stable + latest pre-release info, honouring a 5-minute
+   * cache in main. Pass `force = true` to bypass the cache (used by the
+   * "Check now" button). Never throws — returns a discriminated result.
+   */
+  getLatest: (force = false) => invoke<LatestReleaseResult>(IpcChannels.RELEASES_GET_LATEST, force),
 }
 
 // ---------------------------------------------------------------------------

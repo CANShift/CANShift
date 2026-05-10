@@ -9,6 +9,7 @@ import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
+import { releasesService } from '../services/releases.service'
 import { sessionService } from '../services/session.service'
 import { buildMenu } from '../menu'
 import { closeCliWindow, getCliWindowState, openCliWindow } from '../windows/cli-window'
@@ -472,6 +473,14 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   ipcMain.handle(IpcChannels.UPDATE_INSTALL, () => {
     installUpdate()
+  })
+
+  // ---------------------------------------------------------------------------
+  // GitHub releases info card (issue #571)
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.RELEASES_GET_LATEST, async (_event, force: unknown) => {
+    return releasesService.getLatest(force === true)
   })
 
   // ---------------------------------------------------------------------------
