@@ -1,8 +1,10 @@
-// ota.service.test.ts — fetchReleases, downloadFirmware, verifyFirmware
+// ota.service.test.ts — fetchReleases, downloadFirmware, verifyFirmware,
+// pushFirmware (HMAC trailer staging)
 //
 // We mock `expo-file-system` to a tiny in-memory FS so we can drive the
 // service without touching a real device. Network calls go through a
-// jest-mocked global `fetch`.
+// jest-mocked global `fetch`. `expo-constants` is mocked so the OTA secret
+// loader returns the dev fallback deterministically.
 
 // ---------------------------------------------------------------------------
 // In-memory expo-file-system mock
@@ -18,12 +20,19 @@ let mockNextDownloadBytes: Uint8Array = new Uint8Array(0)
 let mockNextDownloadShouldThrow: Error | null = null
 
 jest.mock('expo-file-system', () => {
-  // Inline base64 encoder — jest forbids referencing top-level `Buffer` from
-  // the mock factory, so we use the global `btoa` over a binary string.
+  // Inline base64 codecs — jest forbids referencing top-level `Buffer` from
+  // the mock factory, so we use the global `btoa` / `atob` over binary
+  // strings.
   const bytesToBase64 = (bytes: Uint8Array): string => {
     let s = ''
     for (const b of bytes) s += String.fromCharCode(b)
     return btoa(s)
+  }
+  const base64ToBytes = (b64: string): Uint8Array => {
+    const s = atob(b64)
+    const out = new Uint8Array(s.length)
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i)
+    return out
   }
 
   return {
@@ -46,6 +55,11 @@ jest.mock('expo-file-system', () => {
       const f = mockFs[uri]
       if (!f) return Promise.reject(new Error(`mock fs: file not found: ${uri}`))
       return Promise.resolve(bytesToBase64(f.bytes))
+    }),
+
+    writeAsStringAsync: jest.fn((uri: string, contents: string) => {
+      mockFs[uri] = { bytes: base64ToBytes(contents) }
+      return Promise.resolve()
     }),
 
     createDownloadResumable: jest.fn(
@@ -73,18 +87,29 @@ jest.mock('expo-file-system', () => {
   }
 })
 
+// expo-constants — drive the OTA secret loader to its dev fallback so HMAC
+// vectors are reproducible and cross-platform stable.
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { extra: {} } },
+}))
+
 // ---------------------------------------------------------------------------
 // Imports under test (after mocks are registered)
 // ---------------------------------------------------------------------------
 
+import { Buffer } from 'buffer'
 import {
   downloadFirmware,
   fetchReleases,
+  pushFirmware,
   verifyFirmware,
   type FirmwareRelease,
 } from './ota.service'
 import { OtaServiceError } from './ota.errors'
-import { sha256Hex } from './sha256'
+import { hmacSha256 } from './ota-hmac'
+import { DEV_INSECURE_OTA_SECRET } from './ota-secret'
+import { bytesToHex, sha256Hex } from './sha256'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -445,6 +470,113 @@ describe('verifyFirmware', () => {
         expected: 'f'.repeat(64),
         actual: digest,
       },
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+describe('pushFirmware (HMAC-trailer staging)', () => {
+  // Minimal XHR mock — drives the multipart upload through to a configurable
+  // terminal status so we can assert what was sent. The constructor records
+  // each instance into `lastXhr` to avoid `this`-aliasing inside `send()`.
+  class MockXhr {
+    method: string | null = null
+    url: string | null = null
+    body: FormData | null = null
+    timeout = 0
+    upload: { onprogress: ((e: ProgressEvent) => void) | null } = {
+      onprogress: null,
+    }
+    onload: (() => void) | null = null
+    onerror: (() => void) | null = null
+    ontimeout: (() => void) | null = null
+    status = 0
+
+    constructor() {
+      // Tracking the most recently constructed instance is the most
+      // straightforward way to assert XHR semantics in this test. The
+      // alternative (a "hasInstance" tracker) is more code for no benefit.
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      lastXhr = this
+    }
+
+    open(method: string, url: string): void {
+      this.method = method
+      this.url = url
+    }
+
+    send(body: FormData): void {
+      this.body = body
+      // Deliver result on the next microtask so the caller can attach its
+      // handlers before they fire — matches real XHR semantics.
+      queueMicrotask(() => {
+        this.status = nextStatus
+        this.onload?.()
+      })
+    }
+  }
+
+  let lastXhr: MockXhr | null = null
+  let nextStatus = 200
+
+  beforeEach(() => {
+    resetMocks()
+    lastXhr = null
+    nextStatus = 200
+    ;(global as unknown as { XMLHttpRequest: new () => MockXhr }).XMLHttpRequest =
+      MockXhr
+  })
+
+  const localPath = 'file:///cache/canshift-0.7.1.bin'
+  const firmwareBytes = new Uint8Array([0x10, 0x20, 0x30, 0x40, 0x50, 0x60])
+
+  it('writes a staging file with payload + 32-byte HMAC trailer, then uploads it', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+
+    await pushFirmware(localPath)
+
+    // Staging file exists alongside the original
+    const stagedPath = `${localPath}.hmac.bin`
+    const staged = mockFs[stagedPath]
+    expect(staged).toBeDefined()
+    expect(staged?.bytes.length).toBe(firmwareBytes.length + 32)
+
+    // Original payload bytes are preserved
+    expect(staged?.bytes.subarray(0, firmwareBytes.length)).toEqual(firmwareBytes)
+
+    // Trailer matches HMAC-SHA256(devSecret, firmware)
+    const trailer = staged?.bytes.subarray(firmwareBytes.length) ?? new Uint8Array(0)
+    const expectedTrailer = hmacSha256(
+      new Uint8Array(Buffer.from(DEV_INSECURE_OTA_SECRET, 'utf8')),
+      firmwareBytes,
+    )
+    expect(bytesToHex(trailer)).toBe(bytesToHex(expectedTrailer))
+
+    // The XHR was POSTed to the OTA endpoint.
+    expect(lastXhr).not.toBeNull()
+    expect(lastXhr?.method).toBe('POST')
+    expect(lastXhr?.url).toContain('/ota')
+  })
+
+  it('leaves the original cached download intact', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+    await pushFirmware(localPath)
+    expect(mockFs[localPath].bytes).toEqual(firmwareBytes)
+  })
+
+  it('throws hmac-prepare-failed when the source file is missing', async () => {
+    await expect(pushFirmware(localPath)).rejects.toBeInstanceOf(OtaServiceError)
+    await expect(pushFirmware(localPath)).rejects.toMatchObject({
+      cause: { kind: 'hmac-prepare-failed' },
+    })
+  })
+
+  it('forwards device-rejected when the upload returns a 4xx/5xx', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+    nextStatus = 422
+    await expect(pushFirmware(localPath)).rejects.toMatchObject({
+      cause: { kind: 'device-rejected', status: 422 },
     })
   })
 })

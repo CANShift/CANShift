@@ -24,6 +24,7 @@ export type OtaError =
   | { kind: 'download-failed'; reason: string }
   | { kind: 'size-mismatch'; expected: number; actual: number }
   | { kind: 'checksum-mismatch'; expected: string; actual: string }
+  | { kind: 'hmac-prepare-failed'; reason: string }
   | { kind: 'network-dropped' }
   | { kind: 'device-unreachable' }
   | { kind: 'device-rejected'; status: number }
@@ -73,6 +74,8 @@ export function describeOtaErrorForUser(err: OtaError): string {
       return `Firmware size mismatch (expected ${String(err.expected)} bytes, got ${String(err.actual)}). The download may be corrupted — try again.`
     case 'checksum-mismatch':
       return 'Firmware checksum mismatch. The downloaded file does not match the published release — try again, or report this if it persists.'
+    case 'hmac-prepare-failed':
+      return `Could not prepare the firmware for signed upload: ${err.reason}. Free up storage space and try again.`
     case 'network-dropped':
       return 'Network dropped during transfer. Reconnect to the canshift-XXXX Wi-Fi network and retry.'
     case 'device-unreachable':
@@ -105,6 +108,8 @@ export function describeOtaError(err: OtaError): string {
       return `size mismatch (expected ${String(err.expected)}, got ${String(err.actual)})`
     case 'checksum-mismatch':
       return `checksum mismatch (expected ${err.expected}, got ${err.actual})`
+    case 'hmac-prepare-failed':
+      return `hmac prepare failed: ${err.reason}`
     case 'network-dropped':
       return 'network dropped'
     case 'device-unreachable':

@@ -27,6 +27,7 @@ const allVariants: OtaError[] = [
     expected: 'a'.repeat(64),
     actual: 'b'.repeat(64),
   },
+  { kind: 'hmac-prepare-failed', reason: 'disk full' },
   { kind: 'network-dropped' },
   { kind: 'device-unreachable' },
   { kind: 'device-rejected', status: 500 },
