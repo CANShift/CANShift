@@ -1,6 +1,6 @@
 {
   "name": "canshift-studio",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "CANShift Desktop Configuration Studio — visual dashboard editor for CANShift firmware",
   "main": "dist/main/index.js",
   "scripts": {
