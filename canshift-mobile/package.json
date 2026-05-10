@@ -8,12 +8,11 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild --clean",
-    "pretypecheck": "npm --prefix ../canshift-core run build",
-    "pretest": "npm --prefix ../canshift-core run build",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:coverage": "jest --coverage",
+    "prepare": "npm --prefix ../canshift-core run build",
+    "lint": "npm --prefix ../canshift-core run build && eslint .",
+    "typecheck": "npm --prefix ../canshift-core run build && tsc --noEmit",
+    "test": "npm --prefix ../canshift-core run build && jest",
+    "test:coverage": "npm --prefix ../canshift-core run build && jest --coverage",
     "preinstall": "node -e \"const p=require('./package.json');const o=p.overrides||{};const banned={tar:'tar v7 breaks Expo prebuild (Cannot read properties of undefined reading extract)','@xmldom/xmldom':'xmldom v0.9 breaks @expo/plist parseFromString (mimeType undefined)'};const hit=Object.keys(banned).find(k=>o[k]);if(hit){console.error('\\n[canshift-mobile] ERROR: incompatible override re-introduced: '+hit+'\\n'+banned[hit]+'\\nRemove overrides.'+hit+' from package.json before reinstalling.\\n');process.exit(1);}\""
   },
   "dependencies": {
