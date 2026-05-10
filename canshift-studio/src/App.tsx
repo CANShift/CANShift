@@ -66,6 +66,7 @@ import ErrorBar from './components/shared/ErrorBar'
 import UpdateBanner from './components/shared/UpdateBanner'
 import VersionMismatchBanner from './components/shared/VersionMismatchBanner'
 import DemoFallbackBanner from './components/shared/DemoFallbackBanner'
+import BootLoopBanner from './components/shared/BootLoopBanner'
 import ErrorBoundary from './components/shared/ErrorBoundary'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useFirmwareCheck } from './hooks/useFirmwareCheck'
@@ -75,6 +76,7 @@ import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
 import { useDirtySync } from './hooks/useDirtySync'
 import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
 import { useUsbEvents } from './hooks/useUsbEvents'
+import { useBootLoopDetector } from './hooks/useBootLoopDetector'
 import { useDeviceStore } from './stores/device.store'
 import { useCliDetach } from './cli/useCliDetach'
 import { useCliLogBridge } from './cli/useCliLogBridge'
@@ -99,6 +101,7 @@ export default function App() {
   useDirtySync()
   useBurnPhaseTracker()
   useCliLogBridge()
+  useBootLoopDetector()
 
   const firstRun = useFirstRunCheck()
   const connected = useDeviceStore((s) => s.connected)
@@ -207,6 +210,7 @@ export default function App() {
       <UpdateBanner />
       <VersionMismatchBanner />
       <DemoFallbackBanner />
+      <BootLoopBanner />
       <PushDiffDialog />
       <BurnProgressModal />
       <BurnFailedDialog />
