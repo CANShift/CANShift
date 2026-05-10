@@ -59,8 +59,11 @@ export const POST_TIMEOUT_RETRY_DELAY_MS = PROBE_BACKOFF_MS[0]
  * (`LOG_INFO("BOOT", "CANShift v" APP_VERSION_STR " starting")`). Matched
  * against the formatted device-log entry the renderer emits, which is
  * `[device][BOOT] CANShift vX.Y.Z starting`.
+ *
+ * Exported so the boot-loop detector (`useBootLoopDetector`) can reuse the
+ * same regex without parsing the boot banner twice (#498).
  */
-const BOOT_VERSION_RE = /\bCANShift v(\d+\.\d+\.\d+)\b/
+export const BOOT_VERSION_RE = /\bCANShift v(\d+\.\d+\.\d+)\b/
 
 interface DeviceLogPayload {
   level: string
