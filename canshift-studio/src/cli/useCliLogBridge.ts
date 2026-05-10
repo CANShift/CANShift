@@ -5,10 +5,16 @@
 // • Watches the local store for new entries and forwards them to main via
 //   `CLI_LOG_PUSH` so other CLI surfaces can render them too.
 //
-// The bus deduplicates by `webContents.id` on the main side, so we don't have
-// to worry about an entry pushed locally arriving back via the broadcast.
-// On startup we also seed the local store with the backlog returned by
-// `CLI_GET_STATE` so a freshly-detached window doesn't appear empty.
+// On startup we seed the local store with the backlog returned by
+// `CLI_GET_STATE` so a freshly-detached window doesn't appear empty. The seed
+// MUST skip entries that this window already pushed locally — otherwise the
+// main window's own forwarded entries come back through the seed and produce
+// duplicate log lines (#575). We track per-id forwarded IDs to deduplicate.
+//
+// Seed completion is marked AFTER the IPC resolves so a StrictMode mount /
+// cleanup / re-mount cycle (or any cancelled invoke) doesn't permanently
+// suppress the seed — that was the cause of the detached window staying empty
+// in dev (#574).
 
 import { useEffect, useRef } from 'react'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
@@ -61,19 +67,30 @@ function isCliLogPayload(value: unknown): value is CliLogPayload {
 export function useCliLogBridge(): void {
   const seedDoneRef = useRef<boolean>(false)
   const lastForwardedIdRef = useRef<number>(0)
+  // Tracks payload ids this window already forwarded to main. The seed must
+  // skip these — otherwise pushFromBridge would re-inject entries already
+  // present in this window's store (the source window for those ids), which
+  // is the duplicate-line regression (#575). Each window has its own local
+  // id counter so collisions across windows are not a concern here.
+  const forwardedIdsRef = useRef<Set<number>>(new Set<number>())
 
   // Seed the backlog and subscribe to broadcasts.
   useEffect(() => {
     let cancelled = false
 
     if (!seedDoneRef.current) {
-      seedDoneRef.current = true
       void window.ipc
         .invoke(IpcChannels.CLI_GET_STATE)
         .then((value) => {
           if (cancelled) return
+          // Mark complete AFTER successful resolution so a cancelled invoke
+          // doesn't permanently suppress retries on the next mount (#574).
+          seedDoneRef.current = true
           const resp = value as CliGetStateResponse
           for (const payload of resp.backlog) {
+            // Skip entries this window itself produced — they're already in
+            // the local store under their original ids (#575).
+            if (forwardedIdsRef.current.has(payload.id)) continue
             useLogStore.getState().pushFromBridge(payloadToEntry(payload))
           }
         })
@@ -111,6 +128,9 @@ export function useCliLogBridge(): void {
         // them would produce a feedback loop where the originating window
         // receives its own log back, doubling every line in the store (#484).
         if (entry.bridged === true) continue
+        // Record the local id so the seed can skip this entry when it comes
+        // back through `CLI_GET_STATE`'s backlog (#575).
+        forwardedIdsRef.current.add(entry.id)
         try {
           window.ipc.send(IpcChannels.CLI_LOG_PUSH, entryToPayload(entry))
         } catch {

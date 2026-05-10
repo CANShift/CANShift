@@ -16,6 +16,15 @@ const PATCH = `
     ${PATCH_MARKER}
     # Downgrade fmt + glog to gnu++17 so __cpp_consteval is undefined →
     # FMT_USE_CONSTEVAL=0 → FMT_STRING macros stop tripping Clang 18+.
+    # Patch both target-level build settings (authoritative — pbxproj overrides
+    # xcconfig) and the xcconfig files (defensive, in case CocoaPods rewrites).
+    installer.pods_project.targets.each do |target|
+      if ['fmt', 'glog'].include?(target.name)
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
+        end
+      end
+    end
     ['fmt', 'glog'].each do |pod_name|
       ['Debug', 'Release'].each do |cfg|
         xcconfig_path = File.join(
@@ -24,7 +33,7 @@ const PATCH = `
         )
         next unless File.exist?(xcconfig_path)
         content = File.read(xcconfig_path)
-        content.gsub!('CLANG_CXX_LANGUAGE_STANDARD = c++20', 'CLANG_CXX_LANGUAGE_STANDARD = gnu++17')
+        content.gsub!(/CLANG_CXX_LANGUAGE_STANDARD = c\\+\\+20/, 'CLANG_CXX_LANGUAGE_STANDARD = gnu++17')
         File.write(xcconfig_path, content)
       end
     end
