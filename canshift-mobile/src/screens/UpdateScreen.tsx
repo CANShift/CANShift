@@ -21,7 +21,6 @@ import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
 import { describeOtaErrorForUser, mapOtaError, OtaServiceError } from '../services/ota.errors'
 import { useDeviceStore } from '../stores/device.store'
-import { ESP32_AP_PASSWORD } from '../constants/ota'
 import type { RootStackParamList } from '../navigation'
 import {
   BlePermissionDialog,
@@ -164,8 +163,12 @@ function ReleaseRow({
 // ---------------------------------------------------------------------------
 
 export default function UpdateScreen({ navigation }: Props) {
-  const { firmwareVersion, wifiApSsid } = useDeviceStore(
-    useShallow((s) => ({ firmwareVersion: s.firmwareVersion, wifiApSsid: s.wifiApSsid })),
+  const { firmwareVersion, wifiApSsid, wifiApPassword } = useDeviceStore(
+    useShallow((s) => ({
+      firmwareVersion: s.firmwareVersion,
+      wifiApSsid: s.wifiApSsid,
+      wifiApPassword: s.wifiApPassword,
+    })),
   )
   const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
   const [loading, setLoading] = useState(true)
@@ -334,13 +337,13 @@ export default function UpdateScreen({ navigation }: Props) {
       {step === 'wifi_wait' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Connect to CANShift Wi-Fi</Text>
-          {wifiApSsid != null ? (
+          {wifiApSsid != null && wifiApPassword != null ? (
             <>
               <Card padding="lg" className="w-full items-center gap-1">
                 <Text style={styles.ssidLabel}>NETWORK</Text>
                 <Text style={styles.ssidValue}>{wifiApSsid}</Text>
                 <View style={styles.ssidDivider} />
-                <Text style={styles.ssidPwd}>{`Password · ${ESP32_AP_PASSWORD}`}</Text>
+                <Text style={styles.ssidPwd}>{`Password · ${wifiApPassword}`}</Text>
               </Card>
               <Text style={styles.hint}>
                 {'Go to Settings → Wi-Fi → select the network above,\nthen come back and tap Push.'}

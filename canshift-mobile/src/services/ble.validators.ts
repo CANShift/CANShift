@@ -22,6 +22,7 @@ export interface StatusPayload {
   ver?: string
   can?: number
   ap_ssid?: string
+  ap_password?: string
   is_day?: number
 }
 
@@ -86,6 +87,12 @@ export function parseStatus(raw: string): StatusPayload | null {
     parsed.ap_ssid.length <= MAX_STATUS_STRING_LEN
   ) {
     result.ap_ssid = parsed.ap_ssid
+  }
+  if (
+    typeof parsed.ap_password === 'string' &&
+    parsed.ap_password.length <= MAX_STATUS_STRING_LEN
+  ) {
+    result.ap_password = parsed.ap_password
   }
   if (typeof parsed.is_day === 'number' && Number.isFinite(parsed.is_day)) {
     result.is_day = parsed.is_day

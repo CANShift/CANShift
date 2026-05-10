@@ -43,6 +43,7 @@ describe('parseStatus', () => {
       ver: '1.2.3',
       can: 1,
       ap_ssid: 'CANShift-AP',
+      ap_password: '0123456789abcdef',
       is_day: 0,
     })
     const result = parseStatus(raw)
@@ -50,6 +51,7 @@ describe('parseStatus', () => {
       ver: '1.2.3',
       can: 1,
       ap_ssid: 'CANShift-AP',
+      ap_password: '0123456789abcdef',
       is_day: 0,
     })
   })
@@ -59,6 +61,7 @@ describe('parseStatus', () => {
       ver: 42,
       can: 'yes',
       ap_ssid: 123,
+      ap_password: 456,
       is_day: NaN,
     })
     const result = parseStatus(raw)
@@ -67,9 +70,23 @@ describe('parseStatus', () => {
 
   it('drops over-length strings and returns null for non-object input', () => {
     const tooLong = 'x'.repeat(33)
-    const raw = JSON.stringify({ ver: tooLong, ap_ssid: tooLong, can: 1 })
+    const raw = JSON.stringify({
+      ver: tooLong,
+      ap_ssid: tooLong,
+      ap_password: tooLong,
+      can: 1,
+    })
     expect(parseStatus(raw)).toEqual({ can: 1 })
     expect(parseStatus('not-json')).toBeNull()
     expect(parseStatus('[1,2]')).toBeNull()
+  })
+
+  it('drops ap_password when it exceeds the max status string length', () => {
+    const tooLong = 'a'.repeat(33)
+    const raw = JSON.stringify({
+      ap_ssid: 'CANShift-AP',
+      ap_password: tooLong,
+    })
+    expect(parseStatus(raw)).toEqual({ ap_ssid: 'CANShift-AP' })
   })
 })

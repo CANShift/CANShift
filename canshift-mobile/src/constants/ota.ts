@@ -1,7 +1,6 @@
 // ota.ts — WiFi OTA endpoint shape + GitHub release source.
 // Must stay in sync with:
 //   canshift-firmware/src/hal/wifi/wifi_ap.cpp  (HTTP routes, multipart shape)
-//   canshift-firmware/include/app_config.h      (BLE_WIFI_AP_PASSWORD)
 //
 // All values are firmware-authoritative — change here only when the firmware
 // changes.
@@ -12,9 +11,6 @@
 
 /** Default IP of the ESP32 softAP. */
 export const ESP32_AP_IP = '192.168.4.1' as const
-
-/** softAP shared password — `BLE_WIFI_AP_PASSWORD` in firmware app_config.h. */
-export const ESP32_AP_PASSWORD = 'canshift' as const
 
 /**
  * Static SSID prefix; firmware appends the last 2 MAC bytes (uppercase hex)
