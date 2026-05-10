@@ -22,5 +22,8 @@ coverage/
 .env
 .env.*
 
+# Local secrets — never commit. See secrets.example.json for the schema.
+secrets.json
+
 # Claude (local only)
 .claude/
