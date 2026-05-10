@@ -19,35 +19,40 @@ Hardware context:
 │                      CANShift Workspace                          │
 │                                                                  │
 │  ┌──────────────────────────────┐                               │
-│  │       canshift-firmware          │  ← Runs on ESP32 (standalone) │
-│  │  C++ / PlatformIO / LVGL     │                               │
+│  │       canshift-firmware       │  ← Runs on ESP32 (standalone)│
+│  │  C++ / PlatformIO / LVGL 8.3 │                               │
 │  │  - CAN bus data ingestion    │                               │
 │  │  - Real-time UI (LVGL 8.3)   │                               │
 │  │  - Config loaded from SPIFFS │                               │
-│  │  - USB comm stub (Phase 1)   │                               │
+│  │  - USB serial command bus    │                               │
+│  │  - BLE GATT (telemetry/cfg)  │                               │
+│  │  - WiFi AP for OTA           │                               │
 │  └──────────────────────────────┘                               │
-│           ↑ USB (Phase 1)  ↑ CAN bus (live ECU)                 │
+│        ↑ USB (115200 JSON)  ↑ CAN bus (live ECU)                │
+│        ↑ BLE GATT           ↑ WiFi AP (OTA only)                │
 │  ┌──────────────────────────────┐                               │
-│  │   canshift-studio      │  ← Runs on macOS / Windows    │
-│  │  Electron + React + TS       │                               │
+│  │       canshift-studio        │  ← Runs on macOS / Windows   │
+│  │  Electron + React 18 + TS    │                               │
 │  │  - Visual dashboard editor   │                               │
 │  │  - JSON import/export        │                               │
 │  │  - USB device sync           │                               │
+│  │  - Firmware flashing         │                               │
 │  └──────────────────────────────┘                               │
 │           ↑ imports                                              │
 │  ┌──────────────────────────────┐                               │
-│  │       canshift-core            │  ← TypeScript library         │
+│  │       canshift-core          │  ← TypeScript library        │
 │  │  - Config types              │                               │
 │  │  - JSON schemas              │                               │
 │  │  - Validation                │                               │
 │  │  - Migration utilities       │                               │
 │  └──────────────────────────────┘                               │
-│                                                                  │
+│           ↑ imports                                              │
 │  ┌──────────────────────────────┐                               │
-│  │   canshift-mobile       │  ← NOT BUILT YET             │
-│  │  React Native (planned)      │                               │
-│  │  - Wi-Fi / BLE config        │                               │
-│  │  - Phase 2+                  │                               │
+│  │       canshift-mobile        │  ← iOS (Expo SDK 52)         │
+│  │  React Native + TypeScript   │                               │
+│  │  - BLE telemetry + settings  │                               │
+│  │  - WiFi OTA firmware update  │                               │
+│  │  - Dashboard / Graph / Logs  │                               │
 │  └──────────────────────────────┘                               │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -85,7 +90,7 @@ MaxxEcuParser → SignalStore (thread-safe)
                         LVGL display (ILI9341 via SPI)
 ```
 
-### Phase 1 configuration workflow (USB)
+### Bench configuration workflow (USB)
 
 ```
 Developer / User
@@ -109,6 +114,22 @@ ConfigLoader::reloadAll()
     │
     ▼
 PageManager / WidgetFactory rebuild UI
+```
+
+### In-car workflow (BLE + WiFi)
+
+```
+iPhone (canshift-mobile)
+    │
+    ├── BLE GATT  ─────────▶  ESP32 BLE task
+    │   live telemetry,           │
+    │   settings, quick           ▼
+    │   commands              SignalStore / ConfigLoader
+    │
+    └── WiFi (AP, on demand) ─▶  ESP32 WiFi/OTA
+        firmware OTA upload         │
+        (HMAC-signed)               ▼
+                                Flash partition → reboot
 ```
 
 ---
