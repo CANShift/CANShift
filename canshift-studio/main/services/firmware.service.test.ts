@@ -7,23 +7,97 @@
 //
 // @vitest-environment node
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const netMock = vi.hoisted(() => ({
   fetch: vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
 }))
 
 // Hoisted block — vi.mock factories run before module-level imports, so the
-// stub class must live where they can reach it.
+// stub class must live where they can reach it. The fake captures every
+// set()/open()/close() call with its callback so tests can assert on the
+// exact DTR/RTS sequence and timing emitted by resetIntoBootloader().
 const stubs = vi.hoisted(() => {
-  class SerialPortStub {
-    readonly _stub = true
+  interface SetCall {
+    signals: { dtr: boolean; rts: boolean }
+    /** Time at which set() was invoked, relative to the test's vi.useFakeTimers() now(). */
+    invokedAt: number
   }
-  return { SerialPortStub }
+
+  interface OpenScript {
+    /** If set, callback is invoked with this error instead of success. */
+    openError?: Error
+    /** If set, the Nth call to set() (0-indexed) fails with this error. */
+    setErrorAtCall?: { index: number; error: Error }
+    /** If true, the close() call after success returns this error. */
+    closeError?: Error
+    /** If true, the close() call during failure cleanup returns this error (still swallowed). */
+    cleanupCloseError?: Error
+  }
+
+  // Module-scoped script the FakeSerialPort constructor reads at instantiation.
+  // Reset between tests via resetScript().
+  let nextScript: OpenScript = {}
+  const setScript = (s: OpenScript): void => {
+    nextScript = s
+  }
+  const resetScript = (): void => {
+    nextScript = {}
+  }
+
+  class FakeSerialPort {
+    static instances: FakeSerialPort[] = []
+    readonly path: string
+    readonly setCalls: SetCall[] = []
+    closed = false
+    closeCallCount = 0
+    private readonly script: OpenScript
+
+    constructor(opts: { path: string; baudRate: number; autoOpen: boolean }) {
+      this.path = opts.path
+      this.script = nextScript
+      FakeSerialPort.instances.push(this)
+    }
+
+    open(cb: (err?: Error | null) => void): void {
+      // Mirror real SerialPort: callback runs on next tick, never sync.
+      setTimeout(() => {
+        cb(this.script.openError ?? null)
+      }, 0)
+    }
+
+    set(signals: { dtr: boolean; rts: boolean }, cb: (err?: Error | null) => void): void {
+      const callIndex = this.setCalls.length
+      this.setCalls.push({ signals, invokedAt: Date.now() })
+      const failure = this.script.setErrorAtCall
+      setTimeout(() => {
+        if (failure?.index === callIndex) {
+          cb(failure.error)
+          return
+        }
+        cb(null)
+      }, 0)
+    }
+
+    close(cb?: (err?: Error | null) => void): void {
+      this.closeCallCount += 1
+      this.closed = true
+      // The first close() after a successful sequence is the "real" close.
+      // Subsequent ones (e.g. fail() cleanup after a set error) are swallowed.
+      const useCloseErr = this.closeCallCount === 1
+      setTimeout(() => {
+        cb?.(
+          useCloseErr ? (this.script.closeError ?? null) : (this.script.cleanupCloseError ?? null)
+        )
+      }, 0)
+    }
+  }
+
+  return { FakeSerialPort, setScript, resetScript }
 })
 
 vi.mock('electron', () => ({ net: netMock }))
-vi.mock('serialport', () => ({ SerialPort: stubs.SerialPortStub }))
+vi.mock('serialport', () => ({ SerialPort: stubs.FakeSerialPort }))
 
 import { FirmwareService } from './firmware.service'
 
@@ -80,6 +154,8 @@ function makeRelease(overrides: PartialRelease = {}): PartialRelease {
 
 beforeEach(() => {
   netMock.fetch.mockReset()
+  stubs.FakeSerialPort.instances.length = 0
+  stubs.resetScript()
 })
 
 describe('FirmwareService.listReleases — channel filtering', () => {
@@ -306,5 +382,177 @@ describe('FirmwareService.flashPort bookkeeping', () => {
 
     service.setFlashPort(null)
     expect(service.getFlashPort()).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resetIntoBootloader — DTR/RTS sequence + timing (#482)
+//
+// Locks the auto-program circuit contract: the renderer relies on this
+// function to land the chip in the ROM bootloader without a BOOT button
+// press. The latch hold MUST be ≥ 250 ms or CrowPanel CH340 boards fall
+// back to the manual-press flow.
+// ---------------------------------------------------------------------------
+
+const PORT_PATH = '/dev/tty.usbserial-test'
+const EXPECTED_BOOT_PIN_PULL_MS = 100
+const EXPECTED_BOOT_LATCH_MS = 250
+
+describe('FirmwareService.resetIntoBootloader — DTR/RTS sequence', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // Drive the macrotask queue forward by `ms` ms. Used to step through the
+  // setTimeout chain inside runClassicResetSequence without blocking on
+  // real wall-clock time.
+  const advance = async (ms: number): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(ms)
+  }
+
+  it('emits the exact 3-step DTR/RTS sequence with #482 timings', async () => {
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    // Run the full timer chain (open → 3× set → close).
+    await vi.runAllTimersAsync()
+    const port = stubs.FakeSerialPort.instances[0]
+    expect(port).toBeDefined()
+    if (!port) throw new Error('port not constructed')
+    expect(port.path).toBe(PORT_PATH)
+
+    expect(port.setCalls).toHaveLength(3)
+    expect(port.setCalls[0]?.signals).toEqual({ dtr: false, rts: true })
+    expect(port.setCalls[1]?.signals).toEqual({ dtr: true, rts: false })
+    expect(port.setCalls[2]?.signals).toEqual({ dtr: false, rts: false })
+
+    const result = await promise
+    expect(result.success).toBe(true)
+    expect(result.error).toBeUndefined()
+    expect(port.closed).toBe(true)
+  })
+
+  it('holds BOOT_PIN_PULL_MS between step 1 and step 2', async () => {
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    // Flush open() and the first set() callback (each is setTimeout(_, 0)).
+    await vi.runOnlyPendingTimersAsync() // open() cb fires → calls set #1
+    await vi.runOnlyPendingTimersAsync() // set #1 cb fires → queues BOOT_PIN_PULL_MS timer
+    const port = stubs.FakeSerialPort.instances[0]
+    if (!port) throw new Error('port not constructed')
+    expect(port.setCalls).toHaveLength(1)
+
+    // Just under the hold — must NOT have fired the second toggle yet.
+    await advance(EXPECTED_BOOT_PIN_PULL_MS - 1)
+    expect(port.setCalls).toHaveLength(1)
+
+    // Cross the threshold — fires the BOOT_PIN_PULL_MS timer which calls set #2.
+    await vi.runOnlyPendingTimersAsync()
+    expect(port.setCalls).toHaveLength(2)
+
+    await vi.runAllTimersAsync()
+    await promise
+  })
+
+  it('holds BOOT_LATCH_MS = 250 ms between step 2 and step 3 (was 50 ms before #482)', async () => {
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    // Drive forward to just after step 2 has been recorded:
+    // open → set #1 → set #1 cb → BOOT_PIN_PULL_MS timer → set #2 → set #2 cb.
+    await vi.runOnlyPendingTimersAsync() // open() cb
+    await vi.runOnlyPendingTimersAsync() // set #1 cb (queues BOOT_PIN_PULL_MS timer)
+    await vi.runOnlyPendingTimersAsync() // BOOT_PIN_PULL_MS timer fires → calls set #2
+    await vi.runOnlyPendingTimersAsync() // set #2 cb (queues BOOT_LATCH_MS timer)
+    const port = stubs.FakeSerialPort.instances[0]
+    if (!port) throw new Error('port not constructed')
+    expect(port.setCalls).toHaveLength(2)
+
+    // Bumping by 50 ms (the OLD latch hold) must NOT advance to step 3.
+    // This is the regression check that guarantees we won't silently
+    // revert to the old value.
+    await advance(50)
+    expect(port.setCalls).toHaveLength(2)
+
+    // Bump up to just under the new hold — still no step 3.
+    await advance(EXPECTED_BOOT_LATCH_MS - 50 - 1)
+    expect(port.setCalls).toHaveLength(2)
+
+    // Finish the latch hold — step 3 must now fire.
+    await vi.runOnlyPendingTimersAsync()
+    expect(port.setCalls).toHaveLength(3)
+    expect(port.setCalls[2]?.signals).toEqual({ dtr: false, rts: false })
+
+    await vi.runAllTimersAsync()
+    await promise
+  })
+
+  it('closes the port before resolving on success', async () => {
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    await vi.runAllTimersAsync()
+    const port = stubs.FakeSerialPort.instances[0]
+    if (!port) throw new Error('port not constructed')
+    const result = await promise
+
+    expect(result.success).toBe(true)
+    expect(port.closeCallCount).toBe(1)
+    expect(port.closed).toBe(true)
+  })
+
+  it('returns failure with error message when open() fails', async () => {
+    stubs.setScript({ openError: new Error('EBUSY: port already open') })
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain(PORT_PATH)
+    expect(result.error).toContain('EBUSY')
+    // No DTR/RTS toggles attempted when open fails.
+    const port = stubs.FakeSerialPort.instances[0]
+    expect(port?.setCalls).toHaveLength(0)
+  })
+
+  it('returns failure and attempts cleanup close when set() fails mid-sequence', async () => {
+    stubs.setScript({ setErrorAtCall: { index: 1, error: new Error('EIO: signal write failed') } })
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('EIO: signal write failed')
+
+    const port = stubs.FakeSerialPort.instances[0]
+    if (!port) throw new Error('port not constructed')
+    // First two set() attempts ran (the second one is the failing call).
+    expect(port.setCalls).toHaveLength(2)
+    // Cleanup close was attempted exactly once.
+    expect(port.closeCallCount).toBe(1)
+  })
+
+  it('still surfaces success (with caveat) when close() errors after a clean sequence', async () => {
+    stubs.setScript({ closeError: new Error('EBADF: bad file descriptor') })
+    const service = new FirmwareService()
+    const promise = service.resetIntoBootloader(PORT_PATH)
+
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    // Existing convention (preserved by the refactor): close error after a
+    // good reset reports success: true with the close error as caveat.
+    expect(result.success).toBe(true)
+    expect(result.error).toContain('close')
+    expect(result.error).toContain('EBADF')
   })
 })

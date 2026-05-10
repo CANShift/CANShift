@@ -21,6 +21,14 @@ const GITHUB_REPO = 'CANShift'
 const FIRMWARE_ASSET_RE = /canshift-firmware-.*-crowpanel_28-merged\.bin$/
 const SPIFFS_ASSET_RE = /canshift-spiffs-.*-crowpanel_28\.bin$/
 
+// ESP32 BOOT-mode reset timing — see resetIntoBootloader() docstring for the
+// auto-program circuit polarity. Bumped from the original esptool defaults to
+// give the CrowPanel CH340 + auto-program circuit enough time to latch IO0
+// LOW reliably on the first try (#482) — without this the renderer falls back
+// to the slow "press BOOT button" workflow that confuses end users.
+const BOOT_PIN_PULL_MS = 100 // EN low + BOOT released hold
+const BOOT_LATCH_MS = 250 // EN released + BOOT held low — was 50, bumped per #482
+
 // ---------------------------------------------------------------------------
 // GitHub API type guards
 // ---------------------------------------------------------------------------
@@ -60,6 +68,52 @@ function isRelease(v: unknown): v is GitHubRelease {
     typeof r.published_at === 'string' &&
     Array.isArray(r.assets)
   )
+}
+
+// ---------------------------------------------------------------------------
+// Bootloader reset helper
+// ---------------------------------------------------------------------------
+
+// Type-only surface of the SerialPort calls used by the reset sequence.
+// Avoids dragging the full SerialPort type into a helper that only needs
+// `set` + `path` — also makes the helper trivially mockable in tests.
+interface ResetCapablePort {
+  readonly path: string
+  set(signals: { dtr: boolean; rts: boolean }, cb: (err?: Error | null) => void): void
+}
+
+/**
+ * Run esptool's "default_reset" DTR/RTS sequence on an already-open port.
+ * Sequence (mirrors python-esptool with #482's bumped latch hold):
+ *   DTR=false RTS=true   wait BOOT_PIN_PULL_MS   // EN low, boot released
+ *   DTR=true  RTS=false  wait BOOT_LATCH_MS      // EN high, boot pulled low → ROM bootloader
+ *   DTR=false RTS=false                          // release boot
+ * Calls `done` with `null` on success or the first `set()` error encountered.
+ */
+function runClassicResetSequence(port: ResetCapablePort, done: (err: Error | null) => void): void {
+  const setSignals = (signals: { dtr: boolean; rts: boolean }, cb: () => void): void => {
+    port.set(signals, (setErr) => {
+      if (setErr) {
+        done(setErr)
+        return
+      }
+      cb()
+    })
+  }
+  // D0 R1 — release boot, hold reset
+  setSignals({ dtr: false, rts: true }, () => {
+    setTimeout(() => {
+      // D1 R0 — pull boot LOW, release reset (chip enters bootloader)
+      setSignals({ dtr: true, rts: false }, () => {
+        setTimeout(() => {
+          // D0 — release boot pin (chip stays in bootloader)
+          setSignals({ dtr: false, rts: false }, () => {
+            done(null)
+          })
+        }, BOOT_LATCH_MS)
+      })
+    }, BOOT_PIN_PULL_MS)
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -125,8 +179,10 @@ export class FirmwareService {
   /**
    * Hardware-reset the ESP32 into download mode by toggling DTR/RTS via the
    * native serialport library. Mirrors esptool's "default_reset" sequence
-   * (D0 R1 W100 D1 R0 W50 D0) but runs in the main process so macOS doesn't
-   * fight us on Web Serial's setSignals throttling.
+   * (D0 R1 W{BOOT_PIN_PULL_MS} D1 R0 W{BOOT_LATCH_MS} D0) but runs in the
+   * main process so macOS doesn't fight us on Web Serial's setSignals
+   * throttling. Latch hold widened from esptool's 50 ms default to 250 ms
+   * to land cleanly on CrowPanel CH340 boards (#482).
    *
    * Always closes the port before returning so the renderer's Web Serial can
    * grab it without an "already open" error. Errors are non-fatal — esptool-js
@@ -146,16 +202,6 @@ export class FirmwareService {
         baudRate: 115200,
         autoOpen: false,
       })
-      const fail = (err: Error | null | undefined): void => {
-        // Best-effort close, then surface the error
-        port.close(() => {
-          /* swallow */
-        })
-        resolve({
-          success: false,
-          error: err?.message ?? 'Failed to reset device into bootloader',
-        })
-      }
       port.open((err) => {
         if (err) {
           resolve({
@@ -164,38 +210,26 @@ export class FirmwareService {
           })
           return
         }
-        const setSignals = (signals: { dtr: boolean; rts: boolean }, cb: () => void): void => {
-          port.set(signals, (setErr) => {
-            if (setErr) {
-              fail(setErr)
+        runClassicResetSequence(port, (resetErr) => {
+          if (resetErr) {
+            // Best-effort close, then surface the error
+            port.close(() => {
+              /* swallow */
+            })
+            resolve({
+              success: false,
+              error: resetErr.message,
+            })
+            return
+          }
+          port.close((closeErr) => {
+            if (closeErr) {
+              // Closing failed but the reset itself worked — log
+              // upstream by surfacing as success with caveat.
+              resolve({ success: true, error: `close: ${closeErr.message}` })
               return
             }
-            cb()
-          })
-        }
-        const sleep = (ms: number, cb: () => void): void => {
-          setTimeout(cb, ms)
-        }
-        // D0 R1 — release boot, hold reset
-        setSignals({ dtr: false, rts: true }, () => {
-          sleep(100, () => {
-            // D1 R0 — pull boot LOW, release reset (chip enters bootloader)
-            setSignals({ dtr: true, rts: false }, () => {
-              sleep(50, () => {
-                // D0 — release boot pin (chip stays in bootloader)
-                setSignals({ dtr: false, rts: false }, () => {
-                  port.close((closeErr) => {
-                    if (closeErr) {
-                      // Closing failed but the reset itself worked — log
-                      // upstream by surfacing as success with caveat.
-                      resolve({ success: true, error: `close: ${closeErr.message}` })
-                      return
-                    }
-                    resolve({ success: true })
-                  })
-                })
-              })
-            })
+            resolve({ success: true })
           })
         })
       })
