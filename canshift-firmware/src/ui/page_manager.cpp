@@ -476,12 +476,29 @@ void showSetupScreen() {
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
 
-    // ---------- Logo ----------
-    lv_obj_t *logo = lv_label_create(scr);
-    lv_label_set_text(logo, "CANShift");
-    lv_obj_set_style_text_font(logo, FontManager::primary(32), 0);
-    lv_obj_set_style_text_color(logo, lv_color_hex(0xFF4444), 0);
-    lv_obj_align(logo, LV_ALIGN_TOP_MID, 0, 28);
+    // ---------- Logo — two-tone "CAN" gray + "Shift" red, matches boot splash ----------
+    lv_obj_t *logoRow = lv_obj_create(scr);
+    lv_obj_set_size(logoRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(logoRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(logoRow, 0, 0);
+    lv_obj_set_style_pad_all(logoRow, 0, 0);
+    lv_obj_clear_flag(logoRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(logoRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(logoRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(logoRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_align(logoRow, LV_ALIGN_TOP_MID, 0, 28);
+
+    lv_obj_t *logoCan = lv_label_create(logoRow);
+    lv_label_set_text(logoCan, "CAN");
+    lv_obj_set_style_text_font(logoCan, FontManager::primary(32), 0);
+    lv_obj_set_style_text_color(logoCan, lv_color_hex(0x9A9A9A), 0);
+
+    lv_obj_t *logoShift = lv_label_create(logoRow);
+    lv_label_set_text(logoShift, "Shift");
+    lv_obj_set_style_text_font(logoShift, FontManager::primary(32), 0);
+    lv_obj_set_style_text_color(logoShift, lv_color_hex(0xFF4444), 0);
+
+    lv_obj_t *logo = logoRow; // keep `logo` as anchor for the version label below
 
     // ---------- Version ----------
     char verBuf[16];
