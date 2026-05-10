@@ -75,6 +75,12 @@ jobs:
           path: ~/qemu-esp
           key: qemu-esp-${{ env.QEMU_TAG }}
 
+      - name: Install QEMU runtime deps
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 libslirp0
+
       - name: Install Espressif QEMU
         if: steps.qemu-cache.outputs.cache-hit != 'true'
         run: |
