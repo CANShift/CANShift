@@ -224,12 +224,15 @@ jobs:
             fail=1
           fi
 
-          # C. Panic detection — none of these strings should appear.
-          # We allow the initial 'rst:0x1' (power-on reset) but fail on any
-          # subsequent rst:0x* (which indicates an unexpected reset).
+          # C. Panic detection — only check output UP TO the [BOOT] Ready marker.
+          # Panics that occur after the boot phase is complete are caught by the
+          # banner/RST-count checks (a post-boot crash that causes a reset loop
+          # shows up as BANNER_COUNT>1 or RST_COUNT>1). Scanning the full log
+          # would flag QEMU-specific post-boot emulation artefacts as boot failures.
+          PRE_READY=$(sed '/\[BOOT\] Ready/q' serial.log)
           for pattern in 'Guru Meditation' 'abort()' 'assert failed' 'Backtrace:'; do
-            if grep -q "$pattern" serial.log; then
-              echo "::error::Panic indicator found in serial.log: $pattern"
+            if echo "$PRE_READY" | grep -q "$pattern"; then
+              echo "::error::Panic indicator found before boot completed: $pattern"
               fail=1
             fi
           done

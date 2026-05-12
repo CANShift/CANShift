@@ -33,13 +33,11 @@ struct GearTag {
 };
 
 const lv_font_t *selectFont(int16_t height) {
-    if (height >= 120)
-        return FontManager::primary(48);
-    if (height >= 80)
+    if (height >= 110)
         return FontManager::primary(32);
-    if (height >= 56)
+    if (height >= 80)
         return FontManager::secondary(24);
-    if (height >= 40)
+    if (height >= 50)
         return FontManager::secondary(20);
     return FontManager::label(16);
 }

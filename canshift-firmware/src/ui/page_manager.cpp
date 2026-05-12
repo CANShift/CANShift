@@ -41,6 +41,11 @@ static uint8_t s_currentIdx = 0;
 static lv_obj_t *s_revOverlay = nullptr; // Red flash overlay, global
 static bool s_rebuildRequested = false;  // Set by ThemeManager::toggleDayMode()
 static bool s_reloadRequested = false;   // Set by USB CMD_PUT_CONFIG handler
+// Page scheduled for pool release after the in-flight animation completes.
+// 0xFF = nothing pending. Consumed at the start of the next showPage() call so
+// the departing screen stays alive for the full animation window (120 ms) before
+// its LVGL objects are deleted.
+static uint8_t s_pendingFreeIdx = 0xFF;
 
 void applyPageBackground(lv_obj_t *screen, const CfgPage &cfg) {
     lv_obj_set_style_bg_color(screen, lv_color_hex(cfg.bgColor.rgb), LV_PART_MAIN);
@@ -101,6 +106,7 @@ void buildPage(uint8_t idx, const CfgPage &cfg) {
 
 void rebuildAllPages() {
     s_rebuildRequested = false;
+    s_pendingFreeIdx = 0xFF; // All pages are about to be deleted — nothing to defer.
 
     const CfgDashboard &dash = ConfigLoader::getDashboardConfig();
     if (!dash.loaded || s_pageCount == 0)
@@ -164,6 +170,22 @@ void showPage(uint8_t idx, lv_scr_load_anim_t anim = LV_SCR_LOAD_ANIM_FADE_IN,
         LOG_WARN("UI", "showPage: idx=%u out of range (pageCount=%u)", idx, s_pageCount);
         return;
     }
+
+    // Release the page that finished its last animation. Do this BEFORE building
+    // the new page so the freed pool space is available. Skip if the user
+    // navigated back to the very page that was scheduled for release.
+    if (s_pendingFreeIdx < s_pageCount && s_pendingFreeIdx != idx) {
+        Page &old = s_pages[s_pendingFreeIdx];
+        if (old.screen) {
+            WidgetFactory::clearAll(old.screen);
+            lv_obj_del(old.screen);
+            old.screen = nullptr;
+            old.built = false;
+            LOG_INFO("UI", "Released page '%s' from LVGL pool after navigation", old.id);
+        }
+        s_pendingFreeIdx = 0xFF;
+    }
+
     // Lazy build: construct the page screen the first time it is visited.
     if (!s_pages[idx].screen) {
         const CfgDashboard &dash = ConfigLoader::getDashboardConfig();
@@ -191,6 +213,13 @@ void showPage(uint8_t idx, lv_scr_load_anim_t anim = LV_SCR_LOAD_ANIM_FADE_IN,
     if (t)
         lv_timer_set_repeat_count(t, 1);
 #endif
+
+    // Schedule the departing page for pool release on the next navigation.
+    // It must stay alive for the current animation window so LVGL can render
+    // the cross-fade/slide; we free it at the top of the next showPage() call.
+    if (s_currentIdx != idx) {
+        s_pendingFreeIdx = s_currentIdx;
+    }
 
     s_currentIdx = idx;
     LOG_INFO("UI", "Navigated to page '%s' (idx=%u)", s_pages[idx].id, idx);
