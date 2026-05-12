@@ -108,6 +108,8 @@ interface DashboardState {
   acceptPendingDeviceConfig: () => void
   /** User keeps the demo — discards the staged device config and clears the prompt. */
   dismissPendingDeviceConfig: () => void
+  /** User dismisses the initial "no config on device — showing default" banner. */
+  clearDemoFallback: () => void
   markSaved: (filePath: string) => void
 
   // Edit history
@@ -283,6 +285,12 @@ export const useDashboardStore = create<DashboardState>()(
         s.pendingDeviceConfig = null
         // Keep loadedFromDemoFallback true — the editor still shows the demo,
         // and any FUTURE device probe with a real config should still prompt.
+      })
+    },
+
+    clearDemoFallback: () => {
+      set((s) => {
+        s.loadedFromDemoFallback = false
       })
     },
 
