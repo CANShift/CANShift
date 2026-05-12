@@ -30,8 +30,9 @@ static constexpr uint8_t MAX_PAGES = CONFIG_MAX_PAGES;
 
 struct Page {
     char id[CFG_MAX_ID_LEN];
-    lv_obj_t *screen; // LVGL screen object for this page
+    lv_obj_t *screen; // LVGL screen object — nullptr until first navigation (lazy build)
     bool built;
+    uint8_t cfgIdx; // index into CfgDashboard::pages[] for lazy build
 };
 
 static Page s_pages[MAX_PAGES];
@@ -124,14 +125,11 @@ void rebuildAllPages() {
         }
     }
 
-    // Rebuild with the active theme colors. Skip hidden pages so the
-    // visible-page index space stays in sync with init() (issue #204).
-    uint8_t outIdx = 0;
-    for (uint8_t i = 0; i < dash.pageCount && outIdx < s_pageCount; ++i) {
-        if (!dash.pages[i].visible)
-            continue;
-        buildPage(outIdx, dash.pages[i]);
-        ++outIdx;
+    // Rebuild only the previously active page eagerly; all others are left
+    // lazy (screen == nullptr) and will be constructed on first navigation.
+    // This keeps at most one page in the LVGL pool during the rebuild.
+    if (savedIdx < s_pageCount) {
+        buildPage(savedIdx, dash.pages[s_pages[savedIdx].cfgIdx]);
     }
 
     // Return to the page that was active before the rebuild
@@ -166,9 +164,15 @@ void showPage(uint8_t idx, lv_scr_load_anim_t anim = LV_SCR_LOAD_ANIM_FADE_IN,
         LOG_WARN("UI", "showPage: idx=%u out of range (pageCount=%u)", idx, s_pageCount);
         return;
     }
+    // Lazy build: construct the page screen the first time it is visited.
     if (!s_pages[idx].screen) {
-        LOG_ERROR("UI", "showPage: page '%s' has no screen object", s_pages[idx].id);
-        return;
+        const CfgDashboard &dash = ConfigLoader::getDashboardConfig();
+        LOG_INFO("UI", "Lazy-building page '%s' on first visit", s_pages[idx].id);
+        buildPage(idx, dash.pages[s_pages[idx].cfgIdx]);
+        if (!s_pages[idx].screen) {
+            LOG_ERROR("UI", "showPage: lazy build failed for page '%s'", s_pages[idx].id);
+            return;
+        }
     }
 
     PERF_RECORD_PAGE_XSTART();
@@ -566,6 +570,11 @@ void PageManager::init() {
     s_pageCount = 0;
     s_currentIdx = 0;
 
+    // Free all splash-screen children from the LVGL pool before registering
+    // pages. The boot sequence built its UI on lv_scr_act(); cleaning it here
+    // recovers that pool space for widget allocations below.
+    lv_obj_clean(lv_scr_act());
+
     // Init error bar first so errors pushed during boot (config load, CAN init)
     // are visible regardless of whether a valid dashboard config exists.
     ErrorBar::init();
@@ -582,15 +591,38 @@ void PageManager::init() {
     // Initialize the top bar (persistent overlay, not part of any page)
     TopBar::init();
 
-    // Build only visible pages — hidden pages stay in the studio config but
-    // are excluded from device iteration / navigation (issue #204).
+    // Register all visible pages and build only the default one eagerly.
+    // All other pages are built lazily the first time they are navigated to
+    // (see showPage). This keeps at most one extra page in the LVGL pool at
+    // boot, avoiding OOM on configs with many gauge-heavy pages.
+    const char *defaultId = dash.defaultPageId;
     for (uint8_t i = 0; i < dash.pageCount && s_pageCount < MAX_PAGES; ++i) {
         if (!dash.pages[i].visible) {
             LOG_INFO("UI", "Skipping hidden page '%s' (visible=false)", dash.pages[i].id);
             continue;
         }
-        buildPage(s_pageCount, dash.pages[i]);
+        Page &p = s_pages[s_pageCount];
+        strlcpy(p.id, dash.pages[i].id, CFG_MAX_ID_LEN);
+        p.screen = nullptr;
+        p.built = false;
+        p.cfgIdx = i;
+
+        // Build the default page eagerly so the first navigation is instant.
+        if (strcmp(p.id, defaultId) == 0) {
+            buildPage(s_pageCount, dash.pages[i]);
+        }
         s_pageCount++;
+    }
+
+    // If the default page was not found among visible pages, build the first
+    // visible one so the device always boots into a usable screen.
+    if (s_pageCount > 0 && !s_pages[0].screen) {
+        for (uint8_t i = 0; i < s_pageCount; ++i) {
+            if (!s_pages[i].screen) {
+                buildPage(i, dash.pages[s_pages[i].cfgIdx]);
+                break;
+            }
+        }
     }
 
     // Create rev limiter overlay — sits above all pages
