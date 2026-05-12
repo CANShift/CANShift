@@ -18,6 +18,6 @@ export const Section = React.forwardRef<React.ElementRef<typeof View>, SectionPr
       {title !== undefined ? <Label>{title}</Label> : null}
       {children}
     </View>
-  ),
+  )
 )
 Section.displayName = 'Section'

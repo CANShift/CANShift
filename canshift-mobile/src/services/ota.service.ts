@@ -98,8 +98,7 @@ function pickOtaAsset(assets: GitHubAsset[]): GitHubAsset | null {
   return (
     assets.find(
       (a) =>
-        a.name.endsWith(RELEASE_OTA_ASSET_SUFFIX) &&
-        !a.name.endsWith(RELEASE_MERGED_ASSET_SUFFIX),
+        a.name.endsWith(RELEASE_OTA_ASSET_SUFFIX) && !a.name.endsWith(RELEASE_MERGED_ASSET_SUFFIX)
     ) ?? null
   )
 }
@@ -111,9 +110,7 @@ function pickOtaAsset(assets: GitHubAsset[]): GitHubAsset | null {
 export async function fetchReleases(): Promise<FirmwareRelease[]> {
   let response: Response
   try {
-    response = await fetch(
-      `${GITHUB_RELEASES_API}?per_page=${String(GITHUB_RELEASES_PER_PAGE)}`,
-    )
+    response = await fetch(`${GITHUB_RELEASES_API}?per_page=${String(GITHUB_RELEASES_PER_PAGE)}`)
   } catch {
     fail({ kind: 'releases-fetch-failed' })
   }
@@ -146,7 +143,7 @@ export async function fetchReleases(): Promise<FirmwareRelease[]> {
 
 export async function downloadFirmware(
   release: FirmwareRelease,
-  onProgress?: (progress: number) => void,
+  onProgress?: (progress: number) => void
 ): Promise<string> {
   const dest = `${FileSystem.cacheDirectory ?? ''}canshift-${release.version}.bin`
 
@@ -170,7 +167,7 @@ export async function downloadFirmware(
     (downloadProgress) => {
       const total = downloadProgress.totalBytesExpectedToWrite
       if (total > 0) onProgress?.(downloadProgress.totalBytesWritten / total)
-    },
+    }
   )
 
   let result: { uri: string } | null | undefined
@@ -201,10 +198,7 @@ export async function downloadFirmware(
  * on failure. When the release predates the digest rollout (sha256 is null),
  * step 2 is skipped — step 1 still runs.
  */
-export async function verifyFirmware(
-  localPath: string,
-  release: FirmwareRelease,
-): Promise<void> {
+export async function verifyFirmware(localPath: string, release: FirmwareRelease): Promise<void> {
   const info = await FileSystem.getInfoAsync(localPath)
   const actualSize = info.exists ? info.size : 0
   if (!info.exists || actualSize !== release.sizeBytes) {
@@ -294,7 +288,7 @@ async function stageFirmwareWithHmac(localPath: string): Promise<string> {
 
 export async function pushFirmware(
   localPath: string,
-  onProgress?: (progress: number) => void,
+  onProgress?: (progress: number) => void
 ): Promise<void> {
   const stagedPath = await stageFirmwareWithHmac(localPath)
   const formData = new FormData()
@@ -331,10 +325,8 @@ export async function pushFirmware(
     xhr.onerror = () => {
       reject(
         new OtaServiceError(
-          progressEverFired
-            ? { kind: 'network-dropped' }
-            : { kind: 'device-unreachable' },
-        ),
+          progressEverFired ? { kind: 'network-dropped' } : { kind: 'device-unreachable' }
+        )
       )
     }
     xhr.ontimeout = () => {

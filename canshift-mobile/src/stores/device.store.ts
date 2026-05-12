@@ -36,21 +36,32 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   isDayMode: null,
   error: null,
 
-  setConnectionState: (connectionState) => { set({ connectionState }); },
+  setConnectionState: (connectionState) => {
+    set({ connectionState })
+  },
 
-  setDevice: (deviceId, deviceName) =>
-    { set({ deviceId, deviceName, connectionState: 'connected', error: null }); },
+  setDevice: (deviceId, deviceName) => {
+    set({ deviceId, deviceName, connectionState: 'connected', error: null })
+  },
 
-  setFirmwareStatus: (firmwareVersion, canHealthy) => { set({ firmwareVersion, canHealthy }); },
+  setFirmwareStatus: (firmwareVersion, canHealthy) => {
+    set({ firmwareVersion, canHealthy })
+  },
 
-  setWifiAp: (wifiApSsid, wifiApPassword) => { set({ wifiApSsid, wifiApPassword }); },
+  setWifiAp: (wifiApSsid, wifiApPassword) => {
+    set({ wifiApSsid, wifiApPassword })
+  },
 
-  setIsDayMode: (isDayMode) => { set({ isDayMode }); },
+  setIsDayMode: (isDayMode) => {
+    set({ isDayMode })
+  },
 
-  setError: (error) => { set({ error, connectionState: 'error' }); },
+  setError: (error) => {
+    set({ error, connectionState: 'error' })
+  },
 
-  disconnect: () =>
-    { set({
+  disconnect: () => {
+    set({
       connectionState: 'idle',
       deviceId: null,
       deviceName: null,
@@ -60,5 +71,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       wifiApPassword: null,
       isDayMode: null,
       error: null,
-    }); },
+    })
+  },
 }))

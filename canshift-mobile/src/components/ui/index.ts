@@ -97,19 +97,9 @@ export type { SectionProps } from './section'
 export { Switch } from './switch'
 export type { UISwitchProps } from './switch'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
-export type {
-  TabsProps,
-  TabsListProps,
-  TabsTriggerProps,
-  TabsContentProps,
-} from './tabs'
+export type { TabsProps, TabsListProps, TabsTriggerProps, TabsContentProps } from './tabs'
 export { Toast, Toaster } from './toast'
-export type {
-  ToastShowParams,
-  ToastConfig,
-  ToastType,
-  ToastPosition,
-} from './toast'
+export type { ToastShowParams, ToastConfig, ToastType, ToastPosition } from './toast'
 export {
   Form,
   FormField,

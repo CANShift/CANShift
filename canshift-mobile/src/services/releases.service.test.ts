@@ -120,10 +120,7 @@ describe('ReleasesService', () => {
 
   it('surfaces a separate prerelease when both exist', async () => {
     global.fetch = makeFetchMock({
-      body: [
-        makeRelease({ tag_name: 'v0.9.0-beta.1', prerelease: true }),
-        makeRelease(),
-      ],
+      body: [makeRelease({ tag_name: 'v0.9.0-beta.1', prerelease: true }), makeRelease()],
     })
     const svc = makeService()
     const result = await svc.getLatest()
@@ -162,7 +159,7 @@ describe('ReleasesService', () => {
   it('refetches when force=true bypasses the cache', async () => {
     const fetchMock = makeFetchMock(
       { body: [makeRelease()] },
-      { body: [makeRelease({ tag_name: 'v0.8.4' })] },
+      { body: [makeRelease({ tag_name: 'v0.8.4' })] }
     )
     global.fetch = fetchMock
     const svc = makeService()
@@ -174,10 +171,7 @@ describe('ReleasesService', () => {
   })
 
   it('retries 5xx once', async () => {
-    const fetchMock = makeFetchMock(
-      { status: 502, ok: false },
-      { body: [makeRelease()] },
-    )
+    const fetchMock = makeFetchMock({ status: 502, ok: false }, { body: [makeRelease()] })
     global.fetch = fetchMock
     const svc = makeService()
     const result = await svc.getLatest()
@@ -199,7 +193,7 @@ describe('ReleasesService', () => {
   it('surfaces rate-limit failures and honours the cooldown window', async () => {
     const fetchMock = makeFetchMock(
       { status: 429, ok: false, headers: { 'retry-after': '60' } },
-      { body: [makeRelease()] },
+      { body: [makeRelease()] }
     )
     global.fetch = fetchMock
     const svc = makeService()

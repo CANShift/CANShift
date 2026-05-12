@@ -3,28 +3,25 @@ import { Pressable, Text, type PressableProps } from 'react-native'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-const buttonVariants = cva(
-  'flex-row items-center justify-center rounded-md',
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary',
-        destructive: 'bg-destructive',
-        outline: 'border border-border bg-transparent',
-        secondary: 'bg-surface-2',
-        ghost: 'bg-transparent',
-        link: 'bg-transparent',
-      },
-      size: {
-        default: 'h-12 px-4',
-        sm: 'h-9 px-3',
-        lg: 'h-14 px-6',
-        icon: 'h-12 w-12',
-      },
+const buttonVariants = cva('flex-row items-center justify-center rounded-md', {
+  variants: {
+    variant: {
+      default: 'bg-primary',
+      destructive: 'bg-destructive',
+      outline: 'border border-border bg-transparent',
+      secondary: 'bg-surface-2',
+      ghost: 'bg-transparent',
+      link: 'bg-transparent',
     },
-    defaultVariants: { variant: 'default', size: 'default' },
+    size: {
+      default: 'h-12 px-4',
+      sm: 'h-9 px-3',
+      lg: 'h-14 px-6',
+      icon: 'h-12 w-12',
+    },
   },
-)
+  defaultVariants: { variant: 'default', size: 'default' },
+})
 
 const buttonTextVariants = cva('text-md font-medium', {
   variants: {
@@ -49,8 +46,7 @@ const buttonTextVariants = cva('text-md font-medium', {
 type ButtonVariantProps = VariantProps<typeof buttonVariants>
 
 export interface ButtonProps
-  extends Omit<PressableProps, 'children' | 'style'>,
-    ButtonVariantProps {
+  extends Omit<PressableProps, 'children' | 'style'>, ButtonVariantProps {
   children?: React.ReactNode
   className?: string
   textClassName?: string
@@ -64,11 +60,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled ?? false }}
         disabled={disabled}
-        className={cn(
-          buttonVariants({ variant, size }),
-          disabled && 'opacity-50',
-          className,
-        )}
+        className={cn(buttonVariants({ variant, size }), disabled && 'opacity-50', className)}
         {...props}
       >
         {({ pressed }) => (
@@ -78,7 +70,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
                 className={cn(
                   buttonTextVariants({ variant, size }),
                   pressed && 'opacity-80',
-                  textClassName,
+                  textClassName
                 )}
               >
                 {children}
@@ -90,7 +82,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
         )}
       </Pressable>
     )
-  },
+  }
 )
 Button.displayName = 'Button'
 

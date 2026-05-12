@@ -1,11 +1,5 @@
 import * as React from 'react'
-import {
-  Pressable,
-  Text,
-  View,
-  type PressableProps,
-  type ViewProps,
-} from 'react-native'
+import { Pressable, Text, View, type PressableProps, type ViewProps } from 'react-native'
 import { cn } from '@/lib/utils'
 
 interface TabsContextValue {
@@ -52,12 +46,12 @@ export function Tabs({
       }
       onValueChange?.(next)
     },
-    [isControlled, onValueChange],
+    [isControlled, onValueChange]
   )
 
   const ctxValue = React.useMemo<TabsContextValue>(
     () => ({ value: currentValue, setValue }),
-    [currentValue, setValue],
+    [currentValue, setValue]
   )
 
   return (
@@ -78,10 +72,7 @@ export function TabsList({ className, ...props }: TabsListProps): React.ReactEle
   return (
     <View
       accessibilityRole="tablist"
-      className={cn(
-        'flex-row items-center rounded-md bg-surface-2 p-1',
-        className,
-      )}
+      className={cn('flex-row items-center rounded-md bg-surface-2 p-1', className)}
       {...props}
     />
   )
@@ -95,45 +86,44 @@ export interface TabsTriggerProps extends Omit<PressableProps, 'onPress' | 'styl
   textClassName?: string
 }
 
-export const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
-  TabsTriggerProps
->(({ value, children, className, textClassName, disabled, ...props }, ref) => {
-  const ctx = useTabsContext()
-  const active = ctx.value === value
-  return (
-    <Pressable
-      ref={ref}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active, disabled: disabled ?? false }}
-      disabled={disabled}
-      onPress={() => {
-        ctx.setValue(value)
-      }}
-      className={cn(
-        'flex-1 flex-row items-center justify-center rounded-sm px-3 py-2',
-        active ? 'bg-surface' : 'bg-transparent',
-        disabled && 'opacity-50',
-        className,
-      )}
-      {...props}
-    >
-      {typeof children === 'string' ? (
-        <Text
-          className={cn(
-            'text-sm font-medium',
-            active ? 'text-text' : 'text-text-muted',
-            textClassName,
-          )}
-        >
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </Pressable>
-  )
-})
+export const TabsTrigger = React.forwardRef<React.ElementRef<typeof Pressable>, TabsTriggerProps>(
+  ({ value, children, className, textClassName, disabled, ...props }, ref) => {
+    const ctx = useTabsContext()
+    const active = ctx.value === value
+    return (
+      <Pressable
+        ref={ref}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active, disabled: disabled ?? false }}
+        disabled={disabled}
+        onPress={() => {
+          ctx.setValue(value)
+        }}
+        className={cn(
+          'flex-1 flex-row items-center justify-center rounded-sm px-3 py-2',
+          active ? 'bg-surface' : 'bg-transparent',
+          disabled && 'opacity-50',
+          className
+        )}
+        {...props}
+      >
+        {typeof children === 'string' ? (
+          <Text
+            className={cn(
+              'text-sm font-medium',
+              active ? 'text-text' : 'text-text-muted',
+              textClassName
+            )}
+          >
+            {children}
+          </Text>
+        ) : (
+          children
+        )}
+      </Pressable>
+    )
+  }
+)
 TabsTrigger.displayName = 'TabsTrigger'
 
 export interface TabsContentProps extends ViewProps {

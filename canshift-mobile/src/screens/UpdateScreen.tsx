@@ -31,13 +31,7 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Update'>
 }
 
-type Step =
-  | 'releases'
-  | 'downloading'
-  | 'verifying'
-  | 'wifi_wait'
-  | 'pushing'
-  | 'done'
+type Step = 'releases' | 'downloading' | 'verifying' | 'wifi_wait' | 'pushing' | 'done'
 
 // ---------------------------------------------------------------------------
 // Step indicator
@@ -55,11 +49,7 @@ function StepIndicator({ current }: { current: number }) {
           <React.Fragment key={label}>
             <View style={styles.stepItem}>
               <View
-                style={[
-                  styles.stepDot,
-                  done && styles.stepDotDone,
-                  active && styles.stepDotActive,
-                ]}
+                style={[styles.stepDot, done && styles.stepDotDone, active && styles.stepDotActive]}
               >
                 <Text style={[styles.stepDotText, (done || active) && styles.stepDotTextActive]}>
                   {done ? '✓' : String(i + 1)}
@@ -130,11 +120,7 @@ function ReleaseRow({
               <Text style={styles.installedText}>Installed</Text>
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.flashBtn}
-              onPress={onSelect}
-              hitSlop={HitSlop.default}
-            >
+            <TouchableOpacity style={styles.flashBtn} onPress={onSelect} hitSlop={HitSlop.default}>
               <Text style={styles.flashBtnText}>Flash</Text>
             </TouchableOpacity>
           )}
@@ -143,7 +129,9 @@ function ReleaseRow({
       {release.notes.length > 0 && (
         <TouchableOpacity
           style={styles.notesToggle}
-          onPress={() => { setNotesOpen((o) => !o) }}
+          onPress={() => {
+            setNotesOpen((o) => !o)
+          }}
           hitSlop={HitSlop.default}
         >
           <Text style={styles.notesToggleText}>
@@ -168,7 +156,7 @@ export default function UpdateScreen({ navigation }: Props) {
       firmwareVersion: s.firmwareVersion,
       wifiApSsid: s.wifiApSsid,
       wifiApPassword: s.wifiApPassword,
-    })),
+    }))
   )
   const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
   const [loading, setLoading] = useState(true)
@@ -177,8 +165,9 @@ export default function UpdateScreen({ navigation }: Props) {
   const [selectedRelease, setSelectedRelease] = useState<OtaService.FirmwareRelease | null>(null)
   const [localPath, setLocalPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [unauthorizedPlatform, setUnauthorizedPlatform] =
-    useState<BlePermissionPlatform | null>(null)
+  const [unauthorizedPlatform, setUnauthorizedPlatform] = useState<BlePermissionPlatform | null>(
+    null
+  )
 
   /** Returns true if the error was a permission denial (and the dialog opened);
    *  callers can short-circuit and skip setting a redundant inline error. */
@@ -197,7 +186,9 @@ export default function UpdateScreen({ navigation }: Props) {
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Failed to load releases')
       })
-      .finally(() => { setLoading(false) })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [])
 
   const stepIndex: Record<Step, number> = {
@@ -219,28 +210,31 @@ export default function UpdateScreen({ navigation }: Props) {
     return err instanceof Error ? err.message : 'Update failed'
   }, [])
 
-  const handleSelectRelease = useCallback(async (release: OtaService.FirmwareRelease) => {
-    setSelectedRelease(release)
-    setStep('downloading')
-    setProgress(0)
-    setError(null)
-    try {
-      const path = await OtaService.downloadFirmware(release, setProgress)
-      setStep('verifying')
+  const handleSelectRelease = useCallback(
+    async (release: OtaService.FirmwareRelease) => {
+      setSelectedRelease(release)
+      setStep('downloading')
       setProgress(0)
-      await OtaService.verifyFirmware(path, release)
-      setLocalPath(path)
-      await BleService.sendCmd('start_wifi_ap')
-      setStep('wifi_wait')
-    } catch (e) {
-      if (handleBleFailure(e)) {
+      setError(null)
+      try {
+        const path = await OtaService.downloadFirmware(release, setProgress)
+        setStep('verifying')
+        setProgress(0)
+        await OtaService.verifyFirmware(path, release)
+        setLocalPath(path)
+        await BleService.sendCmd('start_wifi_ap')
+        setStep('wifi_wait')
+      } catch (e) {
+        if (handleBleFailure(e)) {
+          setStep('releases')
+          return
+        }
+        setError(describeFlowError(e))
         setStep('releases')
-        return
       }
-      setError(describeFlowError(e))
-      setStep('releases')
-    }
-  }, [handleBleFailure, describeFlowError])
+    },
+    [handleBleFailure, describeFlowError]
+  )
 
   const handlePush = useCallback(async () => {
     if (!localPath) return
@@ -266,7 +260,9 @@ export default function UpdateScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => { navigation.goBack() }}
+          onPress={() => {
+            navigation.goBack()
+          }}
           style={styles.backBtn}
           hitSlop={HitSlop.default}
         >
@@ -308,7 +304,9 @@ export default function UpdateScreen({ navigation }: Props) {
                 key={r.version}
                 release={r}
                 isCurrent={r.version === normalizedInstalled}
-                onSelect={() => { void handleSelectRelease(r) }}
+                onSelect={() => {
+                  void handleSelectRelease(r)
+                }}
               />
             ))
           )}
@@ -352,18 +350,23 @@ export default function UpdateScreen({ navigation }: Props) {
               {wifiApPassword != null ? (
                 <>
                   <Text style={styles.hint}>
-                    {'Go to Settings → Wi-Fi → select the network above,\nthen come back and tap Push.'}
+                    {
+                      'Go to Settings → Wi-Fi → select the network above,\nthen come back and tap Push.'
+                    }
                   </Text>
                   <TouchableOpacity
                     style={styles.primaryBtn}
-                    onPress={() => { void handlePush() }}
+                    onPress={() => {
+                      void handlePush()
+                    }}
                   >
                     <Text style={styles.primaryBtnText}>Push firmware →</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <Text style={styles.hint}>
-                  This dashboard runs firmware older than v0.8.x. Update once via the desktop app to enable wireless updates.
+                  This dashboard runs firmware older than v0.8.x. Update once via the desktop app to
+                  enable wireless updates.
                 </Text>
               )}
             </>
@@ -395,7 +398,9 @@ export default function UpdateScreen({ navigation }: Props) {
           <Text style={styles.hint}>The dashboard is rebooting.</Text>
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => { navigation.replace('Scan') }}
+            onPress={() => {
+              navigation.replace('Scan')
+            }}
           >
             <Text style={styles.primaryBtnText}>Reconnect</Text>
           </TouchableOpacity>
@@ -404,7 +409,9 @@ export default function UpdateScreen({ navigation }: Props) {
 
       <BlePermissionDialog
         platform={unauthorizedPlatform}
-        onDismiss={() => { setUnauthorizedPlatform(null) }}
+        onDismiss={() => {
+          setUnauthorizedPlatform(null)
+        }}
       />
     </SafeAreaView>
   )
@@ -423,7 +430,13 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, alignItems: 'flex-start' },
   backText: { fontSize: Typography.xl, color: Colors.accent, lineHeight: 26 },
-  title: { flex: 1, fontSize: Typography.md, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+  title: {
+    flex: 1,
+    fontSize: Typography.md,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
   headerRight: { width: 36 },
 
   stepWrapper: {
@@ -450,7 +463,13 @@ const styles = StyleSheet.create({
   stepDotTextActive: { color: Colors.white },
   stepLabel: { fontSize: 9, color: Colors.textMuted, fontWeight: '600', letterSpacing: 0.5 },
   stepLabelActive: { color: Colors.accent },
-  stepLine: { flex: 1, height: 1, backgroundColor: Colors.border, marginBottom: 14, marginHorizontal: 4 },
+  stepLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+    marginBottom: 14,
+    marginHorizontal: 4,
+  },
   stepLineDone: { backgroundColor: Colors.accent },
 
   errorBanner: {

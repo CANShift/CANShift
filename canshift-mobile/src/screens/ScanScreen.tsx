@@ -32,7 +32,10 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Scan'>
 }
 
-interface FoundDevice { id: string; name: string }
+interface FoundDevice {
+  id: string
+  name: string
+}
 
 /**
  * Render copy for any non-permission BLE error. Permission denials are routed
@@ -91,8 +94,9 @@ function bleErrorMessage(err: BleConnectionError): { title: string; body: string
 export default function ScanScreen({ navigation }: Props) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<FoundDevice[]>([])
-  const [unauthorizedPlatform, setUnauthorizedPlatform] =
-    useState<BlePermissionPlatform | null>(null)
+  const [unauthorizedPlatform, setUnauthorizedPlatform] = useState<BlePermissionPlatform | null>(
+    null
+  )
   const connectionState = useDeviceStore((s) => s.connectionState)
   const isReconnecting = useReconnectStore((s) => s.isReconnecting)
   const reconnectAttempt = useReconnectStore((s) => s.attempt)
@@ -112,21 +116,15 @@ export default function ScanScreen({ navigation }: Props) {
           promptUnauthorized(state.platform)
           return
         case 'unsupported':
-          Alert.alert(
-            'Bluetooth unavailable',
-            "This device doesn't support Bluetooth Low Energy.",
-          )
+          Alert.alert('Bluetooth unavailable', "This device doesn't support Bluetooth Low Energy.")
           return
         case 'resetting':
-          Alert.alert(
-            'Bluetooth restarting',
-            'Bluetooth is resetting. Try again in a moment.',
-          )
+          Alert.alert('Bluetooth restarting', 'Bluetooth is resetting. Try again in a moment.')
           return
         case 'unknown':
           Alert.alert(
             'Checking Bluetooth',
-            'Bluetooth state is not yet available. Try again in a moment.',
+            'Bluetooth state is not yet available. Try again in a moment.'
           )
           return
         default: {
@@ -136,7 +134,7 @@ export default function ScanScreen({ navigation }: Props) {
         }
       }
     },
-    [promptUnauthorized],
+    [promptUnauthorized]
   )
 
   const startScan = useCallback(async () => {
@@ -149,9 +147,7 @@ export default function ScanScreen({ navigation }: Props) {
     setScanning(true)
     try {
       await BleService.scan((device) => {
-        setDevices((prev) =>
-          prev.find((d) => d.id === device.id) ? prev : [...prev, device]
-        )
+        setDevices((prev) => (prev.find((d) => d.id === device.id) ? prev : [...prev, device]))
       }, 10000)
     } catch (err) {
       const mapped = mapBleError(err)
@@ -271,7 +267,9 @@ export default function ScanScreen({ navigation }: Props) {
 
       <BlePermissionDialog
         platform={unauthorizedPlatform}
-        onDismiss={() => { setUnauthorizedPlatform(null) }}
+        onDismiss={() => {
+          setUnauthorizedPlatform(null)
+        }}
       />
     </SafeAreaView>
   )

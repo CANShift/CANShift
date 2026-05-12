@@ -46,8 +46,9 @@ export default function SettingsScreen({ navigation }: Props) {
   const [saving, setSaving] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
   const [calibrateConfirmOpen, setCalibrateConfirmOpen] = useState(false)
-  const [unauthorizedPlatform, setUnauthorizedPlatform] =
-    useState<BlePermissionPlatform | null>(null)
+  const [unauthorizedPlatform, setUnauthorizedPlatform] = useState<BlePermissionPlatform | null>(
+    null
+  )
 
   /** Route a thrown BLE error: permission denials open the shared Settings
    *  dialog, everything else falls back to a generic Alert. Returns true
@@ -133,7 +134,9 @@ export default function SettingsScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => { navigation.goBack(); }}
+          onPress={() => {
+            navigation.goBack()
+          }}
           hitSlop={HitSlop.default}
         >
           <Text style={styles.back}>‹ Back</Text>
@@ -169,7 +172,9 @@ export default function SettingsScreen({ navigation }: Props) {
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.segBtn, sleep === opt.value && styles.segBtnActive]}
-                onPress={() => { setSleep(opt.value); }}
+                onPress={() => {
+                  setSleep(opt.value)
+                }}
               >
                 <Text style={[styles.segLabel, sleep === opt.value && styles.segLabelActive]}>
                   {opt.label}
@@ -231,8 +236,7 @@ export default function SettingsScreen({ navigation }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>Calibrate Touch</AlertDialogTitle>
             <AlertDialogDescription>
-              The dashboard screen will display calibration crosshairs. Tap each point
-              accurately.
+              The dashboard screen will display calibration crosshairs. Tap each point accurately.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -246,7 +250,9 @@ export default function SettingsScreen({ navigation }: Props) {
 
       <BlePermissionDialog
         platform={unauthorizedPlatform}
-        onDismiss={() => { setUnauthorizedPlatform(null) }}
+        onDismiss={() => {
+          setUnauthorizedPlatform(null)
+        }}
       />
     </SafeAreaView>
   )

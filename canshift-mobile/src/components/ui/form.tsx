@@ -33,7 +33,7 @@ function FormField<
 >(props: ControllerProps<TFieldValues, TName>): React.ReactElement {
   const contextValue = React.useMemo<FormFieldContextValue>(
     () => ({ name: props.name }),
-    [props.name],
+    [props.name]
   )
   return (
     <FormFieldContext.Provider value={contextValue}>
@@ -77,7 +77,10 @@ function useFormField(): UseFormFieldReturn {
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
     error: fieldState.error
-      ? { message: typeof fieldState.error.message === 'string' ? fieldState.error.message : undefined }
+      ? {
+          message:
+            typeof fieldState.error.message === 'string' ? fieldState.error.message : undefined,
+        }
       : undefined,
     invalid: fieldState.invalid,
     isDirty: fieldState.isDirty,
@@ -92,16 +95,13 @@ export interface FormItemProps extends ViewProps {
 const FormItem = React.forwardRef<React.ElementRef<typeof View>, FormItemProps>(
   ({ className, ...props }, ref) => {
     const idValue = React.useId()
-    const contextValue = React.useMemo<FormItemContextValue>(
-      () => ({ id: idValue }),
-      [idValue],
-    )
+    const contextValue = React.useMemo<FormItemContextValue>(() => ({ id: idValue }), [idValue])
     return (
       <FormItemContext.Provider value={contextValue}>
         <View ref={ref} className={cn('gap-2', className)} {...props} />
       </FormItemContext.Provider>
     )
-  },
+  }
 )
 FormItem.displayName = 'FormItem'
 
@@ -111,13 +111,9 @@ const FormLabel = React.forwardRef<React.ElementRef<typeof Text>, FormLabelProps
   ({ className, ...props }, ref) => {
     const { error } = useFormField()
     return (
-      <Label
-        ref={ref}
-        className={cn(error !== undefined && 'text-danger', className)}
-        {...props}
-      />
+      <Label ref={ref} className={cn(error !== undefined && 'text-danger', className)} {...props} />
     )
-  },
+  }
 )
 FormLabel.displayName = 'FormLabel'
 
@@ -126,9 +122,7 @@ export interface FormControlProps extends ViewProps {
 }
 
 const FormControl = React.forwardRef<React.ElementRef<typeof View>, FormControlProps>(
-  ({ className, ...props }, ref) => (
-    <View ref={ref} className={cn(className)} {...props} />
-  ),
+  ({ className, ...props }, ref) => <View ref={ref} className={cn(className)} {...props} />
 )
 FormControl.displayName = 'FormControl'
 
@@ -136,12 +130,11 @@ export interface FormDescriptionProps extends TextProps {
   className?: string
 }
 
-const FormDescription = React.forwardRef<
-  React.ElementRef<typeof Text>,
-  FormDescriptionProps
->(({ className, ...props }, ref) => (
-  <Text ref={ref} className={cn('text-sm text-text-muted', className)} {...props} />
-))
+const FormDescription = React.forwardRef<React.ElementRef<typeof Text>, FormDescriptionProps>(
+  ({ className, ...props }, ref) => (
+    <Text ref={ref} className={cn('text-sm text-text-muted', className)} {...props} />
+  )
+)
 FormDescription.displayName = 'FormDescription'
 
 export interface FormMessageProps extends TextProps {
@@ -160,7 +153,7 @@ const FormMessage = React.forwardRef<React.ElementRef<typeof Text>, FormMessageP
         {body}
       </Text>
     )
-  },
+  }
 )
 FormMessage.displayName = 'FormMessage'
 

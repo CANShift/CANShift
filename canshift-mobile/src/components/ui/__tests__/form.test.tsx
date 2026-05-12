@@ -90,7 +90,7 @@ describe('Form', () => {
   it('submits valid values', async () => {
     const onSubmit = jest.fn()
     const { getByText, getByPlaceholderText } = render(
-      <Harness onSubmit={onSubmit} defaultName="Alice" />,
+      <Harness onSubmit={onSubmit} defaultName="Alice" />
     )
 
     fireEvent.changeText(getByPlaceholderText('Enter name'), 'Alice')

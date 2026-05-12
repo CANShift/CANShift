@@ -71,21 +71,17 @@ describe('describeOtaErrorForUser', () => {
   })
 
   it('mentions HTTP status for releases-fetch-failed when known', () => {
-    expect(
-      describeOtaErrorForUser({ kind: 'releases-fetch-failed', status: 502 }),
-    ).toMatch(/HTTP 502/)
-  })
-
-  it('omits HTTP status for releases-fetch-failed when unknown', () => {
-    expect(describeOtaErrorForUser({ kind: 'releases-fetch-failed' })).not.toMatch(
-      /HTTP/,
+    expect(describeOtaErrorForUser({ kind: 'releases-fetch-failed', status: 502 })).toMatch(
+      /HTTP 502/
     )
   })
 
+  it('omits HTTP status for releases-fetch-failed when unknown', () => {
+    expect(describeOtaErrorForUser({ kind: 'releases-fetch-failed' })).not.toMatch(/HTTP/)
+  })
+
   it('points the user to the Wi-Fi step for device-unreachable', () => {
-    expect(
-      describeOtaErrorForUser({ kind: 'device-unreachable' }),
-    ).toMatch(/canshift-XXXX/i)
+    expect(describeOtaErrorForUser({ kind: 'device-unreachable' })).toMatch(/canshift-XXXX/i)
   })
 
   it('reports both expected and actual sizes for size-mismatch', () => {

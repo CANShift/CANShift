@@ -17,7 +17,11 @@ describe('Button', () => {
 
   it('does not fire onPress when disabled', () => {
     const onPress = jest.fn()
-    const { getByRole } = render(<Button onPress={onPress} disabled>Save</Button>)
+    const { getByRole } = render(
+      <Button onPress={onPress} disabled>
+        Save
+      </Button>
+    )
     fireEvent.press(getByRole('button'))
     expect(onPress).not.toHaveBeenCalled()
   })

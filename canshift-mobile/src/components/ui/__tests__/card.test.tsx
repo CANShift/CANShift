@@ -8,7 +8,7 @@ describe('Card', () => {
     const { getByText } = render(
       <Card>
         <Text>Hello</Text>
-      </Card>,
+      </Card>
     )
     expect(getByText('Hello')).toBeTruthy()
   })
@@ -17,7 +17,7 @@ describe('Card', () => {
     const { getByText } = render(
       <Card variant="accent">
         <Text>Accent</Text>
-      </Card>,
+      </Card>
     )
     expect(getByText('Accent')).toBeTruthy()
   })
@@ -31,7 +31,7 @@ describe('Card', () => {
         <CardContent>
           <Text>Body</Text>
         </CardContent>
-      </Card>,
+      </Card>
     )
     expect(getByText('Title')).toBeTruthy()
     expect(getByText('Body')).toBeTruthy()

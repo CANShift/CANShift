@@ -13,9 +13,7 @@ export interface TelemetrySample {
   v: Record<string, number>
 }
 
-const buffer: (TelemetrySample | undefined)[] = new Array<TelemetrySample | undefined>(
-  MAX_SAMPLES,
-)
+const buffer: (TelemetrySample | undefined)[] = new Array<TelemetrySample | undefined>(MAX_SAMPLES)
 let head = 0
 let size = 0
 

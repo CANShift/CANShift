@@ -1,12 +1,7 @@
 // DashTopBar.tsx — Shared top bar for Dash and Graph tabs
 
 import React, { useCallback, useState } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -36,7 +31,7 @@ export default function DashTopBar() {
       deviceName: s.deviceName,
       firmwareVersion: s.firmwareVersion,
       canHealthy: s.canHealthy,
-    })),
+    }))
   )
   const isLive = useSignalsStore((s) => s.isLive)
   const isSim = SimService.isRunning()
@@ -85,7 +80,9 @@ export default function DashTopBar() {
             </View>
           )}
           <TouchableOpacity
-            onPress={() => { setMenuVisible(true); }}
+            onPress={() => {
+              setMenuVisible(true)
+            }}
             style={styles.iconBtn}
             hitSlop={HitSlop.default}
           >
@@ -149,7 +146,12 @@ export default function DashTopBar() {
               <Text style={styles.menuItemText}>About</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); }}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false)
+              }}
+            >
               <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
           </View>

@@ -93,10 +93,7 @@ export function hmacSha256(key: Uint8Array, message: Uint8Array): Uint8Array {
  * `data.length + 32` bytes. Empty input is allowed and produces a 32-byte
  * trailer-only buffer.
  */
-export function appendHmacTrailer(
-  data: Uint8Array,
-  key: Uint8Array,
-): Uint8Array {
+export function appendHmacTrailer(data: Uint8Array, key: Uint8Array): Uint8Array {
   const trailer = hmacSha256(key, data)
   const out = new Uint8Array(data.length + HMAC_SHA256_LEN)
   out.set(data, 0)

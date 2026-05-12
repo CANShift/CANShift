@@ -37,7 +37,10 @@ export function markFirstScreenReady(): void {
   }
   const elapsed = Date.now() - appLaunchMs
   const status = elapsed <= COLD_START_TARGET_MS ? 'ok' : 'slow'
-  log('info', `cold-start: ${String(elapsed)}ms (target ${String(COLD_START_TARGET_MS)}ms, ${status})`)
+  log(
+    'info',
+    `cold-start: ${String(elapsed)}ms (target ${String(COLD_START_TARGET_MS)}ms, ${status})`
+  )
 }
 
 /** Test hook — resets module state so unit tests don't leak across runs. */

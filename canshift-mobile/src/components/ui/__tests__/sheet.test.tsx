@@ -1,13 +1,7 @@
 import * as React from 'react'
 import { Text } from 'react-native'
 import { render, fireEvent } from '@testing-library/react-native'
-import {
-  Sheet,
-  SheetContent,
-  SheetClose,
-  SheetTitle,
-  SheetTrigger,
-} from '../sheet'
+import { Sheet, SheetContent, SheetClose, SheetTitle, SheetTrigger } from '../sheet'
 
 interface HarnessProps {
   open?: boolean
