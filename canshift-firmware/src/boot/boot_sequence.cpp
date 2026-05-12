@@ -377,12 +377,15 @@ void BootSequence::run() {
     UsbComm::init();
     updateSplash("USB ready", 88);
 
-    // 8. Build the UI from config
+    // 8. Build the UI from config.
+    // updateSplash("Ready") must happen BEFORE buildUI() because
+    // PageManager::init() calls lv_obj_clean(lv_scr_act()) to free the
+    // splash objects from the LVGL pool before building page widgets.
+    // Any call to updateSplash after that point would dereference freed objects.
+    updateSplash("Ready", 100);
     logHeap("before buildUI");
     buildUI();
     logHeap("dashboard ready");
-
-    updateSplash("Ready", 100);
 
     // Hold the splash for at least SPLASH_MIN_MS so the user can read the
     // version + final progress state before the dashboard takes over.
