@@ -3,7 +3,7 @@
 // Shows each byte as hex / decimal / binary / ASCII.
 // Highlights bytes that changed since the previous render batch.
 // Shows uint16 and int16 BE + LE interpretations for each adjacent pair —
-// useful for reverse-engineering MaxxECU signals (typically uint16 big-endian).
+// useful for reverse-engineering CAN-broadcast signals (typically uint16 big-endian).
 //
 // Clicking a byte → triggers onDefineSignal pre-filled for 1-byte unsigned.
 // Clicking "Define" on a 16-bit pair row → pre-fills 2-byte uint16 BE.

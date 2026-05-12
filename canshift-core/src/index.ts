@@ -121,3 +121,9 @@ export const CURRENT_SCHEMA_VERSION = '1.13.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const
+
+// ---------------------------------------------------------------------------
+// ECU profiles — built-in signal presets (issue #570)
+// ---------------------------------------------------------------------------
+export type { EcuProfile } from './ecu-profiles'
+export { ECU_PROFILES, DEFAULT_PROFILE_ID } from './ecu-profiles'

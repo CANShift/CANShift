@@ -1,8 +1,8 @@
 // src/routes/SignalRoute.tsx — CAN signal mapping editor
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import type { SignalDef, SignalConfig } from '@tmbk/canshift-core'
-import { CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
+import { CURRENT_SCHEMA_VERSION, ECU_PROFILES } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { signalIpc } from '../services/ipc.service'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -73,19 +73,40 @@ function omitKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K
 
 export default function SignalRoute() {
   const signals = useSignalStore((s) => s.signals)
+  const activeProfileId = useSignalStore((s) => s.activeProfileId)
   const setSignals = useSignalStore((s) => s.setSignals)
+  const loadProfile = useSignalStore((s) => s.loadProfile)
   const tableEndRef = useRef<HTMLDivElement>(null)
+  const [pendingProfileId, setPendingProfileId] = useState<string | null>(null)
+
+  const activeProfile = ECU_PROFILES.find((p) => p.id === activeProfileId)
 
   const handleExport = useCallback(async () => {
     if (signals.length === 0) return
     const config: SignalConfig = {
       version: CURRENT_SCHEMA_VERSION,
-      protocol: 'maxxecu_v1.2',
+      protocol: activeProfile?.protocol ?? 'generic',
       canSpeedKbps: 500,
       signals,
     }
     await signalIpc.export(config)
-  }, [signals])
+  }, [signals, activeProfile])
+
+  function handleProfileChange(profileId: string): void {
+    if (profileId === activeProfileId) return
+    if (signals.length > 0) {
+      setPendingProfileId(profileId)
+    } else {
+      loadProfile(profileId)
+    }
+  }
+
+  function confirmProfileLoad(): void {
+    if (pendingProfileId) {
+      loadProfile(pendingProfileId)
+      setPendingProfileId(null)
+    }
+  }
 
   function updateSignal(index: number, patch: Partial<SignalDef>): void {
     const updated = signals.map((s, i) => (i === index ? { ...s, ...patch } : s))
@@ -126,6 +147,8 @@ export default function SignalRoute() {
     }
   }
 
+  const pendingProfile = ECU_PROFILES.find((p) => p.id === pendingProfileId)
+
   return (
     <div
       style={{
@@ -137,6 +160,115 @@ export default function SignalRoute() {
         overflow: 'hidden',
       }}
     >
+      {/* Confirmation modal */}
+      {pendingProfileId && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              background: '#161616',
+              border: '1px solid #333333',
+              borderRadius: 6,
+              padding: '20px 24px',
+              width: 380,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#CCCCCC' }}>
+              Replace signal map?
+            </div>
+            <div style={{ fontSize: 12, color: '#888888', lineHeight: 1.6 }}>
+              Loading <strong style={{ color: '#CCCCCC' }}>{pendingProfile?.name}</strong> will
+              replace all current signals. Unsaved edits will be lost.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setPendingProfileId(null)
+                }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #333333',
+                  borderRadius: 4,
+                  color: '#888888',
+                  fontSize: 12,
+                  padding: '6px 14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmProfileLoad}
+                style={{
+                  background: '#CC3333',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: '#FFFFFF',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: '6px 14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ECU profile selector */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 20px',
+          borderBottom: '1px solid #1a1a1a',
+          flexShrink: 0,
+          background: '#0D0D0D',
+        }}
+      >
+        <span style={{ fontSize: 11, color: '#666666', whiteSpace: 'nowrap' }}>ECU profile</span>
+        <select
+          value={activeProfileId}
+          onChange={(e) => {
+            handleProfileChange(e.target.value)
+          }}
+          style={{
+            background: '#111111',
+            border: '1px solid #2A2A2A',
+            borderRadius: 4,
+            color: '#CCCCCC',
+            fontSize: 12,
+            padding: '3px 8px',
+            cursor: 'pointer',
+          }}
+          aria-label="ECU profile"
+        >
+          {ECU_PROFILES.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        {activeProfile && (
+          <span style={{ fontSize: 11, color: '#444444' }}>{activeProfile.description}</span>
+        )}
+      </div>
+
       {/* Header */}
       <div
         style={{
@@ -207,8 +339,8 @@ export default function SignalRoute() {
           flexShrink: 0,
         }}
       >
-        ⚠ CAN frame IDs and byte positions are unverified assumptions — confirm against MaxxECU
-        documentation before flashing.
+        ⚠ CAN frame IDs and byte positions must be verified against your ECU&apos;s documentation
+        before flashing.
       </div>
 
       {/* Scrollable table */}
