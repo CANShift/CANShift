@@ -119,6 +119,10 @@ static lv_obj_t *buildSplashBase() {
     lv_label_set_text(titleShift, "Shift");
     lv_obj_set_style_text_color(titleShift, lv_color_hex(0xFF4444), 0);
 
+    // Hidden until FontManager upgrades it to Orbitron Black 32 — avoids the
+    // visible "grow" when the font switches from the built-in fallback.
+    lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
+
     s_splashTitleRow = row;
     s_splashTitleCan = titleCan;
     s_splashTitleShift = titleShift;
@@ -337,6 +341,7 @@ void BootSequence::run() {
                 lv_obj_set_style_text_font(s_splashTitleShift, bigTitleFont, 0);
             }
             lv_obj_align(s_splashTitleRow, LV_ALIGN_CENTER, 0, -50);
+            lv_obj_clear_flag(s_splashTitleRow, LV_OBJ_FLAG_HIDDEN);
             lv_task_handler();
         }
     }
