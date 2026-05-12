@@ -187,14 +187,48 @@ void showPage(uint8_t idx, lv_scr_load_anim_t anim = LV_SCR_LOAD_ANIM_FADE_IN,
     }
 
     // Lazy build: construct the page screen the first time it is visited.
+    // On DRAM-only boards the 80 KB LVGL pool cannot hold two full pages at
+    // once — attempting to build the new page while the old one is still
+    // allocated causes lv_obj_create to return NULL → crash in
+    // lv_obj_class_init_obj. Free the departing page BEFORE the build.
+    // A minimal blank screen keeps LVGL's active-screen pointer valid during
+    // the delete so we never dereference a freed object.
     if (!s_pages[idx].screen) {
         const CfgDashboard &dash = ConfigLoader::getDashboardConfig();
+        bool placeholderActive = false;
+
+        if (s_currentIdx != idx && s_pages[s_currentIdx].screen) {
+            Page &dep = s_pages[s_currentIdx];
+            lv_obj_t *blank = lv_obj_create(nullptr);
+            if (blank) {
+                lv_obj_set_style_bg_color(blank, lv_color_hex(0x000000), LV_PART_MAIN);
+                lv_obj_set_style_bg_opa(blank, LV_OPA_COVER, LV_PART_MAIN);
+                lv_scr_load(blank); // park LVGL so dep.screen is not the active screen
+                placeholderActive = true;
+            }
+            WidgetFactory::clearAll(dep.screen);
+            lv_obj_del(dep.screen);
+            dep.screen = nullptr;
+            dep.built = false;
+            s_pendingFreeIdx = 0xFF;
+            LOG_INFO("UI", "Released page '%s' before lazy build of '%s'", dep.id, s_pages[idx].id);
+        }
+
         LOG_INFO("UI", "Lazy-building page '%s' on first visit", s_pages[idx].id);
         buildPage(idx, dash.pages[s_pages[idx].cfgIdx]);
         if (!s_pages[idx].screen) {
             LOG_ERROR("UI", "showPage: lazy build failed for page '%s'", s_pages[idx].id);
             return;
         }
+
+        // Old screen is already gone — use fade-in. auto_del=true instructs
+        // LVGL to delete the blank placeholder when the animation ends.
+        PERF_RECORD_PAGE_XSTART();
+        lv_scr_load_anim(s_pages[idx].screen, LV_SCR_LOAD_ANIM_FADE_IN, durationMs, 0,
+                         placeholderActive);
+        s_currentIdx = idx;
+        LOG_INFO("UI", "Navigated to page '%s' (idx=%u)", s_pages[idx].id, idx);
+        return;
     }
 
     PERF_RECORD_PAGE_XSTART();
