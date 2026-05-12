@@ -485,7 +485,8 @@ void showSetupScreen() {
     lv_obj_clear_flag(logoRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(logoRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(logoRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(logoRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(logoRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
     lv_obj_align(logoRow, LV_ALIGN_TOP_MID, 0, 28);
 
     lv_obj_t *logoCan = lv_label_create(logoRow);
