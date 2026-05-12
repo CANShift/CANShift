@@ -4,11 +4,6 @@
 // `ReleaseInfoCard` surface: shows the running app version, the latest tag
 // fetched from GitHub, a comparison badge, the release notes, the asset
 // list, and a button that opens the release page on github.com.
-//
-// Markdown rendering: no markdown library is installed in canshift-mobile
-// today. The release notes are rendered as plain text in a monospace block
-// to keep them legible while we avoid a heavy native-aware dependency. A
-// follow-up issue (see PR body) tracks adding rich rendering later.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -21,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import Markdown from 'react-native-markdown-display'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
 import * as SecureStore from 'expo-secure-store'
@@ -372,7 +368,9 @@ function ReleaseBody({
           </TouchableOpacity>
           {notesOpen && (
             <View style={styles.notesBlock}>
-              <Text style={styles.notesBody}>{release.notes}</Text>
+              <Markdown style={markdownStyles} onLinkPress={(url) => { onOpenUrl(url); return false }}>
+                {release.notes}
+              </Markdown>
             </View>
           )}
         </View>
@@ -457,6 +455,22 @@ function FooterRow({
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
+
+const markdownStyles = StyleSheet.create({
+  body: { color: Colors.text, fontSize: Typography.xs, lineHeight: 18 },
+  heading1: { color: Colors.text, fontSize: Typography.lg, fontWeight: '700', marginTop: 8, marginBottom: 4 },
+  heading2: { color: Colors.text, fontSize: Typography.md, fontWeight: '700', marginTop: 6, marginBottom: 2 },
+  heading3: { color: Colors.textDim, fontSize: Typography.sm, fontWeight: '600', marginTop: 4, marginBottom: 2 },
+  bullet_list_icon: { color: Colors.textMuted, marginRight: 6 },
+  ordered_list_icon: { color: Colors.textMuted, marginRight: 6 },
+  code_inline: { backgroundColor: Colors.bg, color: Colors.accent, fontFamily: 'Courier', borderRadius: 3, paddingHorizontal: 3 },
+  fence: { backgroundColor: Colors.bg, borderRadius: 4, padding: 8, marginVertical: 4 },
+  code_block: { color: Colors.text, fontFamily: 'Courier', fontSize: Typography.xs },
+  link: { color: Colors.accent },
+  strong: { fontWeight: '700' },
+  em: { fontStyle: 'italic' },
+  hr: { backgroundColor: Colors.border, height: 1, marginVertical: 8 },
+})
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
@@ -567,13 +581,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.sm,
     padding: Spacing.md,
-    maxHeight: 320,
-  },
-  notesBody: {
-    fontSize: Typography.xs,
-    color: Colors.text,
-    lineHeight: 18,
-    fontFamily: 'Courier',
   },
   assetsWrap: { gap: Spacing.xs },
   assetsTitle: {
