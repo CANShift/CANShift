@@ -4,7 +4,9 @@ import { create } from 'zustand'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { ECU_PROFILES, DEFAULT_PROFILE_ID } from '@tmbk/canshift-core'
 
-const defaultProfile = ECU_PROFILES.find((p) => p.id === DEFAULT_PROFILE_ID) ?? ECU_PROFILES[0]
+function getProfileSignals(profileId: string): SignalDef[] {
+  return ECU_PROFILES.find((p) => p.id === profileId)?.signals ?? []
+}
 
 interface SignalState {
   signals: SignalDef[]
@@ -14,14 +16,12 @@ interface SignalState {
 }
 
 export const useSignalStore = create<SignalState>()((set) => ({
-  signals: defaultProfile.signals,
+  signals: getProfileSignals(DEFAULT_PROFILE_ID),
   activeProfileId: DEFAULT_PROFILE_ID,
   setSignals: (signals) => {
     set({ signals })
   },
   loadProfile: (profileId) => {
-    const profile = ECU_PROFILES.find((p) => p.id === profileId)
-    if (!profile) return
-    set({ signals: profile.signals, activeProfileId: profileId })
+    set({ signals: getProfileSignals(profileId), activeProfileId: profileId })
   },
 }))
