@@ -7,6 +7,8 @@ import { classify, formatBytes, formatDate } from './AboutScreen'
 
 const STABLE: import('../services/releases.types').ReleaseInfo = {
   version: '1.2.0',
+  tag: 'v1.2.0',
+  name: null,
   prerelease: false,
   publishedAt: '2026-01-01T00:00:00Z',
   htmlUrl: 'https://github.com/example/releases/tag/v1.2.0',
