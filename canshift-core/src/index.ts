@@ -69,8 +69,6 @@ export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/rel
 // ---------------------------------------------------------------------------
 export { validateDashboard } from './validation/validate-dashboard'
 export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard'
-export { validateSignals } from './validation/validate-signals'
-export { validateDevice } from './validation/validate-device'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
