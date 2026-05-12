@@ -196,7 +196,8 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
             // button still shows an icon glyph.
             tag->iconLabel = lv_label_create(btn);
             lv_label_set_text(tag->iconLabel, IconAssets::fallbackGlyph(p.iconName));
-            lv_obj_set_style_text_font(tag->iconLabel, btnFont, 0);
+            // Do NOT override the font here: LV_SYMBOL_* glyphs live in the
+            // LVGL built-in symbol range which Orbitron does not include.
             lv_obj_set_style_text_color(tag->iconLabel, lv_color_hex(cfg.style.textColor.rgb), 0);
         }
     }
