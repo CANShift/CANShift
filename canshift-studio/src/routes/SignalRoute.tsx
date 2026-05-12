@@ -194,7 +194,9 @@ export default function SignalRoute() {
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => { setPendingProfileId(null) }}
+                onClick={() => {
+                  setPendingProfileId(null)
+                }}
                 style={{
                   background: 'transparent',
                   border: '1px solid #333333',
@@ -242,7 +244,9 @@ export default function SignalRoute() {
         <span style={{ fontSize: 11, color: '#666666', whiteSpace: 'nowrap' }}>ECU profile</span>
         <select
           value={activeProfileId}
-          onChange={(e) => { handleProfileChange(e.target.value) }}
+          onChange={(e) => {
+            handleProfileChange(e.target.value)
+          }}
           style={{
             background: '#111111',
             border: '1px solid #2A2A2A',
