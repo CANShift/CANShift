@@ -29,11 +29,7 @@ jest.mock('expo-constants', () => ({
 // SUT
 // ---------------------------------------------------------------------------
 
-import {
-  DEV_INSECURE_OTA_SECRET,
-  getOtaHmacSecretBytes,
-  isUsingDevOtaSecret,
-} from './ota-secret'
+import { DEV_INSECURE_OTA_SECRET, getOtaHmacSecretBytes, isUsingDevOtaSecret } from './ota-secret'
 
 function decodeUtf8(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString('utf8')

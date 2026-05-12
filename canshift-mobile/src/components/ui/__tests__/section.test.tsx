@@ -8,7 +8,7 @@ describe('Section', () => {
     const { getByText } = render(
       <Section title="BRIGHTNESS">
         <Text>child</Text>
-      </Section>,
+      </Section>
     )
     expect(getByText('BRIGHTNESS')).toBeTruthy()
     expect(getByText('child')).toBeTruthy()
@@ -18,7 +18,7 @@ describe('Section', () => {
     const { queryByText, getByText } = render(
       <Section>
         <Text>only-child</Text>
-      </Section>,
+      </Section>
     )
     expect(queryByText('SLEEP')).toBeNull()
     expect(getByText('only-child')).toBeTruthy()

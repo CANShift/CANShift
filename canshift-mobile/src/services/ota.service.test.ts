@@ -67,7 +67,7 @@ jest.mock('expo-file-system', () => {
         _url: string,
         dest: string,
         _opts: unknown,
-        onProgress?: (p: { totalBytesWritten: number; totalBytesExpectedToWrite: number }) => void,
+        onProgress?: (p: { totalBytesWritten: number; totalBytesExpectedToWrite: number }) => void
       ) => ({
         downloadAsync: () => {
           if (mockNextDownloadShouldThrow) {
@@ -82,7 +82,7 @@ jest.mock('expo-file-system', () => {
           })
           return Promise.resolve({ uri: dest })
         },
-      }),
+      })
     ),
   }
 })
@@ -155,7 +155,7 @@ function mockFetchReleases(payload: MockRelease[]): jest.Mock {
       ok: true,
       status: 200,
       json: () => Promise.resolve(payload),
-    }),
+    })
   )
 }
 
@@ -165,7 +165,7 @@ function mockFetchFailure(status: number): jest.Mock {
       ok: false,
       status,
       json: () => Promise.resolve([]),
-    }),
+    })
   )
 }
 
@@ -397,9 +397,7 @@ describe('downloadFirmware', () => {
       bytes: new Uint8Array([1, 2, 3, 4]),
     }
     mockNextDownloadShouldThrow = new Error('should not have been called')
-    await expect(downloadFirmware(release)).resolves.toBe(
-      'file:///cache/canshift-0.7.1.bin',
-    )
+    await expect(downloadFirmware(release)).resolves.toBe('file:///cache/canshift-0.7.1.bin')
   })
 
   it('drops a stale cache (size mismatch) and re-downloads', async () => {
@@ -472,9 +470,7 @@ describe('verifyFirmware', () => {
       sizeBytes: 4,
       sha256: null,
     }
-    await expect(verifyFirmware(path, release)).rejects.toBeInstanceOf(
-      OtaServiceError,
-    )
+    await expect(verifyFirmware(path, release)).rejects.toBeInstanceOf(OtaServiceError)
     await expect(verifyFirmware(path, release)).rejects.toMatchObject({
       cause: { kind: 'size-mismatch', expected: 4, actual: 3 },
     })
@@ -564,8 +560,7 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
     resetMocks()
     lastXhr = null
     nextStatus = 200
-    ;(global as unknown as { XMLHttpRequest: new () => MockXhr }).XMLHttpRequest =
-      MockXhr
+    ;(global as unknown as { XMLHttpRequest: new () => MockXhr }).XMLHttpRequest = MockXhr
   })
 
   const localPath = 'file:///cache/canshift-0.7.1.bin'
@@ -589,7 +584,7 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
     const trailer = staged?.bytes.subarray(firmwareBytes.length) ?? new Uint8Array(0)
     const expectedTrailer = hmacSha256(
       new Uint8Array(Buffer.from(DEV_INSECURE_OTA_SECRET, 'utf8')),
-      firmwareBytes,
+      firmwareBytes
     )
     expect(bytesToHex(trailer)).toBe(bytesToHex(expectedTrailer))
 

@@ -29,20 +29,17 @@ function useSheetContext(): SheetContextValue {
 
 export type SheetSide = 'top' | 'bottom' | 'left' | 'right'
 
-const sheetContentVariants = cva(
-  'absolute border-border bg-surface',
-  {
-    variants: {
-      side: {
-        top: 'top-0 left-0 right-0 rounded-b-lg border-b',
-        bottom: 'bottom-0 left-0 right-0 rounded-t-lg border-t',
-        left: 'top-0 bottom-0 left-0 w-3/4 rounded-r-lg border-r',
-        right: 'top-0 bottom-0 right-0 w-3/4 rounded-l-lg border-l',
-      },
+const sheetContentVariants = cva('absolute border-border bg-surface', {
+  variants: {
+    side: {
+      top: 'top-0 left-0 right-0 rounded-b-lg border-b',
+      bottom: 'bottom-0 left-0 right-0 rounded-t-lg border-t',
+      left: 'top-0 bottom-0 left-0 w-3/4 rounded-r-lg border-r',
+      right: 'top-0 bottom-0 right-0 w-3/4 rounded-l-lg border-l',
     },
-    defaultVariants: { side: 'bottom' },
   },
-)
+  defaultVariants: { side: 'bottom' },
+})
 
 type SheetContentVariantProps = VariantProps<typeof sheetContentVariants>
 
@@ -72,12 +69,12 @@ export function Sheet({
       }
       onOpenChange?.(next)
     },
-    [isControlled, onOpenChange],
+    [isControlled, onOpenChange]
   )
 
   const value = React.useMemo<SheetContextValue>(
     () => ({ open: currentOpen, setOpen }),
-    [currentOpen, setOpen],
+    [currentOpen, setOpen]
   )
 
   return <SheetContext.Provider value={value}>{children}</SheetContext.Provider>
@@ -89,25 +86,24 @@ export interface SheetTriggerProps extends Omit<PressableProps, 'onPress' | 'sty
   className?: string
 }
 
-export const SheetTrigger = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
-  SheetTriggerProps
->(({ children, className, ...props }, ref) => {
-  const { setOpen } = useSheetContext()
-  return (
-    <Pressable
-      ref={ref}
-      accessibilityRole="button"
-      onPress={() => {
-        setOpen(true)
-      }}
-      className={cn(className)}
-      {...props}
-    >
-      {children}
-    </Pressable>
-  )
-})
+export const SheetTrigger = React.forwardRef<React.ElementRef<typeof Pressable>, SheetTriggerProps>(
+  ({ children, className, ...props }, ref) => {
+    const { setOpen } = useSheetContext()
+    return (
+      <Pressable
+        ref={ref}
+        accessibilityRole="button"
+        onPress={() => {
+          setOpen(true)
+        }}
+        className={cn(className)}
+        {...props}
+      >
+        {children}
+      </Pressable>
+    )
+  }
+)
 SheetTrigger.displayName = 'SheetTrigger'
 
 function resolveAnimationType(side: SheetSide): NonNullable<ModalProps['animationType']> {
@@ -188,7 +184,7 @@ export function SheetContent({
           className={cn(
             sheetContentVariants({ side: resolvedSide }),
             'border p-6 shadow-lg',
-            className,
+            className
           )}
         >
           {children}
@@ -205,11 +201,7 @@ export interface SheetHeaderProps extends ViewProps {
 
 export function SheetHeader({ className, ...props }: SheetHeaderProps): React.ReactElement {
   return (
-    <View
-      accessibilityRole="header"
-      className={cn('flex-col gap-1.5', className)}
-      {...props}
-    />
+    <View accessibilityRole="header" className={cn('flex-col gap-1.5', className)} {...props} />
   )
 }
 SheetHeader.displayName = 'SheetHeader'
@@ -255,26 +247,25 @@ export interface SheetCloseProps extends Omit<PressableProps, 'onPress' | 'style
   className?: string
 }
 
-export const SheetClose = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
-  SheetCloseProps
->(({ children, className, ...props }, ref) => {
-  const { setOpen } = useSheetContext()
-  return (
-    <Pressable
-      ref={ref}
-      accessibilityRole="button"
-      accessibilityLabel="Close"
-      onPress={() => {
-        setOpen(false)
-      }}
-      className={cn(className)}
-      {...props}
-    >
-      {children}
-    </Pressable>
-  )
-})
+export const SheetClose = React.forwardRef<React.ElementRef<typeof Pressable>, SheetCloseProps>(
+  ({ children, className, ...props }, ref) => {
+    const { setOpen } = useSheetContext()
+    return (
+      <Pressable
+        ref={ref}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        onPress={() => {
+          setOpen(false)
+        }}
+        className={cn(className)}
+        {...props}
+      >
+        {children}
+      </Pressable>
+    )
+  }
+)
 SheetClose.displayName = 'SheetClose'
 
 export { sheetContentVariants }

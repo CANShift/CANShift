@@ -26,7 +26,7 @@ export const Checkbox = React.forwardRef<React.ElementRef<typeof Pressable>, Che
           'h-4 w-4 items-center justify-center rounded-sm border-[1.5px] border-primary',
           checked && 'bg-primary',
           disabled && 'opacity-50',
-          className,
+          className
         )}
         {...props}
       >
@@ -45,6 +45,6 @@ export const Checkbox = React.forwardRef<React.ElementRef<typeof Pressable>, Che
         ) : null}
       </Pressable>
     )
-  },
+  }
 )
 Checkbox.displayName = 'Checkbox'

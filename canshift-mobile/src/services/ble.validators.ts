@@ -82,10 +82,7 @@ export function parseStatus(raw: string): StatusPayload | null {
   if (typeof parsed.can === 'number' && Number.isFinite(parsed.can)) {
     result.can = parsed.can
   }
-  if (
-    typeof parsed.ap_ssid === 'string' &&
-    parsed.ap_ssid.length <= MAX_STATUS_STRING_LEN
-  ) {
+  if (typeof parsed.ap_ssid === 'string' && parsed.ap_ssid.length <= MAX_STATUS_STRING_LEN) {
     result.ap_ssid = parsed.ap_ssid
   }
   if (

@@ -52,12 +52,12 @@ export function AlertDialog({
       }
       onOpenChange?.(next)
     },
-    [isControlled, onOpenChange],
+    [isControlled, onOpenChange]
   )
 
   const value = React.useMemo<AlertDialogContextValue>(
     () => ({ open: currentOpen, setOpen }),
-    [currentOpen, setOpen],
+    [currentOpen, setOpen]
   )
 
   return <AlertDialogContext.Provider value={value}>{children}</AlertDialogContext.Provider>
@@ -111,15 +111,13 @@ export function AlertDialogContent({
         setOpen(false)
       }}
     >
-      <View
-        className={cn('flex-1 items-center justify-center bg-black/60 px-4', overlayClassName)}
-      >
+      <View className={cn('flex-1 items-center justify-center bg-black/60 px-4', overlayClassName)}>
         <View
           accessibilityViewIsModal
           accessibilityRole="alert"
           className={cn(
             'mx-6 max-w-md w-full self-center rounded-lg border border-border bg-surface p-6 shadow-lg',
-            className,
+            className
           )}
         >
           {children}
@@ -139,11 +137,7 @@ export function AlertDialogHeader({
   ...props
 }: AlertDialogHeaderProps): React.ReactElement {
   return (
-    <View
-      accessibilityRole="header"
-      className={cn('flex-col gap-1.5', className)}
-      {...props}
-    />
+    <View accessibilityRole="header" className={cn('flex-col gap-1.5', className)} {...props} />
   )
 }
 AlertDialogHeader.displayName = 'AlertDialogHeader'

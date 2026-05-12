@@ -60,7 +60,7 @@ export function Select({
       }
       onValueChange?.(next)
     },
-    [isControlled, onValueChange],
+    [isControlled, onValueChange]
   )
 
   const setOpen = React.useCallback((next: boolean): void => {
@@ -69,7 +69,7 @@ export function Select({
 
   const ctxValue = React.useMemo<SelectContextValue>(
     () => ({ value: currentValue, setValue, open, setOpen, placeholder }),
-    [currentValue, setValue, open, setOpen, placeholder],
+    [currentValue, setValue, open, setOpen, placeholder]
   )
 
   return <SelectContext.Provider value={ctxValue}>{children}</SelectContext.Provider>
@@ -98,7 +98,7 @@ export const SelectTrigger = React.forwardRef<
       className={cn(
         'h-12 flex-row items-center justify-between rounded-md border border-border bg-surface px-3',
         disabled && 'opacity-50',
-        className,
+        className
       )}
       {...props}
     >
@@ -135,11 +135,7 @@ export function SelectValue({
   return (
     <Text
       numberOfLines={1}
-      className={cn(
-        'text-base',
-        isPlaceholder ? 'text-text-muted' : 'text-text',
-        className,
-      )}
+      className={cn('text-base', isPlaceholder ? 'text-text-muted' : 'text-text', className)}
       {...props}
     >
       {display}
@@ -187,7 +183,7 @@ export function SelectContent({
           accessibilityViewIsModal
           className={cn(
             'mx-6 max-w-md w-full self-center rounded-lg border border-border bg-surface py-2 shadow-lg',
-            className,
+            className
           )}
         >
           <ScrollView>{children}</ScrollView>
@@ -205,51 +201,50 @@ export interface SelectItemProps extends Omit<PressableProps, 'onPress' | 'style
   textClassName?: string
 }
 
-export const SelectItem = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
-  SelectItemProps
->(({ value, children, className, textClassName, disabled, ...props }, ref) => {
-  const ctx = useSelectContext()
-  const selected = ctx.value === value
-  return (
-    <Pressable
-      ref={ref}
-      accessibilityRole="menuitem"
-      accessibilityState={{ selected, disabled: disabled ?? false }}
-      disabled={disabled}
-      onPress={() => {
-        ctx.setValue(value)
-        ctx.setOpen(false)
-      }}
-      className={cn(
-        'flex-row items-center justify-between px-3 py-3',
-        selected && 'bg-surface-2',
-        disabled && 'opacity-50',
-        className,
-      )}
-      {...props}
-    >
-      {typeof children === 'string' ? (
-        <Text className={cn('text-base text-text', textClassName)}>{children}</Text>
-      ) : (
-        children
-      )}
-      {selected ? (
-        <View pointerEvents="none">
-          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M5 12.5L10 17.5L19 7.5"
-              stroke={Colors.primary}
-              strokeWidth={3}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-      ) : null}
-    </Pressable>
-  )
-})
+export const SelectItem = React.forwardRef<React.ElementRef<typeof Pressable>, SelectItemProps>(
+  ({ value, children, className, textClassName, disabled, ...props }, ref) => {
+    const ctx = useSelectContext()
+    const selected = ctx.value === value
+    return (
+      <Pressable
+        ref={ref}
+        accessibilityRole="menuitem"
+        accessibilityState={{ selected, disabled: disabled ?? false }}
+        disabled={disabled}
+        onPress={() => {
+          ctx.setValue(value)
+          ctx.setOpen(false)
+        }}
+        className={cn(
+          'flex-row items-center justify-between px-3 py-3',
+          selected && 'bg-surface-2',
+          disabled && 'opacity-50',
+          className
+        )}
+        {...props}
+      >
+        {typeof children === 'string' ? (
+          <Text className={cn('text-base text-text', textClassName)}>{children}</Text>
+        ) : (
+          children
+        )}
+        {selected ? (
+          <View pointerEvents="none">
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M5 12.5L10 17.5L19 7.5"
+                stroke={Colors.primary}
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </View>
+        ) : null}
+      </Pressable>
+    )
+  }
+)
 SelectItem.displayName = 'SelectItem'
 
 export interface SelectGroupProps extends ViewProps {
@@ -279,10 +274,7 @@ export interface SelectSeparatorProps extends ViewProps {
   className?: string
 }
 
-export function SelectSeparator({
-  className,
-  ...props
-}: SelectSeparatorProps): React.ReactElement {
+export function SelectSeparator({ className, ...props }: SelectSeparatorProps): React.ReactElement {
   return <View className={cn('my-1 h-px bg-border', className)} {...props} />
 }
 SelectSeparator.displayName = 'SelectSeparator'

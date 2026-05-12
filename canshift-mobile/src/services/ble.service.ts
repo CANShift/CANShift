@@ -18,10 +18,7 @@ import { useReconnectStore } from '../stores/reconnect.store'
 import { parseTelemetry, parseStatus } from './ble.validators'
 import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
-import {
-  requestAndroidBlePermissions,
-  type AndroidBlePermissionResult,
-} from './ble-permissions'
+import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
 import { mapBleError, describeBleError } from './ble.errors'
 
 // ---------------------------------------------------------------------------
@@ -76,8 +73,7 @@ function isAborted(signal: AbortSignal): boolean {
 }
 
 function computeBackoffDelay(attempt: number): number {
-  const exponential =
-    RECONNECT_INITIAL_DELAY_MS * Math.pow(RECONNECT_BACKOFF_FACTOR, attempt)
+  const exponential = RECONNECT_INITIAL_DELAY_MS * Math.pow(RECONNECT_BACKOFF_FACTOR, attempt)
   const capped = Math.min(exponential, RECONNECT_MAX_DELAY_MS)
   const jitter = capped * RECONNECT_JITTER_RATIO * (Math.random() * 2 - 1)
   return Math.max(0, Math.round(capped + jitter))
@@ -156,8 +152,7 @@ export class BleService {
   constructor(deps: BleServiceDeps = {}) {
     const factory = deps.managerFactory ?? (() => new BleManager())
     this.manager = factory()
-    this.requestAndroidPermissions =
-      deps.requestAndroidPermissions ?? requestAndroidBlePermissions
+    this.requestAndroidPermissions = deps.requestAndroidPermissions ?? requestAndroidBlePermissions
   }
 
   // -------------------------------------------------------------------------
@@ -189,10 +184,7 @@ export class BleService {
   // -------------------------------------------------------------------------
 
   /** Scan for CANShift BLE devices. Returns list of found devices after timeoutMs. */
-  async scan(
-    onFound: (device: ScanResult) => void,
-    timeoutMs = 10000
-  ): Promise<void> {
+  async scan(onFound: (device: ScanResult) => void, timeoutMs = 10000): Promise<void> {
     // Android 12+: must request runtime BLE permissions before scanning.
     // No-op on iOS and Android < 12.
     await this.ensureAndroidBlePermissions()
@@ -237,8 +229,7 @@ export class BleService {
 
   /** Connect to a device and subscribe to telemetry notifications. */
   async connect(deviceId: string): Promise<void> {
-    const { setConnectionState, setDevice, setFirmwareStatus, setError } =
-      useDeviceStore.getState()
+    const { setConnectionState, setDevice, setFirmwareStatus, setError } = useDeviceStore.getState()
 
     // Android 12+: must request runtime BLE permissions before connecting.
     // No-op on iOS and Android < 12. Errors propagate to the caller.
@@ -258,15 +249,13 @@ export class BleService {
       // Read STATUS characteristic — routed through the GATT serializer so it
       // doesn't race a write that fires immediately after connect.
       const statusChar = await this.runGatt(() =>
-        device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS),
+        device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS)
       )
       if (statusChar.value) {
         const status = parseStatus(decodeBase64(statusChar.value))
         if (status) {
           setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
-          useDeviceStore
-            .getState()
-            .setWifiAp(status.ap_ssid ?? null, status.ap_password ?? null)
+          useDeviceStore.getState().setWifiAp(status.ap_ssid ?? null, status.ap_password ?? null)
           if (status.is_day !== undefined) {
             useDeviceStore.getState().setIsDayMode(status.is_day === 1)
           }
@@ -371,8 +360,8 @@ export class BleService {
       device.writeCharacteristicWithResponseForService(
         BLE_SERVICE_UUID,
         BLE_CHAR_SETTINGS,
-        encodeBase64(json),
-      ),
+        encodeBase64(json)
+      )
     )
   }
 
@@ -384,7 +373,7 @@ export class BleService {
     const device = this.connectedDevice
     if (!device) throw new Error('Not connected')
     const char = await this.runGatt(() =>
-      device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_SETTINGS),
+      device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_SETTINGS)
     )
     if (!char.value) return null
     try {
@@ -409,8 +398,8 @@ export class BleService {
       device.writeCharacteristicWithoutResponseForService(
         BLE_SERVICE_UUID,
         BLE_CHAR_CMD,
-        encodeBase64(json),
-      ),
+        encodeBase64(json)
+      )
     )
   }
 

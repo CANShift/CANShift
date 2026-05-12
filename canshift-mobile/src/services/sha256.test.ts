@@ -15,57 +15,47 @@ describe('sha256Hex', () => {
   // FIPS 180-4 published test vectors
   it('hashes the empty string', () => {
     expect(sha256Hex(new Uint8Array(0))).toBe(
-      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
     )
   })
 
   it("hashes 'abc'", () => {
     expect(sha256Hex(utf8('abc'))).toBe(
-      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
     )
   })
 
   it('hashes the 448-bit message (multi-block boundary)', () => {
-    expect(
-      sha256Hex(utf8('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq')),
-    ).toBe(
-      '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1',
+    expect(sha256Hex(utf8('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'))).toBe(
+      '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1'
     )
   })
 
   it("hashes one million 'a' characters", () => {
     const data = new Uint8Array(1_000_000).fill(0x61)
-    expect(sha256Hex(data)).toBe(
-      'cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0',
-    )
+    expect(sha256Hex(data)).toBe('cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0')
   })
 
   it('handles a single byte', () => {
     expect(sha256Hex(new Uint8Array([0x00]))).toBe(
-      '6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',
+      '6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d'
     )
   })
 
   it('handles a 63-byte message (one byte short of a block)', () => {
     const data = new Uint8Array(63).fill(0xab)
     // Independently produced via Node's crypto.createHash('sha256').
-    expect(sha256Hex(data)).toBe(
-      'd1036ba30d050c74b1a5ab301fa29ff0c607a27cc55af3412577f7e06dbd190b',
-    )
+    expect(sha256Hex(data)).toBe('d1036ba30d050c74b1a5ab301fa29ff0c607a27cc55af3412577f7e06dbd190b')
   })
 
   it('handles a 64-byte message (exactly one block)', () => {
     const data = new Uint8Array(64).fill(0xab)
-    expect(sha256Hex(data)).toBe(
-      'ec65c8798ecf95902413c40f7b9e6d4b0068885f5f324aba1f9ba1c8e14aea61',
-    )
+    expect(sha256Hex(data)).toBe('ec65c8798ecf95902413c40f7b9e6d4b0068885f5f324aba1f9ba1c8e14aea61')
   })
 
   it('handles a 65-byte message (one byte into a second block)', () => {
     const data = new Uint8Array(65).fill(0xab)
-    expect(sha256Hex(data)).toBe(
-      '39cd843414d5125dd308568ace26d04e60b7fa6d2b1a901fb5184fa2eae0598b',
-    )
+    expect(sha256Hex(data)).toBe('39cd843414d5125dd308568ace26d04e60b7fa6d2b1a901fb5184fa2eae0598b')
   })
 })
 
@@ -112,9 +102,7 @@ describe('Sha256 streaming', () => {
 
 describe('bytesToHex', () => {
   it('lowercase-hex encodes a byte array', () => {
-    expect(bytesToHex(new Uint8Array([0x00, 0x0f, 0xff, 0xab, 0xcd]))).toBe(
-      '000fffabcd',
-    )
+    expect(bytesToHex(new Uint8Array([0x00, 0x0f, 0xff, 0xab, 0xcd]))).toBe('000fffabcd')
   })
 
   it('encodes the empty array', () => {

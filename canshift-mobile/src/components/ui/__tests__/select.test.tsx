@@ -1,12 +1,6 @@
 import * as React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 
 interface HarnessProps {
   defaultValue?: string
@@ -44,9 +38,7 @@ describe('Select', () => {
 
   it('updates value and closes when an item is selected', () => {
     const onValueChange = jest.fn()
-    const { getByRole, getByText, queryByText } = render(
-      <Harness onValueChange={onValueChange} />,
-    )
+    const { getByRole, getByText, queryByText } = render(<Harness onValueChange={onValueChange} />)
     fireEvent.press(getByRole('combobox'))
     fireEvent.press(getByText('Banana'))
     expect(onValueChange).toHaveBeenCalledWith('banana')

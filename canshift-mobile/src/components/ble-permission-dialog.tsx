@@ -50,10 +50,7 @@ export function BlePermissionDialog({ platform, onDismiss }: Props) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="default"
-            onPress={() => void Linking.openSettings()}
-          >
+          <AlertDialogAction variant="default" onPress={() => void Linking.openSettings()}>
             Open Settings
           </AlertDialogAction>
         </AlertDialogFooter>

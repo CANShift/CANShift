@@ -58,9 +58,7 @@ describe('AlertDialog', () => {
 
   it('calls the action handler and closes when action is pressed', () => {
     const onAction = jest.fn()
-    const { getByText, queryByText } = render(
-      <Harness defaultOpen onAction={onAction} />,
-    )
+    const { getByText, queryByText } = render(<Harness defaultOpen onAction={onAction} />)
     fireEvent.press(getByText('Delete'))
     expect(onAction).toHaveBeenCalledTimes(1)
     expect(queryByText('Are you sure?')).toBeNull()
@@ -68,9 +66,7 @@ describe('AlertDialog', () => {
 
   it('calls the cancel handler and closes when cancel is pressed', () => {
     const onCancel = jest.fn()
-    const { getByText, queryByText } = render(
-      <Harness defaultOpen onCancel={onCancel} />,
-    )
+    const { getByText, queryByText } = render(<Harness defaultOpen onCancel={onCancel} />)
     fireEvent.press(getByText('Cancel'))
     expect(onCancel).toHaveBeenCalledTimes(1)
     expect(queryByText('Are you sure?')).toBeNull()

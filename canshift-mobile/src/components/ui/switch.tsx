@@ -21,6 +21,6 @@ export const Switch = React.forwardRef<React.ElementRef<typeof RNSwitch>, UISwit
       ios_backgroundColor={Colors.border}
       {...props}
     />
-  ),
+  )
 )
 Switch.displayName = 'Switch'

@@ -145,9 +145,7 @@ export function describeBleError(err: BleConnectionError): string {
     case 'disconnected':
       return 'device disconnected'
     case 'characteristic-missing':
-      return err.uuid
-        ? `characteristic missing (${err.uuid})`
-        : 'characteristic missing'
+      return err.uuid ? `characteristic missing (${err.uuid})` : 'characteristic missing'
     case 'write-failed':
       return err.reason ? `write failed: ${err.reason}` : 'write failed'
     case 'unknown':

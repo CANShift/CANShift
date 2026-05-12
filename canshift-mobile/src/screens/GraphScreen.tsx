@@ -22,41 +22,41 @@ import DashTopBar from '../components/DashTopBar'
 // ---------------------------------------------------------------------------
 
 const SIGNAL_COLOR: Record<string, string> = {
-  r:   '#FF8C00',
+  r: '#FF8C00',
   lam: '#55CC55',
   tps: '#FFD700',
   map: '#44AAFF',
   bst: '#44CCFF',
-  s:   '#CCCCCC',
-  ct:  '#FF4444',
-  ot:  '#FF6633',
-  op:  '#BB88FF',
+  s: '#CCCCCC',
+  ct: '#FF4444',
+  ot: '#FF6633',
+  op: '#BB88FF',
   iat: '#88BBFF',
-  fp:  '#FF88BB',
-  g:   '#888888',
+  fp: '#FF88BB',
+  g: '#888888',
   bat: '#AAFFAA',
 }
 
 const SIGNAL_RANGE: Record<string, { min: number; max: number }> = {
-  r:   { min: 0,    max: 8000 },
-  tps: { min: 0,    max: 100  },
-  map: { min: 0,    max: 300  },
-  bst: { min: -0.5, max: 2.5  },
-  iat: { min: -20,  max: 80   },
-  ct:  { min: 20,   max: 130  },
-  ot:  { min: 20,   max: 150  },
-  op:  { min: 0,    max: 10   },
-  fp:  { min: 0,    max: 10   },
-  lam: { min: 0.6,  max: 1.4  },
-  s:   { min: 0,    max: 250  },
-  g:   { min: 0,    max: 6    },
-  bat: { min: 10,   max: 16   },
+  r: { min: 0, max: 8000 },
+  tps: { min: 0, max: 100 },
+  map: { min: 0, max: 300 },
+  bst: { min: -0.5, max: 2.5 },
+  iat: { min: -20, max: 80 },
+  ct: { min: 20, max: 130 },
+  ot: { min: 20, max: 150 },
+  op: { min: 0, max: 10 },
+  fp: { min: 0, max: 10 },
+  lam: { min: 0.6, max: 1.4 },
+  s: { min: 0, max: 250 },
+  g: { min: 0, max: 6 },
+  bat: { min: 10, max: 16 },
 }
 
 const WINDOW_OPTIONS = [
-  { label: '30s', value: 30  },
-  { label: '1m',  value: 60  },
-  { label: '2m',  value: 120 },
+  { label: '30s', value: 30 },
+  { label: '1m', value: 60 },
+  { label: '2m', value: 120 },
 ]
 
 const DEFAULT_SIGNALS = ['r', 'lam']
@@ -72,7 +72,7 @@ function buildPoints(
   windowStart: number,
   windowEnd: number,
   w: number,
-  h: number,
+  h: number
 ): string {
   const range = SIGNAL_RANGE[key]
   if (!range) return ''
@@ -136,8 +136,12 @@ function ChartPanel({
 
   useEffect(() => {
     if (paused) return
-    const id = setInterval(() => { setTick((n) => n + 1); }, 100)
-    return () => { clearInterval(id); }
+    const id = setInterval(() => {
+      setTick((n) => n + 1)
+    }, 100)
+    return () => {
+      clearInterval(id)
+    }
   }, [paused])
 
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
@@ -182,10 +186,14 @@ function ChartPanel({
             <TouchableOpacity
               key={key}
               style={[styles.pill, active && { borderColor: color, backgroundColor: `${color}22` }]}
-              onPress={() => { onToggleSignal(key); }}
+              onPress={() => {
+                onToggleSignal(key)
+              }}
               hitSlop={HitSlop.default}
             >
-              <View style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]} />
+              <View
+                style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]}
+              />
               <Text style={[styles.pillLabel, active && { color }]}>
                 {SIGNAL_META[key]?.label ?? key}
               </Text>
@@ -196,11 +204,7 @@ function ChartPanel({
 
       {/* Controls */}
       <View style={[styles.controls, { paddingVertical: vGap }]}>
-        <TouchableOpacity
-          style={styles.pauseBtn}
-          onPress={onTogglePause}
-          hitSlop={HitSlop.default}
-        >
+        <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause} hitSlop={HitSlop.default}>
           <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
         </TouchableOpacity>
         <View style={styles.windowRow}>
@@ -208,10 +212,17 @@ function ChartPanel({
             <TouchableOpacity
               key={opt.value}
               style={[styles.windowBtn, windowSecs === opt.value && styles.windowBtnActive]}
-              onPress={() => { onSetWindow(opt.value); }}
+              onPress={() => {
+                onSetWindow(opt.value)
+              }}
               hitSlop={HitSlop.default}
             >
-              <Text style={[styles.windowBtnText, windowSecs === opt.value && styles.windowBtnTextActive]}>
+              <Text
+                style={[
+                  styles.windowBtnText,
+                  windowSecs === opt.value && styles.windowBtnTextActive,
+                ]}
+              >
                 {opt.label}
               </Text>
             </TouchableOpacity>
@@ -237,8 +248,10 @@ function ChartPanel({
             {[0.25, 0.5, 0.75].map((f) => (
               <Line
                 key={f}
-                x1={0} y1={chartSize.height * f}
-                x2={chartSize.width} y2={chartSize.height * f}
+                x1={0}
+                y1={chartSize.height * f}
+                x2={chartSize.width}
+                y2={chartSize.height * f}
                 stroke={Colors.border}
                 strokeWidth={1}
               />
@@ -260,7 +273,10 @@ function ChartPanel({
             {chartData.lines.map((line) => {
               const range = SIGNAL_RANGE[line.key]
               if (!range || line.latestValue === undefined) return null
-              const norm = Math.max(0, Math.min(1, (line.latestValue - range.min) / (range.max - range.min)))
+              const norm = Math.max(
+                0,
+                Math.min(1, (line.latestValue - range.min) / (range.max - range.min))
+              )
               const y = Math.max(10, Math.min(chartSize.height - 4, (1 - norm) * chartSize.height))
               return (
                 <SvgText
@@ -283,7 +299,9 @@ function ChartPanel({
       {/* Time axis */}
       <View style={styles.timeAxis}>
         <Text style={styles.timeLabel}>{formatTime(chartData.windowStart)}</Text>
-        <Text style={styles.timeLabel}>{formatTime((chartData.windowStart + chartData.windowEnd) / 2)}</Text>
+        <Text style={styles.timeLabel}>
+          {formatTime((chartData.windowStart + chartData.windowEnd) / 2)}
+        </Text>
         <Text style={styles.timeLabel}>{formatTime(chartData.windowEnd)}</Text>
       </View>
 

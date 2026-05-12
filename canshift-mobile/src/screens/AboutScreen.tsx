@@ -72,7 +72,7 @@ function isPreReleaseTag(version: string): boolean {
 export function classify(
   currentRaw: string | null,
   release: ReleaseInfo,
-  prerelease: ReleaseInfo | null,
+  prerelease: ReleaseInfo | null
 ): ComparisonKind {
   if (currentRaw === null) return { kind: 'unknown' }
   const current = parseSemver(currentRaw)
@@ -110,7 +110,7 @@ function readAppVersion(): string | null {
   if (typeof fromConfig === 'string' && fromConfig.length > 0) return fromConfig
   // Older Expo manifest shapes expose `nativeAppVersion` / `version`. Fall
   // back to those so dev builds without a resolved config still show a value.
-  const legacy = (Constants as unknown as { nativeAppVersion?: unknown; version?: unknown })
+  const legacy = Constants as unknown as { nativeAppVersion?: unknown; version?: unknown }
   if (typeof legacy.nativeAppVersion === 'string' && legacy.nativeAppVersion.length > 0) {
     return legacy.nativeAppVersion
   }
@@ -237,7 +237,9 @@ export default function AboutScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => { navigation.goBack() }}
+          onPress={() => {
+            navigation.goBack()
+          }}
           hitSlop={HitSlop.default}
         >
           <Text style={styles.back}>‹ Back</Text>
@@ -280,7 +282,9 @@ export default function AboutScreen({ navigation }: Props) {
             <ReleaseBody
               release={displayedRelease}
               notesOpen={notesOpen}
-              onToggleNotes={() => { setNotesOpen((o) => !o) }}
+              onToggleNotes={() => {
+                setNotesOpen((o) => !o)
+              }}
               onOpenUrl={openUrl}
             />
           ) : null}
@@ -349,7 +353,9 @@ function ReleaseBody({
 
       <TouchableOpacity
         style={styles.openLink}
-        onPress={() => { onOpenUrl(release.htmlUrl) }}
+        onPress={() => {
+          onOpenUrl(release.htmlUrl)
+        }}
         hitSlop={HitSlop.default}
       >
         <Text style={styles.openLinkText}>Open on GitHub ↗</Text>
@@ -383,7 +389,9 @@ function ReleaseBody({
             <TouchableOpacity
               key={asset.downloadUrl}
               style={styles.assetRow}
-              onPress={() => { onOpenUrl(asset.downloadUrl) }}
+              onPress={() => {
+                onOpenUrl(asset.downloadUrl)
+              }}
               hitSlop={HitSlop.default}
             >
               <Text style={styles.assetName} numberOfLines={1}>
@@ -417,7 +425,9 @@ function FooterRow({
   return (
     <View style={styles.footer}>
       <TouchableOpacity
-        onPress={() => { onTogglePreRelease(!showPreRelease) }}
+        onPress={() => {
+          onTogglePreRelease(!showPreRelease)
+        }}
         disabled={!hasPreRelease}
         hitSlop={HitSlop.default}
         style={styles.toggleRow}

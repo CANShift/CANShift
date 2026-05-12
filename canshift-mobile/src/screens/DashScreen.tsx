@@ -23,7 +23,7 @@ export default function DashScreen(_: Props) {
   const { width, height } = useWindowDimensions()
   const isLandscape = width > height
   const { values, isLive } = useSignalsStore(
-    useShallow((s) => ({ values: s.values, isLive: s.isLive })),
+    useShallow((s) => ({ values: s.values, isLive: s.isLive }))
   )
 
   return (

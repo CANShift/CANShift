@@ -106,7 +106,7 @@ function toReleaseInfo(raw: GitHubRelease): ReleaseInfo {
           name: a.name,
           downloadUrl: a.browser_download_url,
           sizeBytes: a.size,
-        },
+        }
   )
   return {
     version: raw.tag_name.replace(/^v/, ''),
@@ -372,10 +372,7 @@ export class ReleasesService {
     if (this.inFlight) return this.inFlight
 
     if (nowMs < this.rateLimitedUntil) {
-      return this.makeFailure(
-        'rate-limited',
-        'GitHub rate limit cooling down — try again shortly',
-      )
+      return this.makeFailure('rate-limited', 'GitHub rate limit cooling down — try again shortly')
     }
 
     const promise = this.runFetch()
@@ -437,7 +434,7 @@ export class ReleasesService {
 
   private makeFailure(
     reason: 'offline' | 'rate-limited' | 'http-error' | 'invalid-response',
-    message: string,
+    message: string
   ): LatestReleaseResult {
     const cached = this.cache
     const nowMs = this.now()

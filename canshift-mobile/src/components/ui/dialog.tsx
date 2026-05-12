@@ -32,7 +32,12 @@ export interface DialogProps {
   children: React.ReactNode
 }
 
-export function Dialog({ open, defaultOpen, onOpenChange, children }: DialogProps): React.ReactElement {
+export function Dialog({
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
+}: DialogProps): React.ReactElement {
   const isControlledRef = React.useRef(open !== undefined)
   const [internalOpen, setInternalOpen] = React.useState<boolean>(defaultOpen ?? false)
 
@@ -46,12 +51,12 @@ export function Dialog({ open, defaultOpen, onOpenChange, children }: DialogProp
       }
       onOpenChange?.(next)
     },
-    [isControlled, onOpenChange],
+    [isControlled, onOpenChange]
   )
 
   const value = React.useMemo<DialogContextValue>(
     () => ({ open: currentOpen, setOpen }),
-    [currentOpen, setOpen],
+    [currentOpen, setOpen]
   )
 
   return <DialogContext.Provider value={value}>{children}</DialogContext.Provider>
@@ -122,7 +127,7 @@ export function DialogContent({
           accessibilityViewIsModal
           className={cn(
             'mx-6 max-w-md w-full self-center rounded-lg border border-border bg-surface p-6 shadow-lg',
-            className,
+            className
           )}
         >
           {children}
@@ -139,11 +144,7 @@ export interface DialogHeaderProps extends ViewProps {
 
 export function DialogHeader({ className, ...props }: DialogHeaderProps): React.ReactElement {
   return (
-    <View
-      accessibilityRole="header"
-      className={cn('flex-col gap-1.5', className)}
-      {...props}
-    />
+    <View accessibilityRole="header" className={cn('flex-col gap-1.5', className)} {...props} />
   )
 }
 DialogHeader.displayName = 'DialogHeader'
@@ -189,24 +190,23 @@ export interface DialogCloseProps extends Omit<PressableProps, 'onPress' | 'styl
   className?: string
 }
 
-export const DialogClose = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
-  DialogCloseProps
->(({ children, className, ...props }, ref) => {
-  const { setOpen } = useDialogContext()
-  return (
-    <Pressable
-      ref={ref}
-      accessibilityRole="button"
-      accessibilityLabel="Close"
-      onPress={() => {
-        setOpen(false)
-      }}
-      className={cn(className)}
-      {...props}
-    >
-      {children}
-    </Pressable>
-  )
-})
+export const DialogClose = React.forwardRef<React.ElementRef<typeof Pressable>, DialogCloseProps>(
+  ({ children, className, ...props }, ref) => {
+    const { setOpen } = useDialogContext()
+    return (
+      <Pressable
+        ref={ref}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        onPress={() => {
+          setOpen(false)
+        }}
+        className={cn(className)}
+        {...props}
+      >
+        {children}
+      </Pressable>
+    )
+  }
+)
 DialogClose.displayName = 'DialogClose'

@@ -11,7 +11,10 @@ describe('cold-start', () => {
 
   it('logs an "ok" cold-start when first-screen fires within target', () => {
     const now = Date.now()
-    jest.spyOn(Date, 'now').mockReturnValueOnce(now).mockReturnValueOnce(now + 500)
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now + 500)
     markAppLaunch()
     markFirstScreenReady()
 
@@ -23,7 +26,10 @@ describe('cold-start', () => {
 
   it('flags slow cold-start above the 2s target', () => {
     const now = Date.now()
-    jest.spyOn(Date, 'now').mockReturnValueOnce(now).mockReturnValueOnce(now + 2500)
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(now)
+      .mockReturnValueOnce(now + 2500)
     markAppLaunch()
     markFirstScreenReady()
 

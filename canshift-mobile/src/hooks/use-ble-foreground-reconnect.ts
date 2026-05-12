@@ -68,7 +68,7 @@ function resolveDeps(deps: BleForegroundReconnectDeps): ResolvedDeps {
 export async function handleAppStateTransition(
   prev: AppStateStatus,
   next: AppStateStatus,
-  deps: ResolvedDeps,
+  deps: ResolvedDeps
 ): Promise<void> {
   // We only care about coming BACK to the foreground from background/inactive.
   if (next !== 'active' || !isBackgrounded(prev)) return
@@ -101,9 +101,7 @@ export async function handleAppStateTransition(
  *
  * Mount once at the top of the tree (e.g. in `App.tsx`).
  */
-export function useBleForegroundReconnect(
-  deps: BleForegroundReconnectDeps = {},
-): void {
+export function useBleForegroundReconnect(deps: BleForegroundReconnectDeps = {}): void {
   const resolved = useRef<ResolvedDeps>(resolveDeps(deps))
   const lastStateRef = useRef<AppStateStatus>(resolved.current.appState.currentState)
 
@@ -115,7 +113,7 @@ export function useBleForegroundReconnect(
         const prev = lastStateRef.current
         lastStateRef.current = next
         void handleAppStateTransition(prev, next, current)
-      },
+      }
     )
 
     return () => {

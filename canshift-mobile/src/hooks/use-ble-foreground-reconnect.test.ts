@@ -38,9 +38,7 @@ function makeDeps(overrides: MakeDepsOverrides = {}) {
   return {
     tryReconnect: jest.fn(tryReconnect),
     showToast: jest.fn(noopToast),
-    getConnectionState: jest.fn(
-      (): ConnectionState => overrides.connectionState ?? 'idle',
-    ),
+    getConnectionState: jest.fn((): ConnectionState => overrides.connectionState ?? 'idle'),
     getIsReconnecting: jest.fn((): boolean => overrides.isReconnecting ?? false),
     appState: {
       addEventListener: jest.fn(),
@@ -55,7 +53,7 @@ describe('handleAppStateTransition', () => {
     await handleAppStateTransition('background', 'active', deps)
     expect(deps.tryReconnect).toHaveBeenCalledTimes(1)
     expect(deps.showToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'info', text1: 'Reconnecting' }),
+      expect.objectContaining({ type: 'info', text1: 'Reconnecting' })
     )
   })
 
@@ -113,9 +111,7 @@ describe('handleAppStateTransition', () => {
     const deps = makeDeps({
       tryReconnect: () => Promise.reject(new Error('boom')),
     })
-    await expect(
-      handleAppStateTransition('background', 'active', deps),
-    ).resolves.toBeUndefined()
+    await expect(handleAppStateTransition('background', 'active', deps)).resolves.toBeUndefined()
     expect(deps.showToast).not.toHaveBeenCalled()
   })
 })
