@@ -21,7 +21,7 @@ export default function SignalMapPanel(): React.ReactElement {
     if (signals.length === 0) return
     const config: SignalConfig = {
       version: CURRENT_SCHEMA_VERSION,
-      protocol: 'maxxecu_v1.2',
+      protocol: 'generic',
       canSpeedKbps: 500,
       signals,
     }

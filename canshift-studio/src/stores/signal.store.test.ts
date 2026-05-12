@@ -34,7 +34,7 @@ describe('signal.store', () => {
     useSignalStore.setState({ signals: initialSignals })
   })
 
-  it('exposes the bundled MaxxECU signal map on init', () => {
+  it('exposes the bundled default signal map on init', () => {
     const names = useSignalStore.getState().signals.map((s) => s.name)
     expect(names).toEqual(INITIAL_SIGNAL_NAMES)
   })

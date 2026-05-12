@@ -138,7 +138,7 @@ export default function DeviceConfigRoute() {
                 </option>
               ))}
             </select>
-            <div style={hint}>Must match MaxxECU CAN output configuration</div>
+            <div style={hint}>Must match your ECU&apos;s CAN output configuration</div>
           </div>
 
           <div style={row}>
@@ -182,7 +182,7 @@ export default function DeviceConfigRoute() {
             }}
           >
             Wiring: CAN Pal CTX → GPIO {config.twai_tx_pin} · CRX → GPIO {config.twai_rx_pin} ·
-            CANH/CANL → MaxxECU · VCC → 5V
+            CANH/CANL → your ECU&apos;s CAN bus · VCC → 5V
           </div>
         </div>
 
