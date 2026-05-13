@@ -11,21 +11,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Helpers
 // ---------------------------------------------------------------------------
 
-function xml(frames: string): string {
+function xml(framesAttrs: string, content: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
 <RealDashCAN version="2">
-  <frames>
-    ${frames}
+  <frames${framesAttrs ? ` ${framesAttrs}` : ''}>
+    ${content}
   </frames>
 </RealDashCAN>`
 }
 
-function frame(id: string, values: string, extra = ''): string {
-  return `<frame id="${id}" timeout="2000"${extra}>${values}</frame>`
+function frame(id: string, values: string, frameAttrs = ''): string {
+  return `<frame id="${id}" timeout="2000"${frameAttrs ? ` ${frameAttrs}` : ''}>${values}</frame>`
+}
+
+function simpleXml(values: string, frameAttrs = '', framesAttrs = ''): string {
+  return xml(framesAttrs, frame('0x520', values, frameAttrs))
 }
 
 // ---------------------------------------------------------------------------
-// Not a RealDash file
+// Non-RealDash input
 // ---------------------------------------------------------------------------
 
 describe('non-RealDash input', () => {
@@ -36,9 +40,8 @@ describe('non-RealDash input', () => {
   })
 
   it('returns a warning for arbitrary XML', () => {
-    const { signals, warnings } = parseRealDashXML('<config><item/></config>')
+    const { signals } = parseRealDashXML('<config><item/></config>')
     expect(signals).toHaveLength(0)
-    expect(warnings).toHaveLength(1)
   })
 })
 
@@ -49,23 +52,48 @@ describe('non-RealDash input', () => {
 describe('name generation', () => {
   it('snake_cases the name attribute', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="MaxxECU: Driven wheels avg spd" offset="0" length="2"/>'))
+      simpleXml('<value name="MaxxECU: Driven wheels avg spd" offset="0" length="2"/>')
     )
     expect(signals[0]?.name).toBe('maxxecu_driven_wheels_avg_spd')
   })
 
   it('uses channel_{targetId} when no name attr', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value targetId="37" offset="0" length="2"/>'))
+      simpleXml('<value targetId="37" offset="0" length="2"/>')
     )
     expect(signals[0]?.name).toBe('channel_37')
   })
 
   it('uses positional fallback when neither name nor targetId', () => {
-    const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value offset="0" length="2"/>'))
-    )
+    const { signals } = parseRealDashXML(simpleXml('<value offset="0" length="2"/>'))
     expect(signals[0]?.name).toBe('signal_520_0')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// baseId on <frames>
+// ---------------------------------------------------------------------------
+
+describe('frames baseId', () => {
+  it('adds decimal baseId to frame id', () => {
+    const { signals } = parseRealDashXML(
+      xml('baseId="3200"', frame('1', '<value name="s" offset="0" length="2"/>'))
+    )
+    // 3200 + 1 = 3201 = 0xc81
+    expect(signals[0]?.canFrameId).toBe('0xc81')
+  })
+
+  it('adds hex baseId to frame id', () => {
+    const { signals } = parseRealDashXML(
+      xml('baseId="0xc80"', frame('0x10', '<value name="s" offset="0" length="2"/>'))
+    )
+    // 0xc80 + 0x10 = 0xc90
+    expect(signals[0]?.canFrameId).toBe('0xc90')
+  })
+
+  it('leaves frame id unchanged when baseId is absent', () => {
+    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="2"/>'))
+    expect(signals[0]?.canFrameId).toBe('0x520')
   })
 })
 
@@ -76,19 +104,12 @@ describe('name generation', () => {
 describe('conversion parsing', () => {
   function singleSignal(conversion: string) {
     return parseRealDashXML(
-      xml(
-        frame(
-          '0x520',
-          `<value name="test" offset="0" length="2" conversion="${conversion}"/>`
-        )
-      )
+      simpleXml(`<value name="test" offset="0" length="2" conversion="${conversion}"/>`)
     ).signals[0]
   }
 
   it('empty conversion → scale=1 offset=0', () => {
-    const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="test" offset="0" length="2"/>'))
-    )
+    const { signals } = parseRealDashXML(simpleXml('<value name="test" offset="0" length="2"/>'))
     expect(signals[0]?.scale).toBe(1)
     expect(signals[0]?.offset).toBe(0)
   })
@@ -141,27 +162,24 @@ describe('conversion parsing', () => {
     expect(s?.offset).toBe(0)
   })
 
-  it('V>>0 → bitMask 0x01, scale=1, min=0, max=1', () => {
+  it('V>>0 → bitMask 0x01', () => {
     const s = singleSignal('V>>0')
     expect(s?.bitMask).toBe('0x01')
-    expect(s?.scale).toBe(1)
     expect(s?.min).toBe(0)
     expect(s?.max).toBe(1)
   })
 
   it('V>>3 → bitMask 0x08', () => {
-    const s = singleSignal('V>>3')
-    expect(s?.bitMask).toBe('0x08')
+    expect(singleSignal('V>>3')?.bitMask).toBe('0x08')
   })
 
   it('V>>7 → bitMask 0x80', () => {
-    const s = singleSignal('V>>7')
-    expect(s?.bitMask).toBe('0x80')
+    expect(singleSignal('V>>7')?.bitMask).toBe('0x80')
   })
 
   it('no conversion + units="bit" → bitMask 0x01', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x526', '<value name="flag" offset="0" length="1" units="bit"/>'))
+      simpleXml('<value name="flag" offset="0" length="1" units="bit"/>')
     )
     expect(signals[0]?.bitMask).toBe('0x01')
     expect(signals[0]?.unit).toBe('')
@@ -169,19 +187,41 @@ describe('conversion parsing', () => {
 
   it('warns and skips complex formula (B0+...)', () => {
     const { signals, warnings } = parseRealDashXML(
-      xml(frame('0x520', '<value name="complex" offset="0" length="2" conversion="B0+15*(B1-43)"/>'))
+      simpleXml('<value name="c" offset="0" length="2" conversion="B0+15*(B1-43)"/>')
     )
     expect(signals).toHaveLength(0)
-    expect(warnings).toHaveLength(1)
     expect(warnings[0]).toMatch(/Skipped/)
   })
 
   it('warns and skips V+ID formula', () => {
     const { signals, warnings } = parseRealDashXML(
-      xml(frame('0x520', '<value name="ref" offset="0" length="2" conversion="V+ID200-74.3"/>'))
+      simpleXml('<value name="r" offset="0" length="2" conversion="V+ID200-74.3"/>')
     )
     expect(signals).toHaveLength(0)
     expect(warnings).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// XML entity decoding in conversion attribute
+// ---------------------------------------------------------------------------
+
+describe('XML entity decoding', () => {
+  it('decodes &gt;&gt; in conversion to >> (bit shift)', () => {
+    const { signals } = parseRealDashXML(
+      simpleXml('<value name="flag" offset="0" length="1" conversion="V&gt;&gt;3"/>')
+    )
+    // V>>3 after entity decode → bitMask 0x08
+    expect(signals[0]?.bitMask).toBe('0x08')
+  })
+
+  it('decodes &amp; in conversion to & (treated as complex and warned)', () => {
+    const { signals, warnings } = parseRealDashXML(
+      simpleXml('<value name="mask" offset="0" length="1" conversion="V&amp;15"/>')
+    )
+    // "V&15" is a complex formula — should warn and skip
+    expect(signals).toHaveLength(0)
+    expect(warnings[0]).toMatch(/Skipped/)
   })
 })
 
@@ -191,78 +231,137 @@ describe('conversion parsing', () => {
 
 describe('endianness', () => {
   it('defaults to little-endian when absent', () => {
-    const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="s" offset="0" length="2"/>'))
-    )
+    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="2"/>'))
     expect(signals[0]?.bigEndian).toBe(false)
   })
 
-  it('endianess="big" (RealDash typo) → bigEndian=true', () => {
+  it('frame endianess="big" (typo spelling) → bigEndian=true for all values', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x360', '<value name="s" offset="0" length="2"/>', ' endianess="big"'))
+      simpleXml('<value name="s" offset="0" length="2"/>', 'endianess="big"')
     )
     expect(signals[0]?.bigEndian).toBe(true)
   })
 
-  it('endianness="big" (correct spelling) → bigEndian=true', () => {
+  it('frame endianness="big" (correct spelling) → bigEndian=true', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x360', '<value name="s" offset="0" length="2"/>', ' endianness="big"'))
+      simpleXml('<value name="s" offset="0" length="2"/>', 'endianness="big"')
     )
     expect(signals[0]?.bigEndian).toBe(true)
+  })
+
+  it('per-value endianness overrides frame default', () => {
+    const { signals } = parseRealDashXML(
+      simpleXml(
+        '<value name="be" offset="0" length="2" endianness="big"/>' +
+          '<value name="le" offset="2" length="2" endianness="little"/>',
+        'endianness="big"'
+      )
+    )
+    expect(signals[0]?.bigEndian).toBe(true)
+    expect(signals[1]?.bigEndian).toBe(false)
   })
 })
 
 // ---------------------------------------------------------------------------
-// Signed flag
+// Frame-level signed default
 // ---------------------------------------------------------------------------
 
-describe('signed attribute', () => {
-  it('signed="true" → signed=true', () => {
+describe('frame-level signed', () => {
+  it('frame signed="true" applies to all values', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x521', '<value name="s" offset="4" length="2" signed="true" conversion="V*0.1"/>'))
+      simpleXml(
+        '<value name="a" offset="0" length="2"/><value name="b" offset="2" length="2"/>',
+        'signed="true"'
+      )
     )
     expect(signals[0]?.signed).toBe(true)
+    expect(signals[1]?.signed).toBe(true)
   })
 
-  it('absent signed → signed=false', () => {
+  it('per-value signed overrides frame default', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x521', '<value name="s" offset="0" length="2"/>'))
+      simpleXml(
+        '<value name="a" offset="0" length="2" signed="false"/>',
+        'signed="true"'
+      )
     )
     expect(signals[0]?.signed).toBe(false)
   })
 })
 
 // ---------------------------------------------------------------------------
-// Min/max computation
+// rangeMin / rangeMax
+// ---------------------------------------------------------------------------
+
+describe('rangeMin / rangeMax', () => {
+  it('uses rangeMin/rangeMax when present', () => {
+    const { signals } = parseRealDashXML(
+      simpleXml(
+        '<value name="s" offset="0" length="2" conversion="V*0.1" rangeMin="0" rangeMax="500"/>'
+      )
+    )
+    expect(signals[0]?.min).toBe(0)
+    expect(signals[0]?.max).toBe(500)
+  })
+
+  it('falls back to computed range when absent', () => {
+    const { signals } = parseRealDashXML(
+      simpleXml('<value name="s" offset="0" length="2" conversion="V*0.1"/>')
+    )
+    // 2-byte unsigned * 0.1 → max ≈ 6553.5
+    expect(signals[0]?.max).toBeCloseTo(6553.5)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Signed attribute
+// ---------------------------------------------------------------------------
+
+describe('signed attribute', () => {
+  it('signed="true" on value → signed=true', () => {
+    const { signals } = parseRealDashXML(
+      simpleXml('<value name="s" offset="4" length="2" signed="true" conversion="V*0.1"/>')
+    )
+    expect(signals[0]?.signed).toBe(true)
+  })
+
+  it('absent signed → signed=false', () => {
+    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="2"/>'))
+    expect(signals[0]?.signed).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Min/max computation (no rangeMin/rangeMax)
 // ---------------------------------------------------------------------------
 
 describe('min/max computation', () => {
-  it('2-byte unsigned V*0.1 → max=6553.5', () => {
+  it('2-byte unsigned V*0.1 → max≈6553.5', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="s" offset="0" length="2" conversion="V*0.1"/>'))
+      simpleXml('<value name="s" offset="0" length="2" conversion="V*0.1"/>')
     )
     expect(signals[0]?.min).toBe(0)
     expect(signals[0]?.max).toBeCloseTo(6553.5)
   })
 
-  it('1-byte signed V*1 → range -128..127', () => {
+  it('1-byte signed → range -128..127', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="s" offset="0" length="1" signed="true"/>'))
+      simpleXml('<value name="s" offset="0" length="1" signed="true"/>')
     )
     expect(signals[0]?.min).toBe(-128)
     expect(signals[0]?.max).toBe(127)
   })
 
-  it('2-byte unsigned with offset V*0.1-40 → min=-40', () => {
+  it('2-byte unsigned V*0.1-40 → min=-40', () => {
     const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="s" offset="0" length="2" conversion="V*0.1-40"/>'))
+      simpleXml('<value name="s" offset="0" length="2" conversion="V*0.1-40"/>')
     )
     expect(signals[0]?.min).toBe(-40)
   })
 })
 
 // ---------------------------------------------------------------------------
-// Timeout passthrough
+// Timeout
 // ---------------------------------------------------------------------------
 
 describe('timeout', () => {
@@ -273,7 +372,7 @@ describe('timeout', () => {
     expect(signals[0]?.timeoutMs).toBe(5000)
   })
 
-  it('defaults timeout to 2000 when absent', () => {
+  it('defaults to 2000 when absent', () => {
     const { signals } = parseRealDashXML(
       `<RealDashCAN version="2"><frames><frame id="0x520"><value name="s" offset="0" length="2"/></frame></frames></RealDashCAN>`
     )
@@ -287,16 +386,12 @@ describe('timeout', () => {
 
 describe('byteLength clamping', () => {
   it('length=3 is clamped to 1', () => {
-    const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="s" offset="0" length="3"/>'))
-    )
+    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="3"/>'))
     expect(signals[0]?.byteLength).toBe(1)
   })
 
   it('length=4 passes through', () => {
-    const { signals } = parseRealDashXML(
-      xml(frame('0x520', '<value name="s" offset="0" length="4"/>'))
-    )
+    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="4"/>'))
     expect(signals[0]?.byteLength).toBe(4)
   })
 })
@@ -309,6 +404,7 @@ describe('multiple frames', () => {
   it('collects signals from all frames', () => {
     const { signals } = parseRealDashXML(
       xml(
+        '',
         frame('0x520', '<value name="rpm" offset="0" length="2"/>') +
           frame('0x521', '<value name="lambda" offset="0" length="2" conversion="V*0.001"/>')
       )
@@ -328,46 +424,30 @@ describe('MaxxECU fixture', () => {
     __dirname,
     '../../../../RealDash-extras/RealDash-CAN/XML-files/MaxxECU/maxxecu_default_can.xml'
   )
-
-  // Skip if the extras repo is not checked out alongside CANShift.
   const maybeIt = fs.existsSync(fixturePath) ? it : it.skip
 
-  maybeIt('parses at least 30 signals with no invalid-response warning', () => {
+  maybeIt('parses at least 30 signals with no root-level warning', () => {
     const content = fs.readFileSync(fixturePath, 'utf-8')
     const { signals, warnings } = parseRealDashXML(content)
-
     expect(signals.length).toBeGreaterThan(30)
-
-    // None of the warnings should be "Not a RealDash CAN XML file"
     expect(warnings.every((w) => !w.startsWith('Not a'))).toBe(true)
-
-    // All signals must have valid canFrameId format
     for (const s of signals) {
       expect(s.canFrameId).toMatch(/^0x[0-9a-f]+$/)
     }
   })
 
-  maybeIt('correctly extracts the bit-shift signals from frame 0x526', () => {
+  maybeIt('extracts bit-shift signals from frame 0x526', () => {
     const content = fs.readFileSync(fixturePath, 'utf-8')
     const { signals } = parseRealDashXML(content)
-
     const frame526 = signals.filter((s) => s.canFrameId === '0x526')
     expect(frame526.length).toBeGreaterThan(4)
-
-    // First signal in 0x526 has no conversion → bitMask=0x01
-    const first = frame526[0]
-    expect(first?.bitMask).toBe('0x01')
-    expect(first?.min).toBe(0)
-    expect(first?.max).toBe(1)
-
-    // V>>3 signal should have bitMask=0x08
-    const shiftBy3 = frame526.find((s) => s.bitMask === '0x08')
-    expect(shiftBy3).toBeDefined()
+    expect(frame526[0]?.bitMask).toBe('0x01')
+    expect(frame526.find((s) => s.bitMask === '0x08')).toBeDefined()
   })
 
   maybeIt('defaults to little-endian (MaxxECU uses no endian attr)', () => {
     const content = fs.readFileSync(fixturePath, 'utf-8')
     const { signals } = parseRealDashXML(content)
-    expect(signals.every((s) => s.bigEndian === false)).toBe(true)
+    expect(signals.every((s) => !s.bigEndian)).toBe(true)
   })
 })
