@@ -19,7 +19,6 @@
 #include "config/config_loader.h"
 #include "config/json_reader.h"
 #include "config/rotation_config.h"
-#include "ui/burn_overlay.h"
 #include "ui/page_manager.h"
 #include "ui/settings_page.h"
 #include "ui/theme_manager.h"
@@ -266,10 +265,16 @@ const char *findPayloadSlice(const char *jsonLine, size_t lineLen, size_t *outLe
 // its pool to ~21 KB to materialise it, and a contiguous 21 KB malloc fails
 // once LVGL has consumed its 80 KB pool. Instead, locate the `"payload"`
 // value as a substring of s_rxBuf and stream it straight to flash.
+//
+// Race note: BurnOverlay::show() holds the LVGL mutex for ~280 ms (lv_refr_now
+// flushes the full frame). When the mutex is released the LVGL task immediately
+// runs, hits lv_mem_alloc with ~1 KB free, fires the OOM assert, and calls
+// esp_restart() while writeFileAtomic is still in progress — the new config is
+// never committed. Fix: boost USB task priority to TASK_PRIO_UI+1 BEFORE the
+// write so the LVGL task cannot preempt Core 1 while we write + ack. The
+// overlay is omitted (device reboots in < 100 ms anyway; user never sees it).
 void handlePutConfig(const char *jsonLine) {
 #ifdef ARDUINO
-    // INFO level so field logs capture the value when a user reports a failed
-    // burn — a single line per PUT, the host has already opened the modal.
     LOG_INFO("USB", "heap.largest_free=%u before PUT_CONFIG",
              static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)));
 #endif
@@ -283,37 +288,21 @@ void handlePutConfig(const char *jsonLine) {
         return;
     }
 
-    // Show the "Saving config…" overlay before the storage write so the user
-    // gets immediate feedback. Mirrors studio's BurnProgressModal. lv_refr_now
-    // inside show() flushes the screen before the write blocks the UI.
-    if (xSemaphoreTake(g_lvglMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-        BurnOverlay::show();
-        xSemaphoreGive(g_lvglMutex);
-    }
+    // Boost above the UI task BEFORE the write. Both tasks run on Core 1;
+    // at the elevated priority the LVGL scheduler cannot preempt us and fire
+    // its OOM esp_restart() while writeFileAtomic is in progress.
+    vTaskPrioritySet(nullptr, TASK_PRIO_UI + 1);
 
     bool ok = StorageDriver::writeFileAtomic(
         CONFIG_PATH_DASHBOARD, reinterpret_cast<const uint8_t *>(payloadStart), written);
     if (!ok) {
+        vTaskPrioritySet(nullptr, TASK_PRIO_USB); // restore on failure
         LOG_ERROR("USB", "PUT_CONFIG: storage write failed");
         UsbComm::sendLine("{\"status\":\"error\",\"message\":\"write_failed\"}");
-        // Flip the overlay to its error state so the LCD itself surfaces the
-        // failure instead of just snapping back to the dashboard. showError()
-        // schedules its own teardown via an lv_timer one-shot — no extra
-        // sleep here, so we don't block the USB task while the message
-        // holds (issue #189).
-        if (xSemaphoreTake(g_lvglMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            BurnOverlay::showError(BurnOverlay::ErrorReason::WriteFailed);
-            xSemaphoreGive(g_lvglMutex);
-        }
         return;
     }
 
     LOG_INFO("USB", "PUT_CONFIG: dashboard.json updated (%u bytes) — rebooting", written);
-    // Boost USB task above the UI task (TASK_PRIO_UI=10) so sendLine+flush
-    // run before the LVGL scheduler can preempt and fire an OOM assert.
-    // Both tasks run on Core 1; without the boost the UI task wins the race
-    // and esp_restart()s before the ack reaches Studio.
-    vTaskPrioritySet(nullptr, TASK_PRIO_UI + 1);
     UsbComm::sendLine("{\"status\":\"ok\",\"rebooting\":true}");
     Serial.flush();
     esp_restart(); // never returns
