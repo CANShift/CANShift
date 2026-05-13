@@ -222,6 +222,13 @@ export class UsbService {
     if (!result.success && result.error !== 'Not connected to device') {
       return { success: true }
     }
+    // CP2102 USB-UART bridge stays enumerated when the ESP32 reboots, so the
+    // OS serial port never closes and the 'close' event never fires. Force an
+    // explicit disconnect so the renderer's burn-phase tracker sees the
+    // connected→false edge it needs to transition rebooting→done.
+    if (result.success) {
+      void this.disconnect(false)
+    }
     return result
   }
 
