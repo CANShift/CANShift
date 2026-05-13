@@ -58,9 +58,7 @@ describe('name generation', () => {
   })
 
   it('uses channel_{targetId} when no name attr', () => {
-    const { signals } = parseRealDashXML(
-      simpleXml('<value targetId="37" offset="0" length="2"/>')
-    )
+    const { signals } = parseRealDashXML(simpleXml('<value targetId="37" offset="0" length="2"/>'))
     expect(signals[0]?.name).toBe('channel_37')
   })
 
@@ -280,10 +278,7 @@ describe('frame-level signed', () => {
 
   it('per-value signed overrides frame default', () => {
     const { signals } = parseRealDashXML(
-      simpleXml(
-        '<value name="a" offset="0" length="2" signed="false"/>',
-        'signed="true"'
-      )
+      simpleXml('<value name="a" offset="0" length="2" signed="false"/>', 'signed="true"')
     )
     expect(signals[0]?.signed).toBe(false)
   })

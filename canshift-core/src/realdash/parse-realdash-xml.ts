@@ -130,7 +130,11 @@ function parseConversion(expr: string | undefined): Conversion | 'complex' {
   // V+C  /  V-C
   const addMatch = /^V\s*([+-]\s*\d+\.?\d*)$/.exec(s)
   if (addMatch) {
-    return { scale: 1, offset: parseFloat((addMatch[1] ?? '0').replace(/\s+/g, '')), bitShift: null }
+    return {
+      scale: 1,
+      offset: parseFloat((addMatch[1] ?? '0').replace(/\s+/g, '')),
+      bitShift: null,
+    }
   }
 
   return 'complex'
