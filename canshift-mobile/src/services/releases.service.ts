@@ -5,7 +5,7 @@
 // Native. The service mirrors the studio's `releases.service.ts` behaviour:
 //
 //   - in-memory cache with a 5-minute TTL,
-//   - persistent cache hydration via `expo-secure-store` so the screen can
+//   - persistent cache hydration via `expo-file-system` so the screen can
 //     show the last known release immediately on cold start,
 //   - one retry on 5xx,
 //   - honours `Retry-After` on 403/429,
@@ -18,7 +18,7 @@
 // path. Network details (status codes, error messages) are kept in the
 // `message` field; secrets and stack traces are never embedded.
 
-import * as SecureStore from 'expo-secure-store'
+import * as FileSystem from 'expo-file-system'
 import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from './releases.types'
 
 const GITHUB_OWNER = 'tburkhalterr'
@@ -34,9 +34,10 @@ const RELEASES_PAGE_SIZE = 20
 /** Total budget for an entire fetch attempt — bounds the user-facing latency. */
 const FETCH_TIMEOUT_MS = 8_000
 
-/** Persistent cache key in SecureStore. The payload is non-sensitive but
- *  SecureStore is the only KV store already wired into the app (#588). */
-const PERSISTENT_CACHE_KEY = 'canshift.releases.lastPayload'
+/** Path for the persistent JSON cache file. Release payloads include GitHub
+ *  release notes (markdown, can exceed SecureStore's 2048-byte limit — #610).
+ *  Non-sensitive data; expo-file-system document directory is appropriate. */
+const PERSISTENT_CACHE_PATH = `${FileSystem.documentDirectory ?? ''}releases-cache.json`
 
 /** Cap the `Retry-After` honour window so a misconfigured server can't park
  *  the UI for hours. */
@@ -198,8 +199,7 @@ function parseRetryAfterMs(header: string | null): number {
 
 async function loadPersistedCache(): Promise<CachedPayload | null> {
   try {
-    const raw = await SecureStore.getItemAsync(PERSISTENT_CACHE_KEY)
-    if (raw === null) return null
+    const raw = await FileSystem.readAsStringAsync(PERSISTENT_CACHE_PATH)
     const parsed: unknown = JSON.parse(raw)
     if (!isPersistedPayload(parsed)) return null
     return {
@@ -208,7 +208,7 @@ async function loadPersistedCache(): Promise<CachedPayload | null> {
       fetchedAt: parsed.fetchedAt,
     }
   } catch {
-    // Corrupt payload, secure-store unavailable, etc. — start fresh.
+    // File not found on first launch, or corrupt payload — start fresh.
     return null
   }
 }
@@ -220,7 +220,7 @@ async function savePersistedCache(payload: CachedPayload): Promise<void> {
       prerelease: payload.prerelease,
       fetchedAt: payload.fetchedAt,
     }
-    await SecureStore.setItemAsync(PERSISTENT_CACHE_KEY, JSON.stringify(persisted))
+    await FileSystem.writeAsStringAsync(PERSISTENT_CACHE_PATH, JSON.stringify(persisted))
   } catch {
     // Persistence is best-effort; the in-memory cache still works for the
     // current session.
