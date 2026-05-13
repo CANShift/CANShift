@@ -214,7 +214,14 @@ export class UsbService {
     const payload = JSON.stringify({ cmd: 2, payload: config }) + '\n'
     // Firmware writes to SD synchronously before acking — scale with size.
     const timeoutMs = putConfigTimeoutMs(Buffer.byteLength(payload, 'utf8'))
-    return this.sendCommand(payload, timeoutMs)
+    const result = await this.sendCommand(payload, timeoutMs)
+    // Firmware reboots after a successful write (esp_restart). The port closes
+    // before the {"status":"ok"} ack arrives, so sendCommand resolves with
+    // 'Connection closed'. Treat that as success — the data reached the device.
+    if (!result.success && result.error === 'Connection closed') {
+      return { success: true }
+    }
+    return result
   }
 
   async pushScreenSettings(settings: {

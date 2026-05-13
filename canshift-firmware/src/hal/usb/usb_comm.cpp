@@ -309,6 +309,11 @@ void handlePutConfig(const char *jsonLine) {
     }
 
     LOG_INFO("USB", "PUT_CONFIG: dashboard.json updated (%u bytes) — rebooting", written);
+    // Boost USB task above the UI task (TASK_PRIO_UI=10) so sendLine+flush
+    // run before the LVGL scheduler can preempt and fire an OOM assert.
+    // Both tasks run on Core 1; without the boost the UI task wins the race
+    // and esp_restart()s before the ack reaches Studio.
+    vTaskPrioritySet(nullptr, TASK_PRIO_UI + 1);
     UsbComm::sendLine("{\"status\":\"ok\",\"rebooting\":true}");
     Serial.flush();
     esp_restart(); // never returns
