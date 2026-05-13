@@ -255,9 +255,9 @@ void ButtonWidget::update(lv_obj_t *btn) {
     if (!tag || !tag->activeBadge || tag->mapSwitchIndex == 0)
         return;
 
-    const bool active = SignalStore::isValid(SignalIds::MAP_NUMBER) &&
-                        static_cast<uint8_t>(SignalStore::read(SignalIds::MAP_NUMBER)) ==
-                            tag->mapSwitchIndex;
+    const bool active =
+        SignalStore::isValid(SignalIds::MAP_NUMBER) &&
+        static_cast<uint8_t>(SignalStore::read(SignalIds::MAP_NUMBER)) == tag->mapSwitchIndex;
 
     if (active) {
         lv_obj_clear_flag(tag->activeBadge, LV_OBJ_FLAG_HIDDEN);
