@@ -65,7 +65,9 @@ function persistCollapsed(value: boolean): void {
   if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
   try {
     window.localStorage.setItem(STORAGE_KEY_COLLAPSED, String(value))
-  } catch {}
+  } catch {
+    // Storage unavailable; in-memory state still drives the session.
+  }
 }
 
 export interface CliPanelResize {
