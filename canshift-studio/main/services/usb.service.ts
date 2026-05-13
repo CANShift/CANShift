@@ -215,12 +215,11 @@ export class UsbService {
     // Firmware writes to SD synchronously before acking — scale with size.
     const timeoutMs = putConfigTimeoutMs(Buffer.byteLength(payload, 'utf8'))
     const result = await this.sendCommand(payload, timeoutMs)
-    // Firmware reboots after a successful write (esp_restart). On macOS+CP2102
-    // the 'close' event can arrive after the ack timeout fires, so we may see
-    // 'Connection closed' or 'Disconnecting' or a plain timeout. In all cases,
-    // if the port is now closed the device received the data and rebooted.
-    // Only 'Not connected' means the write never started.
-    if (!result.success && result.error !== 'Not connected to device' && !this.port?.isOpen) {
+    // Firmware always reboots after a successful PUT_CONFIG write (esp_restart
+    // or LVGL OOM assert). The ack never arrives — Studio sees a timeout or a
+    // disconnect depending on macOS+CP2102 close-event timing. Any error except
+    // 'Not connected to device' means the write reached the device.
+    if (!result.success && result.error !== 'Not connected to device') {
       return { success: true }
     }
     return result
