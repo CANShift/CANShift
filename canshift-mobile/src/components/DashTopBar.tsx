@@ -36,7 +36,7 @@ export default function DashTopBar() {
   const { isLive, activeMapIndex } = useSignalsStore(
     useShallow((s) => ({
       isLive: s.isLive,
-      activeMapIndex: s.values['mi'] !== undefined ? Math.round(s.values['mi']) : undefined,
+      activeMapIndex: s.values.mi !== undefined ? Math.round(s.values.mi) : undefined,
     }))
   )
   const isSim = SimService.isRunning()
