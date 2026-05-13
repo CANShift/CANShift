@@ -2,10 +2,12 @@
 
 import { useRef, useCallback, useState } from 'react'
 import type { SignalDef, SignalConfig } from '@tmbk/canshift-core'
-import { CURRENT_SCHEMA_VERSION, ECU_PROFILES } from '@tmbk/canshift-core'
+import { CURRENT_SCHEMA_VERSION, ECU_PROFILES, parseRealDashXML } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
+import { useDashboardStore } from '../stores/dashboard.store'
 import { signalIpc } from '../services/ipc.service'
 import { Checkbox } from '@/components/ui/checkbox'
+import { REALDASH_CATALOG } from '../data/realdash-catalog'
 
 const inputStyle: React.CSSProperties = {
   background: '#111111',
@@ -42,6 +44,20 @@ const tdStyle: React.CSSProperties = {
 
 const DEFAULT_BYTE_LENGTH: 1 | 2 | 4 = 1
 
+// Group RealDash catalog by manufacturer for <optgroup> rendering.
+const GROUPED_CATALOG = REALDASH_CATALOG.reduce<Record<string, typeof REALDASH_CATALOG>>(
+  (acc, p) => {
+    const list = (acc[p.manufacturer] ??= [])
+    list.push(p)
+    return acc
+  },
+  {}
+)
+
+type PendingLoad =
+  | { kind: 'builtin'; profileId: string; displayName: string; previousKey: string }
+  | { kind: 'xml'; signals: SignalDef[]; displayName: string; previousKey: string }
+
 function buildDefaultSignal(index: number): SignalDef {
   return {
     name: `new_signal_${String(index)}`,
@@ -73,39 +89,83 @@ function omitKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K
 
 export default function SignalRoute() {
   const signals = useSignalStore((s) => s.signals)
-  const activeProfileId = useSignalStore((s) => s.activeProfileId)
+  const persistedKey = useSignalStore((s) => s.selectedProfileKey)
   const setSignals = useSignalStore((s) => s.setSignals)
-  const loadProfile = useSignalStore((s) => s.loadProfile)
+  const applyProfile = useSignalStore((s) => s.applyProfile)
+  const setEcuProfileKey = useDashboardStore((s) => s.setEcuProfileKey)
   const tableEndRef = useRef<HTMLDivElement>(null)
-  const [pendingProfileId, setPendingProfileId] = useState<string | null>(null)
 
-  const activeProfile = ECU_PROFILES.find((p) => p.id === activeProfileId)
+  // Local state drives the dropdown; persistedKey is the last confirmed selection.
+  const [selectedKey, setSelectedKey] = useState(persistedKey)
+  const [pendingLoad, setPendingLoad] = useState<PendingLoad | null>(null)
+  const [isLoadingXml, setIsLoadingXml] = useState(false)
+
+  // Derive the active built-in profile from the current dropdown value.
+  const activeBuiltinProfile = selectedKey.startsWith('builtin:')
+    ? ECU_PROFILES.find((p) => p.id === selectedKey.slice('builtin:'.length))
+    : null
 
   const handleExport = useCallback(async () => {
     if (signals.length === 0) return
     const config: SignalConfig = {
       version: CURRENT_SCHEMA_VERSION,
-      protocol: activeProfile?.protocol ?? 'generic',
+      protocol: activeBuiltinProfile?.protocol ?? 'generic',
       canSpeedKbps: 500,
       signals,
     }
     await signalIpc.export(config)
-  }, [signals, activeProfile])
+  }, [signals, activeBuiltinProfile])
 
-  function handleProfileChange(profileId: string): void {
-    if (profileId === activeProfileId) return
-    if (signals.length > 0) {
-      setPendingProfileId(profileId)
-    } else {
-      loadProfile(profileId)
+  function handleSelectChange(key: string): void {
+    if (!key || key === persistedKey || isLoadingXml) return
+    const previousKey = selectedKey
+    setSelectedKey(key)
+
+    if (key.startsWith('builtin:')) {
+      const profileId = key.slice('builtin:'.length)
+      const profile = ECU_PROFILES.find((p) => p.id === profileId)
+      if (!profile) return
+      if (signals.length > 0) {
+        setPendingLoad({ kind: 'builtin', profileId, displayName: profile.name, previousKey })
+      } else {
+        applyProfile(key, profile.signals)
+        setEcuProfileKey(key)
+      }
+    } else if (key.startsWith('xml:')) {
+      const xmlId = key.slice('xml:'.length)
+      const profile = REALDASH_CATALOG.find((p) => p.id === xmlId)
+      if (!profile) return
+      const displayName = `${profile.manufacturer} — ${profile.name}`
+      setIsLoadingXml(true)
+      void profile.load().then((xml) => {
+        setIsLoadingXml(false)
+        const { signals: xmlSignals } = parseRealDashXML(xml)
+        if (signals.length > 0) {
+          setPendingLoad({ kind: 'xml', signals: xmlSignals, displayName, previousKey })
+        } else {
+          applyProfile(key, xmlSignals)
+          setEcuProfileKey(key)
+        }
+      })
     }
   }
 
-  function confirmProfileLoad(): void {
-    if (pendingProfileId) {
-      loadProfile(pendingProfileId)
-      setPendingProfileId(null)
+  function confirmLoad(): void {
+    if (!pendingLoad) return
+    if (pendingLoad.kind === 'builtin') {
+      const profile = ECU_PROFILES.find((p) => p.id === pendingLoad.profileId)
+      applyProfile(selectedKey, profile?.signals ?? [])
+    } else {
+      applyProfile(selectedKey, pendingLoad.signals)
     }
+    setEcuProfileKey(selectedKey)
+    setPendingLoad(null)
+  }
+
+  function cancelLoad(): void {
+    if (!pendingLoad) return
+    setSelectedKey(pendingLoad.previousKey)
+    setPendingLoad(null)
   }
 
   function updateSignal(index: number, patch: Partial<SignalDef>): void {
@@ -147,8 +207,6 @@ export default function SignalRoute() {
     }
   }
 
-  const pendingProfile = ECU_PROFILES.find((p) => p.id === pendingProfileId)
-
   return (
     <div
       style={{
@@ -161,7 +219,7 @@ export default function SignalRoute() {
       }}
     >
       {/* Confirmation modal */}
-      {pendingProfileId && (
+      {pendingLoad && (
         <div
           style={{
             position: 'fixed',
@@ -189,14 +247,12 @@ export default function SignalRoute() {
               Replace signal map?
             </div>
             <div style={{ fontSize: 12, color: '#888888', lineHeight: 1.6 }}>
-              Loading <strong style={{ color: '#CCCCCC' }}>{pendingProfile?.name}</strong> will
+              Loading <strong style={{ color: '#CCCCCC' }}>{pendingLoad.displayName}</strong> will
               replace all current signals. Unsaved edits will be lost.
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => {
-                  setPendingProfileId(null)
-                }}
+                onClick={cancelLoad}
                 style={{
                   background: 'transparent',
                   border: '1px solid #333333',
@@ -210,7 +266,7 @@ export default function SignalRoute() {
                 Cancel
               </button>
               <button
-                onClick={confirmProfileLoad}
+                onClick={confirmLoad}
                 style={{
                   background: '#CC3333',
                   border: 'none',
@@ -243,29 +299,42 @@ export default function SignalRoute() {
       >
         <span style={{ fontSize: 11, color: '#666666', whiteSpace: 'nowrap' }}>ECU profile</span>
         <select
-          value={activeProfileId}
+          value={selectedKey}
           onChange={(e) => {
-            handleProfileChange(e.target.value)
+            handleSelectChange(e.target.value)
           }}
+          disabled={isLoadingXml}
           style={{
             background: '#111111',
             border: '1px solid #2A2A2A',
             borderRadius: 4,
-            color: '#CCCCCC',
+            color: isLoadingXml ? '#555555' : '#CCCCCC',
             fontSize: 12,
             padding: '3px 8px',
-            cursor: 'pointer',
+            cursor: isLoadingXml ? 'wait' : 'pointer',
+            opacity: isLoadingXml ? 0.6 : 1,
           }}
           aria-label="ECU profile"
         >
-          {ECU_PROFILES.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
+          <optgroup label="Built-in">
+            {ECU_PROFILES.map((p) => (
+              <option key={p.id} value={`builtin:${p.id}`}>
+                {p.name}
+              </option>
+            ))}
+          </optgroup>
+          {Object.entries(GROUPED_CATALOG).map(([mfr, profiles]) => (
+            <optgroup key={mfr} label={mfr}>
+              {profiles.map((p) => (
+                <option key={p.id} value={`xml:${p.id}`}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
-        {activeProfile && (
-          <span style={{ fontSize: 11, color: '#444444' }}>{activeProfile.description}</span>
+        {activeBuiltinProfile && (
+          <span style={{ fontSize: 11, color: '#444444' }}>{activeBuiltinProfile.description}</span>
         )}
       </div>
 
