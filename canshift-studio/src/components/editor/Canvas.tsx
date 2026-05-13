@@ -617,7 +617,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const toggleWidgetSelection = useDashboardStore((s) => s.toggleWidgetSelection)
   const moveWidget = useDashboardStore((s) => s.moveWidget)
   const moveWidgets = useDashboardStore((s) => s.moveWidgets)
-  const removeWidget = useDashboardStore((s) => s.removeWidget)
+  const removeWidgets = useDashboardStore((s) => s.removeWidgets)
+  const copyWidgets = useDashboardStore((s) => s.copyWidgets)
+  const pasteWidgets = useDashboardStore((s) => s.pasteWidgets)
+  const nudgeWidgets = useDashboardStore((s) => s.nudgeWidgets)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const commitDrag = useDashboardStore((s) => s.commitDrag)
   const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
@@ -657,6 +660,12 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     selectedWidgetIds,
     widgetAreaH,
   }
+
+  // Ref-based snapshot for the keyboard handler — lets the effect avoid
+  // re-registering on every drag tick (page.widgets changes at 60fps during
+  // drag, which would thrash the event listener). Reads from .current inside.
+  const kbdRef = useRef({ pageId: page.id, pageWidgets: page.widgets })
+  kbdRef.current = { pageId: page.id, pageWidgets: page.widgets }
 
   // When a device is connected it reports its own isDayMode; use that as the
   // source of truth. Fall back to the local preview toggle when disconnected.
@@ -734,22 +743,111 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     return ids
   })()
 
+  // Keyboard handler — registered in the CAPTURE phase so it fires before the
+  // EditorRoute bubble handler (which deletes pages on Delete/Backspace without
+  // checking for widget selection). When we handle an event, stopPropagation
+  // prevents EditorRoute from also responding.
+  //
+  // Cmd+C/X/V are NOT handled here — the Electron menu's role:'copy/cut/paste'
+  // intercepts those at the main-process level. They are handled via the
+  // document 'copy'/'cut'/'paste' events below, which DO fire even with roles.
+  //
+  // Cmd+D is handled by the Electron menu → IPC → useMenuEvents (already works).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
         return
-      if (!selectedWidgetId) return
-      e.preventDefault()
-      removeWidget(page.id, selectedWidgetId)
+
+      const isMod = e.metaKey || e.ctrlKey
+      const activeIds = selectedWidgetIds.length > 0 ? selectedWidgetIds : []
+
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        selectWidget(null)
+        return
+      }
+
+      if (isMod && e.key === 'a') {
+        e.preventDefault()
+        e.stopPropagation()
+        const allIds = kbdRef.current.pageWidgets.map((w) => w.id)
+        if (allIds.length > 0) selectWidgets(allIds)
+        return
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (activeIds.length === 0) return // no widget selected — let EditorRoute handle page deletion
+        e.preventDefault()
+        e.stopPropagation()
+        removeWidgets(kbdRef.current.pageId, activeIds)
+        return
+      }
+
+      if (
+        activeIds.length > 0 &&
+        (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        const step = e.shiftKey ? 10 : 1
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
+        nudgeWidgets(kbdRef.current.pageId, activeIds, dx, dy)
+        return
+      }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
     }
-  }, [selectedWidgetId, page.id, removeWidget])
+  }, [selectedWidgetIds, selectWidget, selectWidgets, removeWidgets, nudgeWidgets])
+
+  // Clipboard: copy/cut/paste events fire even when the Electron menu role
+  // intercepts the accelerator. Read fresh state via getState() so these
+  // handlers never go stale and don't need to re-register on selection changes.
+  useEffect(() => {
+    const isEditableTarget = (e: Event) => {
+      const t = e.target as HTMLElement
+      return t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable
+    }
+
+    const handleCopy = (e: ClipboardEvent) => {
+      if (isEditableTarget(e)) return
+      const { selectedWidgetIds: ids, selectedPageId } = useDashboardStore.getState()
+      if (ids.length === 0 || !selectedPageId) return
+      e.preventDefault()
+      copyWidgets(selectedPageId, ids)
+    }
+
+    const handleCut = (e: ClipboardEvent) => {
+      if (isEditableTarget(e)) return
+      const { selectedWidgetIds: ids, selectedPageId } = useDashboardStore.getState()
+      if (ids.length === 0 || !selectedPageId) return
+      e.preventDefault()
+      copyWidgets(selectedPageId, ids)
+      removeWidgets(selectedPageId, ids)
+    }
+
+    const handlePaste = (e: ClipboardEvent) => {
+      if (isEditableTarget(e)) return
+      const { clipboardWidgets, selectedPageId } = useDashboardStore.getState()
+      if (clipboardWidgets.length === 0 || !selectedPageId) return
+      e.preventDefault()
+      pasteWidgets(selectedPageId)
+    }
+
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('cut', handleCut)
+    document.addEventListener('paste', handlePaste)
+    return () => {
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('cut', handleCut)
+      document.removeEventListener('paste', handlePaste)
+    }
+  }, [copyWidgets, removeWidgets, pasteWidgets])
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent, widget: Widget) => {
