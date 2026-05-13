@@ -126,6 +126,15 @@ export function parseCliLogPayload(v: unknown): CliLogPayload | null {
 export const usbService = new UsbService()
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
+  // Guard against sending to a window whose webContents were destroyed (e.g.
+  // during a reload triggered by the post-burn reconnect).
+  const safeSend = (channel: string, ...args: unknown[]): void => {
+    const win = getWindow()
+    if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) {
+      win.webContents.send(channel, ...args)
+    }
+  }
+
   const rebuildMenu = (): void => {
     const win = getWindow()
     if (win) buildMenu(win)
@@ -137,7 +146,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   let canFrameBatch: CanFrame[] = []
   const flushCanBatch = (): void => {
     if (canFrameBatch.length === 0) return
-    getWindow()?.webContents.send(IpcChannels.CAN_FRAME_BATCH, canFrameBatch)
+    safeSend(IpcChannels.CAN_FRAME_BATCH, canFrameBatch)
     canFrameBatch = []
   }
   setInterval(flushCanBatch, 100)
@@ -145,22 +154,22 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // Wire USB device events to the renderer window
   usbService.setEventHandlers({
     onConnectionChanged: (status) => {
-      getWindow()?.webContents.send(IpcChannels.USB_CONNECTION_CHANGED, status)
+      safeSend(IpcChannels.USB_CONNECTION_CHANGED, status)
     },
     onError: (message) => {
-      getWindow()?.webContents.send(IpcChannels.USB_ERROR, message)
+      safeSend(IpcChannels.USB_ERROR, message)
     },
     onTelemetry: (values) => {
-      getWindow()?.webContents.send(IpcChannels.USB_DATA_RECEIVED, values)
+      safeSend(IpcChannels.USB_DATA_RECEIVED, values)
     },
     onCanFrame: (frame) => {
       canFrameBatch.push(frame)
     },
     onCanHealth: (health) => {
-      getWindow()?.webContents.send(IpcChannels.CAN_HEALTH_UPDATE, health)
+      safeSend(IpcChannels.CAN_HEALTH_UPDATE, health)
     },
     onDeviceLog: (entry) => {
-      getWindow()?.webContents.send(IpcChannels.USB_DEVICE_LOG, entry)
+      safeSend(IpcChannels.USB_DEVICE_LOG, entry)
     },
   })
 
@@ -263,7 +272,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     // Refuse any USB connect while a flash is in progress — the renderer's auto-connect
     // would otherwise grab the port between enterFlash() and navigator.serial.requestPort().
     if (firmwareService.getFlashPort()) {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'warn',
         message: `Refused USB connect to ${portPath} — flash in progress`,
         ts: Date.now(),
@@ -359,19 +368,19 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     // is too flaky on macOS CH340 to reliably enter download mode (#196).
     const reset = await firmwareService.resetIntoBootloader(portPath)
     if (!reset.success) {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'warn',
         message: `Pre-flash reset failed: ${reset.error ?? 'unknown'} — esptool-js will retry from Web Serial`,
         ts: Date.now(),
       })
     } else if (reset.error) {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'warn',
         message: `Pre-flash reset succeeded with caveat: ${reset.error}`,
         ts: Date.now(),
       })
     } else {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'info',
         message: `Pre-flash reset OK — chip should be in bootloader on ${portPath}`,
         ts: Date.now(),
@@ -397,19 +406,19 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     }
     const reset = await firmwareService.resetIntoBootloader(portPath)
     if (!reset.success) {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'warn',
         message: `Retry reset failed: ${reset.error ?? 'unknown'}`,
         ts: Date.now(),
       })
     } else if (reset.error) {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'warn',
         message: `Retry reset succeeded with caveat: ${reset.error}`,
         ts: Date.now(),
       })
     } else {
-      getWindow()?.webContents.send(IpcChannels.APP_LOG, {
+      safeSend(IpcChannels.APP_LOG, {
         level: 'info',
         message: `Retry reset OK on ${portPath}`,
         ts: Date.now(),

@@ -214,7 +214,15 @@ export class UsbService {
     const payload = JSON.stringify({ cmd: 2, payload: config }) + '\n'
     // Firmware writes to SD synchronously before acking — scale with size.
     const timeoutMs = putConfigTimeoutMs(Buffer.byteLength(payload, 'utf8'))
-    return this.sendCommand(payload, timeoutMs)
+    const result = await this.sendCommand(payload, timeoutMs)
+    // Firmware always reboots after a successful PUT_CONFIG write (esp_restart
+    // or LVGL OOM assert). The ack never arrives — Studio sees a timeout or a
+    // disconnect depending on macOS+CP2102 close-event timing. Any error except
+    // 'Not connected to device' means the write reached the device.
+    if (!result.success && result.error !== 'Not connected to device') {
+      return { success: true }
+    }
+    return result
   }
 
   async pushScreenSettings(settings: {
