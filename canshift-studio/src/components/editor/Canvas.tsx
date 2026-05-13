@@ -787,7 +787,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
       if (
         activeIds.length > 0 &&
-        (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')
+        (e.key === 'ArrowLeft' ||
+          e.key === 'ArrowRight' ||
+          e.key === 'ArrowUp' ||
+          e.key === 'ArrowDown')
       ) {
         e.preventDefault()
         e.stopPropagation()
