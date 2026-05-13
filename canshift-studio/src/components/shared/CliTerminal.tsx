@@ -104,7 +104,7 @@ export default function CliTerminal({ detached = false }: CliTerminalProps = {})
   const lastExitOkRef = useRef<boolean>(true)
   const lastWrittenIdRef = useRef<number>(0)
   const fitRef = useRef<{ fit: () => void } | null>(null)
-  const { height, beginDrag, isDragging } = useCliPanelHeight()
+  const { height, beginDrag, isDragging, collapsed, toggleCollapse } = useCliPanelHeight()
   const { state: cliState, detach, reattach } = useCliDetach()
   const isDetachedSurface = detached
   const isDetachedState = cliState.kind === 'detached'
@@ -416,12 +416,12 @@ export default function CliTerminal({ detached = false }: CliTerminalProps = {})
     }
   }, [ctxRef])
 
-  // Re-fit xterm whenever the panel height changes so character grid stays in
-  // sync with the visible area. Skipping while a drag is in progress keeps
-  // the rapid mousemove updates cheap; the final fit on `mouseup` is what
-  // actually matters visually.
+  // Re-fit xterm whenever the panel height changes or the panel is expanded.
+  // Skip while dragging (rapid updates are cheap to defer) and while collapsed
+  // (xterm container has zero size and fit would throw or produce wrong columns).
   useEffect(() => {
     if (isDragging) return
+    if (collapsed) return
     const fit = fitRef.current
     if (fit === null) return
     try {
@@ -429,21 +429,28 @@ export default function CliTerminal({ detached = false }: CliTerminalProps = {})
     } catch {
       // Container may not have a measurable size yet; ignore.
     }
-  }, [height, isDragging])
+  }, [height, isDragging, collapsed])
 
   // The detached surface fills its own BrowserWindow viewport — no need to
   // honour the in-app panel height, and the resize handle has no purpose.
-  const containerHeight: number | string = isDetachedSurface ? '100%' : height
   const showResizeHandle = !isDetachedSurface
+  const panelHeight = isDetachedSurface
+    ? '100%'
+    : collapsed
+      ? HEADER_HEIGHT + (showResizeHandle ? RESIZE_HANDLE_HEIGHT : 0)
+      : height
   // The Detach button doubles as Re-attach when the user has already
   // detached. Disabled while a detach is mid-flight to keep clicks idempotent.
   const detachLabel = isDetachedSurface || isDetachedState ? 'Re-attach' : 'Detach'
   const detachDisabled = !isDetachedSurface && isDetachedState
+  // Collapse is only meaningful on the in-app surface; the detached window
+  // fills its own viewport so there's nothing to collapse into.
+  const showCollapseButton = !isDetachedSurface
 
   return (
     <div
       style={{
-        height: containerHeight,
+        height: panelHeight,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -458,11 +465,11 @@ export default function CliTerminal({ detached = false }: CliTerminalProps = {})
           role="separator"
           aria-label="Resize CLI panel"
           aria-orientation="horizontal"
-          onMouseDown={beginDrag}
+          onMouseDown={collapsed ? undefined : beginDrag}
           style={{
             height: RESIZE_HANDLE_HEIGHT,
             flexShrink: 0,
-            cursor: 'row-resize',
+            cursor: collapsed ? 'default' : 'row-resize',
             background: isDragging ? '#2A2A2A' : 'transparent',
             transition: isDragging ? 'none' : 'background 0.15s ease',
           }}
@@ -477,7 +484,7 @@ export default function CliTerminal({ detached = false }: CliTerminalProps = {})
           justifyContent: 'space-between',
           padding: '0 12px',
           height: HEADER_HEIGHT,
-          borderBottom: '1px solid #1A1A1A',
+          borderBottom: collapsed ? 'none' : '1px solid #1A1A1A',
           flexShrink: 0,
           userSelect: 'none',
         }}
@@ -492,33 +499,59 @@ export default function CliTerminal({ detached = false }: CliTerminalProps = {})
         >
           CLI
         </span>
-        <button
-          type="button"
-          onClick={handleToggleDetach}
-          disabled={detachDisabled}
-          aria-label={detachLabel}
-          style={{
-            background: 'transparent',
-            color: detachDisabled ? '#444444' : '#AAAAAA',
-            border: '1px solid #333333',
-            borderRadius: 3,
-            padding: '2px 8px',
-            fontSize: 9,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            cursor: detachDisabled ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {detachLabel}
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {showCollapseButton && (
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              aria-label={collapsed ? 'Expand CLI' : 'Collapse CLI'}
+              style={{
+                background: 'transparent',
+                color: '#AAAAAA',
+                border: '1px solid #333333',
+                borderRadius: 3,
+                padding: '2px 8px',
+                fontSize: 9,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+              }}
+            >
+              {collapsed ? 'Expand' : 'Collapse'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleToggleDetach}
+            disabled={detachDisabled}
+            aria-label={detachLabel}
+            style={{
+              background: 'transparent',
+              color: detachDisabled ? '#444444' : '#AAAAAA',
+              border: '1px solid #333333',
+              borderRadius: 3,
+              padding: '2px 8px',
+              fontSize: 9,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              cursor: detachDisabled ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {detachLabel}
+          </button>
+        </div>
       </div>
 
+      {/* xterm surface — display:none when collapsed keeps the DOM node (xterm
+          stays mounted) while giving FitAddon a zero-size container; the fit
+          call is skipped while collapsed and fires again on expand. */}
       <div
         ref={containerRef}
         style={{
           flex: 1,
           padding: 6,
           overflow: 'hidden',
+          display: collapsed ? 'none' : 'block',
         }}
       />
     </div>
