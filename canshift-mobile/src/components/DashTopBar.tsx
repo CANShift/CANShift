@@ -33,7 +33,12 @@ export default function DashTopBar() {
       canHealthy: s.canHealthy,
     }))
   )
-  const isLive = useSignalsStore((s) => s.isLive)
+  const { isLive, activeMapIndex } = useSignalsStore(
+    useShallow((s) => ({
+      isLive: s.isLive,
+      activeMapIndex: s.values.mi !== undefined ? Math.round(s.values.mi) : undefined,
+    }))
+  )
   const isSim = SimService.isRunning()
   const [menuVisible, setMenuVisible] = useState(false)
   const [disconnectVisible, setDisconnectVisible] = useState(false)
@@ -69,6 +74,11 @@ export default function DashTopBar() {
           </Text>
         </View>
         <View style={styles.topBarRight}>
+          {activeMapIndex !== undefined && (
+            <View style={styles.mapBadge}>
+              <Text style={styles.mapText}>MAP {activeMapIndex}</Text>
+            </View>
+          )}
           {isSim && (
             <View style={styles.simBadge}>
               <Text style={styles.simText}>SIM</Text>
@@ -174,6 +184,15 @@ const styles = StyleSheet.create({
   deviceName: { fontSize: Typography.md, fontWeight: '600', color: Colors.text },
   version: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  mapBadge: {
+    backgroundColor: Colors.successBg,
+    borderWidth: 1,
+    borderColor: Colors.successBorder,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
+  mapText: { fontSize: Typography.xs, color: Colors.success, fontWeight: '700' },
   simBadge: {
     backgroundColor: Colors.accentDim,
     borderWidth: 1,
