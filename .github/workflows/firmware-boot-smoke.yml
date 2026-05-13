@@ -40,11 +40,6 @@ jobs:
     name: firmware — QEMU boot smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Non-blocking until the QEMU side fully boots [env:sim]: the clock-setup
-    # path stalls under Espressif QEMU 9.0.0 right after
-    # `setCpuFrequencyMhz(): 240 Mhz`, before any app output. Tracked in the
-    # follow-up issue opened from #515 — flip this off once that lands.
-    continue-on-error: true
     defaults:
       run:
         working-directory: canshift-firmware

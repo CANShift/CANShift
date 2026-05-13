@@ -80,6 +80,8 @@ interface DashboardState {
 
   // Config lifecycle
   setConfig: (config: DashboardConfig, filePath?: string) => void
+  /** Stamp the active ECU profile key into the current config so it survives a device push/read cycle. */
+  setEcuProfileKey: (key: string) => void
   /**
    * Replace the current config from an imported source (Import menu, shared
    * dashboard) — clears `filePath`, marks dirty so the user is prompted to
@@ -200,6 +202,15 @@ export const useDashboardStore = create<DashboardState>()(
         // User picked a real config — clear any auto-demo bookkeeping.
         s.loadedFromDemoFallback = false
         s.pendingDeviceConfig = null
+      })
+    },
+
+    setEcuProfileKey: (key) => {
+      set((s) => {
+        if (s.config) {
+          s.config.ecuProfileKey = key
+          s.isDirty = true
+        }
       })
     },
 

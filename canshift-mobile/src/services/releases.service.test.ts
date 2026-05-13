@@ -1,27 +1,28 @@
 // releases.service.test.ts — Cache, retry, rate-limit, validation paths.
 //
-// We mock the global `fetch` and `expo-secure-store` so the suite never
-// touches the network or the device keystore. `Date.now()` is overridden
+// We mock the global `fetch` and `expo-file-system` so the suite never
+// touches the network or the filesystem. `Date.now()` is overridden
 // per-service so cache TTL assertions stay deterministic.
 
 import { ReleasesService } from './releases.service'
+import * as FileSystem from 'expo-file-system'
 
 // ---------------------------------------------------------------------------
-// expo-secure-store mock — in-memory KV
+// expo-file-system mock — in-memory filesystem
 // ---------------------------------------------------------------------------
 
-const mockSecureStore: Record<string, string> = {}
+const mockFs = new Map<string, string>()
 
-jest.mock('expo-secure-store', () => ({
+jest.mock('expo-file-system', () => ({
   __esModule: true,
-  getItemAsync: jest.fn((key: string) => Promise.resolve(mockSecureStore[key] ?? null)),
-  setItemAsync: jest.fn((key: string, value: string) => {
-    mockSecureStore[key] = value
-    return Promise.resolve()
+  documentDirectory: '/mock-document-dir/',
+  readAsStringAsync: jest.fn((path: string) => {
+    const content = mockFs.get(path)
+    if (content === undefined) return Promise.reject(new Error(`File not found: ${path}`))
+    return Promise.resolve(content)
   }),
-  deleteItemAsync: jest.fn((key: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete mockSecureStore[key]
+  writeAsStringAsync: jest.fn((path: string, content: string) => {
+    mockFs.set(path, content)
     return Promise.resolve()
   }),
 }))
@@ -89,10 +90,7 @@ describe('ReleasesService', () => {
   let nowMs = 1_700_000_000_000
 
   beforeEach(() => {
-    for (const key of Object.keys(mockSecureStore)) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete mockSecureStore[key]
-    }
+    mockFs.clear()
     nowMs = 1_700_000_000_000
   })
 
@@ -252,7 +250,7 @@ describe('ReleasesService', () => {
   })
 
   it('hydrates from the persistent cache when available', async () => {
-    mockSecureStore['canshift.releases.lastPayload'] = JSON.stringify({
+    mockFs.set(`${FileSystem.documentDirectory ?? ''}releases-cache.json`, JSON.stringify({
       release: {
         version: '0.8.2',
         tag: 'v0.8.2',
@@ -265,7 +263,7 @@ describe('ReleasesService', () => {
       },
       prerelease: null,
       fetchedAt: nowMs - 1000, // fresh cache
-    })
+    }))
     // No live fetch should fire — cache is fresh.
     const fetchMock = jest.fn()
     global.fetch = fetchMock
