@@ -170,14 +170,19 @@ interface CapturedSend {
 }
 
 function makeWindow(): {
-  win: { webContents: { send: (channel: string, payload: unknown) => void } }
+  win: {
+    isDestroyed: () => boolean
+    webContents: { isDestroyed: () => boolean; send: (channel: string, payload: unknown) => void }
+  }
   sends: CapturedSend[]
 } {
   const sends: CapturedSend[] = []
   return {
     sends,
     win: {
+      isDestroyed: () => false,
       webContents: {
+        isDestroyed: () => false,
         send: (channel: string, payload: unknown): void => {
           sends.push({ channel, payload })
         },

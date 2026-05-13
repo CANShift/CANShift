@@ -211,12 +211,21 @@ export function useDeviceConfigLoad(): void {
   const portPath = useDeviceStore((s) => s.portPath)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const burnPhase = useDeviceStore((s) => s.burnPhase)
   const log = useLogStore((s) => s.push)
   const pushError = useErrorStore((s) => s.push)
 
   // Only run once per (port, version) pair so reconnects to the same device
   // don't repeatedly stomp the editor.
   const loadedKeyRef = useRef<string | null>(null)
+
+  // A burn always writes a new config — clear the cache key so the post-reboot
+  // reconnect reads the updated file back from the device instead of skipping.
+  useEffect(() => {
+    if (burnPhase === 'rebooting') {
+      loadedKeyRef.current = null
+    }
+  }, [burnPhase])
 
   useEffect(() => {
     if (simulationMode || !connected || !portPath || !firmwareVersion) return
