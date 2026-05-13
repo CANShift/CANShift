@@ -11,7 +11,7 @@ import * as FileSystem from 'expo-file-system'
 // expo-file-system mock — in-memory filesystem
 // ---------------------------------------------------------------------------
 
-const mockFs: Map<string, string> = new Map()
+const mockFs = new Map<string, string>()
 
 jest.mock('expo-file-system', () => ({
   __esModule: true,
@@ -250,7 +250,7 @@ describe('ReleasesService', () => {
   })
 
   it('hydrates from the persistent cache when available', async () => {
-    mockFs.set(`${FileSystem.documentDirectory}releases-cache.json`, JSON.stringify({
+    mockFs.set(`${FileSystem.documentDirectory ?? ''}releases-cache.json`, JSON.stringify({
       release: {
         version: '0.8.2',
         tag: 'v0.8.2',

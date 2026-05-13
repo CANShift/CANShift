@@ -37,7 +37,7 @@ const FETCH_TIMEOUT_MS = 8_000
 /** Path for the persistent JSON cache file. Release payloads include GitHub
  *  release notes (markdown, can exceed SecureStore's 2048-byte limit — #610).
  *  Non-sensitive data; expo-file-system document directory is appropriate. */
-const PERSISTENT_CACHE_PATH = `${FileSystem.documentDirectory}releases-cache.json`
+const PERSISTENT_CACHE_PATH = `${FileSystem.documentDirectory ?? ''}releases-cache.json`
 
 /** Cap the `Retry-After` honour window so a misconfigured server can't park
  *  the UI for hours. */
