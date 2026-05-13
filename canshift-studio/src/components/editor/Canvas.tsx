@@ -622,6 +622,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const commitDrag = useDashboardStore((s) => s.commitDrag)
   const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
   const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
+  const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const selectPage = useDashboardStore((s) => s.selectPage)
@@ -657,16 +658,20 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     widgetAreaH,
   }
 
-  // Effective palette and background — follow the preview day/night toggle.
+  // When a device is connected it reports its own isDayMode; use that as the
+  // source of truth. Fall back to the local preview toggle when disconnected.
+  const activeDayMode = deviceIsDayMode ?? isPreviewDayMode
+
+  // Effective palette and background — follow the active day/night mode.
   // Falls back to built-in defaults when config.dayTheme hasn't been configured yet.
   // Memoized so the reference stays stable across drag ticks (otherwise every
   // mouse move would invalidate the WidgetPreview React.memo cache via a new
   // palette object literal even though contents are unchanged).
   const effectivePalette: PagePalette = useMemo(
-    () => (isPreviewDayMode ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT) : page.palette),
-    [isPreviewDayMode, dayTheme?.palette, page.palette]
+    () => (activeDayMode ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT) : page.palette),
+    [activeDayMode, dayTheme?.palette, page.palette]
   )
-  const effectiveBgColor: string = isPreviewDayMode
+  const effectiveBgColor: string = activeDayMode
     ? (dayTheme?.bgColor ?? DAY_BG_DEFAULT)
     : page.backgroundColor
 
@@ -1025,7 +1030,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 <DashTopBar
                   topBar={topBar}
                   settingsOpen={settingsOpen}
-                  isDayMode={isPreviewDayMode}
+                  isDayMode={activeDayMode}
                   onOpenSettings={() => {
                     setSettingsOpen((o) => !o)
                   }}
