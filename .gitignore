@@ -15,5 +15,8 @@
 *.env
 CLAUDE.md
 
+# Dependencies — each package has its own .gitignore but belt-and-suspenders
+**/node_modules
+
 # Local docs — keep on disk, never push
 *.pdf
