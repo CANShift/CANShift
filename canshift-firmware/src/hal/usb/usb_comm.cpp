@@ -31,6 +31,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <esp_heap_caps.h>
+#include <esp_system.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <mbedtls/base64.h>
@@ -253,16 +254,18 @@ const char *findPayloadSlice(const char *jsonLine, size_t lineLen, size_t *outLe
 }
 
 // Handle CMD_PUT_CONFIG (0x02): write new dashboard.json to storage, then
-// trigger an in-place reload via PageManager (no esp_restart). The studio
-// keeps its serial port open across the reload, so telemetry resumes against
-// the new SignalStore as soon as the UI task finishes the rebuild.
+// reboot via esp_restart(). Hot reload (PageManager::requestReload) is not
+// viable at runtime: LVGL's 80 KB heap pool leaves only ~2 KB of contiguous
+// DRAM free, so ArduinoJson fails with NoMemory on any real config file
+// (issue #576 fallout). Cold boot starts with ~110 KB free — enough to parse
+// the JSON before LVGL is initialised. Studio already shows a "reconnect"
+// spinner after PUT_CONFIG, so the UX is identical.
 //
 // Implementation note: we do NOT parse the envelope into a JsonDocument.
 // At schema v1.13 the dashboard JSON is ~13 KB compact; ArduinoJson v7 grows
 // its pool to ~21 KB to materialise it, and a contiguous 21 KB malloc fails
-// once LVGL has consumed its 80 KB pool (issue #576 — boot loop hotfix
-// fallout from #555). Instead, locate the `"payload"` value as a substring
-// of s_rxBuf and stream it straight to flash.
+// once LVGL has consumed its 80 KB pool. Instead, locate the `"payload"`
+// value as a substring of s_rxBuf and stream it straight to flash.
 void handlePutConfig(const char *jsonLine) {
 #ifdef ARDUINO
     // INFO level so field logs capture the value when a user reports a failed
@@ -305,13 +308,10 @@ void handlePutConfig(const char *jsonLine) {
         return;
     }
 
-    LOG_INFO("USB", "PUT_CONFIG: dashboard.json updated (%u bytes) — reloading", written);
-    // Defer the actual reload to the UI task — it owns g_lvglMutex and the
-    // PageManager. The flag is consumed on the next updateWidgets() tick,
-    // which calls ConfigLoader::reloadAll() + rebuildAllPages(), then drops
-    // the BurnOverlay. The studio's serial port stays open the whole time.
-    PageManager::requestReload();
-    UsbComm::sendLine("{\"status\":\"ok\"}");
+    LOG_INFO("USB", "PUT_CONFIG: dashboard.json updated (%u bytes) — rebooting", written);
+    UsbComm::sendLine("{\"status\":\"ok\",\"rebooting\":true}");
+    Serial.flush();
+    esp_restart(); // never returns
 }
 
 // ---------------------------------------------------------------------------
