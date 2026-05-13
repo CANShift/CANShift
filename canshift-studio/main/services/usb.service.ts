@@ -215,10 +215,12 @@ export class UsbService {
     // Firmware writes to SD synchronously before acking — scale with size.
     const timeoutMs = putConfigTimeoutMs(Buffer.byteLength(payload, 'utf8'))
     const result = await this.sendCommand(payload, timeoutMs)
-    // Firmware reboots after a successful write (esp_restart). The port closes
-    // before the {"status":"ok"} ack arrives, so sendCommand resolves with
-    // 'Connection closed'. Treat that as success — the data reached the device.
-    if (!result.success && result.error === 'Connection closed') {
+    // Firmware reboots after a successful write (esp_restart). On macOS+CP2102
+    // the 'close' event can arrive after the ack timeout fires, so we may see
+    // 'Connection closed' or 'Disconnecting' or a plain timeout. In all cases,
+    // if the port is now closed the device received the data and rebooted.
+    // Only 'Not connected' means the write never started.
+    if (!result.success && result.error !== 'Not connected to device' && !this.port?.isOpen) {
       return { success: true }
     }
     return result
