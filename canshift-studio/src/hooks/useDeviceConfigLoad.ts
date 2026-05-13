@@ -15,15 +15,35 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   CURRENT_SCHEMA_VERSION,
+  ECU_PROFILES,
   migrateConfig,
+  parseRealDashXML,
   validateDashboard,
   type DashboardConfig,
 } from '@tmbk/canshift-core'
 import { useDeviceStore } from '../stores/device.store'
 import { useDashboardStore } from '../stores/dashboard.store'
+import { useSignalStore } from '../stores/signal.store'
 import { useLogStore, type LogLevel } from '../stores/log.store'
 import { useErrorStore } from '../stores/error.store'
 import { deviceIpc, type DeviceConfigResult } from '../services/ipc.service'
+import { REALDASH_CATALOG } from '../data/realdash-catalog'
+
+function restoreEcuProfile(ecuProfileKey: string | undefined): void {
+  if (!ecuProfileKey) return
+  if (ecuProfileKey.startsWith('builtin:')) {
+    const profileId = ecuProfileKey.slice('builtin:'.length)
+    const profile = ECU_PROFILES.find((p) => p.id === profileId)
+    if (!profile) return
+    useSignalStore.getState().applyProfile(ecuProfileKey, profile.signals)
+  } else if (ecuProfileKey.startsWith('xml:')) {
+    const xmlId = ecuProfileKey.slice('xml:'.length)
+    const profile = REALDASH_CATALOG.find((p) => p.id === xmlId)
+    if (!profile) return
+    const { signals } = parseRealDashXML(profile.xml)
+    useSignalStore.getState().applyProfile(ecuProfileKey, signals)
+  }
+}
 
 /**
  * Pure outcome of the device-config probe — what the renderer should do
@@ -162,6 +182,7 @@ export function applyDeviceConfigAction(
         log('warn', `Device config: ${w}`)
       })
       useDashboardStore.getState().loadFromDeviceOrDemo(action.config)
+      restoreEcuProfile(action.config.ecuProfileKey)
       log('success', 'Loaded dashboard config from device SD')
       return
     }
@@ -170,12 +191,14 @@ export function applyDeviceConfigAction(
         log('warn', `Device config: ${w}`)
       })
       useDashboardStore.getState().stagePendingDeviceConfig(action.config)
+      restoreEcuProfile(action.config.ecuProfileKey)
       log('info', 'Device config available — kept demo until you confirm')
       return
     }
     case 'apply-device-config': {
       // Reserved for future direct-apply paths; treat like the warnings variant.
       useDashboardStore.getState().loadFromDeviceOrDemo(action.config)
+      restoreEcuProfile(action.config.ecuProfileKey)
       log('success', 'Loaded dashboard config from device SD')
       return
     }

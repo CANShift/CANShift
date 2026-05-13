@@ -4,6 +4,7 @@ import { useRef, useCallback, useState } from 'react'
 import type { SignalDef, SignalConfig } from '@tmbk/canshift-core'
 import { CURRENT_SCHEMA_VERSION, ECU_PROFILES, parseRealDashXML } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
+import { useDashboardStore } from '../stores/dashboard.store'
 import { signalIpc } from '../services/ipc.service'
 import { Checkbox } from '@/components/ui/checkbox'
 import { REALDASH_CATALOG } from '../data/realdash-catalog'
@@ -91,6 +92,7 @@ export default function SignalRoute() {
   const persistedKey = useSignalStore((s) => s.selectedProfileKey)
   const setSignals = useSignalStore((s) => s.setSignals)
   const applyProfile = useSignalStore((s) => s.applyProfile)
+  const setEcuProfileKey = useDashboardStore((s) => s.setEcuProfileKey)
   const tableEndRef = useRef<HTMLDivElement>(null)
 
   // Local state drives the dropdown; persistedKey is the last confirmed selection.
@@ -126,6 +128,7 @@ export default function SignalRoute() {
         setPendingLoad({ kind: 'builtin', profileId, displayName: profile.name, previousKey })
       } else {
         applyProfile(key, profile.signals)
+        setEcuProfileKey(key)
       }
     } else if (key.startsWith('xml:')) {
       const xmlId = key.slice('xml:'.length)
@@ -137,6 +140,7 @@ export default function SignalRoute() {
         setPendingLoad({ kind: 'xml', signals: xmlSignals, displayName, previousKey })
       } else {
         applyProfile(key, xmlSignals)
+        setEcuProfileKey(key)
       }
     }
   }
@@ -149,6 +153,7 @@ export default function SignalRoute() {
     } else {
       applyProfile(selectedKey, pendingLoad.signals)
     }
+    setEcuProfileKey(selectedKey)
     setPendingLoad(null)
   }
 

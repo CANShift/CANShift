@@ -404,4 +404,6 @@ export interface DashboardConfig {
    */
   dayTheme?: ThemePreset
   pages: PageConfig[]
+  /** Identifies the ECU profile used to build the signal map. Restored by Studio on connect. */
+  ecuProfileKey?: string
 }
