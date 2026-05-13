@@ -43,7 +43,7 @@ export default function TestValuesPanel() {
   }, [signals, filter])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
       <button
         type="button"
         onClick={() => {
