@@ -2,11 +2,11 @@
 
 import { useRef, useCallback, useState } from 'react'
 import type { SignalDef, SignalConfig } from '@tmbk/canshift-core'
-import { CURRENT_SCHEMA_VERSION, ECU_PROFILES } from '@tmbk/canshift-core'
+import { CURRENT_SCHEMA_VERSION, ECU_PROFILES, parseRealDashXML } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { signalIpc } from '../services/ipc.service'
 import { Checkbox } from '@/components/ui/checkbox'
-import { RealDashImportDialog } from '../components/shared/RealDashImportDialog'
+import { REALDASH_CATALOG } from '../data/realdash-catalog'
 
 const inputStyle: React.CSSProperties = {
   background: '#111111',
@@ -43,6 +43,20 @@ const tdStyle: React.CSSProperties = {
 
 const DEFAULT_BYTE_LENGTH: 1 | 2 | 4 = 1
 
+// Group RealDash catalog by manufacturer for <optgroup> rendering.
+const GROUPED_CATALOG = REALDASH_CATALOG.reduce<Record<string, typeof REALDASH_CATALOG>>(
+  (acc, p) => {
+    const list = (acc[p.manufacturer] ??= [])
+    list.push(p)
+    return acc
+  },
+  {}
+)
+
+type PendingLoad =
+  | { kind: 'builtin'; profileId: string; displayName: string; previousKey: string }
+  | { kind: 'xml'; signals: SignalDef[]; displayName: string; previousKey: string }
+
 function buildDefaultSignal(index: number): SignalDef {
   return {
     name: `new_signal_${String(index)}`,
@@ -78,8 +92,9 @@ export default function SignalRoute() {
   const setSignals = useSignalStore((s) => s.setSignals)
   const loadProfile = useSignalStore((s) => s.loadProfile)
   const tableEndRef = useRef<HTMLDivElement>(null)
-  const [pendingProfileId, setPendingProfileId] = useState<string | null>(null)
-  const [showImportDialog, setShowImportDialog] = useState(false)
+
+  const [selectedKey, setSelectedKey] = useState(`builtin:${activeProfileId}`)
+  const [pendingLoad, setPendingLoad] = useState<PendingLoad | null>(null)
 
   const activeProfile = ECU_PROFILES.find((p) => p.id === activeProfileId)
 
@@ -94,20 +109,49 @@ export default function SignalRoute() {
     await signalIpc.export(config)
   }, [signals, activeProfile])
 
-  function handleProfileChange(profileId: string): void {
-    if (profileId === activeProfileId) return
-    if (signals.length > 0) {
-      setPendingProfileId(profileId)
-    } else {
-      loadProfile(profileId)
+  function handleSelectChange(key: string): void {
+    if (!key) return
+    const previousKey = selectedKey
+    setSelectedKey(key)
+
+    if (key.startsWith('builtin:')) {
+      const profileId = key.slice('builtin:'.length)
+      if (profileId === activeProfileId) return
+      const profile = ECU_PROFILES.find((p) => p.id === profileId)
+      if (!profile) return
+      if (signals.length > 0) {
+        setPendingLoad({ kind: 'builtin', profileId, displayName: profile.name, previousKey })
+      } else {
+        loadProfile(profileId)
+      }
+    } else if (key.startsWith('xml:')) {
+      const xmlId = key.slice('xml:'.length)
+      const profile = REALDASH_CATALOG.find((p) => p.id === xmlId)
+      if (!profile) return
+      const { signals: xmlSignals } = parseRealDashXML(profile.xml)
+      const displayName = `${profile.manufacturer} — ${profile.name}`
+      if (signals.length > 0) {
+        setPendingLoad({ kind: 'xml', signals: xmlSignals, displayName, previousKey })
+      } else {
+        setSignals(xmlSignals)
+      }
     }
   }
 
-  function confirmProfileLoad(): void {
-    if (pendingProfileId) {
-      loadProfile(pendingProfileId)
-      setPendingProfileId(null)
+  function confirmLoad(): void {
+    if (!pendingLoad) return
+    if (pendingLoad.kind === 'builtin') {
+      loadProfile(pendingLoad.profileId)
+    } else {
+      setSignals(pendingLoad.signals)
     }
+    setPendingLoad(null)
+  }
+
+  function cancelLoad(): void {
+    if (!pendingLoad) return
+    setSelectedKey(pendingLoad.previousKey)
+    setPendingLoad(null)
   }
 
   function updateSignal(index: number, patch: Partial<SignalDef>): void {
@@ -149,8 +193,6 @@ export default function SignalRoute() {
     }
   }
 
-  const pendingProfile = ECU_PROFILES.find((p) => p.id === pendingProfileId)
-
   return (
     <div
       style={{
@@ -162,20 +204,8 @@ export default function SignalRoute() {
         overflow: 'hidden',
       }}
     >
-      {/* RealDash XML import dialog */}
-      {showImportDialog && (
-        <RealDashImportDialog
-          onImport={(imported) => {
-            setSignals(imported)
-          }}
-          onClose={() => {
-            setShowImportDialog(false)
-          }}
-        />
-      )}
-
       {/* Confirmation modal */}
-      {pendingProfileId && (
+      {pendingLoad && (
         <div
           style={{
             position: 'fixed',
@@ -203,14 +233,12 @@ export default function SignalRoute() {
               Replace signal map?
             </div>
             <div style={{ fontSize: 12, color: '#888888', lineHeight: 1.6 }}>
-              Loading <strong style={{ color: '#CCCCCC' }}>{pendingProfile?.name}</strong> will
+              Loading <strong style={{ color: '#CCCCCC' }}>{pendingLoad.displayName}</strong> will
               replace all current signals. Unsaved edits will be lost.
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => {
-                  setPendingProfileId(null)
-                }}
+                onClick={cancelLoad}
                 style={{
                   background: 'transparent',
                   border: '1px solid #333333',
@@ -224,7 +252,7 @@ export default function SignalRoute() {
                 Cancel
               </button>
               <button
-                onClick={confirmProfileLoad}
+                onClick={confirmLoad}
                 style={{
                   background: '#CC3333',
                   border: 'none',
@@ -257,9 +285,9 @@ export default function SignalRoute() {
       >
         <span style={{ fontSize: 11, color: '#666666', whiteSpace: 'nowrap' }}>ECU profile</span>
         <select
-          value={activeProfileId}
+          value={selectedKey}
           onChange={(e) => {
-            handleProfileChange(e.target.value)
+            handleSelectChange(e.target.value)
           }}
           style={{
             background: '#111111',
@@ -272,13 +300,24 @@ export default function SignalRoute() {
           }}
           aria-label="ECU profile"
         >
-          {ECU_PROFILES.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
+          <optgroup label="Built-in">
+            {ECU_PROFILES.map((p) => (
+              <option key={p.id} value={`builtin:${p.id}`}>
+                {p.name}
+              </option>
+            ))}
+          </optgroup>
+          {Object.entries(GROUPED_CATALOG).map(([mfr, profiles]) => (
+            <optgroup key={mfr} label={mfr}>
+              {profiles.map((p) => (
+                <option key={p.id} value={`xml:${p.id}`}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
-        {activeProfile && (
+        {selectedKey.startsWith('builtin:') && activeProfile && (
           <span style={{ fontSize: 11, color: '#444444' }}>{activeProfile.description}</span>
         )}
       </div>
@@ -324,22 +363,6 @@ export default function SignalRoute() {
           }}
         >
           Export signals.json
-        </button>
-        <button
-          onClick={() => {
-            setShowImportDialog(true)
-          }}
-          style={{
-            background: 'transparent',
-            border: '1px solid #2A2A2A',
-            borderRadius: 4,
-            color: '#888888',
-            fontSize: 12,
-            padding: '5px 12px',
-            cursor: 'pointer',
-          }}
-        >
-          Import XML
         </button>
         <button
           onClick={addSignal}

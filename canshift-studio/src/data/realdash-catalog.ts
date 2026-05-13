@@ -38,7 +38,4 @@ export const REALDASH_CATALOG: RealDashProfile[] = Object.entries(xmlModules)
       xml,
     }
   })
-  .sort(
-    (a, b) =>
-      a.manufacturer.localeCompare(b.manufacturer) || a.name.localeCompare(b.name)
-  )
+  .sort((a, b) => a.manufacturer.localeCompare(b.manufacturer) || a.name.localeCompare(b.name))
