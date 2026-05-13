@@ -266,13 +266,15 @@ const char *findPayloadSlice(const char *jsonLine, size_t lineLen, size_t *outLe
 // once LVGL has consumed its 80 KB pool. Instead, locate the `"payload"`
 // value as a substring of s_rxBuf and stream it straight to flash.
 //
-// Race note: BurnOverlay::show() holds the LVGL mutex for ~280 ms (lv_refr_now
-// flushes the full frame). When the mutex is released the LVGL task immediately
-// runs, hits lv_mem_alloc with ~1 KB free, fires the OOM assert, and calls
-// esp_restart() while writeFileAtomic is still in progress — the new config is
-// never committed. Fix: boost USB task priority to TASK_PRIO_UI+1 BEFORE the
-// write so the LVGL task cannot preempt Core 1 while we write + ack. The
-// overlay is omitted (device reboots in < 100 ms anyway; user never sees it).
+// Race note: the SPIFFS/IDF flash driver yields to the OS between page writes
+// (vTaskDelay(0)). When USB yields, the LVGL task runs, calls lv_task_handler(),
+// lv_mem_alloc() fails (~1 KB free in LVGL heap), OOM assert fires esp_restart()
+// mid-write — config never committed. A priority boost alone doesn't prevent this
+// because vTaskDelay(0) is an explicit yield regardless of priority.
+// Fix: hold g_lvglMutex for the entire write so lv_task_handler() is blocked.
+// LVGL ticks that fire during the write see "mutex timeout" and skip — harmless
+// since the device reboots immediately after. On failure the mutex is released
+// so the UI recovers. The overlay is omitted (device reboots in <100 ms anyway).
 void handlePutConfig(const char *jsonLine) {
 #ifdef ARDUINO
     LOG_INFO("USB", "heap.largest_free=%u before PUT_CONFIG",
@@ -288,15 +290,24 @@ void handlePutConfig(const char *jsonLine) {
         return;
     }
 
-    // Boost above the UI task BEFORE the write. Both tasks run on Core 1;
-    // at the elevated priority the LVGL scheduler cannot preempt us and fire
-    // its OOM esp_restart() while writeFileAtomic is in progress.
+    // Take the LVGL mutex before the write. This blocks lv_task_handler() for
+    // the entire duration so the OOM assert cannot fire mid-write. Priority
+    // inheritance raises our effective priority to TASK_PRIO_UI while we wait,
+    // then we boost further to TASK_PRIO_UI+1 so flash ops are uninterrupted.
+    // On the success path we call esp_restart() and never release; on failure
+    // we release so the UI recovers.
+    const bool mutexTaken = (xSemaphoreTake(g_lvglMutex, pdMS_TO_TICKS(100)) == pdTRUE);
+    if (!mutexTaken) {
+        LOG_WARN("USB", "PUT_CONFIG: could not acquire LVGL mutex — proceeding");
+    }
     vTaskPrioritySet(nullptr, TASK_PRIO_UI + 1);
 
     bool ok = StorageDriver::writeFileAtomic(
         CONFIG_PATH_DASHBOARD, reinterpret_cast<const uint8_t *>(payloadStart), written);
     if (!ok) {
-        vTaskPrioritySet(nullptr, TASK_PRIO_USB); // restore on failure
+        vTaskPrioritySet(nullptr, TASK_PRIO_USB);
+        if (mutexTaken)
+            xSemaphoreGive(g_lvglMutex);
         LOG_ERROR("USB", "PUT_CONFIG: storage write failed");
         UsbComm::sendLine("{\"status\":\"error\",\"message\":\"write_failed\"}");
         return;
