@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'canshift.cli.panelHeight'
+const STORAGE_KEY_COLLAPSED = 'canshift.cli.panelCollapsed'
 
 export const CLI_PANEL_MIN_HEIGHT = 120
 export const CLI_PANEL_DEFAULT_HEIGHT = 240
@@ -51,15 +52,34 @@ function persist(value: number): void {
   }
 }
 
+function readCollapsed(): boolean {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return false
+  try {
+    return window.localStorage.getItem(STORAGE_KEY_COLLAPSED) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistCollapsed(value: boolean): void {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return
+  try {
+    window.localStorage.setItem(STORAGE_KEY_COLLAPSED, String(value))
+  } catch {}
+}
+
 export interface CliPanelResize {
   height: number
   beginDrag: (event: React.MouseEvent<HTMLElement>) => void
   isDragging: boolean
+  collapsed: boolean
+  toggleCollapse: () => void
 }
 
 export function useCliPanelHeight(): CliPanelResize {
   const [height, setHeight] = useState<number>(readInitial)
   const [isDragging, setIsDragging] = useState<boolean>(false)
+  const [collapsed, setCollapsed] = useState<boolean>(readCollapsed)
   const dragStartRef = useRef<{ y: number; height: number } | null>(null)
 
   // Re-clamp on viewport shrink so a previously-saved height that now exceeds
@@ -119,5 +139,13 @@ export function useCliPanelHeight(): CliPanelResize {
     [height]
   )
 
-  return { height, beginDrag, isDragging }
+  const toggleCollapse = useCallback((): void => {
+    setCollapsed((prev) => {
+      const next = !prev
+      persistCollapsed(next)
+      return next
+    })
+  }, [])
+
+  return { height, beginDrag, isDragging, collapsed, toggleCollapse }
 }
