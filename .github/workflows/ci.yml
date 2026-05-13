@@ -91,11 +91,13 @@ jobs:
           retention-days: 1
 
   # ─── Desktop studio ─────────────────────────────────────────────────────────
+  # Apply the 'ci:skip-studio' label to a PR to bypass this job (WIP, proto,
+  # or trivial changes where you know the studio checks add no signal).
   studio:
     name: studio — lint + typecheck + build
     runs-on: ubuntu-latest
     needs: [changes, core]
-    if: needs.changes.outputs.studio == 'true'
+    if: needs.changes.outputs.studio == 'true' && !contains(github.event.pull_request.labels.*.name, 'ci:skip-studio')
     defaults:
       run:
         working-directory: canshift-studio
