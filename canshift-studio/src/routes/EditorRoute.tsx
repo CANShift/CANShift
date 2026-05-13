@@ -215,6 +215,8 @@ export default function EditorRoute() {
   const movePage = useDashboardStore((s) => s.movePage)
   const updatePage = useDashboardStore((s) => s.updatePage)
 
+  const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
+
   const [contextMenu, setContextMenu] = useState<{
     pageId: string
     x: number
@@ -223,15 +225,18 @@ export default function EditorRoute() {
 
   const dragFromIndex = useRef<number | null>(null)
 
-  // Keyboard: Delete key removes selected page
+  // Keyboard: Delete key removes selected page — only when no widget is selected.
+  // When a widget is selected, the Canvas handler (capture phase) intercepts
+  // Delete/Backspace first and calls stopPropagation, so this never fires then.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
       if (document.activeElement?.tagName === 'INPUT') return
+      if (selectedWidgetId) return
       if (!selectedPageId || !config || config.pages.length <= 1) return
       removePage(selectedPageId)
     },
-    [selectedPageId, config, removePage]
+    [selectedPageId, config, removePage, selectedWidgetId]
   )
 
   useEffect(() => {
