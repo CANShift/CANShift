@@ -1,20 +1,21 @@
-// realdash-catalog.ts — Eagerly-loaded index of all bundled RealDash CAN XML descriptors.
+// realdash-catalog.ts — Lazy-loaded index of all bundled RealDash CAN XML descriptors.
 //
-// Vite resolves import.meta.glob at build time, so all XMLs ship inside the
-// renderer bundle as raw strings. No runtime fetch or filesystem access needed.
+// Only the metadata (id, manufacturer, name) is in the main chunk. Each XML
+// string is a separate Vite code-split chunk loaded on demand — keeping ~354 KB
+// of XML out of the renderer main bundle.
 
-// import.meta.glob<true, 'default', string> types the result correctly.
-const xmlModules = import.meta.glob<true, 'default', string>('../assets/realdash/**/*.xml', {
+// Without `eager`, each module is a () => Promise<string> loader function.
+const xmlModules = import.meta.glob<string>('../assets/realdash/**/*.xml', {
   query: '?raw',
   import: 'default',
-  eager: true,
 })
 
 export interface RealDashProfile {
   id: string
   manufacturer: string
   name: string
-  xml: string
+  /** Load the raw XML string on demand. */
+  load: () => Promise<string>
 }
 
 function toDisplayName(filename: string): string {
@@ -27,7 +28,7 @@ function toDisplayName(filename: string): string {
 }
 
 export const REALDASH_CATALOG: RealDashProfile[] = Object.entries(xmlModules)
-  .map(([filePath, xml]) => {
+  .map(([filePath, load]) => {
     const parts = filePath.split('/')
     const manufacturer = parts.at(-2) ?? 'Unknown'
     const filename = parts.at(-1) ?? filePath
@@ -35,7 +36,7 @@ export const REALDASH_CATALOG: RealDashProfile[] = Object.entries(xmlModules)
       id: filePath,
       manufacturer,
       name: toDisplayName(filename),
-      xml,
+      load,
     }
   })
   .sort((a, b) => a.manufacturer.localeCompare(b.manufacturer) || a.name.localeCompare(b.name))

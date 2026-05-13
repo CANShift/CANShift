@@ -98,6 +98,7 @@ export default function SignalRoute() {
   // Local state drives the dropdown; persistedKey is the last confirmed selection.
   const [selectedKey, setSelectedKey] = useState(persistedKey)
   const [pendingLoad, setPendingLoad] = useState<PendingLoad | null>(null)
+  const [isLoadingXml, setIsLoadingXml] = useState(false)
 
   // Derive the active built-in profile from the current dropdown value.
   const activeBuiltinProfile = selectedKey.startsWith('builtin:')
@@ -116,7 +117,7 @@ export default function SignalRoute() {
   }, [signals, activeBuiltinProfile])
 
   function handleSelectChange(key: string): void {
-    if (!key || key === persistedKey) return
+    if (!key || key === persistedKey || isLoadingXml) return
     const previousKey = selectedKey
     setSelectedKey(key)
 
@@ -134,14 +135,18 @@ export default function SignalRoute() {
       const xmlId = key.slice('xml:'.length)
       const profile = REALDASH_CATALOG.find((p) => p.id === xmlId)
       if (!profile) return
-      const { signals: xmlSignals } = parseRealDashXML(profile.xml)
       const displayName = `${profile.manufacturer} — ${profile.name}`
-      if (signals.length > 0) {
-        setPendingLoad({ kind: 'xml', signals: xmlSignals, displayName, previousKey })
-      } else {
-        applyProfile(key, xmlSignals)
-        setEcuProfileKey(key)
-      }
+      setIsLoadingXml(true)
+      void profile.load().then((xml) => {
+        setIsLoadingXml(false)
+        const { signals: xmlSignals } = parseRealDashXML(xml)
+        if (signals.length > 0) {
+          setPendingLoad({ kind: 'xml', signals: xmlSignals, displayName, previousKey })
+        } else {
+          applyProfile(key, xmlSignals)
+          setEcuProfileKey(key)
+        }
+      })
     }
   }
 
@@ -298,14 +303,16 @@ export default function SignalRoute() {
           onChange={(e) => {
             handleSelectChange(e.target.value)
           }}
+          disabled={isLoadingXml}
           style={{
             background: '#111111',
             border: '1px solid #2A2A2A',
             borderRadius: 4,
-            color: '#CCCCCC',
+            color: isLoadingXml ? '#555555' : '#CCCCCC',
             fontSize: 12,
             padding: '3px 8px',
-            cursor: 'pointer',
+            cursor: isLoadingXml ? 'wait' : 'pointer',
+            opacity: isLoadingXml ? 0.6 : 1,
           }}
           aria-label="ECU profile"
         >

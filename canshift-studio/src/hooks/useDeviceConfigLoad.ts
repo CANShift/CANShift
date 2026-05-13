@@ -29,7 +29,7 @@ import { useErrorStore } from '../stores/error.store'
 import { deviceIpc, type DeviceConfigResult } from '../services/ipc.service'
 import { REALDASH_CATALOG } from '../data/realdash-catalog'
 
-function restoreEcuProfile(ecuProfileKey: string | undefined): void {
+async function restoreEcuProfile(ecuProfileKey: string | undefined): Promise<void> {
   if (!ecuProfileKey) return
   if (ecuProfileKey.startsWith('builtin:')) {
     const profileId = ecuProfileKey.slice('builtin:'.length)
@@ -40,7 +40,8 @@ function restoreEcuProfile(ecuProfileKey: string | undefined): void {
     const xmlId = ecuProfileKey.slice('xml:'.length)
     const profile = REALDASH_CATALOG.find((p) => p.id === xmlId)
     if (!profile) return
-    const { signals } = parseRealDashXML(profile.xml)
+    const xml = await profile.load()
+    const { signals } = parseRealDashXML(xml)
     useSignalStore.getState().applyProfile(ecuProfileKey, signals)
   }
 }
@@ -182,7 +183,7 @@ export function applyDeviceConfigAction(
         log('warn', `Device config: ${w}`)
       })
       useDashboardStore.getState().loadFromDeviceOrDemo(action.config)
-      restoreEcuProfile(action.config.ecuProfileKey)
+      void restoreEcuProfile(action.config.ecuProfileKey)
       log('success', 'Loaded dashboard config from device SD')
       return
     }
@@ -191,14 +192,14 @@ export function applyDeviceConfigAction(
         log('warn', `Device config: ${w}`)
       })
       useDashboardStore.getState().stagePendingDeviceConfig(action.config)
-      restoreEcuProfile(action.config.ecuProfileKey)
+      void restoreEcuProfile(action.config.ecuProfileKey)
       log('info', 'Device config available — kept demo until you confirm')
       return
     }
     case 'apply-device-config': {
       // Reserved for future direct-apply paths; treat like the warnings variant.
       useDashboardStore.getState().loadFromDeviceOrDemo(action.config)
-      restoreEcuProfile(action.config.ecuProfileKey)
+      void restoreEcuProfile(action.config.ecuProfileKey)
       log('success', 'Loaded dashboard config from device SD')
       return
     }
