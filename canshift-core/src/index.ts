@@ -125,3 +125,9 @@ export const PRODUCT_NAME = 'CANShift' as const
 // ---------------------------------------------------------------------------
 export type { EcuProfile } from './ecu-profiles'
 export { ECU_PROFILES, DEFAULT_PROFILE_ID } from './ecu-profiles'
+
+// ---------------------------------------------------------------------------
+// RealDash CAN XML import (issue #609)
+// ---------------------------------------------------------------------------
+export type { ParseRealDashXMLResult } from './realdash/parse-realdash-xml'
+export { parseRealDashXML } from './realdash/parse-realdash-xml'

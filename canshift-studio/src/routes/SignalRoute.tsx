@@ -6,6 +6,7 @@ import { CURRENT_SCHEMA_VERSION, ECU_PROFILES } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { signalIpc } from '../services/ipc.service'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RealDashImportDialog } from '../components/shared/RealDashImportDialog'
 
 const inputStyle: React.CSSProperties = {
   background: '#111111',
@@ -78,6 +79,7 @@ export default function SignalRoute() {
   const loadProfile = useSignalStore((s) => s.loadProfile)
   const tableEndRef = useRef<HTMLDivElement>(null)
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null)
+  const [showImportDialog, setShowImportDialog] = useState(false)
 
   const activeProfile = ECU_PROFILES.find((p) => p.id === activeProfileId)
 
@@ -160,6 +162,18 @@ export default function SignalRoute() {
         overflow: 'hidden',
       }}
     >
+      {/* RealDash XML import dialog */}
+      {showImportDialog && (
+        <RealDashImportDialog
+          onImport={(imported) => {
+            setSignals(imported)
+          }}
+          onClose={() => {
+            setShowImportDialog(false)
+          }}
+        />
+      )}
+
       {/* Confirmation modal */}
       {pendingProfileId && (
         <div
@@ -310,6 +324,22 @@ export default function SignalRoute() {
           }}
         >
           Export signals.json
+        </button>
+        <button
+          onClick={() => {
+            setShowImportDialog(true)
+          }}
+          style={{
+            background: 'transparent',
+            border: '1px solid #2A2A2A',
+            borderRadius: 4,
+            color: '#888888',
+            fontSize: 12,
+            padding: '5px 12px',
+            cursor: 'pointer',
+          }}
+        >
+          Import XML
         </button>
         <button
           onClick={addSignal}
