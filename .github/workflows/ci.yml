@@ -15,10 +15,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ─── Path-change detection ───────────────────────────────────────────────────
+  # Compares the PR head against the base branch and outputs one boolean per
+  # scope. Downstream jobs read these outputs and skip themselves when their
+  # scope did not change, cutting CI time on scope-isolated PRs.
+  #
+  # Dependency note: core is flagged true whenever studio OR mobile changed
+  # because the studio job downloads the canshift-core-dist artifact — if core
+  # is skipped the artifact upload never happens and the studio job would fail.
+  changes:
+    name: detect changed scopes
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.detect.outputs.core }}
+      studio: ${{ steps.detect.outputs.studio }}
+      mobile: ${{ steps.detect.outputs.mobile }}
+      firmware: ${{ steps.detect.outputs.firmware }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed scopes
+        id: detect
+        run: |
+          BASE="origin/${{ github.base_ref || 'main' }}"
+          git fetch origin "${{ github.base_ref || 'main' }}" --depth=1 >/dev/null 2>&1 || true
+          CHANGED=$(git diff --name-only "$BASE"...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # core runs if core, studio, OR mobile changed (studio downloads core artifact)
+          echo "core=$(echo "$CHANGED" | grep -qE '^(canshift-core|canshift-studio|canshift-mobile)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "studio=$(echo "$CHANGED" | grep -qE '^(canshift-studio|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "mobile=$(echo "$CHANGED" | grep -qE '^(canshift-mobile|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "firmware=$(echo "$CHANGED" | grep -qE '^canshift-firmware/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   # ─── Shared core ────────────────────────────────────────────────────────────
   core:
     name: core — lint + build
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.core == 'true'
     defaults:
       run:
         working-directory: canshift-core
@@ -55,7 +94,8 @@ jobs:
   studio:
     name: studio — lint + typecheck + build
     runs-on: ubuntu-latest
-    needs: core
+    needs: [changes, core]
+    if: needs.changes.outputs.studio == 'true'
     defaults:
       run:
         working-directory: canshift-studio
@@ -105,6 +145,8 @@ jobs:
   mobile:
     name: mobile — typecheck + bundle
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.mobile == 'true'
     defaults:
       run:
         working-directory: canshift-mobile
@@ -153,6 +195,8 @@ jobs:
   mobile-ios-build:
     name: mobile — iOS native build
     runs-on: macos-latest
+    needs: [changes]
+    if: needs.changes.outputs.mobile == 'true'
     defaults:
       run:
         working-directory: canshift-mobile
@@ -256,6 +300,8 @@ jobs:
   firmware:
     name: firmware — clang-format check
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.firmware == 'true'
     defaults:
       run:
         working-directory: canshift-firmware
@@ -275,6 +321,8 @@ jobs:
   firmware-build:
     name: firmware — PlatformIO build
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.firmware == 'true'
     defaults:
       run:
         working-directory: canshift-firmware
@@ -286,15 +334,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Cache PlatformIO packages
+      - name: Cache PlatformIO packages + build objects
         uses: actions/cache@v4
         with:
           path: |
             ~/.platformio/.packages
             ~/.platformio/.cache
-          key: platformio-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+            canshift-firmware/.pio
+          key: pio-build-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}-${{ hashFiles('canshift-firmware/src/**', 'canshift-firmware/include/**') }}
           restore-keys: |
-            platformio-${{ runner.os }}-
+            pio-build-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}-
+            pio-build-${{ runner.os }}-
 
       - name: Install PlatformIO CLI
         run: pip install platformio
@@ -356,6 +406,8 @@ jobs:
   firmware-native-tests:
     name: firmware — native tests
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.firmware == 'true'
     defaults:
       run:
         working-directory: canshift-firmware
