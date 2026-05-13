@@ -88,41 +88,44 @@ function omitKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K
 
 export default function SignalRoute() {
   const signals = useSignalStore((s) => s.signals)
-  const activeProfileId = useSignalStore((s) => s.activeProfileId)
+  const persistedKey = useSignalStore((s) => s.selectedProfileKey)
   const setSignals = useSignalStore((s) => s.setSignals)
-  const loadProfile = useSignalStore((s) => s.loadProfile)
+  const applyProfile = useSignalStore((s) => s.applyProfile)
   const tableEndRef = useRef<HTMLDivElement>(null)
 
-  const [selectedKey, setSelectedKey] = useState(`builtin:${activeProfileId}`)
+  // Local state drives the dropdown; persistedKey is the last confirmed selection.
+  const [selectedKey, setSelectedKey] = useState(persistedKey)
   const [pendingLoad, setPendingLoad] = useState<PendingLoad | null>(null)
 
-  const activeProfile = ECU_PROFILES.find((p) => p.id === activeProfileId)
+  // Derive the active built-in profile from the current dropdown value.
+  const activeBuiltinProfile = selectedKey.startsWith('builtin:')
+    ? ECU_PROFILES.find((p) => p.id === selectedKey.slice('builtin:'.length))
+    : null
 
   const handleExport = useCallback(async () => {
     if (signals.length === 0) return
     const config: SignalConfig = {
       version: CURRENT_SCHEMA_VERSION,
-      protocol: activeProfile?.protocol ?? 'generic',
+      protocol: activeBuiltinProfile?.protocol ?? 'generic',
       canSpeedKbps: 500,
       signals,
     }
     await signalIpc.export(config)
-  }, [signals, activeProfile])
+  }, [signals, activeBuiltinProfile])
 
   function handleSelectChange(key: string): void {
-    if (!key) return
+    if (!key || key === persistedKey) return
     const previousKey = selectedKey
     setSelectedKey(key)
 
     if (key.startsWith('builtin:')) {
       const profileId = key.slice('builtin:'.length)
-      if (profileId === activeProfileId) return
       const profile = ECU_PROFILES.find((p) => p.id === profileId)
       if (!profile) return
       if (signals.length > 0) {
         setPendingLoad({ kind: 'builtin', profileId, displayName: profile.name, previousKey })
       } else {
-        loadProfile(profileId)
+        applyProfile(key, profile.signals)
       }
     } else if (key.startsWith('xml:')) {
       const xmlId = key.slice('xml:'.length)
@@ -133,7 +136,7 @@ export default function SignalRoute() {
       if (signals.length > 0) {
         setPendingLoad({ kind: 'xml', signals: xmlSignals, displayName, previousKey })
       } else {
-        setSignals(xmlSignals)
+        applyProfile(key, xmlSignals)
       }
     }
   }
@@ -141,9 +144,10 @@ export default function SignalRoute() {
   function confirmLoad(): void {
     if (!pendingLoad) return
     if (pendingLoad.kind === 'builtin') {
-      loadProfile(pendingLoad.profileId)
+      const profile = ECU_PROFILES.find((p) => p.id === pendingLoad.profileId)
+      applyProfile(selectedKey, profile?.signals ?? [])
     } else {
-      setSignals(pendingLoad.signals)
+      applyProfile(selectedKey, pendingLoad.signals)
     }
     setPendingLoad(null)
   }
@@ -317,8 +321,8 @@ export default function SignalRoute() {
             </optgroup>
           ))}
         </select>
-        {selectedKey.startsWith('builtin:') && activeProfile && (
-          <span style={{ fontSize: 11, color: '#444444' }}>{activeProfile.description}</span>
+        {activeBuiltinProfile && (
+          <span style={{ fontSize: 11, color: '#444444' }}>{activeBuiltinProfile.description}</span>
         )}
       </div>
 

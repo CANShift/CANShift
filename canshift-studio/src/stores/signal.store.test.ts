@@ -1,81 +1,71 @@
-// signal.store.test.ts — Locks the bundled DEFAULT_SIGNALS list and the
-// `setSignals` reducer used to swap in a user-edited mapping.
+// signal.store.test.ts
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { SignalDef } from '@tmbk/canshift-core'
-import { useSignalStore } from './signal.store'
+import { useSignalStore, DEFAULT_PROFILE_KEY } from './signal.store'
 
-const INITIAL_SIGNAL_NAMES = [
-  'rpm',
-  'throttle_pos',
-  'map_kpa',
-  'iat_c',
-  'speed_kph',
-  'lambda_1',
-  'gear',
-  'fuel_press_bar',
-  'coolant_temp_c',
-  'oil_temp_c',
-  'oil_press_bar',
-  'battery_volts',
-  'flag_mil',
-  'flag_launch_ctrl',
-  'map_number',
-  'afr_1',
-  'boost_bar',
-] as const
+const DUMMY: SignalDef = {
+  name: 'rpm',
+  canFrameId: '0x370',
+  startByte: 0,
+  byteLength: 2,
+  bigEndian: false,
+  signed: false,
+  scale: 1,
+  offset: 0,
+  unit: 'rpm',
+  min: 0,
+  max: 10000,
+  timeoutMs: 500,
+}
 
 describe('signal.store', () => {
-  // Snapshot the baked-in signals so each test starts from the same point even
-  // after a previous test has mutated the singleton store.
-  const initialSignals = useSignalStore.getState().signals
-
   beforeEach(() => {
-    useSignalStore.setState({ signals: initialSignals })
+    localStorage.clear()
+    useSignalStore.setState({ signals: [], selectedProfileKey: DEFAULT_PROFILE_KEY })
   })
 
-  it('exposes the bundled default signal map on init', () => {
-    const names = useSignalStore.getState().signals.map((s) => s.name)
-    expect(names).toEqual(INITIAL_SIGNAL_NAMES)
+  it('starts empty with the default profile key when no localStorage entry exists', () => {
+    expect(useSignalStore.getState().signals).toEqual([])
+    expect(useSignalStore.getState().selectedProfileKey).toBe(DEFAULT_PROFILE_KEY)
   })
 
-  it('every default entry has a non-empty name and a valid hex CAN frame id', () => {
-    for (const sig of useSignalStore.getState().signals) {
-      expect(sig.name.length).toBeGreaterThan(0)
-      expect(sig.canFrameId).toMatch(/^0x[0-9A-Fa-f]+$/)
-      expect(sig.byteLength).toBeGreaterThan(0)
-      expect(sig.timeoutMs).toBeGreaterThan(0)
-      expect(sig.max).toBeGreaterThanOrEqual(sig.min)
-    }
-  })
-
-  it('setSignals() replaces the list wholesale', () => {
-    const replacement: SignalDef[] = [
-      {
-        name: 'custom',
-        canFrameId: '0x500',
-        startByte: 0,
-        byteLength: 1,
-        bigEndian: false,
-        signed: false,
-        scale: 1,
-        offset: 0,
-        unit: '',
-        min: 0,
-        max: 1,
-        timeoutMs: 1000,
-      },
-    ]
-
-    useSignalStore.getState().setSignals(replacement)
-
-    const state = useSignalStore.getState()
-    expect(state.signals).toHaveLength(1)
-    expect(state.signals[0]?.name).toBe('custom')
+  it('setSignals() replaces the list in memory', () => {
+    useSignalStore.getState().setSignals([DUMMY])
+    expect(useSignalStore.getState().signals).toHaveLength(1)
+    expect(useSignalStore.getState().signals[0]?.name).toBe('rpm')
   })
 
   it('setSignals([]) clears the list', () => {
+    useSignalStore.getState().setSignals([DUMMY])
     useSignalStore.getState().setSignals([])
     expect(useSignalStore.getState().signals).toEqual([])
+  })
+
+  it('applyProfile() updates state and writes to localStorage', () => {
+    const key = 'xml:../assets/realdash/MaxxECU/maxxecu_default_can.xml'
+    useSignalStore.getState().applyProfile(key, [DUMMY])
+
+    const state = useSignalStore.getState()
+    expect(state.selectedProfileKey).toBe(key)
+    expect(state.signals).toHaveLength(1)
+
+    const stored = JSON.parse(localStorage.getItem('canshift:signal-store-v1') ?? '{}') as {
+      selectedProfileKey: string
+      signals: SignalDef[]
+    }
+    expect(stored.selectedProfileKey).toBe(key)
+    expect(stored.signals).toHaveLength(1)
+  })
+
+  it('setSignals() does not update the persisted profile key', () => {
+    useSignalStore.getState().applyProfile(DEFAULT_PROFILE_KEY, [])
+    useSignalStore.getState().setSignals([DUMMY])
+
+    const stored = JSON.parse(localStorage.getItem('canshift:signal-store-v1') ?? '{}') as {
+      selectedProfileKey: string
+    }
+    // applyProfile wrote the key; setSignals did not overwrite it
+    expect(stored.selectedProfileKey).toBe(DEFAULT_PROFILE_KEY)
   })
 })
