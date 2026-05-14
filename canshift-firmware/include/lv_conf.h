@@ -57,19 +57,22 @@
    12 KB override panicked StoreProhibited at EXCVADDR=0 because the
    first 20 KB font's bitmap allocation returned NULL inside LVGL's
    lvgl_load_font (which then memset'd the NULL pointer); issue #557. */
-        #define LV_MEM_SIZE (96U * 1024U)
+        #define LV_MEM_SIZE (80U * 1024U)
 
         /* Set an address for the memory pool instead of allocating it as a global array.
    Can be in external SRAM too. */
         #define LV_MEM_ADR 0U
 
-        /* LV_MEM_POOL_ALLOC is intentionally NOT defined here. LVGL then falls back
-   to a static `work_mem_int[LV_MEM_SIZE]` array in BSS (lv_mem.c:95), which
-   is committed at link time and never requires a contiguous runtime malloc.
-   This sidesteps heap fragmentation: after BLE earlyInit() + LovyanGFX there
-   is no 96 KB contiguous block left in the heap, so a malloc-based pool would
-   crash lv_tlsf_create with a NULL pointer (EXCVADDR=0x8). With BSS the pool
-   always exists regardless of runtime heap layout. */
+        /* lv_init() allocates the pool via malloc() at boot. This works because
+   boot_sequence.cpp now calls lv_init() BEFORE DisplayDriver::init():
+   LovyanGFX (s_lcd.init) fragments the heap so severely that malloc(N KB)
+   fails afterwards, but at the lv_init() call site the heap still has a
+   large contiguous block available. Static BSS allocation was tried but
+   overflows dram0_0_seg on this board. */
+        #if LV_MEM_ADR == 0U
+            #define LV_MEM_POOL_INCLUDE <stdlib.h>
+            #define LV_MEM_POOL_ALLOC malloc
+        #endif
 
         /*====================
    HAL SETTINGS

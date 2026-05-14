@@ -63,14 +63,19 @@ static void logHeap(const char *stage) {
 // ---------------------------------------------------------------------------
 
 static void initDisplayAndLVGL() {
-    LOG_INFO("BOOT", "Initializing display...");
-    DisplayDriver::init();
-    LOG_INFO("BOOT", "Display driver up");
-
+    // lv_init() allocates the LVGL pool (LV_MEM_SIZE) via malloc(). It must
+    // run BEFORE DisplayDriver::init() because LovyanGFX's s_lcd.init()
+    // fragments the heap such that a large contiguous block is no longer
+    // available afterwards. lv_init() does not need the display; only
+    // registerWithLVGL() does (it calls lv_disp_drv_register).
     LOG_INFO("BOOT", "Calling lv_init()...");
     lv_init();
     LOG_INFO("BOOT", "lv_init() returned");
     logHeap("after lv_init");
+
+    LOG_INFO("BOOT", "Initializing display...");
+    DisplayDriver::init();
+    LOG_INFO("BOOT", "Display driver up");
 
     LOG_INFO("BOOT", "Registering display with LVGL...");
     DisplayDriver::registerWithLVGL();
