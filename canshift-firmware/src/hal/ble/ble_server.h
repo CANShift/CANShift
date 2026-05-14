@@ -22,8 +22,39 @@
 
 namespace BleServer {
 
-/** Initialize NimBLE stack, GATT service, and start advertising. */
+/**
+ * Called once at boot. Reads the persisted BLE-enabled flag from SettingsPage;
+ * skips NimBLE initialization if the user has disabled BLE.
+ */
 void init();
+
+/**
+ * Start the NimBLE stack at runtime (e.g. after a settings toggle On).
+ * No-op if BLE is already running. Same heap guard as init().
+ */
+void start();
+
+/**
+ * Stop BLE advertising, disconnect any active GATT client, and deinit the
+ * NimBLE stack to recover ~10 KB DRAM. No-op if BLE is not currently running.
+ */
+void stop();
+
+/** Returns true when the NimBLE stack is currently initialized and advertising. */
+bool isEnabled();
+
+/**
+ * Queue a deferred enable/disable request from the settings page (UI task).
+ * Consumed by the BLE task via takePendingEnabled().
+ */
+void setPendingEnabled(bool enabled);
+
+/**
+ * Atomically consume the pending enable/disable request.
+ * Returns 1 (enable), 0 (disable), or -1 (no pending request).
+ * Call from the BLE task.
+ */
+int8_t takePendingEnabled();
 
 /**
  * Called periodically from the BLE task (~10Hz).

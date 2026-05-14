@@ -4,6 +4,7 @@
 // A full-canvas overlay (below the top bar) that exposes:
 //   - Brightness (slider, live preview via DisplayDriver::setBacklight)
 //   - Sleep timeout (segmented buttons: Off / 30s / 1m / 5m)
+//   - Bluetooth (ON/OFF toggle — persisted in NVS, applied immediately)
 //   - Calibrate Touch (runs TFT_eSPI crosshair calibration, stores to NVS)
 //
 // Navigation:
@@ -70,6 +71,9 @@ uint32_t getSleepTimeoutS();
 
 /** Returns the current brightness percentage (10–100). */
 uint8_t getBrightness();
+
+/** Returns true when BLE is enabled (default: true). */
+bool getBleEnabled();
 
 /**
  * Called each UI tick from PageManager::updateWidgets().

@@ -362,6 +362,12 @@ void taskBLE(void *pvParameters) {
 
     TickType_t lastWake = xTaskGetTickCount();
     while (true) {
+        const int8_t pending = BleServer::takePendingEnabled();
+        if (pending == 0) {
+            BleServer::stop();
+        } else if (pending == 1) {
+            BleServer::start();
+        }
         BleServer::tick();
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(BLE_TELE_INTERVAL_MS));
     }

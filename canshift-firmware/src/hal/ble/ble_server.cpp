@@ -45,6 +45,7 @@ static constexpr char CMD_UUID[] = "4fa0b6a0-0000-0000-0000-000000000005";
 static NimBLECharacteristic *s_pTele = nullptr;
 static NimBLECharacteristic *s_pStatus = nullptr;
 static bool s_connected = false;
+static bool s_enabled = false;
 
 // Deferred command flags — set by BLE callbacks, consumed by UI task
 static std::atomic<bool> s_pendingDayNightToggle{false};
@@ -56,6 +57,9 @@ static std::atomic<bool> s_pendingCalibrationReset{false};
 // keep working while new clients (sending set_day_night) get idempotent
 // behaviour. The UI task prefers the explicit set when both are pending.
 static std::atomic<int8_t> s_pendingDayNightSet{-1};
+
+// Pending BLE enable/disable from the settings page: -1 = none, 0 = disable, 1 = enable.
+static std::atomic<int8_t> s_pendingEnabled{-1};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -220,7 +224,11 @@ class CmdCallbacks : public NimBLECharacteristicCallbacks {
 // Public API
 // ---------------------------------------------------------------------------
 
-void BleServer::init() {
+namespace {
+
+// Core NimBLE stack bringup — shared by init() and start().
+// Returns true on success.
+bool startStack() {
     // esp_bt_controller_init needs ~50 KB of contiguous DRAM. On DRAM-only
     // boards the heap is too fragmented after LVGL+display init to satisfy
     // that requirement. NimBLEDevice::init calls ESP_ERROR_CHECK internally,
@@ -228,9 +236,9 @@ void BleServer::init() {
     static constexpr size_t BLE_MIN_HEAP = 50U * 1024U;
     const size_t avail = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
     if (avail < BLE_MIN_HEAP) {
-        LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE stack (%u B < %u B) — disabled",
+        LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE stack (%u B < %u B) — skipped",
                  static_cast<unsigned>(avail), static_cast<unsigned>(BLE_MIN_HEAP));
-        return;
+        return false;
     }
     NimBLEDevice::init("CANShift");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
@@ -240,22 +248,18 @@ void BleServer::init() {
 
     NimBLEService *pSvc = pServer->createService(SVC_UUID);
 
-    // TELE — notify, live signal stream
     s_pTele =
         pSvc->createCharacteristic(TELE_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
     s_pTele->setValue("{}");
 
-    // STATUS — read + notify: firmware version, CAN health, WiFi AP SSID when active
     s_pStatus =
         pSvc->createCharacteristic(STATUS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
     updateStatus();
 
-    // SETTINGS — read + write, screen settings
     NimBLECharacteristic *pSettings =
         pSvc->createCharacteristic(SETTINGS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
     pSettings->setCallbacks(new SettingsCallbacks());
 
-    // CMD — write without response, device commands
     NimBLECharacteristic *pCmd =
         pSvc->createCharacteristic(CMD_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
     pCmd->setCallbacks(new CmdCallbacks());
@@ -268,8 +272,49 @@ void BleServer::init() {
     pAdv->setScanResponse(false);
     pAdv->start();
 
+    s_enabled = true;
     LOG_INFO("BLE", "Advertising as 'CANShift' — %s",
              NimBLEDevice::getAddress().toString().c_str());
+    return true;
+}
+
+} // namespace
+
+void BleServer::init() {
+    if (!SettingsPage::getBleEnabled()) {
+        LOG_INFO("BLE", "BLE disabled by user setting — skipping init");
+        return;
+    }
+    startStack();
+}
+
+void BleServer::start() {
+    if (s_enabled)
+        return;
+    startStack();
+}
+
+void BleServer::stop() {
+    if (!s_enabled)
+        return;
+    NimBLEDevice::deinit(true);
+    s_pTele = nullptr;
+    s_pStatus = nullptr;
+    s_connected = false;
+    s_enabled = false;
+    LOG_INFO("BLE", "BLE stack stopped — heap freed");
+}
+
+bool BleServer::isEnabled() {
+    return s_enabled;
+}
+
+void BleServer::setPendingEnabled(bool enabled) {
+    s_pendingEnabled.store(enabled ? 1 : 0, std::memory_order_relaxed);
+}
+
+int8_t BleServer::takePendingEnabled() {
+    return s_pendingEnabled.exchange(-1, std::memory_order_relaxed);
 }
 
 void BleServer::tick() {
