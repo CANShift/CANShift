@@ -140,6 +140,8 @@ TopBarItemKind parseTopBarItemKind(const char *str) {
         return TopBarItemKind::SIGNAL;
     if (strcmp(str, "usbIcon") == 0)
         return TopBarItemKind::USB_ICON;
+    if (strcmp(str, "bleIcon") == 0)
+        return TopBarItemKind::BLE_ICON;
     if (strcmp(str, "themeToggle") == 0)
         return TopBarItemKind::THEME_TOGGLE;
     if (strcmp(str, "modeFlag") == 0)

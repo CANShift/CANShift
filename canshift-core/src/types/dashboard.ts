@@ -351,6 +351,7 @@ export type TopBarItem =
   | { type: 'separator'; position: TopBarItemPosition }
   | { type: 'signal'; signal: string; format?: string; position: TopBarItemPosition }
   | { type: 'usbIcon'; position: TopBarItemPosition }
+  | { type: 'bleIcon'; position: TopBarItemPosition }
   | { type: 'themeToggle'; position: TopBarItemPosition }
   | { type: 'modeFlag'; signal: string; text: string; position: TopBarItemPosition }
 
@@ -380,7 +381,7 @@ export const DEFAULT_TOP_BAR_LAYOUT: TopBarItem[] = [
   { type: 'separator', position: 'left' },
   { type: 'label', text: 'CAN', position: 'left' },
   { type: 'statusDot', signal: 'any', position: 'left' },
-  { type: 'signal', signal: 'battery_volts', format: '%.1fV', position: 'right' },
+  { type: 'bleIcon', position: 'right' },
   { type: 'usbIcon', position: 'right' },
   { type: 'separator', position: 'right' },
   { type: 'themeToggle', position: 'right' },

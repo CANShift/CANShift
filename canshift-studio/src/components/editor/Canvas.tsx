@@ -504,6 +504,15 @@ function DashTopBar({
             {formatPreviewSignal(item.signal, item.format)}
           </span>
         )
+      case 'bleIcon':
+        return (
+          <span
+            key={key}
+            style={{ fontSize: fs, color: '#4499FF', lineHeight: 1, letterSpacing: '0.04em' }}
+          >
+            BLE
+          </span>
+        )
       case 'usbIcon':
         return <IconUsb key={key} size={iconSz} color={usbColor} />
       case 'themeToggle':
