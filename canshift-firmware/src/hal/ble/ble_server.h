@@ -23,8 +23,17 @@
 namespace BleServer {
 
 /**
- * Called once at boot. Reads the persisted BLE-enabled flag from SettingsPage;
- * skips NimBLE initialization if the user has disabled BLE.
+ * Must be called BEFORE display/LVGL init — reads the BLE-enabled NVS flag
+ * directly and calls NimBLEDevice::init() while the heap still has a large
+ * contiguous block. After display init, only ~16 KB is contiguous and NimBLE
+ * cannot allocate its required ~50 KB. Does nothing if BLE is disabled.
+ */
+void earlyInit();
+
+/**
+ * Called from taskBLE after boot. Completes GATT server + advertising setup
+ * using the already-initialized NimBLE stack (no-op if earlyInit() already
+ * ran the device init). Reads SettingsPage to honour the persisted toggle.
  */
 void init();
 

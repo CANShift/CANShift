@@ -57,7 +57,7 @@
    12 KB override panicked StoreProhibited at EXCVADDR=0 because the
    first 20 KB font's bitmap allocation returned NULL inside LVGL's
    lvgl_load_font (which then memset'd the NULL pointer); issue #557. */
-        #define LV_MEM_SIZE (80U * 1024U)
+        #define LV_MEM_SIZE (96U * 1024U)
 
         /* Set an address for the memory pool instead of allocating it as a global array.
    Can be in external SRAM too. */

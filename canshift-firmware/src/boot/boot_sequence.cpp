@@ -28,6 +28,10 @@
     #include "can/can_manager.h"
 #endif
 
+#if APP_BLE_ENABLED
+    #include "hal/ble/ble_server.h"
+#endif
+
 #include <Arduino.h>
 #include <esp_heap_caps.h>
 #include <esp_log.h>
@@ -238,7 +242,16 @@ void BootSequence::run() {
 
     logHeap("entry");
 
-    // 1. Display + LVGL — must come first so LVGL is ready for all later calls.
+// 0. BLE early init — NimBLE needs ~50 KB contiguous DRAM. After LovyanGFX
+//    init the largest free block shrinks to ~16 KB, making BLE impossible.
+//    Initializing the stack here, before the display, guarantees the
+//    allocation succeeds while the heap is still large and unfragmented.
+#if APP_BLE_ENABLED
+    BleServer::earlyInit();
+    logHeap("after BLE early init");
+#endif
+
+    // 1. Display + LVGL — must come after BLE earlyInit (see above).
     initDisplayAndLVGL();
 
     // 2. Touch controller

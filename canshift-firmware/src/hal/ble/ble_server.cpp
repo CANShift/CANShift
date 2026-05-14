@@ -18,6 +18,7 @@
     #include <ArduinoJson.h>
     #include <freertos/semphr.h>
     #include <Arduino.h>
+    #include <Preferences.h>
     #include <esp_heap_caps.h>
     #include <atomic>
     #include <string.h>
@@ -41,6 +42,12 @@ static constexpr char CMD_UUID[] = "4fa0b6a0-0000-0000-0000-000000000005";
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
+
+static constexpr size_t BLE_MIN_HEAP = 50U * 1024U;
+
+// Set to true by earlyInit() once NimBLEDevice::init() has run — prevents a
+// second call inside startStack() when the task picks up after boot.
+static bool s_stackInited = false;
 
 static NimBLECharacteristic *s_pTele = nullptr;
 static NimBLECharacteristic *s_pStatus = nullptr;
@@ -220,28 +227,24 @@ class CmdCallbacks : public NimBLECharacteristicCallbacks {
 
 } // namespace
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 namespace {
 
 // Core NimBLE stack bringup — shared by init() and start().
 // Returns true on success.
 bool startStack() {
-    // esp_bt_controller_init needs ~50 KB of contiguous DRAM. On DRAM-only
-    // boards the heap is too fragmented after LVGL+display init to satisfy
-    // that requirement. NimBLEDevice::init calls ESP_ERROR_CHECK internally,
-    // so a failed alloc would abort() the device. Skip gracefully instead.
-    static constexpr size_t BLE_MIN_HEAP = 50U * 1024U;
-    const size_t avail = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
-    if (avail < BLE_MIN_HEAP) {
-        LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE stack (%u B < %u B) — skipped",
-                 static_cast<unsigned>(avail), static_cast<unsigned>(BLE_MIN_HEAP));
-        return false;
+    if (!s_stackInited) {
+        // earlyInit() did not run (BLE was disabled at boot, or this is a
+        // runtime re-enable after stop()). Check heap before committing.
+        const size_t avail = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+        if (avail < BLE_MIN_HEAP) {
+            LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE stack (%u B < %u B) — skipped",
+                     static_cast<unsigned>(avail), static_cast<unsigned>(BLE_MIN_HEAP));
+            return false;
+        }
+        NimBLEDevice::init("CANShift");
+        NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+        s_stackInited = true;
     }
-    NimBLEDevice::init("CANShift");
-    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
 
     NimBLEServer *pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
@@ -280,6 +283,37 @@ bool startStack() {
 
 } // namespace
 
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+void BleServer::earlyInit() {
+    // Read the BLE-enabled preference directly from NVS — SettingsPage (and
+    // LVGL) are not yet initialized at this call site.
+    Preferences p;
+    p.begin("screen_cfg", /*readOnly=*/true);
+    const bool enabled = p.getUChar("ble_en", 1) != 0;
+    p.end();
+
+    if (!enabled) {
+        LOG_INFO("BLE", "BLE disabled in NVS — skipping early init");
+        return;
+    }
+
+    const size_t avail = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+    if (avail < BLE_MIN_HEAP) {
+        LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE early init (%u B < %u B)",
+                 static_cast<unsigned>(avail), static_cast<unsigned>(BLE_MIN_HEAP));
+        return;
+    }
+
+    NimBLEDevice::init("CANShift");
+    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+    s_stackInited = true;
+    LOG_INFO("BLE", "BLE stack pre-initialized early (%u B was available)",
+             static_cast<unsigned>(avail));
+}
+
 void BleServer::init() {
     if (!SettingsPage::getBleEnabled()) {
         LOG_INFO("BLE", "BLE disabled by user setting — skipping init");
@@ -302,6 +336,7 @@ void BleServer::stop() {
     s_pStatus = nullptr;
     s_connected = false;
     s_enabled = false;
+    s_stackInited = false;
     LOG_INFO("BLE", "BLE stack stopped — heap freed");
 }
 
