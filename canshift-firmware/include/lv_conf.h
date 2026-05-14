@@ -63,12 +63,13 @@
    Can be in external SRAM too. */
         #define LV_MEM_ADR 0U
 
-        /* Instead of an address give a memory allocator that will be called to get a
-   memory pool for LVGL. E.g. my_malloc */
-        #if LV_MEM_ADR == 0U
-            #define LV_MEM_POOL_INCLUDE <stdlib.h>
-            #define LV_MEM_POOL_ALLOC malloc
-        #endif
+        /* LV_MEM_POOL_ALLOC is intentionally NOT defined here. LVGL then falls back
+   to a static `work_mem_int[LV_MEM_SIZE]` array in BSS (lv_mem.c:95), which
+   is committed at link time and never requires a contiguous runtime malloc.
+   This sidesteps heap fragmentation: after BLE earlyInit() + LovyanGFX there
+   is no 96 KB contiguous block left in the heap, so a malloc-based pool would
+   crash lv_tlsf_create with a NULL pointer (EXCVADDR=0x8). With BSS the pool
+   always exists regardless of runtime heap layout. */
 
         /*====================
    HAL SETTINGS
