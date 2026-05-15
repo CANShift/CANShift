@@ -3,7 +3,7 @@
 // @vitest-environment node
 
 import { describe, it, expect } from 'vitest'
-import { IpcChannels } from './ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 import {
   INVOKE_ALLOWED,
   LISTEN_ALLOWED,

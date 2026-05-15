@@ -12,7 +12,7 @@
 // `assertChannelCoverage` enforces that every entry of `IpcChannels` belongs to
 // at least one of the three sets, so a forgotten classification fails fast.
 
-import { IpcChannels, type IpcChannel } from './ipc-channels'
+import { IpcChannels, type IpcChannel } from '../../shared/ipc-channels'
 
 const C = IpcChannels
 

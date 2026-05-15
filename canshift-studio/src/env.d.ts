@@ -24,6 +24,6 @@ interface Window {
     send: (channel: string, ...args: unknown[]) => void
     on: (channel: string, listener: (...args: unknown[]) => void) => void
     off: (channel: string, listener: (...args: unknown[]) => void) => void
-    channels: typeof import('../main/ipc/ipc-channels').IpcChannels
+    channels: typeof import('../shared/ipc-channels').IpcChannels
   }
 }

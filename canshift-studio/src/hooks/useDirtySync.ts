@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react'
 import { useDashboardStore } from '../stores/dashboard.store'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 export function useDirtySync(): void {
   useEffect(() => {

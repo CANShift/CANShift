@@ -9,8 +9,8 @@
 // @vitest-environment node
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { IpcChannels } from '../ipc/ipc-channels'
-import type { UpdateAvailablePayload, UpdateErrorPayload } from './updater.service.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { UpdateAvailablePayload, UpdateErrorPayload } from '../../shared/updater.service.types'
 
 type UpdaterEvent = 'update-available' | 'update-downloaded' | 'error'
 type UpdaterListener<E extends UpdaterEvent> = E extends 'error'

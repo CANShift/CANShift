@@ -12,13 +12,13 @@ import type {
   SaveResult,
   UsbResult,
 } from '@tmbk/canshift-core'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
-import type { FirmwareRelease } from '../../main/services/firmware.service.types'
-import type { CanFrame, CanHealth } from '../../main/services/usb.service.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { FirmwareRelease } from '../../shared/firmware.service.types'
+import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
 import type {
   UpdateAvailablePayload,
   UpdateErrorPayload,
-} from '../../main/services/updater.service.types'
+} from '../../shared/updater.service.types'
 
 // Studio-local IPC payload types (not part of canshift-core). Core IPC return
 // shapes (PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult) are

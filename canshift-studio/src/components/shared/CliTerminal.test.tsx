@@ -14,7 +14,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { useLogStore } from '../../stores/log.store'
-import { IpcChannels } from '../../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../../shared/ipc-channels'
 
 const writes: string[] = []
 const clearMock = vi.fn()

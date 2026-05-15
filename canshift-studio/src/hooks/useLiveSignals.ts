@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 export function useLiveSignals(): Record<string, number> {
   const signals = useSignalStore((s) => s.signals)

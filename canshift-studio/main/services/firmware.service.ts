@@ -14,7 +14,7 @@
 
 import { net } from 'electron'
 import { SerialPort } from 'serialport'
-import type { FirmwareRelease } from './firmware.service.types'
+import type { FirmwareRelease } from '../../shared/firmware.service.types'
 
 const GITHUB_OWNER = 'tburkhalterr'
 const GITHUB_REPO = 'CANShift'

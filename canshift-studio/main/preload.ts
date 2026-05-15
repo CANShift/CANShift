@@ -6,7 +6,7 @@
 // so a compromised renderer cannot reach arbitrary internal channels.
 
 import { contextBridge, ipcRenderer } from 'electron'
-import { IpcChannels } from './ipc/ipc-channels'
+import { IpcChannels } from '../shared/ipc-channels'
 import { assertInvokeAllowed, assertListenAllowed, assertSendAllowed } from './ipc/ipc-allowlist'
 
 // Track wrapper functions so off() can remove the correct ipcRenderer listener
