@@ -38,7 +38,14 @@ export type {
   CanRawAction,
 } from './types/dashboard'
 
-export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
+export {
+  DEFAULT_PAGE_PALETTE,
+  DEFAULT_TOP_BAR_LAYOUT,
+  BUTTON_ACTION_TYPES,
+  isNavigateAction,
+  isMapSwitchAction,
+  isCanRawAction,
+} from './types/dashboard'
 export type {
   SignalConfig,
   SignalDef,
