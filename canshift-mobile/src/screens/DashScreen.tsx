@@ -1,13 +1,18 @@
 // DashScreen.tsx — Live dashboard via BLE telemetry
+//
+// Each cell subscribes to its own signal key via `useSignalValue(key)` so the
+// 10 Hz tick only re-renders the cells whose value actually changed. The
+// screen itself subscribes only to `isLive` (flips on/off rarely) — without
+// per-key selectors the whole grid would re-render 10 times per second on
+// every BLE update (#687).
 
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
-import { useSignalsStore } from '../stores/signals.store'
-import { SIGNAL_META } from '../constants/ble'
+import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
+import { SIGNAL_META, type SignalMeta } from '../constants/ble'
 import SignalCard from '../components/SignalCard'
 import DashTopBar from '../components/DashTopBar'
 import type { RootStackParamList } from '../navigation'
@@ -19,12 +24,46 @@ interface Props {
 const PRIMARY_SIGNALS = ['r', 's', 'g']
 const GRID_SIGNALS = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
 
+function formatValue(value: number | undefined, meta: SignalMeta): string {
+  if (value === undefined) return '---'
+  return meta.decimals === 0 ? Math.round(value).toString() : value.toFixed(meta.decimals)
+}
+
+function PrimaryCellPortrait({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) {
+  const value = useSignalValue(signalKey)
+  const isLive = useSignalsIsLive()
+  return (
+    <View style={styles.primaryCard}>
+      <Text style={styles.primaryLabel}>{meta.label.toUpperCase()}</Text>
+      <Text style={[styles.primaryValue, !isLive && styles.dim]}>{formatValue(value, meta)}</Text>
+      {meta.unit ? <Text style={styles.primaryUnit}>{meta.unit}</Text> : null}
+    </View>
+  )
+}
+
+function PrimaryCellLandscape({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) {
+  const value = useSignalValue(signalKey)
+  const isLive = useSignalsIsLive()
+  return (
+    <View style={styles.primaryCardLandscape}>
+      <Text style={styles.primaryLabelLandscape}>{meta.label.toUpperCase()}</Text>
+      <Text style={[styles.primaryValueLandscape, !isLive && styles.dim]}>
+        {formatValue(value, meta)}
+      </Text>
+      {meta.unit ? <Text style={styles.primaryUnitLandscape}>{meta.unit}</Text> : null}
+    </View>
+  )
+}
+
+function LiveSignalCard({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) {
+  const value = useSignalValue(signalKey)
+  const isLive = useSignalsIsLive()
+  return <SignalCard meta={meta} value={isLive ? value : undefined} compact />
+}
+
 export default function DashScreen(_: Props) {
   const { width, height } = useWindowDimensions()
   const isLandscape = width > height
-  const { values, isLive } = useSignalsStore(
-    useShallow((s) => ({ values: s.values, isLive: s.isLive }))
-  )
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,19 +76,7 @@ export default function DashScreen(_: Props) {
             {PRIMARY_SIGNALS.map((key) => {
               const meta = SIGNAL_META[key]
               if (!meta) return null
-              return (
-                <View key={key} style={styles.primaryCardLandscape}>
-                  <Text style={styles.primaryLabelLandscape}>{meta.label.toUpperCase()}</Text>
-                  <Text style={[styles.primaryValueLandscape, !isLive && styles.dim]}>
-                    {values[key] !== undefined
-                      ? meta.decimals === 0
-                        ? Math.round(values[key]).toString()
-                        : values[key].toFixed(meta.decimals)
-                      : '---'}
-                  </Text>
-                  {meta.unit ? <Text style={styles.primaryUnitLandscape}>{meta.unit}</Text> : null}
-                </View>
-              )
+              return <PrimaryCellLandscape key={key} signalKey={key} meta={meta} />
             })}
           </View>
           <ScrollView
@@ -60,14 +87,7 @@ export default function DashScreen(_: Props) {
             {GRID_SIGNALS.map((key) => {
               const meta = SIGNAL_META[key]
               if (!meta) return null
-              return (
-                <SignalCard
-                  key={key}
-                  meta={meta}
-                  value={isLive ? values[key] : undefined}
-                  compact
-                />
-              )
+              return <LiveSignalCard key={key} signalKey={key} meta={meta} />
             })}
           </ScrollView>
         </View>
@@ -78,33 +98,14 @@ export default function DashScreen(_: Props) {
             {PRIMARY_SIGNALS.map((key) => {
               const meta = SIGNAL_META[key]
               if (!meta) return null
-              return (
-                <View key={key} style={styles.primaryCard}>
-                  <Text style={styles.primaryLabel}>{meta.label.toUpperCase()}</Text>
-                  <Text style={[styles.primaryValue, !isLive && styles.dim]}>
-                    {values[key] !== undefined
-                      ? meta.decimals === 0
-                        ? Math.round(values[key]).toString()
-                        : values[key].toFixed(meta.decimals)
-                      : '---'}
-                  </Text>
-                  {meta.unit ? <Text style={styles.primaryUnit}>{meta.unit}</Text> : null}
-                </View>
-              )
+              return <PrimaryCellPortrait key={key} signalKey={key} meta={meta} />
             })}
           </View>
           <View style={styles.grid}>
             {GRID_SIGNALS.map((key) => {
               const meta = SIGNAL_META[key]
               if (!meta) return null
-              return (
-                <SignalCard
-                  key={key}
-                  meta={meta}
-                  value={isLive ? values[key] : undefined}
-                  compact
-                />
-              )
+              return <LiveSignalCard key={key} signalKey={key} meta={meta} />
             })}
           </View>
         </ScrollView>
