@@ -1,8 +1,12 @@
 // usb.service.test.ts — Regression coverage for the USB disconnect bookkeeping.
 //
-// Locks the contract from PR #148 (issue #139): voluntary disconnects must NOT
-// surface a phantom "disconnected unexpectedly" event, while involuntary ones
-// (heartbeat unplug, write failure) must.
+// Locks two contracts:
+//   - #696: every connection-state transition (both connect AND disconnect,
+//     intentional or not) publishes a USB_CONNECTION_CHANGED event so the
+//     renderer's `useUsbEvents` is the single source of truth for the store.
+//   - #139 / #148: the published event carries an `intentional` flag so the
+//     renderer can suppress the "disconnected unexpectedly" log on voluntary
+//     disconnects while still surfacing the involuntary ones.
 //
 // @vitest-environment node
 
@@ -80,7 +84,7 @@ import { UsbService, putConfigTimeoutMs } from './usb.service'
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', () => {
+describe('UsbService — connection-event publish surface (#696, #139 / #148)', () => {
   beforeEach(() => {
     fakes.FakeSerialPort.instances.length = 0
     fakes.FakeSerialPort.listResult = [{ path: '/dev/tty.test' }]
@@ -99,7 +103,7 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
     expect(onError).not.toHaveBeenCalled()
   })
 
-  it('intentional disconnect closes the port without firing onConnectionChanged', async () => {
+  it('intentional disconnect publishes a connected:false event with intentional=true', async () => {
     const service = new UsbService()
     const onConnectionChanged = vi.fn()
     service.setEventHandlers({ onConnectionChanged })
@@ -109,19 +113,26 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
     expect(onConnectionChanged).toHaveBeenCalledWith({
       connected: true,
       portPath: '/dev/tty.test',
+      intentional: true,
     })
     onConnectionChanged.mockClear()
 
     const disconnectResult = await service.disconnect()
 
     expect(disconnectResult.success).toBe(true)
-    // The 'close' event fired but the user-initiated disconnect must suppress
-    // the renderer notification — otherwise the UI logs a phantom unplug.
-    expect(onConnectionChanged).not.toHaveBeenCalled()
+    // Renderer is the single source of truth (#696) — every transition fires,
+    // including intentional disconnects. The `intentional` flag lets the
+    // renderer skip the "disconnected unexpectedly" log without losing the
+    // store update.
+    expect(onConnectionChanged).toHaveBeenCalledWith({
+      connected: false,
+      portPath: null,
+      intentional: true,
+    })
     expect(service.getStatus()).toEqual({ connected: false })
   })
 
-  it('involuntary disconnect (intentional=false) does fire onConnectionChanged', async () => {
+  it('involuntary disconnect publishes intentional=false', async () => {
     const service = new UsbService()
     const onConnectionChanged = vi.fn()
     service.setEventHandlers({ onConnectionChanged })
@@ -132,7 +143,11 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
     const disconnectResult = await service.disconnect(false)
 
     expect(disconnectResult.success).toBe(true)
-    expect(onConnectionChanged).toHaveBeenCalledWith({ connected: false })
+    expect(onConnectionChanged).toHaveBeenCalledWith({
+      connected: false,
+      portPath: null,
+      intentional: false,
+    })
   })
 
   it('device log lines fire onDeviceLog and do not resolve a pending ack (regression for #199)', async () => {
@@ -185,7 +200,11 @@ describe('UsbService — disconnect bookkeeping (regression for #139 / #148)', (
     expect(port).toBeDefined()
     port?.emit('close')
 
-    expect(onConnectionChanged).toHaveBeenCalledWith({ connected: false })
+    expect(onConnectionChanged).toHaveBeenCalledWith({
+      connected: false,
+      portPath: null,
+      intentional: false,
+    })
   })
 })
 

@@ -49,7 +49,6 @@ export function useAutoConnect(): void {
   // panel. Without this guard, the 2 s reconnect poll grabs the serial port
   // back from esptool-js mid-flash and the write times out.
   const flashing = useDeviceStore((s) => s.flashing)
-  const setConnected = useDeviceStore((s) => s.setConnected)
   const log = useLogStore((s) => s.push)
 
   // Guard against re-entrant connect attempts while a previous one is still in flight
@@ -79,7 +78,8 @@ export function useAutoConnect(): void {
         if (cancelled) return
 
         if (result.success) {
-          setConnected(candidate.path)
+          // Store update happens via the USB_CONNECTION_CHANGED IPC event —
+          // `useUsbEvents` is the single source of truth (#696).
           const now = Date.now()
           if (now - lastAutoConnectLogAt > RECONNECT_LOG_COOLDOWN_MS) {
             log('success', `Auto-connected to ${candidate.path}`)
@@ -100,5 +100,5 @@ export function useAutoConnect(): void {
       cancelled = true
       clearInterval(interval)
     }
-  }, [connected, simulationMode, probing, flashing, setConnected, log])
+  }, [connected, simulationMode, probing, flashing, log])
 }
