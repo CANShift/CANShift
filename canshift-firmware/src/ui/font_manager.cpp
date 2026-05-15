@@ -15,6 +15,12 @@
 #include <esp_heap_caps.h>
 #include <stdio.h>
 
+// In-flash Orbitron Black 32 px — declared here (not in lv_conf.h, which
+// already exposes the 14 px Medium twin via LV_FONT_CUSTOM_DECLARE).
+// The symbol lives in src/ui/fonts/lv_font_orbitron_black_32_nk.c and is
+// substituted for the SPIFFS load to free ~20 KB of LVGL pool for 48 px.
+LV_FONT_DECLARE(lv_font_orbitron_black_32_nk);
+
 namespace {
 
 // Sizes shipped per tier. Driven by actual call sites (see issues #431 + #487
@@ -23,17 +29,21 @@ namespace {
 //   secondary — gauge/timer mid-band, gear mid, burn_overlay icon
 //   label     — top bar text, signal headers, settings, error bar, dot/icon
 //
-// Partial restoration of the sizes dropped in PR #487:
-//   - 28 (secondary) is restored — its ~15 KB binary fits comfortably in the
-//     80 KB LVGL pool alongside the other loaded fonts.
-//   - 48 (primary) stays dropped. Its 43 KB binary alone consumes ~half the
-//     pool and pushes bold_24, bold_28 and medium_16 past the pre-flight
-//     pool-room guard, leaving widget code to dereference NULL font slots at
-//     boot (Guru Meditation LoadProhibited — see PR #665 CI failure). A real
-//     restoration requires moving a current font (e.g. black_32) to in-flash
-//     linkage to free pool space; tracked as a separate follow-up.
-constexpr uint8_t kPrimarySizes[] = {32};       // 48 not restored — would overflow 80 KB pool
-constexpr uint8_t kSecondarySizes[] = {20, 24, 28};  // 28 restored — fits comfortably
+// Restoration of the sizes dropped in PR #487 (issue #664):
+//   - 32 px Black stays declared as a primary size, but is now linked
+//     in-flash (lv_font_orbitron_black_32_nk in src/ui/fonts/) instead of
+//     loaded from SPIFFS. This frees ~20 KB of LVGL pool — enough room for
+//     48 px Black to fit alongside the bold/medium loads.
+//   - 48 px Black is restored as a SPIFFS-loaded primary size. With 32 px
+//     moved in-flash, the pre-flight pool-room guard now passes for the
+//     43 KB binary and widgets render gauge/timer text at the designed
+//     full-panel height again.
+//   - 28 px Bold was reintroduced earlier on this branch then dropped here:
+//     the 80 KB pool cannot hold both 48 px Black (43 KB) and 28 px Bold
+//     (15 KB) on top of the other bold/medium loads. Picking 48 px is the
+//     bigger UX win, so 28 stays dropped (secondary text snaps to 24 px).
+constexpr uint8_t kPrimarySizes[] = {32, 48};   // 32 in-flash, 48 SPIFFS
+constexpr uint8_t kSecondarySizes[] = {20, 24}; // 28 dropped — pool conflict with 48
 constexpr uint8_t kLabelSizes[] = {12, 14, 16};
 
 constexpr size_t kPrimaryCount = sizeof(kPrimarySizes) / sizeof(kPrimarySizes[0]);
@@ -159,7 +169,16 @@ void FontManager::init() {
     }
 
     for (size_t i = 0; i < kPrimaryCount; ++i) {
-        loadOne("black", "primary", kPrimarySizes[i], s_primary[i]);
+        if (kPrimarySizes[i] == 32) {
+            // orbitron_black_32 ships as a compiled C array in flash
+            // (lv_font_orbitron_black_32_nk). Using it directly frees ~20 KB
+            // of LVGL pool — enough headroom for the 43 KB 48 px Black to fit
+            // alongside the bold/medium SPIFFS loads (issue #664).
+            s_primary[i] = &lv_font_orbitron_black_32_nk;
+            LOG_INFO("FONT", "orbitron_black_32: using in-flash copy (saves ~20 KB pool)");
+        } else {
+            loadOne("black", "primary", kPrimarySizes[i], s_primary[i]);
+        }
     }
     for (size_t i = 0; i < kSecondaryCount; ++i) {
         loadOne("bold", "secondary", kSecondarySizes[i], s_secondary[i]);
@@ -182,8 +201,10 @@ void FontManager::init() {
 void FontManager::shutdown() {
     auto freeAll = [](const lv_font_t **slots, size_t count) {
         for (size_t i = 0; i < count; ++i) {
-            // Skip the flash-resident fallback — it was never pool-allocated.
-            if (slots[i] != nullptr && slots[i] != &lv_font_orbitron_medium_14_nk) {
+            // Skip flash-resident fonts — never pool-allocated, so never freed.
+            const bool isInFlash = slots[i] == &lv_font_orbitron_medium_14_nk ||
+                                   slots[i] == &lv_font_orbitron_black_32_nk;
+            if (slots[i] != nullptr && !isInFlash) {
                 lv_font_free(const_cast<lv_font_t *>(slots[i]));
             }
             slots[i] = nullptr;
