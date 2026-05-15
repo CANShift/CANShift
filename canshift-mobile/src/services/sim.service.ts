@@ -24,9 +24,10 @@ const gear = (r: number) => {
 const rand = (base: number, range: number) => base + (Math.random() - 0.5) * range
 
 export function start() {
-  const { setDevice, setFirmwareStatus } = useDeviceStore.getState()
+  const { setDevice, setFirmwareStatus, setMode } = useDeviceStore.getState()
   setDevice('SIM', 'CANShift (sim)')
   setFirmwareStatus('sim', true)
+  setMode('sim')
   clearBuffer()
   log('info', 'Simulation mode started')
 
