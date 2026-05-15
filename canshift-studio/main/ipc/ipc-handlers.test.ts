@@ -117,6 +117,7 @@ const firmwareMock = vi.hoisted(() => ({
   setFlashPort: vi.fn(),
   getFlashPort: vi.fn(),
   downloadBinary: vi.fn(),
+  downloadText: vi.fn(),
 }))
 vi.mock('../services/firmware.service', () => ({ firmwareService: firmwareMock }))
 
@@ -263,6 +264,7 @@ describe('registerIpcHandlers — channel registration', () => {
       IpcChannels.FIRMWARE_EXIT_FLASH,
       IpcChannels.FIRMWARE_RETRY_RESET,
       IpcChannels.FIRMWARE_DOWNLOAD,
+      IpcChannels.FIRMWARE_DOWNLOAD_TEXT,
       IpcChannels.SIGNAL_EXPORT,
       IpcChannels.APP_VERSION,
       IpcChannels.UPDATE_CHECK,
@@ -654,6 +656,35 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
     expect(firmwareMock.downloadBinary).toHaveBeenCalledWith(
       'https://objects.githubusercontent.com/abc/def.bin',
       expect.any(Function)
+    )
+  })
+
+  it('FIRMWARE_DOWNLOAD_TEXT rejects a non-allowlisted URL host (#671)', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD_TEXT)
+    await expect(handler(makeEvent(), 'https://evil.example/fw.bin.sha256')).rejects.toThrow(
+      'blocked: firmware download URL not on allowlist'
+    )
+    expect(firmwareMock.downloadText).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD_TEXT rejects http:// URLs (#671)', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD_TEXT)
+    await expect(
+      handler(makeEvent(), 'http://objects.githubusercontent.com/abc.sha256')
+    ).rejects.toThrow('blocked: firmware download URL not on allowlist')
+    expect(firmwareMock.downloadText).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD_TEXT forwards an allowlisted https URL to the service (#671)', async () => {
+    firmwareMock.downloadText.mockResolvedValueOnce('deadbeef\n')
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD_TEXT)
+    const result = await handler(
+      makeEvent(),
+      'https://objects.githubusercontent.com/abc/def.bin.sha256'
+    )
+    expect(result).toBe('deadbeef\n')
+    expect(firmwareMock.downloadText).toHaveBeenCalledWith(
+      'https://objects.githubusercontent.com/abc/def.bin.sha256'
     )
   })
 })

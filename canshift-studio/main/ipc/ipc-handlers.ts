@@ -459,6 +459,20 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     }
   )
 
+  // Download a small text sibling (e.g. `firmware.bin.sha256`) used by the
+  // renderer to verify firmware integrity before flashing (#671). Same host
+  // allowlist as the binary path; the underlying service caps the response
+  // length so a hostile mirror can't stream an unbounded body.
+  ipcMain.handle(
+    IpcChannels.FIRMWARE_DOWNLOAD_TEXT,
+    async (_event, url: unknown): Promise<string> => {
+      if (!isFirmwareDownloadUrlAllowed(url)) {
+        throw new Error('blocked: firmware download URL not on allowlist')
+      }
+      return firmwareService.downloadText(url)
+    }
+  )
+
   // ---------------------------------------------------------------------------
   // Signal export
   // ---------------------------------------------------------------------------

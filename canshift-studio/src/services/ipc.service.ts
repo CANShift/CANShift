@@ -227,6 +227,12 @@ export const firmwareIpc = {
       [url, downloadId],
       FIRMWARE_DOWNLOAD_TIMEOUT_MS
     ),
+  /**
+   * Downloads a small text sibling (e.g. `firmware.bin.sha256`) via main —
+   * same host allowlist as `download()`, length-capped server-side. Used by
+   * useFirmwareFlash to verify firmware integrity before flashing (#671).
+   */
+  downloadText: (url: string) => invoke<string>(IpcChannels.FIRMWARE_DOWNLOAD_TEXT, url),
 }
 
 export const deviceIpc = {
