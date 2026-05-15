@@ -77,6 +77,14 @@ function resetSequenceFor(variant: ResetVariant): readonly ResetStep[] {
 /** Settle window between the two reset passes (#482). */
 const RESET_PASS_GAP_MS = 250
 
+/**
+ * Hard ceiling for `downloadText` payloads (#671). The expected `.sha256`
+ * sibling is 64 hex chars + optional filename — well under 1 KiB. 64 KiB
+ * gives ample headroom while keeping a misconfigured CDN from streaming a
+ * large body through main.
+ */
+const FIRMWARE_TEXT_MAX_BYTES = 64 * 1024
+
 function sleepMs(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -319,6 +327,52 @@ export class FirmwareService {
         runStep(0)
       })
     })
+  }
+
+  /**
+   * Download a small text sibling (e.g. `firmware.bin.sha256`) — used to fetch
+   * the expected checksum before flashing (#671). Capped at
+   * `FIRMWARE_TEXT_MAX_BYTES` so a hostile mirror can't stream an unbounded
+   * body. The same URL allowlist as the binary path applies at the IPC layer.
+   */
+  async downloadText(url: string): Promise<string> {
+    const response = await net.fetch(url, {
+      headers: { 'User-Agent': 'CANShift-Studio' },
+      redirect: 'follow',
+    })
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + String(response.status))
+    }
+
+    const body = response.body
+    if (!body) throw new Error('No response body')
+
+    const reader = body.getReader() as ReadableStreamDefaultReader<Uint8Array>
+    let received = 0
+    const chunks: Uint8Array[] = []
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      received += value.length
+      if (received > FIRMWARE_TEXT_MAX_BYTES) {
+        await reader.cancel().catch(() => {
+          /* best-effort */
+        })
+        throw new Error(
+          `Response exceeds ${String(FIRMWARE_TEXT_MAX_BYTES)} bytes — refusing to read further`
+        )
+      }
+      chunks.push(value)
+    }
+
+    const merged = new Uint8Array(received)
+    let offset = 0
+    for (const chunk of chunks) {
+      merged.set(chunk, offset)
+      offset += chunk.length
+    }
+    return new TextDecoder('utf-8', { fatal: false }).decode(merged)
   }
 
   /**

@@ -11,6 +11,7 @@ import type { FirmwareDownloadProgress } from '../services/ipc.service'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
+import { verifyFirmwareSha256 } from '../services/firmware-integrity.service'
 
 export type FlashState = 'idle' | 'downloading' | 'connecting' | 'flashing' | 'done' | 'error'
 export type FlashPhase = 'downloading' | 'connecting' | 'flashing'
@@ -184,6 +185,15 @@ export function useFirmwareFlash() {
             setProgress(Math.round((pct / 100) * fwCeiling))
           })
           appendLog(`Firmware ready (${(fwBuffer.byteLength / 1024).toFixed(1)} KB)`)
+
+          // SHA-256 integrity check (#671) — refuse to flash bytes whose
+          // digest doesn't match the publisher's `.sha256` sibling. Runs
+          // BEFORE writeFlash so a mismatch never reaches the chip. There
+          // is no opt-out flag; a missing or malformed manifest is treated
+          // as a verification failure, same as a mismatch.
+          appendLog('Verifying firmware SHA-256…')
+          const verifiedDigest = await verifyFirmwareSha256(fwBuffer, `${source.url}.sha256`)
+          appendLog(`SHA-256 OK (${verifiedDigest})`)
         } else {
           appendLog(`Reading ${source.file.name} (${(source.file.size / 1024).toFixed(1)} KB)`)
           fwBuffer = await source.file.arrayBuffer()
@@ -198,6 +208,12 @@ export function useFirmwareFlash() {
             setProgress(30 + Math.round((pct / 100) * 10))
           })
           appendLog(`SPIFFS ready (${(spiffsBuffer.byteLength / 1024).toFixed(1)} KB)`)
+
+          // SPIFFS image is flashed alongside firmware — same threat model,
+          // same check. Sibling URL is `${spiffsUrl}.sha256`.
+          appendLog('Verifying SPIFFS SHA-256…')
+          const spiffsDigest = await verifyFirmwareSha256(spiffsBuffer, `${spiffsUrl}.sha256`)
+          appendLog(`SPIFFS SHA-256 OK (${spiffsDigest})`)
         }
 
         // esptool-js opens the port itself inside loader.main() (transport.connect()).
