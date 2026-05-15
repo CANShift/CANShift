@@ -20,6 +20,7 @@ interface FakeWebContents {
   send: (channel: string, payload: unknown) => void
   isDestroyed: () => boolean
   on: (event: string, listener: (...args: unknown[]) => void) => void
+  setWindowOpenHandler: (handler: (details: { url: string }) => unknown) => void
 }
 
 interface FakeBrowserWindow {
@@ -59,6 +60,7 @@ function buildFakeBrowserWindow(): FakeBrowserWindow {
         list.push(listener)
         wcListeners.set(event, list)
       },
+      setWindowOpenHandler: () => undefined,
     },
     on: (event, listener) => {
       const list = listeners.get(event) ?? []
@@ -167,6 +169,7 @@ function makeMainWindow(): FakeMain {
       },
       isDestroyed: () => false,
       on: () => undefined,
+      setWindowOpenHandler: () => undefined,
     },
     on: () => win,
     once: () => win,

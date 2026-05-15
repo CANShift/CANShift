@@ -12,6 +12,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import { useUsbEvents } from './useUsbEvents'
@@ -29,6 +30,7 @@ const listeners = new Map<string, ((...args: unknown[]) => void)[]>()
 beforeEach(() => {
   listeners.clear()
   useLogStore.setState({ entries: [], verbose: false })
+  useDeviceStore.getState().setDisconnected()
   const stub: IpcStub = {
     invoke: vi.fn(() => Promise.resolve(undefined)),
     send: vi.fn(),
@@ -131,5 +133,83 @@ describe('useUsbEvents — single device-log subscription (#484)', () => {
     dispatch(IpcChannels.USB_DEVICE_LOG, 'not-an-object')
 
     expect(useLogStore.getState().entries).toHaveLength(0)
+  })
+})
+
+describe('useUsbEvents — single source of truth for connection state (#696)', () => {
+  it('connected:true event flips the device store via setConnected', async () => {
+    await mount()
+    expect(useDeviceStore.getState().connected).toBe(false)
+
+    act(() => {
+      dispatch(IpcChannels.USB_CONNECTION_CHANGED, {
+        connected: true,
+        portPath: '/dev/tty.usbserial-A',
+        intentional: true,
+      })
+    })
+
+    const state = useDeviceStore.getState()
+    expect(state.connected).toBe(true)
+    expect(state.portPath).toBe('/dev/tty.usbserial-A')
+    expect(state.status).toBe('connected')
+  })
+
+  it('intentional disconnect updates the store without logging "unexpectedly"', async () => {
+    await mount()
+    act(() => {
+      useDeviceStore.getState().setConnected('/dev/tty.usbserial-A')
+    })
+
+    act(() => {
+      dispatch(IpcChannels.USB_CONNECTION_CHANGED, {
+        connected: false,
+        portPath: null,
+        intentional: true,
+      })
+    })
+
+    expect(useDeviceStore.getState().connected).toBe(false)
+    const warnEntries = useLogStore
+      .getState()
+      .entries.filter((e) => e.message === 'Device disconnected unexpectedly')
+    expect(warnEntries).toHaveLength(0)
+  })
+
+  it('involuntary disconnect updates the store AND logs "unexpectedly"', async () => {
+    await mount()
+    act(() => {
+      useDeviceStore.getState().setConnected('/dev/tty.usbserial-A')
+    })
+
+    act(() => {
+      dispatch(IpcChannels.USB_CONNECTION_CHANGED, {
+        connected: false,
+        portPath: null,
+        intentional: false,
+      })
+    })
+
+    expect(useDeviceStore.getState().connected).toBe(false)
+    const warnEntries = useLogStore
+      .getState()
+      .entries.filter((e) => e.message === 'Device disconnected unexpectedly')
+    expect(warnEntries).toHaveLength(1)
+  })
+
+  it('drops malformed connection-changed payloads silently', async () => {
+    await mount()
+    act(() => {
+      useDeviceStore.getState().setConnected('/dev/tty.usbserial-A')
+    })
+
+    act(() => {
+      dispatch(IpcChannels.USB_CONNECTION_CHANGED, null)
+      dispatch(IpcChannels.USB_CONNECTION_CHANGED, { connected: true /* missing fields */ })
+      dispatch(IpcChannels.USB_CONNECTION_CHANGED, 'not-an-object')
+    })
+
+    // Store must not flip: malformed payloads are ignored.
+    expect(useDeviceStore.getState().connected).toBe(true)
   })
 })

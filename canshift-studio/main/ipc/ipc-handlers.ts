@@ -125,6 +125,19 @@ export function parseCliLogPayload(v: unknown): CliLogPayload | null {
  */
 export const usbService = new UsbService()
 
+// CAN-frame flush timer handle — captured here so disposeIpcHandlers() can
+// clear it on app shutdown. Without this the 10 Hz timer keeps Node's event
+// loop alive past app.quit().
+let canBatchFlushTimer: NodeJS.Timeout | null = null
+
+/** Stop background timers owned by ipc-handlers. Call from app `before-quit`. */
+export function disposeIpcHandlers(): void {
+  if (canBatchFlushTimer !== null) {
+    clearInterval(canBatchFlushTimer)
+    canBatchFlushTimer = null
+  }
+}
+
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
   // Guard against sending to a window whose webContents were destroyed (e.g.
   // during a reload triggered by the post-burn reconnect).
@@ -149,12 +162,14 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     safeSend(IpcChannels.CAN_FRAME_BATCH, canFrameBatch)
     canFrameBatch = []
   }
-  setInterval(flushCanBatch, 100)
+  canBatchFlushTimer = setInterval(flushCanBatch, 100)
 
   // Wire USB device events to the renderer window
   usbService.setEventHandlers({
-    onConnectionChanged: (status) => {
-      safeSend(IpcChannels.USB_CONNECTION_CHANGED, status)
+    onConnectionChanged: (event) => {
+      // Renderer is the single source of truth for device-store connection
+      // flags (#696) — every transition is published, both true and false.
+      safeSend(IpcChannels.USB_CONNECTION_CHANGED, event)
     },
     onError: (message) => {
       safeSend(IpcChannels.USB_ERROR, message)

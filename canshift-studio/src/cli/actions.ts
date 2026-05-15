@@ -120,7 +120,6 @@ async function burnConfig(): Promise<CliResult> {
 
 async function connectAction(portPath: string | undefined): Promise<CliResult> {
   const log = useLogStore.getState().push
-  const device = useDeviceStore.getState()
 
   let target: string
   if (portPath === undefined) {
@@ -137,7 +136,8 @@ async function connectAction(portPath: string | undefined): Promise<CliResult> {
   try {
     const result = await usbService.connect(target)
     if (result.success) {
-      device.setConnected(target)
+      // Store update happens via the USB_CONNECTION_CHANGED IPC event —
+      // `useUsbEvents` is the single source of truth (#696).
       log('success', `connected on ${target}`, 'usb')
       return okResult
     }
@@ -153,10 +153,10 @@ async function connectAction(portPath: string | undefined): Promise<CliResult> {
 
 async function disconnectAction(): Promise<CliResult> {
   const log = useLogStore.getState().push
-  const device = useDeviceStore.getState()
   try {
+    // Store update happens via the USB_CONNECTION_CHANGED IPC event —
+    // `useUsbEvents` is the single source of truth (#696).
     const result = await usbService.disconnect()
-    device.setDisconnected()
     if (!result.success && result.error !== undefined) {
       log('warn', `disconnect: ${result.error}`, 'usb')
     } else {

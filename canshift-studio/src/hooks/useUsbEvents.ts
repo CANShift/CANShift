@@ -23,7 +23,8 @@ import type { LogLevel } from '../stores/log.store'
 
 interface ConnectionChangedPayload {
   connected: boolean
-  portPath?: string
+  portPath: string | null
+  intentional: boolean
 }
 
 interface AppLogPayload {
@@ -56,7 +57,9 @@ function mapDeviceLevel(level: string): LogLevel {
 }
 
 function isConnectionChangedPayload(v: unknown): v is ConnectionChangedPayload {
-  return typeof v === 'object' && v !== null && 'connected' in v
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.connected === 'boolean' && typeof o.intentional === 'boolean'
 }
 
 function isAppLogPayload(v: unknown): v is AppLogPayload {
@@ -83,6 +86,7 @@ function isCanHealth(v: unknown): v is CanHealth {
  * second call from another component.
  */
 export function useUsbEvents(): void {
+  const setConnected = useDeviceStore((s) => s.setConnected)
   const setDisconnected = useDeviceStore((s) => s.setDisconnected)
   const setError = useDeviceStore((s) => s.setError)
   const log = useLogStore((s) => s.push)
@@ -95,11 +99,17 @@ export function useUsbEvents(): void {
   const prevCanErrors = useRef<number | null>(null)
 
   useEffect(() => {
+    // Single source of truth for the device-store connection flags (#696).
+    // Every connect / disconnect edge from the main process lands here —
+    // call sites must NOT call setConnected / setDisconnected directly after
+    // a usbService.connect / disconnect, the IPC round-trip already does it.
     const handleConnectionChanged = (payload: unknown): void => {
       if (!isConnectionChangedPayload(payload)) return
-      if (!payload.connected) {
+      if (payload.connected) {
+        if (payload.portPath !== null) setConnected(payload.portPath)
+      } else {
         setDisconnected()
-        log('warn', 'Device disconnected unexpectedly')
+        if (!payload.intentional) log('warn', 'Device disconnected unexpectedly')
       }
     }
 
@@ -161,5 +171,5 @@ export function useUsbEvents(): void {
       window.ipc.off(IpcChannels.APP_LOG, handleAppLog)
       window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
     }
-  }, [setDisconnected, setError, log, updateCanHealth, pushError, pushOrUpdateError])
+  }, [setConnected, setDisconnected, setError, log, updateCanHealth, pushError, pushOrUpdateError])
 }
