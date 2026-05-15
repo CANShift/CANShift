@@ -24,10 +24,7 @@ export function useSessionRestore(): void {
       if (result.success && result.content) {
         let config = result.content as DashboardConfig
         try {
-          const { config: migrated, applied } = migrateConfig(
-            config,
-            CURRENT_SCHEMA_VERSION
-          )
+          const { config: migrated, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
           config = migrated as unknown as DashboardConfig
           if (applied.length > 0) {
             log('info', `Config migrated on restore: ${applied.join(', ')}`)

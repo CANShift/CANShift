@@ -80,10 +80,7 @@ export function useConfigActions() {
       if (result.success && result.content) {
         let config = result.content as DashboardConfig
         try {
-          const { config: migrated, applied } = migrateConfig(
-            config,
-            CURRENT_SCHEMA_VERSION
-          )
+          const { config: migrated, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
           config = migrated as unknown as DashboardConfig
           if (applied.length > 0) {
             log('info', `Config migrated: ${applied.join(', ')}`)
@@ -155,10 +152,7 @@ export function useConfigActions() {
 
       let imported = result.content as DashboardConfig
       try {
-        const { config: migrated, applied } = migrateConfig(
-          imported,
-          CURRENT_SCHEMA_VERSION
-        )
+        const { config: migrated, applied } = migrateConfig(imported, CURRENT_SCHEMA_VERSION)
         imported = migrated as unknown as DashboardConfig
         if (applied.length > 0) {
           log('info', `Imported config migrated: ${applied.join(', ')}`)
