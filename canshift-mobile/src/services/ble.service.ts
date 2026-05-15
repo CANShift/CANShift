@@ -218,6 +218,8 @@ export class BleService {
     this.cancelReconnect()
     return new Promise((resolve, reject) => {
       const found = new Set<string>()
+      let settled = false
+      let timer: ReturnType<typeof setTimeout> | null = null
 
       // startDeviceScan / stopDeviceScan are typed as Promise-returning by the
       // SDK but used here as fire-and-forget — `void` makes that explicit.
@@ -225,7 +227,10 @@ export class BleService {
         [BLE_SERVICE_UUID],
         { allowDuplicates: false },
         (error, device) => {
+          if (settled) return
           if (error) {
+            settled = true
+            if (timer !== null) clearTimeout(timer)
             void this.manager.stopDeviceScan()
             reject(new Error(error.message))
             return
@@ -237,7 +242,9 @@ export class BleService {
         }
       )
 
-      setTimeout(() => {
+      timer = setTimeout(() => {
+        if (settled) return
+        settled = true
         void this.manager.stopDeviceScan()
         resolve()
       }, timeoutMs)
