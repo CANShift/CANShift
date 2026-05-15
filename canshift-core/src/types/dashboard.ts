@@ -352,6 +352,7 @@ export type TopBarItem =
   | { type: 'signal'; signal: string; format?: string; position: TopBarItemPosition }
   | { type: 'usbIcon'; position: TopBarItemPosition }
   | { type: 'themeToggle'; position: TopBarItemPosition }
+  | { type: 'modeFlag'; signal: string; text: string; position: TopBarItemPosition }
 
 export interface TopBarConfig {
   height: number

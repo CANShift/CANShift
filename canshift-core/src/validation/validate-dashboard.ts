@@ -458,6 +458,7 @@ const VALID_TOP_BAR_ITEM_TYPES = [
   'signal',
   'usbIcon',
   'themeToggle',
+  'modeFlag',
 ] as const
 
 const VALID_TOP_BAR_POSITIONS = ['left', 'center', 'right'] as const
@@ -501,14 +502,17 @@ function validateTopBarLayout(layout: unknown): string[] {
     }
 
     if (
-      (itemType === 'statusDot' || itemType === 'signal') &&
+      (itemType === 'statusDot' || itemType === 'signal' || itemType === 'modeFlag') &&
       (typeof item.signal !== 'string' || item.signal.length === 0)
     ) {
       errors.push(`${prefix} (${itemType}): signal must be a non-empty string`)
     }
 
-    if (itemType === 'label' && (typeof item.text !== 'string' || item.text.length === 0)) {
-      errors.push(`${prefix} (label): text must be a non-empty string`)
+    if (
+      (itemType === 'label' || itemType === 'modeFlag') &&
+      (typeof item.text !== 'string' || item.text.length === 0)
+    ) {
+      errors.push(`${prefix} (${itemType}): text must be a non-empty string`)
     }
   })
 
@@ -519,7 +523,7 @@ function checkTopBarSignalRefs(layout: unknown[], known: Set<string>): string[] 
   const warnings: string[] = []
   layout.forEach((item: unknown, idx: number) => {
     if (!isRecord(item)) return
-    if (item.type !== 'statusDot' && item.type !== 'signal') return
+    if (item.type !== 'statusDot' && item.type !== 'signal' && item.type !== 'modeFlag') return
     const signal = typeof item.signal === 'string' ? item.signal : ''
     if (signal.length === 0) return
     if (signal === TOPBAR_LAYOUT_ANY_SIGNAL) return
