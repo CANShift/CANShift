@@ -91,10 +91,24 @@ def is_dev_build():
     The discriminator is the env name (PIOENV) — simpler than threading a new
     APP_BUILD_FLAVOR env var through the build, and it matches the way the
     existing envs are already split (production = crowpanel_28 / debug-perf /
-    secure; dev = sim / debug / native)."""
+    secure; dev = sim / debug / native).
+
+    Also returns True for GitHub Actions pull_request CI runs: those exercise
+    the prod env (crowpanel_28) as a compile check on every PR but the binary
+    is never published, so the placeholder secret is acceptable there. The
+    release workflow runs on tag push (GITHUB_EVENT_NAME=push) and stays
+    subject to the prod gate — release artifacts MUST be built with a real
+    secret from gh-secrets."""
     pio_env = env.get("PIOENV", "") or ""
     lowered = pio_env.lower()
-    return any(token in lowered for token in DEV_ENV_TOKENS)
+    if any(token in lowered for token in DEV_ENV_TOKENS):
+        return True
+    if (
+        os.environ.get("CI") == "true"
+        and os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+    ):
+        return True
+    return False
 
 
 def read_ota_hmac_secret():
