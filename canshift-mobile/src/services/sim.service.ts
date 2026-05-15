@@ -62,6 +62,9 @@ export function stop() {
   }
   useDeviceStore.getState().disconnect()
   useSignalsStore.getState().markStale()
+  // Drop synthetic history so the next real BLE connection's GraphScreen
+  // does not plot real signals on top of stale sim samples (#686).
+  clearBuffer()
   log('info', 'Simulation mode stopped')
 }
 
