@@ -15,7 +15,7 @@
 //   • Bounds are persisted on `close` — saving on every move/resize would
 //     hammer userData unnecessarily.
 
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { IpcChannels } from '../ipc/ipc-channels'
 import type { CliPanelState, CliStateChangedEvent } from '../ipc/cli-detach.types'
@@ -26,6 +26,7 @@ import {
   saveCliWindowBounds,
 } from '../services/cli-window.service'
 import { subscribe, unsubscribe } from '../services/cli-log-bus'
+import { isExternalUrlAllowed } from '../services/security.service'
 
 let cliWindow: BrowserWindow | null = null
 
@@ -69,6 +70,16 @@ export function openCliWindow(getMainWindow: () => BrowserWindow | null): number
   })
 
   const id = cliWindow.id
+
+  // xterm's WebLinksAddon triggers window.open() on link clicks inside the
+  // terminal. Route through the same allowlist the main window uses so a
+  // malicious / file: scheme pasted into logs can't spawn an unsandboxed child.
+  cliWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isExternalUrlAllowed(url)) {
+      void shell.openExternal(url)
+    }
+    return { action: 'deny' }
+  })
 
   cliWindow.once('ready-to-show', () => {
     cliWindow?.show()
