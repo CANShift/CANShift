@@ -21,7 +21,15 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
   isLive: false,
 
   update: (payload) => {
-    pushSample(payload as Record<string, number>)
+    // parseTelemetry can return a partial map (a parser drop yields undefined
+    // for that key). Strip them before pushing so the ring buffer never holds
+    // entries with undefined values — downstream Number.isFinite checks would
+    // otherwise mask the source of the gap.
+    const defined: Record<string, number> = {}
+    for (const [k, v] of Object.entries(payload)) {
+      if (typeof v === 'number') defined[k] = v
+    }
+    pushSample(defined)
     set({ values: payload, lastUpdateMs: Date.now(), isLive: true })
   },
 
