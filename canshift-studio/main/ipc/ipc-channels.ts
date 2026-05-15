@@ -108,8 +108,10 @@ export const IpcChannels = {
   CLI_GET_STATE: 'cli:get-state',
   // Main → renderer: state changes broadcast to every CLI surface.
   CLI_STATE_CHANGED: 'cli:state-changed',
-  // Main → renderer: rebroadcast log entries to other CLI surfaces.
-  CLI_LOG_BROADCAST: 'cli:log-broadcast',
+  // Main → renderer: rebroadcast a batch of log entries to other CLI surfaces.
+  // Payload is `CliLogPayload[]` — coalesced from one or more `publish()`
+  // calls made in the same event-loop turn (#712).
+  CLI_LOG_BROADCAST_BATCH: 'cli:log-broadcast-batch',
   // Renderer → main (fire-and-forget): forward a freshly-pushed log entry.
   CLI_LOG_PUSH: 'cli:log-push',
 } as const

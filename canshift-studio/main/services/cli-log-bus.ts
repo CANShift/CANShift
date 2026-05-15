@@ -10,8 +10,11 @@
 //   • tracks subscribed `WebContents` and rebroadcasts each push to every
 //     subscriber EXCEPT the original sender (matched by `webContents.id`).
 //
-// All operations are synchronous — the actual IPC fan-out is a single
-// `webContents.send` per subscriber, which is itself non-blocking.
+// IPC fan-out is coalesced on a microtask: every `publish()` queues into a
+// per-subscriber pending list, and the very next event-loop turn flushes the
+// queue as a single `webContents.send` per subscriber. Under burst load (a
+// firmware flash session can emit hundreds of log entries per second) this
+// cuts the IPC round-trip count by 1-2 orders of magnitude (#712).
 
 import type { WebContents } from 'electron'
 import { IpcChannels } from '../ipc/ipc-channels'
@@ -21,11 +24,37 @@ const RING_SIZE = 2000
 
 const buffer: CliLogPayload[] = []
 const subscribers = new Set<WebContents>()
+// Per-subscriber pending entries waiting for the next coalesced flush.
+const pending = new Map<WebContents, CliLogPayload[]>()
+let flushScheduled = false
 
 function pushToBuffer(entry: CliLogPayload): void {
   buffer.push(entry)
   if (buffer.length > RING_SIZE) {
     buffer.splice(0, buffer.length - RING_SIZE)
+  }
+}
+
+function scheduleFlush(): void {
+  if (flushScheduled) return
+  flushScheduled = true
+  // queueMicrotask coalesces every `publish()` made in the current event-loop
+  // turn into a single send per subscriber. Tighter than setImmediate (which
+  // would yield to I/O first) and bounded by the runtime, so we don't risk
+  // unbounded queuing under sustained pressure.
+  queueMicrotask(flush)
+}
+
+function flush(): void {
+  flushScheduled = false
+  for (const [wc, entries] of pending) {
+    pending.delete(wc)
+    if (entries.length === 0) continue
+    if (wc.isDestroyed()) {
+      subscribers.delete(wc)
+      continue
+    }
+    wc.send(IpcChannels.CLI_LOG_BROADCAST_BATCH, entries)
   }
 }
 
@@ -46,11 +75,14 @@ export function subscribe(wc: WebContents): void {
 
 export function unsubscribe(wc: WebContents): void {
   subscribers.delete(wc)
+  pending.delete(wc)
 }
 
 /**
- * Records `entry` in the backlog and rebroadcasts it to every subscriber
- * other than the sender.
+ * Records `entry` in the backlog and queues it for rebroadcast to every
+ * subscriber other than the sender. The actual `webContents.send` is
+ * coalesced via `queueMicrotask` so a burst of `publish()` calls in the same
+ * tick results in a single batched send per subscriber.
  */
 export function publish(entry: CliLogPayload, senderId: number): void {
   pushToBuffer(entry)
@@ -58,14 +90,28 @@ export function publish(entry: CliLogPayload, senderId: number): void {
     if (wc.id === senderId) continue
     if (wc.isDestroyed()) {
       subscribers.delete(wc)
+      pending.delete(wc)
       continue
     }
-    wc.send(IpcChannels.CLI_LOG_BROADCAST, entry)
+    let queue = pending.get(wc)
+    if (queue === undefined) {
+      queue = []
+      pending.set(wc, queue)
+    }
+    queue.push(entry)
   }
+  if (pending.size > 0) scheduleFlush()
 }
 
 /** Test-only — clears state between cases. */
 export function __resetForTests(): void {
   buffer.length = 0
   subscribers.clear()
+  pending.clear()
+  flushScheduled = false
+}
+
+/** Test-only — synchronously drain any queued broadcasts. */
+export function __flushForTests(): void {
+  flush()
 }
