@@ -62,12 +62,3 @@ function readConfiguredSecret(): string {
 export function getOtaHmacSecretBytes(): Uint8Array {
   return new Uint8Array(Buffer.from(readConfiguredSecret(), 'utf8'))
 }
-
-/**
- * `true` iff the configured secret is the dev fallback. Useful for surfacing
- * a "OTA is unsigned in this build" indicator in the UI without ever
- * revealing the secret value itself.
- */
-export function isUsingDevOtaSecret(): boolean {
-  return readConfiguredSecret() === DEV_INSECURE_OTA_SECRET
-}
