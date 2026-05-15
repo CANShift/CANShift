@@ -216,12 +216,45 @@ function createWindow(): void {
     callback(picked?.portId ?? '')
   })
 
-  mainWindow.on('ready-to-show', () => {
-    splashWindow?.close()
+  // Belt-and-suspenders splash teardown. Three independent paths can fire:
+  //   1. happy path  — `ready-to-show` from the renderer (preferred)
+  //   2. renderer crash — `did-fail-load` / `render-process-gone`
+  //   3. last resort — a 10 s safety timer for the case where neither event
+  //                    fires (e.g. main blocks before the renderer attaches)
+  // Without these the splash window stays on top forever with no menu to
+  // recover, forcing a force-quit (#699).
+  const SPLASH_SAFETY_TIMEOUT_MS = 10_000
+  const dismissSplash = (): void => {
+    if (splashWindow !== null && !splashWindow.isDestroyed()) {
+      splashWindow.close()
+    }
     splashWindow = null
+  }
+
+  mainWindow.on('ready-to-show', () => {
+    dismissSplash()
     mainWindow?.show()
     if (mainWindow) buildMenu(mainWindow)
   })
+
+  mainWindow.webContents.on('did-fail-load', (_e, code, description) => {
+    logMain('error', `Renderer did-fail-load (${String(code)}): ${description}`)
+    dismissSplash()
+    mainWindow?.show()
+  })
+
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    logMain('error', `Renderer process gone: ${details.reason}`)
+    dismissSplash()
+  })
+
+  setTimeout(() => {
+    if (splashWindow !== null && !splashWindow.isDestroyed()) {
+      logMain('warn', `Splash safety timer fired — renderer never signalled ready-to-show`)
+      dismissSplash()
+      mainWindow?.show()
+    }
+  }, SPLASH_SAFETY_TIMEOUT_MS)
 
   // Prompt before closing the window if there are unsaved config changes.
   // The renderer keeps `configIsDirty` in sync via WINDOW_SET_DIRTY.
