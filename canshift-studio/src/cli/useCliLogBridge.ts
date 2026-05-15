@@ -1,6 +1,6 @@
 // useCliLogBridge.ts — Bidirectional log bridge for CLI surfaces (issue #433).
 //
-// • Subscribes to `CLI_LOG_BROADCAST` so entries produced in another renderer
+// • Subscribes to `CLI_LOG_BROADCAST_BATCH` so entries produced in another renderer
 //   land in this window's `useLogStore`.
 // • Watches the local store for new entries and forwards them to main via
 //   `CLI_LOG_PUSH` so other CLI surfaces can render them too.
@@ -99,16 +99,20 @@ export function useCliLogBridge(): void {
         })
     }
 
-    const onBroadcast = (...args: unknown[]): void => {
+    const onBroadcastBatch = (...args: unknown[]): void => {
       const payload = args[0]
-      if (!isCliLogPayload(payload)) return
-      useLogStore.getState().pushFromBridge(payloadToEntry(payload))
+      if (!Array.isArray(payload)) return
+      const push = useLogStore.getState().pushFromBridge
+      for (const entry of payload) {
+        if (!isCliLogPayload(entry)) continue
+        push(payloadToEntry(entry))
+      }
     }
-    window.ipc.on(IpcChannels.CLI_LOG_BROADCAST, onBroadcast)
+    window.ipc.on(IpcChannels.CLI_LOG_BROADCAST_BATCH, onBroadcastBatch)
 
     return () => {
       cancelled = true
-      window.ipc.off(IpcChannels.CLI_LOG_BROADCAST, onBroadcast)
+      window.ipc.off(IpcChannels.CLI_LOG_BROADCAST_BATCH, onBroadcastBatch)
     }
   }, [])
 

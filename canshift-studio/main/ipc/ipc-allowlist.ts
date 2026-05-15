@@ -106,7 +106,7 @@ export const LISTEN_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.UPDATE_ERROR,
   // CLI panel detach (issue #433) — main → renderer broadcasts
   C.CLI_STATE_CHANGED,
-  C.CLI_LOG_BROADCAST,
+  C.CLI_LOG_BROADCAST_BATCH,
 ])
 
 /** Throws when `channel` is not in the renderer→main invoke allowlist. */
