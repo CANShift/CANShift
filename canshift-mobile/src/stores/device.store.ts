@@ -5,8 +5,12 @@ import type { BleConnectionError } from '../services/ble.errors'
 
 export type ConnectionState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'error'
 
+/** Active data source for the dashboard — drives reactive top-bar badges. */
+export type DeviceMode = 'idle' | 'sim' | 'ble'
+
 interface DeviceState {
   connectionState: ConnectionState
+  mode: DeviceMode
   deviceId: string | null
   deviceName: string | null
   firmwareVersion: string | null
@@ -17,6 +21,7 @@ interface DeviceState {
   error: BleConnectionError | null
 
   setConnectionState: (s: ConnectionState) => void
+  setMode: (m: DeviceMode) => void
   setDevice: (id: string, name: string) => void
   setFirmwareStatus: (version: string, canHealthy: boolean) => void
   setWifiAp: (ssid: string | null, password: string | null) => void
@@ -27,6 +32,7 @@ interface DeviceState {
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
   connectionState: 'idle',
+  mode: 'idle',
   deviceId: null,
   deviceName: null,
   firmwareVersion: null,
@@ -38,6 +44,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setConnectionState: (connectionState) => {
     set({ connectionState })
+  },
+
+  setMode: (mode) => {
+    set({ mode })
   },
 
   setDevice: (deviceId, deviceName) => {
@@ -63,6 +73,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   disconnect: () => {
     set({
       connectionState: 'idle',
+      mode: 'idle',
       deviceId: null,
       deviceName: null,
       firmwareVersion: null,

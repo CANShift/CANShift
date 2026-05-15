@@ -26,11 +26,12 @@ import {
 type RootNav = NativeStackNavigationProp<RootStackParamList>
 
 export default function DashTopBar() {
-  const { deviceName, firmwareVersion, canHealthy } = useDeviceStore(
+  const { deviceName, firmwareVersion, canHealthy, isSim } = useDeviceStore(
     useShallow((s) => ({
       deviceName: s.deviceName,
       firmwareVersion: s.firmwareVersion,
       canHealthy: s.canHealthy,
+      isSim: s.mode === 'sim',
     }))
   )
   const { isLive, activeMapIndex } = useSignalsStore(
@@ -39,7 +40,6 @@ export default function DashTopBar() {
       activeMapIndex: s.values.mi !== undefined ? Math.round(s.values.mi) : undefined,
     }))
   )
-  const isSim = SimService.isRunning()
   const [menuVisible, setMenuVisible] = useState(false)
   const [disconnectVisible, setDisconnectVisible] = useState(false)
 
