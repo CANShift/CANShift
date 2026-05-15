@@ -229,6 +229,10 @@ function createWindow(): void {
   // the main app should never leave a phantom CLI window alive.
   mainWindow.on('closed', () => {
     disposeCliWindow()
+    // Null out the destroyed BrowserWindow reference so late callers
+    // (select-serial-port, safeSend, logMain) see a falsy mainWindow and
+    // short-circuit instead of touching a freed native handle.
+    mainWindow = null
   })
 
   mainWindow.on('close', (event) => {
