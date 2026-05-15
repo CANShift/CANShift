@@ -1,6 +1,13 @@
 // ble.service.ts — BLE connection, telemetry subscription, settings/cmd write
 
-import { BleManager, Device, State, Characteristic, Subscription } from 'react-native-ble-plx'
+import {
+  BleManager,
+  Device,
+  State,
+  Characteristic,
+  Subscription,
+  type BleRestoredState,
+} from 'react-native-ble-plx'
 import { Platform } from 'react-native'
 import {
   BLE_SERVICE_UUID,
@@ -52,6 +59,13 @@ export type BlePermissionState =
 // ---------------------------------------------------------------------------
 // Auto-reconnect tuning (module-level constants)
 // ---------------------------------------------------------------------------
+
+/**
+ * iOS-only: stable identifier the OS uses to associate restored BLE state with
+ * this app's central manager across background/relaunch cycles. Must remain
+ * stable for the app's lifetime — changing it discards any pending restoration.
+ */
+const BLE_RESTORE_STATE_IDENTIFIER = 'canshift.ble.central'
 
 const RECONNECT_INITIAL_DELAY_MS = 1_000
 const RECONNECT_MAX_DELAY_MS = 30_000
@@ -150,7 +164,19 @@ export class BleService {
   }
 
   constructor(deps: BleServiceDeps = {}) {
-    const factory = deps.managerFactory ?? (() => new BleManager())
+    const factory =
+      deps.managerFactory ??
+      (() =>
+        new BleManager({
+          // iOS BLE state restoration: when the OS relaunches the app after a
+          // BLE event in the background, it hands back any peripherals that
+          // were connected at suspension time. Without this, every foreground
+          // cycle triggers a fresh scan+connect.
+          restoreStateIdentifier: BLE_RESTORE_STATE_IDENTIFIER,
+          restoreStateFunction: (restoredState) => {
+            this.handleRestoredState(restoredState)
+          },
+        }))
     this.manager = factory()
     this.requestAndroidPermissions = deps.requestAndroidPermissions ?? requestAndroidBlePermissions
   }
@@ -273,51 +299,7 @@ export class BleService {
       // A successful connect supersedes any in-flight reconnect loop.
       useReconnectStore.getState().stop()
 
-      // Subscribe to TELE notifications
-      this.teleSub = device.monitorCharacteristicForService(
-        BLE_SERVICE_UUID,
-        BLE_CHAR_TELE,
-        (error: Error | null, char: Characteristic | null) => {
-          if (error || !char?.value) return
-          const payload = parseTelemetry(decodeBase64(char.value))
-          if (!payload) {
-            log('warn', 'BLE: rejected malformed telemetry payload')
-            return
-          }
-          useSignalsStore.getState().update(payload)
-        }
-      )
-
-      // Subscribe to STATUS notifications
-      this.statusSub = device.monitorCharacteristicForService(
-        BLE_SERVICE_UUID,
-        BLE_CHAR_STATUS,
-        (error: Error | null, char: Characteristic | null) => {
-          if (error || !char?.value) return
-          const s = parseStatus(decodeBase64(char.value))
-          if (!s) {
-            log('warn', 'BLE: rejected malformed status payload')
-            return
-          }
-          const store = useDeviceStore.getState()
-          store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
-          store.setWifiAp(s.ap_ssid ?? null, s.ap_password ?? null)
-          if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
-        }
-      )
-
-      // Handle unexpected disconnection — kick off the auto-reconnect loop.
-      this.disconnectSub = device.onDisconnected(() => {
-        this.removeSubscriptions()
-        this.stopStalenessTimer()
-        this.connectedDevice = null
-        useDeviceStore.getState().disconnect()
-        log('warn', `Device ${deviceId} disconnected unexpectedly`)
-        // If a loop is already running (e.g. rapid bounce), runReconnectLoop
-        // is a no-op; otherwise it starts a fresh bounded backoff sequence.
-        void this.runReconnectLoop(deviceId)
-      })
-
+      this.bindDeviceSubscriptions(device)
       this.startStalenessTimer()
     } catch (err) {
       this.removeSubscriptions()
@@ -588,6 +570,106 @@ export class BleService {
   // -------------------------------------------------------------------------
   // Internal state helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * Bind TELE / STATUS / disconnect listeners to an already-connected device
+   * and record it as the current connection. Shared between the fresh-connect
+   * path and the iOS state-restoration path.
+   */
+  private bindDeviceSubscriptions(device: Device): void {
+    this.connectedDevice = device
+
+    this.teleSub = device.monitorCharacteristicForService(
+      BLE_SERVICE_UUID,
+      BLE_CHAR_TELE,
+      (error: Error | null, char: Characteristic | null) => {
+        if (error || !char?.value) return
+        const payload = parseTelemetry(decodeBase64(char.value))
+        if (!payload) {
+          log('warn', 'BLE: rejected malformed telemetry payload')
+          return
+        }
+        useSignalsStore.getState().update(payload)
+      }
+    )
+
+    this.statusSub = device.monitorCharacteristicForService(
+      BLE_SERVICE_UUID,
+      BLE_CHAR_STATUS,
+      (error: Error | null, char: Characteristic | null) => {
+        if (error || !char?.value) return
+        const s = parseStatus(decodeBase64(char.value))
+        if (!s) {
+          log('warn', 'BLE: rejected malformed status payload')
+          return
+        }
+        const store = useDeviceStore.getState()
+        store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
+        store.setWifiAp(s.ap_ssid ?? null, s.ap_password ?? null)
+        if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
+      }
+    )
+
+    this.disconnectSub = device.onDisconnected(() => {
+      this.removeSubscriptions()
+      this.stopStalenessTimer()
+      this.connectedDevice = null
+      useDeviceStore.getState().disconnect()
+      log('warn', `Device ${device.id} disconnected unexpectedly`)
+      void this.runReconnectLoop(device.id)
+    })
+  }
+
+  /**
+   * iOS-only: invoked by `BleManager` shortly after construction when the OS
+   * is handing back peripherals that were connected at suspension time.
+   *
+   * Strategy:
+   *  - If iOS returned a connected peripheral, re-bind subscriptions to it and
+   *    seed the device store so the UI reflects the restored connection
+   *    without going through scan → connect.
+   *  - If nothing was restored, fall through silently — the existing
+   *    foreground-reconnect path handles the connect-on-demand case.
+   */
+  private handleRestoredState(restoredState: BleRestoredState | null): void {
+    if (!restoredState) {
+      log('info', 'BLE restore: no prior state (fresh launch)')
+      return
+    }
+
+    const peripherals = restoredState.connectedPeripherals
+    if (peripherals.length === 0) {
+      log('info', 'BLE restore: state present but no connected peripherals')
+      return
+    }
+
+    // Multiple connected peripherals is not a flow CANShift supports today —
+    // we only ever bond to one dashboard at a time. Take the first and log if
+    // there's more than one for future debugging.
+    if (peripherals.length > 1) {
+      log('warn', `BLE restore: ${String(peripherals.length)} peripherals restored — using first`)
+    }
+    const device = peripherals[0]
+    if (!device) return
+
+    log('info', `BLE restore: re-binding to ${device.name ?? BLE_DEVICE_NAME} (${device.id})`)
+
+    // Defensive: clear any subscriptions left from a prior session before
+    // re-binding to the restored device.
+    this.removeSubscriptions()
+    this.bindDeviceSubscriptions(device)
+
+    const store = useDeviceStore.getState()
+    store.setDevice(device.id, device.name ?? BLE_DEVICE_NAME)
+
+    // Persist as last-known device so the foreground-reconnect fallback can
+    // also find it if the OS later drops the link.
+    void rememberDevice(device.id)
+    // Any in-flight reconnect from a prior session is now moot.
+    useReconnectStore.getState().stop()
+
+    this.startStalenessTimer()
+  }
 
   private startStalenessTimer(): void {
     this.stalenessTimer = setInterval(() => {
