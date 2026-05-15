@@ -373,15 +373,6 @@ describe('validateDashboard — button widget type fields', () => {
     return { id: 'w1', type: 'button', ...cfg }
   }
 
-  it('accepts a button with a valid targetPageId', () => {
-    const result = validateDashboard(
-      minimalConfig({
-        pages: [minimalPage({ widgets: [buttonWidget({ targetPageId: 'p2' })] })],
-      })
-    )
-    expect(result.errors.filter((e) => e.includes('(button)'))).toHaveLength(0)
-  })
-
   it('accepts a button with an actions array', () => {
     const result = validateDashboard(
       minimalConfig({
@@ -399,26 +390,88 @@ describe('validateDashboard — button widget type fields', () => {
     expect(result.errors.filter((e) => e.includes('(button)'))).toHaveLength(0)
   })
 
-  it('rejects a button with an empty targetPageId string', () => {
+  it('rejects a legacy targetPageId-only button (must be migrated to actions first)', () => {
     const result = validateDashboard(
       minimalConfig({
-        pages: [minimalPage({ widgets: [buttonWidget({ targetPageId: '' })] })],
+        pages: [minimalPage({ widgets: [buttonWidget({ targetPageId: 'p2' })] })],
       })
     )
     expect(
-      result.errors.some((e) => e.includes('(button): targetPageId must be a non-empty string'))
+      result.errors.some((e) => e.includes('(button): actions must be a non-empty array'))
     ).toBe(true)
   })
 
-  it('rejects a button with neither targetPageId nor actions', () => {
+  it('rejects a button with an empty actions array', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [minimalPage({ widgets: [buttonWidget({ actions: [] })] })],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('(button): actions must be a non-empty array'))
+    ).toBe(true)
+  })
+
+  it('rejects a button with no actions field at all', () => {
     const result = validateDashboard(
       minimalConfig({
         pages: [minimalPage({ widgets: [buttonWidget({})] })],
       })
     )
     expect(
-      result.errors.some((e) => e.includes('(button): targetPageId must be a non-empty string'))
+      result.errors.some((e) => e.includes('(button): actions must be a non-empty array'))
     ).toBe(true)
+  })
+
+  it('rejects a navigate action with empty pageId', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              buttonWidget({
+                actions: [{ category: 'dashboard', type: 'navigate', pageId: '' }],
+              }),
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('navigate.pageId must be a non-empty string'))
+    ).toBe(true)
+  })
+
+  it('rejects a map_switch action with non-integer mapIndex', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [
+              buttonWidget({
+                actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 1.5 }],
+              }),
+            ],
+          }),
+        ],
+      })
+    )
+    expect(
+      result.errors.some((e) => e.includes('map_switch.mapIndex must be an integer'))
+    ).toBe(true)
+  })
+
+  it('rejects an action with unknown category/type combination', () => {
+    const result = validateDashboard(
+      minimalConfig({
+        pages: [
+          minimalPage({
+            widgets: [buttonWidget({ actions: [{ category: 'bogus', type: 'whatever' }] })],
+          }),
+        ],
+      })
+    )
+    expect(result.errors.some((e) => e.includes('unknown action'))).toBe(true)
   })
 })
 
@@ -1701,7 +1754,7 @@ describe('validateDashboard — widget config branches', () => {
               {
                 id: 'b1',
                 type: 'button',
-                targetPageId: 'p1',
+                actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p1' }],
                 colors: { normal: 'red' },
               },
             ],
@@ -1725,7 +1778,7 @@ describe('validateDashboard — widget config branches', () => {
               {
                 id: 'b1',
                 type: 'button',
-                targetPageId: 'p1',
+                actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p1' }],
                 colors: { active: 'green' },
               },
             ],

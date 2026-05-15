@@ -677,15 +677,11 @@ function validateWarning(widget: UnknownRecord, cfg: UnknownRecord, prefix: stri
 function validateButton(cfg: UnknownRecord, prefix: string): string[] {
   const errors: string[] = []
 
-  if (typeof cfg.targetPageId !== 'undefined') {
-    if (typeof cfg.targetPageId !== 'string' || cfg.targetPageId.length === 0) {
-      errors.push(`${prefix} (button): targetPageId must be a non-empty string`)
-    }
-  } else if (!Array.isArray(cfg.actions)) {
-    errors.push(`${prefix} (button): targetPageId must be a non-empty string`)
-  }
-
-  if (Array.isArray(cfg.actions)) {
+  // Legacy `targetPageId` is migrated to `actions[]` by migration-runner before
+  // configs reach the validator — validator only accepts the post-migration shape.
+  if (!Array.isArray(cfg.actions) || cfg.actions.length === 0) {
+    errors.push(`${prefix} (button): actions must be a non-empty array`)
+  } else {
     cfg.actions.forEach((action: unknown, idx: number) => {
       errors.push(...validateButtonAction(action, `${prefix} (button).actions[${idx.toString()}]`))
     })
@@ -705,8 +701,39 @@ function validateButton(cfg: UnknownRecord, prefix: string): string[] {
 }
 
 function validateButtonAction(action: unknown, prefix: string): string[] {
-  if (!isRecord(action)) return []
-  if (action.category !== 'ecu' || action.type !== 'can_raw') return []
+  if (!isRecord(action)) {
+    return [`${prefix}: action must be an object`]
+  }
+  const { category, type } = action
+  if (category === 'dashboard' && type === 'navigate') {
+    return validateNavigateAction(action, prefix)
+  }
+  if (category === 'ecu' && type === 'map_switch') {
+    return validateMapSwitchAction(action, prefix)
+  }
+  if (category === 'ecu' && type === 'can_raw') {
+    return validateCanRawAction(action, prefix)
+  }
+  return [
+    `${prefix}: unknown action — category+type must be one of dashboard/navigate, ecu/map_switch, ecu/can_raw`,
+  ]
+}
+
+function validateNavigateAction(action: UnknownRecord, prefix: string): string[] {
+  if (typeof action.pageId !== 'string' || action.pageId.length === 0) {
+    return [`${prefix}: navigate.pageId must be a non-empty string`]
+  }
+  return []
+}
+
+function validateMapSwitchAction(action: UnknownRecord, prefix: string): string[] {
+  if (!isFiniteNumber(action.mapIndex) || !Number.isInteger(action.mapIndex)) {
+    return [`${prefix}: map_switch.mapIndex must be an integer`]
+  }
+  return []
+}
+
+function validateCanRawAction(action: UnknownRecord, prefix: string): string[] {
   const errors: string[] = []
   errors.push(...validateCanRawData(action.data, prefix))
   if (action.dataOff !== undefined) {
