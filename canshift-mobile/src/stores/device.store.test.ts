@@ -13,6 +13,7 @@ describe('useDeviceStore', () => {
   it('exposes a clean initial state', () => {
     const state = useDeviceStore.getState()
     expect(state.connectionState).toBe('idle')
+    expect(state.mode).toBe('idle')
     expect(state.deviceId).toBeNull()
     expect(state.deviceName).toBeNull()
     expect(state.firmwareVersion).toBeNull()
@@ -21,6 +22,15 @@ describe('useDeviceStore', () => {
     expect(state.wifiApPassword).toBeNull()
     expect(state.isDayMode).toBeNull()
     expect(state.error).toBeNull()
+  })
+
+  it('setMode updates only the mode field', () => {
+    useDeviceStore.getState().setMode('sim')
+    expect(useDeviceStore.getState().mode).toBe('sim')
+    useDeviceStore.getState().setMode('ble')
+    expect(useDeviceStore.getState().mode).toBe('ble')
+    useDeviceStore.getState().setMode('idle')
+    expect(useDeviceStore.getState().mode).toBe('idle')
   })
 
   it('setConnectionState updates only the connection state', () => {
@@ -100,6 +110,7 @@ describe('useDeviceStore', () => {
 
   it('disconnect resets every field back to the initial idle state', () => {
     useDeviceStore.getState().setDevice('AA:BB:CC', 'CANShift-01')
+    useDeviceStore.getState().setMode('ble')
     useDeviceStore.getState().setFirmwareStatus('1.2.3', true)
     useDeviceStore.getState().setWifiAp('CANShift-AP', 'abcDEF12')
     useDeviceStore.getState().setIsDayMode(true)
@@ -109,6 +120,7 @@ describe('useDeviceStore', () => {
 
     const state = useDeviceStore.getState()
     expect(state.connectionState).toBe('idle')
+    expect(state.mode).toBe('idle')
     expect(state.deviceId).toBeNull()
     expect(state.deviceName).toBeNull()
     expect(state.firmwareVersion).toBeNull()
