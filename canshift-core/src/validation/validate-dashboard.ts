@@ -1,4 +1,11 @@
 // validate-dashboard.ts — Dashboard config validation
+//
+// Issue #673: The Zod `ButtonActionSchema` (see `../schemas/dashboard.ts`) is
+// the public runtime source of truth for ButtonAction shapes. This validator
+// stays hand-rolled so its error messages keep matching the existing public
+// contract (tested in `__tests__/validate-dashboard.test.ts`); subsequent PRs
+// will migrate page/widget/topbar slices schema-by-schema once the matching
+// error-shape tests are reconciled with Zod issue formatting.
 
 import {
   CAN_RAW_DATA_MAX_HEX_CHARS,
