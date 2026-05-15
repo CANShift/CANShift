@@ -3,7 +3,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } from 'electron'
 import { join, basename } from 'path'
 import { readFileSync } from 'fs'
-import { registerIpcHandlers, usbService } from './ipc/ipc-handlers'
+import { disposeIpcHandlers, registerIpcHandlers, usbService } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
@@ -302,6 +302,8 @@ app.on('before-quit', () => {
   usbService.disconnect().catch(() => {
     /* best-effort */
   })
+  // Stop the 10 Hz CAN-frame flush interval so Node's event loop can drain.
+  disposeIpcHandlers()
   // Clear flash port so Web Serial auto-select is reset on next launch
   firmwareService.setFlashPort(null)
   // Tear down the detached CLI window so it doesn't keep the app alive.
