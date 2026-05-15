@@ -35,7 +35,7 @@ interface LogState {
   push: (level: LogLevel, message: string, scope?: string) => void
   /**
    * Inject an entry produced in another renderer process (e.g. forwarded from
-   * the detached CLI window via `CLI_LOG_BROADCAST` — issue #433). Bypasses
+   * the detached CLI window via `CLI_LOG_BROADCAST_BATCH` — issue #433). Bypasses
    * the bridge-out path so we don't echo it back through main.
    */
   pushFromBridge: (entry: LogEntry) => void
