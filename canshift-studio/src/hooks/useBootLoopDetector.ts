@@ -24,28 +24,10 @@ import {
 } from '../stores/bootLoop.store'
 import { BOOT_VERSION_RE } from './useFirmwareCheck'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { isDeviceLogPayload } from '../services/ipc.service'
 
 /** Sentinel emitted by the firmware once setup() finishes — see #486. */
 const BOOT_READY_RE = /\bReady\b/
-
-interface DeviceLogPayload {
-  level: string
-  tag: string
-  message: string
-}
-
-function isDeviceLogPayload(v: unknown): v is DeviceLogPayload {
-  return (
-    typeof v === 'object' &&
-    v !== null &&
-    'level' in v &&
-    'tag' in v &&
-    'message' in v &&
-    typeof (v as { tag?: unknown }).tag === 'string' &&
-    typeof (v as { message?: unknown }).message === 'string' &&
-    typeof (v as { level?: unknown }).level === 'string'
-  )
-}
 
 export function useBootLoopDetector(): void {
   const connected = useDeviceStore((s) => s.connected)

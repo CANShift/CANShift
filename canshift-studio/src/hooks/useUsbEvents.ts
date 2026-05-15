@@ -19,6 +19,7 @@ import { useCanHealthStore } from '../stores/canHealth.store'
 import { useErrorStore } from '../stores/error.store'
 import { IpcChannels } from '../../main/ipc/ipc-channels'
 import type { CanHealth } from '../services/ipc.service'
+import { isDeviceLogPayload } from '../services/ipc.service'
 import type { LogLevel } from '../stores/log.store'
 
 interface ConnectionChangedPayload {
@@ -31,12 +32,6 @@ interface AppLogPayload {
   level: LogLevel
   message: string
   ts: number
-}
-
-interface DeviceLogPayload {
-  level: string
-  tag: string
-  message: string
 }
 
 // Map a firmware log level letter to the renderer's LogLevel.
@@ -64,10 +59,6 @@ function isConnectionChangedPayload(v: unknown): v is ConnectionChangedPayload {
 
 function isAppLogPayload(v: unknown): v is AppLogPayload {
   return typeof v === 'object' && v !== null && 'message' in v && 'level' in v
-}
-
-function isDeviceLogPayload(v: unknown): v is DeviceLogPayload {
-  return typeof v === 'object' && v !== null && 'level' in v && 'tag' in v && 'message' in v
 }
 
 function isCanHealth(v: unknown): v is CanHealth {
