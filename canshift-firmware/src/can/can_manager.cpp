@@ -162,7 +162,7 @@ void CanManager::tick() {
         if (!(message.rtr)) {
             // Data frame (not remote frame)
             CanParser::parseFrame(message.identifier, message.data,
-                                      static_cast<uint8_t>(message.data_length_code));
+                                  static_cast<uint8_t>(message.data_length_code));
 
             // Forward raw frame to USB scan queue if scanner is active (best-effort, no lock)
             UsbComm::CanScanFrame sf;

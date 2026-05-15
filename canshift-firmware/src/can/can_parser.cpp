@@ -104,8 +104,8 @@ void parseMapInfoFrame(const uint8_t *data, uint8_t len) {
 // ---------------------------------------------------------------------------
 
 float CanParser::detail::decodeBytes(const uint8_t *data, uint8_t startByte, uint8_t byteLen,
-                                         bool bigEndian, bool isSigned, uint8_t bitMask,
-                                         float scale, float offset) {
+                                     bool bigEndian, bool isSigned, uint8_t bitMask, float scale,
+                                     float offset) {
     static constexpr uint16_t kCanFrameMaxBytes = 8;
     if (byteLen == 0 ||
         static_cast<uint16_t>(startByte) + static_cast<uint16_t>(byteLen) > kCanFrameMaxBytes)
