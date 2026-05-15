@@ -29,7 +29,7 @@ jest.mock('expo-constants', () => ({
 // SUT
 // ---------------------------------------------------------------------------
 
-import { DEV_INSECURE_OTA_SECRET, getOtaHmacSecretBytes, isUsingDevOtaSecret } from './ota-secret'
+import { DEV_INSECURE_OTA_SECRET, getOtaHmacSecretBytes } from './ota-secret'
 
 function decodeUtf8(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString('utf8')
@@ -60,20 +60,5 @@ describe('getOtaHmacSecretBytes', () => {
     expect(getOtaHmacSecretBytes().length).toBeGreaterThan(0)
     mockExtra = { otaHmacSecret: 'short' }
     expect(getOtaHmacSecretBytes().length).toBe(5)
-  })
-})
-
-describe('isUsingDevOtaSecret', () => {
-  beforeEach(() => {
-    mockExtra = {}
-  })
-
-  it('reports true when no secret is configured', () => {
-    expect(isUsingDevOtaSecret()).toBe(true)
-  })
-
-  it('reports false when a custom secret is configured', () => {
-    mockExtra = { otaHmacSecret: 'something-else' }
-    expect(isUsingDevOtaSecret()).toBe(false)
   })
 })

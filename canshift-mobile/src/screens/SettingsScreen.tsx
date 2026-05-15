@@ -44,6 +44,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [brightness, setBrightness] = useState(80)
   const [sleep, setSleep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [dayNightPending, setDayNightPending] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
   const [calibrateConfirmOpen, setCalibrateConfirmOpen] = useState(false)
   const [unauthorizedPlatform, setUnauthorizedPlatform] = useState<BlePermissionPlatform | null>(
@@ -103,15 +104,24 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const handleSetDayNight = async (target: boolean) => {
     // Idempotent at the UI level — tapping the active segment is a no-op.
-    if (isDayMode === target) return
+    // Also no-op while a write is already in flight, otherwise rapid taps
+    // queue multiple BLE writes against a slow link (#707).
+    if (isDayMode === target || dayNightPending) return
+    setDayNightPending(true)
     try {
       // Prefer the explicit command. Older firmware (no set_day_night handler)
       // ignores it gracefully (logs a warning), so we don't double-fire by
       // also sending toggle_day_night — that would defeat the idempotency
       // guarantee the new command exists to provide.
       await BleService.sendCmd('set_day_night', { day: target })
+      Toast.show({
+        type: 'success',
+        text1: target ? 'Day mode' : 'Night mode',
+      })
     } catch (err) {
       handleBleFailure(err, 'Error')
+    } finally {
+      setDayNightPending(false)
     }
   }
 
@@ -190,6 +200,7 @@ export default function SettingsScreen({ navigation }: Props) {
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
               onPress={() => void handleSetDayNight(false)}
+              disabled={dayNightPending}
             >
               <Text style={[styles.segLabel, isDayMode === false && styles.segLabelActive]}>
                 Night
@@ -198,6 +209,7 @@ export default function SettingsScreen({ navigation }: Props) {
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === true && styles.segBtnActive]}
               onPress={() => void handleSetDayNight(true)}
+              disabled={dayNightPending}
             >
               <Text style={[styles.segLabel, isDayMode === true && styles.segLabelActive]}>
                 Day
