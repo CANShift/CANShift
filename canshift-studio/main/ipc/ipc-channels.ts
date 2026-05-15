@@ -47,6 +47,10 @@ export const IpcChannels = {
   FIRMWARE_DOWNLOAD: 'firmware:download',
   // Main → renderer (download progress events for FIRMWARE_DOWNLOAD)
   FIRMWARE_DOWNLOAD_PROGRESS: 'firmware:download-progress',
+  // Download a small text sibling (e.g. .sha256). Same host allowlist as
+  // FIRMWARE_DOWNLOAD, capped server-side at FIRMWARE_TEXT_MAX_BYTES so a
+  // hostile mirror can't stream an unbounded body through main.
+  FIRMWARE_DOWNLOAD_TEXT: 'firmware:download-text',
 
   // Read the current dashboard.json from the connected device's storage.
   DEVICE_GET_CONFIG: 'device:get-config',
