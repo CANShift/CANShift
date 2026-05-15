@@ -6,7 +6,7 @@
 // BLE service to retry against the last-known device — but only if we're not
 // already connected/connecting and the user didn't explicitly disconnect.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { AppState, type AppStateStatus, type NativeEventSubscription } from 'react-native'
 import { useDeviceStore, type ConnectionState } from '../stores/device.store'
 import { useReconnectStore } from '../stores/reconnect.store'
@@ -102,22 +102,30 @@ export async function handleAppStateTransition(
  * Mount once at the top of the tree (e.g. in `App.tsx`).
  */
 export function useBleForegroundReconnect(deps: BleForegroundReconnectDeps = {}): void {
-  const resolved = useRef<ResolvedDeps>(resolveDeps(deps))
-  const lastStateRef = useRef<AppStateStatus>(resolved.current.appState.currentState)
+  const resolved = useMemo<ResolvedDeps>(
+    () => resolveDeps(deps),
+    [
+      deps.appState,
+      deps.tryReconnect,
+      deps.showToast,
+      deps.getConnectionState,
+      deps.getIsReconnecting,
+    ]
+  )
+  const lastStateRef = useRef<AppStateStatus>(resolved.appState.currentState)
 
   useEffect(() => {
-    const current = resolved.current
-    const subscription: NativeEventSubscription = current.appState.addEventListener(
+    const subscription: NativeEventSubscription = resolved.appState.addEventListener(
       'change',
       (next) => {
         const prev = lastStateRef.current
         lastStateRef.current = next
-        void handleAppStateTransition(prev, next, current)
+        void handleAppStateTransition(prev, next, resolved)
       }
     )
 
     return () => {
       subscription.remove()
     }
-  }, [])
+  }, [resolved])
 }

@@ -16,7 +16,13 @@ jest.mock('react-native-ble-plx', () => ({
   State: { PoweredOn: 'PoweredOn' },
 }))
 
-import { handleAppStateTransition } from './use-ble-foreground-reconnect'
+import { renderHook } from '@testing-library/react-native'
+import type { AppStateStatus, NativeEventSubscription } from 'react-native'
+import {
+  handleAppStateTransition,
+  useBleForegroundReconnect,
+  type BleForegroundReconnectDeps,
+} from './use-ble-foreground-reconnect'
 import type { ConnectionState } from '../stores/device.store'
 
 interface MakeDepsOverrides {
@@ -113,5 +119,66 @@ describe('handleAppStateTransition', () => {
     })
     await expect(handleAppStateTransition('background', 'active', deps)).resolves.toBeUndefined()
     expect(deps.showToast).not.toHaveBeenCalled()
+  })
+})
+
+describe('useBleForegroundReconnect', () => {
+  type ChangeListener = (state: AppStateStatus) => void
+
+  function makeAppStateStub() {
+    const listeners: ChangeListener[] = []
+    const addEventListener = jest.fn((event: string, cb: ChangeListener) => {
+      if (event === 'change') listeners.push(cb)
+      const subscription: NativeEventSubscription = {
+        remove: jest.fn(() => {
+          const idx = listeners.indexOf(cb)
+          if (idx >= 0) listeners.splice(idx, 1)
+        }),
+      }
+      return subscription
+    })
+    return {
+      appState: {
+        addEventListener,
+        currentState: 'active' as AppStateStatus,
+      },
+      emit: (next: AppStateStatus) => {
+        listeners.slice().forEach((cb) => {
+          cb(next)
+        })
+      },
+    }
+  }
+
+  it('re-resolves deps when props change so updated stubs take effect', async () => {
+    const firstTry = jest.fn(() => Promise.resolve(true))
+    const secondTry = jest.fn(() => Promise.resolve(true))
+    const stub = makeAppStateStub()
+
+    const idle: ConnectionState = 'idle'
+    const baseDeps: BleForegroundReconnectDeps = {
+      appState: stub.appState,
+      tryReconnect: firstTry,
+      showToast: jest.fn(),
+      getConnectionState: () => idle,
+      getIsReconnecting: () => false,
+    }
+
+    const { rerender } = renderHook(
+      (deps: BleForegroundReconnectDeps) => {
+        useBleForegroundReconnect(deps)
+      },
+      { initialProps: baseDeps }
+    )
+
+    rerender({ ...baseDeps, tryReconnect: secondTry })
+
+    // Drive a background→active transition; the latest tryReconnect must win.
+    stub.emit('background')
+    stub.emit('active')
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(secondTry).toHaveBeenCalledTimes(1)
+    expect(firstTry).not.toHaveBeenCalled()
   })
 })
