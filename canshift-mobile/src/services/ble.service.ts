@@ -265,6 +265,7 @@ export class BleService {
       }
 
       setDevice(deviceId, device.name ?? BLE_DEVICE_NAME)
+      useDeviceStore.getState().setMode('ble')
       log('info', `Connected to ${device.name ?? BLE_DEVICE_NAME} (${deviceId})`)
 
       // Persist for auto-reconnect on next launch / drop. Fire-and-forget.
