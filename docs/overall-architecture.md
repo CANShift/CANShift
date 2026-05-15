@@ -2,11 +2,10 @@
 
 ## System Purpose
 
-CANShift is a configurable real-time automotive dashboard system for the VW VR6 2.9 engine with MaxxECU Street ECU.
+CANShift is a configurable real-time automotive dashboard that works with any CAN-enabled ECU and vehicle. Signal mapping is fully runtime-configurable via `signals.json` — no firmware recompile needed to adapt to a different ECU or car.
 
 Hardware context:
-- ECU: MaxxECU Street
-- Engine: VW VR6 2.9
+- ECU: any CAN-enabled ECU
 - Display: Elecrow CrowPanel 2.8" ESP32 (320×240, ILI9341 + XPT2046)
 - CAN transceiver: Adafruit CAN Pal (TJA1051T/3)
 
@@ -64,9 +63,9 @@ Hardware context:
 ### Real-time operation (no PC connected)
 
 ```
-MaxxECU Street
+Your ECU
     │
-    │ CAN bus 500kbps
+    │ CAN bus (configurable speed)
     ▼
 Adafruit CAN Pal (TJA1051T/3)
     │ TWAI
@@ -77,7 +76,7 @@ ESP32 TWAI controller
 CanManager (FreeRTOS task, core 0)
     │ raw CAN frames
     ▼
-MaxxEcuParser → SignalStore (thread-safe)
+CanParser → SignalStore (thread-safe)
                     │
                     ├── AlertEngine (rev limiter, warnings)
                     │       │

@@ -129,9 +129,8 @@ export interface NavigateAction {
 
 /**
  * Ask the ECU to switch to a specific map slot.
- * Requires a CAN output frame configured in MaxxECU.
- * Map index is 1-based (MaxxECU maps 1–8).
- * NOTE: CAN frame ID / encoding is ECU-specific and unverified.
+ * Requires a map-switch CAN output frame configured in your ECU.
+ * Map index is 1-based. Frame ID and encoding are configured in signals.json.
  */
 export interface MapSwitchAction {
   category: 'ecu'

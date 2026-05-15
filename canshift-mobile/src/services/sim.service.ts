@@ -1,6 +1,6 @@
 // sim.service.ts — Simulated device for UI development without hardware
 //
-// Mimics BLE telemetry: generates realistic VR6 values that cycle over time.
+// Mimics BLE telemetry: generates synthetic engine values that cycle over time.
 // Call start() to enter sim mode; stop() to exit.
 
 import { useDeviceStore } from '../stores/device.store'

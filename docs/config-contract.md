@@ -80,7 +80,7 @@ Schema version is defined in `canshift-core/src/index.ts` as `CURRENT_SCHEMA_VER
 ```json
 {
   "version": "1.0.0",
-  "protocol": "maxxecu_v1.2",
+  "protocol": "custom_v1.0",
   "canSpeedKbps": 500,
   "signals": [
     {
@@ -173,7 +173,7 @@ ConfigLoader::loadAll() reads all three JSON files
     ▼
 ThemeManager::apply() → styles LVGL
 PageManager::init() → creates all LVGL page screens
-MaxxEcuParser::loadSignalDefinitions() → configures CAN parser
+CanParser::loadSignalDefinitions() → configures CAN parser
 ```
 
 ---
