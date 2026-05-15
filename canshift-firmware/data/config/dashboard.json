@@ -575,7 +575,7 @@
         {
           "id": "btn_launch",
           "type": "button",
-          "signal": "",
+          "signal": "flag_launch_ctrl",
           "layout": { "x": 0, "y": 112, "w": 160, "h": 56, "zOrder": 0 },
           "style": {
             "primaryColor": "#FF4444",
@@ -599,7 +599,7 @@
         {
           "id": "btn_antilag",
           "type": "button",
-          "signal": "",
+          "signal": "flag_anti_lag",
           "layout": { "x": 160, "y": 112, "w": 160, "h": 56, "zOrder": 0 },
           "style": {
             "primaryColor": "#FF4444",
