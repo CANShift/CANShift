@@ -54,7 +54,7 @@ SemaphoreHandle_t g_lvglMutex = nullptr;
 // so xTaskCreatePinnedToCore fails. Pre-allocating here guarantees the blocks
 // are reserved from the unfragmented boot heap (~160 KB free).
 // ---------------------------------------------------------------------------
-static StackType_t *s_uiStack  = nullptr;
+static StackType_t *s_uiStack = nullptr;
 static StackType_t *s_canStack = nullptr;
 static StackType_t *s_usbStack = nullptr;
 #if APP_BLE_ENABLED
@@ -102,15 +102,15 @@ static void startLvglTickTimer() {
 // allocation fails; the flush callback is synchronous so there is no penalty.
 // ---------------------------------------------------------------------------
 static void preallocateTaskStacks() {
-    s_uiStack  = static_cast<StackType_t *>(
-        heap_caps_malloc(TASK_STACK_UI  * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
-    s_canStack = static_cast<StackType_t *>(
-        heap_caps_malloc(TASK_STACK_CAN * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
-    s_usbStack = static_cast<StackType_t *>(
-        heap_caps_malloc(TASK_STACK_USB * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+    s_uiStack = static_cast<StackType_t *>(heap_caps_malloc(TASK_STACK_UI * sizeof(StackType_t),
+                                                            MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+    s_canStack = static_cast<StackType_t *>(heap_caps_malloc(
+        TASK_STACK_CAN * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+    s_usbStack = static_cast<StackType_t *>(heap_caps_malloc(
+        TASK_STACK_USB * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
 #if APP_BLE_ENABLED
-    s_bleStack = static_cast<StackType_t *>(
-        heap_caps_malloc(TASK_STACK_BLE * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+    s_bleStack = static_cast<StackType_t *>(heap_caps_malloc(
+        TASK_STACK_BLE * sizeof(StackType_t), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
 #endif
     if (!s_uiStack || !s_canStack || !s_usbStack
 #if APP_BLE_ENABLED
@@ -130,8 +130,8 @@ static void preallocateTaskStacks() {
 // succeeds here even with the fragmented post-lv_init() heap.
 // ---------------------------------------------------------------------------
 static void createAllTasks() {
-    xTaskCreateStaticPinnedToCore(taskUI, "ui", TASK_STACK_UI, nullptr, TASK_PRIO_UI,
-                                  s_uiStack, &s_uiTaskTCB, TASK_CORE_UI);
+    xTaskCreateStaticPinnedToCore(taskUI, "ui", TASK_STACK_UI, nullptr, TASK_PRIO_UI, s_uiStack,
+                                  &s_uiTaskTCB, TASK_CORE_UI);
 
 #if !APP_SIMULATION_MODE
     xTaskCreateStaticPinnedToCore(taskCAN, "can", TASK_STACK_CAN, nullptr, TASK_PRIO_CAN,

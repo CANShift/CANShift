@@ -188,11 +188,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
         </SettingRow>
 
         {/* Theme — fires immediately for both connected and preview modes */}
-        <SettingRow
-          label="THEME"
-          value={activeDayMode ? 'Day' : 'Night'}
-          scale={scale}
-        >
+        <SettingRow label="THEME" value={activeDayMode ? 'Day' : 'Night'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {(['night', 'day'] as const).map((mode) => {
               const active = activeDayMode === (mode === 'day')
