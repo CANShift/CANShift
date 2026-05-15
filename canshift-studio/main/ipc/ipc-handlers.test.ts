@@ -326,29 +326,84 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
     expect(sessionMock.setLastPortPath).not.toHaveBeenCalled()
   })
 
-  it('USB_PUSH_CONFIG rejects a non-object config', async () => {
+  it('USB_PUSH_CONFIG rejects a non-object config with structured Zod issues (issue #698)', async () => {
     const handler = getHandler(IpcChannels.USB_PUSH_CONFIG)
-    expect(await handler(makeEvent(), null)).toEqual({
-      success: false,
-      error: 'Push payload must be a config object',
-    })
-    expect(await handler(makeEvent(), 'string')).toEqual({
-      success: false,
-      error: 'Push payload must be a config object',
-    })
-    expect(await handler(makeEvent(), [1, 2])).toEqual({
-      success: false,
-      error: 'Push payload must be a config object',
-    })
+    const result = (await handler(makeEvent(), null)) as {
+      success: boolean
+      error: string
+      issues: string[]
+    }
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Push payload must be a valid dashboard config')
+    expect(Array.isArray(result.issues)).toBe(true)
+    expect(result.issues.length).toBeGreaterThan(0)
     expect(usbServiceMock.pushConfig).not.toHaveBeenCalled()
   })
 
-  it('USB_PUSH_CONFIG forwards a valid config to the service', async () => {
+  it('USB_PUSH_CONFIG rejects a missing required field with the specific issue (issue #698)', async () => {
+    const handler = getHandler(IpcChannels.USB_PUSH_CONFIG)
+    // version omitted → DashboardConfigSchema must surface a `version` issue
+    const result = (await handler(makeEvent(), {
+      name: 'x',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [],
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('version'))).toBe(true)
+    expect(usbServiceMock.pushConfig).not.toHaveBeenCalled()
+  })
+
+  it('USB_PUSH_CONFIG rejects a wrong-type field with the specific issue (issue #698)', async () => {
+    const handler = getHandler(IpcChannels.USB_PUSH_CONFIG)
+    const result = (await handler(makeEvent(), {
+      version: '1.14.0',
+      name: 'x',
+      defaultPageId: 'p1',
+      revLimitRpm: 'not-a-number',
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [],
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('revLimitRpm'))).toBe(true)
+    expect(usbServiceMock.pushConfig).not.toHaveBeenCalled()
+  })
+
+  it('USB_PUSH_CONFIG forwards a valid dashboard config to the service', async () => {
     usbServiceMock.pushConfig.mockResolvedValueOnce({ success: true })
     const handler = getHandler(IpcChannels.USB_PUSH_CONFIG)
-    const cfg = { schemaVersion: 7 }
+    const cfg = {
+      version: '1.14.0',
+      name: 'Test',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [
+        {
+          id: 'p1',
+          backgroundImage: null,
+          backgroundColor: '#000000',
+          palette: {
+            surface: '#1E1E1E',
+            primary: '#FF4444',
+            accent: '#FF8800',
+            text: '#FFFFFF',
+            textDim: '#888888',
+            warning: '#FF8800',
+            danger: '#FF4444',
+            success: '#00CC44',
+          },
+          showTopBar: true,
+          widgets: [],
+        },
+      ],
+    }
     await handler(makeEvent(), cfg)
-    expect(usbServiceMock.pushConfig).toHaveBeenCalledWith(cfg)
+    expect(usbServiceMock.pushConfig).toHaveBeenCalledTimes(1)
+    expect(usbServiceMock.pushConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Test' })
+    )
   })
 
   it('USB_SCREEN_SETTINGS rejects rotation: 90 with the typed error', async () => {
@@ -436,12 +491,83 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
     expect(sessionMock.addRecentFile).not.toHaveBeenCalled()
   })
 
-  it('CONFIG_SAVE rejects a non-object payload', async () => {
-    expect(await getHandler(IpcChannels.CONFIG_SAVE)(makeEvent(), null)).toEqual({
-      success: false,
-      error: 'Save payload must be a config object',
-    })
+  it('CONFIG_SAVE rejects a non-object payload with structured Zod issues (issue #698)', async () => {
+    const result = (await getHandler(IpcChannels.CONFIG_SAVE)(makeEvent(), null)) as {
+      success: boolean
+      error: string
+      issues: string[]
+    }
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Save payload must be a valid dashboard config')
+    expect(Array.isArray(result.issues)).toBe(true)
+    expect(result.issues.length).toBeGreaterThan(0)
     expect(configFileMock.saveFile).not.toHaveBeenCalled()
+  })
+
+  it('CONFIG_SAVE rejects a missing required field with the specific issue (issue #698)', async () => {
+    // defaultPageId omitted → schema must surface a `defaultPageId` issue.
+    const result = (await getHandler(IpcChannels.CONFIG_SAVE)(makeEvent(), {
+      version: '1.14.0',
+      name: 'x',
+      revLimitRpm: 7000,
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [],
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('defaultPageId'))).toBe(true)
+    expect(configFileMock.saveFile).not.toHaveBeenCalled()
+  })
+
+  it('CONFIG_SAVE rejects a wrong-type field with the specific issue (issue #698)', async () => {
+    const result = (await getHandler(IpcChannels.CONFIG_SAVE)(makeEvent(), {
+      version: 42, // wrong type — must be a SemVer string
+      name: 'x',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [],
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('version'))).toBe(true)
+    expect(configFileMock.saveFile).not.toHaveBeenCalled()
+  })
+
+  it('CONFIG_SAVE forwards a valid dashboard config to the service (issue #698)', async () => {
+    configFileMock.saveFile.mockResolvedValueOnce({ success: true, filePath: '/tmp/x.json' })
+    const cfg = {
+      version: '1.14.0',
+      name: 'Saved',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [
+        {
+          id: 'p1',
+          backgroundImage: null,
+          backgroundColor: '#000000',
+          palette: {
+            surface: '#1E1E1E',
+            primary: '#FF4444',
+            accent: '#FF8800',
+            text: '#FFFFFF',
+            textDim: '#888888',
+            warning: '#FF8800',
+            danger: '#FF4444',
+            success: '#00CC44',
+          },
+          showTopBar: true,
+          widgets: [],
+        },
+      ],
+    }
+    const result = (await getHandler(IpcChannels.CONFIG_SAVE)(makeEvent(), cfg)) as {
+      success: boolean
+      filePath: string
+    }
+    expect(result).toEqual({ success: true, filePath: '/tmp/x.json' })
+    expect(configFileMock.saveFile).toHaveBeenCalledTimes(1)
+    expect(configFileMock.saveFile).toHaveBeenCalledWith(expect.objectContaining({ name: 'Saved' }))
+    expect(sessionMock.addRecentFile).toHaveBeenCalledWith('/tmp/x.json')
   })
 
   it('CONFIG_SAVE_AS rejects an array payload', async () => {
@@ -712,11 +838,57 @@ describe('Device-config IPC handlers — payload validation', () => {
     registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
   })
 
-  it('DEVICE_CONFIG_WRITE rejects a non-object config', async () => {
-    expect(await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), null)).toEqual({
-      success: false,
-      error: 'Device config payload must be an object',
-    })
+  it('DEVICE_CONFIG_WRITE rejects a non-object config with structured Zod issues (issue #698)', async () => {
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), null)) as {
+      success: boolean
+      error: string
+      issues: string[]
+    }
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Device config payload is invalid')
+    expect(Array.isArray(result.issues)).toBe(true)
+    expect(result.issues.length).toBeGreaterThan(0)
+  })
+
+  it('DEVICE_CONFIG_WRITE rejects a missing required field with the specific issue (issue #698)', async () => {
+    // twai_rx_pin omitted → must be flagged.
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
+      can_speed_kbps: 500,
+      twai_tx_pin: 22,
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('twai_rx_pin'))).toBe(true)
+  })
+
+  it('DEVICE_CONFIG_WRITE rejects a wrong-type field with the specific issue (issue #698)', async () => {
+    // can_speed_kbps must be one of 125/250/500/1000 — 800 is rejected.
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
+      can_speed_kbps: 800,
+      twai_tx_pin: 22,
+      twai_rx_pin: 21,
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('can_speed_kbps'))).toBe(true)
+  })
+
+  it('DEVICE_CONFIG_WRITE rejects a GPIO pin out of the ESP32 range (issue #698)', async () => {
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
+      can_speed_kbps: 500,
+      twai_tx_pin: 99,
+      twai_rx_pin: 21,
+    })) as { success: boolean; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(result.issues.some((i) => i.startsWith('twai_tx_pin'))).toBe(true)
+  })
+
+  it('DEVICE_CONFIG_WRITE accepts a valid device config (issue #698)', async () => {
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
+      can_speed_kbps: 500,
+      twai_tx_pin: 22,
+      twai_rx_pin: 21,
+    })) as { success: boolean; error?: string }
+    expect(result.success).toBe(true)
+    expect(result.error).toBeUndefined()
   })
 
   it('SIGNAL_EXPORT rejects a non-object payload', async () => {
