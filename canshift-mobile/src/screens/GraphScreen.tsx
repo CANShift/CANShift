@@ -1,6 +1,6 @@
 // GraphScreen.tsx — Real-time telemetry graph (MTune-style)
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -13,9 +13,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
-import { getBuffer, clearBuffer } from '../stores/telemetry.store'
+import {
+  TelemetrySample,
+  clearBuffer,
+  getRange,
+  getWriteIndex,
+} from '../stores/telemetry.store'
 import { SIGNAL_META } from '../constants/ble'
 import DashTopBar from '../components/DashTopBar'
+import { ingestIncremental } from './graph-buffer'
 
 // ---------------------------------------------------------------------------
 // Signal config
@@ -67,7 +73,7 @@ const ALL_SIGNALS = Object.keys(SIGNAL_META)
 // ---------------------------------------------------------------------------
 
 function buildPoints(
-  buffer: ReturnType<typeof getBuffer>,
+  buffer: readonly TelemetrySample[],
   key: string,
   windowStart: number,
   windowEnd: number,
@@ -134,6 +140,12 @@ function ChartPanel({
   const [tick, setTick] = useState(0)
   const [chartSize, setChartSize] = useState({ width: 300, height: 160 })
 
+  // Stable rolling buffer — append new samples each tick, drop ones outside the
+  // current time window. Avoids re-copying the full 3000-entry ring buffer at
+  // 10 Hz (closes #684).
+  const rollingRef = useRef<TelemetrySample[]>([])
+  const lastSeenIndexRef = useRef<number>(0)
+
   useEffect(() => {
     if (paused) return
     const id = setInterval(() => {
@@ -152,21 +164,49 @@ function ChartPanel({
   const chartData = useMemo(() => {
     const now = paused ? pausedAt : Date.now()
     const windowStart = now - windowSecs * 1000
-    const buf = getBuffer().filter((s) => s.t >= windowStart)
-    const latest: Record<string, number> = buf[buf.length - 1]?.v ?? {}
+
+    // Incremental ingest: pull only samples added since the last tick.
+    const currentWriteIndex = getWriteIndex()
+    if (currentWriteIndex < lastSeenIndexRef.current) {
+      // Buffer was cleared — reset local state.
+      rollingRef.current = []
+      lastSeenIndexRef.current = 0
+    }
+    const fresh =
+      currentWriteIndex > lastSeenIndexRef.current
+        ? getRange(lastSeenIndexRef.current, currentWriteIndex)
+        : []
+    lastSeenIndexRef.current = currentWriteIndex
+
+    // Trim head — drop samples outside the visible time window.
+    const rolling = rollingRef.current
+    ingestIncremental(rolling, fresh, windowStart)
+
+    const latest: Record<string, number> = rolling[rolling.length - 1]?.v ?? {}
     const lines = visibleSignals.map((key) => ({
       key,
       color: SIGNAL_COLOR[key] ?? '#888',
-      points: buildPoints(buf, key, windowStart, now, chartSize.width, chartSize.height),
+      points: buildPoints(rolling, key, windowStart, now, chartSize.width, chartSize.height),
       latestValue: latest[key],
     }))
     return {
       lines,
-      windowStart: now - windowSecs * 1000,
+      windowStart,
       windowEnd: now,
-      hasData: buf.length > 1,
+      hasData: rolling.length > 1,
     }
   }, [tick, visibleSignals, windowSecs, paused, pausedAt, chartSize])
+
+  // Repopulate the rolling buffer when the time window grows — older samples
+  // that were trimmed for a 30s view must be re-pulled for a 2m view. We
+  // re-seed from the ring buffer (which retains the full MAX_SAMPLES history)
+  // and resync the lastSeen cursor.
+  useEffect(() => {
+    const writeIdx = getWriteIndex()
+    const fromIdx = Math.max(0, writeIdx - 3000)
+    rollingRef.current = [...getRange(fromIdx, writeIdx)]
+    lastSeenIndexRef.current = writeIdx
+  }, [windowSecs])
 
   const vGap = compact ? 2 : Spacing.xs
 

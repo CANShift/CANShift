@@ -16,7 +16,14 @@
 // @vitest-environment node
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { __resetForTests, getBacklog, publish, subscribe, unsubscribe } from './cli-log-bus'
+import {
+  __flushForTests,
+  __resetForTests,
+  getBacklog,
+  publish,
+  subscribe,
+  unsubscribe,
+} from './cli-log-bus'
 import type { CliLogPayload } from '../ipc/cli-detach.types'
 
 interface FakeWebContents {
@@ -61,10 +68,30 @@ describe('cli-log-bus — subscribe / publish fan-out', () => {
     subscribe(detached as unknown as Electron.WebContents)
 
     publish(payload(1, 'from main'), main.id)
+    __flushForTests()
 
     expect(main.__sends).toHaveLength(0)
     expect(detached.__sends).toHaveLength(1)
-    expect(detached.__sends[0]?.payload).toMatchObject({ id: 1, message: 'from main' })
+    expect(detached.__sends[0]?.payload).toEqual([payload(1, 'from main')])
+  })
+
+  it('coalesces multiple publishes in the same tick into one batched send', () => {
+    const main = makeWc(10)
+    const detached = makeWc(20)
+    subscribe(main as unknown as Electron.WebContents)
+    subscribe(detached as unknown as Electron.WebContents)
+
+    publish(payload(1, 'a'), main.id)
+    publish(payload(2, 'b'), main.id)
+    publish(payload(3, 'c'), main.id)
+    __flushForTests()
+
+    expect(detached.__sends).toHaveLength(1)
+    expect(detached.__sends[0]?.payload).toEqual([
+      payload(1, 'a'),
+      payload(2, 'b'),
+      payload(3, 'c'),
+    ])
   })
 
   it('still publishes to the backlog for sender-suppressed entries', () => {
@@ -76,6 +103,7 @@ describe('cli-log-bus — subscribe / publish fan-out', () => {
 
     publish(payload(1, 'first'), main.id)
     publish(payload(2, 'second'), main.id)
+    __flushForTests()
 
     expect(getBacklog()).toEqual([payload(1, 'first'), payload(2, 'second')])
     expect(main.__sends).toHaveLength(0)
@@ -90,11 +118,13 @@ describe('cli-log-bus — subscribe / publish fan-out', () => {
     stale.__destroyed = true
 
     publish(payload(1, 'after stale died'), main.id)
+    __flushForTests()
 
     // Stale wc must NOT receive the broadcast, and a second publish must
     // not even attempt it.
     expect(stale.__sends).toHaveLength(0)
     publish(payload(2, 'second pass'), main.id)
+    __flushForTests()
     expect(stale.__sends).toHaveLength(0)
   })
 
@@ -105,6 +135,7 @@ describe('cli-log-bus — subscribe / publish fan-out', () => {
 
     // Sender id intentionally different — no skip applies here.
     publish(payload(1, 'after unsub'), 999)
+    __flushForTests()
     expect(wc.__sends).toHaveLength(0)
   })
 })
