@@ -3,6 +3,8 @@
 import { ipcMain, app, BrowserWindow, dialog } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { z } from 'zod'
+import { DashboardConfigSchema } from '@tmbk/canshift-core'
 import { IpcChannels } from './ipc-channels'
 import type { CliLogPayload, CliPanelState } from './cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
@@ -93,6 +95,43 @@ export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
   }
   if (parsed.protocol !== 'https:') return false
   return FIRMWARE_DOWNLOAD_ALLOWED_HOSTS.has(parsed.hostname)
+}
+
+// ---------------------------------------------------------------------------
+// Zod schemas for IPC payloads (issue #698)
+// ---------------------------------------------------------------------------
+//
+// USB_PUSH_CONFIG and CONFIG_SAVE both carry a dashboard config; the canonical
+// runtime shape lives in canshift-core's `DashboardConfigSchema` (#673) and is
+// reused here verbatim — never duplicated — so a stale studio copy can't drift
+// from the on-device schema.
+//
+// DEVICE_CONFIG_WRITE carries the ESP32 hardware config persisted to
+// userData/device.json. canshift-core only ships the `DeviceConfig` interface
+// (no Zod schema yet), so the schema is mirrored locally rather than duplicated
+// elsewhere — the field set is small and stable, and adding a runtime schema in
+// core would require a separate canshift-core PR.
+const ESP32_GPIO_MIN = 0
+const ESP32_GPIO_MAX = 39
+const Esp32GpioSchema = z.number().int().min(ESP32_GPIO_MIN).max(ESP32_GPIO_MAX)
+const DeviceConfigWritePayloadSchema = z
+  .object({
+    can_speed_kbps: z.union([z.literal(125), z.literal(250), z.literal(500), z.literal(1000)]),
+    twai_tx_pin: Esp32GpioSchema,
+    twai_rx_pin: Esp32GpioSchema,
+  })
+  .strict()
+
+/**
+ * Format Zod issues as `path: message` strings so the renderer can surface a
+ * specific reason without re-walking the issue tree. Top-level issues (empty
+ * path) collapse to just the message.
+ */
+function formatZodIssues(error: z.ZodError): string[] {
+  return error.issues.map((issue) => {
+    const path = issue.path.join('.')
+    return path.length === 0 ? issue.message : `${path}: ${issue.message}`
+  })
 }
 
 const CLI_LOG_LEVELS: ReadonlySet<string> = new Set(['info', 'warn', 'error', 'success', 'debug'])
@@ -214,10 +253,15 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE, async (_event, config: unknown) => {
-    if (!isPlainObject(config)) {
-      return { success: false, error: 'Save payload must be a config object' }
+    const parsed = DashboardConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Save payload must be a valid dashboard config',
+        issues: formatZodIssues(parsed.error),
+      }
     }
-    const result = await configService.saveFile(config)
+    const result = await configService.saveFile(parsed.data)
     if (result.success && result.filePath) {
       sessionService.addRecentFile(result.filePath)
       rebuildMenu()
@@ -304,10 +348,15 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.USB_PUSH_CONFIG, async (_event, config: unknown) => {
-    if (!isPlainObject(config)) {
-      return { success: false, error: 'Push payload must be a config object' }
+    const parsed = DashboardConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Push payload must be a valid dashboard config',
+        issues: formatZodIssues(parsed.error),
+      }
     }
-    return usbService.pushConfig(config)
+    return usbService.pushConfig(parsed.data)
   })
 
   ipcMain.handle(IpcChannels.USB_SCREEN_SETTINGS, async (_event, settings: unknown) => {
@@ -537,11 +586,16 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.DEVICE_CONFIG_WRITE, async (_event, config: unknown) => {
-    if (!isPlainObject(config)) {
-      return { success: false, error: 'Device config payload must be an object' }
+    const parsed = DeviceConfigWritePayloadSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Device config payload is invalid',
+        issues: formatZodIssues(parsed.error),
+      }
     }
     try {
-      await writeFile(deviceConfigPath, JSON.stringify(config, null, 2), 'utf-8')
+      await writeFile(deviceConfigPath, JSON.stringify(parsed.data, null, 2), 'utf-8')
       return { success: true }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
