@@ -101,6 +101,26 @@ export function useConfigActions() {
           })
           return
         }
+        // Validate the migrated config before accepting it: File→Open used to
+        // load any JSON the user picked, which then risked being pushed to
+        // firmware as a corrupt shape (#693). Import already does this; we
+        // mirror that guard on the open / openPath / session-restore paths.
+        const validation = validateDashboard(config)
+        if (!validation.valid) {
+          validation.errors.forEach((e) => {
+            log('error', `Open validation: ${e}`)
+          })
+          pushError({
+            source: 'config',
+            code: 'VALIDATION_FAILED',
+            message: `${result.filePath ?? 'config'} has ${String(validation.errors.length)} validation error(s)`,
+            detail: validation.errors.join('\n'),
+          })
+          return
+        }
+        validation.warnings.forEach((w) => {
+          log('warn', `Open: ${w}`)
+        })
         setConfig(config, result.filePath)
         log('info', `Opened ${result.filePath ?? 'config'}`)
       } else if (!result.success && result.error) {
