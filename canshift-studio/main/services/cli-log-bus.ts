@@ -17,8 +17,8 @@
 // cuts the IPC round-trip count by 1-2 orders of magnitude (#712).
 
 import type { WebContents } from 'electron'
-import { IpcChannels } from '../ipc/ipc-channels'
-import type { CliLogPayload } from '../ipc/cli-detach.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { CliLogPayload } from '../../shared/cli-detach.types'
 
 const RING_SIZE = 2000
 

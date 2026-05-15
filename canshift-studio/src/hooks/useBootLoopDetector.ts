@@ -23,7 +23,7 @@ import {
   useBootLoopStore,
 } from '../stores/bootLoop.store'
 import { BOOT_VERSION_RE } from './useFirmwareCheck'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 import { isDeviceLogPayload } from '../services/ipc.service'
 
 /** Sentinel emitted by the firmware once setup() finishes — see #486. */

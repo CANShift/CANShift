@@ -24,7 +24,7 @@ import {
   subscribe,
   unsubscribe,
 } from './cli-log-bus'
-import type { CliLogPayload } from '../ipc/cli-detach.types'
+import type { CliLogPayload } from '../../shared/cli-detach.types'
 
 interface FakeWebContents {
   id: number

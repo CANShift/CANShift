@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { configService } from '../services/ipc.service'
 import { useConfigActions } from './useConfigActions'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 export function useMenuEvents() {
   const configRef = useRef(useDashboardStore.getState().config)

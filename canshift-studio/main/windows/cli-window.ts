@@ -17,8 +17,8 @@
 
 import { BrowserWindow, shell } from 'electron'
 import { join } from 'path'
-import { IpcChannels } from '../ipc/ipc-channels'
-import type { CliPanelState, CliStateChangedEvent } from '../ipc/cli-detach.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { CliPanelState, CliStateChangedEvent } from '../../shared/cli-detach.types'
 import {
   CLI_WINDOW_MIN_HEIGHT,
   CLI_WINDOW_MIN_WIDTH,
