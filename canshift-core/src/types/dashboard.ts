@@ -166,6 +166,29 @@ export type DashboardButtonAction = NavigateAction
 export type EcuButtonAction = MapSwitchAction | CanRawAction
 export type ButtonAction = DashboardButtonAction | EcuButtonAction
 
+/**
+ * Runtime tuple of valid `(category, type)` pairs for ButtonAction. Single
+ * source of truth for action-editor UIs — consumers can iterate instead of
+ * hand-maintaining a list that drifts from the discriminated union above.
+ */
+export const BUTTON_ACTION_TYPES = [
+  { category: 'dashboard', type: 'navigate' },
+  { category: 'ecu', type: 'map_switch' },
+  { category: 'ecu', type: 'can_raw' },
+] as const
+
+export function isNavigateAction(action: ButtonAction): action is NavigateAction {
+  return action.category === 'dashboard'
+}
+
+export function isMapSwitchAction(action: ButtonAction): action is MapSwitchAction {
+  return action.type === 'map_switch'
+}
+
+export function isCanRawAction(action: ButtonAction): action is CanRawAction {
+  return action.type === 'can_raw'
+}
+
 // ---------------------------------------------------------------------------
 // Button widget config
 // ---------------------------------------------------------------------------
