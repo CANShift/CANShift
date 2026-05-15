@@ -37,3 +37,18 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
     set({ isLive: false })
   },
 }))
+
+/**
+ * Per-key selector — subscribers re-render only when *their* signal changes.
+ * Zustand's default identity check on a primitive return skips re-renders
+ * when the numeric value is unchanged across the 10 Hz tick, even though the
+ * containing `values` object is replaced every update (#687).
+ */
+export function useSignalValue(key: string): number | undefined {
+  return useSignalsStore((s) => s.values[key])
+}
+
+/** Reactive `isLive` flag — flips on/off rarely, safe to subscribe broadly. */
+export function useSignalsIsLive(): boolean {
+  return useSignalsStore((s) => s.isLive)
+}
