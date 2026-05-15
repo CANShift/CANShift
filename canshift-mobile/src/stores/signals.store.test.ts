@@ -54,4 +54,14 @@ describe('useSignalsStore', () => {
     useSignalsStore.getState().update({ r: 2000 })
     expect(useSignalsStore.getState().values).toEqual({ r: 2000 })
   })
+
+  it('update() strips undefined entries before pushing to the ring buffer', () => {
+    useSignalsStore.getState().update({ r: 2000, tps: undefined, ect: 90 })
+    const buffer = getBuffer()
+    expect(buffer).toHaveLength(1)
+    expect(buffer[0]?.v).toEqual({ r: 2000, ect: 90 })
+    // Cached store payload retains the partial shape — only the ring buffer
+    // is filtered (consumers branch on Number.isFinite already).
+    expect(useSignalsStore.getState().values).toEqual({ r: 2000, tps: undefined, ect: 90 })
+  })
 })
