@@ -10,7 +10,6 @@ import type {
   GaugeDisplayStyle,
   WidgetLabelPosition,
 } from '@tmbk/canshift-core'
-import { DAY_THEME_PRESET } from '../../constants/theme'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS } from '../icons/SensorIcons'
@@ -1316,7 +1315,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const updateTopBar = useDashboardStore((s) => s.updateTopBar)
-  const setDayTheme = useDashboardStore((s) => s.setDayTheme)
   const signals = useSignalStore((s) => s.signals)
 
   const page = config?.pages.find((p) => p.id === pageId)
@@ -1344,66 +1342,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         >
           Page settings
         </div>
-
-        {/* Day theme — stored in config root, enables ☀/☾ toggle on device */}
-        <div
-          style={{
-            fontSize: 10,
-            color: '#AAAAAA',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: 6,
-            marginTop: 14,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span>Day Theme</span>
-          {config.dayTheme ? (
-            <button
-              onClick={() => {
-                setDayTheme(null)
-              }}
-              title="Remove day theme (hides ☀/☾ toggle on device)"
-              style={{
-                fontSize: 9,
-                padding: '1px 5px',
-                background: 'none',
-                border: '1px solid #3A1A1A',
-                borderRadius: 3,
-                color: '#AA3333',
-                cursor: 'pointer',
-              }}
-            >
-              remove
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setDayTheme(DAY_THEME_PRESET)
-              }}
-              title="Enable day mode toggle on device"
-              style={{
-                fontSize: 9,
-                padding: '1px 5px',
-                background: 'none',
-                border: '1px solid #1A3A1A',
-                borderRadius: 3,
-                color: '#44AA44',
-                cursor: 'pointer',
-              }}
-            >
-              enable
-            </button>
-          )}
-        </div>
-
-        {!config.dayTheme && (
-          <div style={{ fontSize: 10, color: '#444444', marginBottom: 8 }}>
-            Not configured — device will not show ☀/☾ toggle.
-          </div>
-        )}
 
         <div
           style={{
