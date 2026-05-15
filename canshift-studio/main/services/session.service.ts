@@ -59,7 +59,7 @@ function readFromDisk(): SessionData {
 }
 
 function read(): SessionData {
-  if (cache === null) cache = readFromDisk()
+  cache ??= readFromDisk()
   return cache
 }
 
