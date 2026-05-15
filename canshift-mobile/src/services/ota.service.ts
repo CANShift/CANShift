@@ -33,6 +33,25 @@ import { Sha256 } from './sha256'
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * React Native's FormData accepts a `{ uri, type, name }` file descriptor as
+ * the second argument to `append`, but the DOM `FormData` lib type only
+ * accepts `string | Blob`. This narrow shape is the documented contract from
+ * the React Native polyfill — typing it here keeps the cast confined to one
+ * site (vs sprinkling `as unknown as Blob` at every upload call).
+ */
+interface RNFileDescriptor {
+  uri: string
+  type: string
+  name: string
+}
+
+function appendRNFile(form: FormData, field: string, file: RNFileDescriptor): void {
+  // The cast is unavoidable until @types/react-native ships a typed override
+  // for FormData.append — keep it inside this helper so callers stay clean.
+  form.append(field, file as unknown as Blob)
+}
+
 export interface FirmwareRelease {
   version: string
   publishedAt: string
@@ -292,11 +311,11 @@ export async function pushFirmware(
 ): Promise<void> {
   const stagedPath = await stageFirmwareWithHmac(localPath)
   const formData = new FormData()
-  formData.append(OTA_UPLOAD_FIELD_NAME, {
+  appendRNFile(formData, OTA_UPLOAD_FIELD_NAME, {
     uri: stagedPath,
     type: OTA_UPLOAD_MIME_TYPE,
     name: OTA_UPLOAD_FILE_NAME,
-  } as unknown as Blob)
+  })
 
   const xhr = new XMLHttpRequest()
   // Heuristic for distinguishing "device never reached" from "dropped mid-
