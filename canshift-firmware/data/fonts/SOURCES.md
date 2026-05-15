@@ -16,14 +16,24 @@ no kerning.
 
 | Intent     | Weight       | Sizes (px) | Files                                              |
 | ---------- | ------------ | ---------- | -------------------------------------------------- |
-| primary    | Black (900)  | 32, 48     | `orbitron_black_{32,48}.bin`                       |
+| primary    | Black (900)  | 32         | `orbitron_black_32.bin`                            |
 | secondary  | Bold (700)   | 20, 24, 28 | `orbitron_bold_{20,24,28}.bin`                     |
 | label      | Medium (500) | 12, 14, 16 | `orbitron_medium_{12,14,16}.bin`                   |
 
 The 28-px Bold and 48-px Black entries were dropped in PR #487 to fit the
-then-active LV_MEM_SIZE=64KB budget. After PR #648 bumped the pool to 96 KB,
-both sizes were restored (issue #664) so large numeric/gauge widgets render at
-their designed sizes instead of snapping down (48→32, 28→24).
+then-active LV_MEM_SIZE=64KB budget. PR #665 (issue #664) restores **28-px
+Bold only** — its ~15 KB binary fits comfortably in the current 80 KB LVGL
+pool alongside the other loaded fonts, so mid-band gauge / timer text renders
+at its designed size again instead of snapping to 24.
+
+**48-px Black stays dropped.** Restoring it would consume ~43 KB of pool, push
+the remaining bold/medium loads past the FontManager pre-flight guard, and
+cause widget creation to dereference NULL font slots at boot (Guru Meditation
+LoadProhibited, seen in PR #665 initial CI). A proper restoration requires
+moving a currently pool-loaded font (e.g. 32-px Black) to in-flash linkage —
+mirroring what `lv_font_orbitron_medium_14_nk` already does for 14-px Medium —
+to free enough pool headroom. Tracked as a follow-up to #664.
+
 The 14-px Medium also has an in-flash twin
 (`canshift-firmware/src/ui/fonts/lv_font_orbitron_medium_14_nk.c`,
 symbol `lv_font_orbitron_medium_14_nk`) used as the FontManager fallback when a

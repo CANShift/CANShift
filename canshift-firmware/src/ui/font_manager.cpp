@@ -23,10 +23,17 @@ namespace {
 //   secondary — gauge/timer mid-band, gear mid, burn_overlay icon
 //   label     — top bar text, signal headers, settings, error bar, dot/icon
 //
-// 28 (secondary) and 48 (primary) restored after LV_MEM_SIZE bump to 96 KB
-// (PR #648) — large numeric/gauge widgets render at their designed sizes again.
-constexpr uint8_t kPrimarySizes[] = {32, 48};
-constexpr uint8_t kSecondarySizes[] = {20, 24, 28};
+// Partial restoration of the sizes dropped in PR #487:
+//   - 28 (secondary) is restored — its ~15 KB binary fits comfortably in the
+//     80 KB LVGL pool alongside the other loaded fonts.
+//   - 48 (primary) stays dropped. Its 43 KB binary alone consumes ~half the
+//     pool and pushes bold_24, bold_28 and medium_16 past the pre-flight
+//     pool-room guard, leaving widget code to dereference NULL font slots at
+//     boot (Guru Meditation LoadProhibited — see PR #665 CI failure). A real
+//     restoration requires moving a current font (e.g. black_32) to in-flash
+//     linkage to free pool space; tracked as a separate follow-up.
+constexpr uint8_t kPrimarySizes[] = {32};       // 48 not restored — would overflow 80 KB pool
+constexpr uint8_t kSecondarySizes[] = {20, 24, 28};  // 28 restored — fits comfortably
 constexpr uint8_t kLabelSizes[] = {12, 14, 16};
 
 constexpr size_t kPrimaryCount = sizeof(kPrimarySizes) / sizeof(kPrimarySizes[0]);
