@@ -131,17 +131,19 @@ describe('useCliLogBridge — outbound forwarding (#484)', () => {
     await mount()
     sendSpy.mockClear()
 
-    // Simulate a CLI_LOG_BROADCAST arrival from another renderer.
-    const onBroadcast = listeners.get(IpcChannels.CLI_LOG_BROADCAST)?.[0]
+    // Simulate a CLI_LOG_BROADCAST_BATCH arrival from another renderer.
+    const onBroadcast = listeners.get(IpcChannels.CLI_LOG_BROADCAST_BATCH)?.[0]
     expect(onBroadcast).toBeDefined()
 
     act(() => {
-      onBroadcast?.({
-        id: 42,
-        level: 'info',
-        message: '[device][BOOT] CANShift v0.8.0 starting',
-        timestampMs: Date.now(),
-      })
+      onBroadcast?.([
+        {
+          id: 42,
+          level: 'info',
+          message: '[device][BOOT] CANShift v0.8.0 starting',
+          timestampMs: Date.now(),
+        },
+      ])
     })
 
     // The bridged entry MUST land in the local store (so xterm renders it)…
