@@ -81,9 +81,11 @@ interface DecideContext {
 export function decideDeviceConfigAction(ctx: DecideContext): DeviceConfigAction {
   const { result, isEditorEmpty, loadedFromDemoFallback } = ctx
   if (!result.ok) {
-    if (result.reason === 'no-config') {
-      return isEditorEmpty ? { kind: 'auto-load-demo' } : { kind: 'no-config-but-editor-has-edits' }
-    }
+    // Any failure on an empty editor → seed the demo so the user has something
+    // to work with. Non-empty editor: distinguish no-config from transport so
+    // flaky links don't clobber in-progress edits.
+    if (isEditorEmpty) return { kind: 'auto-load-demo' }
+    if (result.reason === 'no-config') return { kind: 'no-config-but-editor-has-edits' }
     return { kind: 'transport-failure' }
   }
 

@@ -41,10 +41,19 @@ describe('decideDeviceConfigAction', () => {
     expect(action.kind).toBe('no-config-but-editor-has-edits')
   })
 
-  it('treats transport failures as no-op (does NOT auto-load demo) — AC #4', () => {
+  it('auto-loads demo on transport failure when editor is empty', () => {
     const action = decideDeviceConfigAction({
       result: { ok: false, reason: 'transport' },
       isEditorEmpty: true,
+      loadedFromDemoFallback: false,
+    })
+    expect(action.kind).toBe('auto-load-demo')
+  })
+
+  it('treats transport failures as no-op when editor has in-progress edits', () => {
+    const action = decideDeviceConfigAction({
+      result: { ok: false, reason: 'transport' },
+      isEditorEmpty: false,
       loadedFromDemoFallback: false,
     })
     expect(action.kind).toBe('transport-failure')
