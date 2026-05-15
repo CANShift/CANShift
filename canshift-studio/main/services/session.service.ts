@@ -32,7 +32,14 @@ function hasLegacyUsageSignals(parsed: Partial<SessionData>): boolean {
   return hasLastFile || hasRecent || hasLastPort
 }
 
-function read(): SessionData {
+// In-memory cache of the parsed session file. Studio is a single-process
+// Electron app so the file is never written by anyone else — reading once on
+// first access and serving subsequent gets from memory keeps sync FS off the
+// main thread (menu rebuild + useSessionRestore + IPC invokes used to fire
+// several disk reads per startup).
+let cache: SessionData | null = null
+
+function readFromDisk(): SessionData {
   try {
     const raw = fs.readFileSync(sessionPath(), 'utf8')
     const data = JSON.parse(raw) as Partial<SessionData>
@@ -51,11 +58,18 @@ function read(): SessionData {
   }
 }
 
+function read(): SessionData {
+  cache ??= readFromDisk()
+  return cache
+}
+
 function write(data: SessionData): void {
+  cache = data
   try {
     fs.writeFileSync(sessionPath(), JSON.stringify(data))
   } catch {
-    // Best-effort — ignore write errors
+    // Best-effort — ignore write errors. The in-memory cache still reflects the
+    // intended state so subsequent reads in this process see the new value.
   }
 }
 
