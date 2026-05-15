@@ -715,7 +715,7 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 // ---------------------------------------------------------------------------
 
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.13.0 without losing data', () => {
+  it('walks a 1.0.0 config all the way to 1.14.0 without losing data', () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -772,8 +772,8 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.13.0')
-    expect(out.version).toBe('1.13.0')
+    const { config: out, applied } = migrateConfig(config, '1.14.0')
+    expect(out.version).toBe('1.14.0')
     expect(applied).toEqual([
       '1.0.0 → 1.1.0',
       '1.1.0 → 1.2.0',
@@ -788,6 +788,7 @@ describe('migrateConfig — full chain to current', () => {
       '1.10.0 → 1.11.0',
       '1.11.0 → 1.12.0',
       '1.12.0 → 1.13.0',
+      '1.13.0 → 1.14.0',
     ])
 
     const page = (out.pages as Record<string, unknown>[])[0]!
@@ -820,14 +821,59 @@ describe('migrateConfig — full chain to current', () => {
     expect(tpsLayout.h).toBe(56)
   })
 
-  it('a fresh 1.13.0 config is a no-op through the runner', () => {
+  it('a fresh 1.14.0 config is a no-op through the runner', () => {
     const config = {
-      version: '1.13.0',
+      version: '1.14.0',
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.13.0')
+    const { config: out, applied } = migrateConfig(config, '1.14.0')
     expect(applied).toEqual([])
     expect(out).toEqual(config)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 1.13.0 → 1.14.0: signals.json protocol field migrated away from
+// MaxxECU-specific identifier (issue #639)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.13.0 → 1.14.0', () => {
+  it('rewrites legacy "maxxecu_v1.2" protocol to "custom_v1.0"', () => {
+    const config = {
+      version: '1.13.0',
+      protocol: 'maxxecu_v1.2',
+      canSpeedKbps: 500,
+      signals: [],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.14.0')
+    expect(applied).toEqual(['1.13.0 → 1.14.0'])
+    expect(out.version).toBe('1.14.0')
+    expect(out.protocol).toBe('custom_v1.0')
+    expect(out.canSpeedKbps).toBe(500)
+  })
+
+  it('leaves a custom protocol value untouched', () => {
+    const config = {
+      version: '1.13.0',
+      protocol: 'my_ecu_v2',
+      canSpeedKbps: 1000,
+      signals: [],
+    }
+    const { config: out } = migrateConfig(config, '1.14.0')
+    expect(out.version).toBe('1.14.0')
+    expect(out.protocol).toBe('my_ecu_v2')
+  })
+
+  it('is a safe no-op on dashboard configs (no protocol field)', () => {
+    const config = {
+      version: '1.13.0',
+      name: 'Dash',
+      pages: [{ id: 'p1', widgets: [] }],
+    }
+    const { config: out } = migrateConfig(config, '1.14.0')
+    expect(out.version).toBe('1.14.0')
+    expect(out.protocol).toBeUndefined()
+    expect(out.name).toBe('Dash')
   })
 })
 
