@@ -74,6 +74,22 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.13.0 → 1.14.0: signals.json `protocol` field migrated away from the
+    // MaxxECU-specific identifier `"maxxecu_v1.2"` to the ECU-agnostic
+    // `"custom_v1.0"` (issue #639, part of #556). The field is purely
+    // informational — firmware reads it into `CfgSignalConfig.protocol` but
+    // never branches on the value. Migration rewrites the legacy value when
+    // present and is a no-op for dashboard configs (which have no `protocol`).
+    fromVersion: '1.13.0',
+    toVersion: '1.14.0',
+    migrate: (config) => {
+      if (config.protocol === 'maxxecu_v1.2') {
+        return { ...config, version: '1.14.0', protocol: 'custom_v1.0' }
+      }
+      return { ...config, version: '1.14.0' }
+    },
+  },
+  {
     // 1.12.0 → 1.13.0: SignalDef gains an optional `colorRamp` field
     // (issue #430). KEEP semantics — existing configs are bumped without any
     // data transformation. Signals without a ramp continue to render with the
