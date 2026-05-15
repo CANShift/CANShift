@@ -9,7 +9,6 @@ import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useTestModeStore } from '../../stores/testMode.store'
-import { IconUsb } from '../icons/Icon'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { WidgetPreview } from './WidgetPreview'
@@ -439,7 +438,6 @@ function DashTopBar({
   const sep = Math.round(h * TopBarMetrics.separatorRatio)
   const gap = Math.round(h * TopBarMetrics.gapRatio)
   const px = Math.round(h * TopBarMetrics.paddingRatio)
-  const iconSz = Math.round(fs * TopBarMetrics.iconSizeRatio)
 
   const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#AAAAAA'
 
@@ -514,7 +512,14 @@ function DashTopBar({
           </span>
         )
       case 'usbIcon':
-        return <IconUsb key={key} size={iconSz} color={usbColor} />
+        return (
+          <span
+            key={key}
+            style={{ fontSize: fs, color: usbColor, lineHeight: 1, letterSpacing: '0.04em' }}
+          >
+            USB
+          </span>
+        )
       case 'themeToggle':
         return (
           <button

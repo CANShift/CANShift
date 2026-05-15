@@ -457,6 +457,7 @@ const VALID_TOP_BAR_ITEM_TYPES = [
   'separator',
   'signal',
   'usbIcon',
+  'bleIcon',
   'themeToggle',
   'modeFlag',
 ] as const

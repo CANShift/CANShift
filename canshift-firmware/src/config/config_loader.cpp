@@ -668,7 +668,26 @@ bool loadDashboard() {
             ++s_dashboard.topBar.itemCount;
         }
     } else {
-        LOG_WARN("CFG", "topBar.layout missing — top bar will render empty");
+        // No layout in config — mirror canshift-core DEFAULT_TOP_BAR_LAYOUT
+        LOG_INFO("CFG", "topBar.layout missing — applying default layout");
+        uint8_t &n = s_dashboard.topBar.itemCount;
+        auto &items = s_dashboard.topBar.items;
+        auto addItem = [&](TopBarItemKind kind, TopBarItemPos pos,
+                           const char *sig, const char *txt) {
+            if (n >= CFG_MAX_TOPBAR_ITEMS) return;
+            CfgTopBarItem &out = items[n++];
+            out.kind = kind;
+            out.position = pos;
+            strlcpy(out.signalId, sig, sizeof(out.signalId));
+            strlcpy(out.text, txt, sizeof(out.text));
+            out.format[0] = '\0';
+        };
+        addItem(TopBarItemKind::STATUS_DOT,    TopBarItemPos::LEFT,  "any", "");
+        addItem(TopBarItemKind::LABEL,         TopBarItemPos::LEFT,  "",    "CAN");
+        addItem(TopBarItemKind::BLE_ICON,       TopBarItemPos::RIGHT, "",    "");
+        addItem(TopBarItemKind::USB_ICON,       TopBarItemPos::RIGHT, "",    "");
+        addItem(TopBarItemKind::SEPARATOR,      TopBarItemPos::RIGHT, "",    "");
+        addItem(TopBarItemKind::THEME_TOGGLE,   TopBarItemPos::RIGHT, "",    "");
     }
 
     // Optional day theme (hasDayTheme = false when key absent)

@@ -1,16 +1,15 @@
 // top_bar.cpp — Persistent top status bar
 //
-// Layout (left to right):
-//   [• ECU]  [• CAN]  ......  12.4V  ↓  ☀
+// Default layout (left to right):
+//   [• CAN]  ......  BLE  USB  |  ☀
 //
 // Settings is opened by swiping down from the top of the screen — there is no
 // dedicated gear button (#50, redundant given the gesture).
 //
 // Status sources:
-//   ECU dot:  green when SignalIds::RPM is valid (recent ECU frame received)
-//   CAN dot:  green when at least one signal has been received recently
-//   Voltage:  SignalIds::BATTERY_VOLTS — formatted "12.4V" (— if unknown)
-//   Download: green when UsbComm reports a recent host command (studio attached)
+//   CAN dot: green when at least one CAN signal has been received recently
+//   BLE:     blue = client connected; dim blue = advertising; gray = disabled
+//   USB:     green when UsbComm reports a recent host command (studio attached)
 
 #include "top_bar.h"
 #include "ui/font_manager.h"
