@@ -249,12 +249,12 @@ struct CfgPage {
 // ---------------------------------------------------------------------------
 enum class TopBarItemKind : uint8_t {
     UNKNOWN = 0,
-    STATUS_DOT, // Coloured dot tied to a signal's freshness ("rpm" or "any")
-    LABEL,      // Static text
-    SEPARATOR,  // Vertical "|"
-    SIGNAL,     // Live signal value with printf-style format
-    USB_ICON,   // Download arrow — green when host active
-    BLE_ICON,   // "BLE" text badge — blue when connected, dim blue when advertising, gray when off
+    STATUS_DOT,   // Coloured dot tied to a signal's freshness ("rpm" or "any")
+    LABEL,        // Static text
+    SEPARATOR,    // Vertical "|"
+    SIGNAL,       // Live signal value with printf-style format
+    USB_ICON,     // Download arrow — green when host active
+    BLE_ICON,     // "BLE" text badge: blue=connected, dim=advertising, gray=off
     THEME_TOGGLE, // ☀/☾ tap target — only meaningful when hasDayTheme
     MODE_FLAG,    // Text badge — amber when signal ≠ 0, near-black when 0 or invalid
 };
