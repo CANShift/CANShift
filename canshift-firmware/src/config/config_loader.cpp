@@ -216,8 +216,10 @@ void parseButtonAction(JsonObjectConst src, CfgButtonAction *out) {
     out->mapIndex = 0;
     out->canFrameId = 0;
     out->canDataLen = 0;
+    out->canDataOffLen = 0;
     out->canExtended = false;
     memset(out->canData, 0, sizeof(out->canData));
+    memset(out->canDataOff, 0, sizeof(out->canDataOff));
 
     switch (out->type) {
         case CfgButtonActionType::NAV_PAGE:
@@ -268,6 +270,19 @@ void parseButtonAction(JsonObjectConst src, CfgButtonAction *out) {
                 out->type = CfgButtonActionType::UNKNOWN;
                 out->canDataLen = 0;
                 memset(out->canData, 0, sizeof(out->canData));
+            }
+            // Optional disarm payload (toggle-off). Missing = no disarm frame sent.
+            const char *hexOff = src["dataOff"] | "";
+            if (hexOff[0] != '\0') {
+                if (!decodeHexBytes(hexOff, out->canDataOff, sizeof(out->canDataOff),
+                                    &out->canDataOffLen)) {
+                    LOG_WARN("CFG",
+                             "can_raw: invalid dataOff='%s' (must be ≤16 even-length hex chars) — "
+                             "disarm frame suppressed",
+                             hexOff);
+                    out->canDataOffLen = 0;
+                    memset(out->canDataOff, 0, sizeof(out->canDataOff));
+                }
             }
             break;
         }
