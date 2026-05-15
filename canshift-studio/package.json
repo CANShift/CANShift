@@ -4,9 +4,9 @@
   "description": "CANShift Desktop Configuration Studio — visual dashboard editor for CANShift firmware",
   "main": "dist/main/index.js",
   "scripts": {
-    "predev": "npm --prefix ../canshift-core run build && npm run tokens:gen",
+    "predev": "npm --prefix ../canshift-core ci --omit=dev --ignore-scripts && npm --prefix ../canshift-core run build && npm run tokens:gen",
     "dev": "electron-vite dev",
-    "prebuild": "npm --prefix ../canshift-core run build && npm run tokens:gen",
+    "prebuild": "npm --prefix ../canshift-core ci --omit=dev --ignore-scripts && npm --prefix ../canshift-core run build && npm run tokens:gen",
     "build": "electron-vite build",
     "tokens:gen": "node scripts/generate-tokens.css.mjs",
     "analyze": "ANALYZE=1 electron-vite build",
