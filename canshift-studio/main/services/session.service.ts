@@ -61,7 +61,6 @@ function write(data: SessionData): void {
 
 export const sessionService: {
   getLastFilePath: () => string | null
-  setLastFilePath: (filePath: string) => void
   getRecentFiles: () => string[]
   addRecentFile: (filePath: string) => void
   clearRecentFiles: () => void
@@ -73,11 +72,6 @@ export const sessionService: {
   clear: () => void
 } = {
   getLastFilePath: (): string | null => read().lastFilePath,
-
-  setLastFilePath: (filePath: string): void => {
-    const data = read()
-    write({ ...data, lastFilePath: filePath })
-  },
 
   getRecentFiles: (): string[] => read().recentFiles,
 

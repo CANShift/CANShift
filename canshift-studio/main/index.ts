@@ -3,7 +3,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } from 'electron'
 import { join, basename } from 'path'
 import { readFileSync } from 'fs'
-import { registerIpcHandlers, usbService } from './ipc/ipc-handlers'
+import { disposeIpcHandlers, registerIpcHandlers, usbService } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
@@ -229,6 +229,10 @@ function createWindow(): void {
   // the main app should never leave a phantom CLI window alive.
   mainWindow.on('closed', () => {
     disposeCliWindow()
+    // Null out the destroyed BrowserWindow reference so late callers
+    // (select-serial-port, safeSend, logMain) see a falsy mainWindow and
+    // short-circuit instead of touching a freed native handle.
+    mainWindow = null
   })
 
   mainWindow.on('close', (event) => {
@@ -298,6 +302,8 @@ app.on('before-quit', () => {
   usbService.disconnect().catch(() => {
     /* best-effort */
   })
+  // Stop the 10 Hz CAN-frame flush interval so Node's event loop can drain.
+  disposeIpcHandlers()
   // Clear flash port so Web Serial auto-select is reset on next launch
   firmwareService.setFlashPort(null)
   // Tear down the detached CLI window so it doesn't keep the app alive.
