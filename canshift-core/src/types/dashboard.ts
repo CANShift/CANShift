@@ -157,6 +157,8 @@ export interface CanRawAction {
   type: 'can_raw'
   frameId: number
   data: string
+  /** Frame payload sent when a toggle button is turned OFF. Omit for arm-only actions. */
+  dataOff?: string
   extended?: boolean
 }
 
