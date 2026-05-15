@@ -15,10 +15,7 @@ import type {
 import { IpcChannels } from '../../shared/ipc-channels'
 import type { FirmwareRelease } from '../../shared/firmware.service.types'
 import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
-import type {
-  UpdateAvailablePayload,
-  UpdateErrorPayload,
-} from '../../shared/updater.service.types'
+import type { UpdateAvailablePayload, UpdateErrorPayload } from '../../shared/updater.service.types'
 
 // Studio-local IPC payload types (not part of canshift-core). Core IPC return
 // shapes (PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult) are
