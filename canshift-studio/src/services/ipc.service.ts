@@ -36,6 +36,24 @@ export interface FirmwareStatus {
 }
 
 /**
+ * Shape of the `USB_DEVICE_LOG` IPC payload — `level` is the raw firmware
+ * letter (E/W/I/D/V), unmapped. Multiple renderer hooks subscribed to this
+ * channel; the guard lives here so future wire-shape changes (e.g. adding
+ * `timestamp`) only need to update one place.
+ */
+export interface DeviceLogPayload {
+  level: string
+  tag: string
+  message: string
+}
+
+export function isDeviceLogPayload(v: unknown): v is DeviceLogPayload {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.level === 'string' && typeof o.tag === 'string' && typeof o.message === 'string'
+}
+
+/**
  * Outcome of `deviceIpc.getConfig()` — mirrored from main-process
  * `DeviceConfigResult` so the renderer can branch on the empty-device
  * vs transport-failure cases without leaking transport details.
