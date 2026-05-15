@@ -16,13 +16,14 @@ no kerning.
 
 | Intent     | Weight       | Sizes (px) | Files                                              |
 | ---------- | ------------ | ---------- | -------------------------------------------------- |
-| primary    | Black (900)  | 32         | `orbitron_black_32.bin`                            |
-| secondary  | Bold (700)   | 20, 24     | `orbitron_bold_{20,24}.bin`                        |
+| primary    | Black (900)  | 32, 48     | `orbitron_black_{32,48}.bin`                       |
+| secondary  | Bold (700)   | 20, 24, 28 | `orbitron_bold_{20,24,28}.bin`                     |
 | label      | Medium (500) | 12, 14, 16 | `orbitron_medium_{12,14,16}.bin`                   |
 
-The 28-px Bold and 48-px Black entries were dropped (issue #487) to fit the
-LV_MEM_SIZE=64KB budget — callers requesting them snap down via
-`FontManager::secondary` / `primary`.
+The 28-px Bold and 48-px Black entries were dropped in PR #487 to fit the
+then-active LV_MEM_SIZE=64KB budget. After PR #648 bumped the pool to 96 KB,
+both sizes were restored (issue #664) so large numeric/gauge widgets render at
+their designed sizes instead of snapping down (48→32, 28→24).
 The 14-px Medium also has an in-flash twin
 (`canshift-firmware/src/ui/fonts/lv_font_orbitron_medium_14_nk.c`,
 symbol `lv_font_orbitron_medium_14_nk`) used as the FontManager fallback when a
