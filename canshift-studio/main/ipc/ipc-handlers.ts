@@ -153,8 +153,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   // Wire USB device events to the renderer window
   usbService.setEventHandlers({
-    onConnectionChanged: (status) => {
-      safeSend(IpcChannels.USB_CONNECTION_CHANGED, status)
+    onConnectionChanged: (event) => {
+      // Renderer is the single source of truth for device-store connection
+      // flags (#696) — every transition is published, both true and false.
+      safeSend(IpcChannels.USB_CONNECTION_CHANGED, event)
     },
     onError: (message) => {
       safeSend(IpcChannels.USB_ERROR, message)

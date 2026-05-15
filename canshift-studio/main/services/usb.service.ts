@@ -15,6 +15,29 @@ import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
 import type { CanFrame, CanHealth } from './usb.service.types'
 
 /**
+ * Payload forwarded to the renderer on every connection-state transition.
+ *
+ * The renderer treats this event as the single source of truth for the
+ * device-store connection flags (issue #696). Every transition publishes,
+ * both `connected:true` and `connected:false` edges, with the same shape so
+ * the renderer never has to branch on optional fields existing only on one
+ * side.
+ *
+ *   intentional — `true` when triggered by the user / a voluntary code path
+ *                 (UI Disconnect button, CLI `disconnect`, pushConfig reboot
+ *                 sequence). `false` only on involuntary paths (heartbeat
+ *                 unplug, write failure). Lets the renderer suppress the
+ *                 "Device disconnected unexpectedly" log for voluntary
+ *                 disconnects — preserves the #139 / #148 contract while
+ *                 unifying the publish surface.
+ */
+export interface UsbConnectionEvent {
+  connected: boolean
+  portPath: string | null
+  intentional: boolean
+}
+
+/**
  * Structured log entry forwarded from the firmware.
  * Wire format: {"log":1,"lvl":"E|W|I|D|V","tag":"...","msg":"..."}
  */
@@ -34,7 +57,7 @@ export type DeviceConfigResult =
   | { ok: false; reason: 'no-config' | 'transport' }
 
 interface UsbEventHandlers {
-  onConnectionChanged?: (status: ConnectionStatus) => void
+  onConnectionChanged?: (event: UsbConnectionEvent) => void
   onError?: (message: string) => void
   onTelemetry?: (values: Record<string, number>) => void
   onCanFrame?: (frame: CanFrame) => void
@@ -95,9 +118,9 @@ export class UsbService {
   private handlers: UsbEventHandlers = {}
   private pendingAck: PendingAck | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
-  // True while a voluntary disconnect is in flight. The 'close' listener uses
-  // it to suppress the onConnectionChanged event so the UI doesn't log a
-  // spurious "disconnected unexpectedly" entry on a user-initiated disconnect.
+  // True while a voluntary disconnect is in flight. Forwarded to the renderer
+  // on the close-edge event so the UI can suppress the "disconnected
+  // unexpectedly" log on user-initiated disconnects (preserves #139 / #148).
   private intentionalDisconnect = false
 
   setEventHandlers(handlers: UsbEventHandlers): void {
@@ -137,11 +160,20 @@ export class UsbService {
 
       this.port.on('close', () => {
         const wasConnected = this.portPath !== null
+        const intentional = this.intentionalDisconnect
         this.portPath = null
         this.stopHeartbeat()
         this.rejectPendingAck('Connection closed')
-        if (wasConnected && !this.intentionalDisconnect) {
-          this.handlers.onConnectionChanged?.({ connected: false })
+        // Publish every transition — renderer is the single source of truth for
+        // the device-store connection flags (#696). The `intentional` flag lets
+        // the renderer suppress the "disconnected unexpectedly" log on user-
+        // initiated disconnects (preserves #139 / #148).
+        if (wasConnected) {
+          this.handlers.onConnectionChanged?.({
+            connected: false,
+            portPath: null,
+            intentional,
+          })
         }
       })
 
@@ -156,7 +188,13 @@ export class UsbService {
         }
         this.portPath = portPath
         this.startHeartbeat()
-        this.handlers.onConnectionChanged?.({ connected: true, portPath })
+        // A successful open is always voluntary — drives the renderer store via
+        // the IPC event (single source of truth, issue #696).
+        this.handlers.onConnectionChanged?.({
+          connected: true,
+          portPath,
+          intentional: true,
+        })
         resolve({ success: true })
       })
     })
@@ -166,10 +204,10 @@ export class UsbService {
    * Close the serial port and reset all connection state.
    *
    * @param intentional `true` (default) when triggered by the user or another
-   *   voluntary code path — suppresses the onConnectionChanged event so the
-   *   renderer's "disconnected unexpectedly" log doesn't fire. Pass `false`
-   *   from involuntary paths (heartbeat unplug, write failure) so the UI is
-   *   notified.
+   *   voluntary code path — forwarded on the published event so the renderer's
+   *   "disconnected unexpectedly" log doesn't fire. Pass `false` from
+   *   involuntary paths (heartbeat unplug, write failure) so the UI surfaces
+   *   the unexpected disconnect to the operator.
    */
   async disconnect(intentional = true): Promise<UsbResult> {
     this.stopHeartbeat()

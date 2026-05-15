@@ -19,8 +19,6 @@ export function useUsbConnection() {
   const [loading, setLoading] = useState(false)
 
   const connected = useDeviceStore((s) => s.connected)
-  const setConnected = useDeviceStore((s) => s.setConnected)
-  const setDisconnected = useDeviceStore((s) => s.setDisconnected)
   const setError = useDeviceStore((s) => s.setError)
   const clearError = useDeviceStore((s) => s.clearError)
   const log = useLogStore((s) => s.push)
@@ -57,7 +55,8 @@ export function useUsbConnection() {
       .connect(selectedPort)
       .then((result) => {
         if (result.success) {
-          setConnected(selectedPort)
+          // Store update happens via the USB_CONNECTION_CHANGED IPC event —
+          // `useUsbEvents` is the single source of truth (#696).
           log('success', `Connected to ${selectedPort}`)
           toast.success(`Connected to ${selectedPort}`)
         } else {
@@ -76,20 +75,20 @@ export function useUsbConnection() {
       .finally(() => {
         setLoading(false)
       })
-  }, [selectedPort, setConnected, setError, clearError, log, pushError])
+  }, [selectedPort, setError, clearError, log, pushError])
 
   const disconnect = useCallback(() => {
+    // Store update happens via the USB_CONNECTION_CHANGED IPC event —
+    // `useUsbEvents` is the single source of truth (#696).
     usbService
       .disconnect()
       .then(() => {
-        setDisconnected()
         log('info', 'Disconnected')
       })
       .catch(() => {
-        setDisconnected()
         log('warn', 'Disconnect error — forcing disconnected state')
       })
-  }, [setDisconnected, log])
+  }, [log])
 
   return {
     ports,
