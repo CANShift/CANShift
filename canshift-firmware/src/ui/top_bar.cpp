@@ -101,10 +101,10 @@ static uint8_t s_dynCount = 0;
 // scripts/png_to_lvgl_bin.py. We can't use the Unicode sun/moon glyphs
 // because the Latin-only Orbitron fonts don't include them.
 
-static constexpr uint32_t COLOR_DOT_OK = 0x33CC44;    // green — connected, fresh data
-static constexpr uint32_t COLOR_DOT_STALE = 0xFF8800; // orange — was connected but timing out
-static constexpr uint32_t COLOR_DOT_DOWN = 0xCC3333;  // red — never connected since boot
-static constexpr uint32_t COLOR_USB_OFF = 0x444444;   // gray — host not active
+static constexpr uint32_t COLOR_DOT_OK = 0x33CC44;      // green — connected, fresh data
+static constexpr uint32_t COLOR_DOT_STALE = 0xFF8800;   // orange — was connected but timing out
+static constexpr uint32_t COLOR_DOT_DOWN = 0xCC3333;    // red — never connected since boot
+static constexpr uint32_t COLOR_USB_OFF = 0x444444;     // gray — host not active
 static constexpr uint32_t COLOR_MODE_ACTIVE = 0xFF8800; // amber — mode armed
 static constexpr uint32_t COLOR_MODE_IDLE = 0x1C1C1C;   // near-black — mode off
 static constexpr uint32_t COLOR_LABEL = 0xCCCCCC;
