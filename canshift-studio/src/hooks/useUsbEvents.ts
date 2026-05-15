@@ -171,13 +171,5 @@ export function useUsbEvents(): void {
       window.ipc.off(IpcChannels.APP_LOG, handleAppLog)
       window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
     }
-  }, [
-    setConnected,
-    setDisconnected,
-    setError,
-    log,
-    updateCanHealth,
-    pushError,
-    pushOrUpdateError,
-  ])
+  }, [setConnected, setDisconnected, setError, log, updateCanHealth, pushError, pushOrUpdateError])
 }
