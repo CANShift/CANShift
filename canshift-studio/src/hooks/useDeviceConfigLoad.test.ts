@@ -19,7 +19,7 @@ import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
 function makeValidDeviceResponse(): Record<string, unknown> {
   // The store's DEFAULT_SIM_CONFIG is already validateDashboard-clean —
   // reuse it as a known-good wire payload so we don't reinvent the schema.
-  return DEFAULT_SIM_CONFIG as unknown as Record<string, unknown>
+  return DEFAULT_SIM_CONFIG
 }
 
 describe('decideDeviceConfigAction', () => {

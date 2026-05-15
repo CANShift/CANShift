@@ -25,7 +25,7 @@ export function useSessionRestore(): void {
         let config = result.content as DashboardConfig
         try {
           const { config: migrated, applied } = migrateConfig(
-            config as unknown as Record<string, unknown>,
+            config,
             CURRENT_SCHEMA_VERSION
           )
           config = migrated as unknown as DashboardConfig

@@ -81,7 +81,7 @@ export function useConfigActions() {
         let config = result.content as DashboardConfig
         try {
           const { config: migrated, applied } = migrateConfig(
-            config as unknown as Record<string, unknown>,
+            config,
             CURRENT_SCHEMA_VERSION
           )
           config = migrated as unknown as DashboardConfig
@@ -156,7 +156,7 @@ export function useConfigActions() {
       let imported = result.content as DashboardConfig
       try {
         const { config: migrated, applied } = migrateConfig(
-          imported as unknown as Record<string, unknown>,
+          imported,
           CURRENT_SCHEMA_VERSION
         )
         imported = migrated as unknown as DashboardConfig
