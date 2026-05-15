@@ -67,7 +67,13 @@ export interface SignalDef {
 /** Root signal configuration (signals.json) */
 export interface SignalConfig {
   version: SemVer
-  protocol: string // e.g. "maxxecu_v1.2"
+  /**
+   * Informational protocol tag — written by exporters, stored by firmware,
+   * never used in parsing decisions. Current default is `"custom_v1.0"`;
+   * legacy configs with `"maxxecu_v1.2"` are rewritten on load by the
+   * 1.13.0 → 1.14.0 migration (issue #639).
+   */
+  protocol: string
   canSpeedKbps: number // 250, 500, 1000
   signals: SignalDef[]
 }

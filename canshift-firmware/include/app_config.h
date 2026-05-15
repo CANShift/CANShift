@@ -95,6 +95,12 @@
 // per-iteration cost is well below 10 ms in steady state.
 #define LVGL_HANDLER_PERIOD_MS 10
 
+// Horizontal travel (in px) that reclassifies a press as a swipe and cancels
+// any pending button click underneath the finger (issue #640). Tuned above the
+// expected jitter of a stationary tap on the resistive XPT2046 (~4 px) yet
+// well below a deliberate page swipe so navigation still feels responsive.
+#define SWIPE_CANCEL_THRESHOLD_PX 12
+
 // ---------------------------------------------------------------------------
 // LVGL display buffers
 // Two draw buffers allow double-buffered rendering.
@@ -142,6 +148,15 @@ static constexpr size_t LVGL_FS_MIN_HEAP_BYTES = 4096;
 // Timer. 1 tick (~1 ms at configTICK_RATE_HZ=1000) is enough for IDLE0
 // to run while staying well below the MaxxECU group cadence (issue #200).
 #define CAN_TASK_YIELD_TICKS 1
+
+// TWAI init retry policy (issue #652). When initHardware() fails at boot
+// (typically ESP_ERR_NO_MEM from a tight heap), the CAN manager retries on a
+// timer instead of leaving the driver uninstalled and spamming
+// ESP_ERR_INVALID_STATE from twai_receive() at tick rate. Defined as macros so
+// app_config.h stays C-compatible (it is included from a few C translation
+// units alongside C++).
+#define TWAI_INIT_RETRY_MS 5000U
+#define TWAI_INIT_MAX_RETRIES 6U
 
 // ---------------------------------------------------------------------------
 // Config loading
