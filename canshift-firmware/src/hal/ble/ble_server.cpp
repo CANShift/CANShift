@@ -135,10 +135,9 @@ class SettingsCallbacks : public NimBLECharacteristicCallbacks {
             return;
 
         uint8_t brightness = doc["brightness"] | 80;
-        uint32_t sleepS = doc["sleep"] | 0u;
 
         if (xSemaphoreTake(g_lvglMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            SettingsPage::applyFromUsb(brightness, sleepS);
+            SettingsPage::applyFromUsb(brightness);
             xSemaphoreGive(g_lvglMutex);
         }
         LOG_DEBUG("BLE", "Settings applied via BLE");
@@ -156,7 +155,6 @@ class SettingsCallbacks : public NimBLECharacteristicCallbacks {
     void onRead(NimBLECharacteristic *pChar) override {
         JsonDocument doc;
         doc["brightness"] = SettingsPage::getBrightness();
-        doc["sleep"] = SettingsPage::getSleepTimeoutS();
         char buf[64];
         serializeJson(doc, buf, sizeof(buf));
         pChar->setValue(buf);

@@ -832,7 +832,6 @@ void PageManager::updateWidgets() {
     AlertEngine::tick();
     setRevLimiterOverlay(AlertEngine::isRevLimiterFlashOn());
 
-    SettingsPage::tickSleep();
     ErrorBar::update();
 }
 
