@@ -38,7 +38,14 @@ export type {
   CanRawAction,
 } from './types/dashboard'
 
-export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
+export {
+  DEFAULT_PAGE_PALETTE,
+  DEFAULT_TOP_BAR_LAYOUT,
+  BUTTON_ACTION_TYPES,
+  isNavigateAction,
+  isMapSwitchAction,
+  isCanRawAction,
+} from './types/dashboard'
 export type {
   SignalConfig,
   SignalDef,
@@ -108,7 +115,9 @@ export type {
 // Design tokens — canonical UI palette/spacing/typography (issue #526)
 // ---------------------------------------------------------------------------
 export type { DesignTokens } from './design-tokens'
-export { DARK_TOKENS, LIGHT_TOKENS, tokensToCssVars } from './design-tokens'
+// LIGHT_TOKENS deliberately not re-exported — placeholder values for the
+// on-hold theme editor (#21), kept internal until a real consumer lands.
+export { DARK_TOKENS, tokensToCssVars } from './design-tokens'
 
 // ---------------------------------------------------------------------------
 // Constants
