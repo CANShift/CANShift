@@ -10,9 +10,6 @@
     "bgColor": "#0D0D0D",
     "textColor": "#AAAAAA",
     "layout": [
-      { "type": "statusDot", "signal": "rpm", "position": "left" },
-      { "type": "label", "text": "ECU", "position": "left" },
-      { "type": "separator", "position": "left" },
       { "type": "label", "text": "CAN", "position": "left" },
       { "type": "statusDot", "signal": "any", "position": "left" },
       { "type": "modeFlag", "signal": "flag_anti_lag", "text": "ALS", "position": "center" },
