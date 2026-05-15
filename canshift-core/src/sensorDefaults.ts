@@ -34,10 +34,10 @@ export type SensorKind =
  * watch, red = danger. Battery and AFR alarm in BOTH directions — the ramp
  * goes red on either end with a green plateau in the middle.
  *
- * SAFETY NOTE: thresholds are sane defaults for a VW VR6 2.9 on MaxxECU
- * Street, but every engine has its own target windows — users override per
- * signal in the studio editor. A wrong AFR ramp on a different platform is
- * a tuning aid, not a fault detector.
+ * SAFETY NOTE: thresholds are sane defaults for a typical petrol engine, but
+ * every engine has its own target windows — users override per signal in the
+ * studio editor. A wrong AFR ramp on a different platform is a tuning aid,
+ * not a fault detector.
  */
 export const SENSOR_DEFAULT_RAMPS: Record<SensorKind, ColorRamp> = {
   coolant_temp: {

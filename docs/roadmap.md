@@ -17,8 +17,8 @@
 - [ ] Wire CAN transceiver, disable sim mode, confirm TWAI initializes
 
 ### Phase 1B — CAN Signal Validation
-- [ ] Connect to MaxxECU Street with 500kbps CAN
-- [ ] Verify frame IDs in MaxxECU software match signals.json
+- [ ] Connect to ECU with configured CAN speed
+- [ ] Verify ECU frame IDs match signals.json (use Studio's CAN Scanner)
 - [ ] Confirm RPM signal decoded correctly
 - [ ] Validate coolant temp, oil temp, oil pressure signals
 - [ ] Validate speed, gear, lambda signals
@@ -112,4 +112,4 @@
 - Lap timer with GPS integration
 - Shift light LEDs (external GPIO)
 - Predictive shift indicator
-- Engine knock detection display (if MaxxECU exposes it via CAN)
+- Engine knock detection display (if ECU exposes it via CAN)

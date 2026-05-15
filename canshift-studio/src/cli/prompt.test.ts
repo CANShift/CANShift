@@ -10,7 +10,7 @@ describe('slugifyHost', () => {
   })
 
   it('collapses runs of invalid characters to a single hyphen', () => {
-    expect(slugifyHost('VR6   //  Track ?? Day')).toBe('vr6-track-day')
+    expect(slugifyHost('Track  //  Day ?? 1')).toBe('track-day-1')
   })
 
   it('trims leading/trailing hyphens introduced by slugification', () => {
@@ -29,8 +29,8 @@ describe('slugifyHost', () => {
 
 describe('buildPrompt', () => {
   it('uses the slugified config name when connected and named', () => {
-    const out = buildPrompt({ connected: true, configName: 'My VR6', lastExitOk: true })
-    expect(out).toContain('canshift@my-vr6')
+    const out = buildPrompt({ connected: true, configName: 'My Car', lastExitOk: true })
+    expect(out).toContain('canshift@my-car')
     // Default-coloured `%` (no red ANSI in the trailing region).
     expect(out).not.toContain('\x1b[31m')
   })

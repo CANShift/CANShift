@@ -1,157 +1,163 @@
-# CANShift — Premier flash
+# CANShift — First Flash
 
-Marche à suivre complète depuis la réception du matériel jusqu'au dashboard live.
+Complete procedure from hardware setup to a live dashboard.
 
 ---
 
-## Matériel nécessaire
+## Required hardware
 
 - Elecrow CrowPanel 2.8" ESP32 HMI (SKU DIS05028H)
-- Câble USB-C (données, pas charge uniquement)
-- Adafruit CAN Pal (TJA1051T/3) + câble CAN (CANH/CANL vers MaxxECU)
-- Mac avec PlatformIO et CANShift Studio installés
+- USB-C cable (data, not charge-only)
+- Adafruit CAN Pal (TJA1051T/3) + CAN wiring (CANH/CANL to your ECU)
+- Mac or PC with PlatformIO and CANShift Studio installed
 
 ---
 
-## Étape 1 — Premier flash firmware
+## Step 1 — Flash the firmware
 
-### 1a. Brancher l'écran
+### 1a. Connect the display
 
-Brancher le CrowPanel en USB sur le Mac. Vérifier que le port apparaît :
+Plug the CrowPanel in via USB. Verify the port appears:
 
 ```bash
+# macOS
 ls /dev/cu.usbserial-* /dev/cu.SLAB_* /dev/cu.wchusbserial*
+
+# Linux
+ls /dev/ttyUSB*
+
+# Windows
+# Check Device Manager → Ports (COM & LPT)
 ```
 
-Si rien n'apparaît : installer le driver CP210x (Silicon Labs) ou CH340 selon le chip USB du board.
+If nothing appears: install the CP210x (Silicon Labs) or CH340 driver depending on the USB chip on your board.
 
-### 1b. Flasher le firmware
+### 1b. Flash the firmware
 
 ```bash
 cd canshift-firmware
 pio run -e crowpanel_28 --target upload
 ```
 
-L'écran reste noir pendant le flash (normal — le bootloader ESP32 est actif).
+The display stays black during the flash (normal — the ESP32 bootloader is active).
 
-Après le flash, l'ESP32 reboot automatiquement. L'écran affiche :
-- **Splash CANShift** (rouge, barre de progression)
-- **Setup screen** — "Ready to configure" avec un point rouge qui pulse
+After the flash, the ESP32 reboots automatically. The display shows:
+- **CANShift splash** (red, progress bar)
+- **Setup screen** — "Ready to configure" with a pulsing red dot
 
-C'est normal : il n'y a pas encore de config sur l'écran.
+This is expected: no config is on the device yet.
 
-### 1c. Uploader les fichiers de config (SPIFFS)
+### 1c. Upload config files (SPIFFS)
 
 ```bash
 pio run -e crowpanel_28 --target uploadfs
 ```
 
-Cela envoie `dashboard.json` et `signals.json` dans la mémoire flash SPIFFS.
+This writes `dashboard.json`, `signals.json`, and other assets to SPIFFS.
 
-Après l'upload, faire un power cycle (débrancher/rebrancher). Le dashboard VR6 doit s'afficher.
-
----
-
-## Étape 2 — Connexion depuis Studio
-
-Ouvrir CANShift Studio. Dans l'onglet **Device** :
-
-1. Cliquer **Refresh** pour lister les ports USB
-2. Sélectionner le port du CrowPanel
-3. Cliquer **Connect**
-
-Studio envoie `GET_STATUS` — si le firmware répond, la connexion est établie et la version firmware s'affiche.
-
-**Si le firmware n'est pas encore flashé** : Studio détecte l'absence de réponse et ouvre automatiquement le dialog de flash. Sélectionner une release et cliquer Flash — Studio gère tout via Web Serial (pas besoin de PlatformIO).
+After the upload, power cycle (unplug / replug). The dashboard should appear.
 
 ---
 
-## Étape 3 — Calibration touch
+## Step 2 — Connect from Studio
 
-La calibration par défaut est une estimation. Pour la précision :
+Open CANShift Studio. In the **Device** tab:
 
-1. Swipe **vers le bas** depuis le haut de l'écran → Settings s'ouvre
-2. Tapper **Calibrate Touch**
-3. Suivre les 5 points de calibration affichés à l'écran
-4. La calibration est sauvegardée en NVS — pas besoin de refaire après reboot
+1. Click **Refresh** to list USB ports
+2. Select the CrowPanel port
+3. Click **Connect**
 
-Si le touch est décalé ou inversé (X/Y inversés), modifier dans `board_config.h` :
+Studio sends `GET_STATUS` — if the firmware responds, the connection is established and the firmware version is shown.
+
+**If the firmware is not yet flashed:** Studio detects the missing response and automatically opens the flash dialog. Select a release and click Flash — Studio handles everything via Web Serial (no PlatformIO required).
+
+---
+
+## Step 3 — Touch calibration
+
+The default calibration is an estimate. For accuracy:
+
+1. Swipe **down** from the top of the screen → Settings opens
+2. Tap **Calibrate Touch**
+3. Follow the 5 calibration points shown on screen
+4. The calibration is saved in NVS — no need to redo after reboot
+
+If touch is offset or axes are swapped, edit `board_config.h`:
 ```cpp
-#define TOUCH_SWAP_XY  1   // si X et Y sont inversés
-#define TOUCH_INVERT_X 1   // si X est mirroir
-#define TOUCH_INVERT_Y 1   // si Y est mirroir
+#define TOUCH_SWAP_XY  1   // swap X and Y axes
+#define TOUCH_INVERT_X 1   // mirror X axis
+#define TOUCH_INVERT_Y 1   // mirror Y axis
 ```
-puis refaire `pio run -e crowpanel_28 --target upload`.
+then re-flash: `pio run -e crowpanel_28 --target upload`.
 
 ---
 
-## Étape 4 — Vérification CAN / MaxxECU
+## Step 4 — CAN verification
 
-### 4a. Câblage CAN Pal
+### 4a. CAN Pal wiring
 
 ```
 CAN Pal CTX  → ESP32 GPIO 22 (TWAI TX)
 CAN Pal CRX  → ESP32 GPIO 21 (TWAI RX)
 CAN Pal VCC  → 5V
 CAN Pal GND  → GND
-CAN Pal CANH → MaxxECU CAN H
-CAN Pal CANL → MaxxECU CAN L
+CAN Pal CANH → ECU CAN H
+CAN Pal CANL → ECU CAN L
 ```
 
-### 4b. Vérifier les frame IDs MaxxECU
+### 4b. Verify frame IDs
 
-Les IDs dans `signals.json` sont des **estimations** (0x370–0x375). Avant de les valider :
+The IDs in `signals.json` are **examples**. Before using them:
 
-1. Ouvrir MaxxECU PC software
-2. Aller dans **CAN → CAN Output**
-3. Vérifier quels frames sont activés et leurs IDs réels
-4. Si les IDs diffèrent → mettre à jour `signals.json` et repusher depuis Studio
+1. Open your ECU's configuration software or consult its CAN documentation
+2. Check which frames are enabled and their actual IDs
+3. If IDs differ → update `signals.json` and push from Studio
 
-### 4c. Utiliser le CAN scanner pour debug
+### 4c. Use the CAN scanner for debugging
 
-Dans Studio, onglet **CAN Scanner** :
-- Connecter l'écran via USB pendant que l'ECU tourne
-- Les frames CAN bruts s'affichent en temps réel (ID + données hex)
-- Comparer les IDs reçus avec ceux dans `signals.json`
+In Studio, **CAN Scanner** tab:
+- Connect the display via USB while the ECU is running
+- Raw CAN frames appear in real time (ID + hex data)
+- Compare received IDs against those in `signals.json`
 
-### 4d. Confirmer le baud rate
+### 4d. Confirm the baud rate
 
-`signals.json` est configuré à **500 kbps**. Vérifier que MaxxECU est configuré au même baud.
-Si l'ECU est en 1000 kbps : modifier `canSpeedKbps` dans `signals.json` et `CAN_SPEED_KBPS` dans `board_config.h`.
+`signals.json` defaults to **500 kbps**. Verify your ECU uses the same baud rate.
+To change it: update `canSpeedKbps` in `signals.json` and `CAN_SPEED_KBPS` in `board_config.h`.
 
 ---
 
 ## Troubleshooting
 
-| Symptôme | Cause probable | Action |
-|----------|----------------|--------|
-| Écran noir après flash | Mauvaise connexion SPI ou pin RST | Vérifier le câblage, tester avec `pio run -e sim` |
-| Touch ne répond pas | Calibration incorrecte | Faire la calibration (Étape 3) |
-| Touch inversé | SWAP_XY ou INVERT | Modifier `board_config.h` |
-| Pas de signaux CAN | Mauvais frame IDs ou baud rate | CAN scanner + vérifier MaxxECU |
-| RPM affiché mais pas temp | Timeout signal | Vérifier `timeoutMs` dans `signals.json` |
-| Barre rouge en bas de l'écran | Erreur firmware active | Tapper la barre pour voir le détail |
+| Symptom | Likely cause | Action |
+|---------|--------------|--------|
+| Black screen after flash | Bad SPI wiring or RST pin | Check wiring, test with `pio run -e sim` |
+| Touch unresponsive | Incorrect calibration | Run calibration (Step 3) |
+| Touch axes swapped | SWAP_XY or INVERT flags | Edit `board_config.h` |
+| No CAN signals | Wrong frame IDs or baud rate | CAN scanner + verify ECU config |
+| RPM shows but not temp | Signal timeout | Check `timeoutMs` in `signals.json` |
+| Red bar at bottom of screen | Active firmware error | Tap the bar to see details |
 
 ---
 
-## Structure des fichiers de config
+## Config file structure
 
-Les configs sont dans `canshift-firmware/data/config/` et uploadées en SPIFFS.
+Config files live in `canshift-firmware/data/config/` and are uploaded to SPIFFS.
 
 ```
 data/config/
-├── dashboard.json   ← Layout des pages et widgets
-└── signals.json     ← Mapping CAN → signaux
+├── dashboard.json   ← Page layout and widget definitions
+└── signals.json     ← CAN signal mapping (edit to match your ECU)
 ```
 
-Pour modifier le dashboard :
-1. Éditer dans Studio ou directement en JSON
-2. Soit **Push Config** depuis Studio (live, sans reflash)
-3. Soit modifier le fichier et refaire `pio run --target uploadfs`
+To update the dashboard:
+1. Edit in Studio or directly in JSON
+2. Either **Push Config** from Studio (live, no reflash)
+3. Or edit the file and re-run `pio run --target uploadfs`
 
 ---
 
-## Commandes utiles
+## Useful commands
 
 ```bash
 # Build firmware
@@ -163,12 +169,12 @@ pio run -e crowpanel_28 --target upload
 # Upload SPIFFS (config + assets)
 pio run -e crowpanel_28 --target uploadfs
 
-# Build + flash en une commande
+# Build and flash in one command
 pio run -e crowpanel_28 --target upload --target uploadfs
 
-# Mode simulation (sans hardware)
+# Simulation mode (no hardware required)
 pio run -e sim
 
-# Monitor série (logs firmware)
+# Serial monitor (firmware logs)
 pio device monitor --baud 115200
 ```

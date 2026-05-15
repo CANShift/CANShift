@@ -22,17 +22,17 @@
 CANShift is a custom instrument cluster you design yourself. The ESP32 reads CAN frames from your ECU and renders live gauges, bars, and warnings on a small touchscreen. The desktop studio and the iPhone app let you edit the layout, map signals, scan the CAN bus, and push firmware updates.
 
 ```
-MaxxECU ──CAN 500 kbps──► ESP32 (CrowPanel 2.8") ──► 320×240 display
-                                  │
-                             USB serial (115200 baud, JSON lines)
-                                  │
-                             CANShift Studio (desktop)
-                       (config editor · CAN scanner ·
-                        live telemetry · firmware update)
+ECU ──CAN──► ESP32 (CrowPanel 2.8") ──► 320×240 display
+                     │
+                USB serial (115200 baud, JSON lines)
+                     │
+                CANShift Studio (desktop)
+          (config editor · CAN scanner ·
+           live telemetry · firmware update)
 
-                             BLE (iPhone app)
-                       (live telemetry · screen settings ·
-                        console · firmware OTA over Wi-Fi*)
+                BLE (iPhone app)
+          (live telemetry · screen settings ·
+           console · firmware OTA over Wi-Fi*)
 ```
 
 \* The mobile app uses BLE for telemetry and settings. **Wi-Fi is used only when the firmware exposes its OTA access point** — the device hosts an AP, the phone connects to it, and the new firmware bundle is uploaded over HTTP. No live telemetry crosses Wi-Fi.
@@ -46,22 +46,21 @@ The firmware is **autonomous** — it runs without any app connected. Studio and
 | Component | Part |
 |-----------|------|
 | Display / MCU | Elecrow CrowPanel 2.8" (ESP32, ILI9341, XPT2046 touch) |
-| ECU | MaxxECU Street |
-| Engine | VW VR6 2.9 |
+| ECU | Any CAN-enabled ECU |
 | CAN transceiver | Adafruit CAN Pal (TJA1051T/3) |
 
 **CAN wiring** (default — pins are configurable from Studio → Device Config and persisted in `device.json`):
 
 ```
-CAN Pal CANH ── MaxxECU CAN H
-CAN Pal CANL ── MaxxECU CAN L
+CAN Pal CANH ── ECU CAN H
+CAN Pal CANL ── ECU CAN L
 CAN Pal CTX  ── ESP32 GPIO 25 (TWAI TX)
 CAN Pal CRX  ── ESP32 GPIO 32 (TWAI RX)
 CAN Pal VCC  ── 5 V
 CAN Pal GND  ── GND
 ```
 
-MaxxECU has internal CAN termination — do not add a second 120 Ω terminator on the ECU end.
+Check your ECU's datasheet for CAN termination — some ECUs have internal termination, some require an external 120 Ω resistor.
 
 ---
 
@@ -172,14 +171,14 @@ docs/                Architecture documentation
 - USB serial protocol — push config, screen settings, version query, CAN scan, reboot
 - CAN scan mode forwards raw frames to Studio in real time
 - CAN health stats (fps, error count) every 2 s
-- Simulation mode (`[env:sim]`) — realistic VR6 data without a live ECU
+- Simulation mode (`[env:sim]`) — realistic engine data without a live ECU
 
 ### Studio
 
 - First-run onboarding modal walks new users through device pairing (#299)
 - Firmware update flow redesign — clearer progress, rollback, and version surfacing (#304)
 - Visual dashboard editor — pages, widgets, positions, sizes, styles, signal bindings
-- Signal editor — bind widgets to MaxxECU CAN signals
+- Signal editor — bind widgets to CAN signals
 - USB device connection — list ports, connect, push config with diff preview
 - Live telemetry display with LIVE / SIM / NO DATA indicator
 - CAN bus scanner — live table of all frame IDs, data, count, fps
@@ -212,7 +211,7 @@ docs/                Architecture documentation
 ## Configuration & Assumptions To Verify
 
 - CAN speed: 500 kbps default, configurable in Studio → Device Config
-- MaxxECU CAN frame IDs in `signals.json` are **unverified** — confirm in MaxxECU software before driving
+- CAN frame IDs in `signals.json` are examples — map them to your ECU's actual output before driving
 - All GPIO assignments live in [`canshift-firmware/include/board_config.h`](canshift-firmware/include/board_config.h) — verify against your CrowPanel 2.8" schematic
 - Config storage: SPIFFS (configs, fonts, and bundled defaults)
 - First-flash checklist: [`docs/FIRST_FLASH.md`](docs/FIRST_FLASH.md)
@@ -262,18 +261,18 @@ Full architecture docs in [`docs/`](docs/):
 | `FIRST_FLASH.md` | Pre-flight checklist for first hardware power-up |
 | `usb-first-strategy.md` | Phase 1 USB communication design |
 | `config-contract.md` | JSON config schema specification |
-| `can-integration-notes.md` | CAN wiring and MaxxECU protocol |
+| `can-integration-notes.md` | CAN wiring and ECU integration |
 | `future-wireless-strategy.md` | Phase 2 Wi-Fi and BLE plans |
 
 ---
 
 ## Roadmap & Vision
 
-The current build targets a specific hardware stack (Elecrow CrowPanel 2.8", MaxxECU, VW VR6). The long-term goal is to make CANShift **fully open source and hardware-agnostic**:
+CANShift is designed to work with **any CAN-enabled ECU and any vehicle**. The signal mapping is fully configurable via `signals.json` — map your ECU's frame IDs and byte positions, push the config from Studio, and the dashboard adapts without recompiling firmware.
 
 - **Multi-board support** — flash on any ESP32 with any SPI LCD + touch (configurable display driver, resolution, pins)
 - **Multi-screen-size support** — responsive LVGL layouts for 2.4", 3.5", 4.3", 7" panels
-- **Multi-ECU / multi-car** — swappable signal profiles (MaxxECU, Haltech, MegaSquirt, stock OBD-II)
+- **Multi-ECU / multi-car** — swappable signal profiles (Haltech, MegaSquirt, stock OBD-II, custom)
 - **Open source release** — public repo, documented build process, community signal profiles
 - **Theme editor** — visual color palette and widget style editor in Studio, exported as a theme file to the device
 
