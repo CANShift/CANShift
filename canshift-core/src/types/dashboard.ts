@@ -157,6 +157,8 @@ export interface CanRawAction {
   type: 'can_raw'
   frameId: number
   data: string
+  /** Frame payload sent when a toggle button is turned OFF. Omit for arm-only actions. */
+  dataOff?: string
   extended?: boolean
 }
 
@@ -351,6 +353,7 @@ export type TopBarItem =
   | { type: 'separator'; position: TopBarItemPosition }
   | { type: 'signal'; signal: string; format?: string; position: TopBarItemPosition }
   | { type: 'usbIcon'; position: TopBarItemPosition }
+  | { type: 'bleIcon'; position: TopBarItemPosition }
   | { type: 'themeToggle'; position: TopBarItemPosition }
   | { type: 'modeFlag'; signal: string; text: string; position: TopBarItemPosition }
 
@@ -367,20 +370,14 @@ export interface TopBarConfig {
 }
 
 /**
- * Default top bar layout — mirrors what the firmware and studio used to
- * render via hardcoded markup before 1.5.0. Used as fallback when a config
- * has no `topBar.layout` set.
- *
- * `signal: 'any'` on a statusDot lights it green when ANY signal in the
- * signal store has been received recently — used for the CAN-presence dot.
+ * Default top bar layout. Used as fallback when a config has no `topBar.layout` set.
+ * `signal: 'any'` on a statusDot lights it green when ANY CAN signal has been
+ * received recently.
  */
 export const DEFAULT_TOP_BAR_LAYOUT: TopBarItem[] = [
-  { type: 'statusDot', signal: 'rpm', position: 'left' },
-  { type: 'label', text: 'ECU', position: 'left' },
-  { type: 'separator', position: 'left' },
-  { type: 'label', text: 'CAN', position: 'left' },
   { type: 'statusDot', signal: 'any', position: 'left' },
-  { type: 'signal', signal: 'battery_volts', format: '%.1fV', position: 'right' },
+  { type: 'label', text: 'CAN', position: 'left' },
+  { type: 'bleIcon', position: 'right' },
   { type: 'usbIcon', position: 'right' },
   { type: 'separator', position: 'right' },
   { type: 'themeToggle', position: 'right' },

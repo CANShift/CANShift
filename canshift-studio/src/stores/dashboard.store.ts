@@ -13,6 +13,7 @@ import type {
 } from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
 import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
+import { DAY_THEME_PRESET } from '../constants/theme'
 
 /**
  * Outcome of {@link DashboardState.loadFromDeviceOrDemo} — lets callers log
@@ -207,6 +208,8 @@ export const useDashboardStore = create<DashboardState>()(
         s.past = []
         s.future = []
         s.config = config
+        // Day theme is always active — backfill if absent in older configs.
+        s.config.dayTheme ??= DAY_THEME_PRESET
         s.filePath = filePath ?? null
         s.isDirty = false
         s.selectedPageId = config.defaultPageId

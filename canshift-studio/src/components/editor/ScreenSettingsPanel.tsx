@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { useScreenSettingsStore } from '../../stores/screenSettings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
+import { useDashboardStore } from '../../stores/dashboard.store'
 import { usbService } from '../../services/ipc.service'
 import {
   AlertDialog,
@@ -26,7 +27,6 @@ interface ScreenSettingsPanelProps {
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
   const navigate = useNavigate()
   const brightness = useScreenSettingsStore((s) => s.brightness)
-  const sleepTimeoutS = useScreenSettingsStore((s) => s.sleepTimeoutS)
   const rotation = useScreenSettingsStore((s) => s.rotation)
   const set = useScreenSettingsStore((s) => s.set)
   const reset = useScreenSettingsStore((s) => s.reset)
@@ -34,6 +34,8 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
   const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
+  const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
+  const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
   const log = useLogStore((s) => s.push)
   const [otaState, setOtaState] = useState<'idle' | 'pending'>('idle')
   const [calibrating, setCalibrating] = useState(false)
@@ -47,7 +49,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const pushScreenSettings = async () => {
     const result = await usbService.pushScreenSettings({
       brightness,
-      sleep: sleepTimeoutS,
+      sleep: 0,
       rotation,
     })
     if (result.success) {
@@ -84,14 +86,16 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const canSave = connected || simulationMode
   const canDeviceAction = connected && !simulationMode
 
-  // Day/Night selection — fires immediately, optimistically flips local state.
-  // Uses the explicit CMD_SET_DAY_NIGHT so tapping the active segment is a
-  // no-op even on the device side. The firmware response is the next
-  // CMD_GET_STATUS (re-fetched on reconnect), so a stale value self-corrects
-  // on the next probe.
+  // Active day mode: device value when connected, local preview otherwise.
+  const activeDayMode = isDayMode ?? isPreviewDayMode
+
+  // Day/Night selection — fires immediately for both connected and preview modes.
   const handleSelectMode = async (target: 'night' | 'day') => {
-    if (!canDeviceAction) return
     const day = target === 'day'
+    if (!canDeviceAction) {
+      if (isPreviewDayMode !== day) togglePreviewTheme()
+      return
+    }
     if (isDayMode === day) return
     const result = await usbService.setDayNight(day)
     if (result.success) {
@@ -183,62 +187,26 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           />
         </SettingRow>
 
-        {/* Sleep */}
-        <SettingRow
-          label="SLEEP"
-          value={sleepTimeoutS === 0 ? 'Off' : `${String(sleepTimeoutS)}s`}
-          scale={scale}
-        >
-          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-            {([0, 30, 60, 300] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => {
-                  set({ sleepTimeoutS: v })
-                }}
-                style={{
-                  flex: 1,
-                  padding: `${String(Math.round(scale * 2))}px 0`,
-                  background: sleepTimeoutS === v ? '#1A0A0A' : '#111111',
-                  border: `1px solid ${sleepTimeoutS === v ? '#CC3333' : '#2A2A2A'}`,
-                  borderRadius: 3,
-                  color: sleepTimeoutS === v ? '#CC3333' : '#AAAAAA',
-                  fontSize: fs,
-                  cursor: 'pointer',
-                  lineHeight: 1,
-                }}
-              >
-                {v === 0 ? 'Off' : v < 60 ? `${String(v)}s` : `${String(v / 60)}m`}
-              </button>
-            ))}
-          </div>
-        </SettingRow>
-
-        {/* Theme — fires immediately (no Save needed), state mirrors firmware */}
-        <SettingRow
-          label="THEME"
-          value={isDayMode === null ? '—' : isDayMode ? 'Day' : 'Night'}
-          scale={scale}
-        >
+        {/* Theme — fires immediately for both connected and preview modes */}
+        <SettingRow label="THEME" value={activeDayMode ? 'Day' : 'Night'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {(['night', 'day'] as const).map((mode) => {
-              const active = isDayMode === (mode === 'day')
+              const active = activeDayMode === (mode === 'day')
               return (
                 <button
                   key={mode}
                   onClick={() => {
                     void handleSelectMode(mode)
                   }}
-                  disabled={!canDeviceAction}
                   style={{
                     flex: 1,
                     padding: `${String(Math.round(scale * 2))}px 0`,
                     background: active ? '#1A0A0A' : '#111111',
                     border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: active ? '#CC3333' : canDeviceAction ? '#AAAAAA' : '#444444',
+                    color: active ? '#CC3333' : '#AAAAAA',
                     fontSize: fs,
-                    cursor: canDeviceAction ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     lineHeight: 1,
                     textTransform: 'capitalize',
                   }}
@@ -280,26 +248,43 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-        {/* Touch calibration — opens crosshairs on the device */}
+        {/* Touch calibration + reset — same row, same style as theme buttons */}
         <SettingRow label="TOUCH" value="" scale={scale}>
-          <button
-            onClick={handleCalibrate}
-            disabled={!canDeviceAction || calibrating}
-            style={{
-              width: '100%',
-              padding: `${String(Math.round(scale * 2))}px 0`,
-              background: '#111111',
-              border: `1px solid ${canDeviceAction ? '#2A2A2A' : '#1E1E1E'}`,
-              borderRadius: 3,
-              color: canDeviceAction ? '#AAAAAA' : '#444444',
-              fontSize: fs,
-              cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
-              lineHeight: 1,
-              letterSpacing: '0.04em',
-            }}
-          >
-            {calibrating ? 'Starting…' : 'CALIBRATE TOUCH'}
-          </button>
+          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
+            <button
+              onClick={handleCalibrate}
+              disabled={!canDeviceAction || calibrating}
+              style={{
+                flex: 1,
+                padding: `${String(Math.round(scale * 2))}px 0`,
+                background: '#111111',
+                border: `1px solid ${canDeviceAction ? '#2A2A2A' : '#1E1E1E'}`,
+                borderRadius: 3,
+                color: canDeviceAction ? '#AAAAAA' : '#444444',
+                fontSize: fs,
+                cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
+                lineHeight: 1,
+              }}
+            >
+              {calibrating ? '...' : 'CALIBRATE'}
+            </button>
+            <button
+              onClick={reset}
+              style={{
+                flex: 1,
+                padding: `${String(Math.round(scale * 2))}px 0`,
+                background: '#111111',
+                border: '1px solid #2A2A2A',
+                borderRadius: 3,
+                color: '#AAAAAA',
+                fontSize: fs,
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+            >
+              RESET
+            </button>
+          </div>
         </SettingRow>
 
         {/* Firmware update */}
@@ -335,27 +320,12 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: Math.round(scale * 3), marginTop: 'auto' }}>
-          <button
-            onClick={reset}
-            style={{
-              flex: 1,
-              padding: `${String(Math.round(scale * 3))}px 0`,
-              background: 'transparent',
-              border: '1px solid #2A2A2A',
-              borderRadius: 4,
-              color: '#AAAAAA',
-              fontSize: fs,
-              cursor: 'pointer',
-            }}
-          >
-            RESET
-          </button>
+        <div style={{ marginTop: 'auto' }}>
           <button
             onClick={handleSave}
             disabled={!canSave}
             style={{
-              flex: 2,
+              width: '100%',
               padding: `${String(Math.round(scale * 3))}px 0`,
               background: canSave ? '#1A3A1A' : '#111111',
               border: `1px solid ${canSave ? '#336633' : '#2A2A2A'}`,

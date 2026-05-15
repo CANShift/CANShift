@@ -457,6 +457,7 @@ const VALID_TOP_BAR_ITEM_TYPES = [
   'separator',
   'signal',
   'usbIcon',
+  'bleIcon',
   'themeToggle',
   'modeFlag',
 ] as const
@@ -708,9 +709,9 @@ function validateButtonAction(action: unknown, prefix: string): string[] {
   if (action.category !== 'ecu' || action.type !== 'can_raw') return []
   const errors: string[] = []
   errors.push(...validateCanRawData(action.data, prefix))
-  // `extended` is optional (issue #319); default false. Reject anything that
-  // isn't a boolean rather than coercing — Studio writes the flag and we want
-  // a parse-time signal when it gets corrupted.
+  if (action.dataOff !== undefined) {
+    errors.push(...validateCanRawData(action.dataOff, `${prefix} (dataOff)`))
+  }
   if (action.extended !== undefined && typeof action.extended !== 'boolean') {
     errors.push(`${prefix}: extended must be a boolean when set`)
   }

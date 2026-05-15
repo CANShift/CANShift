@@ -511,7 +511,9 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showIcon: true,
             isToggle: true,
             colors: DEMO_BUTTON_COLORS_RED,
-            actions: [{ category: 'ecu', type: 'can_raw', frameId: 0x520, data: '01' }],
+            actions: [
+              { category: 'ecu', type: 'can_raw', frameId: 0x520, data: '01', dataOff: '00' },
+            ],
           },
         },
         {
@@ -528,7 +530,9 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showIcon: true,
             isToggle: true,
             colors: DEMO_BUTTON_COLORS_RED,
-            actions: [{ category: 'ecu', type: 'can_raw', frameId: 0x521, data: '01' }],
+            actions: [
+              { category: 'ecu', type: 'can_raw', frameId: 0x521, data: '01', dataOff: '00' },
+            ],
           },
         },
         {

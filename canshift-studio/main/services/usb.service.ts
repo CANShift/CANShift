@@ -215,21 +215,24 @@ export class UsbService {
     // Firmware writes to SD synchronously before acking — scale with size.
     const timeoutMs = putConfigTimeoutMs(Buffer.byteLength(payload, 'utf8'))
     const result = await this.sendCommand(payload, timeoutMs)
-    // Firmware always reboots after a successful PUT_CONFIG write (esp_restart
-    // or LVGL OOM assert). The ack never arrives — Studio sees a timeout or a
-    // disconnect depending on macOS+CP2102 close-event timing. Any error except
-    // 'Not connected to device' means the write reached the device.
-    if (!result.success && result.error !== 'Not connected to device') {
-      return { success: true }
-    }
-    // CP2102 USB-UART bridge stays enumerated when the ESP32 reboots, so the
-    // OS serial port never closes and the 'close' event never fires. Force an
-    // explicit disconnect so the renderer's burn-phase tracker sees the
-    // connected→false edge it needs to transition rebooting→done.
     if (result.success) {
+      // CP2102 USB-UART bridge stays enumerated when the ESP32 reboots, so the
+      // OS serial port never closes and the 'close' event never fires. Force an
+      // explicit disconnect so the renderer's burn-phase tracker sees the
+      // connected→false edge it needs to transition rebooting→done.
       void this.disconnect(false)
+      return result
     }
-    return result
+    // Explicit firmware rejections — device is still running, write never happened.
+    if (
+      result.error === 'Not connected to device' ||
+      result.error === 'missing_payload' ||
+      result.error === 'write_failed'
+    ) {
+      return result
+    }
+    // Timeout or transport disconnect = firmware wrote and rebooted before acking.
+    return { success: true }
   }
 
   async pushScreenSettings(settings: {
