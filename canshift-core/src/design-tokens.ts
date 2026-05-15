@@ -78,8 +78,9 @@ export const DARK_TOKENS = {
 
 /**
  * Light palette — placeholder values mirroring DARK_TOKENS. The theme editor
- * (issue #21) is on hold; this exists only so consumers can wire a
- * dark/light switch today without surprises if it gets toggled.
+ * (issue #21) is on hold; intentionally *not* re-exported from the package
+ * barrel until a real consumer lands. Kept exported here so the shape check
+ * in design-tokens.test.ts catches drift against DARK_TOKENS.
  */
 export const LIGHT_TOKENS = {
   colors: {
