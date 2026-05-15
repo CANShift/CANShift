@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 #include <esp_partition.h>
+#include <sys/stat.h>
 
 namespace {
 // Tracks the most recent init() outcome so callers (boot UI, USB status)
@@ -274,7 +275,11 @@ bool StorageDriver::writeFileAtomic(const char *path, const uint8_t *data, size_
 }
 
 bool StorageDriver::fileExists(const char *path) {
-    return SPIFFS.exists(path);
+    // Avoid SPIFFS.exists() (wraps fopen+fclose) — under heap pressure newlib's
+    // __sfp() can abort() during FILE-slot mutex init. stat() goes through VFS
+    // directly without touching newlib stdio. See issue #651.
+    struct stat st;
+    return ::stat(path, &st) == 0;
 }
 
 bool StorageDriver::renameFile(const char *src, const char *dst) {
