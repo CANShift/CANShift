@@ -456,9 +456,9 @@ describe('validateDashboard — button widget type fields', () => {
         ],
       })
     )
-    expect(
-      result.errors.some((e) => e.includes('map_switch.mapIndex must be an integer'))
-    ).toBe(true)
+    expect(result.errors.some((e) => e.includes('map_switch.mapIndex must be an integer'))).toBe(
+      true
+    )
   })
 
   it('rejects an action with unknown category/type combination', () => {
