@@ -160,7 +160,7 @@ export function applyDeviceConfigAction(
       return
     }
     case 'invalid-device-config': {
-      const summary = `Device config failed validation — ${String(action.errors.length)} error(s), keeping editor state`
+      const summary = `Device config failed validation — ${String(action.errors.length)} error(s)`
       log('error', summary)
       pushError({
         source: 'config',
@@ -168,6 +168,12 @@ export function applyDeviceConfigAction(
         message: summary,
         detail: action.errors.join('\n'),
       })
+      if (useDashboardStore.getState().config === null) {
+        const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(null)
+        if (outcome === 'demo') {
+          log('info', 'Loaded demo config as fallback — fix device config and push to deploy')
+        }
+      }
       return
     }
     case 'migration-failed-device-config': {
@@ -178,6 +184,12 @@ export function applyDeviceConfigAction(
         code: 'DEVICE_CONFIG_MIGRATION_FAILED',
         message: summary,
       })
+      if (useDashboardStore.getState().config === null) {
+        const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(null)
+        if (outcome === 'demo') {
+          log('info', 'Loaded demo config as fallback — fix device config and push to deploy')
+        }
+      }
       return
     }
     case 'apply-device-config-with-warnings': {
@@ -212,6 +224,7 @@ export function useDeviceConfigLoad(): void {
   const connected = useDeviceStore((s) => s.connected)
   const portPath = useDeviceStore((s) => s.portPath)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
+  const firmwareCheck = useDeviceStore((s) => s.firmwareCheck)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const burnPhase = useDeviceStore((s) => s.burnPhase)
   const log = useLogStore((s) => s.push)
@@ -228,6 +241,20 @@ export function useDeviceConfigLoad(): void {
       loadedKeyRef.current = null
     }
   }, [burnPhase])
+
+  // When the firmware probe fails completely (no_firmware), the main effect
+  // never fires because firmwareVersion stays null. Seed the demo so the
+  // editor isn't blank.
+  useEffect(() => {
+    if (simulationMode || !connected) return
+    if (firmwareCheck.kind !== 'no_firmware') return
+    if (useDashboardStore.getState().config !== null) return
+    const outcome = useDashboardStore.getState().loadFromDeviceOrDemo(null)
+    if (outcome === 'demo') {
+      log('info', 'No CANShift firmware detected — loaded demo config')
+      toast.info('No firmware detected — loaded demo dashboard.')
+    }
+  }, [connected, simulationMode, firmwareCheck, log])
 
   useEffect(() => {
     if (simulationMode || !connected || !portPath || !firmwareVersion) return
