@@ -78,6 +78,23 @@ export { validateDashboard } from './validation/validate-dashboard'
 export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard'
 
 // ---------------------------------------------------------------------------
+// Zod schemas (issue #673) — runtime source of truth for Dashboard, Signal,
+// and ButtonAction. Type aliases above are derived from these via `z.infer`.
+// ---------------------------------------------------------------------------
+export {
+  ButtonActionSchema,
+  DashboardConfigSchema,
+  PageConfigSchema,
+  WidgetSchema,
+  WidgetConfigSchema,
+  TopBarConfigSchema,
+  TopBarItemSchema,
+  PagePaletteSchema,
+  ThemePresetSchema,
+} from './schemas/dashboard'
+export { SignalConfigSchema, SignalDefSchema, ColorRampSchema } from './schemas/signal'
+
+// ---------------------------------------------------------------------------
 // Firmware caps & limits
 // ---------------------------------------------------------------------------
 export {
