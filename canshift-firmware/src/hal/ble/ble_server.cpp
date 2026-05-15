@@ -45,9 +45,11 @@ static constexpr char CMD_UUID[] = "4fa0b6a0-0000-0000-0000-000000000005";
 
 static constexpr size_t BLE_MIN_HEAP = 50U * 1024U;
 
-// Set to true by earlyInit() once NimBLEDevice::init() has run — prevents a
-// second call inside startStack() when the task picks up after boot.
+// s_stackInited: NimBLEDevice::init() has run (stack allocated).
+// s_gattInited:  GATT service + characteristics are set up and advertising started.
+//                True after earlyInit() or a successful runtime startStack().
 static bool s_stackInited = false;
+static bool s_gattInited = false;
 
 static NimBLECharacteristic *s_pTele = nullptr;
 static NimBLECharacteristic *s_pStatus = nullptr;
@@ -229,23 +231,10 @@ class CmdCallbacks : public NimBLECharacteristicCallbacks {
 
 namespace {
 
-// Core NimBLE stack bringup — shared by init() and start().
-// Returns true on success.
-bool startStack() {
-    if (!s_stackInited) {
-        // earlyInit() did not run (BLE was disabled at boot, or this is a
-        // runtime re-enable after stop()). Check heap before committing.
-        const size_t avail = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
-        if (avail < BLE_MIN_HEAP) {
-            LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE stack (%u B < %u B) — skipped",
-                     static_cast<unsigned>(avail), static_cast<unsigned>(BLE_MIN_HEAP));
-            return false;
-        }
-        NimBLEDevice::init("CANShift");
-        NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-        s_stackInited = true;
-    }
-
+// Build the GATT service tree and start advertising.
+// Called from earlyInit() (pre-lv_init, heap ~100 KB) or from startStack()
+// at runtime (heap may be fragmented — guarded by kGattMinHeap check).
+static void setupGatt() {
     NimBLEServer *pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
 
@@ -257,7 +246,9 @@ bool startStack() {
 
     s_pStatus =
         pSvc->createCharacteristic(STATUS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
-    updateStatus();
+    // Real values not available yet at earlyInit() call site — set minimal placeholder.
+    // BleServer::init() calls updateStatus() once all subsystems are up.
+    s_pStatus->setValue("{\"ver\":\"" APP_VERSION_STR "\",\"can\":0,\"is_day\":0}");
 
     NimBLECharacteristic *pSettings =
         pSvc->createCharacteristic(SETTINGS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
@@ -275,9 +266,49 @@ bool startStack() {
     pAdv->setScanResponse(false);
     pAdv->start();
 
+    s_gattInited = true;
     s_enabled = true;
     LOG_INFO("BLE", "Advertising as 'CANShift' — %s",
              NimBLEDevice::getAddress().toString().c_str());
+}
+
+// Bring up BLE advertising. If GATT was already set up by earlyInit(), simply
+// restarts advertising (no heap allocation). Otherwise does a full init with
+// a heap guard to prevent bad_alloc on a fragmented post-boot heap.
+bool startStack() {
+    if (s_gattInited) {
+        // earlyInit() already built the GATT tree — just restart advertising.
+        NimBLEDevice::getAdvertising()->start();
+        s_enabled = true;
+        LOG_INFO("BLE", "BLE advertising restarted — %s",
+                 NimBLEDevice::getAddress().toString().c_str());
+        return true;
+    }
+
+    if (!s_stackInited) {
+        // earlyInit() did not run (BLE disabled at boot, or runtime re-enable).
+        const size_t avail = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+        if (avail < BLE_MIN_HEAP) {
+            LOG_WARN("BLE", "Insufficient contiguous DRAM for BLE stack (%u B < %u B) — skipped",
+                     static_cast<unsigned>(avail), static_cast<unsigned>(BLE_MIN_HEAP));
+            return false;
+        }
+        NimBLEDevice::init("CANShift");
+        NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+        s_stackInited = true;
+    }
+
+    // GATT setup on fragmented post-boot heap — guard against bad_alloc.
+    // 24 KB empirical minimum covers createServer + 4 characteristics + start().
+    constexpr size_t kGattMinHeap = 24U * 1024U;
+    const size_t heapFree = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    if (heapFree < kGattMinHeap) {
+        LOG_WARN("BLE", "Heap too low for GATT setup (%u B < %u B) — BLE disabled",
+                 static_cast<unsigned>(heapFree), static_cast<unsigned>(kGattMinHeap));
+        return false;
+    }
+
+    setupGatt();
     return true;
 }
 
@@ -310,8 +341,13 @@ void BleServer::earlyInit() {
     NimBLEDevice::init("CANShift");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
     s_stackInited = true;
-    LOG_INFO("BLE", "BLE stack pre-initialized early (%u B was available)",
+    LOG_INFO("BLE", "BLE stack initialized (%u B available) — building GATT tree",
              static_cast<unsigned>(avail));
+
+    // Build GATT service tree now, while heap is large and unfragmented.
+    // After lv_init() claims 80 KB, the remaining heap is too fragmented for
+    // NimBLE's C++ new[] allocations (issue confirmed: bad_alloc → terminate).
+    setupGatt();
 }
 
 void BleServer::init() {
@@ -320,6 +356,9 @@ void BleServer::init() {
         return;
     }
     startStack();
+    if (s_enabled) {
+        updateStatus();
+    }
 }
 
 void BleServer::start() {
@@ -331,13 +370,23 @@ void BleServer::start() {
 void BleServer::stop() {
     if (!s_enabled)
         return;
-    NimBLEDevice::deinit(true);
-    s_pTele = nullptr;
-    s_pStatus = nullptr;
-    s_connected = false;
-    s_enabled = false;
-    s_stackInited = false;
-    LOG_INFO("BLE", "BLE stack stopped — heap freed");
+    if (s_gattInited) {
+        // GATT was built in earlyInit — stop advertising only. Keeping the GATT
+        // tree alive avoids a re-init that would fail on the fragmented post-boot heap.
+        NimBLEDevice::stopAdvertising();
+        s_connected = false;
+        s_enabled = false;
+        LOG_INFO("BLE", "BLE advertising stopped (GATT preserved)");
+    } else {
+        // Runtime-started stack — full deinit to free the heap.
+        NimBLEDevice::deinit(true);
+        s_pTele = nullptr;
+        s_pStatus = nullptr;
+        s_connected = false;
+        s_enabled = false;
+        s_stackInited = false;
+        LOG_INFO("BLE", "BLE stack stopped — heap freed");
+    }
 }
 
 bool BleServer::isEnabled() {
