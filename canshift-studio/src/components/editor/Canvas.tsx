@@ -535,6 +535,12 @@ function DashTopBar({
             {isDayMode ? '☾' : '☀'}
           </button>
         )
+      case 'modeFlag':
+        return (
+          <span key={key} style={{ fontSize: fs, color: '#FF8800', lineHeight: 1, opacity: 0.4 }}>
+            {item.text}
+          </span>
+        )
     }
   }
 
