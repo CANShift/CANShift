@@ -15,11 +15,14 @@
 #include <esp_heap_caps.h>
 #include <stdio.h>
 
-// In-flash Orbitron Black 32 px — declared here (not in lv_conf.h, which
-// already exposes the 14 px Medium twin via LV_FONT_CUSTOM_DECLARE).
-// The symbol lives in src/ui/fonts/lv_font_orbitron_black_32_nk.c and is
-// substituted for the SPIFFS load to free ~20 KB of LVGL pool for 48 px.
+// In-flash Orbitron Black 32 + 48 px — declared here (not in lv_conf.h, which
+// already exposes the 14 px Medium twin via LV_FONT_CUSTOM_DECLARE). The
+// symbols live in src/ui/fonts/lv_font_orbitron_black_{32,48}_nk.c. Both
+// primary sizes ship in-flash because the 80 KB LVGL pool is shared with the
+// LVGL draw buffers (~25 KB) — there is no room to host the 43 KB 48 px Black
+// binary in pool alongside the bold/medium SPIFFS loads (issue #664, PR #665).
 LV_FONT_DECLARE(lv_font_orbitron_black_32_nk);
+LV_FONT_DECLARE(lv_font_orbitron_black_48_nk);
 
 namespace {
 
@@ -30,20 +33,21 @@ namespace {
 //   label     — top bar text, signal headers, settings, error bar, dot/icon
 //
 // Restoration of the sizes dropped in PR #487 (issue #664):
-//   - 32 px Black stays declared as a primary size, but is now linked
-//     in-flash (lv_font_orbitron_black_32_nk in src/ui/fonts/) instead of
-//     loaded from SPIFFS. This frees ~20 KB of LVGL pool — enough room for
-//     48 px Black to fit alongside the bold/medium loads.
-//   - 48 px Black is restored as a SPIFFS-loaded primary size. With 32 px
-//     moved in-flash, the pre-flight pool-room guard now passes for the
-//     43 KB binary and widgets render gauge/timer text at the designed
-//     full-panel height again.
-//   - 28 px Bold was reintroduced earlier on this branch then dropped here:
-//     the 80 KB pool cannot hold both 48 px Black (43 KB) and 28 px Bold
-//     (15 KB) on top of the other bold/medium loads. Picking 48 px is the
-//     bigger UX win, so 28 stays dropped (secondary text snaps to 24 px).
-constexpr uint8_t kPrimarySizes[] = {32, 48};   // 32 in-flash, 48 SPIFFS
-constexpr uint8_t kSecondarySizes[] = {20, 24}; // 28 dropped — pool conflict with 48
+//   - 32 px Black stays declared as a primary size, linked in-flash
+//     (lv_font_orbitron_black_32_nk in src/ui/fonts/) instead of loaded from
+//     SPIFFS.
+//   - 48 px Black is restored as a primary size, also linked in-flash
+//     (lv_font_orbitron_black_48_nk in src/ui/fonts/). Hosting it in the LVGL
+//     pool was attempted first but failed at boot: the 80 KB pool is shared
+//     with the LVGL draw buffers (~25 KB) and widget runtime state, leaving
+//     ~50 KB for fonts — not enough for the 43 KB 48 px binary alongside the
+//     bold/medium loads. Flash linkage sidesteps the pool entirely.
+//   - 28 px Bold was reintroduced earlier on this branch then dropped:
+//     even with both primary sizes in flash, adding the 15 KB 28 px Bold on
+//     top of the existing bold/medium SPIFFS budget pushes the pool past its
+//     working ceiling. 28 stays dropped (secondary text snaps to 24 px).
+constexpr uint8_t kPrimarySizes[] = {32, 48};   // both in-flash
+constexpr uint8_t kSecondarySizes[] = {20, 24}; // 28 dropped — pool too tight
 constexpr uint8_t kLabelSizes[] = {12, 14, 16};
 
 constexpr size_t kPrimaryCount = sizeof(kPrimarySizes) / sizeof(kPrimarySizes[0]);
@@ -171,11 +175,16 @@ void FontManager::init() {
     for (size_t i = 0; i < kPrimaryCount; ++i) {
         if (kPrimarySizes[i] == 32) {
             // orbitron_black_32 ships as a compiled C array in flash
-            // (lv_font_orbitron_black_32_nk). Using it directly frees ~20 KB
-            // of LVGL pool — enough headroom for the 43 KB 48 px Black to fit
-            // alongside the bold/medium SPIFFS loads (issue #664).
+            // (lv_font_orbitron_black_32_nk). Saves ~20 KB of LVGL pool.
             s_primary[i] = &lv_font_orbitron_black_32_nk;
             LOG_INFO("FONT", "orbitron_black_32: using in-flash copy (saves ~20 KB pool)");
+        } else if (kPrimarySizes[i] == 48) {
+            // orbitron_black_48 also ships in-flash
+            // (lv_font_orbitron_black_48_nk). The 43 KB binary cannot live in
+            // the LVGL pool — draw buffers consume ~25 KB of the 80 KB pool
+            // already (issue #664).
+            s_primary[i] = &lv_font_orbitron_black_48_nk;
+            LOG_INFO("FONT", "orbitron_black_48: using in-flash copy (saves ~44 KB pool)");
         } else {
             loadOne("black", "primary", kPrimarySizes[i], s_primary[i]);
         }
@@ -203,7 +212,8 @@ void FontManager::shutdown() {
         for (size_t i = 0; i < count; ++i) {
             // Skip flash-resident fonts — never pool-allocated, so never freed.
             const bool isInFlash = slots[i] == &lv_font_orbitron_medium_14_nk ||
-                                   slots[i] == &lv_font_orbitron_black_32_nk;
+                                   slots[i] == &lv_font_orbitron_black_32_nk ||
+                                   slots[i] == &lv_font_orbitron_black_48_nk;
             if (slots[i] != nullptr && !isInFlash) {
                 lv_font_free(const_cast<lv_font_t *>(slots[i]));
             }
