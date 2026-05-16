@@ -571,23 +571,53 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
   })
 
   it('CONFIG_SAVE_AS rejects an array payload', async () => {
-    expect(await getHandler(IpcChannels.CONFIG_SAVE_AS)(makeEvent(), [1, 2, 3])).toEqual({
-      success: false,
-      error: 'Save payload must be a config object',
-    })
+    const result = (await getHandler(IpcChannels.CONFIG_SAVE_AS)(makeEvent(), [1, 2, 3])) as {
+      success: false
+      error: string
+    }
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Save-as payload must be a valid dashboard config')
   })
 
   it('CONFIG_EXPORT rejects a non-object payload', async () => {
-    expect(await getHandler(IpcChannels.CONFIG_EXPORT)(makeEvent(), 'string')).toEqual({
-      success: false,
-      error: 'Export payload must be a config object',
-    })
+    const result = (await getHandler(IpcChannels.CONFIG_EXPORT)(makeEvent(), 'string')) as {
+      success: false
+      error: string
+    }
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Export payload must be a valid dashboard config')
     expect(configFileMock.exportFile).not.toHaveBeenCalled()
   })
 
   it('CONFIG_EXPORT does NOT update recent files (foreign target)', async () => {
     configFileMock.exportFile.mockResolvedValueOnce({ success: true, filePath: '/x/y.json' })
-    await getHandler(IpcChannels.CONFIG_EXPORT)(makeEvent(), { schemaVersion: 1 })
+    const cfg = {
+      version: '1.14.0',
+      name: 'Exported',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 30, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [
+        {
+          id: 'p1',
+          backgroundImage: null,
+          backgroundColor: '#000000',
+          palette: {
+            surface: '#1E1E1E',
+            primary: '#FF4444',
+            accent: '#FF8800',
+            text: '#FFFFFF',
+            textDim: '#888888',
+            warning: '#FF8800',
+            danger: '#FF4444',
+            success: '#00CC44',
+          },
+          showTopBar: true,
+          widgets: [],
+        },
+      ],
+    }
+    await getHandler(IpcChannels.CONFIG_EXPORT)(makeEvent(), cfg)
     expect(sessionMock.addRecentFile).not.toHaveBeenCalled()
   })
 
@@ -892,10 +922,21 @@ describe('Device-config IPC handlers — payload validation', () => {
   })
 
   it('SIGNAL_EXPORT rejects a non-object payload', async () => {
-    expect(await getHandler(IpcChannels.SIGNAL_EXPORT)(makeEvent(), null)).toEqual({
-      success: false,
-      error: 'Signal export payload must be an object',
-    })
+    const result = (await getHandler(IpcChannels.SIGNAL_EXPORT)(makeEvent(), null)) as {
+      success: false
+      error: string
+    }
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Signal export payload must be a valid signals.json shape')
+  })
+
+  it('SIGNAL_EXPORT rejects a payload that does not match SignalConfigSchema', async () => {
+    const result = (await getHandler(IpcChannels.SIGNAL_EXPORT)(makeEvent(), {
+      something: 'unrelated',
+    })) as { success: false; error: string; issues: string[] }
+    expect(result.success).toBe(false)
+    expect(Array.isArray(result.issues)).toBe(true)
+    expect(result.issues.length).toBeGreaterThan(0)
   })
 })
 
