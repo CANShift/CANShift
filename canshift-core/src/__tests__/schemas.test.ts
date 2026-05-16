@@ -9,7 +9,7 @@
 // `DashboardConfigSchema` is the only schema re-exported from the package
 // barrel (#771); the rest are internal — import them directly from the
 // schemas modules.
-import { DashboardConfigSchema } from '../index.js'
+import { DashboardConfigSchema, DeviceConfigSchema } from '../index.js'
 import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
 import { SignalConfigSchema } from '../schemas/signal.js'
 
@@ -314,6 +314,53 @@ describe('ButtonActionSchema', () => {
     expect(parsed.success).toBe(false)
     if (!parsed.success) {
       expect(parsed.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// DeviceConfigSchema (issue #789 — moved from canshift-studio's IPC mirror)
+// ---------------------------------------------------------------------------
+
+describe('DeviceConfigSchema', () => {
+  const validDeviceConfig = {
+    can_speed_kbps: 500,
+    twai_tx_pin: 22,
+    twai_rx_pin: 21,
+  }
+
+  it('accepts a valid device config', () => {
+    const result = DeviceConfigSchema.safeParse(validDeviceConfig)
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a missing required field (twai_tx_pin)', () => {
+    const invalid: Record<string, unknown> = { ...validDeviceConfig }
+    delete invalid.twai_tx_pin
+    const result = DeviceConfigSchema.safeParse(invalid)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an unsupported CAN speed (e.g. 800 kbps)', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, can_speed_kbps: 800 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a GPIO pin outside the ESP32 range (40)', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twai_tx_pin: 40 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a non-integer GPIO pin', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twai_rx_pin: 21.5 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects extra (unknown) fields — .strict() per #769', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, extra: true })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
     }
   })
 })
