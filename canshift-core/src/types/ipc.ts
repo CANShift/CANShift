@@ -24,15 +24,15 @@ export interface ConnectionStatus {
  * Result of a USB command sent to the device.
  *
  * `data` carries the full parsed JSON response when the device returns extra
- * fields (e.g. CMD_GET_STATUS → version, is_day). Generic so individual
- * channels can narrow the data shape on the renderer side without losing
- * type-safety.
+ * fields (e.g. CMD_GET_STATUS → version, is_day). Typed as `unknown` because
+ * the device payload crosses an untrusted boundary — channel-side validation
+ * (typeof checks, isRecord, or Zod safeParse) is required before access.
  */
-export interface UsbResult<T extends Record<string, unknown> = Record<string, unknown>> {
+export interface UsbResult {
   success: boolean
   error?: string
-  /** Full parsed JSON response from the device for commands that return extra fields. */
-  data?: T
+  /** Full parsed JSON response from the device. Validate before access. */
+  data?: unknown
 }
 
 /** Result of opening a config file from disk via the main process. */
