@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { LatestReleaseResult } from '@tmbk/canshift-core'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 const getLatestMock = vi.fn<(force?: boolean) => Promise<LatestReleaseResult>>()
 

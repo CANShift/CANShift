@@ -10,7 +10,7 @@
 // @vitest-environment node
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { IpcChannels } from './ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 // ---------------------------------------------------------------------------
 // Mocks — recorder + service stubs

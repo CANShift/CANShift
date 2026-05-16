@@ -8,7 +8,7 @@ import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
 import { installContentSecurityPolicy, isExternalUrlAllowed } from './services/security.service'
-import { IpcChannels } from './ipc/ipc-channels'
+import { IpcChannels } from '../shared/ipc-channels'
 import { disposeCliWindow } from './windows/cli-window'
 
 let mainWindow: BrowserWindow | null = null

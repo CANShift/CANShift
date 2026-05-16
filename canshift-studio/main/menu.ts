@@ -3,7 +3,7 @@
 
 import { Menu, BrowserWindow, app, dialog } from 'electron'
 import { basename } from 'node:path'
-import { IpcChannels } from './ipc/ipc-channels'
+import { IpcChannels } from '../shared/ipc-channels'
 import { sessionService } from './services/session.service'
 
 export function buildMenu(win: BrowserWindow): void {
