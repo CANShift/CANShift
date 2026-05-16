@@ -7,7 +7,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
-import { useSignalsStore } from '../stores/signals.store'
+import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
 import * as BleService from '../services/ble.service'
 import * as SimService from '../services/sim.service'
 import type { RootStackParamList } from '../navigation'
@@ -34,12 +34,9 @@ export default function DashTopBar() {
       isSim: s.mode === 'sim',
     }))
   )
-  const { isLive, activeMapIndex } = useSignalsStore(
-    useShallow((s) => ({
-      isLive: s.isLive,
-      activeMapIndex: s.values.mi !== undefined ? Math.round(s.values.mi) : undefined,
-    }))
-  )
+  const isLive = useSignalsIsLive()
+  const mi = useSignalValue('mi')
+  const activeMapIndex = mi !== undefined ? Math.round(mi) : undefined
   const [menuVisible, setMenuVisible] = useState(false)
   const [disconnectVisible, setDisconnectVisible] = useState(false)
 
