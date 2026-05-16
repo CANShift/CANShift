@@ -15,17 +15,61 @@
 //
 // `CanSpeedKbpsSchema` lives in `./signal.js` (single source of truth per
 // #778).
+//
+// Issue #831 — chip-level GPIO safety. Pins 6-11 are wired to the internal
+// SPI flash on the ESP32-WROOM-32 — writing to them at runtime corrupts
+// flash and bricks the device. Pins 34-39 are input-only (no output driver)
+// so they can't drive TWAI TX. The `Esp32OutputGpioSchema` enforces both,
+// with an error message that tells the user WHY.
 
 import { z } from 'zod'
 
 import { CanSpeedKbpsSchema } from './signal.js'
 
-/** ESP32 GPIO pin range — matches the chip's addressable IO pins. */
-const ESP32_GPIO_MIN = 0
-const ESP32_GPIO_MAX = 39
+/**
+ * ESP32 pins safe to use as OUTPUTS. Excludes:
+ *  - 6-11: connected to internal SPI flash — writing bricks the device.
+ *  - 34-39: input-only pins (no output driver).
+ *  - 20, 24, 28, 29, 30, 31: not bonded out on most ESP32 packages.
+ */
+const ESP32_SAFE_OUTPUT_PINS = new Set<number>([
+  0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
+])
 
-/** ESP32 GPIO pin index — integer in `[0, 39]`. */
-export const Esp32GpioSchema = z.number().int().min(ESP32_GPIO_MIN).max(ESP32_GPIO_MAX)
+/**
+ * ESP32 pins safe to use as INPUTS. Superset of output-safe — includes 34-39
+ * (input-only pins).
+ */
+const ESP32_SAFE_INPUT_PINS = new Set<number>([...ESP32_SAFE_OUTPUT_PINS, 34, 35, 36, 37, 38, 39])
+
+/**
+ * ESP32 GPIO usable as an OUTPUT pin. Rejects flash-SPI (6-11), input-only
+ * (34-39), and unbonded pins. Used for `twai_tx_pin` AND `twai_rx_pin` —
+ * the TWAI peripheral is logically bi-directional and choosing the
+ * stricter "must be output-capable" superset for both pins keeps the rule
+ * simple to reason about (and matches firmware-side guidance in
+ * `board_config.h:76-77`).
+ */
+export const Esp32OutputGpioSchema = z
+  .number()
+  .int()
+  .refine((n) => ESP32_SAFE_OUTPUT_PINS.has(n), {
+    message:
+      'GPIO must be a safe output pin. Excludes 6-11 (SPI flash — would brick the device), 34-39 (input-only), and unbonded pins.',
+  })
+
+/**
+ * ESP32 GPIO usable as an INPUT pin. Allows 34-39 (input-only) in addition
+ * to the output-safe set. Not currently used by `DeviceConfigSchema` but
+ * exported for downstream consumers that need to validate input-only pin
+ * assignments (touch IRQ, dedicated sensor inputs, …).
+ */
+export const Esp32InputGpioSchema = z
+  .number()
+  .int()
+  .refine((n) => ESP32_SAFE_INPUT_PINS.has(n), {
+    message: 'GPIO must be a valid ESP32 IO pin. Excludes 6-11 (SPI flash) and unbonded pins.',
+  })
 
 /**
  * On-disk wire format of `userData/device.json`. Strict — extra fields are
@@ -37,10 +81,10 @@ export const DeviceConfigWireSchema = z
   .object({
     /** CAN bus speed in kbps — must match ECU output configuration */
     can_speed_kbps: CanSpeedKbpsSchema,
-    /** ESP32 TWAI TX GPIO pin */
-    twai_tx_pin: Esp32GpioSchema,
-    /** ESP32 TWAI RX GPIO pin */
-    twai_rx_pin: Esp32GpioSchema,
+    /** ESP32 TWAI TX GPIO pin — must be output-capable */
+    twai_tx_pin: Esp32OutputGpioSchema,
+    /** ESP32 TWAI RX GPIO pin — kept on the output-safe set for simplicity */
+    twai_rx_pin: Esp32OutputGpioSchema,
   })
   .strict()
 
@@ -56,9 +100,9 @@ export const DeviceConfigSchema = z
     /** CAN bus speed in kbps — must match ECU output configuration */
     canSpeedKbps: CanSpeedKbpsSchema,
     /** ESP32 TWAI TX GPIO pin */
-    twaiTxPin: Esp32GpioSchema,
-    /** ESP32 TWAI RX GPIO pin */
-    twaiRxPin: Esp32GpioSchema,
+    twaiTxPin: Esp32OutputGpioSchema,
+    /** ESP32 TWAI RX GPIO pin — kept on the output-safe set for simplicity */
+    twaiRxPin: Esp32OutputGpioSchema,
   })
   .strict()
 
