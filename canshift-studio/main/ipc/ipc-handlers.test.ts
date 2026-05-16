@@ -413,6 +413,50 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
     expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
   })
 
+  // Table-driven negative cases for USB_SCREEN_SETTINGS (issue #791).
+  // parseScreenSettings is hand-rolled, so each rejection path needs its own
+  // assertion at the IPC boundary to lock the typed error envelope down — a
+  // regression that started accepting `brightness: NaN` or `sleep: '30'` would
+  // forward garbage to firmware and likely crash the screen task.
+  const invalidScreenSettingsPayloads: { label: string; payload: unknown }[] = [
+    // non-number brightness
+    { label: 'string brightness', payload: { brightness: '80', sleep: 30 } },
+    { label: 'null brightness', payload: { brightness: null, sleep: 30 } },
+    { label: 'undefined brightness (explicit)', payload: { brightness: undefined, sleep: 30 } },
+    { label: 'object brightness', payload: { brightness: { value: 80 }, sleep: 30 } },
+    { label: 'boolean brightness', payload: { brightness: true, sleep: 30 } },
+    // non-finite brightness
+    { label: 'NaN brightness', payload: { brightness: NaN, sleep: 30 } },
+    { label: 'Infinity brightness', payload: { brightness: Infinity, sleep: 30 } },
+    { label: '-Infinity brightness', payload: { brightness: -Infinity, sleep: 30 } },
+    // non-number sleep
+    { label: 'string sleep', payload: { brightness: 80, sleep: '30' } },
+    { label: 'null sleep', payload: { brightness: 80, sleep: null } },
+    { label: 'object sleep', payload: { brightness: 80, sleep: { value: 30 } } },
+    { label: 'boolean sleep', payload: { brightness: 80, sleep: false } },
+    // non-finite sleep
+    { label: 'NaN sleep', payload: { brightness: 80, sleep: NaN } },
+    { label: 'Infinity sleep', payload: { brightness: 80, sleep: Infinity } },
+    { label: '-Infinity sleep', payload: { brightness: 80, sleep: -Infinity } },
+    // missing keys
+    { label: 'missing brightness', payload: { sleep: 30 } },
+    { label: 'missing sleep', payload: { brightness: 80 } },
+    { label: 'empty object', payload: {} },
+    // bad envelope
+    { label: 'null payload', payload: null },
+    { label: 'array payload', payload: [80, 30] },
+    { label: 'string payload', payload: '{"brightness":80,"sleep":30}' },
+  ]
+
+  for (const { label, payload } of invalidScreenSettingsPayloads) {
+    it(`USB_SCREEN_SETTINGS rejects ${label} with the typed error`, async () => {
+      const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
+      const result = await handler(makeEvent(), payload)
+      expect(result).toEqual({ success: false, error: 'Screen settings payload is invalid' })
+      expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
+    })
+  }
+
   it('USB_SCREEN_SETTINGS forwards a valid payload to the service', async () => {
     usbServiceMock.pushScreenSettings.mockResolvedValueOnce({ success: true })
     const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
