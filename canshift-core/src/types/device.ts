@@ -1,4 +1,12 @@
-export type CanSpeedKbps = 125 | 250 | 500 | 1000
+// types/device.ts — Device configuration types.
+//
+// `CanSpeedKbps` and `CAN_SPEED_OPTIONS` are derived from `CanSpeedKbpsSchema`
+// in `../schemas/signal` per issue #778 — schema is the single source of truth.
+
+export type { CanSpeedKbps } from '../schemas/signal.js'
+export { CAN_SPEED_OPTIONS } from '../schemas/signal.js'
+
+import type { CanSpeedKbps } from '../schemas/signal.js'
 
 export interface DeviceConfig {
   /** CAN bus speed in kbps — must match ECU output configuration */
@@ -14,5 +22,3 @@ export const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   twai_tx_pin: 22,
   twai_rx_pin: 21,
 }
-
-export const CAN_SPEED_OPTIONS: CanSpeedKbps[] = [125, 250, 500, 1000]
