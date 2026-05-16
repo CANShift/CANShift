@@ -19,6 +19,8 @@ import {
 } from '../constants/firmware-caps.js'
 import type { SignalConfig } from '../types/signal.js'
 
+import { validateSignalCatalog } from './validate-signal.js'
+
 export interface ValidationResult {
   valid: boolean
   errors: string[]
@@ -125,6 +127,15 @@ export function validateDashboard(
   // Top-bar layout signal references against the catalog
   if (knownSignalIds !== null && isRecord(config.topBar) && Array.isArray(config.topBar.layout)) {
     warnings.push(...checkTopBarSignalRefs(config.topBar.layout, knownSignalIds))
+  }
+
+  // Signal-catalog structural checks (issue #700) — ramp stops cap + monotonic
+  // ascending values. Only runs when an external catalog is supplied; legacy
+  // embedded `config.signals` does not carry `colorRamp`.
+  if (options?.signalCatalog) {
+    const signalResult = validateSignalCatalog(options.signalCatalog)
+    errors.push(...signalResult.errors)
+    warnings.push(...signalResult.warnings)
   }
 
   return { valid: errors.length === 0, errors, warnings }
@@ -689,6 +700,11 @@ function validateButton(cfg: UnknownRecord, prefix: string): string[] {
   if (!Array.isArray(cfg.actions) || cfg.actions.length === 0) {
     errors.push(`${prefix} (button): actions must be a non-empty array`)
   } else {
+    if (cfg.actions.length > FIRMWARE_CAPS.MAX_BUTTON_ACTIONS) {
+      errors.push(
+        `${prefix} (button): too many actions (${cfg.actions.length.toString()} > ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()})`
+      )
+    }
     cfg.actions.forEach((action: unknown, idx: number) => {
       errors.push(...validateButtonAction(action, `${prefix} (button).actions[${idx.toString()}]`))
     })
