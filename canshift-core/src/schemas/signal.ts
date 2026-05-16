@@ -93,9 +93,11 @@ export const SignalDefSchema = z
   })
 
 /**
- * CAN bus speed in kbps. Matches `types/device.ts::CAN_SPEED_OPTIONS` —
- * firmware's `getTimingConfig` accepts 250/500/1000 and falls back for 125,
- * but core keeps 125 in the enum for parity with `CanSpeedKbps`.
+ * CAN bus speed in kbps — single source of truth (issue #778).
+ * Firmware's `getTimingConfig` accepts 250/500/1000 and falls back for 125,
+ * but core keeps 125 in the enum for parity with the firmware fallback path.
+ * The `CanSpeedKbps` type and `CAN_SPEED_OPTIONS` array are derived below;
+ * adding a new speed here automatically propagates to both.
  */
 export const CanSpeedKbpsSchema = z.union([
   z.literal(125),
@@ -103,6 +105,14 @@ export const CanSpeedKbpsSchema = z.union([
   z.literal(500),
   z.literal(1000),
 ])
+
+/** Allowed CAN bus speeds in kbps — derived from `CanSpeedKbpsSchema`. */
+export type CanSpeedKbps = z.infer<typeof CanSpeedKbpsSchema>
+
+/** Ordered list of allowed CAN bus speeds — derived from `CanSpeedKbpsSchema`. */
+export const CAN_SPEED_OPTIONS: readonly CanSpeedKbps[] = CanSpeedKbpsSchema.options.map(
+  (o) => o.value
+)
 
 /**
  * Root signal configuration (signals.json). `protocol` is informational only —
