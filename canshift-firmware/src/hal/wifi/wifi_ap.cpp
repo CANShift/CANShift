@@ -23,6 +23,7 @@
         #include <freertos/FreeRTOS.h>
         #include <freertos/task.h>
         #include <mbedtls/sha256.h>
+        #include <new>
         #include <stdio.h>
         #include <string.h>
 
@@ -59,9 +60,13 @@ static constexpr size_t OTA_TOKEN_HEX_LEN = OTA_TOKEN_BYTES * 2;
 static constexpr char OTA_TOKEN_SALT[] = "ota-bearer-v1";
 static char s_otaTokenHex[OTA_TOKEN_HEX_LEN + 1] = {};
 
-// OTA HMAC trailer verifier — heap-allocated for the duration of one upload
-// so chunked WRITEs don't have to thread the verifier through closures. The
-// HTTP server task is single-threaded, so a single static is safe.
+// OTA HMAC trailer verifier — placement-new'd into static storage for the
+// duration of one upload so chunked WRITEs don't have to thread the verifier
+// through closures. Static-lifetime storage means Update.begin() can never
+// fail open because of a heap-exhaustion `new` on a fragmented device (#781).
+// The HTTP server task is single-threaded, so a single static is safe.
+alignas(OtaHmac::OtaHmacVerifier) static unsigned char s_otaVerifierStorage[sizeof(
+    OtaHmac::OtaHmacVerifier)];
 static OtaHmac::OtaHmacVerifier *s_otaVerifier = nullptr;
 static bool s_otaHmacOk = false;
 // Sticky reject flag — set by the upload handler when the bearer token is
@@ -142,16 +147,23 @@ bool hasValidBearerToken() {
     if (!s_server.hasHeader("Authorization")) {
         return false;
     }
-    String value = s_server.header("Authorization");
     static const char kPrefix[] = "Bearer ";
     constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
-    if (static_cast<size_t>(value.length()) < kPrefixLen + OTA_TOKEN_HEX_LEN) {
+    // Copy the header into a fixed-size C buffer so the OTA auth path doesn't
+    // hold an Arduino String on the heap during Update.begin() (issue #782).
+    // Sized for "Bearer " + 32 hex chars + NUL, with room for one extra byte
+    // so an over-long header trips the length check below instead of being
+    // silently truncated to a valid-looking value.
+    char buf[kPrefixLen + OTA_TOKEN_HEX_LEN + 2] = {};
+    strlcpy(buf, s_server.header("Authorization").c_str(), sizeof(buf));
+    const size_t len = strlen(buf);
+    if (len < kPrefixLen + OTA_TOKEN_HEX_LEN) {
         return false;
     }
-    if (strncmp(value.c_str(), kPrefix, kPrefixLen) != 0) {
+    if (strncmp(buf, kPrefix, kPrefixLen) != 0) {
         return false;
     }
-    return tokenMatches(value.c_str() + kPrefixLen);
+    return tokenMatches(buf + kPrefixLen);
 }
 
 void handleStatus() {
@@ -162,7 +174,7 @@ void handleStatus() {
 
 void cleanupVerifier() {
     if (s_otaVerifier != nullptr) {
-        delete s_otaVerifier;
+        s_otaVerifier->~OtaHmacVerifier();
         s_otaVerifier = nullptr;
     }
 }
@@ -246,11 +258,11 @@ void handleOtaUpload() {
 
         #if APP_OTA_REQUIRE_HMAC
         static const char kSecret[] = OTA_HMAC_SECRET;
-        s_otaVerifier = new OtaHmac::OtaHmacVerifier(OtaHmac::mbedtlsHmacBackend(),
-                                                     reinterpret_cast<const uint8_t *>(kSecret),
-                                                     sizeof(kSecret) - 1, // exclude trailing NUL
-                                                     otaUpdateSink, nullptr);
-        if (s_otaVerifier == nullptr || !s_otaVerifier->begin()) {
+        s_otaVerifier = new (s_otaVerifierStorage) OtaHmac::OtaHmacVerifier(
+            OtaHmac::mbedtlsHmacBackend(), reinterpret_cast<const uint8_t *>(kSecret),
+            sizeof(kSecret) - 1, // exclude trailing NUL
+            otaUpdateSink, nullptr);
+        if (!s_otaVerifier->begin()) {
             LOG_ERROR("WiFi", "OTA HMAC verifier init failed");
             cleanupVerifier();
             Update.abort();
