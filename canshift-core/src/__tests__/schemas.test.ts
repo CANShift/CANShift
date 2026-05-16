@@ -6,8 +6,12 @@
 // Plus an explicit guard that `ButtonActionSchema` does not accept the legacy
 // `targetPageId` field removed in #672.
 
-import { ButtonActionSchema, DashboardConfigSchema, SignalConfigSchema } from '../index.js'
-import { ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
+// `DashboardConfigSchema` is the only schema re-exported from the package
+// barrel (#771); the rest are internal — import them directly from the
+// schemas modules.
+import { DashboardConfigSchema } from '../index.js'
+import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
+import { SignalConfigSchema } from '../schemas/signal.js'
 
 // ---------------------------------------------------------------------------
 // DashboardConfigSchema
