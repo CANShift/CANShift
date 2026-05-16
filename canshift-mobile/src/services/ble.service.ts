@@ -279,23 +279,10 @@ export class BleService {
       await device.discoverAllServicesAndCharacteristics()
       this.connectedDevice = device
 
-      // Read STATUS characteristic — routed through the GATT serializer so it
-      // doesn't race a write that fires immediately after connect.
-      const statusChar = await this.runGatt(() =>
-        device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS)
-      )
-      if (statusChar.value) {
-        const status = parseStatus(decodeBase64(statusChar.value))
-        if (status) {
-          setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
-          useDeviceStore.getState().setWifiAp(status.ap_ssid ?? null, status.ap_password ?? null)
-          if (status.is_day !== undefined) {
-            useDeviceStore.getState().setIsDayMode(status.is_day === 1)
-          }
-        } else {
-          log('warn', 'BLE: rejected malformed initial status payload')
-        }
-      }
+      // Read STATUS characteristic so firmwareVersion/canHealthy/wifiAp/isDayMode
+      // are seeded before any UI subscribes — shared with the iOS restore path
+      // (#773) so both entry points produce the same observable store state.
+      await this.seedStatusFromDevice(device, setFirmwareStatus)
 
       setDevice(deviceId, device.name ?? BLE_DEVICE_NAME)
       useDeviceStore.getState().setMode('ble')
@@ -668,6 +655,10 @@ export class BleService {
 
     const store = useDeviceStore.getState()
     store.setDevice(device.id, device.name ?? BLE_DEVICE_NAME)
+    // Mirror the fresh-connect flow: without this any UI gated on `mode === 'ble'`
+    // (top-bar SIM badge, future mode-based branches) misclassifies the
+    // restored session as idle (#773).
+    store.setMode('ble')
 
     // Persist as last-known device so the foreground-reconnect fallback can
     // also find it if the OS later drops the link.
@@ -675,7 +666,47 @@ export class BleService {
     // Any in-flight reconnect from a prior session is now moot.
     useReconnectStore.getState().stop()
 
+    // Seed firmware/CAN/WiFi/Day-Night state from STATUS so the dashboard
+    // doesn't render `v?` / `CAN ○` / wrong theme until the next notification
+    // arrives. Fire-and-forget — failures fall back to the next notify (#773).
+    void this.seedStatusFromDevice(device)
+
     this.startStalenessTimer()
+  }
+
+  /**
+   * Read STATUS once and seed firmwareVersion / canHealthy / wifiAp / isDayMode
+   * into the device store. Shared by `connect()` (fresh foreground connect)
+   * and `handleRestoredState()` (iOS background-restore) so both paths produce
+   * the same observable state — #773.
+   */
+  private async seedStatusFromDevice(
+    device: Device,
+    setFirmwareStatus: (version: string, canHealthy: boolean) => void = useDeviceStore.getState()
+      .setFirmwareStatus
+  ): Promise<void> {
+    try {
+      const statusChar = await this.runGatt(() =>
+        device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS)
+      )
+      if (!statusChar.value) return
+      const status = parseStatus(decodeBase64(statusChar.value))
+      if (!status) {
+        log('warn', 'BLE: rejected malformed initial status payload')
+        return
+      }
+      setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
+      const store = useDeviceStore.getState()
+      store.setWifiAp(status.ap_ssid ?? null, status.ap_password ?? null)
+      if (status.is_day !== undefined) {
+        store.setIsDayMode(status.is_day === 1)
+      }
+    } catch (err) {
+      // Best-effort — the seed is a UX nicety. If the read fails the next
+      // notification will populate the store; don't fail the restore path.
+      const msg = err instanceof Error ? err.message : String(err)
+      log('warn', `BLE: failed to seed STATUS — ${msg}`)
+    }
   }
 
   private startStalenessTimer(): void {
