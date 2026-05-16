@@ -925,44 +925,106 @@ describe('Device-config IPC handlers — payload validation', () => {
   })
 
   it('DEVICE_CONFIG_WRITE rejects a missing required field with the specific issue (issue #698)', async () => {
-    // twai_rx_pin omitted → must be flagged.
+    // twaiRxPin omitted → must be flagged. Payload is the camelCase domain
+    // shape (#715); the wire-format snake_case keys live on disk only.
     const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
-      can_speed_kbps: 500,
-      twai_tx_pin: 22,
+      canSpeedKbps: 500,
+      twaiTxPin: 22,
     })) as { success: boolean; issues: string[] }
     expect(result.success).toBe(false)
-    expect(result.issues.some((i) => i.startsWith('twai_rx_pin'))).toBe(true)
+    expect(result.issues.some((i) => i.startsWith('twaiRxPin'))).toBe(true)
   })
 
   it('DEVICE_CONFIG_WRITE rejects a wrong-type field with the specific issue (issue #698)', async () => {
-    // can_speed_kbps must be one of 125/250/500/1000 — 800 is rejected.
+    // canSpeedKbps must be one of 125/250/500/1000 — 800 is rejected.
     const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
-      can_speed_kbps: 800,
-      twai_tx_pin: 22,
-      twai_rx_pin: 21,
+      canSpeedKbps: 800,
+      twaiTxPin: 22,
+      twaiRxPin: 21,
     })) as { success: boolean; issues: string[] }
     expect(result.success).toBe(false)
-    expect(result.issues.some((i) => i.startsWith('can_speed_kbps'))).toBe(true)
+    expect(result.issues.some((i) => i.startsWith('canSpeedKbps'))).toBe(true)
   })
 
   it('DEVICE_CONFIG_WRITE rejects a GPIO pin out of the ESP32 range (issue #698)', async () => {
     const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
-      can_speed_kbps: 500,
-      twai_tx_pin: 99,
-      twai_rx_pin: 21,
+      canSpeedKbps: 500,
+      twaiTxPin: 99,
+      twaiRxPin: 21,
     })) as { success: boolean; issues: string[] }
     expect(result.success).toBe(false)
-    expect(result.issues.some((i) => i.startsWith('twai_tx_pin'))).toBe(true)
+    expect(result.issues.some((i) => i.startsWith('twaiTxPin'))).toBe(true)
   })
 
   it('DEVICE_CONFIG_WRITE accepts a valid device config (issue #698)', async () => {
     const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
-      can_speed_kbps: 500,
-      twai_tx_pin: 22,
-      twai_rx_pin: 21,
+      canSpeedKbps: 500,
+      twaiTxPin: 22,
+      twaiRxPin: 21,
     })) as { success: boolean; error?: string }
     expect(result.success).toBe(true)
     expect(result.error).toBeUndefined()
+  })
+
+  it('DEVICE_CONFIG_WRITE rejects the legacy snake_case payload (#715)', async () => {
+    // Renderer must send the camelCase domain shape; the snake_case keys are
+    // wire-format only and are stripped/converted inside the handler.
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
+      can_speed_kbps: 500,
+      twai_tx_pin: 22,
+      twai_rx_pin: 21,
+    })) as { success: boolean }
+    expect(result.success).toBe(false)
+  })
+
+  it('DEVICE_CONFIG_WRITE persists the snake_case wire shape on disk (#715)', async () => {
+    // Firmware reads device.json keys verbatim (`config_loader.cpp` reads
+    // `doc["can_speed_kbps"]` etc.), so the on-disk JSON must stay snake_case
+    // even though the renderer payload is camelCase.
+    const fs = await import('node:fs/promises')
+    const writeFileMock = vi.mocked(fs.writeFile)
+    writeFileMock.mockClear()
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_WRITE)(makeEvent(), {
+      canSpeedKbps: 500,
+      twaiTxPin: 22,
+      twaiRxPin: 21,
+    })) as { success: boolean }
+    expect(result.success).toBe(true)
+    expect(writeFileMock).toHaveBeenCalledTimes(1)
+    const writtenJson = writeFileMock.mock.calls[0]?.[1] as string
+    expect(JSON.parse(writtenJson)).toEqual({
+      can_speed_kbps: 500,
+      twai_tx_pin: 22,
+      twai_rx_pin: 21,
+    })
+  })
+
+  it('DEVICE_CONFIG_READ maps the on-disk wire shape to the camelCase domain shape (#715)', async () => {
+    const fs = await import('node:fs/promises')
+    const readFileMock = vi.mocked(fs.readFile)
+    readFileMock.mockResolvedValueOnce(
+      JSON.stringify({ can_speed_kbps: 250, twai_tx_pin: 5, twai_rx_pin: 4 }),
+    )
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_READ)(makeEvent())) as {
+      success: boolean
+      config: unknown
+    }
+    expect(result.success).toBe(true)
+    expect(result.config).toEqual({ canSpeedKbps: 250, twaiTxPin: 5, twaiRxPin: 4 })
+  })
+
+  it('DEVICE_CONFIG_READ returns no-config on an invalid on-disk shape (#715)', async () => {
+    const fs = await import('node:fs/promises')
+    const readFileMock = vi.mocked(fs.readFile)
+    // A file that doesn't match the wire schema must not leak to the renderer
+    // as a domain config — the renderer falls back to defaults.
+    readFileMock.mockResolvedValueOnce(JSON.stringify({ canSpeedKbps: 500 }))
+    const result = (await getHandler(IpcChannels.DEVICE_CONFIG_READ)(makeEvent())) as {
+      success: boolean
+      config: unknown
+    }
+    expect(result.success).toBe(false)
+    expect(result.config).toBeNull()
   })
 
   it('SIGNAL_EXPORT rejects a non-object payload', async () => {

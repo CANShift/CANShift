@@ -4,7 +4,14 @@ import { ipcMain, app, BrowserWindow, dialog } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
-import { DashboardConfigSchema, DeviceConfigSchema, SignalConfigSchema } from '@tmbk/canshift-core'
+import {
+  DashboardConfigSchema,
+  DeviceConfigSchema,
+  DeviceConfigWireSchema,
+  SignalConfigSchema,
+  deviceConfigFromWire,
+  deviceConfigToWire,
+} from '@tmbk/canshift-core'
 import { IpcChannels } from '../../shared/ipc-channels'
 import {
   CliLogPayloadSchema,
@@ -100,10 +107,13 @@ export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
 // reused here verbatim — never duplicated — so a stale studio copy can't drift
 // from the on-device schema.
 //
-// DEVICE_CONFIG_WRITE carries the ESP32 hardware config persisted to
-// userData/device.json. The runtime shape is `DeviceConfigSchema` in
-// canshift-core (#789) — same source of truth as the on-device `DeviceConfig`
-// type, so a stale studio copy can't drift from the firmware contract.
+// DEVICE_CONFIG_WRITE carries the ESP32 hardware config in the camelCase
+// domain shape (`DeviceConfigSchema`, #715). The handler maps it to the
+// snake_case `DeviceConfigWireSchema` via `deviceConfigToWire` before
+// persisting to userData/device.json — firmware reads the wire shape
+// verbatim from disk (`config_loader.cpp` reads `doc["can_speed_kbps"]`
+// etc.). DEVICE_CONFIG_READ parses the wire shape from disk and returns
+// the camelCase domain shape to the renderer.
 
 /**
  * Format Zod issues as `path: message` strings so the renderer can surface a
@@ -553,13 +563,24 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.DEVICE_CONFIG_READ, async () => {
     try {
       const raw = await readFile(deviceConfigPath, 'utf-8')
-      return { success: true, config: JSON.parse(raw) as unknown }
+      // device.json on disk is the snake_case wire shape consumed by firmware.
+      // Parse it, then map to the camelCase domain shape before handing it to
+      // the renderer (#715). Anything that doesn't match the wire schema is
+      // treated as "no config" so the renderer falls back to defaults.
+      const parsed = DeviceConfigWireSchema.safeParse(JSON.parse(raw))
+      if (!parsed.success) {
+        return { success: false, config: null }
+      }
+      return { success: true, config: deviceConfigFromWire(parsed.data) }
     } catch {
       return { success: false, config: null }
     }
   })
 
   ipcMain.handle(IpcChannels.DEVICE_CONFIG_WRITE, async (_event, config: unknown) => {
+    // Renderer sends the camelCase domain shape. Validate, then map to the
+    // snake_case wire shape before persisting to disk (#715) — firmware reads
+    // device.json keys verbatim and the wire format must stay unchanged.
     const parsed = DeviceConfigSchema.safeParse(config)
     if (!parsed.success) {
       return {
@@ -569,7 +590,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       }
     }
     try {
-      await writeFile(deviceConfigPath, JSON.stringify(parsed.data, null, 2), 'utf-8')
+      const wire = deviceConfigToWire(parsed.data)
+      await writeFile(deviceConfigPath, JSON.stringify(wire, null, 2), 'utf-8')
       return { success: true }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }

@@ -123,11 +123,11 @@ export default function DeviceConfigRoute() {
           <div style={{ marginBottom: 12 }}>
             <span style={label}>Speed</span>
             <select
-              value={config.can_speed_kbps}
+              value={config.canSpeedKbps}
               onChange={(e) => {
                 setConfig((c) => ({
                   ...c,
-                  can_speed_kbps: parseInt(e.target.value, 10) as CanSpeedKbps,
+                  canSpeedKbps: parseInt(e.target.value, 10) as CanSpeedKbps,
                 }))
               }}
               style={inputStyle}
@@ -148,9 +148,9 @@ export default function DeviceConfigRoute() {
                 type="number"
                 min={0}
                 max={39}
-                value={config.twai_tx_pin}
+                value={config.twaiTxPin}
                 onChange={(e) => {
-                  setConfig((c) => ({ ...c, twai_tx_pin: parseInt(e.target.value, 10) }))
+                  setConfig((c) => ({ ...c, twaiTxPin: parseInt(e.target.value, 10) }))
                 }}
                 style={inputStyle}
               />
@@ -162,9 +162,9 @@ export default function DeviceConfigRoute() {
                 type="number"
                 min={0}
                 max={39}
-                value={config.twai_rx_pin}
+                value={config.twaiRxPin}
                 onChange={(e) => {
-                  setConfig((c) => ({ ...c, twai_rx_pin: parseInt(e.target.value, 10) }))
+                  setConfig((c) => ({ ...c, twaiRxPin: parseInt(e.target.value, 10) }))
                 }}
                 style={inputStyle}
               />
@@ -181,7 +181,7 @@ export default function DeviceConfigRoute() {
               marginTop: 4,
             }}
           >
-            Wiring: CAN Pal CTX → GPIO {config.twai_tx_pin} · CRX → GPIO {config.twai_rx_pin} ·
+            Wiring: CAN Pal CTX → GPIO {config.twaiTxPin} · CRX → GPIO {config.twaiRxPin} ·
             CANH/CANL → your ECU&apos;s CAN bus · VCC → 5V
           </div>
         </div>
