@@ -61,6 +61,11 @@ function resolveDeps(deps: BleForegroundReconnectDeps): ResolvedDeps {
   }
 }
 
+// Stable default so the no-arg call site (App.tsx) keeps a single deps identity
+// across renders; otherwise `deps = {}` would alloc a fresh object each render
+// and re-bind the AppState listener mid-flight.
+const DEFAULT_DEPS: BleForegroundReconnectDeps = Object.freeze({})
+
 /**
  * Pure side-effect: handle a single AppState transition. Exported so tests can
  * exercise the decision logic without the React lifecycle.
@@ -100,23 +105,19 @@ export async function handleAppStateTransition(
  * last-known device whenever the app returns to the foreground.
  *
  * Mount once at the top of the tree (e.g. in `App.tsx`).
+ *
+ * Memoization contract: callers passing a `deps` argument MUST memoize the
+ * object itself (e.g. with `useMemo`) — the hook keys its internal memo on the
+ * `deps` object identity. A fresh `{}` every render would cleanup-then-
+ * resubscribe the AppState listener on every render and could drop a
+ * background→active transition mid-rebind. The no-arg form is safe; it uses a
+ * frozen module-level default.
  */
-export function useBleForegroundReconnect(deps: BleForegroundReconnectDeps = {}): void {
-  // Re-resolve when any concrete dependency identity changes. `useRef` was the
-  // original implementation but it captured the deps only on first render,
-  // which silently ignored later updates from tests (or any future caller
-  // passing live deps). useMemo keys on the dep identities so re-mounts /
-  // identity changes correctly rebind the listeners.
-  const resolved = useMemo(
-    () => resolveDeps(deps),
-    [
-      deps.appState,
-      deps.tryReconnect,
-      deps.showToast,
-      deps.getConnectionState,
-      deps.getIsReconnecting,
-    ]
-  )
+export function useBleForegroundReconnect(deps: BleForegroundReconnectDeps = DEFAULT_DEPS): void {
+  // Re-resolve only when the deps object identity changes. The JSDoc above
+  // requires callers to memoize that object, so this is a single stable key
+  // instead of five separate field identities.
+  const resolved = useMemo(() => resolveDeps(deps), [deps])
   const lastStateRef = useRef<AppStateStatus>(resolved.appState.currentState)
 
   useEffect(() => {
