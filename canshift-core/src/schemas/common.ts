@@ -24,25 +24,29 @@ export const WidgetTypeSchema = z.enum([
 ])
 
 /** Widget position and size in pixels on a 320×240 canvas. */
-export const WidgetLayoutSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  w: z.number(),
-  h: z.number(),
-  zOrder: z.number(),
-})
+export const WidgetLayoutSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    w: z.number(),
+    h: z.number(),
+    zOrder: z.number(),
+  })
+  .strict()
 
 /** Widget visual style. */
-export const WidgetStyleSchema = z.object({
-  primaryColor: HexColorSchema,
-  secondaryColor: HexColorSchema,
-  warningColor: HexColorSchema,
-  criticalColor: HexColorSchema,
-  textColor: HexColorSchema,
-  fontSize: z.number(),
-  /** Optional border color — omit or set to null for no border */
-  borderColor: HexColorSchema.nullable().optional(),
-})
+export const WidgetStyleSchema = z
+  .object({
+    primaryColor: HexColorSchema,
+    secondaryColor: HexColorSchema,
+    warningColor: HexColorSchema,
+    criticalColor: HexColorSchema,
+    textColor: HexColorSchema,
+    fontSize: z.number(),
+    /** Optional border color — omit or set to null for no border */
+    borderColor: HexColorSchema.nullable().optional(),
+  })
+  .strict()
 
 /** Semantic version string — "MAJOR.MINOR.PATCH". */
 export const SemVerSchema = z

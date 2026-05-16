@@ -71,50 +71,58 @@ export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc', 'bar'])
 export const GaugeArcFillStyleSchema = z.enum(['zones', 'gradient'])
 const BarOrientationSchema = z.enum(['vertical', 'horizontal'])
 
-export const GaugeWidgetConfigSchema = z.object({
-  type: z.literal('gauge'),
-  displayStyle: GaugeDisplayStyleSchema,
-  minValue: z.number(),
-  maxValue: z.number(),
-  warningLevel: z.number(),
-  dangerLevel: z.number(),
-  decimalPlaces: z.number(),
-  prefix: z.string().optional(),
-  suffix: z.string().optional(),
-  hideWhenInvalid: z.boolean().optional(),
-  showNeedle: z.boolean().optional(),
-  arcFillStyle: GaugeArcFillStyleSchema.optional(),
-  revFlash: z.boolean().optional(),
-  alertThreshold: z.number().optional(),
-  barOrientation: BarOrientationSchema.optional(),
-  label: z.string().optional(),
-  labelPosition: WidgetLabelPositionSchema.optional(),
-})
+export const GaugeWidgetConfigSchema = z
+  .object({
+    type: z.literal('gauge'),
+    displayStyle: GaugeDisplayStyleSchema,
+    minValue: z.number(),
+    maxValue: z.number(),
+    warningLevel: z.number(),
+    dangerLevel: z.number(),
+    decimalPlaces: z.number(),
+    prefix: z.string().optional(),
+    suffix: z.string().optional(),
+    hideWhenInvalid: z.boolean().optional(),
+    showNeedle: z.boolean().optional(),
+    arcFillStyle: GaugeArcFillStyleSchema.optional(),
+    revFlash: z.boolean().optional(),
+    alertThreshold: z.number().optional(),
+    barOrientation: BarOrientationSchema.optional(),
+    label: z.string().optional(),
+    labelPosition: WidgetLabelPositionSchema.optional(),
+  })
+  .strict()
 
-export const WarningWidgetConfigSchema = z.object({
-  type: z.literal('warning'),
-  invertLogic: z.boolean().optional(),
-  threshold: z.number(),
-  iconName: SensorIconNameSchema.optional(),
-  label: z.string().optional(),
-  labelPosition: WidgetLabelPositionSchema.optional(),
-})
+export const WarningWidgetConfigSchema = z
+  .object({
+    type: z.literal('warning'),
+    invertLogic: z.boolean().optional(),
+    threshold: z.number(),
+    iconName: SensorIconNameSchema.optional(),
+    label: z.string().optional(),
+    labelPosition: WidgetLabelPositionSchema.optional(),
+  })
+  .strict()
 
 // ---------------------------------------------------------------------------
 // Button action types — discriminated union on `category` + `type` (issue #673)
 // ---------------------------------------------------------------------------
 
-const NavigateActionSchema = z.object({
-  category: z.literal('dashboard'),
-  type: z.literal('navigate'),
-  pageId: z.string(),
-})
+const NavigateActionSchema = z
+  .object({
+    category: z.literal('dashboard'),
+    type: z.literal('navigate'),
+    pageId: z.string(),
+  })
+  .strict()
 
-const MapSwitchActionSchema = z.object({
-  category: z.literal('ecu'),
-  type: z.literal('map_switch'),
-  mapIndex: z.number(),
-})
+const MapSwitchActionSchema = z
+  .object({
+    category: z.literal('ecu'),
+    type: z.literal('map_switch'),
+    mapIndex: z.number(),
+  })
+  .strict()
 
 const CanRawDataSchema = z
   .string({ invalid_type_error: 'data must be a string' })
@@ -123,14 +131,16 @@ const CanRawDataSchema = z
   })
   .regex(CAN_RAW_DATA_REGEX, 'data must be even-length hex (e.g. "DEADBEEF")')
 
-const CanRawActionSchema = z.object({
-  category: z.literal('ecu'),
-  type: z.literal('can_raw'),
-  frameId: z.number(),
-  data: CanRawDataSchema,
-  dataOff: CanRawDataSchema.optional(),
-  extended: z.boolean({ invalid_type_error: 'extended must be a boolean when set' }).optional(),
-})
+const CanRawActionSchema = z
+  .object({
+    category: z.literal('ecu'),
+    type: z.literal('can_raw'),
+    frameId: z.number(),
+    data: CanRawDataSchema,
+    dataOff: CanRawDataSchema.optional(),
+    extended: z.boolean({ invalid_type_error: 'extended must be a boolean when set' }).optional(),
+  })
+  .strict()
 
 /**
  * Discriminated union of all button actions.
@@ -188,69 +198,80 @@ export function isCanRawAction(action: ButtonAction): action is CanRawAction {
 // Button widget config
 // ---------------------------------------------------------------------------
 
-export const ButtonWidgetConfigSchema = z.object({
-  type: z.literal('button'),
-  label: z.string(),
-  iconName: SensorIconNameSchema.optional(),
-  iconPath: z.string().optional(),
-  showIcon: z.boolean().optional(),
-  showLabel: z.boolean().optional(),
-  isToggle: z.boolean().optional(),
-  colors: z
-    .object({
-      normal: HexColorSchema,
-      active: HexColorSchema,
-    })
-    .optional(),
-  // Firmware mirrors this cap as a fixed C array — over-limit configs lose
-  // their tail actions silently on-device. Enforce at the schema boundary
-  // so Studio surfaces it as a validation error (#700).
-  actions: z
-    .array(ButtonActionSchema)
-    .max(
-      FIRMWARE_CAPS.MAX_BUTTON_ACTIONS,
-      `actions cannot exceed ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()} entries (firmware cap)`
-    ),
-})
+export const ButtonWidgetConfigSchema = z
+  .object({
+    type: z.literal('button'),
+    label: z.string(),
+    iconName: SensorIconNameSchema.optional(),
+    iconPath: z.string().optional(),
+    showIcon: z.boolean().optional(),
+    showLabel: z.boolean().optional(),
+    isToggle: z.boolean().optional(),
+    colors: z
+      .object({
+        normal: HexColorSchema,
+        active: HexColorSchema,
+      })
+      .strict()
+      .optional(),
+    // Firmware mirrors this cap as a fixed C array — over-limit configs lose
+    // their tail actions silently on-device. Enforce at the schema boundary
+    // so Studio surfaces it as a validation error (#700).
+    actions: z
+      .array(ButtonActionSchema)
+      .max(
+        FIRMWARE_CAPS.MAX_BUTTON_ACTIONS,
+        `actions cannot exceed ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()} entries (firmware cap)`
+      ),
+  })
+  .strict()
 
-export const TimerWidgetConfigSchema = z.object({
-  type: z.literal('timer'),
-  autoStart: z.boolean().optional(),
-  format: z.enum(['mm:ss', 'ss.mmm']).optional(),
-  label: z.string().optional(),
-  labelPosition: WidgetLabelPositionSchema.optional(),
-})
+export const TimerWidgetConfigSchema = z
+  .object({
+    type: z.literal('timer'),
+    autoStart: z.boolean().optional(),
+    format: z.enum(['mm:ss', 'ss.mmm']).optional(),
+    label: z.string().optional(),
+    labelPosition: WidgetLabelPositionSchema.optional(),
+  })
+  .strict()
 
-export const BarWidgetConfigSchema = z.object({
-  type: z.literal('bar'),
-  decimalPlaces: z.number(),
-  prefix: z.string().optional(),
-  suffix: z.string().optional(),
-  label: z.string().optional(),
-  labelPosition: z.enum(['top-center', 'bottom-center']).optional(),
-  minValue: z.number().optional(),
-  maxValue: z.number().optional(),
-  warningLevel: z.number().optional(),
-  dangerLevel: z.number().optional(),
-  alertThreshold: z.number().optional(),
-})
+export const BarWidgetConfigSchema = z
+  .object({
+    type: z.literal('bar'),
+    decimalPlaces: z.number(),
+    prefix: z.string().optional(),
+    suffix: z.string().optional(),
+    label: z.string().optional(),
+    labelPosition: z.enum(['top-center', 'bottom-center']).optional(),
+    minValue: z.number().optional(),
+    maxValue: z.number().optional(),
+    warningLevel: z.number().optional(),
+    dangerLevel: z.number().optional(),
+    alertThreshold: z.number().optional(),
+  })
+  .strict()
 
-export const GearWidgetConfigSchema = z.object({
-  type: z.literal('gear'),
-  decimalPlaces: z.literal(0),
-  prefix: z.string().optional(),
-  suffix: z.string().optional(),
-  hideWhenInvalid: z.boolean().optional(),
-  label: z.string().optional(),
-  labelPosition: WidgetLabelPositionSchema.optional(),
-})
+export const GearWidgetConfigSchema = z
+  .object({
+    type: z.literal('gear'),
+    decimalPlaces: z.literal(0),
+    prefix: z.string().optional(),
+    suffix: z.string().optional(),
+    hideWhenInvalid: z.boolean().optional(),
+    label: z.string().optional(),
+    labelPosition: WidgetLabelPositionSchema.optional(),
+  })
+  .strict()
 
-export const ImageWidgetConfigSchema = z.object({
-  type: z.literal('image'),
-  imagePath: z.string(),
-  label: z.string().optional(),
-  labelPosition: WidgetLabelPositionSchema.optional(),
-})
+export const ImageWidgetConfigSchema = z
+  .object({
+    type: z.literal('image'),
+    imagePath: z.string(),
+    label: z.string().optional(),
+    labelPosition: WidgetLabelPositionSchema.optional(),
+  })
+  .strict()
 
 export const WidgetConfigSchema = z.discriminatedUnion('type', [
   GaugeWidgetConfigSchema,
@@ -266,29 +287,33 @@ export const WidgetConfigSchema = z.discriminatedUnion('type', [
 // Widget
 // ---------------------------------------------------------------------------
 
-export const WidgetSchema = z.object({
-  id: z.string(),
-  type: WidgetTypeSchema,
-  signal: z.string(),
-  layout: WidgetLayoutSchema,
-  style: WidgetStyleSchema,
-  config: WidgetConfigSchema,
-})
+export const WidgetSchema = z
+  .object({
+    id: z.string(),
+    type: WidgetTypeSchema,
+    signal: z.string(),
+    layout: WidgetLayoutSchema,
+    style: WidgetStyleSchema,
+    config: WidgetConfigSchema,
+  })
+  .strict()
 
 // ---------------------------------------------------------------------------
 // Page palette + theme
 // ---------------------------------------------------------------------------
 
-export const PagePaletteSchema = z.object({
-  surface: HexColorSchema,
-  primary: HexColorSchema,
-  accent: HexColorSchema,
-  text: HexColorSchema,
-  textDim: HexColorSchema,
-  warning: HexColorSchema,
-  danger: HexColorSchema,
-  success: HexColorSchema,
-})
+export const PagePaletteSchema = z
+  .object({
+    surface: HexColorSchema,
+    primary: HexColorSchema,
+    accent: HexColorSchema,
+    text: HexColorSchema,
+    textDim: HexColorSchema,
+    warning: HexColorSchema,
+    danger: HexColorSchema,
+    success: HexColorSchema,
+  })
+  .strict()
 
 export const DEFAULT_PAGE_PALETTE: z.infer<typeof PagePaletteSchema> = {
   surface: '#1E1E1E',
@@ -301,24 +326,28 @@ export const DEFAULT_PAGE_PALETTE: z.infer<typeof PagePaletteSchema> = {
   success: '#00CC44',
 }
 
-export const ThemePresetSchema = z.object({
-  bgColor: HexColorSchema,
-  palette: PagePaletteSchema,
-})
+export const ThemePresetSchema = z
+  .object({
+    bgColor: HexColorSchema,
+    palette: PagePaletteSchema,
+  })
+  .strict()
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export const PageConfigSchema = z.object({
-  id: z.string(),
-  backgroundImage: z.string().nullable(),
-  backgroundColor: HexColorSchema,
-  palette: PagePaletteSchema,
-  showTopBar: z.boolean(),
-  visible: z.boolean().optional(),
-  widgets: z.array(WidgetSchema),
-})
+export const PageConfigSchema = z
+  .object({
+    id: z.string(),
+    backgroundImage: z.string().nullable(),
+    backgroundColor: HexColorSchema,
+    palette: PagePaletteSchema,
+    showTopBar: z.boolean(),
+    visible: z.boolean().optional(),
+    widgets: z.array(WidgetSchema),
+  })
+  .strict()
 
 // ---------------------------------------------------------------------------
 // Top bar
@@ -327,36 +356,46 @@ export const PageConfigSchema = z.object({
 export const TopBarItemPositionSchema = z.enum(['left', 'center', 'right'])
 
 export const TopBarItemSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('statusDot'),
-    signal: z.string(),
-    position: TopBarItemPositionSchema,
-  }),
-  z.object({ type: z.literal('label'), text: z.string(), position: TopBarItemPositionSchema }),
-  z.object({ type: z.literal('separator'), position: TopBarItemPositionSchema }),
-  z.object({
-    type: z.literal('signal'),
-    signal: z.string(),
-    format: z.string().optional(),
-    position: TopBarItemPositionSchema,
-  }),
-  z.object({ type: z.literal('usbIcon'), position: TopBarItemPositionSchema }),
-  z.object({ type: z.literal('bleIcon'), position: TopBarItemPositionSchema }),
-  z.object({ type: z.literal('themeToggle'), position: TopBarItemPositionSchema }),
-  z.object({
-    type: z.literal('modeFlag'),
-    signal: z.string(),
-    text: z.string(),
-    position: TopBarItemPositionSchema,
-  }),
+  z
+    .object({
+      type: z.literal('statusDot'),
+      signal: z.string(),
+      position: TopBarItemPositionSchema,
+    })
+    .strict(),
+  z
+    .object({ type: z.literal('label'), text: z.string(), position: TopBarItemPositionSchema })
+    .strict(),
+  z.object({ type: z.literal('separator'), position: TopBarItemPositionSchema }).strict(),
+  z
+    .object({
+      type: z.literal('signal'),
+      signal: z.string(),
+      format: z.string().optional(),
+      position: TopBarItemPositionSchema,
+    })
+    .strict(),
+  z.object({ type: z.literal('usbIcon'), position: TopBarItemPositionSchema }).strict(),
+  z.object({ type: z.literal('bleIcon'), position: TopBarItemPositionSchema }).strict(),
+  z.object({ type: z.literal('themeToggle'), position: TopBarItemPositionSchema }).strict(),
+  z
+    .object({
+      type: z.literal('modeFlag'),
+      signal: z.string(),
+      text: z.string(),
+      position: TopBarItemPositionSchema,
+    })
+    .strict(),
 ])
 
-export const TopBarConfigSchema = z.object({
-  height: z.number(),
-  bgColor: HexColorSchema,
-  textColor: HexColorSchema,
-  layout: z.array(TopBarItemSchema).optional(),
-})
+export const TopBarConfigSchema = z
+  .object({
+    height: z.number(),
+    bgColor: HexColorSchema,
+    textColor: HexColorSchema,
+    layout: z.array(TopBarItemSchema).optional(),
+  })
+  .strict()
 
 export const DEFAULT_TOP_BAR_LAYOUT: z.infer<typeof TopBarItemSchema>[] = [
   { type: 'statusDot', signal: 'any', position: 'left' },
@@ -371,17 +410,19 @@ export const DEFAULT_TOP_BAR_LAYOUT: z.infer<typeof TopBarItemSchema>[] = [
 // Dashboard root
 // ---------------------------------------------------------------------------
 
-export const DashboardConfigSchema = z.object({
-  version: SemVerSchema,
-  name: z.string(),
-  description: z.string().optional(),
-  defaultPageId: z.string(),
-  revLimitRpm: z.number(),
-  topBar: TopBarConfigSchema,
-  dayTheme: ThemePresetSchema.optional(),
-  pages: z.array(PageConfigSchema),
-  ecuProfileKey: z.string().optional(),
-})
+export const DashboardConfigSchema = z
+  .object({
+    version: SemVerSchema,
+    name: z.string(),
+    description: z.string().optional(),
+    defaultPageId: z.string(),
+    revLimitRpm: z.number(),
+    topBar: TopBarConfigSchema,
+    dayTheme: ThemePresetSchema.optional(),
+    pages: z.array(PageConfigSchema),
+    ecuProfileKey: z.string().optional(),
+  })
+  .strict()
 
 // ---------------------------------------------------------------------------
 // Inferred types — these REPLACE the previous hand-written interfaces in

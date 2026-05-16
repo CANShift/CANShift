@@ -22,10 +22,12 @@ const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,3}$/
 const BIT_MASK_REGEX = /^0[xX][0-9a-fA-F]+$/
 
 /** Single stop on a color ramp — value in the signal's native unit, color in #RRGGBB. */
-export const ColorRampStopSchema = z.object({
-  value: z.number(),
-  color: HexColorSchema,
-})
+export const ColorRampStopSchema = z
+  .object({
+    value: z.number(),
+    color: HexColorSchema,
+  })
+  .strict()
 
 /**
  * How a `ColorRamp` blends between adjacent stops.
@@ -38,25 +40,27 @@ export const RampInterpolationSchema = z.enum(['linear', 'step'])
  * Per-signal value→color mapping. Stops are sorted ascending by `value` and
  * contain between 2 and `MAX_RAMP_STOPS` entries (the firmware-side cap, #700).
  */
-export const ColorRampSchema = z.object({
-  stops: z
-    .array(ColorRampStopSchema)
-    .min(2, 'colorRamp.stops must contain at least 2 stops')
-    .max(
-      MAX_RAMP_STOPS,
-      `colorRamp.stops cannot exceed ${MAX_RAMP_STOPS.toString()} entries (firmware cap)`
-    )
-    .refine(
-      (stops) =>
-        stops.every((stop, idx) => {
-          if (idx === 0) return true
-          const prev = stops[idx - 1]
-          return prev !== undefined && prev.value < stop.value
-        }),
-      { message: 'colorRamp.stops must be sorted strictly ascending by value' }
-    ),
-  interpolate: RampInterpolationSchema,
-})
+export const ColorRampSchema = z
+  .object({
+    stops: z
+      .array(ColorRampStopSchema)
+      .min(2, 'colorRamp.stops must contain at least 2 stops')
+      .max(
+        MAX_RAMP_STOPS,
+        `colorRamp.stops cannot exceed ${MAX_RAMP_STOPS.toString()} entries (firmware cap)`
+      )
+      .refine(
+        (stops) =>
+          stops.every((stop, idx) => {
+            if (idx === 0) return true
+            const prev = stops[idx - 1]
+            return prev !== undefined && prev.value < stop.value
+          }),
+        { message: 'colorRamp.stops must be sorted strictly ascending by value' }
+      ),
+    interpolate: RampInterpolationSchema,
+  })
+  .strict()
 
 /** Individual CAN signal definition. */
 export const SignalDefSchema = z
@@ -82,6 +86,7 @@ export const SignalDefSchema = z
     timeoutMs: z.number(),
     colorRamp: ColorRampSchema.optional(),
   })
+  .strict()
   .refine((s) => s.min < s.max, {
     message: 'min must be less than max',
     path: ['min'],
@@ -103,12 +108,14 @@ export const CanSpeedKbpsSchema = z.union([
  * Root signal configuration (signals.json). `protocol` is informational only —
  * never used in parsing decisions. Current default is `"custom_v1.0"`.
  */
-export const SignalConfigSchema = z.object({
-  version: SemVerSchema,
-  protocol: z.string(),
-  canSpeedKbps: CanSpeedKbpsSchema,
-  signals: z.array(SignalDefSchema),
-})
+export const SignalConfigSchema = z
+  .object({
+    version: SemVerSchema,
+    protocol: z.string(),
+    canSpeedKbps: CanSpeedKbpsSchema,
+    signals: z.array(SignalDefSchema),
+  })
+  .strict()
 
 export type ColorRampStop = z.infer<typeof ColorRampStopSchema>
 export type RampInterpolation = z.infer<typeof RampInterpolationSchema>
