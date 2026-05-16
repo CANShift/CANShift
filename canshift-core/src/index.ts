@@ -38,14 +38,10 @@ export type {
   CanRawAction,
 } from './types/dashboard'
 
-export {
-  DEFAULT_PAGE_PALETTE,
-  DEFAULT_TOP_BAR_LAYOUT,
-  BUTTON_ACTION_TYPES,
-  isNavigateAction,
-  isMapSwitchAction,
-  isCanRawAction,
-} from './types/dashboard'
+export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
+// BUTTON_ACTION_TYPES / isNavigateAction / isMapSwitchAction / isCanRawAction
+// kept internal (still in ./types/dashboard) until a downstream consumer needs
+// them — re-export here when that lands. See issue #793.
 export type {
   SignalConfig,
   SignalDef,
