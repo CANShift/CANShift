@@ -68,6 +68,26 @@ describe('DashboardConfigSchema', () => {
     const result = DashboardConfigSchema.safeParse({ ...validDashboard, version: 'v1.0' })
     expect(result.success).toBe(false)
   })
+
+  it('rejects a missing required field (pages)', () => {
+    const invalid: Record<string, unknown> = { ...validDashboard }
+    delete invalid.pages
+    const result = DashboardConfigSchema.safeParse(invalid)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('pages'))).toBe(true)
+    }
+  })
+
+  // PR #800 (#769) applied `.strict()` to every object schema — unknown keys at
+  // the top level must be rejected outright rather than silently stripped.
+  it('rejects an unknown top-level key', () => {
+    const result = DashboardConfigSchema.safeParse({ ...validDashboard, mystery: 1 })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -100,6 +120,36 @@ describe('SignalConfigSchema', () => {
   it('accepts a minimal valid signal catalog', () => {
     const result = SignalConfigSchema.safeParse(validSignals)
     expect(result.success).toBe(true)
+  })
+
+  it('rejects a missing required field (canSpeedKbps)', () => {
+    const invalid: Record<string, unknown> = { ...validSignals }
+    delete invalid.canSpeedKbps
+    const result = SignalConfigSchema.safeParse(invalid)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('canSpeedKbps'))).toBe(true)
+    }
+  })
+
+  it('rejects a missing required field (signals)', () => {
+    const invalid: Record<string, unknown> = { ...validSignals }
+    delete invalid.signals
+    const result = SignalConfigSchema.safeParse(invalid)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('signals'))).toBe(true)
+    }
+  })
+
+  // PR #800 (#769) applied `.strict()` to every object schema — unknown keys at
+  // the top level must be rejected outright rather than silently stripped.
+  it('rejects an unknown top-level key', () => {
+    const result = SignalConfigSchema.safeParse({ ...validSignals, mystery: 1 })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
+    }
   })
 
   it('rejects an invalid byteLength (3)', () => {
