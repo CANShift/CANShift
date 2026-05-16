@@ -19,7 +19,7 @@ export const FIRMWARE_CAPS = {
  * sync. The cap is generous enough for green→orange→red gradients with extra
  * intermediate hues while keeping the firmware-side fixed array small.
  */
-export const MAX_RAMP_STOPS = 8
+export const MAX_RAMP_STOPS = FIRMWARE_CAPS.MAX_RAMP_STOPS
 
 export const CANVAS = {
   WIDTH: 320,
