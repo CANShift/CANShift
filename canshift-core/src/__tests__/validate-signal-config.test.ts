@@ -1,0 +1,202 @@
+// validate-signal-config.test.ts — Issue #701
+//
+// Covers each invariant on `SignalConfigSchema` / `validateSignalConfig`:
+//   - hex `canFrameId`
+//   - `byteLength` ∈ {1, 2, 4}
+//   - `min < max`
+//   - optional hex `bitMask`
+//   - `canSpeedKbps` enum
+
+import { validateSignalConfig } from '../validation/validate-signal-config.js'
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+function validSignal(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    name: 'rpm',
+    canFrameId: '0x370',
+    startByte: 0,
+    byteLength: 2,
+    bigEndian: true,
+    signed: false,
+    scale: 1,
+    offset: 0,
+    unit: 'rpm',
+    min: 0,
+    max: 8000,
+    timeoutMs: 1000,
+    ...overrides,
+  }
+}
+
+function validConfig(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    version: '1.14.0',
+    protocol: 'custom_v1.0',
+    canSpeedKbps: 500,
+    signals: [validSignal()],
+    ...overrides,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Result envelope
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — envelope', () => {
+  it('returns valid:true for a minimal valid catalog', () => {
+    const result = validateSignalConfig(validConfig())
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+    expect(result.warnings).toHaveLength(0)
+  })
+
+  it('returns valid:false with errors on a non-object input', () => {
+    const result = validateSignalConfig(null)
+    expect(result.valid).toBe(false)
+    expect(result.errors.length).toBeGreaterThan(0)
+  })
+
+  it('formats issues as "path: message"', () => {
+    const result = validateSignalConfig(validConfig({ canSpeedKbps: 999 }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.startsWith('canSpeedKbps:'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// canFrameId — hex literal
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — canFrameId', () => {
+  it.each(['0x0', '0x1', '0xFF', '0x7FF', '0X123', '0xabc'])(
+    'accepts valid hex form %s',
+    (canFrameId) => {
+      const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
+      expect(result.valid).toBe(true)
+    }
+  )
+
+  it.each([
+    '370', // missing 0x prefix
+    '#370', // wrong prefix
+    '0x', // empty
+    '0xGGG', // non-hex digits
+    '0x1234', // 4 hex chars (out of 11-bit range)
+    '', // empty string
+  ])('rejects invalid form %s', (canFrameId) => {
+    const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('canFrameId'))).toBe(true)
+  })
+
+  it('rejects a non-string canFrameId', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ canFrameId: 0x370 })] })
+    )
+    expect(result.valid).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// byteLength — must be 1, 2, or 4
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — byteLength', () => {
+  it.each([1, 2, 4])('accepts %i', (byteLength) => {
+    const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
+    expect(result.valid).toBe(true)
+  })
+
+  it.each([0, 3, 5, 8, -1, 1.5])('rejects %s', (byteLength) => {
+    const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('byteLength'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// min < max
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — min/max range', () => {
+  it('accepts min < max', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ min: 0, max: 8000 })] })
+    )
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects min == max', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ min: 100, max: 100 })] })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.toLowerCase().includes('min must be less than max'))).toBe(
+      true
+    )
+  })
+
+  it('rejects min > max', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ min: 500, max: 100 })] })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.toLowerCase().includes('min must be less than max'))).toBe(
+      true
+    )
+  })
+
+  it('accepts negative ranges (e.g. coolant below zero)', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ min: -40, max: 150 })] })
+    )
+    expect(result.valid).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// bitMask — optional hex literal
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — bitMask', () => {
+  it('accepts a signal without bitMask', () => {
+    const result = validateSignalConfig(validConfig())
+    expect(result.valid).toBe(true)
+  })
+
+  it.each(['0x1', '0x01', '0xFF', '0xFF00', '0Xabcdef'])('accepts %s', (bitMask) => {
+    const result = validateSignalConfig(validConfig({ signals: [validSignal({ bitMask })] }))
+    expect(result.valid).toBe(true)
+  })
+
+  it.each(['1', '0xGG', '0x', 'FF', '#FF'])('rejects %s', (bitMask) => {
+    const result = validateSignalConfig(validConfig({ signals: [validSignal({ bitMask })] }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('bitMask'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// canSpeedKbps — enum
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — canSpeedKbps', () => {
+  it.each([125, 250, 500, 1000])('accepts %i', (canSpeedKbps) => {
+    const result = validateSignalConfig(validConfig({ canSpeedKbps }))
+    expect(result.valid).toBe(true)
+  })
+
+  it.each([0, 100, 800, 999, 2000, -500])('rejects %i', (canSpeedKbps) => {
+    const result = validateSignalConfig(validConfig({ canSpeedKbps }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('canSpeedKbps'))).toBe(true)
+  })
+
+  it('rejects a non-number canSpeedKbps', () => {
+    const result = validateSignalConfig(validConfig({ canSpeedKbps: '500' }))
+    expect(result.valid).toBe(false)
+  })
+})

@@ -76,6 +76,7 @@ export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/rel
 // ---------------------------------------------------------------------------
 export { validateDashboard } from './validation/validate-dashboard'
 export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard'
+export { validateSignalConfig } from './validation/validate-signal-config'
 
 // ---------------------------------------------------------------------------
 // Zod schemas (issue #673) — runtime source of truth for Dashboard, Signal,
@@ -92,7 +93,12 @@ export {
   PagePaletteSchema,
   ThemePresetSchema,
 } from './schemas/dashboard'
-export { SignalConfigSchema, SignalDefSchema, ColorRampSchema } from './schemas/signal'
+export {
+  SignalConfigSchema,
+  SignalDefSchema,
+  ColorRampSchema,
+  CanSpeedKbpsSchema,
+} from './schemas/signal'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
