@@ -251,20 +251,19 @@ describe('ButtonActionSchema', () => {
 
   it('rejects the legacy targetPageId field on a navigate action (issue #672)', () => {
     // `targetPageId` lived on ButtonWidgetConfig before the 1.0→1.1 migration
-    // (issue #672). It must NEVER appear inside a ButtonAction — the new
-    // discriminated union does not declare it and `z.object` strips unknown
-    // keys, so `safeParse` succeeds but the parsed shape MUST NOT carry
-    // `targetPageId`. This guards against schema drift if the field is ever
-    // accidentally re-introduced.
+    // (issue #672). Since #769 every object schema is `.strict()`, so an
+    // unknown key is now an outright rejection rather than a silent strip —
+    // the stricter behaviour catches drift immediately if the legacy field
+    // ever resurfaces in a config.
     const parsed = ButtonActionSchema.safeParse({
       category: 'dashboard',
       type: 'navigate',
       pageId: 'p2',
       targetPageId: 'p3',
     })
-    expect(parsed.success).toBe(true)
-    if (parsed.success) {
-      expect('targetPageId' in parsed.data).toBe(false)
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) {
+      expect(parsed.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
     }
   })
 })
