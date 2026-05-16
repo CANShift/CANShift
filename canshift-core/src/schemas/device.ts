@@ -26,6 +26,12 @@ export const Esp32GpioSchema = z.number().int().min(ESP32_GPIO_MIN).max(ESP32_GP
  * On-device hardware configuration persisted to `userData/device.json`.
  * Strict — extra fields are rejected so a stale studio payload can't smuggle
  * unknown keys through the IPC boundary into the file on disk.
+ *
+ * Field naming is intentionally `snake_case` (issue #715): this schema IS the
+ * firmware JSON wire format, read verbatim by
+ * `canshift-firmware/src/config/config_loader.cpp` (keys `can_speed_kbps`,
+ * `twai_tx_pin`, `twai_rx_pin`). Renaming would require a coordinated firmware
+ * change or a runtime mapper; the convention is frozen here instead.
  */
 export const DeviceConfigSchema = z
   .object({
