@@ -305,7 +305,8 @@ export class UsbService {
     //   {"status":"ok","version":"x.y.z","protocol":N,"is_day":0|1}
     const payload = JSON.stringify({ cmd: 0x10 }) + '\n'
     const result = await this.sendCommand(payload, 4_000)
-    if (!result.success || !result.data) {
+    // `data` is `unknown` from the device — narrow before access.
+    if (!result.success || !isRecord(result.data)) {
       return { version: null, isDay: null }
     }
     const v = result.data.version
@@ -336,7 +337,8 @@ export class UsbService {
     // ReadlineParser has the whole frame before the ack timer fires.
     const result = await this.sendCommand(payload, 8_000)
     if (result.success) {
-      if (!result.data) return { ok: false, reason: 'transport' }
+      // `data` is `unknown` from the device — narrow before access.
+      if (!isRecord(result.data)) return { ok: false, reason: 'transport' }
       const cfg = result.data.config
       return isRecord(cfg) ? { ok: true, config: cfg } : { ok: false, reason: 'transport' }
     }
