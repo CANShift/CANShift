@@ -41,13 +41,13 @@ static constexpr uint32_t MAP_BADGE_COLOR = 0x33CC44; // green
 // to the const config (kept alive by the dashboard singleton).
 struct ButtonTag {
     const CfgButtonParams *params;
-    lv_obj_t *iconImg;            // nullptr when no asset is rendered
-    bool toggleActive;            // only meaningful when params->isToggle == true
-    char lvglPath[LVGL_PATH_LEN]; // resolved LVGL FS path for the icon, "" if none
-    lv_obj_t *activeBadge;        // green dot overlay, nullptr if not a map_switch button
-    uint8_t mapSwitchIndex;       // mapIndex of the MAP_SWITCH action, 0 = none
+    lv_obj_t *iconImg;                // nullptr when no asset is rendered
+    bool toggleActive;                // only meaningful when params->isToggle == true
+    char lvglPath[LVGL_PATH_LEN];     // resolved LVGL FS path for the icon, "" if none
+    lv_obj_t *activeBadge;            // green dot overlay, nullptr if not a map_switch button
+    uint8_t mapSwitchIndex;           // mapIndex of the MAP_SWITCH action, 0 = none
     char signalId[CFG_MAX_SIGNAL_LEN]; // signal driving toggle state; "" = use local latch
-    uint32_t signalSyncIgnoreUntilMs;  // ms tick before which update() must skip signal-driven sync
+    uint32_t signalSyncIgnoreUntilMs; // ms tick before which update() must skip signal-driven sync
 };
 
 // Resolve the icon source. Returns a non-empty C-string LVGL path when an
