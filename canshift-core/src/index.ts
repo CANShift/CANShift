@@ -77,6 +77,7 @@ export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/rel
 export { validateDashboard } from './validation/validate-dashboard'
 export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard'
 export { validateSignalConfig } from './validation/validate-signal-config'
+export { validateSignalCatalog } from './validation/validate-signal'
 
 // ---------------------------------------------------------------------------
 // Zod schemas (issue #673) — runtime source of truth for Dashboard, Signal,
