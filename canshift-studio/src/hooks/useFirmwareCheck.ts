@@ -33,7 +33,7 @@ import type { FirmwareCheck } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
 import { firmwareIpc } from '../services/ipc.service'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 import type { FirmwareRelease, FirmwareStatus } from '../services/ipc.service'
 
 /**

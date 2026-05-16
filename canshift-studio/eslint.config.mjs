@@ -30,6 +30,23 @@ export default tseslint.config(
       ],
       'prefer-const': 'error',
       'no-console': ['warn', { allow: ['error', 'warn'] }],
+      // The renderer must NOT reach across into main-process source — anything
+      // that crosses the process boundary (IPC channel names, payload shapes)
+      // belongs under `shared/`. Importing from `main/` risks pulling main-only
+      // deps (electron, fs, …) into the renderer bundle and breaks the sandbox
+      // guarantee (#710).
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../../main/*', '../../../main/*', '**/main/*'],
+              message:
+                'Renderer must not import from main/. Move shared IPC types/constants under shared/ and import from there.',
+            },
+          ],
+        },
+      ],
     },
   },
   {

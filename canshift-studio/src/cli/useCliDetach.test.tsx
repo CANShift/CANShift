@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, useEffect } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useCliDetach } from './useCliDetach'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 const ipcInvoke = vi.fn<(channel: string, ...args: unknown[]) => Promise<unknown>>()
 const ipcSend = vi.fn<(channel: string, ...args: unknown[]) => void>()

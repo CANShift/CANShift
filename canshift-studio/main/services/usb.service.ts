@@ -12,7 +12,7 @@
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
 import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
-import type { CanFrame, CanHealth } from './usb.service.types'
+import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
 
 /**
  * Payload forwarded to the renderer on every connection-state transition.

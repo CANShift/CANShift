@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 import { useDeviceStore } from '../stores/device.store'
 import { CONTEXT_LINES, QUIET_RESET_MS, useBootLoopStore } from '../stores/bootLoop.store'
 import { useBootLoopDetector } from './useBootLoopDetector'

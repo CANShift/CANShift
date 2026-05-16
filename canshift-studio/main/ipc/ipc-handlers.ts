@@ -5,8 +5,8 @@ import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { DashboardConfigSchema } from '@tmbk/canshift-core'
-import { IpcChannels } from './ipc-channels'
-import type { CliLogPayload, CliPanelState } from './cli-detach.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { CliLogPayload, CliPanelState } from '../../shared/cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
@@ -21,8 +21,8 @@ import {
   subscribe as subscribeLog,
   unsubscribe as unsubscribeLog,
 } from '../services/cli-log-bus'
-import type { FirmwareRelease } from '../services/firmware.service.types'
-import type { CanFrame } from '../services/usb.service.types'
+import type { FirmwareRelease } from '../../shared/firmware.service.types'
+import type { CanFrame } from '../../shared/usb.service.types'
 
 // Allowed hosts for FIRMWARE_DOWNLOAD — defence in depth so a compromised
 // renderer cannot turn the main process into an open HTTP fetcher. The CSP

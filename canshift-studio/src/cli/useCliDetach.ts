@@ -7,8 +7,8 @@
 // IPC bridge.
 
 import { useCallback, useEffect, useState } from 'react'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
-import type { CliPanelState, CliStateChangedEvent } from '../../main/ipc/cli-detach.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { CliPanelState, CliStateChangedEvent } from '../../shared/cli-detach.types'
 
 const INITIAL_STATE: CliPanelState = { kind: 'inApp' }
 

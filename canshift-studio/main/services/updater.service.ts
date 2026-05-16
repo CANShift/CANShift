@@ -13,9 +13,9 @@
 
 import { autoUpdater, UpdateInfo } from 'electron-updater'
 import type { BrowserWindow } from 'electron'
-import { IpcChannels } from '../ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 import { markdownToPlainText } from '../utils/markdown-to-plain-text'
-import type { UpdateAvailablePayload, UpdateErrorPayload } from './updater.service.types'
+import type { UpdateAvailablePayload, UpdateErrorPayload } from '../../shared/updater.service.types'
 
 function buildPayload(info: UpdateInfo): UpdateAvailablePayload {
   return {

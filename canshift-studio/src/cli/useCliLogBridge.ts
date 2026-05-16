@@ -17,8 +17,8 @@
 // in dev (#574).
 
 import { useEffect, useRef } from 'react'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
-import type { CliLogPayload } from '../../main/ipc/cli-detach.types'
+import { IpcChannels } from '../../shared/ipc-channels'
+import type { CliLogPayload } from '../../shared/cli-detach.types'
 import { useLogStore, type LogEntry } from '../stores/log.store'
 
 interface CliGetStateResponse {

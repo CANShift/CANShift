@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { IpcChannels } from '../ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 interface CapturedSend {
   channel: string

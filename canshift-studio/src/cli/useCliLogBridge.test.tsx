@@ -28,7 +28,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useCliLogBridge } from './useCliLogBridge'
 import { useLogStore } from '../stores/log.store'
-import { IpcChannels } from '../../main/ipc/ipc-channels'
+import { IpcChannels } from '../../shared/ipc-channels'
 
 interface IpcStub {
   invoke: ReturnType<typeof vi.fn>
