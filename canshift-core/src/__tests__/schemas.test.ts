@@ -7,6 +7,7 @@
 // `targetPageId` field removed in #672.
 
 import { ButtonActionSchema, DashboardConfigSchema, SignalConfigSchema } from '../index.js'
+import { ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
 
 // ---------------------------------------------------------------------------
 // DashboardConfigSchema
@@ -110,6 +111,61 @@ describe('SignalConfigSchema', () => {
     const result = SignalConfigSchema.safeParse({ ...validSignals, protocol: 42 })
     expect(result.success).toBe(false)
   })
+
+  // colorRamp cap enforcement (#700) — firmware mirrors MAX_RAMP_STOPS=8 as a
+  // fixed C array. Over-limit configs lose stops on-device, and a single-stop
+  // ramp can't interpolate so it's degenerate too.
+  it('rejects a colorRamp with fewer than 2 stops', () => {
+    const broken = {
+      ...validSignals,
+      signals: [
+        {
+          ...validSignals.signals[0],
+          colorRamp: { stops: [{ value: 0, color: '#00FF00' }], interpolate: 'linear' },
+        },
+      ],
+    }
+    const result = SignalConfigSchema.safeParse(broken)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a colorRamp with more than MAX_RAMP_STOPS=8 stops', () => {
+    const stops = Array.from({ length: 9 }, (_, i) => ({
+      value: i * 100,
+      color: '#FF0000',
+    }))
+    const broken = {
+      ...validSignals,
+      signals: [
+        {
+          ...validSignals.signals[0],
+          colorRamp: { stops, interpolate: 'linear' },
+        },
+      ],
+    }
+    const result = SignalConfigSchema.safeParse(broken)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a colorRamp whose stops are not strictly ascending', () => {
+    const broken = {
+      ...validSignals,
+      signals: [
+        {
+          ...validSignals.signals[0],
+          colorRamp: {
+            stops: [
+              { value: 100, color: '#00FF00' },
+              { value: 50, color: '#FF0000' },
+            ],
+            interpolate: 'linear',
+          },
+        },
+      ],
+    }
+    const result = SignalConfigSchema.safeParse(broken)
+    expect(result.success).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -172,6 +228,20 @@ describe('ButtonActionSchema', () => {
       type: 'map_switch',
       mapIndex: 1,
     })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a button widget with more than MAX_BUTTON_ACTIONS=4 actions (#700)', () => {
+    const tooMany = {
+      type: 'button',
+      label: 'x',
+      actions: Array.from({ length: 5 }, () => ({
+        category: 'dashboard',
+        type: 'navigate',
+        pageId: 'p1',
+      })),
+    }
+    const result = ButtonWidgetConfigSchema.safeParse(tooMany)
     expect(result.success).toBe(false)
   })
 

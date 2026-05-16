@@ -6,7 +6,11 @@
 
 import { z } from 'zod'
 
-import { CAN_RAW_DATA_MAX_HEX_CHARS, CAN_RAW_DATA_REGEX } from '../constants/firmware-caps.js'
+import {
+  CAN_RAW_DATA_MAX_HEX_CHARS,
+  CAN_RAW_DATA_REGEX,
+  FIRMWARE_CAPS,
+} from '../constants/firmware-caps.js'
 
 import {
   HexColorSchema,
@@ -198,7 +202,15 @@ export const ButtonWidgetConfigSchema = z.object({
       active: HexColorSchema,
     })
     .optional(),
-  actions: z.array(ButtonActionSchema),
+  // Firmware mirrors this cap as a fixed C array — over-limit configs lose
+  // their tail actions silently on-device. Enforce at the schema boundary
+  // so Studio surfaces it as a validation error (#700).
+  actions: z
+    .array(ButtonActionSchema)
+    .max(
+      FIRMWARE_CAPS.MAX_BUTTON_ACTIONS,
+      `actions cannot exceed ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()} entries (firmware cap)`
+    ),
 })
 
 export const TimerWidgetConfigSchema = z.object({
