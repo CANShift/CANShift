@@ -173,6 +173,30 @@ function mockFetchNetworkError(): jest.Mock {
   return installFetch(() => Promise.reject(new TypeError('Network request failed')))
 }
 
+/**
+ * Wire a one-shot interceptor on the mocked `deleteAsync` that snapshots the
+ * bytes of `stagedPath` into `out.bytes` just before the file is removed.
+ * Used by `pushFirmware` tests because the service discards the staging file
+ * after upload, leaving nothing to read from `mockFs` once the call returns.
+ */
+function captureStagedOnDelete(out: { bytes?: Uint8Array }, stagedPath: string): void {
+  // jest.requireMock returns the same module factory we registered above, so
+  // we know the shape; the `unknown` cast keeps the boundary explicit without
+  // pulling in @types/expo-file-system here.
+  const fs = jest.requireMock('expo-file-system') as unknown as { deleteAsync: jest.Mock }
+  const originalDeleteAsync = fs.deleteAsync.getMockImplementation()
+  fs.deleteAsync.mockImplementationOnce((uri: string, opts?: unknown): Promise<void> => {
+    if (uri === stagedPath) {
+      const file = mockFs[stagedPath]
+      if (file) out.bytes = file.bytes
+    }
+    if (originalDeleteAsync) {
+      return originalDeleteAsync(uri, opts) as Promise<void>
+    }
+    return Promise.resolve()
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -432,22 +456,8 @@ describe('verifyFirmware', () => {
 
   const path = 'file:///cache/canshift-0.7.1.bin'
   const bytes = new Uint8Array([1, 2, 3, 4])
-  const digest = sha256Hex(bytes)
 
-  it('passes when size and SHA-256 match', async () => {
-    mockFs[path] = { bytes }
-    const release: FirmwareRelease = {
-      version: '0.7.1',
-      publishedAt: '',
-      notes: '',
-      downloadUrl: '',
-      sizeBytes: bytes.length,
-      sha256: digest,
-    }
-    await expect(verifyFirmware(path, release)).resolves.toBeUndefined()
-  })
-
-  it('passes (digest skipped) when release has no published sha256', async () => {
+  it('passes when the file exists and size matches', async () => {
     mockFs[path] = { bytes }
     const release: FirmwareRelease = {
       version: '0.7.1',
@@ -456,6 +466,22 @@ describe('verifyFirmware', () => {
       downloadUrl: '',
       sizeBytes: bytes.length,
       sha256: null,
+    }
+    await expect(verifyFirmware(path, release)).resolves.toBeUndefined()
+  })
+
+  it('passes regardless of the published sha256 (checksum is deferred to staging)', async () => {
+    // Issue #706: SHA-256 verification was moved into stageFirmwareWithHmac so
+    // the firmware bytes are read off disk exactly once. verifyFirmware now
+    // only enforces the size precondition before the Wi-Fi switch.
+    mockFs[path] = { bytes }
+    const release: FirmwareRelease = {
+      version: '0.7.1',
+      publishedAt: '',
+      notes: '',
+      downloadUrl: '',
+      sizeBytes: bytes.length,
+      sha256: 'f'.repeat(64),
     }
     await expect(verifyFirmware(path, release)).resolves.toBeUndefined()
   })
@@ -487,25 +513,6 @@ describe('verifyFirmware', () => {
     }
     await expect(verifyFirmware(path, release)).rejects.toMatchObject({
       cause: { kind: 'size-mismatch', expected: 4, actual: 0 },
-    })
-  })
-
-  it('throws checksum-mismatch when SHA-256 does not match', async () => {
-    mockFs[path] = { bytes }
-    const release: FirmwareRelease = {
-      version: '0.7.1',
-      publishedAt: '',
-      notes: '',
-      downloadUrl: '',
-      sizeBytes: bytes.length,
-      sha256: 'f'.repeat(64),
-    }
-    await expect(verifyFirmware(path, release)).rejects.toMatchObject({
-      cause: {
-        kind: 'checksum-mismatch',
-        expected: 'f'.repeat(64),
-        actual: digest,
-      },
     })
   })
 })
@@ -565,23 +572,38 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
 
   const localPath = 'file:///cache/canshift-0.7.1.bin'
   const firmwareBytes = new Uint8Array([0x10, 0x20, 0x30, 0x40, 0x50, 0x60])
+  const firmwareDigest = sha256Hex(firmwareBytes)
+
+  function makeRelease(overrides: Partial<FirmwareRelease> = {}): FirmwareRelease {
+    return {
+      version: '0.7.1',
+      publishedAt: '',
+      notes: '',
+      downloadUrl: '',
+      sizeBytes: firmwareBytes.length,
+      sha256: firmwareDigest,
+      ...overrides,
+    }
+  }
 
   it('writes a staging file with payload + 32-byte HMAC trailer, then uploads it', async () => {
     mockFs[localPath] = { bytes: firmwareBytes }
 
-    await pushFirmware(localPath)
+    // pushFirmware deletes the staging file after upload, so snapshot the
+    // staged bytes the moment `deleteAsync` is called.
+    const stagedSnapshot: { bytes?: Uint8Array } = {}
+    captureStagedOnDelete(stagedSnapshot, `${localPath}.hmac.bin`)
 
-    // Staging file exists alongside the original
-    const stagedPath = `${localPath}.hmac.bin`
-    const staged = mockFs[stagedPath]
-    expect(staged).toBeDefined()
-    expect(staged?.bytes.length).toBe(firmwareBytes.length + 32)
+    await pushFirmware(localPath, makeRelease())
+
+    const staged = stagedSnapshot.bytes ?? new Uint8Array(0)
+    expect(staged.length).toBe(firmwareBytes.length + 32)
 
     // Original payload bytes are preserved
-    expect(staged?.bytes.subarray(0, firmwareBytes.length)).toEqual(firmwareBytes)
+    expect(staged.subarray(0, firmwareBytes.length)).toEqual(firmwareBytes)
 
     // Trailer matches HMAC-SHA256(devSecret, firmware)
-    const trailer = staged?.bytes.subarray(firmwareBytes.length) ?? new Uint8Array(0)
+    const trailer = staged.subarray(firmwareBytes.length)
     const expectedTrailer = hmacSha256(
       new Uint8Array(Buffer.from(DEV_INSECURE_OTA_SECRET, 'utf8')),
       firmwareBytes
@@ -596,13 +618,44 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
 
   it('leaves the original cached download intact', async () => {
     mockFs[localPath] = { bytes: firmwareBytes }
-    await pushFirmware(localPath)
+    await pushFirmware(localPath, makeRelease())
     expect(mockFs[localPath].bytes).toEqual(firmwareBytes)
   })
 
+  it('discards the staging file after a successful upload', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+    await pushFirmware(localPath, makeRelease())
+    expect(mockFs[`${localPath}.hmac.bin`]).toBeUndefined()
+  })
+
+  it('discards the staging file even when the upload fails', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+    nextStatus = 500
+    await expect(pushFirmware(localPath, makeRelease())).rejects.toBeInstanceOf(OtaServiceError)
+    expect(mockFs[`${localPath}.hmac.bin`]).toBeUndefined()
+  })
+
+  it('skips the sha256 check when the release has no published digest', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+    await expect(pushFirmware(localPath, makeRelease({ sha256: null }))).resolves.toBeUndefined()
+  })
+
+  it('throws checksum-mismatch when the staged bytes do not match the release digest', async () => {
+    mockFs[localPath] = { bytes: firmwareBytes }
+    await expect(
+      pushFirmware(localPath, makeRelease({ sha256: 'f'.repeat(64) }))
+    ).rejects.toMatchObject({
+      cause: {
+        kind: 'checksum-mismatch',
+        expected: 'f'.repeat(64),
+        actual: firmwareDigest,
+      },
+    })
+  })
+
   it('throws hmac-prepare-failed when the source file is missing', async () => {
-    await expect(pushFirmware(localPath)).rejects.toBeInstanceOf(OtaServiceError)
-    await expect(pushFirmware(localPath)).rejects.toMatchObject({
+    await expect(pushFirmware(localPath, makeRelease())).rejects.toBeInstanceOf(OtaServiceError)
+    await expect(pushFirmware(localPath, makeRelease())).rejects.toMatchObject({
       cause: { kind: 'hmac-prepare-failed' },
     })
   })
@@ -610,7 +663,7 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
   it('forwards device-rejected when the upload returns a 4xx/5xx', async () => {
     mockFs[localPath] = { bytes: firmwareBytes }
     nextStatus = 422
-    await expect(pushFirmware(localPath)).rejects.toMatchObject({
+    await expect(pushFirmware(localPath, makeRelease())).rejects.toMatchObject({
       cause: { kind: 'device-rejected', status: 422 },
     })
   })

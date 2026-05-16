@@ -7,10 +7,15 @@
 //
 // Checksum strategy: GitHub Releases v3 publishes a per-asset
 // `digest: "sha256:<hex>"` field on every uploaded asset. We pin that digest
-// at listing time, then re-verify it after download via the pure-JS SHA-256
-// implementation in `sha256.ts` (no native dep required). If a release was
-// uploaded before the digest field was rolled out the digest is `null` and
-// we skip checksum verification but still enforce the strict size check.
+// at listing time, then re-verify it via the pure-JS SHA-256 implementation
+// in `sha256.ts` (no native dep required). If a release was uploaded before
+// the digest field was rolled out the digest is `null` and we skip checksum
+// verification but still enforce the strict size check.
+//
+// Verification timing (issue #706): the SHA-256 check runs inside
+// `stageFirmwareWithHmac` rather than `verifyFirmware`, so the firmware
+// bytes are pulled off disk exactly once for both the digest and the HMAC
+// trailer. `verifyFirmware` only does the size check pre-Wi-Fi-switch.
 
 import { Buffer } from 'buffer'
 import * as FileSystem from 'expo-file-system'
@@ -167,7 +172,7 @@ export async function downloadFirmware(
   const dest = `${FileSystem.cacheDirectory ?? ''}canshift-${release.version}.bin`
 
   // Cache hit: existing file with matching size — assume verified previously.
-  // Checksum is re-verified by the caller via `verifyFirmware` either way.
+  // The checksum is still cross-checked at staging time before upload.
   const info = await FileSystem.getInfoAsync(dest)
   if (info.exists && info.size === release.sizeBytes) {
     onProgress?.(1)
@@ -209,13 +214,14 @@ export async function downloadFirmware(
 // ---------------------------------------------------------------------------
 
 /**
- * Verify that the downloaded firmware matches the published release:
- * 1. file size matches `release.sizeBytes` exactly,
- * 2. (when available) SHA-256 matches the GitHub asset digest.
+ * Verify that the downloaded firmware matches the published release size.
  *
- * Throws `OtaServiceError({ kind: 'size-mismatch' | 'checksum-mismatch' })`
- * on failure. When the release predates the digest rollout (sha256 is null),
- * step 2 is skipped — step 1 still runs.
+ * SHA-256 verification is deferred to `stageFirmwareWithHmac` (called from
+ * `pushFirmware`) so the firmware bytes are read off disk exactly once for
+ * both hash and HMAC computation — this halves the OTA staging memory peak
+ * on low-RAM devices (see issue #706).
+ *
+ * Throws `OtaServiceError({ kind: 'size-mismatch' })` on failure.
  */
 export async function verifyFirmware(localPath: string, release: FirmwareRelease): Promise<void> {
   const info = await FileSystem.getInfoAsync(localPath)
@@ -227,32 +233,6 @@ export async function verifyFirmware(localPath: string, release: FirmwareRelease
       actual: actualSize,
     })
   }
-
-  if (release.sha256 == null) return
-
-  const actualDigest = await sha256OfFile(localPath)
-  if (actualDigest !== release.sha256) {
-    fail({
-      kind: 'checksum-mismatch',
-      expected: release.sha256,
-      actual: actualDigest,
-    })
-  }
-}
-
-/** Compute the lowercase-hex SHA-256 of a local file via base64-chunked reads.
- *  Hosted in this module rather than `sha256.ts` so the latter stays runtime-
- *  agnostic and trivially unit-testable. */
-async function sha256OfFile(uri: string): Promise<string> {
-  // Reading the whole file as base64 in one call is the only path expo-file-
-  // system gives us; for ~1.4 MB firmware this is fast enough and runs once
-  // per OTA flash. If we ever need streaming for larger payloads we'd have to
-  // adopt expo-crypto or a chunked reader.
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  })
-  const bytes = new Uint8Array(Buffer.from(base64, 'base64'))
-  return new Sha256().update(bytes).digestHex()
 }
 
 // ---------------------------------------------------------------------------
@@ -263,22 +243,52 @@ async function sha256OfFile(uri: string): Promise<string> {
  *  download so re-runs don't have to re-download — only re-stage. */
 const HMAC_STAGED_SUFFIX = '.hmac.bin'
 
+/** Decode a file's base64 contents to a single `Uint8Array`. Scoped so the
+ *  base64 string can be released by the GC before downstream allocations
+ *  (hash state, HMAC trailer, staged base64) push memory higher. */
+async function readFileBytes(localPath: string): Promise<Uint8Array> {
+  const base64 = await FileSystem.readAsStringAsync(localPath, {
+    encoding: FileSystem.EncodingType.Base64,
+  })
+  return new Uint8Array(Buffer.from(base64, 'base64'))
+}
+
 /**
- * Read the verified firmware off disk, append the HMAC-SHA256 trailer using
- * the configured secret, and write the result to a sibling staging file.
- * Returns the staging URI. The original `localPath` is left untouched so the
- * cached download can still be reused on a retry.
+ * Read the verified firmware off disk once, compute both the SHA-256 digest
+ * (verified against `expectedSha256` when present) and the HMAC-SHA256
+ * trailer over the same buffer, then write `<body> || HMAC` to a sibling
+ * staging file. Returns the staging URI.
  *
- * The secret is loaded from `ota-secret.ts` and passed straight into the
- * HMAC primitive — it is never logged, copied to disk, or returned.
+ * Single-read design (issue #706): the previous implementation called
+ * `readAsStringAsync` twice — once in `sha256OfFile` for verification and
+ * again here for HMAC staging. That doubled peak heap on low-RAM Android
+ * devices for any reasonably sized firmware. We now share one base64 read
+ * (plus the decoded `Uint8Array`) for both passes.
+ *
+ * The original `localPath` is left untouched so the cached download can be
+ * reused on a retry. The secret is loaded from `ota-secret.ts` and passed
+ * straight into the HMAC primitive — never logged, copied to disk, or
+ * returned.
  */
-async function stageFirmwareWithHmac(localPath: string): Promise<string> {
+async function stageFirmwareWithHmac(
+  localPath: string,
+  expectedSha256: string | null
+): Promise<string> {
   const stagedPath = `${localPath}${HMAC_STAGED_SUFFIX}`
   try {
-    const base64 = await FileSystem.readAsStringAsync(localPath, {
-      encoding: FileSystem.EncodingType.Base64,
-    })
-    const body = new Uint8Array(Buffer.from(base64, 'base64'))
+    const body = await readFileBytes(localPath)
+
+    if (expectedSha256 != null) {
+      const actualSha256 = new Sha256().update(body).digestHex()
+      if (actualSha256 !== expectedSha256) {
+        fail({
+          kind: 'checksum-mismatch',
+          expected: expectedSha256,
+          actual: actualSha256,
+        })
+      }
+    }
+
     const trailered = appendHmacTrailer(body, getOtaHmacSecretBytes())
     const stagedBase64 = Buffer.from(trailered).toString('base64')
     await FileSystem.writeAsStringAsync(stagedPath, stagedBase64, {
@@ -286,12 +296,25 @@ async function stageFirmwareWithHmac(localPath: string): Promise<string> {
     })
     return stagedPath
   } catch (e) {
+    // Preserve already-typed OTA errors (e.g. checksum-mismatch from above).
+    if (e instanceof OtaServiceError) throw e
     // Map any FS / encoding failure to a typed error. Reason text comes from
     // the underlying error message — never from the secret material.
     throw new OtaServiceError({
       kind: 'hmac-prepare-failed',
       reason: e instanceof Error ? e.message : 'unknown error',
     })
+  }
+}
+
+/** Best-effort removal of the HMAC-trailered staging file. Swallows errors so
+ *  cleanup never masks a real OTA failure surfaced earlier in the flow. */
+async function discardStagedFile(stagedPath: string): Promise<void> {
+  try {
+    await FileSystem.deleteAsync(stagedPath, { idempotent: true })
+  } catch {
+    // Intentionally swallow — see doc above. The next OTA run will overwrite
+    // the staging file anyway, so a leftover is annoying but not unsafe.
   }
 }
 
@@ -307,9 +330,27 @@ async function stageFirmwareWithHmac(localPath: string): Promise<string> {
 
 export async function pushFirmware(
   localPath: string,
+  release: FirmwareRelease,
   onProgress?: (progress: number) => void
 ): Promise<void> {
-  const stagedPath = await stageFirmwareWithHmac(localPath)
+  const stagedPath = await stageFirmwareWithHmac(localPath, release.sha256 ?? null)
+  try {
+    await uploadStagedFile(stagedPath, onProgress)
+  } finally {
+    // Always discard the trailered staging file once the upload terminates —
+    // success or failure. The verified `localPath` remains so a retry can
+    // re-stage without re-downloading. (Issue #706.)
+    await discardStagedFile(stagedPath)
+  }
+}
+
+/** Multipart-upload the trailered staging file to the dashboard. Throws a
+ *  typed `OtaServiceError` on any transport failure; the caller is
+ *  responsible for staging and cleanup. */
+async function uploadStagedFile(
+  stagedPath: string,
+  onProgress?: (progress: number) => void
+): Promise<void> {
   const formData = new FormData()
   appendRNFile(formData, OTA_UPLOAD_FIELD_NAME, {
     uri: stagedPath,

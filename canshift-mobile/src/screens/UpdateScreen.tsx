@@ -237,11 +237,11 @@ export default function UpdateScreen({ navigation }: Props) {
   )
 
   const handlePush = useCallback(async () => {
-    if (!localPath) return
+    if (!localPath || !selectedRelease) return
     setStep('pushing')
     setProgress(0)
     try {
-      await OtaService.pushFirmware(localPath, setProgress)
+      await OtaService.pushFirmware(localPath, selectedRelease, setProgress)
       setStep('done')
     } catch (e) {
       if (handleBleFailure(e)) {
@@ -251,7 +251,7 @@ export default function UpdateScreen({ navigation }: Props) {
       setError(describeFlowError(e))
       setStep('wifi_wait')
     }
-  }, [localPath, handleBleFailure, describeFlowError])
+  }, [localPath, selectedRelease, handleBleFailure, describeFlowError])
 
   const normalizedInstalled = firmwareVersion?.replace(/^v/, '') ?? null
 
