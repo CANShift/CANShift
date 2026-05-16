@@ -82,24 +82,13 @@ export { validateSignalCatalog } from './validation/validate-signal'
 // ---------------------------------------------------------------------------
 // Zod schemas (issue #673) — runtime source of truth for Dashboard, Signal,
 // and ButtonAction. Type aliases above are derived from these via `z.infer`.
+//
+// Only the schemas actually consumed by downstream packages are re-exported.
+// Sub-schemas (Page, Widget, TopBar, Signal*, ColorRamp, …) remain internal
+// to keep the public API surface narrow (#771). Add a re-export here when a
+// real consumer needs runtime parsing on the boundary.
 // ---------------------------------------------------------------------------
-export {
-  ButtonActionSchema,
-  DashboardConfigSchema,
-  PageConfigSchema,
-  WidgetSchema,
-  WidgetConfigSchema,
-  TopBarConfigSchema,
-  TopBarItemSchema,
-  PagePaletteSchema,
-  ThemePresetSchema,
-} from './schemas/dashboard'
-export {
-  SignalConfigSchema,
-  SignalDefSchema,
-  ColorRampSchema,
-  CanSpeedKbpsSchema,
-} from './schemas/signal'
+export { DashboardConfigSchema } from './schemas/dashboard'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
