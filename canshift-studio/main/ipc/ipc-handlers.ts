@@ -4,7 +4,7 @@ import { ipcMain, app, BrowserWindow, dialog } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
-import { DashboardConfigSchema, SignalConfigSchema } from '@tmbk/canshift-core'
+import { DashboardConfigSchema, DeviceConfigSchema, SignalConfigSchema } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../shared/ipc-channels'
 import type { CliLogPayload, CliPanelState } from '../../shared/cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
@@ -107,20 +107,9 @@ export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
 // from the on-device schema.
 //
 // DEVICE_CONFIG_WRITE carries the ESP32 hardware config persisted to
-// userData/device.json. canshift-core only ships the `DeviceConfig` interface
-// (no Zod schema yet), so the schema is mirrored locally rather than duplicated
-// elsewhere — the field set is small and stable, and adding a runtime schema in
-// core would require a separate canshift-core PR.
-const ESP32_GPIO_MIN = 0
-const ESP32_GPIO_MAX = 39
-const Esp32GpioSchema = z.number().int().min(ESP32_GPIO_MIN).max(ESP32_GPIO_MAX)
-const DeviceConfigWritePayloadSchema = z
-  .object({
-    can_speed_kbps: z.union([z.literal(125), z.literal(250), z.literal(500), z.literal(1000)]),
-    twai_tx_pin: Esp32GpioSchema,
-    twai_rx_pin: Esp32GpioSchema,
-  })
-  .strict()
+// userData/device.json. The runtime shape is `DeviceConfigSchema` in
+// canshift-core (#789) — same source of truth as the on-device `DeviceConfig`
+// type, so a stale studio copy can't drift from the firmware contract.
 
 /**
  * Format Zod issues as `path: message` strings so the renderer can surface a
@@ -601,7 +590,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.DEVICE_CONFIG_WRITE, async (_event, config: unknown) => {
-    const parsed = DeviceConfigWritePayloadSchema.safeParse(config)
+    const parsed = DeviceConfigSchema.safeParse(config)
     if (!parsed.success) {
       return {
         success: false,

@@ -90,6 +90,7 @@ export { validateSignalCatalog } from './validation/validate-signal'
 // ---------------------------------------------------------------------------
 export { DashboardConfigSchema } from './schemas/dashboard'
 export { SignalConfigSchema } from './schemas/signal'
+export { DeviceConfigSchema } from './schemas/device'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
