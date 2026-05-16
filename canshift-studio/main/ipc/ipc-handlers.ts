@@ -19,12 +19,7 @@ import { releasesService } from '../services/releases.service'
 import { sessionService } from '../services/session.service'
 import { buildMenu } from '../menu'
 import { closeCliWindow, getCliWindowState, openCliWindow } from '../windows/cli-window'
-import {
-  getBacklog,
-  publish as publishLog,
-  subscribe as subscribeLog,
-  unsubscribe as unsubscribeLog,
-} from '../services/cli-log-bus'
+import { getBacklog, publish as publishLog } from '../services/cli-log-bus'
 import type { FirmwareRelease } from '../../shared/firmware.service.types'
 import type { CanFrame } from '../../shared/usb.service.types'
 import type { ScreenSettingsPayload } from '../../shared/ipc-payloads'
@@ -585,23 +580,14 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // CLI panel detach (issue #433)
   // ---------------------------------------------------------------------------
 
-  // The main window is always a log-bus subscriber so detached entries flow
-  // back into the in-app surface even after a re-attach round trip. The
-  // detached window subscribes itself in cli-window.ts on construction.
-  let mainWindowSubscribed: BrowserWindow | null = null
-  const ensureMainWindowSubscribed = (): void => {
-    const main = getWindow()
-    if (main === null) return
-    if (mainWindowSubscribed === main) return
-    if (mainWindowSubscribed !== null && !mainWindowSubscribed.isDestroyed()) {
-      unsubscribeLog(mainWindowSubscribed.webContents)
-    }
-    subscribeLog(main.webContents)
-    mainWindowSubscribed = main
-  }
+  // The main window subscribes to the log bus once in createWindow() so
+  // detached entries flow back into the in-app surface even after a re-attach
+  // round trip. The detached window subscribes itself in cli-window.ts on
+  // construction. cli-log-bus prunes destroyed WebContents on the next
+  // publish, so a closed main window's stale subscription is harmless and the
+  // new window created on macOS dock re-open re-subscribes itself.
 
   ipcMain.handle(IpcChannels.CLI_DETACH, (): { windowId: number } => {
-    ensureMainWindowSubscribed()
     const windowId = openCliWindow(getWindow)
     return { windowId }
   })
@@ -614,7 +600,6 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(
     IpcChannels.CLI_GET_STATE,
     (): { state: CliPanelState; backlog: readonly CliLogPayload[] } => {
-      ensureMainWindowSubscribed()
       return { state: getCliWindowState(), backlog: getBacklog() }
     }
   )

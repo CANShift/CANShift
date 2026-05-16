@@ -10,6 +10,7 @@ import { firmwareService } from './services/firmware.service'
 import { installContentSecurityPolicy, isExternalUrlAllowed } from './services/security.service'
 import { IpcChannels } from '../shared/ipc-channels'
 import { disposeCliWindow } from './windows/cli-window'
+import { subscribe as subscribeLog } from './services/cli-log-bus'
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
@@ -132,6 +133,13 @@ function createWindow(): void {
       sandbox: true,
     },
   })
+
+  // The main window is always a log-bus subscriber so log entries produced in
+  // a detached CLI window flow back into the in-app surface. cli-log-bus
+  // prunes destroyed WebContents lazily on the next publish, so the stale
+  // subscription left behind when the window closes is harmless — and the
+  // fresh BrowserWindow built on macOS dock re-open re-subscribes here.
+  subscribeLog(mainWindow.webContents)
 
   // Web Serial API — grant blanket serial permission to the app and auto-select the flash port.
   // The renderer uses navigator.serial (Web Serial) only during firmware flashing.
