@@ -4,7 +4,7 @@ import { ipcMain, app, BrowserWindow, dialog } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
-import { DashboardConfigSchema } from '@tmbk/canshift-core'
+import { DashboardConfigSchema, SignalConfigSchema } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../shared/ipc-channels'
 import type { CliLogPayload, CliPanelState } from '../../shared/cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
@@ -270,10 +270,15 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.CONFIG_SAVE_AS, async (_event, config: unknown) => {
-    if (!isPlainObject(config)) {
-      return { success: false, error: 'Save payload must be a config object' }
+    const parsed = DashboardConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Save-as payload must be a valid dashboard config',
+        issues: formatZodIssues(parsed.error),
+      }
     }
-    const result = await configService.saveFileAs(config)
+    const result = await configService.saveFileAs(parsed.data)
     if (result.success && result.filePath) {
       sessionService.addRecentFile(result.filePath)
       rebuildMenu()
@@ -290,10 +295,15 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // Export does NOT update recent files for the same reason — it's a one-shot
   // copy out, not a change of working location.
   ipcMain.handle(IpcChannels.CONFIG_EXPORT, async (_event, config: unknown) => {
-    if (!isPlainObject(config)) {
-      return { success: false, error: 'Export payload must be a config object' }
+    const parsed = DashboardConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Export payload must be a valid dashboard config',
+        issues: formatZodIssues(parsed.error),
+      }
     }
-    return configService.exportFile(config)
+    return configService.exportFile(parsed.data)
   })
 
   ipcMain.handle(IpcChannels.SESSION_GET_LAST_FILE, () => {
@@ -527,8 +537,13 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.SIGNAL_EXPORT, async (_event, config: unknown) => {
-    if (!isPlainObject(config)) {
-      return { success: false, error: 'Signal export payload must be an object' }
+    const parsed = SignalConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Signal export payload must be a valid signals.json shape',
+        issues: formatZodIssues(parsed.error),
+      }
     }
     const { filePath, canceled } = await dialog.showSaveDialog({
       title: 'Export signals.json',
@@ -537,7 +552,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     })
     if (canceled || !filePath) return { success: false }
     try {
-      await writeFile(filePath, JSON.stringify(config, null, 2), 'utf-8')
+      await writeFile(filePath, JSON.stringify(parsed.data, null, 2), 'utf-8')
       return { success: true, filePath }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }

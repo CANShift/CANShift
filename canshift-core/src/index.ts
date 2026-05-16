@@ -89,6 +89,7 @@ export { validateSignalCatalog } from './validation/validate-signal'
 // real consumer needs runtime parsing on the boundary.
 // ---------------------------------------------------------------------------
 export { DashboardConfigSchema } from './schemas/dashboard'
+export { SignalConfigSchema } from './schemas/signal'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
