@@ -1003,7 +1003,7 @@ describe('Device-config IPC handlers — payload validation', () => {
     const fs = await import('node:fs/promises')
     const readFileMock = vi.mocked(fs.readFile)
     readFileMock.mockResolvedValueOnce(
-      JSON.stringify({ can_speed_kbps: 250, twai_tx_pin: 5, twai_rx_pin: 4 }),
+      JSON.stringify({ can_speed_kbps: 250, twai_tx_pin: 5, twai_rx_pin: 4 })
     )
     const result = (await getHandler(IpcChannels.DEVICE_CONFIG_READ)(makeEvent())) as {
       success: boolean
