@@ -16,49 +16,32 @@ import { IpcChannels } from '../../shared/ipc-channels'
 import type { FirmwareRelease } from '../../shared/firmware.service.types'
 import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
 import type { UpdateAvailablePayload, UpdateErrorPayload } from '../../shared/updater.service.types'
+import {
+  isDeviceLogPayload,
+  type DeviceConfigResult,
+  type DeviceLogPayload,
+  type FirmwareDownloadProgress,
+  type FirmwareStatus,
+  type ScreenSettingsPayload,
+} from '../../shared/ipc-payloads'
 
 // Studio-local IPC payload types (not part of canshift-core). Core IPC return
 // shapes (PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult) are
 // imported directly from '@tmbk/canshift-core' at every call site — do not
 // re-export them through this barrel.
-export type { FirmwareRelease, CanFrame, CanHealth, UpdateAvailablePayload, UpdateErrorPayload }
-
-/**
- * Renderer-side mirror of the `queryVersion()` payload. Kept as a type alias
- * so renderer call sites and tests don't reach into `main/services` directly.
- */
-export interface FirmwareStatus {
-  version: string | null
-  isDay: boolean | null
+export type {
+  FirmwareRelease,
+  CanFrame,
+  CanHealth,
+  UpdateAvailablePayload,
+  UpdateErrorPayload,
+  DeviceConfigResult,
+  DeviceLogPayload,
+  FirmwareDownloadProgress,
+  FirmwareStatus,
+  ScreenSettingsPayload,
 }
-
-/**
- * Shape of the `USB_DEVICE_LOG` IPC payload — `level` is the raw firmware
- * letter (E/W/I/D/V), unmapped. Multiple renderer hooks subscribed to this
- * channel; the guard lives here so future wire-shape changes (e.g. adding
- * `timestamp`) only need to update one place.
- */
-export interface DeviceLogPayload {
-  level: string
-  tag: string
-  message: string
-}
-
-export function isDeviceLogPayload(v: unknown): v is DeviceLogPayload {
-  if (typeof v !== 'object' || v === null) return false
-  const o = v as Record<string, unknown>
-  return typeof o.level === 'string' && typeof o.tag === 'string' && typeof o.message === 'string'
-}
-
-/**
- * Outcome of `deviceIpc.getConfig()` — mirrored from main-process
- * `DeviceConfigResult` so the renderer can branch on the empty-device
- * vs transport-failure cases without leaking transport details.
- * Issue #418.
- */
-export type DeviceConfigResult =
-  | { ok: true; config: Record<string, unknown> }
-  | { ok: false; reason: 'no-config' | 'transport' }
+export { isDeviceLogPayload }
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -151,12 +134,6 @@ export const sessionIpc = {
 // USB device operations
 // ---------------------------------------------------------------------------
 
-export interface ScreenSettingsPayload {
-  brightness: number
-  sleep: number
-  rotation?: 0 | 180
-}
-
 // Large dashboard configs serialized over USB can outlive the default 30 s
 // (slow ack, retries) — give the burn path enough headroom that the timeout
 // only fires when the device is truly wedged.
@@ -180,12 +157,6 @@ export const usbService = {
 // ---------------------------------------------------------------------------
 // Firmware management
 // ---------------------------------------------------------------------------
-
-export interface FirmwareDownloadProgress {
-  downloadId: string
-  received: number
-  total: number
-}
 
 // Firmware binaries can be several MB — downloading on slow networks easily
 // exceeds 30 s. 5 min covers everything short of a stalled CDN.

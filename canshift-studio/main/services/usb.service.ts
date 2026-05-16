@@ -13,6 +13,7 @@ import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
 import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
 import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
+import type { DeviceConfigResult } from '../../shared/ipc-payloads'
 
 /**
  * Payload forwarded to the renderer on every connection-state transition.
@@ -46,15 +47,6 @@ export interface DeviceLogEntry {
   tag: string
   message: string
 }
-
-/**
- * Outcome of a CMD_GET_CONFIG round-trip — discriminates the empty-device
- * branch (firmware reports `config_not_found`) from any transport-level
- * failure (port closed, ack timeout, malformed response). Issue #418.
- */
-export type DeviceConfigResult =
-  | { ok: true; config: Record<string, unknown> }
-  | { ok: false; reason: 'no-config' | 'transport' }
 
 interface UsbEventHandlers {
   onConnectionChanged?: (event: UsbConnectionEvent) => void
