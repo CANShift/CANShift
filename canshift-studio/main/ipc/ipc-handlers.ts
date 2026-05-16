@@ -23,6 +23,7 @@ import {
 } from '../services/cli-log-bus'
 import type { FirmwareRelease } from '../../shared/firmware.service.types'
 import type { CanFrame } from '../../shared/usb.service.types'
+import type { ScreenSettingsPayload } from '../../shared/ipc-payloads'
 
 // Allowed hosts for FIRMWARE_DOWNLOAD — defence in depth so a compromised
 // renderer cannot turn the main process into an open HTTP fetcher. The CSP
@@ -55,12 +56,6 @@ export function isNonEmptyString(v: unknown): v is string {
 
 export function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
-}
-
-export interface ScreenSettingsPayload {
-  brightness: number
-  sleep: number
-  rotation?: 0 | 180
 }
 
 export function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
