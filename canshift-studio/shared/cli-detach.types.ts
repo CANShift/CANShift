@@ -10,12 +10,16 @@
 // (`tsconfig.main.json`) only `include`s `main/**` + `shared/**`. The renderer
 // re-exports its own `LogLevel` and treats this file as the contract.
 
+import { z } from 'zod'
+
 /**
  * Mirror of the `LogLevel` union in `src/stores/log.store.ts`. Kept in lockstep
  * — narrowing this set without updating the renderer (or vice-versa) means the
- * payload guard in `ipc-handlers.ts` will silently drop log entries.
+ * CLI_LOG_PUSH IPC payload validator will silently drop log entries.
  */
-export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug'
+export const LogLevelSchema = z.enum(['info', 'warn', 'error', 'success', 'debug'])
+
+export type LogLevel = z.infer<typeof LogLevelSchema>
 
 /**
  * Top-level state of the CLI panel surface. The renderer mirrors this so
@@ -31,14 +35,22 @@ export type CliPanelState = { kind: 'inApp' } | { kind: 'detached'; windowId: nu
  * `timestampMs` so the bridge stays small and JSON-printable. The id is
  * carried through so the receiving renderer can dedupe against its own
  * locally-pushed entries.
+ *
+ * `.strict()` rejects unknown fields so the renderer can't smuggle extra
+ * keys past the main-process boundary (matches the project-wide IPC
+ * convention per #769).
  */
-export interface CliLogPayload {
-  id: number
-  level: LogLevel
-  message: string
-  timestampMs: number
-  scope?: string
-}
+export const CliLogPayloadSchema = z
+  .object({
+    id: z.number().finite(),
+    level: LogLevelSchema,
+    message: z.string(),
+    timestampMs: z.number().finite(),
+    scope: z.string().optional(),
+  })
+  .strict()
+
+export type CliLogPayload = z.infer<typeof CliLogPayloadSchema>
 
 /** Payload of `IpcChannels.CLI_STATE_CHANGED`. */
 export interface CliStateChangedEvent {

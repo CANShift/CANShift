@@ -6,7 +6,11 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import { DashboardConfigSchema, DeviceConfigSchema, SignalConfigSchema } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../shared/ipc-channels'
-import type { CliLogPayload, CliPanelState } from '../../shared/cli-detach.types'
+import {
+  CliLogPayloadSchema,
+  type CliLogPayload,
+  type CliPanelState,
+} from '../../shared/cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
@@ -116,30 +120,6 @@ function formatZodIssues(error: z.ZodError): string[] {
     const path = issue.path.join('.')
     return path.length === 0 ? issue.message : `${path}: ${issue.message}`
   })
-}
-
-const CLI_LOG_LEVELS: ReadonlySet<string> = new Set(['info', 'warn', 'error', 'success', 'debug'])
-
-/** Validates an inbound `CLI_LOG_PUSH` payload from the renderer. */
-export function parseCliLogPayload(v: unknown): CliLogPayload | null {
-  if (!isPlainObject(v)) return null
-  const id = v.id
-  const level = v.level
-  const message = v.message
-  const timestampMs = v.timestampMs
-  const scope = v.scope
-  if (typeof id !== 'number' || !Number.isFinite(id)) return null
-  if (typeof level !== 'string' || !CLI_LOG_LEVELS.has(level)) return null
-  if (typeof message !== 'string') return null
-  if (typeof timestampMs !== 'number' || !Number.isFinite(timestampMs)) return null
-  if (scope !== undefined && typeof scope !== 'string') return null
-  const base: CliLogPayload = {
-    id,
-    level: level as CliLogPayload['level'],
-    message,
-    timestampMs,
-  }
-  return scope === undefined ? base : { ...base, scope }
 }
 
 /**
@@ -640,8 +620,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   )
 
   ipcMain.on(IpcChannels.CLI_LOG_PUSH, (event, payload: unknown) => {
-    const parsed = parseCliLogPayload(payload)
-    if (parsed === null) return
-    publishLog(parsed, event.sender.id)
+    const parsed = CliLogPayloadSchema.safeParse(payload)
+    if (!parsed.success) return
+    publishLog(parsed.data, event.sender.id)
   })
 }
