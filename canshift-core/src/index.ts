@@ -51,6 +51,8 @@ export type {
 } from './types/signal'
 export type { DeviceConfig, CanSpeedKbps } from './types/device'
 export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
+export type { DeviceConfigWire } from './schemas/device'
+export { deviceConfigFromWire, deviceConfigToWire } from './schemas/device'
 
 // Sensor color-ramp defaults (issue #430)
 export {
@@ -86,7 +88,7 @@ export { validateSignalCatalog } from './validation/validate-signal'
 // ---------------------------------------------------------------------------
 export { DashboardConfigSchema } from './schemas/dashboard'
 export { SignalConfigSchema } from './schemas/signal'
-export { DeviceConfigSchema } from './schemas/device'
+export { DeviceConfigSchema, DeviceConfigWireSchema } from './schemas/device'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits

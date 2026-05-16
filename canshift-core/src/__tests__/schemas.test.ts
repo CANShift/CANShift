@@ -9,7 +9,14 @@
 // `DashboardConfigSchema` is the only schema re-exported from the package
 // barrel (#771); the rest are internal — import them directly from the
 // schemas modules.
-import { DashboardConfigSchema, DeviceConfigSchema } from '../index.js'
+import {
+  DashboardConfigSchema,
+  DeviceConfigSchema,
+  DeviceConfigWireSchema,
+  deviceConfigFromWire,
+  deviceConfigToWire,
+} from '../index.js'
+import type { DeviceConfig, DeviceConfigWire } from '../index.js'
 import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
 import { SignalConfigSchema } from '../schemas/signal.js'
 
@@ -319,14 +326,14 @@ describe('ButtonActionSchema', () => {
 })
 
 // ---------------------------------------------------------------------------
-// DeviceConfigSchema (issue #789 — moved from canshift-studio's IPC mirror)
+// DeviceConfigSchema — camelCase domain shape (issue #715)
 // ---------------------------------------------------------------------------
 
 describe('DeviceConfigSchema', () => {
-  const validDeviceConfig = {
-    can_speed_kbps: 500,
-    twai_tx_pin: 22,
-    twai_rx_pin: 21,
+  const validDeviceConfig: DeviceConfig = {
+    canSpeedKbps: 500,
+    twaiTxPin: 22,
+    twaiRxPin: 21,
   }
 
   it('accepts a valid device config', () => {
@@ -334,25 +341,25 @@ describe('DeviceConfigSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects a missing required field (twai_tx_pin)', () => {
+  it('rejects a missing required field (twaiTxPin)', () => {
     const invalid: Record<string, unknown> = { ...validDeviceConfig }
-    delete invalid.twai_tx_pin
+    delete invalid.twaiTxPin
     const result = DeviceConfigSchema.safeParse(invalid)
     expect(result.success).toBe(false)
   })
 
   it('rejects an unsupported CAN speed (e.g. 800 kbps)', () => {
-    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, can_speed_kbps: 800 })
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, canSpeedKbps: 800 })
     expect(result.success).toBe(false)
   })
 
   it('rejects a GPIO pin outside the ESP32 range (40)', () => {
-    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twai_tx_pin: 40 })
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twaiTxPin: 40 })
     expect(result.success).toBe(false)
   })
 
   it('rejects a non-integer GPIO pin', () => {
-    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twai_rx_pin: 21.5 })
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twaiRxPin: 21.5 })
     expect(result.success).toBe(false)
   })
 
@@ -362,5 +369,101 @@ describe('DeviceConfigSchema', () => {
     if (!result.success) {
       expect(result.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
     }
+  })
+
+  it('rejects the snake_case wire shape outright (#715)', () => {
+    const wireShape = { can_speed_kbps: 500, twai_tx_pin: 22, twai_rx_pin: 21 }
+    const result = DeviceConfigSchema.safeParse(wireShape)
+    expect(result.success).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// DeviceConfigWireSchema — snake_case on-disk format consumed by firmware
+// ---------------------------------------------------------------------------
+
+describe('DeviceConfigWireSchema', () => {
+  const validWire: DeviceConfigWire = {
+    can_speed_kbps: 500,
+    twai_tx_pin: 22,
+    twai_rx_pin: 21,
+  }
+
+  it('accepts the snake_case shape firmware reads from device.json', () => {
+    const result = DeviceConfigWireSchema.safeParse(validWire)
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a missing required field (twai_rx_pin)', () => {
+    const invalid: Record<string, unknown> = { ...validWire }
+    delete invalid.twai_rx_pin
+    const result = DeviceConfigWireSchema.safeParse(invalid)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an unsupported CAN speed', () => {
+    const result = DeviceConfigWireSchema.safeParse({ ...validWire, can_speed_kbps: 800 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects extra (unknown) fields — .strict()', () => {
+    const result = DeviceConfigWireSchema.safeParse({ ...validWire, extra: true })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects the camelCase domain shape outright', () => {
+    const domainShape = { canSpeedKbps: 500, twaiTxPin: 22, twaiRxPin: 21 }
+    const result = DeviceConfigWireSchema.safeParse(domainShape)
+    expect(result.success).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// deviceConfigFromWire / deviceConfigToWire — boundary mappers (issue #715)
+// ---------------------------------------------------------------------------
+
+describe('deviceConfigFromWire / deviceConfigToWire', () => {
+  it('deviceConfigFromWire renames snake_case keys to camelCase verbatim', () => {
+    const wire: DeviceConfigWire = {
+      can_speed_kbps: 500,
+      twai_tx_pin: 22,
+      twai_rx_pin: 21,
+    }
+    expect(deviceConfigFromWire(wire)).toEqual({
+      canSpeedKbps: 500,
+      twaiTxPin: 22,
+      twaiRxPin: 21,
+    })
+  })
+
+  it('deviceConfigToWire renames camelCase keys to snake_case verbatim', () => {
+    const cfg: DeviceConfig = {
+      canSpeedKbps: 250,
+      twaiTxPin: 5,
+      twaiRxPin: 4,
+    }
+    expect(deviceConfigToWire(cfg)).toEqual({
+      can_speed_kbps: 250,
+      twai_tx_pin: 5,
+      twai_rx_pin: 4,
+    })
+  })
+
+  it('round-trips wire → domain → wire without loss', () => {
+    const wire: DeviceConfigWire = {
+      can_speed_kbps: 1000,
+      twai_tx_pin: 0,
+      twai_rx_pin: 39,
+    }
+    expect(deviceConfigToWire(deviceConfigFromWire(wire))).toEqual(wire)
+  })
+
+  it('round-trips domain → wire → domain without loss', () => {
+    const cfg: DeviceConfig = {
+      canSpeedKbps: 125,
+      twaiTxPin: 22,
+      twaiRxPin: 21,
+    }
+    expect(deviceConfigFromWire(deviceConfigToWire(cfg))).toEqual(cfg)
   })
 })
