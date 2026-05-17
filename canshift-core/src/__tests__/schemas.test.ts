@@ -24,6 +24,7 @@ import {
   inputBindingsToWire,
   isPinAvailableForBoard,
   MAX_INPUT_BINDINGS,
+  TrackTelemetrySchema,
 } from '../index.js'
 import type {
   DeviceConfig,
@@ -787,5 +788,70 @@ describe('isPinAvailableForBoard', () => {
   it('marks expansion-header pins (GPIO 25, 32) as available on crowpanel_28', () => {
     expect(isPinAvailableForBoard('crowpanel_28', 25)).toBe(true)
     expect(isPinAvailableForBoard('crowpanel_28', 32)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TrackTelemetrySchema (issue #843) — BLE Track-mode message contract
+// ---------------------------------------------------------------------------
+
+describe('TrackTelemetrySchema', () => {
+  it('accepts the minimal payload with only trackMode', () => {
+    expect(TrackTelemetrySchema.safeParse({ trackMode: false }).success).toBe(true)
+  })
+
+  it('accepts a fully populated payload', () => {
+    expect(
+      TrackTelemetrySchema.safeParse({
+        trackMode: true,
+        currentLapMs: 45_321,
+        lastLapMs: 92_100,
+        bestLapMs: 88_500,
+        lapNumber: 3,
+        deltaMs: 3_600,
+        isBestLap: false,
+      }).success
+    ).toBe(true)
+  })
+
+  it('rejects negative lap times', () => {
+    expect(TrackTelemetrySchema.safeParse({ trackMode: true, currentLapMs: -1 }).success).toBe(
+      false
+    )
+  })
+
+  it('rejects non-integer lap times', () => {
+    expect(TrackTelemetrySchema.safeParse({ trackMode: true, currentLapMs: 1.5 }).success).toBe(
+      false
+    )
+  })
+
+  it('rejects laps longer than 1 hour', () => {
+    expect(
+      TrackTelemetrySchema.safeParse({ trackMode: true, currentLapMs: 60 * 60 * 1000 + 1 }).success
+    ).toBe(false)
+  })
+
+  it('rejects a negative lapNumber', () => {
+    expect(TrackTelemetrySchema.safeParse({ trackMode: true, lapNumber: -1 }).success).toBe(false)
+  })
+
+  it('accepts a signed delta in both directions', () => {
+    expect(TrackTelemetrySchema.safeParse({ trackMode: true, deltaMs: 250 }).success).toBe(true)
+    expect(TrackTelemetrySchema.safeParse({ trackMode: true, deltaMs: -250 }).success).toBe(true)
+  })
+
+  it('rejects an out-of-range delta (more than an hour)', () => {
+    expect(
+      TrackTelemetrySchema.safeParse({ trackMode: true, deltaMs: 60 * 60 * 1000 + 1 }).success
+    ).toBe(false)
+  })
+
+  it('rejects a missing trackMode flag', () => {
+    expect(TrackTelemetrySchema.safeParse({ currentLapMs: 1000 }).success).toBe(false)
+  })
+
+  it('rejects an unknown top-level key — .strict()', () => {
+    expect(TrackTelemetrySchema.safeParse({ trackMode: true, sectorMs: 12345 }).success).toBe(false)
   })
 })
