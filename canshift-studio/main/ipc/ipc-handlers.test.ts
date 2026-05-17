@@ -334,7 +334,7 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
       issues: string[]
     }
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Push payload must be a valid dashboard config')
+    expect(result.error).toMatch(/^Push payload invalid — /)
     expect(Array.isArray(result.issues)).toBe(true)
     expect(result.issues.length).toBeGreaterThan(0)
     expect(usbServiceMock.pushConfig).not.toHaveBeenCalled()
@@ -542,7 +542,7 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
       issues: string[]
     }
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Save payload must be a valid dashboard config')
+    expect(result.error).toMatch(/^Save payload invalid — /)
     expect(Array.isArray(result.issues)).toBe(true)
     expect(result.issues.length).toBeGreaterThan(0)
     expect(configFileMock.saveFile).not.toHaveBeenCalled()
@@ -620,7 +620,7 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
       error: string
     }
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Save-as payload must be a valid dashboard config')
+    expect(result.error).toMatch(/^Save-as payload invalid — /)
   })
 
   it('CONFIG_EXPORT rejects a non-object payload', async () => {
@@ -629,7 +629,7 @@ describe('Config IPC handlers — payload validation and recent-file plumbing', 
       error: string
     }
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Export payload must be a valid dashboard config')
+    expect(result.error).toMatch(/^Export payload invalid — /)
     expect(configFileMock.exportFile).not.toHaveBeenCalled()
   })
 
@@ -919,7 +919,7 @@ describe('Device-config IPC handlers — payload validation', () => {
       issues: string[]
     }
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Device config payload is invalid')
+    expect(result.error).toMatch(/^Device config invalid — /)
     expect(Array.isArray(result.issues)).toBe(true)
     expect(result.issues.length).toBeGreaterThan(0)
   })
@@ -1033,7 +1033,7 @@ describe('Device-config IPC handlers — payload validation', () => {
       error: string
     }
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Signal export payload must be a valid signals.json shape')
+    expect(result.error).toMatch(/^Signal export payload invalid — /)
   })
 
   it('SIGNAL_EXPORT rejects a payload that does not match SignalConfigSchema', async () => {
