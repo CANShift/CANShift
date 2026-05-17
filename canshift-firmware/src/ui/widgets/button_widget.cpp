@@ -35,6 +35,22 @@ const lv_font_t *selectButtonFont(int16_t h) {
 static constexpr int16_t MAP_BADGE_DIAMETER = 7;
 static constexpr uint32_t MAP_BADGE_COLOR = 0x33CC44; // green
 
+// Default per-channel brightening applied to a button's `style.primaryColor`
+// to derive the "active" toggle shade when the config omits the optional
+// `colors{normal,active}` block. Mirrors `brightenHex` in
+// canshift-core/src/migrations/migration-runner.ts (1.7→1.8 schema migration).
+static constexpr uint8_t TOGGLE_FALLBACK_BRIGHTEN_DELTA = 0x33;
+
+uint32_t brightenRgb(uint32_t rgb, uint8_t delta) {
+    const uint32_t r = (rgb >> 16) & 0xFF;
+    const uint32_t g = (rgb >> 8) & 0xFF;
+    const uint32_t b = rgb & 0xFF;
+    const uint32_t r2 = (r + delta) > 0xFF ? 0xFF : (r + delta);
+    const uint32_t g2 = (g + delta) > 0xFF ? 0xFF : (g + delta);
+    const uint32_t b2 = (b + delta) > 0xFF ? 0xFF : (b + delta);
+    return (r2 << 16) | (g2 << 8) | b2;
+}
+
 // Per-button runtime state — owns the latched toggle flag and a pointer back
 // to the const config (kept alive by the dashboard singleton).
 struct ButtonTag {
@@ -46,6 +62,8 @@ struct ButtonTag {
     uint8_t mapSwitchIndex;            // mapIndex of the MAP_SWITCH action, 0 = none
     char signalId[CFG_MAX_SIGNAL_LEN]; // signal driving toggle state; "" = use local latch
     uint32_t signalSyncIgnoreUntilMs;  // ms tick before which update() must skip signal-driven sync
+    uint32_t bgNormal;                 // resolved idle bg — `colors.normal` or `style.primaryColor`
+    uint32_t bgActive; // resolved active bg — `colors.active`, or primary brightened (#838)
 };
 
 // Resolve the icon source. Returns a non-empty C-string LVGL path when an
@@ -75,11 +93,15 @@ const char *resolveIconAsset(const CfgButtonParams &p, char *out, size_t outLen)
     return out; // empty
 }
 
+// Drive the button background from the latched flag. Uses the pre-resolved
+// bgNormal/bgActive stored on the tag so toggle buttons that omit the
+// optional `colors{normal,active}` block still get visual feedback — the
+// fallback active shade is derived from `style.primaryColor` at create time
+// (issue #838).
 void applyToggleVisualState(lv_obj_t *btn, const ButtonTag &tag) {
-    if (!tag.params || !tag.params->isToggle || !tag.params->hasColors)
+    if (!tag.params || !tag.params->isToggle)
         return;
-    const uint32_t bg =
-        tag.toggleActive ? tag.params->colorActive.rgb : tag.params->colorNormal.rgb;
+    const uint32_t bg = tag.toggleActive ? tag.bgActive : tag.bgNormal;
     lv_obj_set_style_bg_color(btn, lv_color_hex(bg), LV_PART_MAIN);
 }
 
@@ -118,11 +140,15 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
     const CfgButtonParams &p = cfg.button;
 
     // Idle / pressed background — honor `colors{normal,active}` when present,
-    // otherwise fall back to the legacy `widget.style.primaryColor`. Toggle
-    // buttons drive the bg color manually from the latched flag (see
-    // applyToggleVisualState) and ignore LVGL's PRESSED state.
+    // otherwise fall back to `widget.style.primaryColor` (idle) and a
+    // brightened variant (active). Toggle buttons drive the bg color manually
+    // from the latched flag (see applyToggleVisualState) and ignore LVGL's
+    // PRESSED state. Fallback active shade matches the 1.7→1.8 core migration
+    // so configs that were auto-upgraded keep their visual identity (#838).
     const uint32_t bgNormal = p.hasColors ? p.colorNormal.rgb : cfg.style.primaryColor.rgb;
-    const uint32_t bgActive = p.hasColors ? p.colorActive.rgb : cfg.style.primaryColor.rgb;
+    const uint32_t bgActive =
+        p.hasColors ? p.colorActive.rgb
+                    : brightenRgb(cfg.style.primaryColor.rgb, TOGGLE_FALLBACK_BRIGHTEN_DELTA);
     lv_obj_set_style_bg_color(btn, lv_color_hex(bgNormal), LV_PART_MAIN);
     if (!p.isToggle) {
         lv_obj_set_style_bg_color(btn, lv_color_hex(bgActive), LV_PART_MAIN | LV_STATE_PRESSED);
@@ -152,6 +178,8 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
     tag->mapSwitchIndex = 0;
     strlcpy(tag->signalId, cfg.signalId, sizeof(tag->signalId));
     tag->signalSyncIgnoreUntilMs = 0;
+    tag->bgNormal = bgNormal;
+    tag->bgActive = bgActive;
 
     // Resolve map_switch index before layout so badge creation can reference it
     for (uint8_t i = 0; i < p.actionsCount; ++i) {
