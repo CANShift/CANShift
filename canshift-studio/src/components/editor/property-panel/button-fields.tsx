@@ -6,13 +6,30 @@
 // component.
 
 import { useState } from 'react'
-import type { ButtonAction } from '@tmbk/canshift-core'
+import type { ButtonAction, CruiseControlOp } from '@tmbk/canshift-core'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { IconTrash } from '../../icons/Icon'
 import { WidgetPreview } from '../WidgetPreview'
 import { useDashboardStore } from '../../../stores/dashboard.store'
 import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } from './shared'
+
+// Cruise-control ops the editor exposes — mirrors `CRUISE_CONTROL_OPS` in
+// canshift-core. Kept inline (not imported as a value) because the schema
+// barrel re-exports only the types today; if a downstream consumer needs the
+// runtime tuple too we can promote it. Issue #852.
+const CRUISE_OPS: CruiseControlOp[] = [
+  'on',
+  'off',
+  'toggle',
+  'set',
+  'resume',
+  'increment',
+  'decrement',
+]
+
+// Ops that accept an optional `stepKmh` adjustment.
+const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])
 
 interface ActionRowProps {
   action: ButtonAction
@@ -23,11 +40,13 @@ interface ActionRowProps {
 
 function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
   const typeLabel =
-    action.category === 'dashboard'
+    action.type === 'navigate'
       ? 'Navigate'
       : action.type === 'map_switch'
         ? 'Map Switch'
-        : 'CAN Raw'
+        : action.type === 'can_raw'
+          ? 'CAN Raw'
+          : 'Cruise Ctrl'
 
   const categoryColor = action.category === 'ecu' ? '#CC8800' : '#5577CC'
 
@@ -138,6 +157,53 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
           </div>
         </div>
       )}
+
+      {action.category === 'ecu' && action.type === 'cruise_control' && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>OP</div>
+            <select
+              style={{ ...inputStyle, fontSize: 11 }}
+              value={action.op}
+              onChange={(e) => {
+                const nextOp = e.target.value as CruiseControlOp
+                // Drop `stepKmh` when switching to an op that doesn't honor it
+                // so the persisted config stays minimal (schema would accept
+                // it, but a stale value would be misleading).
+                if (!CRUISE_STEP_OPS.has(nextOp) && action.stepKmh !== undefined) {
+                  const { stepKmh: _drop, ...rest } = action
+                  void _drop
+                  onUpdate({ ...rest, op: nextOp })
+                  return
+                }
+                onUpdate({ ...action, op: nextOp })
+              }}
+            >
+              {CRUISE_OPS.map((op) => (
+                <option key={op} value={op}>
+                  {op}
+                </option>
+              ))}
+            </select>
+          </div>
+          {CRUISE_STEP_OPS.has(action.op) && (
+            <div style={{ flex: '0 0 80px' }}>
+              <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>STEP (KM/H)</div>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                style={{ ...numberInputStyle, fontSize: 11 }}
+                value={action.stepKmh ?? 1}
+                onChange={(e) => {
+                  const v = Number(e.target.value)
+                  if (Number.isFinite(v)) onUpdate({ ...action, stepKmh: v })
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -169,6 +235,15 @@ function AddActionMenu({
         {
           label: 'CAN Raw',
           action: (): ButtonAction => ({ category: 'ecu', type: 'can_raw', frameId: 0, data: '' }),
+          color: '#CC8800',
+        },
+        {
+          label: 'Cruise Ctrl',
+          action: (): ButtonAction => ({
+            category: 'ecu',
+            type: 'cruise_control',
+            op: 'toggle',
+          }),
           color: '#CC8800',
         },
       ].map(({ label, action, color }) => (
