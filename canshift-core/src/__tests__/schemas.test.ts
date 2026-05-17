@@ -13,6 +13,8 @@ import {
   DashboardConfigSchema,
   DeviceConfigSchema,
   DeviceConfigWireSchema,
+  Esp32OutputGpioSchema,
+  Esp32InputGpioSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
   InputBindingSchema,
@@ -21,6 +23,7 @@ import {
   InputBindingsConfigWireSchema,
   inputBindingsFromWire,
   inputBindingsToWire,
+  isPinAvailableForBoard,
   MAX_INPUT_BINDINGS,
 } from '../index.js'
 import type {
@@ -31,7 +34,6 @@ import type {
   InputBindingsConfigWire,
 } from '../index.js'
 import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
-import { Esp32InputGpioSchema } from '../schemas/device.js'
 import { SignalConfigSchema } from '../schemas/signal.js'
 
 // ---------------------------------------------------------------------------
@@ -390,6 +392,23 @@ describe('DeviceConfigSchema', () => {
     const result = DeviceConfigSchema.safeParse(wireShape)
     expect(result.success).toBe(false)
   })
+
+  // -- #831: chip-level GPIO safety enforced through DeviceConfigSchema -------
+
+  it('rejects twaiTxPin in the SPI-flash range (7) — would brick the device', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twaiTxPin: 7 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects twaiRxPin in the SPI-flash range (10) — would brick the device', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twaiRxPin: 10 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an input-only pin on twaiTxPin (35) — TWAI TX needs output', () => {
+    const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twaiTxPin: 35 })
+    expect(result.success).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -430,6 +449,58 @@ describe('DeviceConfigWireSchema', () => {
     const result = DeviceConfigWireSchema.safeParse(domainShape)
     expect(result.success).toBe(false)
   })
+
+  // -- #831: chip-level GPIO safety also enforced on the wire schema ----------
+
+  it('rejects twai_tx_pin in the SPI-flash range (7)', () => {
+    const result = DeviceConfigWireSchema.safeParse({ ...validWire, twai_tx_pin: 7 })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an input-only pin on twai_tx_pin (35)', () => {
+    const result = DeviceConfigWireSchema.safeParse({ ...validWire, twai_tx_pin: 35 })
+    expect(result.success).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Esp32OutputGpioSchema / Esp32InputGpioSchema (issue #831)
+// ---------------------------------------------------------------------------
+
+describe('Esp32OutputGpioSchema', () => {
+  it('accepts known-safe output pins (22, 25, 32)', () => {
+    expect(Esp32OutputGpioSchema.safeParse(22).success).toBe(true)
+    expect(Esp32OutputGpioSchema.safeParse(25).success).toBe(true)
+    expect(Esp32OutputGpioSchema.safeParse(32).success).toBe(true)
+  })
+
+  it.each([6, 7, 8, 9, 10, 11])('rejects SPI-flash pin %i (would brick the device)', (pin) => {
+    expect(Esp32OutputGpioSchema.safeParse(pin).success).toBe(false)
+  })
+
+  it.each([34, 35, 36, 37, 38, 39])('rejects input-only pin %i', (pin) => {
+    expect(Esp32OutputGpioSchema.safeParse(pin).success).toBe(false)
+  })
+
+  it('rejects an unbonded pin (20)', () => {
+    expect(Esp32OutputGpioSchema.safeParse(20).success).toBe(false)
+  })
+
+  it('rejects a non-integer pin', () => {
+    expect(Esp32OutputGpioSchema.safeParse(22.5).success).toBe(false)
+  })
+})
+
+describe('Esp32InputGpioSchema', () => {
+  it('accepts the input-only range (34-39) since they can still be read', () => {
+    for (const pin of [34, 35, 36, 37, 38, 39]) {
+      expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(true)
+    }
+  })
+
+  it.each([6, 7, 8, 9, 10, 11])('still rejects SPI-flash pin %i', (pin) => {
+    expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -466,8 +537,8 @@ describe('deviceConfigFromWire / deviceConfigToWire', () => {
   it('round-trips wire → domain → wire without loss', () => {
     const wire: DeviceConfigWire = {
       can_speed_kbps: 1000,
-      twai_tx_pin: 0,
-      twai_rx_pin: 39,
+      twai_tx_pin: 22,
+      twai_rx_pin: 21,
     }
     expect(deviceConfigToWire(deviceConfigFromWire(wire))).toEqual(wire)
   })
@@ -479,39 +550,6 @@ describe('deviceConfigFromWire / deviceConfigToWire', () => {
       twaiRxPin: 21,
     }
     expect(deviceConfigFromWire(deviceConfigToWire(cfg))).toEqual(cfg)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Esp32InputGpioSchema — refuses SPI flash pins, allows input-only 34-39
-// ---------------------------------------------------------------------------
-
-describe('Esp32InputGpioSchema', () => {
-  it('accepts general-purpose input pins', () => {
-    for (const pin of [0, 4, 22, 32]) {
-      expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(true)
-    }
-  })
-
-  it('accepts input-only pins 34-39', () => {
-    for (const pin of [34, 35, 36, 37, 38, 39]) {
-      expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(true)
-    }
-  })
-
-  it('rejects SPI flash pins 6-11 with an explanatory message', () => {
-    for (const pin of [6, 7, 8, 9, 10, 11]) {
-      const result = Esp32InputGpioSchema.safeParse(pin)
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0]?.message).toMatch(/SPI flash/i)
-      }
-    }
-  })
-
-  it('rejects out-of-range pins', () => {
-    expect(Esp32InputGpioSchema.safeParse(-1).success).toBe(false)
-    expect(Esp32InputGpioSchema.safeParse(40).success).toBe(false)
   })
 })
 
@@ -738,5 +776,24 @@ describe('inputBindingsFromWire / inputBindingsToWire', () => {
       ],
     }
     expect(inputBindingsFromWire(inputBindingsToWire(cfg))).toEqual(cfg)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// HardwareProfile helpers (issue #831)
+// ---------------------------------------------------------------------------
+
+describe('isPinAvailableForBoard', () => {
+  it('marks display MOSI (GPIO 13) as unavailable on crowpanel_28', () => {
+    expect(isPinAvailableForBoard('crowpanel_28', 13)).toBe(false)
+  })
+
+  it('marks touch CS (GPIO 33) as unavailable on crowpanel_28', () => {
+    expect(isPinAvailableForBoard('crowpanel_28', 33)).toBe(false)
+  })
+
+  it('marks expansion-header pins (GPIO 25, 32) as available on crowpanel_28', () => {
+    expect(isPinAvailableForBoard('crowpanel_28', 25)).toBe(true)
+    expect(isPinAvailableForBoard('crowpanel_28', 32)).toBe(true)
   })
 })

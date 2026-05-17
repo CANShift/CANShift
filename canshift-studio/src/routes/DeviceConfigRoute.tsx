@@ -4,12 +4,52 @@
 // device.json at boot from SPIFFS and uses these values instead of the
 // board_config.h compile-time defaults.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { deviceConfigIpc } from '../services/ipc.service'
 import type { DeviceConfig, CanSpeedKbps } from '@tmbk/canshift-core'
-import { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from '@tmbk/canshift-core'
+import {
+  DEFAULT_DEVICE_CONFIG,
+  CAN_SPEED_OPTIONS,
+  Esp32OutputGpioSchema,
+  HARDWARE_PROFILES,
+} from '@tmbk/canshift-core'
 import InputBindingsSection from '../components/device/InputBindingsSection'
 import ReleaseInfoCard from '../components/shared/ReleaseInfoCard'
+
+// ---------------------------------------------------------------------------
+// Pin picker — chip-safe ∩ board-available (issue #831)
+//
+// Two layers of defence: `Esp32OutputGpioSchema` rejects flash-SPI (6-11) and
+// input-only (34-39) pins; `HARDWARE_PROFILES[boardId].reservedPins` rejects
+// pins claimed by the board's own hardware (display SPI, touch SPI, …). The
+// dropdown surfaces only the intersection so the user can never select an
+// unsafe pin from the UI; `safeParse` is still the source of truth if a
+// user hand-edits the JSON before importing it.
+//
+// `CURRENT_BOARD_ID` is hard-coded because firmware is currently single-board
+// (CrowPanel 2.8" — see `canshift-firmware/include/board_config.h`). When
+// board switching lands, lift this to a setting / detected at runtime.
+const CURRENT_BOARD_ID = 'crowpanel_28' as const
+
+interface PinOption {
+  pin: number
+  /** Hint suffix appended to the option label, e.g. "(expansion)". */
+  hint: string | null
+}
+
+function buildSafePinOptions(): PinOption[] {
+  const profile = HARDWARE_PROFILES[CURRENT_BOARD_ID]
+  const options: PinOption[] = []
+  for (let pin = 0; pin <= 39; pin++) {
+    if (!Esp32OutputGpioSchema.safeParse(pin).success) continue
+    if (profile.reservedPins.has(pin)) continue
+    options.push({
+      pin,
+      hint: profile.expansionPins.has(pin) ? 'expansion' : null,
+    })
+  }
+  return options
+}
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -82,6 +122,7 @@ export default function DeviceConfigRoute() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const pinOptions = useMemo(buildSafePinOptions, [])
 
   useEffect(() => {
     void deviceConfigIpc.read().then((result) => {
@@ -145,31 +186,39 @@ export default function DeviceConfigRoute() {
           <div style={row}>
             <div>
               <span style={label}>TWAI TX pin (GPIO)</span>
-              <input
-                type="number"
-                min={0}
-                max={39}
+              <select
                 value={config.twaiTxPin}
                 onChange={(e) => {
                   setConfig((c) => ({ ...c, twaiTxPin: parseInt(e.target.value, 10) }))
                 }}
                 style={inputStyle}
-              />
-              <div style={hint}>CAN Pal CTX → ESP32</div>
+              >
+                {pinOptions.map(({ pin, hint: pinHint }) => (
+                  <option key={pin} value={pin}>
+                    GPIO {pin}
+                    {pinHint ? ` (${pinHint})` : ''}
+                  </option>
+                ))}
+              </select>
+              <div style={hint}>CAN Pal CTX → ESP32 (safe pins only)</div>
             </div>
             <div>
               <span style={label}>TWAI RX pin (GPIO)</span>
-              <input
-                type="number"
-                min={0}
-                max={39}
+              <select
                 value={config.twaiRxPin}
                 onChange={(e) => {
                   setConfig((c) => ({ ...c, twaiRxPin: parseInt(e.target.value, 10) }))
                 }}
                 style={inputStyle}
-              />
-              <div style={hint}>CAN Pal CRX → ESP32</div>
+              >
+                {pinOptions.map(({ pin, hint: pinHint }) => (
+                  <option key={pin} value={pin}>
+                    GPIO {pin}
+                    {pinHint ? ` (${pinHint})` : ''}
+                  </option>
+                ))}
+              </select>
+              <div style={hint}>CAN Pal CRX → ESP32 (safe pins only)</div>
             </div>
           </div>
 

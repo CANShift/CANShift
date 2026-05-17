@@ -110,7 +110,17 @@ export { validateSignalCatalog } from './validation/validate-signal'
 // ---------------------------------------------------------------------------
 export { DashboardConfigSchema } from './schemas/dashboard'
 export { SignalConfigSchema } from './schemas/signal'
-export { DeviceConfigSchema, DeviceConfigWireSchema } from './schemas/device'
+export {
+  DeviceConfigSchema,
+  DeviceConfigWireSchema,
+  Esp32OutputGpioSchema,
+  Esp32InputGpioSchema,
+} from './schemas/device'
+
+// Hardware profiles (#831) — per-board reserved/expansion pin tables that
+// studio's pin pickers consume to surface only board-safe choices.
+export { HARDWARE_PROFILES, isPinAvailableForBoard } from './schemas/hardware-profile'
+export type { HardwareProfileId, HardwareProfile } from './schemas/hardware-profile'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
