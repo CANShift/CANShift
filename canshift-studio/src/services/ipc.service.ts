@@ -5,6 +5,7 @@ import type {
   DashboardConfig,
   SignalConfig,
   DeviceConfig,
+  InputBindingsConfig,
   ConnectionStatus,
   LatestReleaseResult,
   OpenResult,
@@ -230,6 +231,19 @@ export const deviceConfigIpc = {
     invoke<{ success: boolean; config: DeviceConfig | null }>(IpcChannels.DEVICE_CONFIG_READ),
   write: (config: DeviceConfig) =>
     invoke<{ success: boolean; error?: string }>(IpcChannels.DEVICE_CONFIG_WRITE, config),
+}
+
+// ---------------------------------------------------------------------------
+// Input bindings — physical GPIO buttons (issue #833)
+// ---------------------------------------------------------------------------
+
+export const inputBindingsIpc = {
+  read: () =>
+    invoke<{ success: boolean; config: InputBindingsConfig | null }>(
+      IpcChannels.INPUT_BINDINGS_READ
+    ),
+  write: (config: InputBindingsConfig) =>
+    invoke<{ success: boolean; error?: string }>(IpcChannels.INPUT_BINDINGS_WRITE, config),
 }
 
 // ---------------------------------------------------------------------------

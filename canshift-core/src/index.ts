@@ -36,6 +36,8 @@ export type {
   NavigateAction,
   MapSwitchAction,
   CanRawAction,
+  CruiseControlAction,
+  CruiseControlOp,
 } from './types/dashboard'
 
 export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
@@ -53,6 +55,26 @@ export type { DeviceConfig, CanSpeedKbps } from './types/device'
 export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
 export type { DeviceConfigWire } from './schemas/device'
 export { deviceConfigFromWire, deviceConfigToWire } from './schemas/device'
+
+// Input bindings — physical GPIO buttons → dashboard actions (issue #833)
+export type {
+  InputBinding,
+  InputBindingWire,
+  InputBindingsConfig,
+  InputBindingsConfigWire,
+  InputActiveLevel,
+  InputPressKind,
+} from './schemas/input-bindings'
+export {
+  InputBindingSchema,
+  InputBindingsConfigSchema,
+  InputBindingWireSchema,
+  InputBindingsConfigWireSchema,
+  inputBindingsFromWire,
+  inputBindingsToWire,
+  MAX_INPUT_BINDINGS,
+  INPUT_BINDING_ID_MAX_LEN,
+} from './schemas/input-bindings'
 
 // Sensor color-ramp defaults (issue #430)
 export {

@@ -17,9 +17,21 @@ import {
   Esp32InputGpioSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
+  InputBindingSchema,
+  InputBindingWireSchema,
+  InputBindingsConfigWireSchema,
+  inputBindingsFromWire,
+  inputBindingsToWire,
   isPinAvailableForBoard,
+  MAX_INPUT_BINDINGS,
 } from '../index.js'
-import type { DeviceConfig, DeviceConfigWire } from '../index.js'
+import type {
+  DeviceConfig,
+  DeviceConfigWire,
+  InputBinding,
+  InputBindingsConfig,
+  InputBindingsConfigWire,
+} from '../index.js'
 import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
 import { SignalConfigSchema } from '../schemas/signal.js'
 
@@ -537,6 +549,225 @@ describe('deviceConfigFromWire / deviceConfigToWire', () => {
       twaiRxPin: 21,
     }
     expect(deviceConfigFromWire(deviceConfigToWire(cfg))).toEqual(cfg)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// ButtonActionSchema — cruise control variant (issue #833 / #451)
+// ---------------------------------------------------------------------------
+
+describe('ButtonActionSchema — cruise_control variant', () => {
+  it('accepts a bare op (on/off/toggle/set/resume)', () => {
+    for (const op of ['on', 'off', 'toggle', 'set', 'resume']) {
+      const result = ButtonActionSchema.safeParse({
+        category: 'ecu',
+        type: 'cruise_control',
+        op,
+      })
+      expect(result.success).toBe(true)
+    }
+  })
+
+  it('accepts increment/decrement with stepKmh', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'cruise_control',
+      op: 'increment',
+      stepKmh: 5,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an unknown op', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'cruise_control',
+      op: 'fly',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a wrong category (must be ecu)', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'dashboard',
+      type: 'cruise_control',
+      op: 'on',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an out-of-range stepKmh', () => {
+    expect(
+      ButtonActionSchema.safeParse({
+        category: 'ecu',
+        type: 'cruise_control',
+        op: 'increment',
+        stepKmh: 0,
+      }).success
+    ).toBe(false)
+    expect(
+      ButtonActionSchema.safeParse({
+        category: 'ecu',
+        type: 'cruise_control',
+        op: 'increment',
+        stepKmh: 999,
+      }).success
+    ).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// InputBindingsConfig — physical GPIO buttons (issue #833)
+// ---------------------------------------------------------------------------
+
+describe('InputBindingWireSchema / InputBindingSchema', () => {
+  const validWire = {
+    id: 'steering_set',
+    pin: 34,
+    active: 'low' as const,
+    pullup: true,
+    debounce_ms: 25,
+    kind: 'short' as const,
+    action: { category: 'ecu', type: 'cruise_control', op: 'set' },
+  }
+
+  it('accepts a minimal valid wire binding', () => {
+    expect(InputBindingWireSchema.safeParse(validWire).success).toBe(true)
+  })
+
+  it('accepts the optional signal field on both wire and domain', () => {
+    expect(InputBindingWireSchema.safeParse({ ...validWire, signal: 'als_armed' }).success).toBe(
+      true
+    )
+    const domainShape: InputBinding = {
+      id: 'als_btn',
+      pin: 32,
+      active: 'low',
+      pullup: true,
+      debounceMs: 20,
+      kind: 'short',
+      action: { category: 'ecu', type: 'cruise_control', op: 'toggle' },
+      signal: 'als_armed',
+    }
+    expect(InputBindingSchema.safeParse(domainShape).success).toBe(true)
+  })
+
+  it('rejects an SPI-flash pin (6-11)', () => {
+    expect(InputBindingWireSchema.safeParse({ ...validWire, pin: 7 }).success).toBe(false)
+  })
+
+  it('rejects extra (unknown) fields — .strict()', () => {
+    expect(InputBindingWireSchema.safeParse({ ...validWire, foo: 'bar' }).success).toBe(false)
+  })
+
+  it('rejects an unknown press kind', () => {
+    expect(InputBindingWireSchema.safeParse({ ...validWire, kind: 'triple' }).success).toBe(false)
+  })
+
+  it('rejects an out-of-range debounce', () => {
+    expect(InputBindingWireSchema.safeParse({ ...validWire, debounce_ms: 0 }).success).toBe(false)
+    expect(InputBindingWireSchema.safeParse({ ...validWire, debounce_ms: 9999 }).success).toBe(
+      false
+    )
+  })
+
+  it('rejects camelCase debounceMs on the wire schema', () => {
+    const rest = { ...validWire } as Record<string, unknown>
+    delete rest.debounce_ms
+    expect(InputBindingWireSchema.safeParse({ ...rest, debounceMs: 25 }).success).toBe(false)
+  })
+})
+
+describe('InputBindingsConfigWireSchema cap', () => {
+  it(`rejects > ${String(MAX_INPUT_BINDINGS)} bindings`, () => {
+    const one = {
+      id: 'b',
+      pin: 32,
+      active: 'low' as const,
+      pullup: true,
+      debounce_ms: 20,
+      kind: 'short' as const,
+      action: { category: 'ecu', type: 'cruise_control', op: 'toggle' },
+    }
+    const tooMany = {
+      input_bindings: Array.from({ length: MAX_INPUT_BINDINGS + 1 }, (_, i) => ({
+        ...one,
+        id: `b${String(i)}`,
+      })),
+    }
+    expect(InputBindingsConfigWireSchema.safeParse(tooMany).success).toBe(false)
+  })
+})
+
+describe('inputBindingsFromWire / inputBindingsToWire', () => {
+  const wire: InputBindingsConfigWire = {
+    input_bindings: [
+      {
+        id: 'steering_set',
+        pin: 34,
+        active: 'low',
+        pullup: true,
+        debounce_ms: 25,
+        kind: 'short',
+        action: { category: 'ecu', type: 'cruise_control', op: 'set' },
+      },
+      {
+        id: 'als_btn',
+        pin: 32,
+        active: 'low',
+        pullup: true,
+        debounce_ms: 20,
+        kind: 'short',
+        action: { category: 'ecu', type: 'can_raw', frameId: 0x123, data: 'DEAD' },
+        signal: 'als_armed',
+      },
+    ],
+  }
+
+  it('renames debounce_ms → debounceMs and preserves the action verbatim', () => {
+    const domain = inputBindingsFromWire(wire)
+    expect(domain.inputBindings[0]?.debounceMs).toBe(25)
+    expect(domain.inputBindings[0]?.action).toEqual(wire.input_bindings[0]?.action)
+    expect(domain.inputBindings[1]?.signal).toBe('als_armed')
+  })
+
+  it('round-trips wire → domain → wire without loss', () => {
+    expect(inputBindingsToWire(inputBindingsFromWire(wire))).toEqual(wire)
+  })
+
+  it('round-trips domain → wire → domain without loss', () => {
+    const cfg: InputBindingsConfig = {
+      inputBindings: [
+        {
+          id: 'b1',
+          pin: 22,
+          active: 'high',
+          pullup: false,
+          debounceMs: 50,
+          kind: 'long',
+          action: { category: 'dashboard', type: 'navigate', pageId: 'home' },
+        },
+      ],
+    }
+    expect(inputBindingsFromWire(inputBindingsToWire(cfg))).toEqual(cfg)
+  })
+
+  it('round-trips a domain binding with the optional signal field set', () => {
+    const cfg: InputBindingsConfig = {
+      inputBindings: [
+        {
+          id: 'als_btn',
+          pin: 25,
+          active: 'low',
+          pullup: true,
+          debounceMs: 20,
+          kind: 'short',
+          action: { category: 'ecu', type: 'cruise_control', op: 'toggle' },
+          signal: 'als_armed',
+        },
+      ],
+    }
+    expect(inputBindingsFromWire(inputBindingsToWire(cfg))).toEqual(cfg)
   })
 })
 

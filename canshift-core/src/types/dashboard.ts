@@ -14,6 +14,8 @@ export type {
   NavigateAction,
   MapSwitchAction,
   CanRawAction,
+  CruiseControlAction,
+  CruiseControlOp,
   DashboardButtonAction,
   EcuButtonAction,
   ButtonAction,
@@ -37,7 +39,9 @@ export {
   DEFAULT_PAGE_PALETTE,
   DEFAULT_TOP_BAR_LAYOUT,
   BUTTON_ACTION_TYPES,
+  CRUISE_CONTROL_OPS,
   isNavigateAction,
   isMapSwitchAction,
   isCanRawAction,
+  isCruiseControlAction,
 } from '../schemas/dashboard.js'
