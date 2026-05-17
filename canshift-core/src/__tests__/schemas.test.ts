@@ -636,9 +636,9 @@ describe('InputBindingWireSchema / InputBindingSchema', () => {
   })
 
   it('accepts the optional signal field on both wire and domain', () => {
-    expect(
-      InputBindingWireSchema.safeParse({ ...validWire, signal: 'als_armed' }).success
-    ).toBe(true)
+    expect(InputBindingWireSchema.safeParse({ ...validWire, signal: 'als_armed' }).success).toBe(
+      true
+    )
     const domainShape: InputBinding = {
       id: 'als_btn',
       pin: 32,
@@ -657,24 +657,18 @@ describe('InputBindingWireSchema / InputBindingSchema', () => {
   })
 
   it('rejects extra (unknown) fields — .strict()', () => {
-    expect(
-      InputBindingWireSchema.safeParse({ ...validWire, foo: 'bar' }).success
-    ).toBe(false)
+    expect(InputBindingWireSchema.safeParse({ ...validWire, foo: 'bar' }).success).toBe(false)
   })
 
   it('rejects an unknown press kind', () => {
-    expect(
-      InputBindingWireSchema.safeParse({ ...validWire, kind: 'triple' }).success
-    ).toBe(false)
+    expect(InputBindingWireSchema.safeParse({ ...validWire, kind: 'triple' }).success).toBe(false)
   })
 
   it('rejects an out-of-range debounce', () => {
-    expect(
-      InputBindingWireSchema.safeParse({ ...validWire, debounce_ms: 0 }).success
-    ).toBe(false)
-    expect(
-      InputBindingWireSchema.safeParse({ ...validWire, debounce_ms: 9999 }).success
-    ).toBe(false)
+    expect(InputBindingWireSchema.safeParse({ ...validWire, debounce_ms: 0 }).success).toBe(false)
+    expect(InputBindingWireSchema.safeParse({ ...validWire, debounce_ms: 9999 }).success).toBe(
+      false
+    )
   })
 
   it('rejects camelCase debounceMs on the wire schema', () => {
