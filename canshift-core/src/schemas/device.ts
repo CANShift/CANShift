@@ -28,6 +28,30 @@ const ESP32_GPIO_MAX = 39
 export const Esp32GpioSchema = z.number().int().min(ESP32_GPIO_MIN).max(ESP32_GPIO_MAX)
 
 /**
+ * Pins wired to the internal SPI flash on ESP32-WROOM modules. Configuring
+ * these as user IO at runtime corrupts flash and bricks the board until
+ * reflash over ESP-PROG. Mirrors the warning in `board_config.h`.
+ */
+const ESP32_SPI_FLASH_PINS: ReadonlySet<number> = new Set([6, 7, 8, 9, 10, 11])
+
+/**
+ * ESP32 GPIO pin usable as a digital input (issue #833). Accepts the full
+ * `[0, 39]` range MINUS the SPI flash pins. Pins 34-39 ARE allowed here even
+ * though they are input-only — that's exactly the use case (button-to-GND).
+ *
+ * Note this is intentionally more permissive than the (future) output-only
+ * schema: TWAI TX needs output-capable pins (rejects 34-39), while a GPIO
+ * button only reads, so 34-39 are fine.
+ */
+export const Esp32InputGpioSchema = Esp32GpioSchema.refine(
+  (pin) => !ESP32_SPI_FLASH_PINS.has(pin),
+  {
+    message:
+      'GPIO 6-11 are wired to the SPI flash chip — using them as IO bricks the device',
+  }
+)
+
+/**
  * On-disk wire format of `userData/device.json`. Strict — extra fields are
  * rejected so a stale studio payload can't smuggle unknown keys through the
  * IPC boundary into the file on disk. Field names mirror the firmware JSON

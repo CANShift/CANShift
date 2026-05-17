@@ -142,15 +142,42 @@ const CanRawActionSchema = z
   })
   .strict()
 
+// Cruise-control operations a button or input binding can request. `toggle`
+// flips the armed state; `set`/`resume` are commonly emitted by steering-wheel
+// SET / RES buttons; `increment`/`decrement` adjust the setpoint, optionally
+// by `stepKmh` (defaults applied by firmware). Issue #833 / consumer #451.
+export const CRUISE_CONTROL_OPS = [
+  'on',
+  'off',
+  'toggle',
+  'set',
+  'resume',
+  'increment',
+  'decrement',
+] as const
+
+export const CruiseControlOpSchema = z.enum(CRUISE_CONTROL_OPS)
+
+const CruiseControlActionSchema = z
+  .object({
+    category: z.literal('ecu'),
+    type: z.literal('cruise_control'),
+    op: CruiseControlOpSchema,
+    // Only consulted by firmware for `increment` / `decrement`. Constrained to
+    // a sane range so a fat-fingered value can't push the setpoint by 200 km/h.
+    stepKmh: z.number().int().min(1).max(20).optional(),
+  })
+  .strict()
+
 /**
  * Discriminated union of all button actions.
  *
  * The pair `(category, type)` is the conceptual discriminator. Each `type`
- * value is unique across categories (`navigate` → dashboard, `map_switch` and
- * `can_raw` → ecu), so a single-key discriminated union on `type` is
- * sufficient and produces sharper errors than `z.union(...)`. The `category`
- * literal on each variant is still enforced, so unknown / mismatched
- * combinations are rejected.
+ * value is unique across categories (`navigate` → dashboard, `map_switch` /
+ * `can_raw` / `cruise_control` → ecu), so a single-key discriminated union on
+ * `type` is sufficient and produces sharper errors than `z.union(...)`. The
+ * `category` literal on each variant is still enforced, so unknown /
+ * mismatched combinations are rejected.
  *
  * The legacy `targetPageId` field that lived on `ButtonWidgetConfig` (and was
  * removed during the 1.0→1.1 migration, issue #672) is NOT part of any action
@@ -160,6 +187,7 @@ export const ButtonActionSchema = z.discriminatedUnion('type', [
   NavigateActionSchema,
   MapSwitchActionSchema,
   CanRawActionSchema,
+  CruiseControlActionSchema,
 ])
 
 // Individual variants are re-exported as types for downstream consumers
@@ -167,8 +195,10 @@ export const ButtonActionSchema = z.discriminatedUnion('type', [
 export type NavigateAction = z.infer<typeof NavigateActionSchema>
 export type MapSwitchAction = z.infer<typeof MapSwitchActionSchema>
 export type CanRawAction = z.infer<typeof CanRawActionSchema>
+export type CruiseControlAction = z.infer<typeof CruiseControlActionSchema>
+export type CruiseControlOp = z.infer<typeof CruiseControlOpSchema>
 export type DashboardButtonAction = NavigateAction
-export type EcuButtonAction = MapSwitchAction | CanRawAction
+export type EcuButtonAction = MapSwitchAction | CanRawAction | CruiseControlAction
 export type ButtonAction = z.infer<typeof ButtonActionSchema>
 
 /**
@@ -180,10 +210,11 @@ export const BUTTON_ACTION_TYPES = [
   { category: 'dashboard', type: 'navigate' },
   { category: 'ecu', type: 'map_switch' },
   { category: 'ecu', type: 'can_raw' },
+  { category: 'ecu', type: 'cruise_control' },
 ] as const
 
 export function isNavigateAction(action: ButtonAction): action is NavigateAction {
-  return action.category === 'dashboard'
+  return action.type === 'navigate'
 }
 
 export function isMapSwitchAction(action: ButtonAction): action is MapSwitchAction {
@@ -192,6 +223,10 @@ export function isMapSwitchAction(action: ButtonAction): action is MapSwitchActi
 
 export function isCanRawAction(action: ButtonAction): action is CanRawAction {
   return action.type === 'can_raw'
+}
+
+export function isCruiseControlAction(action: ButtonAction): action is CruiseControlAction {
+  return action.type === 'cruise_control'
 }
 
 // ---------------------------------------------------------------------------
