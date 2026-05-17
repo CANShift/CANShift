@@ -76,6 +76,10 @@ export {
   INPUT_BINDING_ID_MAX_LEN,
 } from './schemas/input-bindings'
 
+// Track-mode telemetry — BLE message contract between mobile and firmware (issue #843)
+export type { TrackTelemetry } from './schemas/track-telemetry'
+export { TrackTelemetrySchema } from './schemas/track-telemetry'
+
 // Sensor color-ramp defaults (issue #430)
 export {
   SENSOR_DEFAULT_RAMPS,
