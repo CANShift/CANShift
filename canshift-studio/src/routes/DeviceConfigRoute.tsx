@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { deviceConfigIpc } from '../services/ipc.service'
 import type { DeviceConfig, CanSpeedKbps } from '@tmbk/canshift-core'
 import { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from '@tmbk/canshift-core'
+import InputBindingsSection from '../components/device/InputBindingsSection'
 import ReleaseInfoCard from '../components/shared/ReleaseInfoCard'
 
 // ---------------------------------------------------------------------------
@@ -209,6 +210,9 @@ export default function DeviceConfigRoute() {
           {saved && <span style={{ fontSize: 12, color: '#44CC44' }}>Saved</span>}
           {saveError && <span style={{ fontSize: 12, color: '#CC3333' }}>{saveError}</span>}
         </div>
+
+        {/* Physical buttons (#833) */}
+        <InputBindingsSection />
 
         {/* GitHub release info card (issue #571) */}
         <ReleaseInfoCard />

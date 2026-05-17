@@ -97,6 +97,10 @@ export const IpcChannels = {
   DEVICE_CONFIG_READ: 'device:read',
   DEVICE_CONFIG_WRITE: 'device:write',
 
+  // Physical GPIO button bindings (issue #833)
+  INPUT_BINDINGS_READ: 'inputs:read',
+  INPUT_BINDINGS_WRITE: 'inputs:write',
+
   // GitHub releases info card (issue #571)
   // Renderer → main: fetch latest stable + pre-release info, cached.
   RELEASES_GET_LATEST: 'releases:get-latest',

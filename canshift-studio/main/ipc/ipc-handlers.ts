@@ -8,9 +8,13 @@ import {
   DashboardConfigSchema,
   DeviceConfigSchema,
   DeviceConfigWireSchema,
+  InputBindingsConfigSchema,
+  InputBindingsConfigWireSchema,
   SignalConfigSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
+  inputBindingsFromWire,
+  inputBindingsToWire,
 } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../shared/ipc-channels'
 import {
@@ -592,6 +596,46 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     try {
       const wire = deviceConfigToWire(parsed.data)
       await writeFile(deviceConfigPath, JSON.stringify(wire, null, 2), 'utf-8')
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  // ---------------------------------------------------------------------------
+  // Input bindings (#833) — physical GPIO buttons, persisted in
+  // userData/input_bindings.json. Same wire↔domain pattern as device config.
+  // ---------------------------------------------------------------------------
+
+  const inputBindingsPath = join(app.getPath('userData'), 'input_bindings.json')
+
+  ipcMain.handle(IpcChannels.INPUT_BINDINGS_READ, async () => {
+    try {
+      const raw = await readFile(inputBindingsPath, 'utf-8')
+      const parsed = InputBindingsConfigWireSchema.safeParse(JSON.parse(raw))
+      if (!parsed.success) {
+        return { success: false, config: null }
+      }
+      return { success: true, config: inputBindingsFromWire(parsed.data) }
+    } catch {
+      // Missing file is a valid "no bindings yet" state — surface as success
+      // with an empty config so the UI shows an empty list, not an error.
+      return { success: true, config: { inputBindings: [] } }
+    }
+  })
+
+  ipcMain.handle(IpcChannels.INPUT_BINDINGS_WRITE, async (_event, config: unknown) => {
+    const parsed = InputBindingsConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Input bindings payload is invalid',
+        issues: formatZodIssues(parsed.error),
+      }
+    }
+    try {
+      const wire = inputBindingsToWire(parsed.data)
+      await writeFile(inputBindingsPath, JSON.stringify(wire, null, 2), 'utf-8')
       return { success: true }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
