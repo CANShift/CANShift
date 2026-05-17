@@ -62,8 +62,8 @@ struct ButtonTag {
     uint8_t mapSwitchIndex;            // mapIndex of the MAP_SWITCH action, 0 = none
     char signalId[CFG_MAX_SIGNAL_LEN]; // signal driving toggle state; "" = use local latch
     uint32_t signalSyncIgnoreUntilMs;  // ms tick before which update() must skip signal-driven sync
-    uint32_t bgNormal;                 // resolved idle bg — `colors.normal` or `style.primaryColor`
-    uint32_t bgActive; // resolved active bg — `colors.active`, or primary brightened (#838)
+    uint32_t bgNormal;                 // idle bg — colors.normal or style.primaryColor
+    uint32_t bgActive;                 // active bg — colors.active or primary brightened (#838)
 };
 
 // Resolve the icon source. Returns a non-empty C-string LVGL path when an
