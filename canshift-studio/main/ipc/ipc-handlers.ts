@@ -17,6 +17,7 @@ import {
   inputBindingsToWire,
 } from '@tmbk/canshift-core'
 import { IpcChannels } from '../../shared/ipc-channels'
+import { friendlyZodIssues, installFriendlyZodErrorMap, summarizeZodError } from './zod-error-map'
 import {
   CliLogPayloadSchema,
   type CliLogPayload,
@@ -119,10 +120,18 @@ export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
 // etc.). DEVICE_CONFIG_READ parses the wire shape from disk and returns
 // the camelCase domain shape to the renderer.
 
+// Friendly error map runs at module load so every safeParse below benefits
+// from improved default messages (#832). Idempotent — calling it twice just
+// replaces the previous map.
+installFriendlyZodErrorMap()
+
 /**
  * Format Zod issues as `path: message` strings so the renderer can surface a
  * specific reason without re-walking the issue tree. Top-level issues (empty
  * path) collapse to just the message.
+ *
+ * Kept for the CLI / log surface that wants a flat string list per issue.
+ * The richer typed shape lives in `zod-error-map.ts::friendlyZodIssues`.
  */
 function formatZodIssues(error: z.ZodError): string[] {
   return error.issues.map((issue) => {
@@ -230,8 +239,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Save payload must be a valid dashboard config',
+        error: `Save payload invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     const result = await configService.saveFile(parsed.data)
@@ -247,8 +257,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Save-as payload must be a valid dashboard config',
+        error: `Save-as payload invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     const result = await configService.saveFileAs(parsed.data)
@@ -272,8 +283,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Export payload must be a valid dashboard config',
+        error: `Export payload invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     return configService.exportFile(parsed.data)
@@ -335,8 +347,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Push payload must be a valid dashboard config',
+        error: `Push payload invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     return usbService.pushConfig(parsed.data)
@@ -514,8 +527,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Signal export payload must be a valid signals.json shape',
+        error: `Signal export payload invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     const { filePath, canceled } = await dialog.showSaveDialog({
@@ -589,8 +603,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Device config payload is invalid',
+        error: `Device config invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     try {
@@ -629,8 +644,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!parsed.success) {
       return {
         success: false,
-        error: 'Input bindings payload is invalid',
+        error: `Input bindings invalid — ${summarizeZodError(parsed.error)}`,
         issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
     try {
