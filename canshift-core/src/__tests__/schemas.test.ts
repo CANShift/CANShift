@@ -19,7 +19,6 @@ import {
   deviceConfigToWire,
   InputBindingSchema,
   InputBindingWireSchema,
-  InputBindingsConfigSchema,
   InputBindingsConfigWireSchema,
   inputBindingsFromWire,
   inputBindingsToWire,
@@ -679,10 +678,9 @@ describe('InputBindingWireSchema / InputBindingSchema', () => {
   })
 
   it('rejects camelCase debounceMs on the wire schema', () => {
-    const { debounce_ms: _omit, ...rest } = validWire
-    expect(
-      InputBindingWireSchema.safeParse({ ...rest, debounceMs: 25 }).success
-    ).toBe(false)
+    const rest = { ...validWire } as Record<string, unknown>
+    delete rest.debounce_ms
+    expect(InputBindingWireSchema.safeParse({ ...rest, debounceMs: 25 }).success).toBe(false)
   })
 })
 
