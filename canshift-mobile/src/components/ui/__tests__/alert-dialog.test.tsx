@@ -29,7 +29,11 @@ function Harness({
   onCancel,
 }: HarnessProps): React.ReactElement {
   return (
-    <AlertDialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+    <AlertDialog
+      {...(open !== undefined && { open })}
+      {...(defaultOpen !== undefined && { defaultOpen })}
+      {...(onOpenChange !== undefined && { onOpenChange })}
+    >
       <AlertDialogTrigger>
         <Text>Open</Text>
       </AlertDialogTrigger>

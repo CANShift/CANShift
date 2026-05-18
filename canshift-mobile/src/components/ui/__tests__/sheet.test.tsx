@@ -11,7 +11,11 @@ interface HarnessProps {
 
 function Harness({ open, defaultOpen, onOpenChange }: HarnessProps): React.ReactElement {
   return (
-    <Sheet open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+    <Sheet
+      {...(open !== undefined && { open })}
+      {...(defaultOpen !== undefined && { defaultOpen })}
+      {...(onOpenChange !== undefined && { onOpenChange })}
+    >
       <SheetTrigger>
         <Text>Open</Text>
       </SheetTrigger>

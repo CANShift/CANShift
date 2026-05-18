@@ -116,8 +116,10 @@ export function mapBleError(err: unknown): BleConnectionError {
     case BleErrorCode.ServicesNotDiscovered:
       return { kind: 'characteristic-missing' }
     case BleErrorCode.CharacteristicWriteFailed:
-    case BleErrorCode.CharacteristicReadFailed:
-      return { kind: 'write-failed', reason: writeFailureReason(err) }
+    case BleErrorCode.CharacteristicReadFailed: {
+      const reason = writeFailureReason(err)
+      return reason !== undefined ? { kind: 'write-failed', reason } : { kind: 'write-failed' }
+    }
     default:
       return { kind: 'unknown', message: describe(err) }
   }

@@ -11,7 +11,11 @@ interface HarnessProps {
 
 function Harness({ open, defaultOpen, onOpenChange }: HarnessProps): React.ReactElement {
   return (
-    <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+    <Dialog
+      {...(open !== undefined && { open })}
+      {...(defaultOpen !== undefined && { defaultOpen })}
+      {...(onOpenChange !== undefined && { onOpenChange })}
+    >
       <DialogTrigger>
         <Text>Open</Text>
       </DialogTrigger>

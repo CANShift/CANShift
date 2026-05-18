@@ -9,7 +9,11 @@ interface HarnessProps {
 
 function Harness({ defaultValue, onValueChange }: HarnessProps): React.ReactElement {
   return (
-    <Select defaultValue={defaultValue} onValueChange={onValueChange} placeholder="Pick one">
+    <Select
+      {...(defaultValue !== undefined && { defaultValue })}
+      {...(onValueChange !== undefined && { onValueChange })}
+      placeholder="Pick one"
+    >
       <SelectTrigger>
         <SelectValue />
       </SelectTrigger>
