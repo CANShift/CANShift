@@ -23,7 +23,7 @@ import * as SecureStore from 'expo-secure-store'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, HitSlop, Radius, Spacing, Typography } from '../theme'
 import { useLatestRelease } from '../hooks/use-latest-release'
-import type { LatestReleaseResult, ReleaseInfo } from '../services/releases.types'
+import type { LatestReleaseResult, ReleaseInfo } from '@tmbk/canshift-core'
 import type { RootStackParamList } from '../navigation'
 
 interface Props {
