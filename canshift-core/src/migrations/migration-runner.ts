@@ -9,7 +9,7 @@
 //   - The runner applies all migrations between the file version and current version
 //
 // Append new migrations to the `BUILTIN_MIGRATIONS` array below as the
-// schema evolves; the chain currently spans 1.0.0 → 1.14.0 (issue #850).
+// schema evolves; the chain currently spans 1.0.0 → 1.15.0 (issue #850).
 
 export type MigrationFn = (config: Record<string, unknown>) => Record<string, unknown>
 
@@ -74,6 +74,15 @@ function brightenHex(hex: string, delta = 0x33): string {
 // All migrations receive a deep clone of the input — they can mutate freely;
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.14.0 → 1.15.0: WidgetStyle gains an optional `respectDayMode` field
+    // (issue #191). No data transformation — existing widgets leave the field
+    // undefined; firmware treats undefined as `true` to preserve the v0.7.0
+    // contract from #171 (widgets follow the active day/night text colour).
+    fromVersion: '1.14.0',
+    toVersion: '1.15.0',
+    migrate: (config) => ({ ...config, version: '1.15.0' }),
+  },
   {
     // 1.13.0 → 1.14.0: signals.json `protocol` field migrated away from the
     // MaxxECU-specific identifier `"maxxecu_v1.2"` to the ECU-agnostic

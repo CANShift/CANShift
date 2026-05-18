@@ -285,6 +285,39 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
+      {/* Day-mode text colour override (#191).
+          Toggling this off keeps the widget's bespoke `style.textColor` in
+          day mode instead of collapsing to the active theme's black. */}
+      <Field label="Follow day-mode text colour">
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12,
+            color: '#AAAAAA',
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={widget.style.respectDayMode !== false}
+            onChange={(e) => {
+              const nextStyle = { ...widget.style }
+              if (e.target.checked) {
+                // Default behaviour — drop the explicit flag so legacy
+                // configs round-trip unchanged.
+                delete nextStyle.respectDayMode
+              } else {
+                nextStyle.respectDayMode = false
+              }
+              patch({ style: nextStyle })
+            }}
+          />
+          When off, the widget keeps its bespoke text colour in day mode
+        </label>
+      </Field>
+
       {/* Button states — only buttons expose colour pickers (#146).
           Normal = idle state, Active = pressed / hover / triggered. */}
       {widget.type === 'button' && widget.config.type === 'button' && (
