@@ -8,7 +8,8 @@
 //   - Migrations are chained: 1.0.0 → 1.1.0 → 1.2.0 etc.
 //   - The runner applies all migrations between the file version and current version
 //
-// TODO: Add actual migration implementations as schema evolves.
+// Append new migrations to the `BUILTIN_MIGRATIONS` array below as the
+// schema evolves; the chain currently spans 1.0.0 → 1.14.0 (issue #850).
 
 export type MigrationFn = (config: Record<string, unknown>) => Record<string, unknown>
 
