@@ -483,14 +483,43 @@ jobs:
         # headers and silently bails.
         run: platformio run -e crowpanel_28 -t compiledb
 
-      - name: Run clang-tidy on src/
-        # `-p .` points clang-tidy at the compilation database emitted above.
-        # `find … -exec … +` batches files into a single clang-tidy invocation
-        # so the analyser amortises its index across the whole TU set.
+      - name: Sanitise compile_commands.json for stock clang-tidy
+        # Stock Ubuntu clang-tidy is built against system clang, which doesn't
+        # know the Xtensa target the ESP32 toolchain compiles for. Without
+        # this fix every file errors out at parse time before clang-tidy can
+        # run a single check. We strip the Xtensa- / GCC-only flags and
+        # substitute the target with x86_64-linux-gnu — enough for the
+        # analyser to walk the AST and lint the C++.
         run: |
+          DB=$(find .pio -name compile_commands.json | head -n 1)
+          if [ -z "$DB" ]; then
+            echo "::error::compile_commands.json not produced by PlatformIO"
+            exit 1
+          fi
+          echo "Patching $DB for clang-tidy"
+          # Drop the Xtensa / GCC-only flags clang doesn't recognise.
+          sed -i \
+            -e 's/-mlongcalls//g' \
+            -e 's/-mfix-esp32-psram-cache-issue//g' \
+            -e 's/-mfix-esp32-psram-cache-strategy=[a-z]*//g' \
+            -e 's/-fno-tree-switch-conversion//g' \
+            -e 's/-fstrict-volatile-bitfields//g' \
+            -e 's/-freorder-blocks//g' \
+            -e 's/-fno-shrink-wrap//g' \
+            -e 's/-fno-ipa-cp//g' \
+            -e 's|--target=xtensa-esp32-elf|--target=x86_64-linux-gnu|g' \
+            -e 's|xtensa-esp32-unknown-elf|x86_64-linux-gnu|g' \
+            "$DB"
+
+      - name: Run clang-tidy on src/
+        # `-p` points clang-tidy at the patched compilation database. `find …
+        # -exec … +` batches files into a single clang-tidy invocation so the
+        # analyser amortises its index across the whole TU set.
+        run: |
+          DB_DIR=$(dirname "$(find .pio -name compile_commands.json | head -n 1)")
           FILES=$(find src -name '*.cpp')
           if [ -z "$FILES" ]; then
             echo "No firmware sources found — skipping clang-tidy"
             exit 0
           fi
-          clang-tidy -p . $FILES
+          clang-tidy -p "$DB_DIR" $FILES
