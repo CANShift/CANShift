@@ -9,7 +9,10 @@ import { z } from 'zod'
 import {
   CAN_RAW_DATA_MAX_HEX_CHARS,
   CAN_RAW_DATA_REGEX,
+  DECIMAL_PLACES,
   FIRMWARE_CAPS,
+  REV_LIMIT_RPM,
+  TOPBAR_HEIGHT,
 } from '../constants/firmware-caps.js'
 
 import {
@@ -79,7 +82,7 @@ export const GaugeWidgetConfigSchema = z
     maxValue: z.number(),
     warningLevel: z.number(),
     dangerLevel: z.number(),
-    decimalPlaces: z.number(),
+    decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
     prefix: z.string().optional(),
     suffix: z.string().optional(),
     hideWhenInvalid: z.boolean().optional(),
@@ -254,6 +257,7 @@ export const ButtonWidgetConfigSchema = z
     // so Studio surfaces it as a validation error (#700).
     actions: z
       .array(ButtonActionSchema)
+      .min(1, 'actions must contain at least one entry')
       .max(
         FIRMWARE_CAPS.MAX_BUTTON_ACTIONS,
         `actions cannot exceed ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()} entries (firmware cap)`
@@ -274,7 +278,7 @@ export const TimerWidgetConfigSchema = z
 export const BarWidgetConfigSchema = z
   .object({
     type: z.literal('bar'),
-    decimalPlaces: z.number(),
+    decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
     prefix: z.string().optional(),
     suffix: z.string().optional(),
     label: z.string().optional(),
@@ -324,7 +328,7 @@ export const WidgetConfigSchema = z.discriminatedUnion('type', [
 
 export const WidgetSchema = z
   .object({
-    id: z.string(),
+    id: z.string().min(1, 'widget id must be a non-empty string'),
     type: WidgetTypeSchema,
     signal: z.string(),
     layout: WidgetLayoutSchema,
@@ -332,6 +336,64 @@ export const WidgetSchema = z
     config: WidgetConfigSchema,
   })
   .strict()
+  .superRefine((w, ctx) => {
+    const cfg = w.config
+    if (cfg.type === 'gauge') {
+      if (cfg.minValue >= cfg.maxValue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'gauge: minValue must be less than maxValue',
+          path: ['config', 'maxValue'],
+        })
+      }
+      if (cfg.warningLevel < cfg.minValue || cfg.warningLevel > cfg.maxValue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'gauge: warningLevel must be in [minValue, maxValue]',
+          path: ['config', 'warningLevel'],
+        })
+      }
+      if (cfg.dangerLevel < cfg.minValue || cfg.dangerLevel > cfg.maxValue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'gauge: dangerLevel must be in [minValue, maxValue]',
+          path: ['config', 'dangerLevel'],
+        })
+      }
+    } else if (cfg.type === 'bar') {
+      if (cfg.minValue !== undefined && cfg.maxValue !== undefined && cfg.minValue >= cfg.maxValue) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'bar: minValue must be less than maxValue',
+          path: ['config', 'maxValue'],
+        })
+      }
+      if (
+        cfg.warningLevel !== undefined &&
+        cfg.minValue !== undefined &&
+        cfg.maxValue !== undefined &&
+        (cfg.warningLevel < cfg.minValue || cfg.warningLevel > cfg.maxValue)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'bar: warningLevel must be in [minValue, maxValue]',
+          path: ['config', 'warningLevel'],
+        })
+      }
+      if (
+        cfg.dangerLevel !== undefined &&
+        cfg.minValue !== undefined &&
+        cfg.maxValue !== undefined &&
+        (cfg.dangerLevel < cfg.minValue || cfg.dangerLevel > cfg.maxValue)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'bar: dangerLevel must be in [minValue, maxValue]',
+          path: ['config', 'dangerLevel'],
+        })
+      }
+    }
+  })
 
 // ---------------------------------------------------------------------------
 // Page palette + theme
@@ -364,7 +426,9 @@ export const DEFAULT_PAGE_PALETTE: z.infer<typeof PagePaletteSchema> = {
 export const ThemePresetSchema = z
   .object({
     bgColor: HexColorSchema,
-    palette: PagePaletteSchema,
+    // Falls back to DEFAULT_PAGE_PALETTE when omitted — firmware demo configs
+    // ship without an explicit palette and rely on the default.
+    palette: PagePaletteSchema.optional(),
   })
   .strict()
 
@@ -374,13 +438,22 @@ export const ThemePresetSchema = z
 
 export const PageConfigSchema = z
   .object({
-    id: z.string(),
+    id: z.string().min(1, 'page id must be a non-empty string'),
     backgroundImage: z.string().nullable(),
     backgroundColor: HexColorSchema,
-    palette: PagePaletteSchema,
+    // Falls back to DEFAULT_PAGE_PALETTE when omitted — firmware demo configs
+    // ship without explicit palettes.
+    palette: PagePaletteSchema.optional(),
     showTopBar: z.boolean(),
     visible: z.boolean().optional(),
-    widgets: z.array(WidgetSchema),
+    // Firmware allocates a fixed-size widget array per page — over-limit configs
+    // would silently drop tail widgets at load time. Enforce at the boundary.
+    widgets: z
+      .array(WidgetSchema)
+      .max(
+        FIRMWARE_CAPS.MAX_WIDGETS_PER_PAGE,
+        `widgets cannot exceed ${String(FIRMWARE_CAPS.MAX_WIDGETS_PER_PAGE)} entries (firmware cap)`
+      ),
   })
   .strict()
 
@@ -428,10 +501,16 @@ export const TopBarItemSchema = z.discriminatedUnion('type', [
 
 export const TopBarConfigSchema = z
   .object({
-    height: z.number(),
+    height: z.number().min(TOPBAR_HEIGHT.MIN).max(TOPBAR_HEIGHT.MAX),
     bgColor: HexColorSchema,
     textColor: HexColorSchema,
-    layout: z.array(TopBarItemSchema).optional(),
+    layout: z
+      .array(TopBarItemSchema)
+      .max(
+        FIRMWARE_CAPS.MAX_TOPBAR_ITEMS,
+        `topBar.layout cannot exceed ${String(FIRMWARE_CAPS.MAX_TOPBAR_ITEMS)} entries (firmware cap)`
+      )
+      .optional(),
   })
   .strict()
 
@@ -450,14 +529,27 @@ export const DEFAULT_TOP_BAR_LAYOUT: z.infer<typeof TopBarItemSchema>[] = [
 
 export const DashboardConfigSchema = z
   .object({
+    // Allow a top-level `_comment` for JSON-side documentation (firmware demos
+    // use it). Validated as a string so a stray non-string `_comment` still
+    // surfaces as an issue.
+    _comment: z.string().optional(),
     version: SemVerSchema,
-    name: z.string(),
+    name: z.string().min(1, 'name must be a non-empty string'),
     description: z.string().optional(),
-    defaultPageId: z.string(),
-    revLimitRpm: z.number(),
+    defaultPageId: z.string().min(1, 'defaultPageId must be a non-empty string'),
+    revLimitRpm: z.number().min(REV_LIMIT_RPM.MIN).max(REV_LIMIT_RPM.MAX),
     topBar: TopBarConfigSchema,
     dayTheme: ThemePresetSchema.optional(),
-    pages: z.array(PageConfigSchema),
+    // Firmware allocates a fixed page array — over-limit configs would silently
+    // drop tail pages at load time. `min(1)` because a 0-page dashboard would
+    // boot with no content to render.
+    pages: z
+      .array(PageConfigSchema)
+      .min(1, 'pages must contain at least one entry')
+      .max(
+        FIRMWARE_CAPS.MAX_PAGES,
+        `pages cannot exceed ${String(FIRMWARE_CAPS.MAX_PAGES)} entries (firmware cap)`
+      ),
     ecuProfileKey: z.string().optional(),
   })
   .strict()
