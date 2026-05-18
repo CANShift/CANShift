@@ -374,7 +374,13 @@ function ReleaseBody({
           </TouchableOpacity>
           {notesOpen && (
             <View style={styles.notesBlock}>
-              <Markdown style={markdownStyles} onLinkPress={(url) => { onOpenUrl(url); return false }}>
+              <Markdown
+                style={markdownStyles}
+                onLinkPress={(url) => {
+                  onOpenUrl(url)
+                  return false
+                }}
+              >
                 {release.notes}
               </Markdown>
             </View>
@@ -468,12 +474,36 @@ function FooterRow({
 
 const markdownStyles = StyleSheet.create({
   body: { color: Colors.text, fontSize: Typography.xs, lineHeight: 18 },
-  heading1: { color: Colors.text, fontSize: Typography.lg, fontWeight: '700', marginTop: 8, marginBottom: 4 },
-  heading2: { color: Colors.text, fontSize: Typography.md, fontWeight: '700', marginTop: 6, marginBottom: 2 },
-  heading3: { color: Colors.textDim, fontSize: Typography.sm, fontWeight: '600', marginTop: 4, marginBottom: 2 },
+  heading1: {
+    color: Colors.text,
+    fontSize: Typography.lg,
+    fontWeight: '700',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  heading2: {
+    color: Colors.text,
+    fontSize: Typography.md,
+    fontWeight: '700',
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  heading3: {
+    color: Colors.textDim,
+    fontSize: Typography.sm,
+    fontWeight: '600',
+    marginTop: 4,
+    marginBottom: 2,
+  },
   bullet_list_icon: { color: Colors.textMuted, marginRight: 6 },
   ordered_list_icon: { color: Colors.textMuted, marginRight: 6 },
-  code_inline: { backgroundColor: Colors.bg, color: Colors.accent, fontFamily: 'Courier', borderRadius: 3, paddingHorizontal: 3 },
+  code_inline: {
+    backgroundColor: Colors.bg,
+    color: Colors.accent,
+    fontFamily: 'Courier',
+    borderRadius: 3,
+    paddingHorizontal: 3,
+  },
   fence: { backgroundColor: Colors.bg, borderRadius: 4, padding: 8, marginVertical: 4 },
   code_block: { color: Colors.text, fontFamily: 'Courier', fontSize: Typography.xs },
   link: { color: Colors.accent },

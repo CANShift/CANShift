@@ -250,20 +250,23 @@ describe('ReleasesService', () => {
   })
 
   it('hydrates from the persistent cache when available', async () => {
-    mockFs.set(`${FileSystem.documentDirectory ?? ''}releases-cache.json`, JSON.stringify({
-      release: {
-        version: '0.8.2',
-        tag: 'v0.8.2',
-        name: 'cached',
-        notes: '',
-        publishedAt: '2026-05-08T10:00:00Z',
-        prerelease: false,
-        htmlUrl: 'https://example.com',
-        assets: [],
-      },
-      prerelease: null,
-      fetchedAt: nowMs - 1000, // fresh cache
-    }))
+    mockFs.set(
+      `${FileSystem.documentDirectory ?? ''}releases-cache.json`,
+      JSON.stringify({
+        release: {
+          version: '0.8.2',
+          tag: 'v0.8.2',
+          name: 'cached',
+          notes: '',
+          publishedAt: '2026-05-08T10:00:00Z',
+          prerelease: false,
+          htmlUrl: 'https://example.com',
+          assets: [],
+        },
+        prerelease: null,
+        fetchedAt: nowMs - 1000, // fresh cache
+      })
+    )
     // No live fetch should fire — cache is fresh.
     const fetchMock = jest.fn()
     global.fetch = fetchMock
