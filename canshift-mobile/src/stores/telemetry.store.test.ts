@@ -1,24 +1,25 @@
 // telemetry.store.test.ts — Tests for the telemetry ring buffer
 
-import {
-  clearBuffer,
-  getBuffer,
-  getRange,
-  getWriteIndex,
-  pushSample,
-} from './telemetry.store'
+import { clearBuffer, getRange, getWriteIndex, pushSample } from './telemetry.store'
 
 const MAX_SAMPLES = 3000
+
+// Shorthand — every old `getBuffer()` test wanted "give me every retained
+// sample in order", which is `getRange(0, getWriteIndex())` after the
+// migration in #684 / #795.
+function snapshot() {
+  return getRange(0, getWriteIndex())
+}
 
 describe('telemetry.store', () => {
   beforeEach(() => {
     clearBuffer()
   })
 
-  it('pushes a sample and exposes it via getBuffer with a copy of values', () => {
+  it('pushes a sample and stores a defensive copy of the values payload', () => {
     const values = { r: 1500, tps: 10 }
     pushSample(values)
-    const buffer = getBuffer()
+    const buffer = snapshot()
     expect(buffer).toHaveLength(1)
     expect(buffer[0]?.v).toEqual({ r: 1500, tps: 10 })
     // Mutating the source object after push must not affect the stored sample
@@ -30,7 +31,7 @@ describe('telemetry.store', () => {
     for (let i = 0; i < MAX_SAMPLES + 50; i += 1) {
       pushSample({ r: i })
     }
-    const buffer = getBuffer()
+    const buffer = snapshot()
     expect(buffer).toHaveLength(MAX_SAMPLES)
     // First retained sample should be at index 50 (50 oldest evicted)
     expect(buffer[0]?.v.r).toBe(50)
@@ -40,9 +41,9 @@ describe('telemetry.store', () => {
   it('clearBuffer() empties the buffer', () => {
     pushSample({ r: 1 })
     pushSample({ r: 2 })
-    expect(getBuffer()).toHaveLength(2)
+    expect(snapshot()).toHaveLength(2)
     clearBuffer()
-    expect(getBuffer()).toHaveLength(0)
+    expect(snapshot()).toHaveLength(0)
   })
 
   describe('getWriteIndex', () => {

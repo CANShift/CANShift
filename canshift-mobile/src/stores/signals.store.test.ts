@@ -1,6 +1,6 @@
 // signals.store.test.ts — Tests for the live BLE signal values store
 
-import { clearBuffer, getBuffer } from './telemetry.store'
+import { clearBuffer, getRange, getWriteIndex } from './telemetry.store'
 import { useSignalsStore } from './signals.store'
 
 const initialState = useSignalsStore.getState()
@@ -29,7 +29,7 @@ describe('useSignalsStore', () => {
 
   it('update() forwards the sample to the telemetry ring buffer', () => {
     useSignalsStore.getState().update({ r: 2000, tps: 20 })
-    const buffer = getBuffer()
+    const buffer = getRange(0, getWriteIndex())
     expect(buffer).toHaveLength(1)
     expect(buffer[0]?.v).toEqual({ r: 2000, tps: 20 })
   })
@@ -57,7 +57,7 @@ describe('useSignalsStore', () => {
 
   it('update() strips undefined entries before pushing to the ring buffer', () => {
     useSignalsStore.getState().update({ r: 2000, tps: undefined, ect: 90 })
-    const buffer = getBuffer()
+    const buffer = getRange(0, getWriteIndex())
     expect(buffer).toHaveLength(1)
     expect(buffer[0]?.v).toEqual({ r: 2000, ect: 90 })
     // Cached store payload retains the partial shape — only the ring buffer
