@@ -22,6 +22,7 @@ import { mapBleError } from '../services/ble.errors'
 import { describeOtaErrorForUser, mapOtaError, OtaServiceError } from '../services/ota.errors'
 import { getWifiApPassword } from '../services/wifi-ap-password'
 import { useDeviceStore } from '../stores/device.store'
+import { loadOtaReleases, useOtaReleasesStore } from '../stores/ota-releases.store'
 import type { RootStackParamList } from '../navigation'
 import {
   BlePermissionDialog,
@@ -161,8 +162,16 @@ export default function UpdateScreen({ navigation }: Props) {
   // Password lives in SecureStore (#890). Hydrated lazily when the WiFi
   // step is reached so we never hold it in memory before it's actually shown.
   const [wifiApPassword, setWifiApPasswordState] = useState<string | null>(null)
-  const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
-  const [loading, setLoading] = useState(true)
+  // Firmware-release list lives in ota-releases.store (#905). Selector
+  // shape kept narrow so unrelated store fields don't trigger re-renders.
+  const { releases, loading, fetchError, loadCount } = useOtaReleasesStore(
+    useShallow((s) => ({
+      releases: s.releases,
+      loading: s.loading,
+      fetchError: s.error,
+      loadCount: s.loadCount,
+    }))
+  )
   const [step, setStep] = useState<Step>('releases')
   const [progress, setProgress] = useState(0)
   const [selectedRelease, setSelectedRelease] = useState<OtaService.FirmwareRelease | null>(null)
@@ -183,16 +192,15 @@ export default function UpdateScreen({ navigation }: Props) {
     return false
   }, [])
 
+  // Kick off the first load on mount when the store is untouched.
+  // Subsequent mounts (back-nav, re-enter) reuse the cached list.
   useEffect(() => {
-    void OtaService.fetchReleases()
-      .then(setReleases)
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : 'Failed to load releases')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
+    if (loadCount === 0) void loadOtaReleases()
+  }, [loadCount])
+
+  // Displayed error banner: store fetch failure OR a mid-flow OTA failure
+  // (download/verify/push) stored locally — whichever is set takes priority.
+  const displayedError = fetchError ?? error
 
   useEffect(() => {
     if (step !== 'wifi_wait') {
@@ -297,9 +305,9 @@ export default function UpdateScreen({ navigation }: Props) {
       )}
 
       {/* Error banner */}
-      {error != null && (
+      {displayedError !== null && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{displayedError}</Text>
         </View>
       )}
 
