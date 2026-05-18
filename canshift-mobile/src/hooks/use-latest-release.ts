@@ -1,18 +1,15 @@
-// use-latest-release.ts — React hook around `releasesService.getLatest`.
+// use-latest-release.ts — React hook around the releases.store (#571 + #905).
 //
-// Issue #571 (mobile side). Mirrors the studio hook (`useLatestRelease.ts`)
-// API surface so the on-screen card can share the same rendering path. The
-// service does the actual caching; this hook only retains the latest result
-// so the screen can render immediately on remount without flashing a
-// loading state.
+// Pure selector over the Zustand store — the fetch lifecycle lives in
+// `loadReleases` (releases.store.ts), not in this hook. The hook keeps a
+// stable return shape so AboutScreen renders unchanged.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { releasesService } from '../services/releases.service'
+import { useEffect } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import type { LatestReleaseResult } from '@tmbk/canshift-core'
+import { loadReleases, useReleasesStore, type LatestReleaseStatus } from '../stores/releases.store'
 
-export type LatestReleaseState =
-  | { status: 'loading'; previous: LatestReleaseResult | null }
-  | { status: 'ready'; result: LatestReleaseResult }
+export type LatestReleaseState = LatestReleaseStatus
 
 export interface UseLatestReleaseReturn {
   state: LatestReleaseState
@@ -23,59 +20,28 @@ export interface UseLatestReleaseReturn {
 }
 
 export function useLatestRelease(): UseLatestReleaseReturn {
-  const [state, setState] = useState<LatestReleaseState>({
-    status: 'loading',
-    previous: null,
-  })
-  const [isFetching, setIsFetching] = useState(true)
-  // Strict-mode dev double-mount guard — keeps a late resolution from
-  // overwriting a fresher one after unmount.
-  const cancelledRef = useRef(false)
+  const { latest, isFetching, loadCount } = useReleasesStore(
+    useShallow((s) => ({
+      latest: s.latest,
+      isFetching: s.isFetching,
+      loadCount: s.loadCount,
+    }))
+  )
 
-  const fetchOnce = useCallback(async (force: boolean): Promise<void> => {
-    setIsFetching(true)
-    try {
-      const result = await releasesService.getLatest(force)
-      if (cancelledRef.current) return
-      setState({ status: 'ready', result })
-    } catch (err) {
-      if (cancelledRef.current) return
-      // The service is engineered not to throw — but a bug or platform-level
-      // failure could still surface here. Fall through to an offline-style
-      // result so the screen keeps a single rendering path.
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      setState({
-        status: 'ready',
-        result: {
-          ok: false,
-          reason: 'offline',
-          message,
-          fetchedAt: new Date().toISOString(),
-          cached: null,
-        },
-      })
-    } finally {
-      if (!cancelledRef.current) setIsFetching(false)
-    }
+  // Kick off the first load on mount when the store is untouched.
+  // Subsequent mounts reuse whatever state the store has already produced.
+  // Intentionally not depending on `loadCount` — we only check it once on
+  // mount; re-running on increment would refetch on every page navigation.
+  useEffect(() => {
+    if (loadCount === 0) void loadReleases(false)
   }, [])
 
-  useEffect(() => {
-    cancelledRef.current = false
-    void fetchOnce(false)
-    return () => {
-      cancelledRef.current = true
-    }
-  }, [fetchOnce])
+  const refresh = (): void => {
+    void loadReleases(true)
+  }
 
-  const refresh = useCallback((): void => {
-    // Keep the previously known result visible while we refresh so the
-    // screen doesn't collapse back to a skeleton during the round-trip.
-    setState((prev) => {
-      if (prev.status === 'ready') return { status: 'loading', previous: prev.result }
-      return prev
-    })
-    void fetchOnce(true)
-  }, [fetchOnce])
-
-  return { state, isFetching, refresh }
+  return { state: latest, isFetching, refresh }
 }
+
+/** Bare access for callers that don't need the React lifecycle. */
+export type { LatestReleaseResult }
