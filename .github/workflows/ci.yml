@@ -527,12 +527,19 @@ jobs:
 
       - name: Run clang-tidy on src/
         # `-p` points clang-tidy at the directory of the patched compilation
-        # database. `find … -exec … +` batches files into a single clang-tidy
-        # invocation so the analyser amortises its index across the whole TU set.
+        # database. `--extra-arg` flags are APPENDED to each TU's compile args,
+        # so the trailing `--target=x86_64-linux-gnu` wins over any leftover
+        # Xtensa target the sed pass didn't catch. `-Wno-...` lines silence the
+        # unknown-argument errors clang otherwise raises for the GCC-only
+        # flags PlatformIO emits.
         run: |
           FILES=$(find src -name '*.cpp')
           if [ -z "$FILES" ]; then
             echo "No firmware sources found — skipping clang-tidy"
             exit 0
           fi
-          clang-tidy -p "${{ steps.db.outputs.db-dir }}" $FILES
+          clang-tidy -p "${{ steps.db.outputs.db-dir }}" \
+            --extra-arg='--target=x86_64-linux-gnu' \
+            --extra-arg=-Wno-unknown-warning-option \
+            --extra-arg=-Qunused-arguments \
+            $FILES
