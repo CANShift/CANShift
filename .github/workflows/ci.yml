@@ -491,7 +491,7 @@ jobs:
         # substitute the target with x86_64-linux-gnu — enough for the
         # analyser to walk the AST and lint the C++.
         run: |
-          DB=$(find .pio -name compile_commands.json | head -n 1)
+          DB=$(find . -maxdepth 4 -name compile_commands.json | head -n 1)
           if [ -z "$DB" ]; then
             echo "::error::compile_commands.json not produced by PlatformIO"
             exit 1
@@ -516,7 +516,7 @@ jobs:
         # -exec … +` batches files into a single clang-tidy invocation so the
         # analyser amortises its index across the whole TU set.
         run: |
-          DB_DIR=$(dirname "$(find .pio -name compile_commands.json | head -n 1)")
+          DB_DIR=$(dirname "$(find . -maxdepth 4 -name compile_commands.json | head -n 1)")
           FILES=$(find src -name '*.cpp')
           if [ -z "$FILES" ]; then
             echo "No firmware sources found — skipping clang-tidy"
