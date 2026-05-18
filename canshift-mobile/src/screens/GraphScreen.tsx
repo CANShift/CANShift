@@ -14,12 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
-import {
-  TelemetrySample,
-  clearBuffer,
-  getRange,
-  getWriteIndex,
-} from '../stores/telemetry.store'
+import { TelemetrySample, clearBuffer, getRange, getWriteIndex } from '../stores/telemetry.store'
 import { SIGNAL_META } from '../constants/ble'
 import DashTopBar from '../components/DashTopBar'
 import { ingestIncremental } from './graph-buffer'
