@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     alignItems: 'center',
   },
-  primaryLabelLandscape: { fontSize: 9, color: Colors.textMuted, letterSpacing: 0.8 },
+  primaryLabelLandscape: { fontSize: Typography.xxs, color: Colors.textMuted, letterSpacing: 0.8 },
   primaryValueLandscape: { fontSize: Typography.xl, fontWeight: '700', color: Colors.text },
   primaryUnitLandscape: { fontSize: 10, color: Colors.textDim },
   landscapeRight: { flex: 1 },
