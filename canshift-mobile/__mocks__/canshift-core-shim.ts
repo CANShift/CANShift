@@ -12,6 +12,7 @@
 
 export * from '../../canshift-core/src/design-tokens'
 export * from '../../canshift-core/src/sensorDefaults'
+export * from '../../canshift-core/src/schemas/ble-status'
 export type {
   ReleaseAsset,
   ReleaseInfo,

@@ -1,7 +1,9 @@
 // ble.validators.ts — Pure JSON payload validators for BLE characteristics.
-// Defends against malformed or malicious peripherals that could ship payloads
-// breaking chart math, store invariants, or downstream rendering. Pure
-// functions: no external state, fully unit-testable.
+//
+// STATUS validation lives in `@tmbk/canshift-core/schemas/ble-status` since
+// #887 — see `parseBleStatus` (camelCase domain shape + Zod-backed wire
+// schema). This file now only owns the live telemetry validator, whose
+// allowlist depends on the mobile-local `SIGNAL_META` table.
 
 import { SIGNAL_META } from '../constants/ble'
 
@@ -10,21 +12,8 @@ import { SIGNAL_META } from '../constants/ble'
 // SIGNAL_META count, so this is a defensive ceiling.
 const MAX_TELEMETRY_KEYS = 32
 
-// Maximum length for free-form STATUS strings. The firmware caps these at
-// ~32 chars (version tag, AP SSID); reject anything wildly longer.
-const MAX_STATUS_STRING_LEN = 32
-
 // Telemetry payload after validation: only allowlisted keys, all finite numbers.
 export type TelemetrySample = Partial<Record<keyof typeof SIGNAL_META, number>>
-
-// STATUS payload after validation. All fields optional — firmware may omit any.
-export interface StatusPayload {
-  ver?: string
-  can?: number
-  ap_ssid?: string
-  ap_password?: string
-  is_day?: number
-}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -60,40 +49,5 @@ export function parseTelemetry(raw: string): TelemetrySample | null {
     if (typeof value !== 'number' || !Number.isFinite(value)) continue
     result[key] = value
   }
-  return result
-}
-
-/**
- * Parse and validate a STATUS payload.
- *
- * Returns a sanitized object with only the recognized fields, validated by
- * shape. Strings are length-capped; numbers must be finite. Returns null
- * when input is not a JSON object.
- */
-export function parseStatus(raw: string): StatusPayload | null {
-  const parsed = safeJsonParse(raw)
-  if (!isPlainObject(parsed)) return null
-
-  const result: StatusPayload = {}
-
-  if (typeof parsed.ver === 'string' && parsed.ver.length <= MAX_STATUS_STRING_LEN) {
-    result.ver = parsed.ver
-  }
-  if (typeof parsed.can === 'number' && Number.isFinite(parsed.can)) {
-    result.can = parsed.can
-  }
-  if (typeof parsed.ap_ssid === 'string' && parsed.ap_ssid.length <= MAX_STATUS_STRING_LEN) {
-    result.ap_ssid = parsed.ap_ssid
-  }
-  if (
-    typeof parsed.ap_password === 'string' &&
-    parsed.ap_password.length <= MAX_STATUS_STRING_LEN
-  ) {
-    result.ap_password = parsed.ap_password
-  }
-  if (typeof parsed.is_day === 'number' && Number.isFinite(parsed.is_day)) {
-    result.is_day = parsed.is_day
-  }
-
   return result
 }

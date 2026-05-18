@@ -22,7 +22,8 @@ import { useSignalsStore } from '../stores/signals.store'
 import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
 import { useReconnectStore } from '../stores/reconnect.store'
-import { parseTelemetry, parseStatus } from './ble.validators'
+import { parseTelemetry } from './ble.validators'
+import { parseBleStatus } from '@tmbk/canshift-core'
 import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 import { setWifiApPassword, clearWifiApPassword } from './wifi-ap-password'
@@ -594,16 +595,16 @@ export class BleService {
       BLE_CHAR_STATUS,
       (error: Error | null, char: Characteristic | null) => {
         if (error || !char?.value) return
-        const s = parseStatus(decodeBase64(char.value))
+        const s = parseBleStatus(decodeBase64(char.value))
         if (!s) {
           log('warn', 'BLE: rejected malformed status payload')
           return
         }
         const store = useDeviceStore.getState()
-        store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
-        store.setWifiApSsid(s.ap_ssid ?? null)
-        void setWifiApPassword(s.ap_password ?? null)
-        if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
+        store.setFirmwareStatus(s.firmwareVersion ?? '?', s.canHealthy ?? false)
+        store.setWifiApSsid(s.apSsid ?? null)
+        void setWifiApPassword(s.apPassword ?? null)
+        if (s.isDay !== undefined) store.setIsDayMode(s.isDay)
       }
     )
 
@@ -693,17 +694,17 @@ export class BleService {
         device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS)
       )
       if (!statusChar.value) return
-      const status = parseStatus(decodeBase64(statusChar.value))
+      const status = parseBleStatus(decodeBase64(statusChar.value))
       if (!status) {
         log('warn', 'BLE: rejected malformed initial status payload')
         return
       }
-      setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
+      setFirmwareStatus(status.firmwareVersion ?? '?', status.canHealthy ?? false)
       const store = useDeviceStore.getState()
-      store.setWifiApSsid(status.ap_ssid ?? null)
-      void setWifiApPassword(status.ap_password ?? null)
-      if (status.is_day !== undefined) {
-        store.setIsDayMode(status.is_day === 1)
+      store.setWifiApSsid(status.apSsid ?? null)
+      void setWifiApPassword(status.apPassword ?? null)
+      if (status.isDay !== undefined) {
+        store.setIsDayMode(status.isDay)
       }
     } catch (err) {
       // Best-effort — the seed is a UX nicety. If the read fails the next
