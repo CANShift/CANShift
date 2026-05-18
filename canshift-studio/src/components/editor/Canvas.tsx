@@ -13,6 +13,8 @@ import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
+import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
+
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 
 // ---------------------------------------------------------------------------
@@ -706,7 +708,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   // mouse move would invalidate the WidgetPreview React.memo cache via a new
   // palette object literal even though contents are unchanged).
   const effectivePalette: PagePalette = useMemo(
-    () => (activeDayMode ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT) : page.palette),
+    () =>
+      activeDayMode
+        ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT)
+        : (page.palette ?? DEFAULT_PAGE_PALETTE),
     [activeDayMode, dayTheme?.palette, page.palette]
   )
   const effectiveBgColor: string = activeDayMode
