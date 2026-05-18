@@ -55,7 +55,13 @@
           "bluetoothAlwaysPermission": "CANShift uses Bluetooth to connect to the dashboard device for live data and configuration."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CANShift uses your location to record laps and detect start/finish crossings on the circuit."
+        }
+      ]
     ]
   }
 }

@@ -1,6 +1,7 @@
-// ble.validators.test.ts — Pure-logic tests for BLE payload validators
+// ble.validators.test.ts — Pure-logic tests for BLE payload validators.
+// STATUS coverage lives in canshift-core/__tests__/ble-status.test.ts (#887).
 
-import { parseStatus, parseTelemetry } from './ble.validators'
+import { parseTelemetry } from './ble.validators'
 
 describe('parseTelemetry', () => {
   it('returns sanitized record with only allowlisted finite numbers', () => {
@@ -34,50 +35,5 @@ describe('parseTelemetry', () => {
     const raw = JSON.stringify({ foo: 1, bar: 'baz' })
     const result = parseTelemetry(raw)
     expect(result).toEqual({})
-  })
-})
-
-describe('parseStatus', () => {
-  it('returns sanitized record with valid recognized fields', () => {
-    const raw = JSON.stringify({
-      ver: '1.2.3',
-      can: 1,
-      ap_ssid: 'CANShift-AP',
-      ap_password: 'abcDEF12',
-      is_day: 0,
-    })
-    const result = parseStatus(raw)
-    expect(result).toEqual({
-      ver: '1.2.3',
-      can: 1,
-      ap_ssid: 'CANShift-AP',
-      ap_password: 'abcDEF12',
-      is_day: 0,
-    })
-  })
-
-  it('drops fields with wrong types or non-finite numbers', () => {
-    const raw = JSON.stringify({
-      ver: 42,
-      can: 'yes',
-      ap_ssid: 123,
-      ap_password: 42,
-      is_day: NaN,
-    })
-    const result = parseStatus(raw)
-    expect(result).toEqual({})
-  })
-
-  it('drops over-length strings and returns null for non-object input', () => {
-    const tooLong = 'x'.repeat(33)
-    const raw = JSON.stringify({
-      ver: tooLong,
-      ap_ssid: 'CANShift-AP',
-      ap_password: tooLong,
-      can: 1,
-    })
-    expect(parseStatus(raw)).toEqual({ ap_ssid: 'CANShift-AP', can: 1 })
-    expect(parseStatus('not-json')).toBeNull()
-    expect(parseStatus('[1,2]')).toBeNull()
   })
 })
