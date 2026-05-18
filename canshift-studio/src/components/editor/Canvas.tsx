@@ -555,6 +555,18 @@ function DashTopBar({
             {item.text}
           </span>
         )
+      case 'trackBadge':
+        // Studio preview can't read live BLE state — render a muted amber
+        // TRACK label so the layout slot is visible. The firmware lights it
+        // up only when canshift-mobile pushes trackMode=true. Issue #844.
+        return (
+          <span
+            key={key}
+            style={{ fontSize: fs, color: '#FF8800', lineHeight: 1, opacity: 0.4 }}
+          >
+            TRACK
+          </span>
+        )
     }
   }
 
