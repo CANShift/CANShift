@@ -1,10 +1,6 @@
 // ble-status.test.ts — Schema + wire mapper coverage for #887.
 
-import {
-  BleStatusWireSchema,
-  bleStatusFromWire,
-  parseBleStatus,
-} from '../schemas/ble-status.js'
+import { BleStatusWireSchema, bleStatusFromWire, parseBleStatus } from '../schemas/ble-status.js'
 
 describe('BleStatusWireSchema', () => {
   it('accepts an empty object (firmware before any STATUS field landed)', () => {
@@ -23,9 +19,7 @@ describe('BleStatusWireSchema', () => {
   })
 
   it('rejects extra wire fields (strict)', () => {
-    expect(() =>
-      BleStatusWireSchema.parse({ ver: '1.0.0', unexpected: 'x' })
-    ).toThrow()
+    expect(() => BleStatusWireSchema.parse({ ver: '1.0.0', unexpected: 'x' })).toThrow()
   })
 
   it('rejects strings longer than the cap', () => {
