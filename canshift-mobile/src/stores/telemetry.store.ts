@@ -1,5 +1,6 @@
 // telemetry.store.ts — Mutable ring buffer for time-series signal data
-// Not reactive — GraphScreen reads via getBuffer() on its own tick timer.
+// Not reactive — GraphScreen reads via getWriteIndex() + getRange() on its
+// own tick timer (incremental pull, never a full buffer copy).
 //
 // Implementation note: the buffer uses a circular index instead of Array#shift
 // so push is O(1). At ~10 Hz with MAX_SAMPLES = 3000, a naive Array#shift would
@@ -28,22 +29,6 @@ export function pushSample(values: Record<string, number>): void {
   head = (head + 1) % MAX_SAMPLES
   if (size < MAX_SAMPLES) size++
   writeIndex++
-}
-
-/**
- * Returns samples in chronological (oldest → newest) order. The returned
- * array is a fresh snapshot; mutating it does not affect the ring buffer.
- */
-export function getBuffer(): readonly TelemetrySample[] {
-  if (size === 0) return []
-  const out: TelemetrySample[] = new Array<TelemetrySample>(size)
-  // Oldest entry is at (head - size + MAX_SAMPLES) % MAX_SAMPLES.
-  const start = (head - size + MAX_SAMPLES) % MAX_SAMPLES
-  for (let i = 0; i < size; i++) {
-    const sample = buffer[(start + i) % MAX_SAMPLES]
-    if (sample !== undefined) out[i] = sample
-  }
-  return out
 }
 
 /**
