@@ -18,15 +18,21 @@ describe('segmentIntersect', () => {
   })
 
   it('returns null when segments do not cross', () => {
-    expect(segmentIntersect({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 })).toBeNull()
+    expect(
+      segmentIntersect({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 })
+    ).toBeNull()
   })
 
   it('returns null for parallel segments', () => {
-    expect(segmentIntersect({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 })).toBeNull()
+    expect(
+      segmentIntersect({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 })
+    ).toBeNull()
   })
 
   it('returns null for collinear segments', () => {
-    expect(segmentIntersect({ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 5, y: 0 })).toBeNull()
+    expect(
+      segmentIntersect({ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 5, y: 0 })
+    ).toBeNull()
   })
 
   it('reports tAlong = 0.25 when crossing near the start of segment 1', () => {

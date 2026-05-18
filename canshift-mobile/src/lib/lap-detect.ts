@@ -112,10 +112,7 @@ export function createLapCrossingDetector(
       // not a real lap. Drop it. The very first crossing is always allowed
       // (lastCrossingMs === 0 sentinel means "no prior crossing").
       const interpolatedMs = prev.t + (sample.t - prev.t) * crossing.tAlong
-      if (
-        state.lastCrossingMs !== 0 &&
-        interpolatedMs - state.lastCrossingMs < hysteresis
-      ) {
+      if (state.lastCrossingMs !== 0 && interpolatedMs - state.lastCrossingMs < hysteresis) {
         return null
       }
 
