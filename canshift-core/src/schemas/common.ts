@@ -45,6 +45,12 @@ export const WidgetStyleSchema = z
     fontSize: z.number(),
     /** Optional border color — omit or set to null for no border */
     borderColor: HexColorSchema.nullable().optional(),
+    /**
+     * When false, the widget keeps its `textColor` regardless of day/night
+     * mode. Default behaviour (omitted / true) follows the active theme,
+     * matching the v0.7.0 contract (#171). Issue #191.
+     */
+    respectDayMode: z.boolean().optional(),
   })
   .strict()
 
