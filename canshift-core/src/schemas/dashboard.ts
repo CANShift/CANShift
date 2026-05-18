@@ -361,7 +361,11 @@ export const WidgetSchema = z
         })
       }
     } else if (cfg.type === 'bar') {
-      if (cfg.minValue !== undefined && cfg.maxValue !== undefined && cfg.minValue >= cfg.maxValue) {
+      if (
+        cfg.minValue !== undefined &&
+        cfg.maxValue !== undefined &&
+        cfg.minValue >= cfg.maxValue
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'bar: minValue must be less than maxValue',

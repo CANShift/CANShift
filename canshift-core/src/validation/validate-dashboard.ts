@@ -134,10 +134,7 @@ function validatePageIdUniqueness(pages: readonly { id: string }[]): string[] {
   return [...dupes].map((id) => `pages: duplicate page id "${id}"`)
 }
 
-function validateWidgetIdUniqueness(
-  widgets: readonly { id: string }[],
-  pageIdx: number
-): string[] {
+function validateWidgetIdUniqueness(widgets: readonly { id: string }[], pageIdx: number): string[] {
   const seen = new Set<string>()
   const dupes = new Set<string>()
   for (const w of widgets) {

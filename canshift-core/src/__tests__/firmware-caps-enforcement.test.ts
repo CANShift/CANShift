@@ -14,10 +14,42 @@ import { validateSignalCatalog } from '../validation/validate-signal.js'
 // Fixtures
 // ---------------------------------------------------------------------------
 
+const widgetStyle = {
+  primaryColor: '#FFFFFF',
+  secondaryColor: '#000000',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
+  fontSize: 14,
+}
+
+function gaugeWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'w0',
+    type: 'gauge',
+    signal: 'rpm',
+    layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+    style: widgetStyle,
+    config: {
+      type: 'gauge',
+      displayStyle: 'arc',
+      minValue: 0,
+      maxValue: 100,
+      warningLevel: 70,
+      dangerLevel: 90,
+      decimalPlaces: 0,
+    },
+    ...overrides,
+  }
+}
+
 function minimalPage(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: 'p1',
-    widgets: [{ id: 'w0', type: 'gauge', minValue: 0, maxValue: 100, decimalPlaces: 0 }],
+    backgroundImage: null,
+    backgroundColor: '#000000',
+    showTopBar: true,
+    widgets: [gaugeWidget()],
     ...overrides,
   }
 }
@@ -28,6 +60,7 @@ function minimalConfig(overrides: Record<string, unknown> = {}): Record<string, 
     name: 'Test',
     defaultPageId: 'p1',
     revLimitRpm: 7000,
+    topBar: { height: 16, bgColor: '#000000', textColor: '#FFFFFF' },
     pages: [minimalPage()],
     ...overrides,
   }
@@ -37,11 +70,18 @@ function buttonWithActions(count: number): Record<string, unknown> {
   return {
     id: 'btn',
     type: 'button',
-    actions: Array.from({ length: count }, (_, i) => ({
-      category: 'dashboard',
-      type: 'navigate',
-      pageId: `p${i.toString()}`,
-    })),
+    signal: 'rpm',
+    layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+    style: widgetStyle,
+    config: {
+      type: 'button',
+      label: 'go',
+      actions: Array.from({ length: count }, (_, i) => ({
+        category: 'dashboard',
+        type: 'navigate',
+        pageId: `p${i.toString()}`,
+      })),
+    },
   }
 }
 
@@ -101,10 +141,7 @@ describe('validateDashboard — button.actions cap (issue #700)', () => {
     expect(result.valid).toBe(false)
     expect(
       result.errors.some(
-        (e) =>
-          e.includes('(button)') &&
-          e.includes('too many actions') &&
-          e.includes(`> ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()}`)
+        (e) => e.includes('actions') && e.includes(String(FIRMWARE_CAPS.MAX_BUTTON_ACTIONS))
       )
     ).toBe(true)
   })

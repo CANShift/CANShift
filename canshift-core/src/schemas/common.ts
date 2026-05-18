@@ -33,8 +33,16 @@ export const WidgetTypeSchema = z.enum([
  */
 export const WidgetLayoutSchema = z
   .object({
-    x: z.number().int().min(0).max(CANVAS.WIDTH - 1),
-    y: z.number().int().min(0).max(CANVAS.HEIGHT - 1),
+    x: z
+      .number()
+      .int()
+      .min(0)
+      .max(CANVAS.WIDTH - 1),
+    y: z
+      .number()
+      .int()
+      .min(0)
+      .max(CANVAS.HEIGHT - 1),
     w: z.number().int().min(1).max(CANVAS.WIDTH),
     h: z.number().int().min(1).max(CANVAS.HEIGHT),
     zOrder: z.number(),
