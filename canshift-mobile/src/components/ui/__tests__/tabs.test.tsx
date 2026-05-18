@@ -10,7 +10,10 @@ interface HarnessProps {
 
 function Harness({ defaultValue, onValueChange }: HarnessProps): React.ReactElement {
   return (
-    <Tabs defaultValue={defaultValue ?? 'one'} onValueChange={onValueChange}>
+    <Tabs
+      defaultValue={defaultValue ?? 'one'}
+      {...(onValueChange !== undefined && { onValueChange })}
+    >
       <TabsList>
         <TabsTrigger value="one">One</TabsTrigger>
         <TabsTrigger value="two">Two</TabsTrigger>

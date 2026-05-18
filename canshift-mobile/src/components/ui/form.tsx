@@ -77,10 +77,9 @@ function useFormField(): UseFormFieldReturn {
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
     error: fieldState.error
-      ? {
-          message:
-            typeof fieldState.error.message === 'string' ? fieldState.error.message : undefined,
-        }
+      ? typeof fieldState.error.message === 'string'
+        ? { message: fieldState.error.message }
+        : {}
       : undefined,
     invalid: fieldState.invalid,
     isDirty: fieldState.isDirty,
