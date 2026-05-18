@@ -38,10 +38,12 @@ Checks: >
 # Not yet promoted to errors — baseline cleanup PRs land first (#829 plan).
 WarningsAsErrors: ''
 
-# Restrict header analysis to first-party code. Without this, every LVGL /
-# LovyanGFX / NimBLE header that gets included drags its own warnings into
-# the report.
-HeaderFilterRegex: 'src/.*|include/.*'
+# Restrict header analysis to first-party code. clang-tidy uses regex_search
+# so the pattern must anchor at start (`^`) — without it `src/.*` matches the
+# `src/` inside any third-party lib path like `.pio/libdeps/LovyanGFX/src/`.
+# The `^(src|include)/` form covers both `src/foo.h` and `include/foo.h`
+# emitted as relative paths when clang-tidy runs from `canshift-firmware/`.
+HeaderFilterRegex: '^(src|include)/'
 
 # Honour `.clang-format` for any auto-fix suggestions clang-tidy emits.
 FormatStyle: file
