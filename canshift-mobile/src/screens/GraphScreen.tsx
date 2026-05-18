@@ -14,30 +14,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
+import { getSignalColor } from '../theme/signal-colors'
 import { TelemetrySample, clearBuffer, getRange, getWriteIndex } from '../stores/telemetry.store'
 import { SIGNAL_META } from '../constants/ble'
 import DashTopBar from '../components/DashTopBar'
 import { ingestIncremental } from './graph-buffer'
 
 // ---------------------------------------------------------------------------
-// Signal config
+// Signal config — colors live in theme/signal-colors.ts and derive from
+// canshift-core's SENSOR_DEFAULT_RAMPS (#907).
 // ---------------------------------------------------------------------------
-
-const SIGNAL_COLOR: Record<string, string> = {
-  r: '#FF8C00',
-  lam: '#55CC55',
-  tps: '#FFD700',
-  map: '#44AAFF',
-  bst: '#44CCFF',
-  s: '#CCCCCC',
-  ct: '#FF4444',
-  ot: '#FF6633',
-  op: '#BB88FF',
-  iat: '#88BBFF',
-  fp: '#FF88BB',
-  g: '#888888',
-  bat: '#AAFFAA',
-}
 
 const SIGNAL_RANGE: Record<string, { min: number; max: number }> = {
   r: { min: 0, max: 8000 },
@@ -171,7 +157,7 @@ function ChartPanel({
     const latest: Record<string, number> = rolling[rolling.length - 1]?.v ?? {}
     const lines = visibleSignals.map((key) => ({
       key,
-      color: SIGNAL_COLOR[key] ?? '#888',
+      color: getSignalColor(key),
       points: buildPoints(rolling, key, windowStart, now, chartSize.width, chartSize.height),
       latestValue: latest[key],
     }))
@@ -207,7 +193,7 @@ function ChartPanel({
       >
         {ALL_SIGNALS.map((key) => {
           const active = visibleSignals.includes(key)
-          const color = SIGNAL_COLOR[key] ?? '#888'
+          const color = getSignalColor(key)
           return (
             <TouchableOpacity
               key={key}
@@ -470,7 +456,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  timeLabel: { fontSize: 9, color: Colors.textMuted, fontVariant: ['tabular-nums'] },
+  timeLabel: { fontSize: Typography.xxs, color: Colors.textMuted, fontVariant: ['tabular-nums'] },
 
   valuesGrid: {
     flexDirection: 'row',
