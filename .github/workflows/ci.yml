@@ -483,21 +483,33 @@ jobs:
         # headers and silently bails.
         run: platformio run -e crowpanel_28 -t compiledb
 
-      - name: Sanitise compile_commands.json for stock clang-tidy
-        # Stock Ubuntu clang-tidy is built against system clang, which doesn't
-        # know the Xtensa target the ESP32 toolchain compiles for. Without
-        # this fix every file errors out at parse time before clang-tidy can
-        # run a single check. We strip the Xtensa- / GCC-only flags and
-        # substitute the target with x86_64-linux-gnu — enough for the
-        # analyser to walk the AST and lint the C++.
+      - name: Locate + sanitise compile_commands.json
+        id: db
+        # PlatformIO emits `compile_commands.json` to the project root or to
+        # `.pio/build/<env>/`, depending on version. Search both, then patch
+        # the file in place so stock Ubuntu clang-tidy (system clang, no
+        # Xtensa target) can parse the TUs. Without this every file errors
+        # out at the target-triple check before clang-tidy runs a single rule.
         run: |
-          DB=$(find . -maxdepth 4 -name compile_commands.json | head -n 1)
+          echo "PlatformIO version: $(platformio --version)"
+          echo "Filesystem state under firmware project:"
+          ls -la
+          ls -la .pio/build/crowpanel_28/ 2>/dev/null || echo "(no .pio/build/crowpanel_28 dir)"
+          DB=""
+          for candidate in compile_commands.json .pio/build/crowpanel_28/compile_commands.json; do
+            if [ -f "$candidate" ]; then
+              DB="$candidate"
+              break
+            fi
+          done
+          if [ -z "$DB" ]; then
+            DB=$(find . -name compile_commands.json -type f 2>/dev/null | head -n 1)
+          fi
           if [ -z "$DB" ]; then
             echo "::error::compile_commands.json not produced by PlatformIO"
             exit 1
           fi
           echo "Patching $DB for clang-tidy"
-          # Drop the Xtensa / GCC-only flags clang doesn't recognise.
           sed -i \
             -e 's/-mlongcalls//g' \
             -e 's/-mfix-esp32-psram-cache-issue//g' \
@@ -510,16 +522,17 @@ jobs:
             -e 's|--target=xtensa-esp32-elf|--target=x86_64-linux-gnu|g' \
             -e 's|xtensa-esp32-unknown-elf|x86_64-linux-gnu|g' \
             "$DB"
+          DB_DIR=$(dirname "$DB")
+          echo "db-dir=$DB_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Run clang-tidy on src/
-        # `-p` points clang-tidy at the patched compilation database. `find …
-        # -exec … +` batches files into a single clang-tidy invocation so the
-        # analyser amortises its index across the whole TU set.
+        # `-p` points clang-tidy at the directory of the patched compilation
+        # database. `find … -exec … +` batches files into a single clang-tidy
+        # invocation so the analyser amortises its index across the whole TU set.
         run: |
-          DB_DIR=$(dirname "$(find . -maxdepth 4 -name compile_commands.json | head -n 1)")
           FILES=$(find src -name '*.cpp')
           if [ -z "$FILES" ]; then
             echo "No firmware sources found — skipping clang-tidy"
             exit 0
           fi
-          clang-tidy -p "$DB_DIR" $FILES
+          clang-tidy -p "${{ steps.db.outputs.db-dir }}" $FILES
