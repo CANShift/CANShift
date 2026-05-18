@@ -1,4 +1,8 @@
-// device.store.ts — BLE connection state
+// device.store.ts — BLE connection state.
+//
+// The WiFi-AP password is intentionally not in this store. It is a device
+// secret (boots OTA over HTTP) and lives in expo-secure-store via
+// services/wifi-ap-password.ts (#890).
 
 import { create } from 'zustand'
 import type { BleConnectionError } from '../services/ble.errors'
@@ -16,7 +20,6 @@ interface DeviceState {
   firmwareVersion: string | null
   canHealthy: boolean
   wifiApSsid: string | null
-  wifiApPassword: string | null
   isDayMode: boolean | null
   error: BleConnectionError | null
 
@@ -24,7 +27,7 @@ interface DeviceState {
   setMode: (m: DeviceMode) => void
   setDevice: (id: string, name: string) => void
   setFirmwareStatus: (version: string, canHealthy: boolean) => void
-  setWifiAp: (ssid: string | null, password: string | null) => void
+  setWifiApSsid: (ssid: string | null) => void
   setIsDayMode: (v: boolean) => void
   setError: (err: BleConnectionError | null) => void
   disconnect: () => void
@@ -38,7 +41,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   firmwareVersion: null,
   canHealthy: false,
   wifiApSsid: null,
-  wifiApPassword: null,
   isDayMode: null,
   error: null,
 
@@ -58,8 +60,8 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
     set({ firmwareVersion, canHealthy })
   },
 
-  setWifiAp: (wifiApSsid, wifiApPassword) => {
-    set({ wifiApSsid, wifiApPassword })
+  setWifiApSsid: (wifiApSsid) => {
+    set({ wifiApSsid })
   },
 
   setIsDayMode: (isDayMode) => {
@@ -79,7 +81,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       firmwareVersion: null,
       canHealthy: false,
       wifiApSsid: null,
-      wifiApPassword: null,
       isDayMode: null,
       error: null,
     })
