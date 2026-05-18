@@ -436,3 +436,123 @@ jobs:
 
       - name: Run native unit tests
         run: platformio test -e native
+
+  # ─── Firmware — clang-tidy (informational, ramping to blocking, #829) ───────
+  # clang-tidy runs on a compilation database emitted by PlatformIO. Until the
+  # baseline is clean (planned fix-up PRs) the job is non-blocking — it surfaces
+  # findings via the workflow log + GitHub annotations but does not gate merges.
+  # When the baseline reaches zero warnings, drop `continue-on-error: true` and
+  # add `WarningsAsErrors: '*'` to `.clang-tidy` to make this a required check.
+  firmware-clang-tidy:
+    name: firmware — clang-tidy (non-blocking)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.firmware == 'true'
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO + clang-tidy
+        run: |
+          pip install platformio
+          sudo apt-get install -y clang-tidy
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+          key: pio-clang-tidy-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: |
+            pio-clang-tidy-${{ runner.os }}-
+
+      - name: Emit compile_commands.json
+        # PlatformIO's `compiledb` target writes a clang-compatible compilation
+        # database covering every first-party translation unit for the target
+        # env. clang-tidy uses it to know exactly which flags each file was
+        # compiled with — without it the analyser can't resolve LVGL / Arduino
+        # headers and silently bails.
+        run: platformio run -e crowpanel_28 -t compiledb
+
+      - name: Locate + sanitise compile_commands.json
+        id: db
+        # PlatformIO emits `compile_commands.json` to the project root or to
+        # `.pio/build/<env>/`, depending on version. Search both, then patch
+        # the file in place so stock Ubuntu clang-tidy (system clang, no
+        # Xtensa target) can parse the TUs. Without this every file errors
+        # out at the target-triple check before clang-tidy runs a single rule.
+        run: |
+          echo "PlatformIO version: $(platformio --version)"
+          echo "Filesystem state under firmware project:"
+          ls -la
+          ls -la .pio/build/crowpanel_28/ 2>/dev/null || echo "(no .pio/build/crowpanel_28 dir)"
+          DB=""
+          for candidate in compile_commands.json .pio/build/crowpanel_28/compile_commands.json; do
+            if [ -f "$candidate" ]; then
+              DB="$candidate"
+              break
+            fi
+          done
+          if [ -z "$DB" ]; then
+            DB=$(find . -name compile_commands.json -type f 2>/dev/null | head -n 1)
+          fi
+          if [ -z "$DB" ]; then
+            echo "::error::compile_commands.json not produced by PlatformIO"
+            exit 1
+          fi
+          echo "Patching $DB for clang-tidy"
+          sed -i \
+            -e 's/-mlongcalls//g' \
+            -e 's/-mfix-esp32-psram-cache-issue//g' \
+            -e 's/-mfix-esp32-psram-cache-strategy=[a-z]*//g' \
+            -e 's/-fno-tree-switch-conversion//g' \
+            -e 's/-fstrict-volatile-bitfields//g' \
+            -e 's/-freorder-blocks//g' \
+            -e 's/-fno-shrink-wrap//g' \
+            -e 's/-fno-ipa-cp//g' \
+            -e 's|--target=xtensa-esp32-elf|--target=x86_64-linux-gnu|g' \
+            -e 's|xtensa-esp32-unknown-elf|x86_64-linux-gnu|g' \
+            "$DB"
+          DB_DIR=$(dirname "$DB")
+          echo "db-dir=$DB_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Run clang-tidy on src/ (informational)
+        # ESP32 toolchain compatibility footnote:
+        #   Stock Ubuntu clang-tidy cannot target Xtensa, so the compile DB is
+        #   patched to substitute `--target=x86_64-linux-gnu`. That gets clang
+        #   past the unknown-target gate but the host sysroot is missing
+        #   ESP32-newlib bits like `machine/endian.h`. Files that transitively
+        #   include Arduino / FreeRTOS / lwip headers will still raise a
+        #   `clang-diagnostic-error` on those missing includes.
+        #
+        #   Until ESP-IDF's Xtensa-aware clang is wired into CI (separate
+        #   issue) the runnable signal is whatever rules clang-tidy can emit
+        #   for the TUs that DO parse cleanly — pure-logic modules that don't
+        #   touch the toolchain sysroot. The step prints the full output and
+        #   always exits 0 so the rest of the firmware checks see this job as
+        #   passing; promote to a hard gate once the toolchain hurdle is gone.
+        run: |
+          FILES=$(find src -name '*.cpp')
+          if [ -z "$FILES" ]; then
+            echo "No firmware sources found — skipping clang-tidy"
+            exit 0
+          fi
+          set +e
+          clang-tidy -p "${{ steps.db.outputs.db-dir }}" \
+            --extra-arg='--target=x86_64-linux-gnu' \
+            --extra-arg=-Wno-unknown-warning-option \
+            --extra-arg=-Qunused-arguments \
+            $FILES
+          STATUS=$?
+          set -e
+          echo "clang-tidy exited with status $STATUS (non-blocking — see footnote)"
+          exit 0
