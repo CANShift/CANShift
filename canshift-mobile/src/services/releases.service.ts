@@ -19,7 +19,7 @@
 // `message` field; secrets and stack traces are never embedded.
 
 import * as FileSystem from 'expo-file-system'
-import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from './releases.types'
+import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 
 const GITHUB_OWNER = 'tburkhalterr'
 const GITHUB_REPO = 'CANShift'

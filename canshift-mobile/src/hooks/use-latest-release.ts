@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { releasesService } from '../services/releases.service'
-import type { LatestReleaseResult } from '../services/releases.types'
+import type { LatestReleaseResult } from '@tmbk/canshift-core'
 
 export type LatestReleaseState =
   | { status: 'loading'; previous: LatestReleaseResult | null }

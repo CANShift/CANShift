@@ -5,7 +5,7 @@ import { render } from '@testing-library/react-native'
 import Markdown from 'react-native-markdown-display'
 import { classify, formatBytes, formatDate } from './AboutScreen'
 
-const STABLE: import('../services/releases.types').ReleaseInfo = {
+const STABLE: import('@tmbk/canshift-core').ReleaseInfo = {
   version: '1.2.0',
   tag: 'v1.2.0',
   name: null,
