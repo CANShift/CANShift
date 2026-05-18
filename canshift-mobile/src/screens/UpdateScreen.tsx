@@ -20,6 +20,7 @@ import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
 import { describeOtaErrorForUser, mapOtaError, OtaServiceError } from '../services/ota.errors'
+import { getWifiApPassword } from '../services/wifi-ap-password'
 import { useDeviceStore } from '../stores/device.store'
 import type { RootStackParamList } from '../navigation'
 import {
@@ -151,13 +152,15 @@ function ReleaseRow({
 // ---------------------------------------------------------------------------
 
 export default function UpdateScreen({ navigation }: Props) {
-  const { firmwareVersion, wifiApSsid, wifiApPassword } = useDeviceStore(
+  const { firmwareVersion, wifiApSsid } = useDeviceStore(
     useShallow((s) => ({
       firmwareVersion: s.firmwareVersion,
       wifiApSsid: s.wifiApSsid,
-      wifiApPassword: s.wifiApPassword,
     }))
   )
+  // Password lives in SecureStore (#890). Hydrated lazily when the WiFi
+  // step is reached so we never hold it in memory before it's actually shown.
+  const [wifiApPassword, setWifiApPasswordState] = useState<string | null>(null)
   const [releases, setReleases] = useState<OtaService.FirmwareRelease[]>([])
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('releases')
@@ -190,6 +193,20 @@ export default function UpdateScreen({ navigation }: Props) {
         setLoading(false)
       })
   }, [])
+
+  useEffect(() => {
+    if (step !== 'wifi_wait') {
+      setWifiApPasswordState(null)
+      return
+    }
+    let cancelled = false
+    void getWifiApPassword().then((pwd) => {
+      if (!cancelled) setWifiApPasswordState(pwd)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [step])
 
   const stepIndex: Record<Step, number> = {
     releases: 0,

@@ -25,6 +25,7 @@ import { useReconnectStore } from '../stores/reconnect.store'
 import { parseTelemetry, parseStatus } from './ble.validators'
 import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
+import { setWifiApPassword, clearWifiApPassword } from './wifi-ap-password'
 import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
 import { mapBleError, describeBleError } from './ble.errors'
 
@@ -322,6 +323,7 @@ export class BleService {
     clearBuffer()
     useDeviceStore.getState().disconnect()
     await forgetDevice()
+    await clearWifiApPassword()
   }
 
   // -------------------------------------------------------------------------
@@ -599,7 +601,8 @@ export class BleService {
         }
         const store = useDeviceStore.getState()
         store.setFirmwareStatus(s.ver ?? '?', (s.can ?? 0) === 1)
-        store.setWifiAp(s.ap_ssid ?? null, s.ap_password ?? null)
+        store.setWifiApSsid(s.ap_ssid ?? null)
+        void setWifiApPassword(s.ap_password ?? null)
         if (s.is_day !== undefined) store.setIsDayMode(s.is_day === 1)
       }
     )
@@ -697,7 +700,8 @@ export class BleService {
       }
       setFirmwareStatus(status.ver ?? '?', (status.can ?? 0) === 1)
       const store = useDeviceStore.getState()
-      store.setWifiAp(status.ap_ssid ?? null, status.ap_password ?? null)
+      store.setWifiApSsid(status.ap_ssid ?? null)
+      void setWifiApPassword(status.ap_password ?? null)
       if (status.is_day !== undefined) {
         store.setIsDayMode(status.is_day === 1)
       }
