@@ -5,7 +5,7 @@
 
 import { z } from 'zod'
 
-import { HEX_COLOR_REGEX } from '../constants/firmware-caps.js'
+import { CANVAS, HEX_COLOR_REGEX } from '../constants/firmware-caps.js'
 
 /** Hex color string — e.g. "#FF4444" (6-digit, with leading `#`). */
 export const HexColorSchema = z
@@ -23,16 +23,39 @@ export const WidgetTypeSchema = z.enum([
   'image',
 ])
 
-/** Widget position and size in pixels on a 320×240 canvas. */
+/**
+ * Widget position and size in pixels on the 320×240 canvas.
+ *
+ * Bounds enforced so the firmware can render the widget without clipping or
+ * memory corruption — see CANVAS in firmware-caps.ts. Cross-field refines
+ * block `x+w > CANVAS.WIDTH` and `y+h > CANVAS.HEIGHT` which would silently
+ * push the widget partially off-screen on device.
+ */
 export const WidgetLayoutSchema = z
   .object({
-    x: z.number(),
-    y: z.number(),
-    w: z.number(),
-    h: z.number(),
+    x: z
+      .number()
+      .int()
+      .min(0)
+      .max(CANVAS.WIDTH - 1),
+    y: z
+      .number()
+      .int()
+      .min(0)
+      .max(CANVAS.HEIGHT - 1),
+    w: z.number().int().min(1).max(CANVAS.WIDTH),
+    h: z.number().int().min(1).max(CANVAS.HEIGHT),
     zOrder: z.number(),
   })
   .strict()
+  .refine((l) => l.x + l.w <= CANVAS.WIDTH, {
+    message: `layout: x+w must be <= ${String(CANVAS.WIDTH)}`,
+    path: ['w'],
+  })
+  .refine((l) => l.y + l.h <= CANVAS.HEIGHT, {
+    message: `layout: y+h must be <= ${String(CANVAS.HEIGHT)}`,
+    path: ['h'],
+  })
 
 /** Widget visual style. */
 export const WidgetStyleSchema = z

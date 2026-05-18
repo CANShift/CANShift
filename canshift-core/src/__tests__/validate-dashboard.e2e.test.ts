@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import type { SignalConfig } from '../types/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -20,13 +21,10 @@ function loadJson(relativePath: string): unknown {
 
 describe('validateDashboard — firmware demo regression', () => {
   it('accepts canshift-firmware/data/config/dashboard.json with the canonical signals catalog', () => {
-    const dashboard = loadJson('dashboard.json') as Record<string, unknown>
-    const signals = loadJson('signals.json') as Record<string, unknown>
+    const dashboard = loadJson('dashboard.json')
+    const signalCatalog = loadJson('signals.json') as SignalConfig
 
-    // Splice the firmware signals catalog into the dashboard for cross-reference checks.
-    const merged = { ...dashboard, signals: signals.signals }
-
-    const result = validateDashboard(merged)
+    const result = validateDashboard(dashboard, { signalCatalog })
 
     expect(result.errors).toEqual([])
     expect(result.valid).toBe(true)
