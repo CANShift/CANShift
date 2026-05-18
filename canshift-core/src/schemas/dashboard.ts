@@ -421,6 +421,9 @@ export const TopBarItemSchema = z.discriminatedUnion('type', [
       position: TopBarItemPositionSchema,
     })
     .strict(),
+  // Track-mode indicator — lit when canshift-mobile pushes `trackMode: true`
+  // through the BLE CMD `track_state` envelope. Issue #844.
+  z.object({ type: z.literal('trackBadge'), position: TopBarItemPositionSchema }).strict(),
 ])
 
 export const TopBarConfigSchema = z
