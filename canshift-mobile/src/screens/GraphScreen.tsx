@@ -1,6 +1,7 @@
 // GraphScreen.tsx — Real-time telemetry graph (MTune-style)
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useGraphTick } from '../hooks/use-graph-tick'
 import {
   View,
   Text,
@@ -137,24 +138,14 @@ function ChartPanel({
   onToggleSignal,
   compact,
 }: ChartPanelProps) {
-  const [tick, setTick] = useState(0)
   const [chartSize, setChartSize] = useState({ width: 300, height: 160 })
+  const tick = useGraphTick(paused)
 
   // Stable rolling buffer — append new samples each tick, drop ones outside the
   // current time window. Avoids re-copying the full 3000-entry ring buffer at
   // 10 Hz (closes #684).
   const rollingRef = useRef<TelemetrySample[]>([])
   const lastSeenIndexRef = useRef<number>(0)
-
-  useEffect(() => {
-    if (paused) return
-    const id = setInterval(() => {
-      setTick((n) => n + 1)
-    }, 100)
-    return () => {
-      clearInterval(id)
-    }
-  }, [paused])
 
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout
