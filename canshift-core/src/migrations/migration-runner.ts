@@ -75,6 +75,15 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.15.0 → 1.16.0: GaugeWidgetConfig and BarWidgetConfig gain an optional
+    // `iconName` field (issue #954). When set to a known SensorIconName,
+    // gauges fill opaquely in the per-sensor palette colour. Existing configs
+    // leave the field undefined and keep the legacy `style.primaryColor` path.
+    fromVersion: '1.15.0',
+    toVersion: '1.16.0',
+    migrate: (config) => ({ ...config, version: '1.16.0' }),
+  },
+  {
     // 1.14.0 → 1.15.0: WidgetStyle gains an optional `respectDayMode` field
     // (issue #191). No data transformation — existing widgets leave the field
     // undefined; firmware treats undefined as `true` to preserve the v0.7.0

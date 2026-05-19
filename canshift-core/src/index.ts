@@ -98,6 +98,10 @@ export {
 } from './sensorDefaults'
 export type { SensorKind } from './sensorDefaults'
 
+// Sensor semantic two-zone palette (issue #954)
+export { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from './sensor-palette'
+export type { SensorPaletteEntry } from './sensor-palette'
+
 // IPC return-shape contracts (renderer ↔ main)
 export type { PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult } from './types/ipc'
 
@@ -182,7 +186,7 @@ export { DARK_TOKENS, tokensToCssVars } from './design-tokens'
 // ---------------------------------------------------------------------------
 
 /** Current schema version — configs written by this version will have this. */
-export const CURRENT_SCHEMA_VERSION = '1.15.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.16.0' as const
 
 /** Display name of this product */
 export const PRODUCT_NAME = 'CANShift' as const

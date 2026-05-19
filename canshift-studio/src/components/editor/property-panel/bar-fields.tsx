@@ -1,6 +1,6 @@
 // property-panel/bar-fields.tsx — Editor for `bar` widgets.
 
-import { ALL_UNITS, ConfigFieldsProps, Field, Row, inputStyle } from './shared'
+import { ALL_UNITS, ConfigFieldsProps, Field, IconPicker, Row, inputStyle } from './shared'
 
 export function BarFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'bar' ? widget.config : null
@@ -58,6 +58,16 @@ export function BarFields({ widget, onChange }: ConfigFieldsProps) {
             />
           </Field>
         </Row>
+      </Field>
+      <Field label="Sensor">
+        <IconPicker
+          value={cfg.iconName}
+          onChange={(name) => {
+            onChange({
+              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
+            })
+          }}
+        />
       </Field>
       <Field label="Label">
         <input

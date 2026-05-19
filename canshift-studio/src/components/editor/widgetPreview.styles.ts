@@ -4,7 +4,12 @@
 // the studio a single place to tweak the cross-widget look.
 
 import type { CSSProperties } from 'react'
-import type { WidgetLabelPosition } from '@tmbk/canshift-core'
+import {
+  sensorOkColor,
+  sensorWarningColor,
+  type SensorIconName,
+  type WidgetLabelPosition,
+} from '@tmbk/canshift-core'
 
 // ---------------------------------------------------------------------------
 // Font + animation tokens
@@ -47,6 +52,37 @@ export function zoneColorFor(valuePct: number, warnPct: number, dangerPct: numbe
   if (valuePct >= dangerPct) return ZONE_DANGER
   if (valuePct >= warnPct) return ZONE_WARNING
   return ZONE_NORMAL
+}
+
+// ---------------------------------------------------------------------------
+// Semantic per-sensor palette (issue #954)
+//
+// When a gauge or bar widget pins itself to a known `SensorIconName`, the
+// preview fills opaquely in the per-sensor OK colour below `warningLevel`
+// and the warning colour above. Sensors with no semantic upper warning
+// (throttle, speed) keep the OK colour across the whole range. Unknown
+// sensors fall through to the legacy zone palette so widgets without an
+// `iconName` keep their existing look.
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the fill colour for a gauge/bar value, given the bound sensor's
+ * `iconName`. Returns `undefined` when no sensor is set so the caller can
+ * keep its existing fallback path (widget.style.primaryColor / legacy zone
+ * tinting).
+ */
+export function paletteFillColor(
+  iconName: SensorIconName | undefined,
+  valuePct: number,
+  warnPct: number,
+  dangerPct: number
+): string | undefined {
+  const ok = sensorOkColor(iconName)
+  if (!ok) return undefined
+  const warning = sensorWarningColor(iconName)
+  if (warning === undefined) return ok
+  if (valuePct >= warnPct || valuePct >= dangerPct) return warning
+  return ok
 }
 
 // ---------------------------------------------------------------------------
