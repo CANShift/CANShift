@@ -328,6 +328,16 @@ export function useFirmwareFlash() {
           // Patch flash-command timeouts on every loader instance — the
           // stub's hard-coded 3 s ceiling is a per-instance issue.
           const lI = l as unknown as EsploaderInternals
+          // Runtime invariant — the cast above succeeds silently at compile
+          // time, so a future esptool-js rename/removal of `checkCommand`
+          // would not surface until writeFlash blew up mid-flash. Fail loud
+          // here instead so the next version bump shows up as an obvious
+          // error during setup.
+          if (typeof lI.checkCommand !== 'function') {
+            throw new Error(
+              'esptool-js internal API changed — ESPLoader.checkCommand is no longer a function. The stub-timeout workaround needs to be revisited for the current esptool-js version.'
+            )
+          }
           const cmds = new Set([
             lI.ESP_FLASH_BEGIN,
             lI.ESP_FLASH_DATA,
