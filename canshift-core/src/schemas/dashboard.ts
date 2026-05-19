@@ -80,7 +80,10 @@ export const GaugeWidgetConfigSchema = z
     displayStyle: GaugeDisplayStyleSchema,
     minValue: z.number(),
     maxValue: z.number(),
-    warningLevel: z.number(),
+    // Single threshold (issue #965) — value >= dangerLevel turns the gauge
+    // red (or the sensor palette's warning colour). Replaces the legacy
+    // warningLevel + dangerLevel pair, dropped because the two-zone palette
+    // (#954) only needs one cut-off.
     dangerLevel: z.number(),
     decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
     prefix: z.string().optional(),
@@ -95,7 +98,7 @@ export const GaugeWidgetConfigSchema = z
     labelPosition: WidgetLabelPositionSchema.optional(),
     // Sensor identifier — drives the semantic two-zone palette (issue #954).
     // When set to a known name, gauge fills opaquely in the per-sensor OK
-    // colour below `warningLevel` and the warning colour above. Unset or
+    // colour below `dangerLevel` and the warning colour above. Unset or
     // unknown keeps the legacy `style.primaryColor` path.
     iconName: SensorIconNameSchema.optional(),
   })
@@ -290,7 +293,7 @@ export const BarWidgetConfigSchema = z
     labelPosition: z.enum(['top-center', 'bottom-center']).optional(),
     minValue: z.number().optional(),
     maxValue: z.number().optional(),
-    warningLevel: z.number().optional(),
+    // Single threshold (issue #965) — see GaugeWidgetConfigSchema.
     dangerLevel: z.number().optional(),
     alertThreshold: z.number().optional(),
     // Sensor identifier — drives the semantic two-zone palette (issue #954).
@@ -354,13 +357,6 @@ export const WidgetSchema = z
           path: ['config', 'maxValue'],
         })
       }
-      if (cfg.warningLevel < cfg.minValue || cfg.warningLevel > cfg.maxValue) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'gauge: warningLevel must be in [minValue, maxValue]',
-          path: ['config', 'warningLevel'],
-        })
-      }
       if (cfg.dangerLevel < cfg.minValue || cfg.dangerLevel > cfg.maxValue) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -378,18 +374,6 @@ export const WidgetSchema = z
           code: z.ZodIssueCode.custom,
           message: 'bar: minValue must be less than maxValue',
           path: ['config', 'maxValue'],
-        })
-      }
-      if (
-        cfg.warningLevel !== undefined &&
-        cfg.minValue !== undefined &&
-        cfg.maxValue !== undefined &&
-        (cfg.warningLevel < cfg.minValue || cfg.warningLevel > cfg.maxValue)
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'bar: warningLevel must be in [minValue, maxValue]',
-          path: ['config', 'warningLevel'],
         })
       }
       if (
