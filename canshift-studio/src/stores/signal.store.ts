@@ -65,8 +65,16 @@ interface SignalState {
 
 const stored = readStored()
 
+// Pick FALLBACK_SIGNALS even when localStorage holds an empty array. Earlier
+// studio sessions persisted `signals: []` from the `generic-blank` default
+// profile; `??` would happily keep that empty array and the preview ran with
+// no units (the user complaint). Fall through to FALLBACK whenever the stored
+// catalog is missing OR empty so widgets always have a unit table to look up.
+const initialSignals: SignalDef[] =
+  stored && stored.signals.length > 0 ? stored.signals : FALLBACK_SIGNALS
+
 export const useSignalStore = create<SignalState>()((set) => ({
-  signals: stored?.signals ?? FALLBACK_SIGNALS,
+  signals: initialSignals,
   selectedProfileKey: stored?.selectedProfileKey ?? DEFAULT_PROFILE_KEY,
 
   setSignals: (signals) => {
