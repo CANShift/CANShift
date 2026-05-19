@@ -92,7 +92,6 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
             displayStyle: 'arc' as const,
             minValue: 0,
             maxValue: 8000,
-            warningLevel: 6000,
             dangerLevel: 7000,
             decimalPlaces: 0,
             iconName: item.icon,

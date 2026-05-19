@@ -35,7 +35,6 @@ function gaugeWidget(overrides: Record<string, unknown> = {}): Record<string, un
       displayStyle: 'arc',
       minValue: 0,
       maxValue: 100,
-      warningLevel: 70,
       dangerLevel: 90,
       decimalPlaces: 0,
     },
