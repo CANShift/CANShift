@@ -41,7 +41,6 @@ function gaugeWidget(overrides: Record<string, unknown> = {}): Record<string, un
       displayStyle: 'arc',
       minValue: 0,
       maxValue: 8000,
-      warningLevel: 6500,
       dangerLevel: 7500,
       decimalPlaces: 0,
     },
@@ -250,7 +249,6 @@ describe('validateDashboard — gauge cross-field', () => {
         displayStyle: 'arc',
         minValue: 100,
         maxValue: 50,
-        warningLevel: 60,
         dangerLevel: 80,
         decimalPlaces: 0,
       },
@@ -260,23 +258,6 @@ describe('validateDashboard — gauge cross-field', () => {
     expect(result.errors.some((e) => e.includes('minValue must be less than maxValue'))).toBe(true)
   })
 
-  it('rejects warningLevel outside [min, max]', () => {
-    const w = gaugeWidget({
-      config: {
-        type: 'gauge',
-        displayStyle: 'arc',
-        minValue: 0,
-        maxValue: 100,
-        warningLevel: 200,
-        dangerLevel: 80,
-        decimalPlaces: 0,
-      },
-    })
-    const result = validateDashboard(validConfig({ pages: [validPage({ widgets: [w] })] }))
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('warningLevel'))).toBe(true)
-  })
-
   it('rejects dangerLevel outside [min, max]', () => {
     const w = gaugeWidget({
       config: {
@@ -284,7 +265,6 @@ describe('validateDashboard — gauge cross-field', () => {
         displayStyle: 'arc',
         minValue: 0,
         maxValue: 100,
-        warningLevel: 80,
         dangerLevel: 200,
         decimalPlaces: 0,
       },

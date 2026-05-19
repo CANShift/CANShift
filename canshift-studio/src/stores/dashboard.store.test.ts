@@ -26,7 +26,6 @@ function makeWidget(id: string, overrides: Partial<Widget> = {}): Widget {
       displayStyle: 'numeric',
       minValue: 0,
       maxValue: 8000,
-      warningLevel: 6500,
       dangerLevel: 7000,
       decimalPlaces: 0,
     },

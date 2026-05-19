@@ -75,6 +75,33 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.16.0 → 1.17.0: collapse gauge / bar thresholds to a single field
+    // (issue #965). The two-zone palette (#954) only needs one cut-off, so
+    // `warningLevel` is dropped and `dangerLevel` becomes the sole threshold
+    // above which a gauge turns red. Per-widget `dangerLevel` is preserved
+    // as-is — the legacy `warningLevel` is simply discarded.
+    fromVersion: '1.16.0',
+    toVersion: '1.17.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.17.0' }
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+        const migratedWidgets = widgets.map((widget) => {
+          const cfg = widget.config as Record<string, unknown> | undefined
+          if (!cfg) return widget
+          if (!('warningLevel' in cfg)) return widget
+          const { warningLevel: _drop, ...rest } = cfg
+          void _drop
+          return { ...widget, config: rest }
+        })
+        return { ...page, widgets: migratedWidgets }
+      })
+      return { ...config, version: '1.17.0', pages: migratedPages }
+    },
+  },
+  {
     // 1.15.0 → 1.16.0: GaugeWidgetConfig and BarWidgetConfig gain an optional
     // `iconName` field (issue #954). When set to a known SensorIconName,
     // gauges fill opaquely in the per-sensor palette colour. Existing configs

@@ -251,9 +251,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                   suffix: signalDef.unit,
                   minValue: signalDef.min,
                   maxValue: signalDef.max,
-                  ...(signalDef.warningLevel !== undefined && {
-                    warningLevel: signalDef.warningLevel,
-                  }),
                   ...(signalDef.dangerLevel !== undefined && {
                     dangerLevel: signalDef.dangerLevel,
                   }),
@@ -264,9 +261,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                   suffix: signalDef.unit,
                   minValue: signalDef.min,
                   maxValue: signalDef.max,
-                  ...(signalDef.warningLevel !== undefined && {
-                    warningLevel: signalDef.warningLevel,
-                  }),
                   ...(signalDef.dangerLevel !== undefined && {
                     dangerLevel: signalDef.dangerLevel,
                   }),

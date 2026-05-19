@@ -28,9 +28,9 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
   const style = cfg.displayStyle
-  // Pre-narrowed defaults — TypeScript can't follow signalDef?.X through the
-  // chained ternaries inside the JSX, so we hoist the values once.
-  const defaultWarn = signalDef?.warningLevel
+  // Pre-narrowed default for the "Reset to signal default" affordance —
+  // TypeScript can't follow signalDef?.X through the chained ternaries inside
+  // the JSX, so we hoist the value once.
   const defaultDanger = signalDef?.dangerLevel
   const barOrientation = cfg.barOrientation ?? 'vertical'
   const allowedTokenIds = gaugeTokenIds(style, barOrientation)
@@ -243,7 +243,6 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
                     config: {
                       ...cfg,
                       minValue: newMin,
-                      warningLevel: Math.max(cfg.warningLevel, newMin),
                       dangerLevel: Math.max(cfg.dangerLevel, newMin),
                     },
                   })
@@ -266,16 +265,15 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
                 value={cfg.maxValue}
                 onChange={(e) => {
                   const newMax = Number(e.target.value)
-                  // Scale warn/danger proportionally when max changes
+                  // Scale dangerLevel proportionally when max changes so the
+                  // user's relative cut-off survives the range adjustment.
                   const range = cfg.maxValue - cfg.minValue || 1
-                  const warnPct = (cfg.warningLevel - cfg.minValue) / range
                   const dangerPct = (cfg.dangerLevel - cfg.minValue) / range
                   const newRange = newMax - cfg.minValue || 1
                   onChange({
                     config: {
                       ...cfg,
                       maxValue: newMax,
-                      warningLevel: Math.round(cfg.minValue + warnPct * newRange),
                       dangerLevel: Math.round(cfg.minValue + dangerPct * newRange),
                     },
                   })
@@ -284,31 +282,6 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
             </Field>
           </Row>
           <Row>
-            <Field
-              label="Warn"
-              onReset={
-                defaultWarn !== undefined && cfg.warningLevel !== defaultWarn
-                  ? () => {
-                      onChange({ config: { ...cfg, warningLevel: defaultWarn } })
-                    }
-                  : undefined
-              }
-            >
-              <input
-                type="number"
-                style={numberInputStyle}
-                value={cfg.warningLevel}
-                onChange={(e) => {
-                  const v = Number(e.target.value)
-                  onChange({
-                    config: {
-                      ...cfg,
-                      warningLevel: Math.min(v, cfg.dangerLevel),
-                    },
-                  })
-                }}
-              />
-            </Field>
             <Field
               label="Danger"
               onReset={
@@ -324,13 +297,7 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
                 style={numberInputStyle}
                 value={cfg.dangerLevel}
                 onChange={(e) => {
-                  const v = Number(e.target.value)
-                  onChange({
-                    config: {
-                      ...cfg,
-                      dangerLevel: Math.max(v, cfg.warningLevel),
-                    },
-                  })
+                  onChange({ config: { ...cfg, dangerLevel: Number(e.target.value) } })
                 }}
               />
             </Field>
