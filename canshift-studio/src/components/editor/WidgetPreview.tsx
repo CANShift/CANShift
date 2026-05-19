@@ -8,6 +8,7 @@ import type { ComponentType } from 'react'
 import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 import { displayLabelForSignal } from '../../utils/signalLabels'
+import { useSignalStore } from '../../stores/signal.store'
 import {
   FONT_FAMILY,
   BLINK_ANIM,
@@ -69,8 +70,14 @@ export function interpolateGreenOrangeRed(pct: number): string {
 
 // ---------------------------------------------------------------------------
 // Palette → widget style resolver
-// When a page palette is provided, its semantic colors override the per-widget
-// style defaults. This lets page-level color changes reflect on all widgets.
+// Mirrors the firmware's day/night handling: only the text colour follows the
+// active page palette (so it stays legible against the swapped background).
+// Per-widget primary / warning / critical colours and — crucially — the
+// `iconName` sensor palette are PRESERVED so each gauge keeps its semantic
+// colour. The previous implementation overrode every style slot with the page
+// palette, which collapsed every gauge to the same uniform red on Canvas
+// while the rail thumbnails (no palette prop, no override) kept their proper
+// per-sensor colour — see issue #963.
 // ---------------------------------------------------------------------------
 
 function applyPalette(widget: Widget, palette: PagePalette): Widget {
@@ -78,20 +85,31 @@ function applyPalette(widget: Widget, palette: PagePalette): Widget {
     ...widget,
     style: {
       ...widget.style,
-      primaryColor: palette.primary,
-      warningColor: palette.warning,
-      criticalColor: palette.danger,
-      // Mirror the firmware's `ThemeManager::getEffectiveTextColor()` (#171):
-      // widget text always follows the active page palette text color (white
-      // on dark night bg, black on light day bg). Bespoke per-widget text
-      // colours are intentionally collapsed for legibility — the device
-      // does the same so the preview stays 1:1.
       textColor: palette.text,
     },
   }
 }
 
 const DEMO_PCT = 0.65 // fraction of range used for demo value
+
+// ---------------------------------------------------------------------------
+// Decimal split helper — splits "13.3" into "13" + ".3" so the fractional
+// part can be rendered at a slightly smaller font. Used by numeric / arc
+// readouts where decimals carry less perceptual weight than the integer
+// part (AFR, voltage, lambda, pressures). Returns empty `frac` when no
+// decimal point is present.
+// ---------------------------------------------------------------------------
+
+function splitDecimal(s: string): { int: string; frac: string } {
+  const dot = s.indexOf('.')
+  if (dot < 0) return { int: s, frac: '' }
+  return { int: s.slice(0, dot), frac: s.slice(dot) }
+}
+
+// Fractional digits render at ~70 % of the integer-part font so they sit
+// clearly subordinate without disappearing. Same ratio used in firmware
+// label_widget.cpp / gauge_widget.cpp.
+const FRAC_FONT_SCALE = 0.7
 
 /**
  * Compute the percentage and raw value to render for a preview.
@@ -176,20 +194,24 @@ interface GaugeArcRendererProps extends BaseRendererProps {
   revLimiting: boolean
   danger: boolean
   testValue?: number | null
+  signalUnit: string
 }
 
 interface GaugeBarRendererProps extends BaseRendererProps {
   danger: boolean
   testValue?: number | null
+  signalUnit: string
 }
 
 interface GaugeNumericRendererProps extends BaseRendererProps {
   danger: boolean
   testValue?: number | null
+  signalUnit: string
 }
 
 interface BarRendererProps extends BaseRendererProps {
   testValue?: number | null
+  signalUnit: string
 }
 
 interface WarningRendererProps extends BaseRendererProps {
@@ -211,6 +233,7 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
   revLimiting,
   danger,
   testValue,
+  signalUnit,
 }: GaugeArcRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -324,7 +347,10 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
           needle were all dropped per user spec — the arc trace + the centred
           numeric value carry the read on their own. */}
       {/* Value text — center of arc. Threshold-tinted in BOTH modes.
-          Primary value tier — Black 900 matches FontManager::primary. */}
+          Primary value tier — Black 900 matches FontManager::primary.
+          Fractional digits render at FRAC_FONT_SCALE of the integer part so
+          decimals on AFR / voltage / lambda / pressure readouts sit
+          subordinate to the headline number. */}
       <text
         x={cx}
         y={cy}
@@ -336,10 +362,21 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
         fontFamily={FONT_FAMILY}
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       >
-        {valueStr}
+        {(() => {
+          const { int, frac } = splitDecimal(valueStr)
+          if (frac === '') return valueStr
+          return (
+            <>
+              <tspan>{int}</tspan>
+              <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{frac}</tspan>
+            </>
+          )
+        })()}
       </text>
-      {/* Suffix / unit */}
-      {cfg.suffix && (
+      {/* Suffix / unit — defaults to the bound signal's `unit` (signals.json)
+          via `signalUnit`; an explicit `cfg.suffix` would have won at the
+          resolver layer so we don't special-case it here. */}
+      {signalUnit !== '' && (
         <text
           x={cx}
           y={cy + r * 0.32}
@@ -349,7 +386,7 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
           fontSize={unitFontSize}
           fontFamily={FONT_FAMILY}
         >
-          {cfg.suffix}
+          {signalUnit}
         </text>
       )}
       {/* Widget label (user-configured, shown at bottom when set) */}
@@ -387,6 +424,7 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
   h,
   danger,
   testValue,
+  signalUnit,
 }: GaugeBarRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -507,7 +545,7 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
             style={{ animation: danger ? BLINK_ANIM : undefined }}
           >
             {valueStr}
-            {cfg.suffix ?? ''}
+            {signalUnit}
           </text>
         )}
         {/* User label — sits in the band at the user-chosen horizontal corner */}
@@ -670,7 +708,7 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
       >
         {valueStr}
       </text>
-      {cfg.suffix && (
+      {signalUnit !== '' && (
         <text
           x={w / 2}
           y={h - 3}
@@ -683,7 +721,7 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
           letterSpacing="0.03em"
           style={{ animation: danger ? BLINK_ANIM : undefined }}
         >
-          {cfg.suffix}
+          {signalUnit}
         </text>
       )}
       {/* Widget label */}
@@ -720,6 +758,7 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   h,
   danger,
   testValue,
+  signalUnit,
 }: GaugeNumericRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -824,40 +863,63 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
           {labelText}
         </span>
       )}
-      {/* Value row — prefix and suffix concatenated inline */}
+      {/* Value + unit row — value on the left, unit to its right at a smaller
+          font, separated by a small gap. Mirrors firmware label_widget.cpp
+          where the unit hugs the value baseline-aligned. The unit font is
+          sized ~30 % of the value so it reads clearly subordinate without
+          competing with the number. */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: 'baseline',
           justifyContent: 'center',
-          gap: 3,
+          gap: 4,
           width: '100%',
           flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            color: valueColor,
-            fontSize,
-            // Orbitron to match firmware's runtime-loaded fonts (FontManager).
-            // System sans-serif fallback for environments without Orbitron.
-            // Black 900 — primary value tier (matches FontManager::primary).
-            fontFamily: FONT_FAMILY,
-            fontWeight: 900,
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'clip',
-            maxWidth: '100%',
-            textAlign: 'center',
-            animation: danger ? BLINK_ANIM : undefined,
-          }}
-        >
-          {/* Suffix dropped unconditionally — the label conveys the unit and
-              "195km/h" was clipping on 80-px-wide cells. */}
-          {prefix + valueOnly}
-        </span>
+        {(() => {
+          const { int, frac } = splitDecimal(valueOnly)
+          return (
+            <span
+              style={{
+                color: valueColor,
+                fontFamily: FONT_FAMILY,
+                fontWeight: 900,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'clip',
+                textAlign: 'center',
+                animation: danger ? BLINK_ANIM : undefined,
+              }}
+            >
+              {/* Orbitron matches firmware FontManager::primary at the
+                  integer-part size. The fractional part (".3", ".09", …) is
+                  rendered at FRAC_FONT_SCALE of the integer size so AFR /
+                  voltage / lambda / pressure readouts emphasise the headline
+                  number while the decimal sits visibly subordinate. */}
+              <span style={{ fontSize }}>{prefix + int}</span>
+              {frac !== '' && <span style={{ fontSize: fontSize * FRAC_FONT_SCALE }}>{frac}</span>}
+            </span>
+          )
+        })()}
+        {signalUnit !== '' && (
+          <span
+            style={{
+              color: '#888888',
+              fontSize: Math.max(8, Math.min(fontSize * 0.32, 14)),
+              fontFamily: FONT_FAMILY,
+              fontWeight: 500,
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {signalUnit}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -872,6 +934,7 @@ const BarWidgetPreview = memo(function BarWidgetPreview({
   w,
   h,
   testValue,
+  signalUnit,
 }: BarRendererProps) {
   if (widget.config.type !== 'bar') return null
   const cfg = widget.config
@@ -888,7 +951,7 @@ const BarWidgetPreview = memo(function BarWidgetPreview({
   const valueStr =
     (cfg.prefix ?? '') +
     String(Math.round(testValue == null ? valuePct * 100 : rawValue)) +
-    (cfg.suffix ?? '')
+    signalUnit
   const labelPos = cfg.labelPosition ?? 'bottom-center'
   const labelIsTop = labelPos === 'top-center'
   const signalLabel = formatSignalLabel(widget.signal)
@@ -1375,6 +1438,13 @@ interface RenderContext {
   noAnimate: boolean
   testValue: number | null
   danger: boolean
+  /**
+   * Unit string resolved by `WidgetPreviewImpl` from the bound signal's
+   * `unit` field (signals.json), with the widget's explicit `cfg.suffix`
+   * winning as a manual override. Mirrors firmware
+   * `WidgetHelpers::resolveDisplayUnit`. Empty string when no unit applies.
+   */
+  signalUnit: string
 }
 
 type WidgetTypeKey = WidgetConfig['type']
@@ -1412,11 +1482,18 @@ const RENDERERS: RendererDispatch = {
         revLimiting={ctx.revLimiting}
         danger={ctx.danger}
         testValue={ctx.testValue}
+        signalUnit={ctx.signalUnit}
       />
     )
   },
   bar: (widget, ctx) => (
-    <BarWidgetPreview widget={widget} w={ctx.w} h={ctx.h} testValue={ctx.testValue} />
+    <BarWidgetPreview
+      widget={widget}
+      w={ctx.w}
+      h={ctx.h}
+      testValue={ctx.testValue}
+      signalUnit={ctx.signalUnit}
+    />
   ),
   warning: (widget, ctx) => (
     <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
@@ -1451,6 +1528,29 @@ interface WidgetPreviewProps {
   testValue?: number | null
 }
 
+/**
+ * Resolve the unit string to display next to a widget's value. Mirrors the
+ * firmware helper `WidgetHelpers::resolveDisplayUnit`: an explicit per-widget
+ * `cfg.suffix` wins as a manual override, otherwise the unit declared on the
+ * bound signal (signals.json) is used. Returns "" when no unit applies so
+ * callers don't have to special-case nullish handling.
+ *
+ * Subscribes to `useSignalStore` so a unit change in the signal mapper
+ * surfaces in every preview without a manual refresh.
+ */
+function useResolvedSignalUnit(widget: Widget): string {
+  const signals = useSignalStore((s) => s.signals)
+  const cfg = widget.config
+  const configSuffix =
+    cfg.type === 'gauge' || cfg.type === 'bar' || cfg.type === 'timer'
+      ? ((cfg as { suffix?: string }).suffix ?? '')
+      : ''
+  if (configSuffix !== '') return configSuffix
+  if (!widget.signal) return ''
+  const def = signals.find((s) => s.name === widget.signal)
+  return def?.unit ?? ''
+}
+
 function WidgetPreviewImpl({
   widget,
   displayW: rawW,
@@ -1469,6 +1569,7 @@ function WidgetPreviewImpl({
 
   const resolved = palette ? applyPalette(widget, palette) : widget
   const danger = noAnimate ? false : isDangerState(resolved, testValue)
+  const signalUnit = useResolvedSignalUnit(resolved)
 
   const ctx: RenderContext = {
     w,
@@ -1478,6 +1579,7 @@ function WidgetPreviewImpl({
     noAnimate,
     testValue,
     danger,
+    signalUnit,
   }
 
   // Exhaustive dispatch — TypeScript enforces every WidgetConfig['type'] has

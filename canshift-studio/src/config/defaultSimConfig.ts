@@ -61,14 +61,22 @@ const DEMO_STYLE_BUTTON = {
   fontSize: 16,
 }
 
-const DEMO_BUTTON_COLORS_RED = {
-  normal: '#FF4444' as const,
-  active: '#FF7777' as const,
+// Strong contrast between resting and active states so the user can tell at
+// a glance whether a button is engaged. Mirrors the firmware demo dashboard
+// (canshift-firmware/data/config/dashboard.json) after #966.
+const DEMO_BUTTON_COLORS_MAP = {
+  normal: '#3A1212' as const, // deep dark red — resting
+  active: '#FF4444' as const, // bright red — pressed flash
 }
 
-const DEMO_BUTTON_COLORS_NAV = {
-  normal: '#444444' as const,
-  active: '#777777' as const,
+const DEMO_BUTTON_COLORS_LAUNCH = {
+  normal: '#1F1F1F' as const, // near-black resting
+  active: '#43A047' as const, // palette launch green when engaged
+}
+
+const DEMO_BUTTON_COLORS_ANTILAG = {
+  normal: '#1F1F1F' as const, // near-black resting
+  active: '#FF6F00' as const, // palette flame amber when engaged
 }
 
 export const DEFAULT_SIM_CONFIG: DashboardConfig = {
@@ -102,6 +110,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'arc',
+            iconName: 'speed',
             minValue: 0,
             maxValue: 300,
             warningLevel: 240,
@@ -120,6 +129,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'arc',
+            iconName: 'coolant',
             minValue: 0,
             maxValue: 120,
             warningLevel: 95,
@@ -146,6 +156,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'oil_pressure',
             minValue: 0,
             maxValue: 6,
             warningLevel: 1,
@@ -164,6 +175,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'battery',
             minValue: 10,
             maxValue: 15,
             warningLevel: 11,
@@ -182,6 +194,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'afr',
             minValue: 0.7,
             maxValue: 1.3,
             warningLevel: 1.15,
@@ -213,6 +226,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'arc',
+            iconName: 'boost',
             minValue: 0,
             maxValue: 300,
             warningLevel: 230,
@@ -231,6 +245,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'iat',
             minValue: -20,
             maxValue: 80,
             warningLevel: 50,
@@ -249,6 +264,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'afr',
             minValue: 0.7,
             maxValue: 1.3,
             warningLevel: 1.15,
@@ -267,6 +283,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'rpm',
             minValue: 0,
             maxValue: 8000,
             warningLevel: 6500,
@@ -285,6 +302,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'bar',
+            iconName: 'throttle',
             barOrientation: 'horizontal',
             minValue: 0,
             maxValue: 100,
@@ -317,6 +335,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'arc',
+            iconName: 'coolant',
             minValue: 0,
             maxValue: 120,
             warningLevel: 95,
@@ -335,6 +354,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'arc',
+            iconName: 'oil_pressure',
             minValue: 0,
             maxValue: 6,
             warningLevel: 1,
@@ -353,6 +373,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'oil_temp',
             minValue: 0,
             maxValue: 150,
             warningLevel: 120,
@@ -371,6 +392,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'fuel',
             minValue: 0,
             maxValue: 6,
             warningLevel: 5,
@@ -389,6 +411,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'battery',
             minValue: 10,
             maxValue: 15,
             warningLevel: 11,
@@ -407,6 +430,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           config: {
             type: 'gauge',
             displayStyle: 'numeric',
+            iconName: 'iat',
             minValue: -20,
             maxValue: 80,
             warningLevel: 50,
@@ -433,7 +457,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           id: 'btn_map1',
           type: 'button',
           signal: '',
-          layout: { x: 0, y: 0, w: 160, h: 56, zOrder: 0 },
+          layout: { x: 0, y: 0, w: 160, h: 112, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
@@ -442,7 +466,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: false,
-            colors: DEMO_BUTTON_COLORS_RED,
+            colors: DEMO_BUTTON_COLORS_MAP,
             actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 1 }],
           },
         },
@@ -450,7 +474,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           id: 'btn_map2',
           type: 'button',
           signal: '',
-          layout: { x: 160, y: 0, w: 160, h: 56, zOrder: 0 },
+          layout: { x: 160, y: 0, w: 160, h: 112, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
@@ -459,49 +483,15 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: false,
-            colors: DEMO_BUTTON_COLORS_RED,
+            colors: DEMO_BUTTON_COLORS_MAP,
             actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 2 }],
-          },
-        },
-        {
-          id: 'btn_map3',
-          type: 'button',
-          signal: '',
-          layout: { x: 0, y: 56, w: 160, h: 56, zOrder: 0 },
-          style: DEMO_STYLE_BUTTON,
-          config: {
-            type: 'button',
-            label: 'MAP 3',
-            iconName: 'map_icon',
-            showLabel: true,
-            showIcon: true,
-            isToggle: false,
-            colors: DEMO_BUTTON_COLORS_RED,
-            actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 3 }],
-          },
-        },
-        {
-          id: 'btn_map4',
-          type: 'button',
-          signal: '',
-          layout: { x: 160, y: 56, w: 160, h: 56, zOrder: 0 },
-          style: DEMO_STYLE_BUTTON,
-          config: {
-            type: 'button',
-            label: 'MAP 4',
-            iconName: 'map_icon',
-            showLabel: true,
-            showIcon: true,
-            isToggle: false,
-            colors: DEMO_BUTTON_COLORS_RED,
-            actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 4 }],
           },
         },
         {
           id: 'btn_launch',
           type: 'button',
-          signal: '',
-          layout: { x: 0, y: 112, w: 160, h: 56, zOrder: 0 },
+          signal: 'flag_launch_ctrl',
+          layout: { x: 0, y: 112, w: 160, h: 112, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
@@ -510,7 +500,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: true,
-            colors: DEMO_BUTTON_COLORS_RED,
+            colors: DEMO_BUTTON_COLORS_LAUNCH,
             actions: [
               { category: 'ecu', type: 'can_raw', frameId: 0x520, data: '01', dataOff: '00' },
             ],
@@ -519,8 +509,8 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
         {
           id: 'btn_antilag',
           type: 'button',
-          signal: '',
-          layout: { x: 160, y: 112, w: 160, h: 56, zOrder: 0 },
+          signal: 'flag_anti_lag',
+          layout: { x: 160, y: 112, w: 160, h: 112, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
@@ -529,42 +519,10 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             showLabel: true,
             showIcon: true,
             isToggle: true,
-            colors: DEMO_BUTTON_COLORS_RED,
+            colors: DEMO_BUTTON_COLORS_ANTILAG,
             actions: [
               { category: 'ecu', type: 'can_raw', frameId: 0x521, data: '01', dataOff: '00' },
             ],
-          },
-        },
-        {
-          id: 'btn_nav_overview',
-          type: 'button',
-          signal: '',
-          layout: { x: 0, y: 168, w: 160, h: 56, zOrder: 0 },
-          style: { ...DEMO_STYLE_BUTTON, primaryColor: '#444444' },
-          config: {
-            type: 'button',
-            label: 'Overview',
-            showLabel: true,
-            showIcon: false,
-            isToggle: false,
-            colors: DEMO_BUTTON_COLORS_NAV,
-            actions: [{ category: 'dashboard', type: 'navigate', pageId: 'overview' }],
-          },
-        },
-        {
-          id: 'btn_nav_engine',
-          type: 'button',
-          signal: '',
-          layout: { x: 160, y: 168, w: 160, h: 56, zOrder: 0 },
-          style: { ...DEMO_STYLE_BUTTON, primaryColor: '#444444' },
-          config: {
-            type: 'button',
-            label: 'Engine',
-            showLabel: true,
-            showIcon: false,
-            isToggle: false,
-            colors: DEMO_BUTTON_COLORS_NAV,
-            actions: [{ category: 'dashboard', type: 'navigate', pageId: 'engine' }],
           },
         },
       ],
