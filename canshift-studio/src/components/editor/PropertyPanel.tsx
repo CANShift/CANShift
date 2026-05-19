@@ -18,13 +18,7 @@ import { BarFields } from './property-panel/bar-fields'
 import { WarningFields } from './property-panel/warning-fields'
 import { TimerFields } from './property-panel/timer-fields'
 import { GearFields } from './property-panel/gear-fields'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { ImageFields } from './property-panel/image-fields'
 
 const CONFIG_FIELDS: Partial<
