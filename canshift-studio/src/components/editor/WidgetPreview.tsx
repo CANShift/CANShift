@@ -9,6 +9,22 @@ import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 import { displayLabelForSignal } from '../../utils/signalLabels'
 import { useSignalStore } from '../../stores/signal.store'
+import { ECU_PROFILES } from '@tmbk/canshift-core'
+
+// Built-in MaxxECU catalog used as a unit-only fallback when the user's
+// loaded signal store doesn't carry a definition for the widget's bound
+// name. Keeps the preview readable on a fresh dashboard whose widgets
+// reference standard names (rpm, throttle_pos, coolant_temp_c, …) even
+// before the user picks an ECU profile. Only the unit string is read —
+// resolution / scaling / framing stay tied to the user's actual catalog.
+const FALLBACK_UNIT_TABLE: Record<string, string> = (() => {
+  const profile = ECU_PROFILES.find((p) => p.id === 'maxxecu-street')
+  const table: Record<string, string> = {}
+  if (profile) {
+    for (const s of profile.signals) table[s.name] = s.unit
+  }
+  return table
+})()
 import {
   FONT_FAMILY,
   BLINK_ANIM,
@@ -1513,7 +1529,14 @@ function useResolvedSignalUnit(widget: Widget): string {
   if (configSuffix !== '') return configSuffix
   if (!widget.signal) return ''
   const def = signals.find((s) => s.name === widget.signal)
-  return def?.unit ?? ''
+  if (def?.unit) return def.unit
+  // Hook-level fallback: even if the user's signal store doesn't carry the
+  // bound name (custom profile, partial import, …), look the unit up in the
+  // built-in MaxxECU table so standard names still show their units. Beats
+  // the previous behaviour where the preview ran with no units at all when
+  // localStorage held a non-empty but mismatched catalog (which the
+  // store-level fallback couldn't reach).
+  return FALLBACK_UNIT_TABLE[widget.signal] ?? ''
 }
 
 function WidgetPreviewImpl({
