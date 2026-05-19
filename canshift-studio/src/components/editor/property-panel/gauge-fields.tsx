@@ -214,7 +214,10 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
                     textTransform: 'uppercase',
                   }}
                 >
-                  {dir === 'vertical' ? '↕ V' : '↔ H'}
+                  {/* Always vertical now — the conditional below is preserved as
+                      a no-op so reintroducing 'horizontal' later only requires
+                      adding it back to the picker array, not rewriting this row. */}
+                  ↕ V
                 </button>
               )
             })}
