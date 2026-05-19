@@ -93,6 +93,11 @@ export const GaugeWidgetConfigSchema = z
     barOrientation: BarOrientationSchema.optional(),
     label: z.string().optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
+    // Sensor identifier — drives the semantic two-zone palette (issue #954).
+    // When set to a known name, gauge fills opaquely in the per-sensor OK
+    // colour below `warningLevel` and the warning colour above. Unset or
+    // unknown keeps the legacy `style.primaryColor` path.
+    iconName: SensorIconNameSchema.optional(),
   })
   .strict()
 
@@ -288,6 +293,9 @@ export const BarWidgetConfigSchema = z
     warningLevel: z.number().optional(),
     dangerLevel: z.number().optional(),
     alertThreshold: z.number().optional(),
+    // Sensor identifier — drives the semantic two-zone palette (issue #954).
+    // Same semantics as on `GaugeWidgetConfig`.
+    iconName: SensorIconNameSchema.optional(),
   })
   .strict()
 

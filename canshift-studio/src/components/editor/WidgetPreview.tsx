@@ -15,6 +15,7 @@ import {
   ZONE_WARNING,
   ZONE_DANGER,
   zoneColorFor,
+  paletteFillColor,
   thresholdPct,
   svgLabelAttrs,
   htmlLabelStyle,
@@ -225,19 +226,33 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
   const arcFillStyle = cfg.arcFillStyle ?? 'zones'
   const isGradient = arcFillStyle === 'gradient'
 
+  // Issue #954 — sensor palette wins when the widget pins a known iconName.
+  // The opaque per-sensor colour fills below `warningLevel` and the warning
+  // colour above; the zone-tinted background sectors are dropped so the read
+  // is "single solid colour grows from min toward max".
+  const palette = paletteFillColor(cfg.iconName, valuePct, warnPct, dangerPct)
+  const inPaletteMode = palette !== undefined
+
   // Threshold-tinted text colour stays unchanged in BOTH modes — separate
-  // concern from arc fill. Firmware does the same.
-  const textValueColor =
-    valuePct >= dangerPct
+  // concern from arc fill. Firmware does the same. Palette mode tints the
+  // text in the same palette colour so the readout matches the fill.
+  const textValueColor = inPaletteMode
+    ? palette
+    : valuePct >= dangerPct
       ? st.criticalColor
       : valuePct >= warnPct
         ? st.warningColor
         : st.primaryColor
 
   // Arc fill colour:
+  //   palette  — per-sensor opaque colour (issue #954).
   //   zones    — same threshold-tinted colour as the text (legacy behaviour).
   //   gradient — interpolated green→orange→red across the value range.
-  const arcValueColor = isGradient ? interpolateGreenOrangeRed(valuePct) : textValueColor
+  const arcValueColor = inPaletteMode
+    ? palette
+    : isGradient
+      ? interpolateGreenOrangeRed(valuePct)
+      : textValueColor
 
   const cx = w / 2
   // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
@@ -278,8 +293,9 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
         strokeWidth={strokeW}
         strokeLinecap="butt"
       />
-      {/* Zones mode only: warning + danger sector tinting */}
-      {!isGradient && dangerPct > warnPct && (
+      {/* Zones mode only: warning + danger sector tinting. Palette mode
+          (#954) skips this — the value arc is already opaque and semantic. */}
+      {!isGradient && !inPaletteMode && dangerPct > warnPct && (
         <path
           d={gaugeArcD(cx, cy, r, warnPct, dangerPct)}
           fill="none"
@@ -287,7 +303,7 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
           strokeWidth={strokeW}
         />
       )}
-      {!isGradient && (
+      {!isGradient && !inPaletteMode && (
         <path
           d={gaugeArcD(cx, cy, r, dangerPct, 1)}
           fill="none"
@@ -385,8 +401,13 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
   const signalLabel = formatSignalLabel(widget.signal)
 
+  // Issue #954 — sensor palette overrides the legacy zone tinting when the
+  // gauge widget pins a known iconName.
+  const paletteColor = paletteFillColor(cfg.iconName, valuePct, warnPct, dangerPct)
+  const inPaletteMode = paletteColor !== undefined
+
   if (isHorizontal) {
-    const fillColor = zoneColorFor(valuePct, warnPct, dangerPct)
+    const fillColor = paletteColor ?? zoneColorFor(valuePct, warnPct, dangerPct)
 
     const labelPos = cfg.labelPosition ?? 'bottom-left'
     // Label band sits below the bar by default (issue #137). Users can still
@@ -414,8 +435,9 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
       <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
         {/* Track — square corners */}
         <rect x={padX} y={trackY} width={trackW} height={barH} fill="#1C1C1C" />
-        {/* Warning zone (warn..danger band) — orange tint */}
-        {dangerPct > warnPct && (
+        {/* Palette mode (#954) drops the translucent zone bands and tick — the
+            opaque palette fill carries the read on its own. */}
+        {!inPaletteMode && dangerPct > warnPct && (
           <rect
             x={padX + trackW * warnPct}
             y={trackY}
@@ -424,24 +446,26 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
             fill={ZONE_WARNING + '35'}
           />
         )}
-        {/* Danger zone — red tint */}
-        <rect
-          x={padX + trackW * dangerPct}
-          y={trackY}
-          width={(1 - dangerPct) * trackW}
-          height={barH}
-          fill={ZONE_DANGER + '35'}
-        />
-        {/* Danger threshold tick */}
-        <line
-          x1={padX + trackW * dangerPct}
-          y1={trackY - 2}
-          x2={padX + trackW * dangerPct}
-          y2={trackY + barH + 2}
-          stroke={ZONE_DANGER}
-          strokeWidth={1}
-          strokeDasharray="2 2"
-        />
+        {!inPaletteMode && (
+          <rect
+            x={padX + trackW * dangerPct}
+            y={trackY}
+            width={(1 - dangerPct) * trackW}
+            height={barH}
+            fill={ZONE_DANGER + '35'}
+          />
+        )}
+        {!inPaletteMode && (
+          <line
+            x1={padX + trackW * dangerPct}
+            y1={trackY - 2}
+            x2={padX + trackW * dangerPct}
+            y2={trackY + barH + 2}
+            stroke={ZONE_DANGER}
+            strokeWidth={1}
+            strokeDasharray="2 2"
+          />
+        )}
         {/* Fill — zone-coloured, square corners */}
         <rect
           x={padX}
@@ -508,8 +532,9 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
     )
   }
 
-  // Vertical bar — zone colours green/orange/red regardless of primaryColor.
-  const valueColor = zoneColorFor(valuePct, warnPct, dangerPct)
+  // Vertical bar — palette wins when iconName resolves; otherwise legacy
+  // green/orange/red zone tinting drives the fill.
+  const valueColor = paletteColor ?? zoneColorFor(valuePct, warnPct, dangerPct)
 
   // Bar track: 60 % of widget width, centered
   const bw = Math.max(10, w * 0.6)
@@ -562,8 +587,9 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
       )}
       {/* Track background — square corners */}
       <rect x={padX} y={padTop} width={bw} height={trackH} fill="#1C1C1C" />
-      {/* Warning zone (warn..danger band) */}
-      {dangerPct > warnPct && (
+      {/* Palette mode (#954) drops the translucent zone overlays/tick — the
+          opaque palette fill carries the read on its own. */}
+      {!inPaletteMode && dangerPct > warnPct && (
         <rect
           x={padX}
           y={warnY}
@@ -572,18 +598,26 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
           fill={ZONE_WARNING + '35'}
         />
       )}
-      {/* Danger zone */}
-      <rect x={padX} y={dangerY} width={bw} height={dangerPct * trackH} fill={ZONE_DANGER + '35'} />
-      {/* Danger line tick */}
-      <line
-        x1={padX - 3}
-        y1={dangerY}
-        x2={padX + bw + 3}
-        y2={dangerY}
-        stroke={ZONE_DANGER}
-        strokeWidth={1}
-        strokeDasharray="2 2"
-      />
+      {!inPaletteMode && (
+        <rect
+          x={padX}
+          y={dangerY}
+          width={bw}
+          height={dangerPct * trackH}
+          fill={ZONE_DANGER + '35'}
+        />
+      )}
+      {!inPaletteMode && (
+        <line
+          x1={padX - 3}
+          y1={dangerY}
+          x2={padX + bw + 3}
+          y2={dangerY}
+          stroke={ZONE_DANGER}
+          strokeWidth={1}
+          strokeDasharray="2 2"
+        />
+      )}
       {/* Value fill from bottom — square corners */}
       <rect
         x={padX}
@@ -859,12 +893,20 @@ const BarWidgetPreview = memo(function BarWidgetPreview({
   const labelIsTop = labelPos === 'top-center'
   const signalLabel = formatSignalLabel(widget.signal)
 
+  // Issue #954 — palette wins over the per-widget primaryColor when a known
+  // sensor is pinned on the widget. warningLevel is optional on standalone
+  // bars; fall back to the top of the range so the OK colour fills the
+  // entire bar until a real threshold is configured.
+  const warnPct = cfg.warningLevel !== undefined ? thresholdPct(cfg.warningLevel, min, max) : 1.1
+  const dangerPct = cfg.dangerLevel !== undefined ? thresholdPct(cfg.dangerLevel, min, max) : 1.1
+  const barFillColor = paletteFillColor(cfg.iconName, valuePct, warnPct, dangerPct) ?? st.primaryColor
+
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
       {/* Track */}
       <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" />
       {/* Fill */}
-      <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={st.primaryColor} />
+      <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={barFillColor} />
       {/* Signal name — only when no custom label is set (avoid stacked text) */}
       {!cfg.label && (
         <text

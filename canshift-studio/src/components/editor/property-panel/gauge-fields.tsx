@@ -16,6 +16,7 @@ import {
   ConfigFieldsProps,
   Field,
   GAUGE_STYLES,
+  IconPicker,
   LabelFields,
   Row,
   SIGNAL_UNITS,
@@ -425,6 +426,18 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
           </Row>
         </>
       )}
+
+      {/* Sensor — drives the two-zone palette (issue #954). */}
+      <Field label="Sensor">
+        <IconPicker
+          value={cfg.iconName}
+          onChange={(name) => {
+            onChange({
+              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
+            })
+          }}
+        />
+      </Field>
 
       {/* Widget label */}
       <LabelFields
