@@ -5,11 +5,7 @@
 // contract here. Drift from the C++ mirror is caught by the firmware
 // native test against the JSON fixture.
 
-import {
-  SENSOR_PALETTE,
-  sensorOkColor,
-  sensorWarningColor,
-} from '../sensor-palette.js'
+import { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from '../sensor-palette.js'
 import { SensorIconNameSchema } from '../schemas/dashboard.js'
 import { HEX_COLOR_REGEX } from '../constants/firmware-caps.js'
 

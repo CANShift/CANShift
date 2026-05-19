@@ -899,7 +899,8 @@ const BarWidgetPreview = memo(function BarWidgetPreview({
   // entire bar until a real threshold is configured.
   const warnPct = cfg.warningLevel !== undefined ? thresholdPct(cfg.warningLevel, min, max) : 1.1
   const dangerPct = cfg.dangerLevel !== undefined ? thresholdPct(cfg.dangerLevel, min, max) : 1.1
-  const barFillColor = paletteFillColor(cfg.iconName, valuePct, warnPct, dangerPct) ?? st.primaryColor
+  const barFillColor =
+    paletteFillColor(cfg.iconName, valuePct, warnPct, dangerPct) ?? st.primaryColor
 
   return (
     <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
