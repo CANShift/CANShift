@@ -85,6 +85,14 @@ const RESET_PASS_GAP_MS = 250
  */
 const FIRMWARE_TEXT_MAX_BYTES = 64 * 1024
 
+/**
+ * Hard ceiling for `downloadBinary` payloads (#879). Current merged firmware
+ * images are ~1.5 MiB; 16 MiB gives ~10× headroom while preventing a hostile
+ * mirror (or a renderer with code execution) from streaming a multi-GB body
+ * through main and OOMing the process.
+ */
+const FIRMWARE_BINARY_MAX_BYTES = 16 * 1024 * 1024
+
 function sleepMs(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -404,8 +412,16 @@ export class FirmwareService {
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
-      chunks.push(value)
       received += value.length
+      if (received > FIRMWARE_BINARY_MAX_BYTES) {
+        await reader.cancel().catch(() => {
+          /* best-effort */
+        })
+        throw new Error(
+          `Response exceeds ${String(FIRMWARE_BINARY_MAX_BYTES)} bytes — refusing to read further`
+        )
+      }
+      chunks.push(value)
       onProgress(received, total)
     }
 

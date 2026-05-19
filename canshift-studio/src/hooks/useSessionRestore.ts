@@ -6,7 +6,7 @@
 
 import { useEffect } from 'react'
 import type { DashboardConfig } from '@tmbk/canshift-core'
-import { migrateConfig, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
+import { migrateConfig, validateDashboard, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useLogStore } from '../stores/log.store'
 import { sessionIpc, configService } from '../services/ipc.service'
@@ -38,6 +38,24 @@ export function useSessionRestore(): void {
           log('warn', `Session restore skipped — migration failed for ${lastPath}: ${msg}`)
           return
         }
+        // Mirror the open / import guard: refuse to push a malformed shape
+        // into the store, even if migration succeeded. A corrupt session
+        // file or a migration whose output drifts from the current schema
+        // would otherwise silently corrupt the editor (#889).
+        const validation = validateDashboard(config)
+        if (!validation.valid) {
+          validation.errors.forEach((e) => {
+            log('error', `Session restore validation: ${e}`)
+          })
+          log(
+            'warn',
+            `Session restore skipped — ${String(validation.errors.length)} validation error(s) for ${lastPath}`
+          )
+          return
+        }
+        validation.warnings.forEach((w) => {
+          log('warn', `Session restore: ${w}`)
+        })
         setConfig(config, result.filePath)
         log('info', `Restored session: ${result.filePath ?? lastPath}`)
       }

@@ -187,6 +187,21 @@ void sendTelemetry() {
 // into a JsonDocument grew the pool to ~21 KB, which couldn't be satisfied
 // after the LV_MEM_SIZE bump in #555 (issue #576). Skipping the full parse
 // keeps the PUT_CONFIG path heap-allocation-free.
+// Length-bounded substring search. Used in place of strstr() so an embedded
+// NUL in the JSON line (corrupted USB stream, malformed input) cannot
+// short-circuit the search before reaching the needle. Issue #884.
+const char *findNeedle(const char *haystack, size_t haystackLen, const char *needle,
+                       size_t needleLen) {
+    if (needleLen == 0 || haystackLen < needleLen)
+        return nullptr;
+    const size_t lastStart = haystackLen - needleLen;
+    for (size_t i = 0; i <= lastStart; ++i) {
+        if (memcmp(haystack + i, needle, needleLen) == 0)
+            return haystack + i;
+    }
+    return nullptr;
+}
+
 const char *findPayloadSlice(const char *jsonLine, size_t lineLen, size_t *outLen) {
     if (!jsonLine || !outLen)
         return nullptr;
@@ -195,13 +210,11 @@ const char *findPayloadSlice(const char *jsonLine, size_t lineLen, size_t *outLe
     // Plain-text needle is acceptable here: the studio always emits the
     // envelope with the literal key `"payload"` and never inside a nested
     // string by accident — the surrounding `{"cmd":2,...}` frame is fixed.
-    // `strstr` is OK because `jsonLine` is the null-terminated `s_rxBuf` and
-    // `kNeedle` contains no NUL bytes.
     static constexpr char kNeedle[] = "\"payload\"";
-    const char *needle = strstr(jsonLine, kNeedle);
-    if (!needle || needle >= jsonLine + lineLen)
-        return nullptr;
     static constexpr size_t kNeedleLen = sizeof(kNeedle) - 1;
+    const char *needle = findNeedle(jsonLine, lineLen, kNeedle, kNeedleLen);
+    if (!needle)
+        return nullptr;
 
     // Skip past `"payload"` then optional whitespace then the `:` separator.
     const char *cursor = needle + kNeedleLen;
@@ -304,6 +317,12 @@ void handlePutConfig(const char *jsonLine) {
         LOG_WARN("USB", "PUT_CONFIG: could not acquire LVGL mutex — proceeding");
     }
     vTaskPrioritySet(nullptr, TASK_PRIO_UI + 1);
+    // BurnOverlay::show() calls lv_refr_now(), which runs
+    // DisplayDriver::flushCallback inline on this (USB) task — see the
+    // task-coupling note in src/ui/burn_overlay.cpp::show(). The LVGL mutex
+    // taken above is what makes that safe: it serialises LVGL state and SPI
+    // access with the UI task. Do not call show() without holding the mutex,
+    // and do not relax the mutex contract here without revisiting show().
     BurnOverlay::show();
 
     bool ok = StorageDriver::writeFileAtomic(
@@ -553,10 +572,19 @@ void handleCommand(const char *jsonLine) {
     switch (cmd) {
         case UsbComm::CMD_GET_STATUS: {
             char resp[160];
-            snprintf(resp, sizeof(resp),
-                     "{\"status\":\"ok\",\"version\":\"%s\",\"protocol\":%u,\"is_day\":%d}",
-                     APP_VERSION_STR, static_cast<unsigned>(USB_PROTOCOL_VERSION),
-                     ThemeManager::isDayMode() ? 1 : 0);
+            // snprintf returns the would-have-written length — if it equals or
+            // exceeds sizeof(resp), the payload is truncated and no longer
+            // valid JSON. Log + skip so the host doesn't get garbage (#936).
+            const int n =
+                snprintf(resp, sizeof(resp),
+                         "{\"status\":\"ok\",\"version\":\"%s\",\"protocol\":%u,\"is_day\":%d}",
+                         APP_VERSION_STR, static_cast<unsigned>(USB_PROTOCOL_VERSION),
+                         ThemeManager::isDayMode() ? 1 : 0);
+            if (n <= 0 || static_cast<size_t>(n) >= sizeof(resp)) {
+                LOG_WARN("USB", "GET_STATUS payload truncated (n=%d, cap=%u)", n,
+                         static_cast<unsigned>(sizeof(resp)));
+                break;
+            }
             UsbComm::sendLine(resp);
             break;
         }
@@ -633,8 +661,14 @@ void handleCommand(const char *jsonLine) {
                 xQueueReset(s_canScanQueue);
             LOG_INFO("USB", "CAN scan stopped — drops: %lu", (unsigned long)s_scanDrops);
             char stopResp[64];
-            snprintf(stopResp, sizeof(stopResp), "{\"status\":\"ok\",\"drops\":%lu}",
-                     (unsigned long)s_scanDrops);
+            const int stopN =
+                snprintf(stopResp, sizeof(stopResp), "{\"status\":\"ok\",\"drops\":%lu}",
+                         (unsigned long)s_scanDrops);
+            if (stopN <= 0 || static_cast<size_t>(stopN) >= sizeof(stopResp)) {
+                LOG_WARN("USB", "STOP_CAN_SCAN payload truncated (n=%d, cap=%u)", stopN,
+                         static_cast<unsigned>(sizeof(stopResp)));
+                break;
+            }
             UsbComm::sendLine(stopResp);
             break;
         }
@@ -798,11 +832,20 @@ void UsbComm::tick() {
         // Format: {"can_stat":1,"fps":12.5,"errors":0}\n
         char statBuf[72];
         const CanHealthStats stats = {s_canStats.fpsX10, s_canStats.errors};
-        snprintf(statBuf, sizeof(statBuf), "{\"can_stat\":1,\"fps\":%lu.%lu,\"errors\":%lu}\n",
-                 static_cast<unsigned long>(stats.fpsX10 / 10),
-                 static_cast<unsigned long>(stats.fpsX10 % 10),
-                 static_cast<unsigned long>(stats.errors));
-        UsbComm::sendLine(statBuf);
+        const int n =
+            snprintf(statBuf, sizeof(statBuf), "{\"can_stat\":1,\"fps\":%lu.%lu,\"errors\":%lu}\n",
+                     static_cast<unsigned long>(stats.fpsX10 / 10),
+                     static_cast<unsigned long>(stats.fpsX10 % 10),
+                     static_cast<unsigned long>(stats.errors));
+        if (n > 0 && static_cast<size_t>(n) < sizeof(statBuf)) {
+            UsbComm::sendLine(statBuf);
+        } else {
+            // 72-byte cap fits the worst-case max-uint values today, but if a
+            // future protocol bump grows the payload we want to know rather
+            // than ship malformed JSON to the host (#936).
+            LOG_WARN("USB", "can_stat payload truncated (n=%d, cap=%u)", n,
+                     static_cast<unsigned>(sizeof(statBuf)));
+        }
     }
 
     if (++s_tickCount >= TELE_PERIOD_TICKS) {

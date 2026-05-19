@@ -15,6 +15,23 @@ import { subscribe as subscribeLog } from './services/cli-log-bus'
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
 
+// USB-UART bridges shipped on supported CANShift boards (CH340, CH9102, CP210x).
+// Used to gate Web Serial device permission AND auto-pick a flash port.
+// VID/PID pairs are in hex; Electron reports vendorId/productId as decimal numbers.
+const ALLOWED_VID_PID: readonly (readonly [number, number])[] = [
+  [0x1a86, 0x7523], // CH340
+  [0x1a86, 0x55d4], // CH9102
+  [0x10c4, 0xea60], // CP210x
+]
+
+function isAllowedSerialDevice(
+  vendorId: number | undefined,
+  productId: number | undefined
+): boolean {
+  if (vendorId === undefined || productId === undefined) return false
+  return ALLOWED_VID_PID.some(([vid, pid]) => vid === vendorId && pid === productId)
+}
+
 // Latest dirty flag pushed by the renderer — used to prompt before close.
 let configIsDirty = false
 // True after the user confirms "Discard changes" so the next close goes through.
@@ -141,13 +158,18 @@ function createWindow(): void {
   // fresh BrowserWindow built on macOS dock re-open re-subscribes here.
   subscribeLog(mainWindow.webContents)
 
-  // Web Serial API — grant blanket serial permission to the app and auto-select the flash port.
-  // The renderer uses navigator.serial (Web Serial) only during firmware flashing.
+  // Web Serial API — gate permission to the known CANShift USB-UART bridges only.
+  // Without the per-device filter, any renderer call to navigator.serial.requestPort()
+  // could be auto-granted access to unrelated USB-CDC devices (3D printers,
+  // programmers, GPS modules). The renderer uses Web Serial only during firmware
+  // flashing, where the target is always a CH340 / CH9102 / CP210x bridge.
   mainWindow.webContents.session.setPermissionCheckHandler((_wc, permission) => {
     return permission === 'serial'
   })
   mainWindow.webContents.session.setDevicePermissionHandler((details) => {
-    return details.deviceType === 'serial'
+    if (details.deviceType !== 'serial') return false
+    const d = details.device as { vendorId?: number; productId?: number }
+    return isAllowedSerialDevice(d.vendorId, d.productId)
   })
   // Log a marker on startup so the user can verify the latest main build is running
   mainWindow.webContents.once('did-finish-load', () => {
@@ -167,9 +189,12 @@ function createWindow(): void {
       const n = parseInt(v ?? '0', 10)
       return Number.isNaN(n) ? '' : n.toString(16).padStart(4, '0')
     }
+    const allowedKeys = ALLOWED_VID_PID.map(
+      ([vid, pid]) => `${vid.toString(16).padStart(4, '0')}:${pid.toString(16).padStart(4, '0')}`
+    )
     const isCanShiftBridge = (p: Electron.SerialPort): boolean => {
       const key = `${toHex4(p.vendorId)}:${toHex4(p.productId)}`
-      return ['1a86:7523', '1a86:55d4', '10c4:ea60'].includes(key)
+      return allowedKeys.includes(key)
     }
 
     // macOS exposes the same USB serial port at both /dev/tty.* and /dev/cu.*.

@@ -12,6 +12,7 @@
 #include "diag/error_store.h"
 #include "runtime/signal_store.h"
 #include "ui/font_manager.h"
+#include "ui/gesture_controller.h"
 
 #include <lvgl.h>
 #include <stdint.h>
@@ -26,15 +27,26 @@ namespace {
 // Geometry
 // ---------------------------------------------------------------------------
 
-// Handle = the always-visible tab the user taps to open the drawer. Kept
-// narrow vertically so it does not eat into widget real estate, but wide
-// enough to be a comfortable tap target on the resistive XPT2046 touch.
-constexpr int16_t HANDLE_H = 14;
+// Swipe-up access — no UI element. The drawer hooks into the global
+// `GestureController` polling path: any LV_DIR_TOP gesture anywhere on
+// screen calls `open()`. The previous transparent-zone approach relied on
+// LV_EVENT_GESTURE event routing through `lv_layer_top()`, which never
+// fired on device — the polling path here is the one already used by
+// page-nav swipes and `error_bar`, so we know it works.
 
-// Drawer panel target dimensions — matches the issue's "~180 px" guidance.
-constexpr int16_t PANEL_H = 180;
+// Drawer panel covers the full screen height when open. Earlier versions
+// used a partial-height (180 px) drawer that overlapped the dashboard;
+// going full-screen gives the user enough room to scan errors + signals
+// without the dash showing through, and matches the close-button UX.
+// CrowPanel 2.8" is 320×240, hardcoded everywhere else (board_config.h).
+constexpr int16_t PANEL_H = 240;
 constexpr int16_t PANEL_PAD = 6;
 constexpr int16_t ROW_H = 18;
+
+// Close button — visible "✕" tap target at the panel's top-right. Replaces
+// the swipe-down-to-close gesture which was undiscoverable on the
+// resistive touch panel.
+constexpr int16_t CLOSE_BTN_SIZE = 24;
 
 // Section heights computed from row counts so they stay in sync with the
 // row arrays below.
@@ -96,9 +108,8 @@ const ScalarRow s_scalars[SCALARS_COUNT] = {
 // LVGL handles
 // ---------------------------------------------------------------------------
 
-lv_obj_t *s_handle = nullptr;
-lv_obj_t *s_handleLabel = nullptr;
 lv_obj_t *s_panel = nullptr;
+lv_obj_t *s_closeBtn = nullptr;
 lv_obj_t *s_flagBadges[FLAGS_COUNT] = {nullptr};
 lv_obj_t *s_scalarValues[SCALARS_COUNT] = {nullptr};
 lv_obj_t *s_errorRows[ERRORS_MAX_ROWS] = {nullptr};
@@ -249,8 +260,18 @@ const char *errorSrcLabel(ErrorSource src) {
     return "?";
 }
 
-void onHandleClicked(lv_event_t * /*e*/) {
-    s_open ? close() : open();
+void onCloseClicked(lv_event_t * /*e*/) {
+    close();
+}
+
+void onVerticalSwipe(lv_dir_t dir) {
+    // Registered with GestureController. Swipe-up anywhere opens the
+    // drawer; swipe-down inside the open drawer closes it (the panel
+    // already has its own swipe-down handler for that case, but routing
+    // both through here keeps the code obvious for a future reader).
+    if (dir == LV_DIR_TOP && !s_open) {
+        open();
+    }
 }
 
 void onPanelGesture(lv_event_t *e) {
@@ -271,26 +292,12 @@ void init() {
     if (s_initDone)
         return;
 
-    // -------- Handle -------------------------------------------------------
-    s_handle = lv_obj_create(lv_layer_top());
-    lv_obj_set_size(s_handle, LV_HOR_RES, HANDLE_H);
-    lv_obj_align(s_handle, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_color(s_handle, lv_color_hex(COL_HANDLE_BG), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(s_handle, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_width(s_handle, 1, LV_PART_MAIN);
-    lv_obj_set_style_border_side(s_handle, LV_BORDER_SIDE_TOP, LV_PART_MAIN);
-    lv_obj_set_style_border_color(s_handle, lv_color_hex(COL_PANEL_BORDER), LV_PART_MAIN);
-    lv_obj_set_style_pad_all(s_handle, 0, LV_PART_MAIN);
-    lv_obj_set_style_radius(s_handle, 0, LV_PART_MAIN);
-    lv_obj_clear_flag(s_handle, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(s_handle, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(s_handle, onHandleClicked, LV_EVENT_CLICKED, nullptr);
-
-    s_handleLabel = lv_label_create(s_handle);
-    lv_label_set_text(s_handleLabel, "▴ DIAG");
-    lv_obj_set_style_text_font(s_handleLabel, FONT_SM(), 0);
-    lv_obj_set_style_text_color(s_handleLabel, lv_color_hex(COL_HANDLE_TXT), 0);
-    lv_obj_center(s_handleLabel);
+    // No swipe-up obj on the dashboard — the open trigger goes through
+    // GestureController's polling handler registered below. That polling
+    // path is the same one used by page-nav and error_bar, so we know
+    // gestures actually fire there (the previous transparent-overlay obj
+    // approach silently never received LV_EVENT_GESTURE on device).
+    GestureController::setVerticalSwipeHandler(onVerticalSwipe);
 
     // -------- Panel --------------------------------------------------------
     s_panel = lv_obj_create(lv_layer_top());
@@ -316,6 +323,34 @@ void init() {
     buildScalarsSection(s_panel);
     buildErrorsSection(s_panel);
 
+    // -------- Close button -------------------------------------------------
+    // Child of s_panel (not lv_layer_top()) so the panel intercepts every
+    // touch in its area and the topbar (sibling on lv_layer_top, lower in z)
+    // can never receive a click while the drawer is open. Earlier the close
+    // btn lived on lv_layer_top at TOP_RIGHT and shared coordinates with the
+    // top bar's day/night toggle — a slightly off-target tap would close the
+    // drawer AND flip the theme. FLOATING keeps the btn out of the panel's
+    // flex-column layout so it doesn't stack between sections.
+    s_closeBtn = lv_btn_create(s_panel);
+    lv_obj_add_flag(s_closeBtn, LV_OBJ_FLAG_FLOATING);
+    lv_obj_set_size(s_closeBtn, CLOSE_BTN_SIZE, CLOSE_BTN_SIZE);
+    lv_obj_align(s_closeBtn, LV_ALIGN_TOP_RIGHT, 0, 0);
+    lv_obj_set_style_bg_color(s_closeBtn, lv_color_hex(COL_HANDLE_BG), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_closeBtn, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(s_closeBtn, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(s_closeBtn, lv_color_hex(COL_PANEL_BORDER), LV_PART_MAIN);
+    lv_obj_set_style_radius(s_closeBtn, 4, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(s_closeBtn, 0, LV_PART_MAIN);
+    lv_obj_add_event_cb(s_closeBtn, onCloseClicked, LV_EVENT_CLICKED, nullptr);
+
+    lv_obj_t *closeLabel = lv_label_create(s_closeBtn);
+    // Plain "X" — LV_SYMBOL_CLOSE (U+F00D, FontAwesome PUA) is not in our
+    // Orbitron font and would render as a placeholder + flood LVGL warnings.
+    lv_label_set_text(closeLabel, "X");
+    lv_obj_set_style_text_font(closeLabel, FONT_SM(), 0);
+    lv_obj_set_style_text_color(closeLabel, lv_color_hex(COL_VALUE), 0);
+    lv_obj_center(closeLabel);
+
     s_initDone = true;
 }
 
@@ -323,9 +358,8 @@ void open() {
     if (!s_panel)
         return;
     lv_obj_clear_flag(s_panel, LV_OBJ_FLAG_HIDDEN);
-    // Hide the handle while open so it does not overlap the panel border.
-    if (s_handle)
-        lv_obj_add_flag(s_handle, LV_OBJ_FLAG_HIDDEN);
+    // Close btn is a child of s_panel — hidden flag on the parent already
+    // propagates, no separate show/hide call needed.
     s_open = true;
     // Force the next update() to refresh the error rows even if the version
     // hasn't moved since the last open.
@@ -337,8 +371,6 @@ void close() {
     if (!s_panel)
         return;
     lv_obj_add_flag(s_panel, LV_OBJ_FLAG_HIDDEN);
-    if (s_handle)
-        lv_obj_clear_flag(s_handle, LV_OBJ_FLAG_HIDDEN);
     s_open = false;
 }
 
