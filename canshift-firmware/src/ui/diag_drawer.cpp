@@ -298,11 +298,22 @@ void init() {
     // -------- Swipe-up zone ------------------------------------------------
     // Invisible touch surface anchored to the bottom of the screen. Listens
     // for LV_DIR_TOP gestures and pops the drawer when fired. Never renders
-    // (zero opa) so it never occludes widget content. The 32 px tall strip
-    // overlaps the bottom row of bar widgets but they are not in the touch
-    // path (bars don't react to taps), so there's no event-routing conflict
-    // with the dashboard. The themeToggle in the topbar is at the OPPOSITE
-    // edge of the screen — no overlap.
+    // (zero opa) so it never occludes widget content.
+    //
+    // The zone MUST be CLICKABLE: LVGL only routes LV_EVENT_GESTURE to the
+    // object that received the initial LV_EVENT_PRESSED, and that path
+    // requires LV_OBJ_FLAG_CLICKABLE. Without it, the touch falls through
+    // to the page widgets below and the gesture never reaches us — which is
+    // exactly the bug observed on device after the first iteration of this
+    // refactor.
+    //
+    // Trade-off: a tap that lands in the bottom 32 px is consumed by the
+    // zone and swallowed (no LV_EVENT_CLICKED handler is wired). The
+    // dashboard's bottom row is bar/gauge widgets that do not react to
+    // taps in the first place, so the practical impact is zero. If a
+    // future page lands a button widget in the bottom 32 px we'll need to
+    // rethink — until then, a working swipe is more important than
+    // theoretical reachability.
     s_swipeZone = lv_obj_create(lv_layer_top());
     lv_obj_set_size(s_swipeZone, LV_HOR_RES, SWIPE_ZONE_H);
     lv_obj_align(s_swipeZone, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -311,7 +322,7 @@ void init() {
     lv_obj_set_style_pad_all(s_swipeZone, 0, LV_PART_MAIN);
     lv_obj_set_style_radius(s_swipeZone, 0, LV_PART_MAIN);
     lv_obj_clear_flag(s_swipeZone, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(s_swipeZone, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(s_swipeZone, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(s_swipeZone, onSwipeZoneGesture, LV_EVENT_GESTURE, nullptr);
 
     // -------- Panel --------------------------------------------------------
