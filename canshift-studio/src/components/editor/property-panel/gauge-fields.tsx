@@ -182,17 +182,20 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </>
       )}
 
-      {/* Bar orientation — switches to the default token for the new orientation */}
+      {/* Bar orientation — horizontal removed per user feedback (the horizontal
+          bar gauge layout didn't read well in the dashboard); only the vertical
+          orientation is offered now. Existing horizontal bar gauges still
+          render but the picker won't surface 'horizontal' as a new choice. */}
       {style === 'bar' && (
         <Field label="Orientation">
           <div style={{ display: 'flex', gap: 4 }}>
-            {(['vertical', 'horizontal'] as const).map((dir) => {
+            {(['vertical'] as const).map((dir) => {
               const isActive = barOrientation === dir
               return (
                 <button
                   key={dir}
                   onClick={() => {
-                    const newTokenId = dir === 'horizontal' ? 'H-FULL' : 'V-M'
+                    const newTokenId = 'V-M'
                     const newToken = SIZE_TOKENS[newTokenId]
                     onChange({
                       config: { ...cfg, barOrientation: dir },
@@ -211,7 +214,10 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
                     textTransform: 'uppercase',
                   }}
                 >
-                  {dir === 'vertical' ? '↕ V' : '↔ H'}
+                  {/* Always vertical now — the conditional below is preserved as
+                      a no-op so reintroducing 'horizontal' later only requires
+                      adding it back to the picker array, not rewriting this row. */}
+                  ↕ V
                 </button>
               )
             })}

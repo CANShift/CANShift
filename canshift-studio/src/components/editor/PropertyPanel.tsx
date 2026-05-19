@@ -18,6 +18,7 @@ import { BarFields } from './property-panel/bar-fields'
 import { WarningFields } from './property-panel/warning-fields'
 import { TimerFields } from './property-panel/timer-fields'
 import { GearFields } from './property-panel/gear-fields'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { ImageFields } from './property-panel/image-fields'
 
 const CONFIG_FIELDS: Partial<
@@ -235,14 +236,15 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           search; the dropdown stays scrollable in browsers that support it. */}
       {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
         <Field label="Signal">
-          <input
-            type="text"
-            list={`signals-list-${widget.id}`}
-            style={inputStyle}
-            value={widget.signal}
-            placeholder="— search signals —"
-            onChange={(e) => {
-              const newSignal = e.target.value
+          {/* Proper Radix Select dropdown listing every loaded signal with its
+              unit next to the name, so the user always sees what they're
+              picking and unit defaults flow through automatically. Replaces
+              the previous `<input list>` + `<datalist>` autocomplete that
+              required typing the name from memory. */}
+          <Select
+            value={widget.signal || '__none__'}
+            onValueChange={(raw) => {
+              const newSignal = raw === '__none__' ? '' : raw
               const signalDef = signals.find((s) => s.name === newSignal)
               const p: Partial<Widget> = { signal: newSignal }
               if (signalDef && widget.config.type === 'gauge') {
@@ -268,14 +270,20 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
               }
               patch(p)
             }}
-          />
-          <datalist id={`signals-list-${widget.id}`}>
-            {signals.map((s) => (
-              <option key={s.name} value={s.name}>
-                {s.unit}
-              </option>
-            ))}
-          </datalist>
+          >
+            <SelectTrigger style={inputStyle}>
+              <SelectValue placeholder="— pick a signal —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— none —</SelectItem>
+              {signals.map((s) => (
+                <SelectItem key={s.name} value={s.name}>
+                  {s.name}
+                  {s.unit ? ` — ${s.unit}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
       )}
 

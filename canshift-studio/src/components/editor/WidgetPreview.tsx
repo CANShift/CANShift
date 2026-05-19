@@ -9,6 +9,14 @@ import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 import { displayLabelForSignal } from '../../utils/signalLabels'
 import { useSignalStore } from '../../stores/signal.store'
+import { MAXXECU_SIGNAL_UNITS } from '@tmbk/canshift-core'
+
+// Built-in name → unit fallback table imported as a lean constant rather
+// than derived at runtime from `ECU_PROFILES`. The full profiles registry
+// drags the entire MaxxECU + OBD-II CAN-frame metadata into the renderer
+// bundle (~30 KB) and pushes us over the studio size budget. The fallback
+// only needs unit strings — keep the table in lockstep via canshift-core.
+const FALLBACK_UNIT_TABLE: Readonly<Record<string, string>> = MAXXECU_SIGNAL_UNITS
 import {
   FONT_FAMILY,
   BLINK_ANIM,
@@ -1513,7 +1521,14 @@ function useResolvedSignalUnit(widget: Widget): string {
   if (configSuffix !== '') return configSuffix
   if (!widget.signal) return ''
   const def = signals.find((s) => s.name === widget.signal)
-  return def?.unit ?? ''
+  if (def?.unit) return def.unit
+  // Hook-level fallback: even if the user's signal store doesn't carry the
+  // bound name (custom profile, partial import, …), look the unit up in the
+  // built-in MaxxECU table so standard names still show their units. Beats
+  // the previous behaviour where the preview ran with no units at all when
+  // localStorage held a non-empty but mismatched catalog (which the
+  // store-level fallback couldn't reach).
+  return FALLBACK_UNIT_TABLE[widget.signal] ?? ''
 }
 
 function WidgetPreviewImpl({
