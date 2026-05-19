@@ -9,22 +9,14 @@ import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { SensorIcon } from '../icons/SensorIcons'
 import { displayLabelForSignal } from '../../utils/signalLabels'
 import { useSignalStore } from '../../stores/signal.store'
-import { ECU_PROFILES } from '@tmbk/canshift-core'
+import { MAXXECU_SIGNAL_UNITS } from '@tmbk/canshift-core'
 
-// Built-in MaxxECU catalog used as a unit-only fallback when the user's
-// loaded signal store doesn't carry a definition for the widget's bound
-// name. Keeps the preview readable on a fresh dashboard whose widgets
-// reference standard names (rpm, throttle_pos, coolant_temp_c, …) even
-// before the user picks an ECU profile. Only the unit string is read —
-// resolution / scaling / framing stay tied to the user's actual catalog.
-const FALLBACK_UNIT_TABLE: Record<string, string> = (() => {
-  const profile = ECU_PROFILES.find((p) => p.id === 'maxxecu-street')
-  const table: Record<string, string> = {}
-  if (profile) {
-    for (const s of profile.signals) table[s.name] = s.unit
-  }
-  return table
-})()
+// Built-in name → unit fallback table imported as a lean constant rather
+// than derived at runtime from `ECU_PROFILES`. The full profiles registry
+// drags the entire MaxxECU + OBD-II CAN-frame metadata into the renderer
+// bundle (~30 KB) and pushes us over the studio size budget. The fallback
+// only needs unit strings — keep the table in lockstep via canshift-core.
+const FALLBACK_UNIT_TABLE: Readonly<Record<string, string>> = MAXXECU_SIGNAL_UNITS
 import {
   FONT_FAMILY,
   BLINK_ANIM,

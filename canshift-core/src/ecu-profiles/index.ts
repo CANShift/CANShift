@@ -445,3 +445,31 @@ export const ECU_PROFILES: EcuProfile[] = [
 ]
 
 export const DEFAULT_PROFILE_ID = 'generic-blank' as const
+
+// Tiny name → unit table for the Studio preview's unit-overlay fallback
+// (#967 follow-up). Importing `ECU_PROFILES` to derive the same data
+// drags the entire MaxxECU + OBD-II registry (CAN frame ids, byte
+// positions, scale/offset, every `_comment`) into the renderer bundle
+// and trips the studio size budget. The fallback only needs unit
+// strings keyed by signal name, so this lean constant carries just
+// that. Keep in lockstep with `MAXXECU_SIGNALS` above.
+export const MAXXECU_SIGNAL_UNITS: Readonly<Record<string, string>> = {
+  rpm: 'rpm',
+  throttle_pos: '%',
+  map_kpa: 'kPa',
+  iat_c: '°C',
+  speed_kph: 'km/h',
+  lambda_1: 'AFR',
+  gear: '',
+  fuel_press_bar: 'bar',
+  coolant_temp_c: '°C',
+  oil_temp_c: '°C',
+  oil_press_bar: 'bar',
+  battery_volts: 'V',
+  flag_mil: '',
+  flag_launch_ctrl: '',
+  flag_flat_shift: '',
+  flag_anti_lag: '',
+  flag_traction_cut: '',
+  map_number: '',
+}

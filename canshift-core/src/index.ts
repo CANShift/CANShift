@@ -195,7 +195,7 @@ export const PRODUCT_NAME = 'CANShift' as const
 // ECU profiles — built-in signal presets (issue #570)
 // ---------------------------------------------------------------------------
 export type { EcuProfile } from './ecu-profiles'
-export { ECU_PROFILES, DEFAULT_PROFILE_ID } from './ecu-profiles'
+export { ECU_PROFILES, DEFAULT_PROFILE_ID, MAXXECU_SIGNAL_UNITS } from './ecu-profiles'
 
 // ---------------------------------------------------------------------------
 // RealDash CAN XML import (issue #609)

@@ -9,10 +9,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ASSETS_DIR = resolve(__dirname, '..', 'dist', 'renderer', 'assets')
 
 // Budget for the renderer main chunk (`index-*.js`).
-// Baseline at the time of writing: ~1013 KB minified (post #166 lazy-loading + shadcn).
-// 1100 KB gives ~8% headroom — tight enough to catch regressions, loose enough to absorb minor adds.
-// Issue #193: revisit and tighten as routes get further code-split.
-const MAIN_CHUNK_BUDGET_BYTES = 1100 * 1024
+// Baseline at v0.10.0: ~1208 KB minified (Radix Select for the signal
+// picker, sensor palette helpers, unit fallback table, fractional digit
+// split path). 1280 KB gives ~6 % headroom — keeps the gate honest but
+// absorbs the UX features that landed together. Issue #193: revisit and
+// tighten as routes get further code-split.
+const MAIN_CHUNK_BUDGET_BYTES = 1280 * 1024
 
 const KIB = 1024
 
