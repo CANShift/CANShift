@@ -91,6 +91,84 @@ export const SignalDefSchema = z
     message: 'min must be less than max',
     path: ['min'],
   })
+  // Issue #1010 — relational invariants on threshold fields.
+  //
+  // The primary `(warningLevel, dangerLevel)` pair can describe either a
+  // high-side ramp (warn rises to danger, e.g. coolant temp: 100 → 115 °C)
+  // or a low-side ramp (warn drops to danger, e.g. oil pressure or battery
+  // undervolt: 1.5 → 1.0 bar, 12.0 → 11.5 V). Both orderings are valid; the
+  // firmware ramp logic (`config_types.h` SignalDef) treats `warningLevel`
+  // as the outer bound and `dangerLevel` as the inner one regardless of
+  // direction. The optional `(highWarningLevel, highDangerLevel)` pair is
+  // unambiguously high-side and exists alongside the low-side primary pair
+  // for two-sided signals (battery: undervolt + overcharge).
+  .superRefine((s, ctx) => {
+    const levelKeys: ('warningLevel' | 'dangerLevel' | 'highWarningLevel' | 'highDangerLevel')[] = [
+      'warningLevel',
+      'dangerLevel',
+      'highWarningLevel',
+      'highDangerLevel',
+    ]
+    for (const key of levelKeys) {
+      const v = s[key]
+      if (v === undefined) continue
+      if (v < s.min || v > s.max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${key} (${v.toString()}) must be within [min=${s.min.toString()}, max=${s.max.toString()}]`,
+          path: [key],
+        })
+      }
+    }
+
+    // Primary pair must form a monotonic ramp (either direction).
+    if (s.warningLevel !== undefined && s.dangerLevel !== undefined) {
+      const highSideOk = s.warningLevel <= s.dangerLevel
+      const lowSideOk = s.dangerLevel <= s.warningLevel
+      if (!highSideOk && !lowSideOk) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'warningLevel/dangerLevel must form a monotonic ramp: ' +
+            'high-side requires warningLevel <= dangerLevel, ' +
+            'low-side requires dangerLevel <= warningLevel',
+          path: ['dangerLevel'],
+        })
+      }
+    }
+
+    // High-side dual pair is unambiguous: warning must precede danger.
+    if (
+      s.highWarningLevel !== undefined &&
+      s.highDangerLevel !== undefined &&
+      s.highWarningLevel > s.highDangerLevel
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'highWarningLevel must be <= highDangerLevel (high-side ramp)',
+        path: ['highDangerLevel'],
+      })
+    }
+
+    // Two-sided signals (battery: low-side primary + high-side overcharge):
+    // the low-side pair must sit strictly below the high-side pair so the
+    // zones don't overlap. Detected by the presence of all four levels and
+    // a low-side ordering on the primary pair (dangerLevel <= warningLevel).
+    if (
+      s.warningLevel !== undefined &&
+      s.dangerLevel !== undefined &&
+      s.highWarningLevel !== undefined &&
+      s.highDangerLevel !== undefined &&
+      s.dangerLevel <= s.warningLevel &&
+      s.warningLevel >= s.highWarningLevel
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'low-side warningLevel must be below highWarningLevel',
+        path: ['highWarningLevel'],
+      })
+    }
+  })
 
 /**
  * CAN bus speed in kbps — single source of truth (issue #778).
