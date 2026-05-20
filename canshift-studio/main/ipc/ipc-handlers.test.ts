@@ -413,7 +413,46 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
   it('USB_SCREEN_SETTINGS rejects rotation: 90 with the typed error', async () => {
     const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
     const result = await handler(makeEvent(), { brightness: 80, sleep: 30, rotation: 90 })
-    expect(result).toEqual({ success: false, error: 'Screen settings payload is invalid' })
+    expect(result).toMatchObject({ success: false })
+    expect((result as { error: string }).error).toMatch(/Screen settings payload invalid/)
+    expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
+  })
+
+  // Bounded brightness/sleep — audit finding S-H-1 (#1015). The old guard
+  // accepted any finite number; the shared ScreenSettingsSchema now rejects
+  // brightness=-9999 and sleep=86400000 at the IPC boundary.
+  it('USB_SCREEN_SETTINGS rejects brightness=-9999 (audit S-H-1)', async () => {
+    const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
+    const result = await handler(makeEvent(), { brightness: -9999, sleep: 0 })
+    expect(result).toMatchObject({ success: false })
+    expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
+  })
+
+  it('USB_SCREEN_SETTINGS rejects brightness=101 (above max)', async () => {
+    const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
+    const result = await handler(makeEvent(), { brightness: 101, sleep: 0 })
+    expect(result).toMatchObject({ success: false })
+    expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
+  })
+
+  it('USB_SCREEN_SETTINGS rejects sleep=86400000 (audit S-H-1)', async () => {
+    const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
+    const result = await handler(makeEvent(), { brightness: 80, sleep: 86_400_000 })
+    expect(result).toMatchObject({ success: false })
+    expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
+  })
+
+  it('USB_SCREEN_SETTINGS rejects sleep=-1 (below min)', async () => {
+    const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
+    const result = await handler(makeEvent(), { brightness: 80, sleep: -1 })
+    expect(result).toMatchObject({ success: false })
+    expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
+  })
+
+  it('USB_SCREEN_SETTINGS rejects unknown top-level keys (strict)', async () => {
+    const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
+    const result = await handler(makeEvent(), { brightness: 80, sleep: 30, mystery: 1 })
+    expect(result).toMatchObject({ success: false })
     expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
   })
 
@@ -456,7 +495,8 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
     it(`USB_SCREEN_SETTINGS rejects ${label} with the typed error`, async () => {
       const handler = getHandler(IpcChannels.USB_SCREEN_SETTINGS)
       const result = await handler(makeEvent(), payload)
-      expect(result).toEqual({ success: false, error: 'Screen settings payload is invalid' })
+      expect(result).toMatchObject({ success: false })
+      expect((result as { error: string }).error).toMatch(/Screen settings payload invalid/)
       expect(usbServiceMock.pushScreenSettings).not.toHaveBeenCalled()
     })
   }
