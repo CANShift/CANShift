@@ -3,7 +3,7 @@
 import { dialog } from 'electron'
 import { readFile, writeFile } from 'fs/promises'
 import { resolve } from 'node:path'
-import type { OpenResult, SaveResult } from '@tmbk/canshift-core'
+import type { OpenResult, SaveResult } from '../../shared/ipc-contract'
 import { sessionService } from './session.service'
 
 // Renderer-supplied paths must match a path the user previously surfaced through

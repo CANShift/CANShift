@@ -1,9 +1,13 @@
-// ipc.ts — Canonical return-shape contracts for renderer ↔ main IPC.
+// ipc-contract.ts — Canonical return-shape contracts for renderer ↔ main IPC.
 //
 // These shapes cross the Electron IPC boundary (renderer ↔ main) so they
 // MUST be defined in a single place — drift between the two processes is
 // silently lossy (e.g. main sets `data` on a UsbResult, the renderer never
 // sees it because its local copy of the type was missing the field).
+//
+// Lives in `shared/` (compiled into both tsconfig.json and tsconfig.main.json)
+// since these are Electron-renderer ↔ main contracts. canshift-core stays a
+// pure domain library — no transport boundary types. Issue #902.
 
 /** A serial port discovered on the host machine. */
 export interface PortInfo {
