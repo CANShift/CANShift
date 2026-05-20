@@ -66,6 +66,10 @@ export function openCliWindow(getMainWindow: () => BrowserWindow | null): number
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Defensive — pin the same-origin policy and disallow mixed content even
+      // if a future Electron upgrade flips a default. Issue #913.
+      webSecurity: true,
+      allowRunningInsecureContent: false,
     },
   })
 
