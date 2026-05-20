@@ -16,6 +16,7 @@
 import type { z } from 'zod'
 
 import { DashboardConfigSchema } from '../schemas/dashboard.js'
+import type { DashboardConfig } from '../schemas/dashboard.js'
 import type { SignalConfig } from '../schemas/signal.js'
 
 import { validateSignalCatalog } from './validate-signal.js'
@@ -24,6 +25,12 @@ export interface ValidationResult {
   valid: boolean
   errors: string[]
   warnings: string[]
+  /**
+   * The Zod-parsed config, set ONLY when `valid === true`. Lets call sites
+   * use the parsed value without an `as DashboardConfig` cast — the runtime
+   * has already proven the shape (#888). Undefined when `valid === false`.
+   */
+  config?: DashboardConfig
 }
 
 export interface ValidateDashboardOptions {
@@ -80,7 +87,15 @@ export function validateDashboard(
     warnings.push(...sigResult.warnings)
   }
 
-  return { valid: errors.length === 0, errors, warnings }
+  // `dashboard` is already the Zod-parsed shape — surface it so callers can
+  // bind a typed `DashboardConfig` without re-parsing (#888). The cast is
+  // safe because `parsed.data` came out of DashboardConfigSchema.safeParse,
+  // which is the source of truth for the DashboardConfig type alias. The
+  // structural difference is purely a `exactOptionalPropertyTypes` quirk on
+  // the optional `_comment` field (Zod adds `| undefined`, our type doesn't).
+  return errors.length === 0
+    ? { valid: true, errors, warnings, config: dashboard as DashboardConfig }
+    : { valid: false, errors, warnings }
 }
 
 // ---------------------------------------------------------------------------

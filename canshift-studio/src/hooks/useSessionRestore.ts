@@ -22,12 +22,13 @@ export function useSessionRestore(): void {
 
       const result = await configService.openPath(lastPath)
       if (result.success && result.content) {
-        let config = result.content as DashboardConfig
+        const rawContent = result.content as Record<string, unknown>
+        let migrated: Record<string, unknown>
         try {
-          const { config: migrated, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
-          config = migrated as unknown as DashboardConfig
-          if (applied.length > 0) {
-            log('info', `Config migrated on restore: ${applied.join(', ')}`)
+          const out = migrateConfig(rawContent, CURRENT_SCHEMA_VERSION)
+          migrated = out.config
+          if (out.applied.length > 0) {
+            log('info', `Config migrated on restore: ${out.applied.join(', ')}`)
           }
         } catch (err) {
           // Skip restore when migration fails — better to start with a clean
@@ -42,8 +43,8 @@ export function useSessionRestore(): void {
         // into the store, even if migration succeeded. A corrupt session
         // file or a migration whose output drifts from the current schema
         // would otherwise silently corrupt the editor (#889).
-        const validation = validateDashboard(config)
-        if (!validation.valid) {
+        const validation = validateDashboard(migrated)
+        if (!validation.valid || !validation.config) {
           validation.errors.forEach((e) => {
             log('error', `Session restore validation: ${e}`)
           })
@@ -56,7 +57,7 @@ export function useSessionRestore(): void {
         validation.warnings.forEach((w) => {
           log('warn', `Session restore: ${w}`)
         })
-        setConfig(config, result.filePath)
+        setConfig(validation.config, result.filePath)
         log('info', `Restored session: ${result.filePath ?? lastPath}`)
       }
       // Silent failure — file may have been moved or deleted since last session
