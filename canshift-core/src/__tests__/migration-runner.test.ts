@@ -722,9 +722,7 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 // registry. BUILTIN_MIGRATIONS is registered newest-first in the source file,
 // so reverse it to walk forward through history.
 function expectedAppliedFromRegistry(): string[] {
-  return [...BUILTIN_MIGRATIONS]
-    .reverse()
-    .map((m) => `${m.fromVersion} → ${m.toVersion}`)
+  return [...BUILTIN_MIGRATIONS].reverse().map((m) => `${m.fromVersion} → ${m.toVersion}`)
 }
 
 describe('migrateConfig — full chain to current', () => {
