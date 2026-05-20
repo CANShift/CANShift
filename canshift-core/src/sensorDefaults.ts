@@ -6,8 +6,8 @@
 // byte; the parity is enforced by an anchor test against the JSON fixture
 // emitted by `npm run export:sensor-defaults`.
 
-import type { HexColor } from './types/common.js'
-import type { ColorRamp } from './types/signal.js'
+import type { HexColor } from './schemas/common.js'
+import type { ColorRamp } from './schemas/signal.js'
 
 /**
  * Discriminated kinds for the standard sensor catalog. The string values are

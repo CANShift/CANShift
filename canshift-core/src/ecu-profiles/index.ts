@@ -11,7 +11,7 @@
 // when those aren't available, ship as `generic-blank` and let the user fill
 // the table from their own measurements.
 
-import type { SignalDef } from '../types/signal'
+import type { SignalDef } from '../schemas/signal.js'
 
 export interface EcuProfile {
   id: string

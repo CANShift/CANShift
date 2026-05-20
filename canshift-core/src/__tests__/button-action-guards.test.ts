@@ -6,14 +6,14 @@ import {
   isCruiseControlAction,
   isMapSwitchAction,
   isNavigateAction,
-} from '../types/dashboard.js'
+} from '../schemas/dashboard.js'
 import type {
   ButtonAction,
   CanRawAction,
   CruiseControlAction,
   MapSwitchAction,
   NavigateAction,
-} from '../types/dashboard.js'
+} from '../schemas/dashboard.js'
 
 describe('ButtonAction discriminant tuple', () => {
   it('exposes every known (category, type) pair', () => {

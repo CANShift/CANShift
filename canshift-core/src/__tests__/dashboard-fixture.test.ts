@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 
 import { CURRENT_SCHEMA_VERSION } from '../index.js'
 import { migrateConfig } from '../migrations/migration-runner.js'
-import type { SignalConfig } from '../types/signal.js'
+import type { SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
