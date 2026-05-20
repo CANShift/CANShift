@@ -128,6 +128,27 @@ jobs:
       - name: Install PlatformIO CLI
         run: pip install platformio
 
+      # Write the OTA HMAC secret consumed by `extra_targets.py` before the
+      # production env builds. The guard introduced in #667 deliberately
+      # refuses to compile the release env with the placeholder, so the
+      # workflow needs a real key sourced from a repo secret. Set
+      # `OTA_HMAC_SECRET` under Settings → Secrets and variables → Actions
+      # (generate with `openssl rand -hex 32`). The same value must be
+      # configured on the OTA backend so signed bins verify against it.
+      # Closes #978.
+      - name: Write secrets.ini for production firmware
+        run: |
+          if [ -z "${OTA_HMAC_SECRET:-}" ]; then
+            echo "::error::OTA_HMAC_SECRET repo secret is not set — see #978 for setup."
+            exit 1
+          fi
+          cat > secrets.ini <<EOF
+          [ota]
+          hmac_secret = ${OTA_HMAC_SECRET}
+          EOF
+        env:
+          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
+
       - name: Build production firmware
         run: platformio run -e crowpanel_28
 
