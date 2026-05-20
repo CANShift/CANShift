@@ -49,13 +49,18 @@ export function useAutoConnect(): void {
   // panel. Without this guard, the 2 s reconnect poll grabs the serial port
   // back from esptool-js mid-flash and the write times out.
   const flashing = useDeviceStore((s) => s.flashing)
+  // `manualDisconnect` is set by `useUsbConnection.disconnect()` when the
+  // user explicitly drops the connection. Without this guard the 2 s poll
+  // would silently undo every Disconnect click — issue #977. Cleared on the
+  // next `connect()` call (or on a fresh app launch via sessionStorage).
+  const manualDisconnect = useDeviceStore((s) => s.manualDisconnect)
   const log = useLogStore((s) => s.push)
 
   // Guard against re-entrant connect attempts while a previous one is still in flight
   const inFlight = useRef(false)
 
   useEffect(() => {
-    if (connected || simulationMode || probing || flashing) return
+    if (connected || simulationMode || probing || flashing || manualDisconnect) return
 
     let cancelled = false
 
@@ -100,5 +105,5 @@ export function useAutoConnect(): void {
       cancelled = true
       clearInterval(interval)
     }
-  }, [connected, simulationMode, probing, flashing, log])
+  }, [connected, simulationMode, probing, flashing, manualDisconnect, log])
 }
