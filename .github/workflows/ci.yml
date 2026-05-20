@@ -478,6 +478,13 @@ jobs:
         run: pip install platformio
 
       - name: Run native unit tests
+        # ASAN_OPTIONS=detect_leaks=1 flips on LeakSanitizer at process exit
+        # for the native Unity binaries. ASan-on-Linux ships with LSan baked
+        # in, so this is the portable way to opt in without forcing macOS
+        # developers to install standalone LSan (#936 Phase 0).
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: platformio test -e native
 
   # ─── Firmware — clang-tidy (informational, ramping to blocking, #829) ───────
