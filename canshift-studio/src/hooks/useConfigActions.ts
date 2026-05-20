@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { DashboardConfig } from '@tmbk/canshift-core'
 import { validateDashboard, migrateConfig, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
@@ -78,12 +77,17 @@ export function useConfigActions() {
   const applyOpenResult = useCallback(
     (result: Awaited<ReturnType<typeof configService.open>>) => {
       if (result.success && result.content) {
-        let config = result.content as DashboardConfig
+        // Inbound IPC content is `unknown` — keep it that way until Zod
+        // narrows the type. migrateConfig works on the loose Record shape;
+        // the parsed DashboardConfig comes back from `validateDashboard`
+        // (#888 — no `as DashboardConfig` cast needed).
+        const rawContent = result.content as Record<string, unknown>
+        let migrated: Record<string, unknown>
         try {
-          const { config: migrated, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
-          config = migrated as unknown as DashboardConfig
-          if (applied.length > 0) {
-            log('info', `Config migrated: ${applied.join(', ')}`)
+          const out = migrateConfig(rawContent, CURRENT_SCHEMA_VERSION)
+          migrated = out.config
+          if (out.applied.length > 0) {
+            log('info', `Config migrated: ${out.applied.join(', ')}`)
           }
         } catch (err) {
           // Refuse to load a config we cannot bring up to the current schema —
@@ -102,8 +106,8 @@ export function useConfigActions() {
         // load any JSON the user picked, which then risked being pushed to
         // firmware as a corrupt shape (#693). Import already does this; we
         // mirror that guard on the open / openPath / session-restore paths.
-        const validation = validateDashboard(config)
-        if (!validation.valid) {
+        const validation = validateDashboard(migrated)
+        if (!validation.valid || !validation.config) {
           validation.errors.forEach((e) => {
             log('error', `Open validation: ${e}`)
           })
@@ -118,7 +122,7 @@ export function useConfigActions() {
         validation.warnings.forEach((w) => {
           log('warn', `Open: ${w}`)
         })
-        setConfig(config, result.filePath)
+        setConfig(validation.config, result.filePath)
         log('info', `Opened ${result.filePath ?? 'config'}`)
       } else if (!result.success && result.error) {
         log('error', `Open failed: ${result.error}`)
@@ -150,12 +154,13 @@ export function useConfigActions() {
       }
       if (!result.content) return
 
-      let imported = result.content as DashboardConfig
+      const rawContent = result.content as Record<string, unknown>
+      let migrated: Record<string, unknown>
       try {
-        const { config: migrated, applied } = migrateConfig(imported, CURRENT_SCHEMA_VERSION)
-        imported = migrated as unknown as DashboardConfig
-        if (applied.length > 0) {
-          log('info', `Imported config migrated: ${applied.join(', ')}`)
+        const out = migrateConfig(rawContent, CURRENT_SCHEMA_VERSION)
+        migrated = out.config
+        if (out.applied.length > 0) {
+          log('info', `Imported config migrated: ${out.applied.join(', ')}`)
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -164,8 +169,8 @@ export function useConfigActions() {
         return
       }
 
-      const validation = validateDashboard(imported)
-      if (!validation.valid) {
+      const validation = validateDashboard(migrated)
+      if (!validation.valid || !validation.config) {
         validation.errors.forEach((e) => {
           log('error', `Import validation: ${e}`)
         })
@@ -181,7 +186,7 @@ export function useConfigActions() {
         log('warn', `Import: ${w}`)
       })
 
-      loadImported(imported)
+      loadImported(validation.config)
       log(
         'success',
         `Imported ${result.filePath ?? 'dashboard'} — review then Save to keep a local copy`
