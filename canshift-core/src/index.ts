@@ -169,6 +169,12 @@ export { TopBarMetrics } from './topbar-metrics'
 export type { TopBarMetricsRatios } from './topbar-metrics'
 
 // ---------------------------------------------------------------------------
+// TopBar status colours — shared with firmware (mirrored in top_bar.cpp)
+// ---------------------------------------------------------------------------
+export { TopBarColors } from './topbar-colors'
+export type { TopBarColorPalette } from './topbar-colors'
+
+// ---------------------------------------------------------------------------
 // Day-theme defaults — fallback palette + bg consumed by the studio canvas
 // (and eventually the mobile renderer) when `dayTheme` is absent. Issue #901.
 // ---------------------------------------------------------------------------
