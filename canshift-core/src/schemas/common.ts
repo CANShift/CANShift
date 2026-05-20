@@ -84,3 +84,18 @@ export const SemVerSchema = z
     /^\d+\.\d+\.\d+$/,
     'must be a semver string "MAJOR.MINOR.PATCH"'
   ) as z.ZodType<`${number}.${number}.${number}`>
+
+/** Hex color string — e.g. "#FF4444". */
+export type HexColor = z.infer<typeof HexColorSchema>
+
+/** Widget type discriminant. */
+export type WidgetType = z.infer<typeof WidgetTypeSchema>
+
+/** Widget position and size in pixels on a 320×240 canvas. */
+export type WidgetLayout = z.infer<typeof WidgetLayoutSchema>
+
+/** Widget visual style. */
+export type WidgetStyle = z.infer<typeof WidgetStyleSchema>
+
+/** Semantic version string — "MAJOR.MINOR.PATCH". */
+export type SemVer = z.infer<typeof SemVerSchema>
