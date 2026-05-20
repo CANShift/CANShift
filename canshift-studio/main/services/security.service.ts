@@ -43,11 +43,7 @@ function buildCsp(connectSrc: string, styleSrc: string, styleSrcAttr: string | n
   return directives.join('; ')
 }
 
-const PROD_CSP = buildCsp(
-  PROD_CONNECT_SRC,
-  "style-src 'self'",
-  "style-src-attr 'unsafe-inline'"
-)
+const PROD_CSP = buildCsp(PROD_CONNECT_SRC, "style-src 'self'", "style-src-attr 'unsafe-inline'")
 const DEV_CSP = buildCsp(DEV_CONNECT_SRC, "style-src 'self' 'unsafe-inline'", null)
 
 // Exported for tests — keep in sync with the values installed by
