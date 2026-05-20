@@ -786,6 +786,15 @@ describe('migrateConfig — full chain to current', () => {
     expect(out.version).toBe(CURRENT_SCHEMA_VERSION)
     expect(applied).toEqual(expectedApplied)
 
+    // Belt-and-braces: assert the last step lands on CURRENT_SCHEMA_VERSION.
+    // Catches a future refactor where `expectedApplied` is built from a
+    // truncated registry slice without anyone noticing — the equality above
+    // would still pass (truncated == truncated), but the chain wouldn't
+    // actually reach the current version.
+    expect(applied[applied.length - 1]).toBe(
+      `${BUILTIN_MIGRATIONS[0]!.fromVersion} → ${CURRENT_SCHEMA_VERSION}`
+    )
+
     const page = (out.pages as Record<string, unknown>[])[0]!
     expect(page.name).toBeUndefined() // dropped in 1.6→1.7
     expect(page.palette).toBeDefined() // added in 1.2→1.3
