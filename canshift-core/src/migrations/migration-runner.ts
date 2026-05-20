@@ -509,6 +509,12 @@ export function validateMigrationChain(
   return missing
 }
 
+// Semver pattern accepted by `migrateConfig` for `input.version`. Mirrors the
+// regex used by `SemVerSchema` in `schemas/common.ts` — kept inline here so the
+// migration runner stays free of cross-module coupling on a hot path. A change
+// to either site should keep the two in sync (issue #1016, audit C-HI-2).
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/
+
 /**
  * Apply all migrations to bring config from its current version to targetVersion.
  * Returns the migrated config and the list of migrations applied.
@@ -518,13 +524,47 @@ export function validateMigrationChain(
  * migrations only shallow-spread the top level (e.g. 1.3→1.4, 1.4→1.5,
  * 1.9→1.10) — the deep clone guarantees nested objects are not shared.
  *
+ * Throws (with a precise message naming the defect) if:
+ *   - `config` is null or not a plain object,
+ *   - `config.version` is missing, not a string, empty, or not a semver triple.
+ *
+ * Strict input validation is required because callers in studio
+ * (`useSessionRestore`, `useConfigActions`, `useDeviceConfigLoad`) cast raw
+ * file contents via `as Record<string, unknown>` and rely on this function to
+ * reject malformed payloads with an actionable message instead of producing
+ * garbage downstream (audit C-HI-2, umbrella #1016).
+ *
  * Throws if the migration chain has gaps — prevents partial migration.
  */
 export function migrateConfig(
   config: Record<string, unknown>,
   targetVersion: string
 ): MigrationResult {
-  const currentVersion = (config.version as string | undefined) ?? '0.0.0'
+  // Strict input validation — the TS signature is bypassed by callers that
+  // cast raw file contents (studio's `useSessionRestore`, `useConfigActions`,
+  // `useDeviceConfigLoad` all do `rawContent as Record<string, unknown>`).
+  // Without this guard, a number/empty/missing `version` would cast to
+  // `string` and produce confusing downstream errors. Cast through `unknown`
+  // here so the runtime guards are not optimised away by the type system.
+  const rawConfig = config as unknown
+  if (rawConfig === null || typeof rawConfig !== 'object' || Array.isArray(rawConfig)) {
+    throw new Error('migrateConfig: input must be a non-null object')
+  }
+  const rawVersion: unknown = (rawConfig as Record<string, unknown>).version
+  if (typeof rawVersion !== 'string') {
+    throw new Error(
+      `migrateConfig: input.version is not a string (got ${rawVersion === null ? 'null' : typeof rawVersion})`
+    )
+  }
+  if (rawVersion.length === 0) {
+    throw new Error('migrateConfig: input.version is an empty string')
+  }
+  if (!SEMVER_PATTERN.test(rawVersion)) {
+    throw new Error(
+      `migrateConfig: input.version "${rawVersion}" does not match semver pattern "MAJOR.MINOR.PATCH"`
+    )
+  }
+  const currentVersion = rawVersion
   let current = deepClone(config)
   const applied: string[] = []
 
