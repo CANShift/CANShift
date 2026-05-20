@@ -42,13 +42,15 @@ static CfgSignalConfig s_signals = {};
 static CfgDeviceConfig s_device = {};
 static CfgInputBindings s_inputs = {};
 
-// Issue #458: transactional reload uses heap-allocated snapshots taken on
-// entry to each load* function and freed on exit. CfgDashboard is ~22 KB and
-// CfgSignalConfig is ~5 KB — too large to keep in DRAM permanently (would
-// overflow `dram0_0_seg`) and too large for the loop-task stack (8 KB
-// CONFIG_ARDUINO_LOOP_STACK_SIZE has no headroom). Heap is fine: load*()
-// runs synchronously, the allocation is short-lived (<500 ms), and freeing
-// happens before any UI rebuild.
+// Transactional reload snapshots (issue #458, audit F-HI-3 / umbrella #1014).
+// Previously these snapshots were heap-allocated on each load* entry and freed
+// on exit (~22 KB + ~5 KB of malloc/free churn per reload), which fragmented
+// the LVGL pool when fonts/SPIFFS loaded right after boot (related to #895 /
+// #976). Now BSS-resident so load*() never touches the heap. Single-writer:
+// boot-time config load is serial — loadAll() drives each load* in sequence
+// from a single task — so a plain static buffer is safe.
+static CfgDashboard s_dashboard_snapshot = {};
+static CfgSignalConfig s_signals_snapshot = {};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -723,29 +725,20 @@ void parseWidget(JsonObjectConst src, CfgWidget *w) {
 }
 
 bool loadDashboard() {
-    // Snapshot the previous in-memory state on the heap before touching
-    // s_dashboard so we can roll back atomically on any parse failure
-    // (issue #458). All subsequent mutations write directly into s_dashboard;
-    // on failure the snapshot is copied back, leaving observable state
-    // byte-identical to the pre-call value. If the snapshot allocation
-    // itself fails (very low-memory boot), we fall through without a
-    // rollback safety net rather than refusing to load — the previous
-    // (pre-fix) behaviour. This keeps the cold-boot path resilient.
-    auto *prev = static_cast<CfgDashboard *>(malloc(sizeof(CfgDashboard)));
-    if (prev) {
-        memcpy(prev, &s_dashboard, sizeof(CfgDashboard));
-    } else {
-        LOG_WARN("CFG", "dashboard snapshot alloc failed — proceeding without rollback");
-    }
+    // Snapshot the previous in-memory state into the BSS-resident buffer
+    // before touching s_dashboard so we can roll back atomically on any parse
+    // failure (issue #458, audit F-HI-3 / umbrella #1014). All subsequent
+    // mutations write directly into s_dashboard; on failure the snapshot is
+    // copied back, leaving observable state byte-identical to the pre-call
+    // value. BSS storage cannot fail, so the previous "fall through without
+    // rollback on alloc failure" branch is gone.
+    memcpy(&s_dashboard_snapshot, &s_dashboard, sizeof(CfgDashboard));
 
     JsonDocument doc; // ArduinoJson v7 — dynamic, no capacity() needed
     if (!readAndParseWithBak(CONFIG_PATH_DASHBOARD, doc)) {
         LOG_ERROR("CFG", "dashboard.json unreadable (primary + .bak)");
         ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "dashboard.json unreadable");
-        if (prev) {
-            memcpy(&s_dashboard, prev, sizeof(CfgDashboard));
-            free(prev);
-        }
+        memcpy(&s_dashboard, &s_dashboard_snapshot, sizeof(CfgDashboard));
         return false;
     }
 
@@ -853,32 +846,22 @@ bool loadDashboard() {
     }
 
     s_dashboard.loaded = true;
-    if (prev)
-        free(prev);
     LOG_INFO("CFG", "dashboard.json loaded: %d pages", s_dashboard.pageCount);
     return true;
 }
 
 bool loadSignals() {
-    // Snapshot prior state on the heap for rollback on parse failure
-    // (issue #458) — same pattern as loadDashboard(). CfgSignalConfig is
-    // ~5 KB which fits the stack but heap-allocating keeps the function
-    // signature uniform with the dashboard path.
-    auto *prev = static_cast<CfgSignalConfig *>(malloc(sizeof(CfgSignalConfig)));
-    if (prev) {
-        memcpy(prev, &s_signals, sizeof(CfgSignalConfig));
-    } else {
-        LOG_WARN("CFG", "signals snapshot alloc failed — proceeding without rollback");
-    }
+    // Snapshot prior state into the BSS-resident buffer for rollback on parse
+    // failure (issue #458, audit F-HI-3 / umbrella #1014) — same pattern as
+    // loadDashboard(). Boot-time config load is serial so a single static
+    // buffer per type is sufficient.
+    memcpy(&s_signals_snapshot, &s_signals, sizeof(CfgSignalConfig));
 
     JsonDocument doc; // ArduinoJson v7 — dynamic
     if (!readAndParseWithBak(CONFIG_PATH_SIGNALS, doc)) {
         LOG_ERROR("CFG", "signals.json unreadable (primary + .bak)");
         ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "signals.json unreadable");
-        if (prev) {
-            memcpy(&s_signals, prev, sizeof(CfgSignalConfig));
-            free(prev);
-        }
+        memcpy(&s_signals, &s_signals_snapshot, sizeof(CfgSignalConfig));
         return false;
     }
 
@@ -972,8 +955,6 @@ bool loadSignals() {
     }
 
     s_signals.loaded = true;
-    if (prev)
-        free(prev);
     LOG_INFO("CFG", "signals.json loaded: %d signals", s_signals.signalCount);
     return true;
 }
