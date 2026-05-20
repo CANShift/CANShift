@@ -42,15 +42,22 @@ static CfgSignalConfig s_signals = {};
 static CfgDeviceConfig s_device = {};
 static CfgInputBindings s_inputs = {};
 
-// Transactional reload snapshots (issue #458, audit F-HI-3 / umbrella #1014).
+// Transactional reload snapshot (issue #458, audit F-HI-3 / umbrella #1014).
 // Previously these snapshots were heap-allocated on each load* entry and freed
 // on exit (~22 KB + ~5 KB of malloc/free churn per reload), which fragmented
 // the LVGL pool when fonts/SPIFFS loaded right after boot (related to #895 /
-// #976). Now BSS-resident so load*() never touches the heap. Single-writer:
-// boot-time config load is serial — loadAll() drives each load* in sequence
-// from a single task — so a plain static buffer is safe.
-static CfgDashboard s_dashboard_snapshot = {};
-static CfgSignalConfig s_signals_snapshot = {};
+// #976). Now BSS-resident so load*() never touches the heap.
+//
+// loadDashboard() and loadSignals() run sequentially on the same task
+// (ConfigLoader::loadAll drives them in order) and each completes before the
+// next begins, so a single shared buffer sized to the larger of the two types
+// is enough. Two separate buffers cost ~5 KB extra BSS and pushed the
+// production crowpanel_28 image past the DRAM ceiling (umbrella #1014).
+// The static_assert pins the invariant so a future struct growth on the
+// other type can't silently underflow this buffer.
+static_assert(sizeof(CfgDashboard) >= sizeof(CfgSignalConfig),
+              "rollback snapshot buffer must fit CfgDashboard (the larger of the two)");
+alignas(CfgDashboard) static uint8_t s_rollback_snapshot[sizeof(CfgDashboard)];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -732,13 +739,13 @@ bool loadDashboard() {
     // copied back, leaving observable state byte-identical to the pre-call
     // value. BSS storage cannot fail, so the previous "fall through without
     // rollback on alloc failure" branch is gone.
-    memcpy(&s_dashboard_snapshot, &s_dashboard, sizeof(CfgDashboard));
+    memcpy(s_rollback_snapshot, &s_dashboard, sizeof(CfgDashboard));
 
     JsonDocument doc; // ArduinoJson v7 — dynamic, no capacity() needed
     if (!readAndParseWithBak(CONFIG_PATH_DASHBOARD, doc)) {
         LOG_ERROR("CFG", "dashboard.json unreadable (primary + .bak)");
         ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "dashboard.json unreadable");
-        memcpy(&s_dashboard, &s_dashboard_snapshot, sizeof(CfgDashboard));
+        memcpy(&s_dashboard, s_rollback_snapshot, sizeof(CfgDashboard));
         return false;
     }
 
@@ -853,15 +860,15 @@ bool loadDashboard() {
 bool loadSignals() {
     // Snapshot prior state into the BSS-resident buffer for rollback on parse
     // failure (issue #458, audit F-HI-3 / umbrella #1014) — same pattern as
-    // loadDashboard(). Boot-time config load is serial so a single static
-    // buffer per type is sufficient.
-    memcpy(&s_signals_snapshot, &s_signals, sizeof(CfgSignalConfig));
+    // loadDashboard(). Boot-time config load is serial and loadDashboard has
+    // already returned, so the shared rollback buffer is free to reuse here.
+    memcpy(s_rollback_snapshot, &s_signals, sizeof(CfgSignalConfig));
 
     JsonDocument doc; // ArduinoJson v7 — dynamic
     if (!readAndParseWithBak(CONFIG_PATH_SIGNALS, doc)) {
         LOG_ERROR("CFG", "signals.json unreadable (primary + .bak)");
         ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "signals.json unreadable");
-        memcpy(&s_signals, &s_signals_snapshot, sizeof(CfgSignalConfig));
+        memcpy(&s_signals, s_rollback_snapshot, sizeof(CfgSignalConfig));
         return false;
     }
 
