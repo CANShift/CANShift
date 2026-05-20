@@ -7,7 +7,7 @@
 //   - XML entity decoding (&amp; &lt; &gt;) in attribute values
 //   - V*N, V*N+C, V/N, V*N/M, V>>N conversions; warns on complex formulas
 
-import type { SignalDef } from '../types/signal'
+import type { SignalDef } from '../schemas/signal.js'
 
 export interface ParseRealDashXMLResult {
   signals: SignalDef[]

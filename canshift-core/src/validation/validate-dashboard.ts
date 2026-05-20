@@ -16,7 +16,7 @@
 import type { z } from 'zod'
 
 import { DashboardConfigSchema } from '../schemas/dashboard.js'
-import type { SignalConfig } from '../types/signal.js'
+import type { SignalConfig } from '../schemas/signal.js'
 
 import { validateSignalCatalog } from './validate-signal.js'
 

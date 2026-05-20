@@ -3,9 +3,11 @@
 // Only import from this barrel file in consuming projects.
 
 // ---------------------------------------------------------------------------
-// Types
+// Types — all derived from Zod schemas; the schema file is the single source
+// of truth. The intermediate `./types/*` barrels were removed in #914 — there
+// is exactly one home for every contract now.
 // ---------------------------------------------------------------------------
-export type { HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer } from './types/common'
+export type { HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer } from './schemas/common.js'
 
 export type {
   // Dashboard
@@ -38,23 +40,34 @@ export type {
   CanRawAction,
   CruiseControlAction,
   CruiseControlOp,
-} from './types/dashboard'
+} from './schemas/dashboard.js'
 
-export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './types/dashboard'
-// BUTTON_ACTION_TYPES / isNavigateAction / isMapSwitchAction / isCanRawAction
-// kept internal (still in ./types/dashboard) until a downstream consumer needs
-// them — re-export here when that lands. See issue #793.
+export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './schemas/dashboard.js'
+// Button-action discriminator helpers — exposed because studio's ActionRow
+// (#852) consumes them in `editor/ButtonActionEditor.tsx`. The previous
+// "kept internal until needed" comment (referencing #793) is no longer
+// accurate now that the studio editor ships.
+export {
+  BUTTON_ACTION_TYPES,
+  CRUISE_CONTROL_OPS,
+  isNavigateAction,
+  isMapSwitchAction,
+  isCanRawAction,
+  isCruiseControlAction,
+} from './schemas/dashboard.js'
 export type {
   SignalConfig,
   SignalDef,
   ColorRamp,
   ColorRampStop,
   RampInterpolation,
-} from './types/signal'
-export type { DeviceConfig, CanSpeedKbps } from './types/device'
-export { DEFAULT_DEVICE_CONFIG, CAN_SPEED_OPTIONS } from './types/device'
-export type { DeviceConfigWire } from './schemas/device'
-export { deviceConfigFromWire, deviceConfigToWire } from './schemas/device'
+} from './schemas/signal.js'
+export type { DeviceConfig } from './schemas/device.js'
+export type { CanSpeedKbps } from './schemas/signal.js'
+export { CAN_SPEED_OPTIONS } from './schemas/signal.js'
+export { DEFAULT_DEVICE_CONFIG } from './schemas/device.js'
+export type { DeviceConfigWire } from './schemas/device.js'
+export { deviceConfigFromWire, deviceConfigToWire } from './schemas/device.js'
 
 // Input bindings — physical GPIO buttons → dashboard actions (issue #833)
 export type {

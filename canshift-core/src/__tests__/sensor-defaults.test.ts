@@ -11,7 +11,7 @@ import {
 } from '../sensorDefaults.js'
 import type { SensorKind } from '../sensorDefaults.js'
 import { HEX_COLOR_REGEX, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
-import type { ColorRamp } from '../types/signal.js'
+import type { ColorRamp } from '../schemas/signal.js'
 
 describe('SENSOR_DEFAULT_RAMPS', () => {
   const entries = Object.entries(SENSOR_DEFAULT_RAMPS) as [

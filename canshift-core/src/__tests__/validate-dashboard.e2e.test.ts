@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import type { SignalConfig } from '../types/signal.js'
+import type { SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
