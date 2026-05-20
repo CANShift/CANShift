@@ -715,7 +715,15 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 // ---------------------------------------------------------------------------
 
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.14.0 without losing data', () => {
+  // Rebuild the expected `applied` list from BUILTIN_MIGRATIONS so the
+  // regression test always walks every registered step up to
+  // CURRENT_SCHEMA_VERSION. BUILTIN_MIGRATIONS is registered newest-first;
+  // reverse to walk forward through history.
+  const expectedApplied = [...BUILTIN_MIGRATIONS]
+    .reverse()
+    .map((m) => `${m.fromVersion} → ${m.toVersion}`)
+
+  it(`walks a 1.0.0 config all the way to ${CURRENT_SCHEMA_VERSION} without losing data`, () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -765,6 +773,8 @@ describe('migrateConfig — full chain to current', () => {
                 barOrientation: 'horizontal',
                 minValue: 0,
                 maxValue: 100,
+                warningLevel: 70, // dropped in 1.16→1.17
+                dangerLevel: 90,
               },
             },
           ],
@@ -772,24 +782,9 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.14.0')
-    expect(out.version).toBe('1.14.0')
-    expect(applied).toEqual([
-      '1.0.0 → 1.1.0',
-      '1.1.0 → 1.2.0',
-      '1.2.0 → 1.3.0',
-      '1.3.0 → 1.4.0',
-      '1.4.0 → 1.5.0',
-      '1.5.0 → 1.6.0',
-      '1.6.0 → 1.7.0',
-      '1.7.0 → 1.8.0',
-      '1.8.0 → 1.9.0',
-      '1.9.0 → 1.10.0',
-      '1.10.0 → 1.11.0',
-      '1.11.0 → 1.12.0',
-      '1.12.0 → 1.13.0',
-      '1.13.0 → 1.14.0',
-    ])
+    const { config: out, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
+    expect(out.version).toBe(CURRENT_SCHEMA_VERSION)
+    expect(applied).toEqual(expectedApplied)
 
     const page = (out.pages as Record<string, unknown>[])[0]!
     expect(page.name).toBeUndefined() // dropped in 1.6→1.7
@@ -814,19 +809,22 @@ describe('migrateConfig — full chain to current', () => {
     expect(gearLayout.w).toBe(160)
     expect(gearLayout.h).toBe(56)
 
-    // Horizontal bar at 320×28 was doubled to 320×56
+    // Horizontal bar at 320×28 was doubled to 320×56; warningLevel dropped in 1.16→1.17
     const tps = widgets[3]!
     const tpsLayout = tps.layout as Record<string, unknown>
     expect(tpsLayout.w).toBe(320)
     expect(tpsLayout.h).toBe(56)
+    const tpsCfg = tps.config as Record<string, unknown>
+    expect('warningLevel' in tpsCfg).toBe(false)
+    expect(tpsCfg.dangerLevel).toBe(90)
   })
 
-  it('a fresh 1.14.0 config is a no-op through the runner', () => {
+  it(`a fresh ${CURRENT_SCHEMA_VERSION} config is a no-op through the runner`, () => {
     const config = {
-      version: '1.14.0',
+      version: CURRENT_SCHEMA_VERSION,
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.14.0')
+    const { config: out, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
     expect(applied).toEqual([])
     expect(out).toEqual(config)
   })
