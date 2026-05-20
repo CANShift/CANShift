@@ -6,13 +6,17 @@ import type {
   SignalConfig,
   DeviceConfig,
   InputBindingsConfig,
-  ConnectionStatus,
   LatestReleaseResult,
+} from '@tmbk/canshift-core'
+// IPC transport types live in shared/ — they're Electron-renderer ↔ main
+// contracts, not domain shapes (issue #902).
+import type {
+  ConnectionStatus,
   OpenResult,
   PortInfo,
   SaveResult,
   UsbResult,
-} from '@tmbk/canshift-core'
+} from '../../shared/ipc-contract'
 import { IpcChannels } from '../../shared/ipc-channels'
 import type { FirmwareRelease } from '../../shared/firmware.service.types'
 import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
@@ -26,9 +30,9 @@ import {
   type ScreenSettingsPayload,
 } from '../../shared/ipc-payloads'
 
-// Studio-local IPC payload types (not part of canshift-core). Core IPC return
-// shapes (PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult) are
-// imported directly from '@tmbk/canshift-core' at every call site — do not
+// Studio-local IPC payload types. IPC return shapes (PortInfo,
+// ConnectionStatus, UsbResult, OpenResult, SaveResult) live in
+// `shared/ipc-contract.ts` and are imported there at every call site — do not
 // re-export them through this barrel.
 export type {
   FirmwareRelease,

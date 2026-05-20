@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { useErrorStore } from '../stores/error.store'
-import type { PortInfo } from '@tmbk/canshift-core'
+import type { PortInfo } from '../../shared/ipc-contract'
 import { usbService } from '../services/ipc.service'
 
 export function useUsbConnection() {

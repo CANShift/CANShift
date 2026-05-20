@@ -11,7 +11,7 @@
 
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
-import type { ConnectionStatus, PortInfo, UsbResult } from '@tmbk/canshift-core'
+import type { ConnectionStatus, PortInfo, UsbResult } from '../../shared/ipc-contract'
 import type { CanFrame, CanHealth } from '../../shared/usb.service.types'
 import type { DeviceConfigResult } from '../../shared/ipc-payloads'
 

@@ -11,7 +11,7 @@
 import { useEffect, useRef } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
-import type { PortInfo } from '@tmbk/canshift-core'
+import type { PortInfo } from '../../shared/ipc-contract'
 import { sessionIpc, usbService } from '../services/ipc.service'
 
 const POLL_INTERVAL_MS = 2_000
