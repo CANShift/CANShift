@@ -83,7 +83,7 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 
 **Version**
 
-- `CURRENT_SCHEMA_VERSION` — currently `1.13.0`
+- `CURRENT_SCHEMA_VERSION` — currently `1.17.0`
 - `PRODUCT_NAME` — `'CANShift'`
 
 ---
@@ -93,7 +93,7 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 Every config file carries a `"version"` field at the root:
 
 ```json
-{ "version": "1.13.0", ... }
+{ "version": "1.17.0", ... }
 ```
 
 `CURRENT_SCHEMA_VERSION` (`src/index.ts`) is the version this code reads and writes. It follows semver:
@@ -128,6 +128,10 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 | 1.10.0 → 1.11.0 | Arc gauges gain optional `arcFillStyle` field (#175); undefined defaults to `'zones'` — no data transform needed |
 | 1.11.0 → 1.12.0 | Default `topBar.height` bumped from 24 → 30 (#379); configs persisting the old default are rewritten, custom values are left untouched |
 | 1.12.0 → 1.13.0 | `SignalDef` gains optional `colorRamp` field (#430); firmware resolves a default ramp from the signal name when none is configured |
+| 1.13.0 → 1.14.0 | `signals.json` `protocol` rewritten from the MaxxECU-specific `"maxxecu_v1.2"` to the ECU-agnostic `"custom_v1.0"` (#639); no-op for dashboard configs (no `protocol` field) |
+| 1.14.0 → 1.15.0 | `WidgetStyle` gains optional `respectDayMode` field (#191); undefined treated as `true` to preserve the v0.7.0 day/night text-colour contract — no data transform |
+| 1.15.0 → 1.16.0 | `GaugeWidgetConfig` and `BarWidgetConfig` gain optional `iconName` field (#954); existing configs leave the field undefined and keep the legacy `style.primaryColor` path — no data transform |
+| 1.16.0 → 1.17.0 | Gauge / bar `warningLevel` dropped (#965); `dangerLevel` becomes the sole threshold above which a gauge turns red — `warningLevel` is discarded, `dangerLevel` preserved as-is |
 
 `migrateConfig` deep-clones the input before any migration runs (#282) so individual migrations can mutate freely without aliasing the caller's object.
 
