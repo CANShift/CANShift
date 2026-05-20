@@ -149,6 +149,35 @@ export class FirmwareService {
   private flashPortPath: string | null = null
 
   /**
+   * Allowlist of fully-qualified download URLs returned by a verified
+   * `listReleases()` call. Populated lazily; the IPC layer consults this set
+   * before forwarding any `firmware:download` request to `downloadBinary`.
+   *
+   * Without this, a compromised renderer could call `firmware:download` with
+   * any URL on `objects.githubusercontent.com` (or release-assets) — the
+   * release-asset CDN is shared across every public GitHub repo, so the
+   * hostname allowlist alone was effectively "any GitHub release asset".
+   * Issue #880.
+   */
+  private readonly trustedDownloadUrls = new Set<string>()
+
+  /**
+   * Returns true only when `url` was previously surfaced by `listReleases()`
+   * or by `getLatestRelease()` (single-source check). The IPC handler uses
+   * this for the opaque-host case (objects.githubusercontent.com,
+   * release-assets.githubusercontent.com) where the path carries no
+   * repository identifier. Issue #880.
+   */
+  isFirmwareUrlTrusted(url: string): boolean {
+    return this.trustedDownloadUrls.has(url)
+  }
+
+  /** Test-only — clears the allowlist between unit tests. */
+  __resetTrustedUrlsForTest(): void {
+    this.trustedDownloadUrls.clear()
+  }
+
+  /**
    * Fetch firmware releases from GitHub.
    * channel 'stable' → only non-prerelease releases.
    * channel 'beta'   → all releases (stable + prerelease).
@@ -176,6 +205,21 @@ export class FirmwareService {
       const assets = item.assets.filter(isAsset)
       const fwAsset = assets.find((a) => FIRMWARE_ASSET_RE.test(a.name))
       const spiffsAsset = assets.find((a) => SPIFFS_ASSET_RE.test(a.name))
+
+      // Trust the URLs we just surfaced from a verified GitHub API response,
+      // plus their `.sha256` siblings used by `verifyFirmwareSha256` (the
+      // renderer constructs the manifest URL by appending `.sha256` to the
+      // binary URL). The IPC layer checks this set on `firmware:download`
+      // calls so an attacker can't smuggle an arbitrary
+      // objects.githubusercontent.com URL through the renderer (#880).
+      if (fwAsset) {
+        this.trustedDownloadUrls.add(fwAsset.browser_download_url)
+        this.trustedDownloadUrls.add(`${fwAsset.browser_download_url}.sha256`)
+      }
+      if (spiffsAsset) {
+        this.trustedDownloadUrls.add(spiffsAsset.browser_download_url)
+        this.trustedDownloadUrls.add(`${spiffsAsset.browser_download_url}.sha256`)
+      }
 
       releases.push({
         version: item.tag_name.replace(/^v/, ''),
