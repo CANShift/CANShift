@@ -108,6 +108,13 @@ export const DeviceConfigSchema = z
 
 export type DeviceConfig = z.infer<typeof DeviceConfigSchema>
 
+/** Default device config — sane pins for the CrowPanel 2.8" reference board. */
+export const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
+  canSpeedKbps: 500,
+  twaiTxPin: 22,
+  twaiRxPin: 21,
+}
+
 /** Wire → domain. Pure; assumes input already passed `DeviceConfigWireSchema`. */
 export function deviceConfigFromWire(wire: DeviceConfigWire): DeviceConfig {
   return {

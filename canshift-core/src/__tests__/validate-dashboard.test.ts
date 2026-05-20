@@ -7,7 +7,7 @@
 // and signal-catalog pass-through.
 
 import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
-import type { SignalConfig } from '../types/signal.js'
+import type { SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
 
 // ---------------------------------------------------------------------------

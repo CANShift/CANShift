@@ -15,7 +15,7 @@
 //     `style.primaryColor` (legacy override) — never silently overrides a
 //     hand-picked colour.
 
-import type { HexColor } from './types/common.js'
+import type { HexColor } from './schemas/common.js'
 import type { SensorIconName } from './schemas/dashboard.js'
 
 export interface SensorPaletteEntry {

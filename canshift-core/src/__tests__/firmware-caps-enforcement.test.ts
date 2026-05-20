@@ -6,7 +6,7 @@
 //  - signal.colorRamp.stops[*].value not strictly ascending
 
 import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
-import type { ColorRampStop, SignalConfig } from '../types/signal.js'
+import type { ColorRampStop, SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
 import { validateSignalCatalog } from '../validation/validate-signal.js'
 
