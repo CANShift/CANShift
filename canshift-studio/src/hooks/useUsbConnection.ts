@@ -21,6 +21,7 @@ export function useUsbConnection() {
   const connected = useDeviceStore((s) => s.connected)
   const setError = useDeviceStore((s) => s.setError)
   const clearError = useDeviceStore((s) => s.clearError)
+  const setManualDisconnect = useDeviceStore((s) => s.setManualDisconnect)
   const log = useLogStore((s) => s.push)
   const pushError = useErrorStore((s) => s.push)
 
@@ -48,6 +49,10 @@ export function useUsbConnection() {
 
   const connect = useCallback(() => {
     if (!selectedPort) return
+    // Clear the manual-disconnect flag — the user is explicitly opting back
+    // into the connection, so let `useAutoConnect`'s polling resume after a
+    // future drop. Issue #977.
+    setManualDisconnect(false)
     setLoading(true)
     clearError()
     log('info', `Connecting to ${selectedPort}…`)
@@ -75,9 +80,15 @@ export function useUsbConnection() {
       .finally(() => {
         setLoading(false)
       })
-  }, [selectedPort, setError, clearError, log, pushError])
+  }, [selectedPort, setError, clearError, setManualDisconnect, log, pushError])
 
   const disconnect = useCallback(() => {
+    // Latch the manual-disconnect flag BEFORE the IPC call so that the
+    // moment `USB_CONNECTION_CHANGED` drops the connection,
+    // `useAutoConnect` already sees the suppression flag and skips its
+    // 2 s reconnect poll. Without this the user would observe a brief
+    // disconnect → auto-reconnect bounce. Issue #977.
+    setManualDisconnect(true)
     // Store update happens via the USB_CONNECTION_CHANGED IPC event —
     // `useUsbEvents` is the single source of truth (#696).
     usbService
@@ -88,7 +99,7 @@ export function useUsbConnection() {
       .catch(() => {
         log('warn', 'Disconnect error — forcing disconnected state')
       })
-  }, [log])
+  }, [log, setManualDisconnect])
 
   return {
     ports,
