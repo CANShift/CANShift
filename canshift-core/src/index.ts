@@ -93,6 +93,10 @@ export {
 export type { TrackTelemetry } from './schemas/track-telemetry'
 export { TrackTelemetrySchema } from './schemas/track-telemetry'
 
+// Screen settings — CMD_SCREEN_SETTINGS / BLE SETTINGS payload (issue #1015, S-H-1)
+export type { ScreenSettings } from './schemas/screen-settings'
+export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-settings'
+
 // BLE STATUS characteristic — firmware → mobile health/config payload (issue #887)
 export type { BleStatusWire, BleStatus, BleStatusResult } from './schemas/ble-status'
 export {
