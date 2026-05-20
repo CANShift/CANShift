@@ -96,6 +96,41 @@ interface DeviceState {
    */
   flashing: boolean
   setFlashing: (flashing: boolean) => void
+
+  /**
+   * Set to true when the user explicitly disconnects via the UI, and cleared
+   * the moment they invoke `connect()` manually. `useAutoConnect` reads this
+   * to suppress its 2 s reconnect poll — otherwise clicking Disconnect would
+   * be visually undone within seconds. Persisted in sessionStorage so a page
+   * refresh keeps the user disconnected, but a full app restart starts
+   * with auto-connect enabled (matches the original UX). Issue #977.
+   */
+  manualDisconnect: boolean
+  setManualDisconnect: (manual: boolean) => void
+}
+
+// Manual-disconnect flag lives in sessionStorage so a page refresh during a
+// user's "stay disconnected" window keeps that intent. App restart (new
+// session) clears it — auto-connect re-engages on a clean boot. Wrapped in
+// try/catch because sessionStorage can throw under privacy-mode browsers
+// and on the Electron renderer if storage isn't ready yet.
+const MANUAL_DISCONNECT_KEY = 'canshift:manual-disconnect'
+
+function readManualDisconnect(): boolean {
+  try {
+    return sessionStorage.getItem(MANUAL_DISCONNECT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeManualDisconnect(flag: boolean): void {
+  try {
+    if (flag) sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1')
+    else sessionStorage.removeItem(MANUAL_DISCONNECT_KEY)
+  } catch {
+    // sessionStorage unavailable — in-memory state still tracks the flag.
+  }
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -113,6 +148,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   lastPushedConfig: null,
   burnPhase: 'idle',
   flashing: false,
+  manualDisconnect: readManualDisconnect(),
 
   setConnected: (portPath) => {
     set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
@@ -186,5 +222,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFlashing: (flashing) => {
     set({ flashing })
+  },
+
+  setManualDisconnect: (manual) => {
+    writeManualDisconnect(manual)
+    set({ manualDisconnect: manual })
   },
 }))
