@@ -86,6 +86,8 @@ import BurnFailedDialog from './components/shared/BurnFailedDialog'
 import WelcomeModal from './components/shared/WelcomeModal'
 import { useFirstRunCheck } from './hooks/useFirstRunCheck'
 import { Toaster } from './components/ui/sonner'
+import { useState } from 'react'
+import { BootScreen } from './components/shared/BootScreen'
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled CLI panel state: ${JSON.stringify(value)}`)
@@ -102,6 +104,12 @@ export default function App() {
   useBurnPhaseTracker()
   useCliLogBridge()
   useBootLoopDetector()
+
+  // Boot splash — hides once `BootScreen` calls back `onDone`. Lives in
+  // `App` state (not a store) because every fresh React mount should replay
+  // the splash, while a route change inside the running app shouldn't.
+  // Issue #968.
+  const [bootDone, setBootDone] = useState(false)
 
   const firstRun = useFirstRunCheck()
   const connected = useDeviceStore((s) => s.connected)
@@ -141,6 +149,17 @@ export default function App() {
         fontFamily: 'system-ui, sans-serif',
       }}
     >
+      {/* Boot splash — overlays the app on cold start, fades out once the
+          timeline completes (or Esc / click skips). The page mounts behind
+          the splash so its async work runs while the splash is visible.
+          Closes #968. */}
+      {!bootDone && (
+        <BootScreen
+          onDone={() => {
+            setBootDone(true)
+          }}
+        />
+      )}
       <TopBar />
 
       {ready ? (
