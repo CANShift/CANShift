@@ -712,10 +712,23 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
 // ---------------------------------------------------------------------------
 // Full chain regression — load a 1.0.0 config and walk it to the latest
 // schema. Guards against silent breakage of the chain when adding migrations.
+//
+// The expected `applied` list is derived from BUILTIN_MIGRATIONS so this test
+// stays anchored on CURRENT_SCHEMA_VERSION: when a new migration is registered,
+// the test automatically exercises it instead of silently stopping short.
 // ---------------------------------------------------------------------------
 
+// Build the full ordered list of expected migration step labels from the
+// registry. BUILTIN_MIGRATIONS is registered newest-first in the source file,
+// so reverse it to walk forward through history.
+function expectedAppliedFromRegistry(): string[] {
+  return [...BUILTIN_MIGRATIONS]
+    .reverse()
+    .map((m) => `${m.fromVersion} → ${m.toVersion}`)
+}
+
 describe('migrateConfig — full chain to current', () => {
-  it('walks a 1.0.0 config all the way to 1.14.0 without losing data', () => {
+  it('walks a 1.0.0 config all the way to CURRENT_SCHEMA_VERSION without losing data', () => {
     const config = {
       version: '1.0.0',
       defaultPageId: 'p1',
@@ -740,7 +753,8 @@ describe('migrateConfig — full chain to current', () => {
               style: { primaryColor: '#CC3333', textColor: '#FFFFFF' },
               config: { type: 'button', label: 'Engine', targetPageId: 'p2' },
             },
-            // Label — becomes a numeric gauge in 1.1→1.2
+            // Label — becomes a numeric gauge in 1.1→1.2 (with warningLevel:80,
+            // dangerLevel:95), then 1.16→1.17 drops the warningLevel.
             {
               id: 'lbl1',
               type: 'label',
@@ -753,7 +767,9 @@ describe('migrateConfig — full chain to current', () => {
               layout: { x: 0, y: 0, w: 80, h: 56, zOrder: 0 },
               config: { type: 'gear', decimalPlaces: 0 },
             },
-            // Horizontal bar gauge at the legacy 320×28 — doubled to 320×56 in 1.8→1.9
+            // Horizontal bar gauge at the legacy 320×28 — doubled to 320×56 in
+            // 1.8→1.9. Carries an explicit warningLevel so the 1.16→1.17 step
+            // is exercised on a non-label-derived widget too.
             {
               id: 'tps_bar',
               type: 'gauge',
@@ -765,6 +781,8 @@ describe('migrateConfig — full chain to current', () => {
                 barOrientation: 'horizontal',
                 minValue: 0,
                 maxValue: 100,
+                warningLevel: 70,
+                dangerLevel: 90,
               },
             },
           ],
@@ -772,24 +790,15 @@ describe('migrateConfig — full chain to current', () => {
       ],
     }
 
-    const { config: out, applied } = migrateConfig(config, '1.14.0')
-    expect(out.version).toBe('1.14.0')
-    expect(applied).toEqual([
-      '1.0.0 → 1.1.0',
-      '1.1.0 → 1.2.0',
-      '1.2.0 → 1.3.0',
-      '1.3.0 → 1.4.0',
-      '1.4.0 → 1.5.0',
-      '1.5.0 → 1.6.0',
-      '1.6.0 → 1.7.0',
-      '1.7.0 → 1.8.0',
-      '1.8.0 → 1.9.0',
-      '1.9.0 → 1.10.0',
-      '1.10.0 → 1.11.0',
-      '1.11.0 → 1.12.0',
-      '1.12.0 → 1.13.0',
-      '1.13.0 → 1.14.0',
-    ])
+    const { config: out, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
+    expect(out.version).toBe(CURRENT_SCHEMA_VERSION)
+    expect(applied).toEqual(expectedAppliedFromRegistry())
+
+    // The expected chain must actually reach CURRENT_SCHEMA_VERSION — guards
+    // against a registry change that accidentally truncates the walk.
+    expect(applied[applied.length - 1]).toBe(
+      `${BUILTIN_MIGRATIONS[0]!.fromVersion} → ${CURRENT_SCHEMA_VERSION}`
+    )
 
     const page = (out.pages as Record<string, unknown>[])[0]!
     expect(page.name).toBeUndefined() // dropped in 1.6→1.7
@@ -804,9 +813,14 @@ describe('migrateConfig — full chain to current', () => {
     const btn = widgets[0]!
     expect((btn.config as Record<string, unknown>).colors).toBeDefined()
 
-    // Label widget became a numeric gauge
+    // Label widget became a numeric gauge in 1.1→1.2 and lost its
+    // warningLevel in 1.16→1.17 — keeps dangerLevel and label-derived suffix.
     const lbl = widgets[1]!
     expect(lbl.type).toBe('gauge')
+    const lblCfg = lbl.config as Record<string, unknown>
+    expect('warningLevel' in lblCfg).toBe(false)
+    expect(lblCfg.dangerLevel).toBe(95)
+    expect(lblCfg.suffix).toBe(' rpm')
 
     // Gear at 80×56 was collapsed to 160×56
     const gear = widgets[2]!
@@ -814,19 +828,23 @@ describe('migrateConfig — full chain to current', () => {
     expect(gearLayout.w).toBe(160)
     expect(gearLayout.h).toBe(56)
 
-    // Horizontal bar at 320×28 was doubled to 320×56
+    // Horizontal bar at 320×28 was doubled to 320×56, and its warningLevel
+    // was dropped in 1.16→1.17 while dangerLevel survived.
     const tps = widgets[3]!
     const tpsLayout = tps.layout as Record<string, unknown>
     expect(tpsLayout.w).toBe(320)
     expect(tpsLayout.h).toBe(56)
+    const tpsCfg = tps.config as Record<string, unknown>
+    expect('warningLevel' in tpsCfg).toBe(false)
+    expect(tpsCfg.dangerLevel).toBe(90)
   })
 
-  it('a fresh 1.14.0 config is a no-op through the runner', () => {
+  it('a fresh CURRENT_SCHEMA_VERSION config is a no-op through the runner', () => {
     const config = {
-      version: '1.14.0',
+      version: CURRENT_SCHEMA_VERSION,
       pages: [{ id: 'p1', widgets: [] }],
     }
-    const { config: out, applied } = migrateConfig(config, '1.14.0')
+    const { config: out, applied } = migrateConfig(config, CURRENT_SCHEMA_VERSION)
     expect(applied).toEqual([])
     expect(out).toEqual(config)
   })
