@@ -211,6 +211,14 @@ function createWindow(): void {
     // Strip the prefix so 'tty.usbserial-2130' matches Chromium's 'cu.usbserial-2130'.
     const tail = (s: string | undefined): string => basename(s ?? '').replace(/^(?:tty|cu)\./, '')
 
+    // Scrub vendorId / productId / serialNumber out of the log payload. The
+    // raw `portList` carries the device's USB serial number, which is often
+    // bound to the user's hardware identity — emitting it into the studio log
+    // surface (and any future "send diagnostics" feature) would leak a stable
+    // hardware fingerprint (#900). Only the port path is useful for debugging.
+    const scrubPorts = (ports: readonly Electron.SerialPort[]): { portName: string }[] =>
+      ports.map((p) => ({ portName: p.portName }))
+
     if (target) {
       const targetTail = tail(target)
       const matched =
@@ -221,7 +229,7 @@ function createWindow(): void {
       if (matched) {
         logMain(
           'info',
-          `select-serial-port: target=${target} match=${matched.portId} portList=${JSON.stringify(portList)}`
+          `select-serial-port: target=${target} match=${matched.portId} portList=${JSON.stringify(scrubPorts(portList))}`
         )
         callback(matched.portId)
         return
@@ -229,7 +237,7 @@ function createWindow(): void {
 
       logMain(
         'warn',
-        `select-serial-port: target ${target} not found among ${String(portList.length)} ports — letting user choose (no VID/PID fallback) portList=${JSON.stringify(portList)}`
+        `select-serial-port: target ${target} not found among ${String(portList.length)} ports — letting user choose (no VID/PID fallback) portList=${JSON.stringify(scrubPorts(portList))}`
       )
       callback('')
       return
@@ -243,17 +251,17 @@ function createWindow(): void {
     if (bridgeMatches.length > 1) {
       logMain(
         'warn',
-        `select-serial-port: ${String(bridgeMatches.length)} VID/PID matches — auto-picked ${picked?.portId ?? 'none'} (set a target to disambiguate) portList=${JSON.stringify(portList)}`
+        `select-serial-port: ${String(bridgeMatches.length)} VID/PID matches — auto-picked ${picked?.portId ?? 'none'} (set a target to disambiguate) portList=${JSON.stringify(scrubPorts(portList))}`
       )
     } else if (picked && portList.length > 0 && picked.portId !== portList[0]?.portId) {
       logMain(
         'info',
-        `select-serial-port: auto-picked ${picked.portId} (not first in list) portList=${JSON.stringify(portList)}`
+        `select-serial-port: auto-picked ${picked.portId} (not first in list) portList=${JSON.stringify(scrubPorts(portList))}`
       )
     } else {
       logMain(
         'info',
-        `select-serial-port: target=null match=${picked?.portId ?? 'none'} portList=${JSON.stringify(portList)}`
+        `select-serial-port: target=null match=${picked?.portId ?? 'none'} portList=${JSON.stringify(scrubPorts(portList))}`
       )
     }
     callback(picked?.portId ?? '')
