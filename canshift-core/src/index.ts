@@ -159,6 +159,12 @@ export { TopBarMetrics } from './topbar-metrics'
 export type { TopBarMetricsRatios } from './topbar-metrics'
 
 // ---------------------------------------------------------------------------
+// Day-theme defaults — fallback palette + bg consumed by the studio canvas
+// (and eventually the mobile renderer) when `dayTheme` is absent. Issue #901.
+// ---------------------------------------------------------------------------
+export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults'
+
+// ---------------------------------------------------------------------------
 // Migrations
 // ---------------------------------------------------------------------------
 export {
