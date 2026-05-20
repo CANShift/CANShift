@@ -98,7 +98,7 @@ export type { ScreenSettings } from './schemas/screen-settings'
 export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-settings'
 
 // BLE STATUS characteristic — firmware → mobile health/config payload (issue #887)
-export type { BleStatusWire, BleStatus } from './schemas/ble-status'
+export type { BleStatusWire, BleStatus, BleStatusResult } from './schemas/ble-status'
 export {
   BleStatusWireSchema,
   BLE_STATUS_MAX_STRING_LEN,
