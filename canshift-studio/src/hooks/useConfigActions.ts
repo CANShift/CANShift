@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { DashboardConfig } from '@tmbk/canshift-core'
 import { validateDashboard, migrateConfig, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'

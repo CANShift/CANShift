@@ -5,7 +5,6 @@
 // failures — session restore is best-effort.
 
 import { useEffect } from 'react'
-import type { DashboardConfig } from '@tmbk/canshift-core'
 import { migrateConfig, validateDashboard, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useLogStore } from '../stores/log.store'
