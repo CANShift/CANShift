@@ -42,15 +42,12 @@ export type DeviceConfigResult =
   | { ok: false; reason: 'no-config' | 'transport' }
 
 /**
- * Payload of `IpcChannels.USB_SCREEN_SETTINGS` — brightness/sleep are raw
- * device units; `rotation` is constrained to the two orientations the
- * firmware supports.
+ * Payload of `IpcChannels.USB_SCREEN_SETTINGS` — brightness/sleep/rotation
+ * bounds and the strict shape live in `@tmbk/canshift-core`'s
+ * `ScreenSettingsSchema` (issue #1015, audit finding S-H-1). The type is
+ * re-exported here so renderer-side consumers keep a stable local import.
  */
-export interface ScreenSettingsPayload {
-  brightness: number
-  sleep: number
-  rotation?: 0 | 180
-}
+export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
 
 /**
  * Payload of `IpcChannels.FIRMWARE_DOWNLOAD_PROGRESS` — emitted by main

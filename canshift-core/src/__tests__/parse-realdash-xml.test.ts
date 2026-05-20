@@ -376,18 +376,81 @@ describe('timeout', () => {
 })
 
 // ---------------------------------------------------------------------------
-// byteLength clamping
+// Schema validation (issue #1016 / C-HI-1) — invalid rows divert to warnings
 // ---------------------------------------------------------------------------
 
-describe('byteLength clamping', () => {
-  it('length=3 is clamped to 1', () => {
-    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="3"/>'))
-    expect(signals[0]?.byteLength).toBe(1)
+describe('schema validation', () => {
+  it('length=3 is rejected and emits a warning (no silent coercion)', () => {
+    const { signals, warnings } = parseRealDashXML(
+      simpleXml('<value name="bad" offset="0" length="3"/>')
+    )
+    expect(signals).toHaveLength(0)
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/Rejected signal "bad"/)
+    expect(warnings[0]).toMatch(/frame 0x520/)
+    expect(warnings[0]).toMatch(/byteLength/)
   })
 
-  it('length=4 passes through', () => {
-    const { signals } = parseRealDashXML(simpleXml('<value name="s" offset="0" length="4"/>'))
+  it('length=4 passes through unchanged', () => {
+    const { signals, warnings } = parseRealDashXML(
+      simpleXml('<value name="s" offset="0" length="4"/>')
+    )
+    expect(signals).toHaveLength(1)
     expect(signals[0]?.byteLength).toBe(4)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('length=1 and length=2 pass through unchanged', () => {
+    const { signals, warnings } = parseRealDashXML(
+      simpleXml(
+        '<value name="a" offset="0" length="1"/>' + '<value name="b" offset="1" length="2"/>'
+      )
+    )
+    expect(signals).toHaveLength(2)
+    expect(signals[0]?.byteLength).toBe(1)
+    expect(signals[1]?.byteLength).toBe(2)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('multiple invalid rows produce multiple warnings and zero signals', () => {
+    const { signals, warnings } = parseRealDashXML(
+      simpleXml(
+        '<value name="bad_a" offset="0" length="3"/>' +
+          '<value name="bad_b" offset="3" length="5"/>' +
+          '<value name="bad_c" offset="8" length="7"/>'
+      )
+    )
+    expect(signals).toHaveLength(0)
+    expect(warnings).toHaveLength(3)
+    expect(warnings[0]).toMatch(/bad_a/)
+    expect(warnings[1]).toMatch(/bad_b/)
+    expect(warnings[2]).toMatch(/bad_c/)
+  })
+
+  it('mix of valid and invalid rows keeps the valid ones', () => {
+    const { signals, warnings } = parseRealDashXML(
+      simpleXml(
+        '<value name="good" offset="0" length="2"/>' +
+          '<value name="bad" offset="2" length="3"/>' +
+          '<value name="also_good" offset="4" length="4"/>'
+      )
+    )
+    expect(signals).toHaveLength(2)
+    expect(signals.map((s) => s.name)).toEqual(['good', 'also_good'])
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/Rejected signal "bad"/)
+  })
+
+  it('warning string includes the zod path and message', () => {
+    const { warnings } = parseRealDashXML(simpleXml('<value name="bad" offset="0" length="8"/>'))
+    expect(warnings[0]).toMatch(/byteLength:/)
+  })
+
+  it('result still satisfies ParseRealDashXMLResult (string[] warnings)', () => {
+    const result = parseRealDashXML(simpleXml('<value name="bad" offset="0" length="3"/>'))
+    expect(Array.isArray(result.signals)).toBe(true)
+    expect(Array.isArray(result.warnings)).toBe(true)
+    expect(result.warnings.every((w) => typeof w === 'string')).toBe(true)
   })
 })
 

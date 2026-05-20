@@ -6,8 +6,12 @@
 //   - rangeMin/rangeMax when present (more accurate than computed range)
 //   - XML entity decoding (&amp; &lt; &gt;) in attribute values
 //   - V*N, V*N+C, V/N, V*N/M, V>>N conversions; warns on complex formulas
+//
+// Every emitted signal is validated through SignalDefSchema (issue #1016 /
+// C-HI-1). Malformed rows (e.g. length="3", which the schema does not allow)
+// are diverted to `warnings` instead of being silently coerced.
 
-import type { SignalDef } from '../schemas/signal.js'
+import { SignalDefSchema, type SignalDef } from '../schemas/signal.js'
 
 export interface ParseRealDashXMLResult {
   signals: SignalDef[]
@@ -63,12 +67,6 @@ function toSnakeCase(s: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
-}
-
-function clampByteLength(n: number): 1 | 2 | 4 {
-  if (n === 2) return 2
-  if (n === 4) return 4
-  return 1
 }
 
 function parseHexOrDec(s: string): number {
@@ -145,7 +143,7 @@ function parseConversion(expr: string | undefined): Conversion | 'complex' {
 // ---------------------------------------------------------------------------
 
 function computeRange(
-  byteLength: 1 | 2 | 4,
+  byteLength: number,
   signed: boolean,
   scale: number,
   offset: number
@@ -216,7 +214,7 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
       }
 
       const startByte = parseInt(va.offset ?? '0', 10)
-      const byteLength = clampByteLength(parseInt(va.length ?? '1', 10))
+      const byteLength = parseInt(va.length ?? '1', 10)
 
       // Per-value signed / endianness override the frame-level defaults.
       const signed = va.signed !== undefined ? va.signed === 'true' : frameSignedDefault
@@ -259,7 +257,7 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
         ;({ min, max } = computeRange(byteLength, signed, scale, offset))
       }
 
-      signals.push({
+      const candidate = {
         name,
         canFrameId,
         startByte,
@@ -273,7 +271,20 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
         max,
         timeoutMs,
         ...(bitMask !== undefined ? { bitMask } : {}),
-      })
+      }
+
+      const parsed = SignalDefSchema.safeParse(candidate)
+      if (parsed.success) {
+        signals.push(parsed.data)
+      } else {
+        const reasons = parsed.error.issues
+          .map((iss) => {
+            const dotPath = iss.path.join('.')
+            return dotPath ? `${dotPath}: ${iss.message}` : iss.message
+          })
+          .join('; ')
+        warnings.push(`Rejected signal "${name}" (frame ${canFrameId}): ${reasons}`)
+      }
       valueIndex++
     }
   }
