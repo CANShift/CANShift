@@ -78,7 +78,13 @@ function createSplash(): void {
     resizable: false,
     skipTaskbar: true,
     center: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+    },
   })
 
   // Read logo as base64 to avoid file:// CSP issues inside a data: page
@@ -148,6 +154,10 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Pin same-origin + mixed-content denial defensively so a future
+      // Electron default flip can't regress us (issue #913).
+      webSecurity: true,
+      allowRunningInsecureContent: false,
     },
   })
 

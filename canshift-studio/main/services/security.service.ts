@@ -6,28 +6,45 @@
 
 import { session } from 'electron'
 
-const PROD_CSP = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://api.github.com https://objects.githubusercontent.com https://github.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'",
-  "form-action 'none'",
-].join('; ')
+// `connect-src` allowlist for outbound network calls. Production locks down
+// to api.github.com (release manifests) + githubusercontent (firmware assets).
+// Dev additionally allows http+ws on localhost so Vite HMR works without
+// disabling CSP entirely — that gap previously let the dev build load any
+// arbitrary HTTP resource (issue #913).
+const PROD_CONNECT_SRC =
+  "connect-src 'self' https://api.github.com https://objects.githubusercontent.com https://github.com"
+const DEV_CONNECT_SRC = `${PROD_CONNECT_SRC} http://localhost:* ws://localhost:*`
+
+function buildCsp(connectSrc: string): string {
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self' data:",
+    connectSrc,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'none'",
+  ].join('; ')
+}
+
+const PROD_CSP = buildCsp(PROD_CONNECT_SRC)
+const DEV_CSP = buildCsp(DEV_CONNECT_SRC)
 
 export function installContentSecurityPolicy(): void {
-  // Skip in dev — Vite HMR (ws://localhost) is incompatible with a strict prod CSP.
-  if (process.env.ELECTRON_RENDERER_URL !== undefined) return
+  // Both dev and prod get a CSP — dev just whitelists localhost so HMR works.
+  // The previous "skip in dev" branch meant a dev renderer could fetch any
+  // HTTP URL, which would matter the moment user-typed URLs entered the
+  // renderer (search box, paste-then-render, …). Issue #913.
+  const csp = process.env.ELECTRON_RENDERER_URL !== undefined ? DEV_CSP : PROD_CSP
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [PROD_CSP],
+        'Content-Security-Policy': [csp],
       },
     })
   })
