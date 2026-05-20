@@ -33,6 +33,15 @@ vi.mock('electron-updater', () => ({
 vi.mock('serialport', () => ({ SerialPort: stubs.EmptyStub }))
 vi.mock('@serialport/parser-readline', () => ({ ReadlineParser: stubs.EmptyStub }))
 
+// Mock the firmware service trust check — `isFirmwareDownloadUrlAllowed`
+// consults it for opaque-CDN URLs (issue #880). Default returns false; the
+// "accepts" cases for objects.githubusercontent.com / release-assets flip
+// the mock to true so we test both halves of the policy independently.
+const firmwareMock = vi.hoisted(() => ({
+  isFirmwareUrlTrusted: vi.fn<(url: string) => boolean>(() => false),
+}))
+vi.mock('../services/firmware.service', () => ({ firmwareService: firmwareMock }))
+
 import {
   isFirmwareChannel,
   isFirmwareDownloadUrlAllowed,
@@ -210,21 +219,50 @@ describe('isFirmwareChannel — payload guard for FIRMWARE_LIST_RELEASES', () =>
   }
 })
 
-describe('isFirmwareDownloadUrlAllowed — host + protocol allowlist', () => {
-  const allowed: string[] = [
-    'https://github.com/foo/bar/releases/download/v1/firmware.bin',
-    'https://api.github.com/repos/foo/bar/releases',
-    'https://objects.githubusercontent.com/abc/def.bin',
-    'https://release-assets.githubusercontent.com/abc/def.bin',
+describe('isFirmwareDownloadUrlAllowed — two-tier policy (#880)', () => {
+  // Repo-bound hosts: github.com / api.github.com URLs are accepted ONLY when
+  // the path is rooted at the CANShift repo. A foreign-repo path is refused.
+  const repoBoundAllowed: string[] = [
+    'https://github.com/tburkhalterr/CANShift/releases/download/v1/firmware.bin',
+    'https://api.github.com/repos/tburkhalterr/CANShift/releases',
   ]
-  for (const url of allowed) {
-    it(`accepts ${url}`, () => {
+  for (const url of repoBoundAllowed) {
+    it(`accepts repo-rooted ${url}`, () => {
       expect(isFirmwareDownloadUrlAllowed(url)).toBe(true)
     })
   }
 
+  // Opaque CDN hosts: URLs pass only when previously surfaced by listReleases()
+  // (mocked via firmwareService.isFirmwareUrlTrusted).
+  const opaqueCdnUrls: string[] = [
+    'https://objects.githubusercontent.com/abc/def.bin',
+    'https://release-assets.githubusercontent.com/abc/def.bin',
+  ]
+  for (const url of opaqueCdnUrls) {
+    it(`accepts trusted ${url} (after listReleases populated the set)`, () => {
+      firmwareMock.isFirmwareUrlTrusted.mockReturnValueOnce(true)
+      expect(isFirmwareDownloadUrlAllowed(url)).toBe(true)
+      expect(firmwareMock.isFirmwareUrlTrusted).toHaveBeenCalledWith(url)
+    })
+    it(`rejects untrusted ${url} (URL never surfaced by listReleases)`, () => {
+      firmwareMock.isFirmwareUrlTrusted.mockReturnValueOnce(false)
+      expect(isFirmwareDownloadUrlAllowed(url)).toBe(false)
+    })
+  }
+
   const rejected: { label: string; value: unknown }[] = [
-    { label: 'http:// on github.com (cleartext)', value: 'http://github.com/foo/bar.bin' },
+    {
+      label: 'github.com URL pointing at a foreign repo',
+      value: 'https://github.com/foo/bar/releases/download/v1/firmware.bin',
+    },
+    {
+      label: 'api.github.com URL pointing at a foreign repo',
+      value: 'https://api.github.com/repos/foo/bar/releases',
+    },
+    {
+      label: 'http:// on github.com (cleartext)',
+      value: 'http://github.com/tburkhalterr/CANShift/releases/download/v1/fw.bin',
+    },
     { label: 'https on evil host', value: 'https://evil.example/firmware.bin' },
     { label: 'https on subdomain not in allowlist', value: 'https://raw.github.com/foo/bar.bin' },
     { label: 'file:// path', value: 'file:///etc/passwd' },
