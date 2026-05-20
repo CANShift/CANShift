@@ -376,6 +376,29 @@ jobs:
         # This is the primary compile check — same toolchain as the real target.
         run: platformio run -e sim
 
+      # Write a secrets.ini so the production env compiles on PR CI. The
+      # auto-accept-placeholder fallback in `extra_targets.py` was removed in
+      # #910 — a maintainer tagging a release from a debug branch shouldn't
+      # ship the placeholder OTA secret. PR builds still need a real (or at
+      # least non-placeholder) secret; we use the repo secret when present
+      # and fall back to a fixed CI-only value for fork PRs. The artifact is
+      # never published, so a public CI secret is harmless.
+      - name: Write secrets.ini for production firmware (CI-only secret)
+        run: |
+          if [ -n "${OTA_HMAC_SECRET:-}" ]; then
+            echo "Using OTA_HMAC_SECRET from repo secrets"
+            SECRET="${OTA_HMAC_SECRET}"
+          else
+            echo "OTA_HMAC_SECRET not available (fork PR or unconfigured) — using CI-only fallback"
+            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+          fi
+          cat > secrets.ini <<EOF
+          [ota]
+          hmac_secret = ${SECRET}
+          EOF
+        env:
+          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
+
       - name: Build production environment
         # Compiles the production target to catch any #if branch divergence.
         # Output is teed to build.log so the next step can parse the flash usage.
@@ -494,6 +517,22 @@ jobs:
           key: pio-clang-tidy-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
           restore-keys: |
             pio-clang-tidy-${{ runner.os }}-
+
+      # Same secrets.ini guard as firmware-build — the production env build
+      # needs a non-placeholder OTA secret since #910 removed the auto-accept.
+      - name: Write secrets.ini for production firmware (CI-only secret)
+        run: |
+          if [ -n "${OTA_HMAC_SECRET:-}" ]; then
+            SECRET="${OTA_HMAC_SECRET}"
+          else
+            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+          fi
+          cat > secrets.ini <<EOF
+          [ota]
+          hmac_secret = ${SECRET}
+          EOF
+        env:
+          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
 
       - name: Emit compile_commands.json
         # PlatformIO's `compiledb` target writes a clang-compatible compilation
