@@ -16,6 +16,7 @@ import { rectsOverlap } from '../../utils/layout'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
+import { usbService } from '../../services/ipc.service'
 
 // ---------------------------------------------------------------------------
 // Canvas layout constants
@@ -718,9 +719,22 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     ? (dayTheme?.bgColor ?? DAY_BG_DEFAULT)
     : page.backgroundColor
 
+  // When a device is connected, the device's reported `isDayMode` takes
+  // precedence over the local preview flag (the live device is the source
+  // of truth). Toggling the local flag alone wouldn't repaint anything in
+  // that case — issue #957. Send the toggle over USB so the firmware
+  // flips, the next status sweep updates `deviceIsDayMode`, and the
+  // preview follows. Offline (or in simulation mode), fall back to the
+  // local preview flag so the canvas still toggles for design work.
   const handleToggleTheme = useCallback(() => {
+    if (deviceIsDayMode !== null) {
+      // Device connected and reporting day mode — round-trip the toggle so
+      // the firmware repaints and `useUsbEvents` echoes the new state back.
+      void usbService.setDayNight(!deviceIsDayMode)
+      return
+    }
     togglePreviewTheme()
-  }, [togglePreviewTheme])
+  }, [deviceIsDayMode, togglePreviewTheme])
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [diagOpen, setDiagOpen] = useState(false)
