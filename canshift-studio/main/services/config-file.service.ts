@@ -1,7 +1,7 @@
 // config-file.service.ts — Open and save dashboard config JSON files
 
 import { dialog } from 'electron'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, writeFile, stat } from 'fs/promises'
 import { resolve } from 'node:path'
 import type { OpenResult, SaveResult } from '../../shared/ipc-contract'
 import { sessionService } from './session.service'
@@ -11,6 +11,24 @@ import { sessionService } from './session.service'
 // invoke CONFIG_OPEN_PATH to read any user-readable file (#214). The error
 // message intentionally omits the rejected path so we don't leak FS structure.
 const PATH_NOT_SURFACED_ERROR = 'blocked: path not previously surfaced'
+
+// Hard ceiling on the JSON config file size. The current schema serialises to
+// ~13 KB; 1 MiB is two orders of magnitude of headroom for future schema
+// growth while denying a 2 GB file from OOMing the main process at JSON.parse
+// (#900). Anything legitimately larger should land via a dedicated import
+// path (firmware bundle, asset stream) not the config open path.
+const MAX_CONFIG_BYTES = 1024 * 1024
+
+async function readConfigJson(filePath: string): Promise<unknown> {
+  const stats = await stat(filePath)
+  if (stats.size > MAX_CONFIG_BYTES) {
+    throw new Error(
+      `Config file exceeds ${String(MAX_CONFIG_BYTES)} bytes (got ${String(stats.size)}); refusing to load`
+    )
+  }
+  const raw = await readFile(filePath, 'utf-8')
+  return JSON.parse(raw) as unknown
+}
 
 export class ConfigFileService {
   private currentFilePath: string | null = null
@@ -52,8 +70,7 @@ export class ConfigFileService {
     this.allowPath(filePath)
 
     try {
-      const raw = await readFile(filePath, 'utf-8')
-      const content: unknown = JSON.parse(raw)
+      const content = await readConfigJson(filePath)
       this.currentFilePath = filePath
       return { success: true, filePath, content }
     } catch (err) {
@@ -91,8 +108,7 @@ export class ConfigFileService {
     }
 
     try {
-      const raw = await readFile(filePath, 'utf-8')
-      const content: unknown = JSON.parse(raw)
+      const content = await readConfigJson(filePath)
       this.currentFilePath = filePath
       return { success: true, filePath, content }
     } catch (err) {
@@ -124,8 +140,7 @@ export class ConfigFileService {
     if (!filePath) return { success: false }
 
     try {
-      const raw = await readFile(filePath, 'utf-8')
-      const content: unknown = JSON.parse(raw)
+      const content = await readConfigJson(filePath)
       return { success: true, filePath, content }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
