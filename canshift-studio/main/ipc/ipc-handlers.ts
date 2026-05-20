@@ -10,6 +10,7 @@ import {
   DeviceConfigWireSchema,
   InputBindingsConfigSchema,
   InputBindingsConfigWireSchema,
+  ScreenSettingsSchema,
   SignalConfigSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
@@ -79,15 +80,19 @@ export function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+/**
+ * Validate the CMD_SCREEN_SETTINGS payload against the shared bounded schema
+ * in `@tmbk/canshift-core` (issue #1015, audit finding S-H-1). The previous
+ * implementation accepted any finite number for brightness/sleep — a
+ * malicious or stale renderer could push brightness=-9999 or sleep=86400000
+ * (24 h) and the handler would forward it unchecked. Now bounds live in
+ * the schema and out-of-range payloads are rejected at the IPC boundary.
+ *
+ * Exported for table-driven tests in `ipc-handlers.test.ts`.
+ */
 export function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
-  if (!isPlainObject(v)) return null
-  const brightness = v.brightness
-  const sleep = v.sleep
-  const rotation = v.rotation
-  if (typeof brightness !== 'number' || !Number.isFinite(brightness)) return null
-  if (typeof sleep !== 'number' || !Number.isFinite(sleep)) return null
-  if (rotation !== undefined && rotation !== 0 && rotation !== 180) return null
-  return rotation === undefined ? { brightness, sleep } : { brightness, sleep, rotation }
+  const parsed = ScreenSettingsSchema.safeParse(v)
+  return parsed.success ? parsed.data : null
 }
 
 export function isFirmwareChannel(v: unknown): v is 'stable' | 'beta' {
@@ -390,11 +395,24 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.USB_SCREEN_SETTINGS, async (_event, settings: unknown) => {
-    const parsed = parseScreenSettings(settings)
-    if (!parsed) {
-      return { success: false, error: 'Screen settings payload is invalid' }
+    // Bounded validation lives in canshift-core's ScreenSettingsSchema
+    // (#1015 / audit S-H-1). The previous Number.isFinite-only guard
+    // accepted brightness=-9999 and sleep=24h; safeParse rejects both.
+    const parsed = ScreenSettingsSchema.safeParse(settings)
+    if (!parsed.success) {
+      safeSend(IpcChannels.APP_LOG, {
+        level: 'warn',
+        message: `Rejected screen settings IPC — ${summarizeZodError(parsed.error)}`,
+        ts: Date.now(),
+      })
+      return {
+        success: false,
+        error: `Screen settings payload invalid — ${summarizeZodError(parsed.error)}`,
+        issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
+      }
     }
-    return usbService.pushScreenSettings(parsed)
+    return usbService.pushScreenSettings(parsed.data)
   })
 
   ipcMain.handle(IpcChannels.USB_GET_STATUS, () => {
