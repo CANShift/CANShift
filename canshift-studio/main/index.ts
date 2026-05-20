@@ -368,7 +368,10 @@ app.on('before-quit', () => {
   // log the failure so a wedged port doesn't disappear silently from the
   // diagnostics (project rule "no empty catch", issue #914).
   usbService.disconnect().catch((err: unknown) => {
-    logMain('warn', `USB disconnect on quit failed: ${err instanceof Error ? err.message : String(err)}`)
+    logMain(
+      'warn',
+      `USB disconnect on quit failed: ${err instanceof Error ? err.message : String(err)}`
+    )
   })
   // Stop the 10 Hz CAN-frame flush interval so Node's event loop can drain.
   disposeIpcHandlers()
