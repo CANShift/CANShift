@@ -182,21 +182,34 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
     })
   }
 
-  it('accepts brightness 0 (off) — Number.isFinite is the only guard', () => {
-    // The contract is "any finite number" — clamping/range validation is the
-    // firmware's job. A regression that started rejecting 0 would prevent
-    // users from turning the backlight off.
+  it('accepts brightness 0 (off — the lower bound)', () => {
+    // 0 is the documented lower bound for brightness so users can turn the
+    // backlight off. Locking it down prevents an over-eager refactor from
+    // bumping the floor and breaking that behaviour.
     expect(parseScreenSettings({ brightness: 0, sleep: 0 })).toEqual({ brightness: 0, sleep: 0 })
   })
 
-  it('accepts negative numbers (firmware clamps, not the guard)', () => {
-    // Same rationale — the IPC guard is shape-only, not range. Locking this
-    // down prevents an over-eager refactor from adding `>= 0` here and
-    // breaking the firmware-side responsibility split.
-    expect(parseScreenSettings({ brightness: -1, sleep: -5 })).toEqual({
-      brightness: -1,
-      sleep: -5,
+  // Audit finding S-H-1 (#1015) — the previous Number.isFinite-only guard
+  // accepted brightness=-9999 and sleep=86400000 (24h). The shared
+  // ScreenSettingsSchema in @tmbk/canshift-core now enforces bounds.
+  const outOfBoundsCases: { label: string; payload: Record<string, unknown> }[] = [
+    { label: 'brightness=-1 (below 0)', payload: { brightness: -1, sleep: 0 } },
+    { label: 'brightness=-9999 (audit repro)', payload: { brightness: -9999, sleep: 0 } },
+    { label: 'brightness=101 (above 100)', payload: { brightness: 101, sleep: 0 } },
+    { label: 'brightness=255 (PWM duty, wrong unit)', payload: { brightness: 255, sleep: 0 } },
+    { label: 'sleep=-1 (below 0)', payload: { brightness: 80, sleep: -1 } },
+    { label: 'sleep=3601 (above 1h cap)', payload: { brightness: 80, sleep: 3601 } },
+    { label: 'sleep=86400000 (audit repro: 24h)', payload: { brightness: 80, sleep: 86_400_000 } },
+    { label: 'brightness=50.5 (non-integer)', payload: { brightness: 50.5, sleep: 0 } },
+  ]
+  for (const { label, payload } of outOfBoundsCases) {
+    it(`rejects ${label} (audit S-H-1)`, () => {
+      expect(parseScreenSettings(payload)).toBeNull()
     })
+  }
+
+  it('rejects unknown top-level keys (strict schema)', () => {
+    expect(parseScreenSettings({ brightness: 80, sleep: 30, mystery: 1 })).toBeNull()
   })
 })
 
