@@ -118,6 +118,10 @@ const firmwareMock = vi.hoisted(() => ({
   getFlashPort: vi.fn(),
   downloadBinary: vi.fn(),
   downloadText: vi.fn(),
+  // Issue #880 — `isFirmwareUrlTrusted` is consulted by the IPC layer's
+  // URL allowlist for opaque-CDN hosts (objects.githubusercontent.com).
+  // Tests stub a return value per-case via `mockReturnValue`.
+  isFirmwareUrlTrusted: vi.fn(() => false),
 }))
 vi.mock('../services/firmware.service', () => ({ firmwareService: firmwareMock }))
 
@@ -837,26 +841,54 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
 
   it('FIRMWARE_DOWNLOAD rejects a non-string downloadId', async () => {
     const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
-    await expect(handler(makeEvent(), 'https://github.com/foo/bar/release.bin', 7)).rejects.toThrow(
-      'downloadId must be a non-empty string'
-    )
+    await expect(
+      handler(handler, 'https://github.com/tburkhalterr/CANShift/releases/download/v1/fw.bin', 7)
+    ).rejects.toThrow('downloadId must be a non-empty string')
     expect(firmwareMock.downloadBinary).not.toHaveBeenCalled()
   })
 
-  it('FIRMWARE_DOWNLOAD forwards an allowlisted https URL to the service', async () => {
+  // Issue #880 — github.com URLs are accepted ONLY when the path is rooted at
+  // our own repo. A foreign-repo path on the same hostname must be refused.
+  it('FIRMWARE_DOWNLOAD rejects a github.com URL pointing at a foreign repo (#880)', async () => {
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    await expect(
+      handler(makeEvent(), 'https://github.com/foo/bar/releases/download/v1/fw.bin', 'dl-1')
+    ).rejects.toThrow('blocked: firmware download URL not on allowlist')
+    expect(firmwareMock.downloadBinary).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD accepts a github.com URL rooted at the CANShift repo', async () => {
     const buf = new ArrayBuffer(8)
     firmwareMock.downloadBinary.mockResolvedValueOnce(buf)
     const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
-    const result = await handler(
-      makeEvent(),
-      'https://objects.githubusercontent.com/abc/def.bin',
-      'dl-1'
-    )
+    const url = 'https://github.com/tburkhalterr/CANShift/releases/download/v1/fw.bin'
+    const result = await handler(makeEvent(), url, 'dl-1')
     expect(result).toBe(buf)
-    expect(firmwareMock.downloadBinary).toHaveBeenCalledWith(
-      'https://objects.githubusercontent.com/abc/def.bin',
-      expect.any(Function)
-    )
+    expect(firmwareMock.downloadBinary).toHaveBeenCalledWith(url, expect.any(Function))
+  })
+
+  // Issue #880 — objects.githubusercontent.com URLs are opaque, so they're
+  // accepted ONLY when previously surfaced by `listReleases()` (mocked via
+  // `isFirmwareUrlTrusted`). An unknown URL on the same CDN must be refused.
+  it('FIRMWARE_DOWNLOAD rejects an unseen objects.githubusercontent.com URL (#880)', async () => {
+    firmwareMock.isFirmwareUrlTrusted.mockReturnValueOnce(false)
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    await expect(
+      handler(makeEvent(), 'https://objects.githubusercontent.com/foreign/asset.bin', 'dl-1')
+    ).rejects.toThrow('blocked: firmware download URL not on allowlist')
+    expect(firmwareMock.downloadBinary).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_DOWNLOAD accepts a previously-surfaced objects.githubusercontent.com URL', async () => {
+    const buf = new ArrayBuffer(8)
+    firmwareMock.downloadBinary.mockResolvedValueOnce(buf)
+    firmwareMock.isFirmwareUrlTrusted.mockReturnValueOnce(true)
+    const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD)
+    const url = 'https://objects.githubusercontent.com/abc/def.bin'
+    const result = await handler(makeEvent(), url, 'dl-1')
+    expect(result).toBe(buf)
+    expect(firmwareMock.isFirmwareUrlTrusted).toHaveBeenCalledWith(url)
+    expect(firmwareMock.downloadBinary).toHaveBeenCalledWith(url, expect.any(Function))
   })
 
   it('FIRMWARE_DOWNLOAD_TEXT rejects a non-allowlisted URL host (#671)', async () => {
@@ -875,17 +907,14 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
     expect(firmwareMock.downloadText).not.toHaveBeenCalled()
   })
 
-  it('FIRMWARE_DOWNLOAD_TEXT forwards an allowlisted https URL to the service (#671)', async () => {
+  it('FIRMWARE_DOWNLOAD_TEXT accepts a previously-surfaced .sha256 URL (#880)', async () => {
     firmwareMock.downloadText.mockResolvedValueOnce('deadbeef\n')
+    firmwareMock.isFirmwareUrlTrusted.mockReturnValueOnce(true)
     const handler = getHandler(IpcChannels.FIRMWARE_DOWNLOAD_TEXT)
-    const result = await handler(
-      makeEvent(),
-      'https://objects.githubusercontent.com/abc/def.bin.sha256'
-    )
+    const url = 'https://objects.githubusercontent.com/abc/def.bin.sha256'
+    const result = await handler(makeEvent(), url)
     expect(result).toBe('deadbeef\n')
-    expect(firmwareMock.downloadText).toHaveBeenCalledWith(
-      'https://objects.githubusercontent.com/abc/def.bin.sha256'
-    )
+    expect(firmwareMock.downloadText).toHaveBeenCalledWith(url)
   })
 })
 

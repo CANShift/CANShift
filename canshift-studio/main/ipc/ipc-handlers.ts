@@ -36,15 +36,25 @@ import type { FirmwareRelease } from '../../shared/firmware.service.types'
 import type { CanFrame } from '../../shared/usb.service.types'
 import type { ScreenSettingsPayload } from '../../shared/ipc-payloads'
 
-// Allowed hosts for FIRMWARE_DOWNLOAD — defence in depth so a compromised
-// renderer cannot turn the main process into an open HTTP fetcher. The CSP
-// already restricts renderer outbound, but the IPC bridge skips that path.
-const FIRMWARE_DOWNLOAD_ALLOWED_HOSTS: ReadonlySet<string> = new Set([
-  'github.com',
-  'api.github.com',
+// Hosts whose URL path identifies the repo — checking that the path is rooted
+// at our own owner/repo is enough to constrain these. Used as a first-pass
+// shape filter before the trust-set check below.
+const FIRMWARE_REPO_BOUND_HOSTS: ReadonlySet<string> = new Set(['github.com', 'api.github.com'])
+
+// Hosts whose URL path is opaque (signed download CDN — paths carry no repo
+// identifier). For these, we require the URL to be in the runtime trust set
+// populated by `firmwareService.listReleases()`. Without this, any release
+// asset from any GitHub repo on the shared CDN would pass the hostname
+// allowlist alone (#880).
+const FIRMWARE_OPAQUE_CDN_HOSTS: ReadonlySet<string> = new Set([
   'objects.githubusercontent.com',
   'release-assets.githubusercontent.com',
 ])
+
+const REPO_PATH_PREFIXES: readonly string[] = [
+  '/tburkhalterr/CANShift/',
+  '/repos/tburkhalterr/CANShift/',
+]
 
 // ---------------------------------------------------------------------------
 // Renderer payload guards
@@ -85,10 +95,25 @@ export function isFirmwareChannel(v: unknown): v is 'stable' | 'beta' {
 }
 
 /**
- * Validate the URL of a firmware download request from the renderer. Only
- * `https:` URLs whose hostname is in the GitHub-release allowlist pass —
- * this guards against a compromised renderer turning main into an open
- * HTTP fetcher and against cleartext downloads of signed binaries.
+ * Validate the URL of a firmware download request from the renderer.
+ *
+ * Two-tier policy (issue #880):
+ *
+ *  1. Repo-bound hosts (github.com / api.github.com). The URL path itself
+ *     identifies the repository, so requiring `/tburkhalterr/CANShift/...`
+ *     (or `/repos/tburkhalterr/CANShift/...`) is a structural constraint a
+ *     hostile renderer cannot bypass.
+ *
+ *  2. Opaque CDN hosts (objects.githubusercontent.com,
+ *     release-assets.githubusercontent.com). These serve assets from EVERY
+ *     public GitHub repo from the same hostname, with signed opaque paths
+ *     that carry no repo identifier. For these, only URLs that
+ *     `firmwareService.listReleases()` previously surfaced (and their
+ *     `.sha256` siblings) are accepted.
+ *
+ * Either way, the URL must be `https:` — cleartext signed firmware would
+ * defeat the HMAC trailer the device verifies on flash.
+ *
  * Exported for table-driven tests.
  */
 export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
@@ -100,7 +125,16 @@ export function isFirmwareDownloadUrlAllowed(url: unknown): url is string {
     return false
   }
   if (parsed.protocol !== 'https:') return false
-  return FIRMWARE_DOWNLOAD_ALLOWED_HOSTS.has(parsed.hostname)
+
+  if (FIRMWARE_REPO_BOUND_HOSTS.has(parsed.hostname)) {
+    return REPO_PATH_PREFIXES.some((prefix) => parsed.pathname.startsWith(prefix))
+  }
+
+  if (FIRMWARE_OPAQUE_CDN_HOSTS.has(parsed.hostname)) {
+    return firmwareService.isFirmwareUrlTrusted(url)
+  }
+
+  return false
 }
 
 // ---------------------------------------------------------------------------

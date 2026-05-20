@@ -294,6 +294,54 @@ describe('FirmwareService.listReleases — asset extraction (#304 payloadBytes)'
   })
 })
 
+describe('FirmwareService.listReleases — trusted URL allowlist (#880)', () => {
+  it('trusts both binary URLs and their .sha256 sibling URLs after listReleases()', async () => {
+    netMock.fetch.mockResolvedValueOnce(
+      jsonResponse([
+        makeRelease({
+          tag_name: 'v0.7.1',
+          assets: [fwAsset('0.7.1', 1_000), spiffsAsset('0.7.1', 500)],
+        }),
+      ])
+    )
+
+    const service = new FirmwareService()
+    await service.listReleases('beta')
+
+    // Both browser_download_urls + their .sha256 manifest siblings should pass.
+    expect(service.isFirmwareUrlTrusted('https://example.test/fw-0.7.1.bin')).toBe(true)
+    expect(service.isFirmwareUrlTrusted('https://example.test/fw-0.7.1.bin.sha256')).toBe(true)
+    expect(service.isFirmwareUrlTrusted('https://example.test/spiffs-0.7.1.bin')).toBe(true)
+    expect(service.isFirmwareUrlTrusted('https://example.test/spiffs-0.7.1.bin.sha256')).toBe(true)
+  })
+
+  it('refuses URLs that were never surfaced by a verified listReleases()', () => {
+    const service = new FirmwareService()
+    expect(service.isFirmwareUrlTrusted('https://example.test/never-seen.bin')).toBe(false)
+    expect(
+      service.isFirmwareUrlTrusted('https://objects.githubusercontent.com/foreign/asset.bin')
+    ).toBe(false)
+  })
+
+  it('accumulates URLs across multiple listReleases() calls (channel switch)', async () => {
+    netMock.fetch.mockResolvedValueOnce(
+      jsonResponse([makeRelease({ tag_name: 'v0.7.1', assets: [fwAsset('0.7.1', 1_000)] })])
+    )
+    netMock.fetch.mockResolvedValueOnce(
+      jsonResponse([
+        makeRelease({ tag_name: 'v0.8.0-beta', assets: [fwAsset('0.8.0-beta', 1_000)] }),
+      ])
+    )
+
+    const service = new FirmwareService()
+    await service.listReleases('stable')
+    await service.listReleases('beta')
+
+    expect(service.isFirmwareUrlTrusted('https://example.test/fw-0.7.1.bin')).toBe(true)
+    expect(service.isFirmwareUrlTrusted('https://example.test/fw-0.8.0-beta.bin')).toBe(true)
+  })
+})
+
 describe('FirmwareService.listReleases — malformed payload tolerance', () => {
   it('skips releases that fail the type guard without throwing', async () => {
     netMock.fetch.mockResolvedValueOnce(
