@@ -69,18 +69,42 @@ export function bleStatusFromWire(wire: BleStatusWire): BleStatus {
 }
 
 /**
- * Parse + validate a raw STATUS JSON string straight from the BLE
- * notification. Returns null on JSON parse failure or schema rejection —
- * callers should skip the update rather than propagate uncertain data.
+ * Discriminated outcome of parsing a raw STATUS payload. Previously the
+ * function collapsed three failure cases into `null` which made it
+ * impossible for callers to surface a specific diagnostic. Audit finding
+ * C-HI-3 (umbrella issue #1016) — mirrors the `LatestReleaseResult`
+ * pattern from `types/releases.ts`. Discriminator is `kind` because each
+ * variant carries different payload shapes and the consumer narrows on it.
  */
-export function parseBleStatus(raw: string): BleStatus | null {
+export type BleStatusResult =
+  | { kind: 'ok'; status: BleStatus }
+  /** `JSON.parse` threw — raw text preserved for the log line. */
+  | { kind: 'invalid_json'; raw: string }
+  /** Parsed JSON was a primitive or array — schema can't even run on it. */
+  | { kind: 'not_an_object'; payload: unknown }
+  /** Parsed JSON was an object but failed strict schema validation. */
+  | { kind: 'wrong_shape'; issues: z.ZodIssue[] }
+
+/**
+ * Parse + validate a raw STATUS JSON string straight from the BLE
+ * notification. Returns a discriminated `BleStatusResult` so callers can
+ * distinguish malformed JSON, non-object payloads, and schema rejections
+ * (each warrants a different log line). Callers should still skip the
+ * device update on anything other than `kind === 'ok'`.
+ */
+export function parseBleStatus(raw: string): BleStatusResult {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
-    return null
+    return { kind: 'invalid_json', raw }
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { kind: 'not_an_object', payload: parsed }
   }
   const result = BleStatusWireSchema.safeParse(parsed)
-  if (!result.success) return null
-  return bleStatusFromWire(result.data)
+  if (!result.success) {
+    return { kind: 'wrong_shape', issues: result.error.issues }
+  }
+  return { kind: 'ok', status: bleStatusFromWire(result.data) }
 }

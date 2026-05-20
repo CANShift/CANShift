@@ -94,7 +94,7 @@ export type { TrackTelemetry } from './schemas/track-telemetry'
 export { TrackTelemetrySchema } from './schemas/track-telemetry'
 
 // BLE STATUS characteristic — firmware → mobile health/config payload (issue #887)
-export type { BleStatusWire, BleStatus } from './schemas/ble-status'
+export type { BleStatusWire, BleStatus, BleStatusResult } from './schemas/ble-status'
 export {
   BleStatusWireSchema,
   BLE_STATUS_MAX_STRING_LEN,
