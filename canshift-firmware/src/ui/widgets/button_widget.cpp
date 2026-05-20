@@ -162,9 +162,38 @@ void btnClickHandler(lv_event_t *e) {
     }
 }
 
+// Fixed-size pool of ButtonTag slots (F-HI-2). Sized to the per-page widget
+// ceiling so a page made entirely of buttons still fits. Pool bookkeeping
+// runs under the LVGL UI task (g_lvglMutex) — no extra synchronisation
+// needed for s_slotBusy / s_tagPool.
+constexpr size_t kButtonTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
+ButtonTag s_tagPool[kButtonTagPoolSize];
+bool s_slotBusy[kButtonTagPoolSize] = {};
+
+ButtonTag *allocTag() {
+    for (size_t i = 0; i < kButtonTagPoolSize; ++i) {
+        if (!s_slotBusy[i]) {
+            s_slotBusy[i] = true;
+            s_tagPool[i] = ButtonTag{};
+            return &s_tagPool[i];
+        }
+    }
+    return nullptr;
+}
+
+void releaseTag(ButtonTag *tag) {
+    for (size_t i = 0; i < kButtonTagPoolSize; ++i) {
+        if (&s_tagPool[i] == tag) {
+            s_slotBusy[i] = false;
+            return;
+        }
+    }
+}
+
 void btnDeleteHandler(lv_event_t *e) {
     auto *tag = static_cast<ButtonTag *>(lv_event_get_user_data(e));
-    delete tag;
+    if (tag)
+        releaseTag(tag);
 }
 
 } // namespace
@@ -200,7 +229,13 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
         lv_obj_set_style_pad_column(btn, 4, LV_PART_MAIN);
     }
 
-    auto *tag = new ButtonTag{};
+    ButtonTag *tag = allocTag();
+    if (!tag) {
+        LOG_WARN("BTN", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
+                 static_cast<unsigned>(kButtonTagPoolSize));
+        lv_obj_del(btn);
+        return nullptr;
+    }
     LOG_DEBUG("BTN", "create %s heap.largest=%u", cfg.id,
               static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)));
     tag->cfg = &cfg;

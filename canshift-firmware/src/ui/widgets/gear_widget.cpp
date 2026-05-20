@@ -9,6 +9,7 @@
 // Font is auto-selected from the largest that fits the widget height.
 
 #include "gear_widget.h"
+#include "app_config.h"
 #include "ui/font_manager.h"
 #include "ui/theme_manager.h"
 #include "ui/widget_label.h"
@@ -31,6 +32,39 @@ struct GearTag {
     lv_obj_t *label;
     uint32_t lastColorRgb; // 0xFFFFFFFFu sentinel forces the first paint.
 };
+
+// Fixed-size pool of GearTag slots (F-HI-2). Sized to the per-page widget
+// ceiling. Pool bookkeeping runs under the LVGL UI task (g_lvglMutex) —
+// no extra synchronisation needed for s_slotBusy / s_tagPool.
+constexpr size_t kGearTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
+GearTag s_tagPool[kGearTagPoolSize];
+bool s_slotBusy[kGearTagPoolSize] = {};
+
+GearTag *allocTag() {
+    for (size_t i = 0; i < kGearTagPoolSize; ++i) {
+        if (!s_slotBusy[i]) {
+            s_slotBusy[i] = true;
+            s_tagPool[i] = GearTag{};
+            return &s_tagPool[i];
+        }
+    }
+    return nullptr;
+}
+
+void releaseTag(GearTag *tag) {
+    for (size_t i = 0; i < kGearTagPoolSize; ++i) {
+        if (&s_tagPool[i] == tag) {
+            s_slotBusy[i] = false;
+            return;
+        }
+    }
+}
+
+void gearTagDeleteHandler(lv_event_t *e) {
+    auto *t = static_cast<GearTag *>(lv_event_get_user_data(e));
+    if (t)
+        releaseTag(t);
+}
 
 // Same proportional formula as label_widget so a gear and a numeric widget
 // at the same size render at identical font sizes.
@@ -69,10 +103,17 @@ lv_obj_t *GearWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOf
     lv_obj_set_style_text_font(label, selectFont(cfg.layout.h, cfg.layout.w), 0);
     lv_label_set_text(label, "N");
 
-    auto *tag = new GearTag{};
+    GearTag *tag = allocTag();
+    if (!tag) {
+        LOG_WARN("GEAR", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
+                 static_cast<unsigned>(kGearTagPoolSize));
+        lv_obj_del(cont);
+        return nullptr;
+    }
     tag->label = label;
     tag->lastColorRgb = textRgb; // First paint above already pushed textRgb.
-    WidgetHelpers::attachTagDeleter(cont, tag);
+    lv_obj_set_user_data(cont, tag);
+    lv_obj_add_event_cb(cont, gearTagDeleteHandler, LV_EVENT_DELETE, tag);
 
     // Optional widget label (gear shares CfgLabelParams in the union).
     WidgetLabelOverlay::apply(cont, cfg.label.label, cfg.label.labelPosition, textRgb);

@@ -12,6 +12,7 @@
 // value so a corner-anchored user label can never collide with the unit.
 
 #include "label_widget.h"
+#include "app_config.h"
 #include "diag/logger.h"
 #include "ui/alert_flash.h"
 #include "ui/font_manager.h"
@@ -74,6 +75,40 @@ struct LabelTag {
     // 0xFFFFFFFFu so the first update() always paints.
     uint32_t lastTintRgb;
 };
+
+// Fixed-size pool of LabelTag slots (F-HI-2). Sized to the per-page widget
+// ceiling so a page of nothing-but-numeric widgets still fits. Pool
+// bookkeeping runs under the LVGL UI task (g_lvglMutex) — no extra
+// synchronisation needed for s_slotBusy / s_tagPool.
+constexpr size_t kLabelTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
+LabelTag s_tagPool[kLabelTagPoolSize];
+bool s_slotBusy[kLabelTagPoolSize] = {};
+
+LabelTag *allocTag() {
+    for (size_t i = 0; i < kLabelTagPoolSize; ++i) {
+        if (!s_slotBusy[i]) {
+            s_slotBusy[i] = true;
+            s_tagPool[i] = LabelTag{};
+            return &s_tagPool[i];
+        }
+    }
+    return nullptr;
+}
+
+void releaseTag(LabelTag *tag) {
+    for (size_t i = 0; i < kLabelTagPoolSize; ++i) {
+        if (&s_tagPool[i] == tag) {
+            s_slotBusy[i] = false;
+            return;
+        }
+    }
+}
+
+void labelTagDeleteHandler(lv_event_t *e) {
+    auto *t = static_cast<LabelTag *>(lv_event_get_user_data(e));
+    if (t)
+        releaseTag(t);
+}
 
 } // namespace
 
@@ -188,7 +223,13 @@ lv_obj_t *LabelWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
         }
     }
 
-    auto *tag = new LabelTag{};
+    LabelTag *tag = allocTag();
+    if (!tag) {
+        LOG_WARN("WF", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
+                 static_cast<unsigned>(kLabelTagPoolSize));
+        lv_obj_del(cont);
+        return nullptr;
+    }
     tag->valueLabel = label;
     tag->fracLabel = fracLabel;
     tag->unitLabel = unitLabel;
@@ -204,7 +245,8 @@ lv_obj_t *LabelWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     if (fracLabel)
         AlertFlash::watchLabel(tag->alert, fracLabel, textRgb);
 
-    WidgetHelpers::attachTagDeleter(cont, tag);
+    lv_obj_set_user_data(cont, tag);
+    lv_obj_add_event_cb(cont, labelTagDeleteHandler, LV_EVENT_DELETE, tag);
 
     return cont;
 }

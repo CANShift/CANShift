@@ -1,6 +1,7 @@
 // gauge_widget.cpp — Arc-based gauge widget with colored zone sectors
 
 #include "gauge_widget.h"
+#include "app_config.h"
 #include "ui/alert_flash.h"
 #include "ui/font_manager.h"
 #include "ui/sensor_color_ramp.h"
@@ -193,6 +194,40 @@ struct GaugeTag {
     uint32_t lastFillRgb;
 };
 
+// Fixed-size pool of GaugeTag slots (F-HI-2). Sized to the per-page widget
+// ceiling so a page of nothing-but-gauges still fits. Pool bookkeeping
+// runs under the LVGL UI task (g_lvglMutex) — no extra synchronisation
+// needed for s_slotBusy / s_tagPool.
+constexpr size_t kGaugeTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
+GaugeTag s_tagPool[kGaugeTagPoolSize];
+bool s_slotBusy[kGaugeTagPoolSize] = {};
+
+GaugeTag *allocTag() {
+    for (size_t i = 0; i < kGaugeTagPoolSize; ++i) {
+        if (!s_slotBusy[i]) {
+            s_slotBusy[i] = true;
+            s_tagPool[i] = GaugeTag{};
+            return &s_tagPool[i];
+        }
+    }
+    return nullptr;
+}
+
+void releaseTag(GaugeTag *tag) {
+    for (size_t i = 0; i < kGaugeTagPoolSize; ++i) {
+        if (&s_tagPool[i] == tag) {
+            s_slotBusy[i] = false;
+            return;
+        }
+    }
+}
+
+void gaugeTagDeleteHandler(lv_event_t *e) {
+    auto *t = static_cast<GaugeTag *>(lv_event_get_user_data(e));
+    if (t)
+        releaseTag(t);
+}
+
 // Combine the per-signal alertThreshold (issue #133) with the revFlash trigger
 // (issue #263) into a single value that AlertFlash::update() can consume. The
 // lower of the two thresholds wins so either condition pulses the overlay.
@@ -366,8 +401,14 @@ lv_obj_t *GaugeWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     // Optional widget label drawn at the configured corner.
     WidgetLabelOverlay::apply(cont, cfg.gauge.label, cfg.gauge.labelPosition, textRgb);
 
-    // Allocate and attach tag
-    GaugeTag *tag = new GaugeTag{};
+    // Allocate and attach tag from the fixed pool (F-HI-2).
+    GaugeTag *tag = allocTag();
+    if (!tag) {
+        LOG_WARN("GAUGE", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
+                 static_cast<unsigned>(kGaugeTagPoolSize));
+        lv_obj_del(cont);
+        return nullptr;
+    }
     tag->valueLabel = label;
     tag->fracLabel = fracLabel;
     tag->unitLabel = unitLabel;
@@ -416,7 +457,8 @@ lv_obj_t *GaugeWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
         AlertFlash::watchLabel(tag->alert, unitLabel, textRgb & 0x888888);
     }
 
-    WidgetHelpers::attachTagDeleter(cont, tag);
+    lv_obj_set_user_data(cont, tag);
+    lv_obj_add_event_cb(cont, gaugeTagDeleteHandler, LV_EVENT_DELETE, tag);
 
     return cont;
 }

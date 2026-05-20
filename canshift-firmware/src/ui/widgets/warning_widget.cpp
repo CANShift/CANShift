@@ -4,6 +4,7 @@
 // when active, an icon at the top, and the signal name underneath.
 
 #include "warning_widget.h"
+#include "app_config.h"
 #include "ui/font_manager.h"
 #include "ui/icon_assets.h"
 #include "ui/theme_manager.h"
@@ -27,6 +28,33 @@ struct WarningTag {
     bool wasActive;
     uint32_t bgColor; // criticalColor (RGB)
 };
+
+// Fixed-size pool of WarningTag slots (F-HI-2). Sized to the per-page widget
+// ceiling. Pool bookkeeping runs under the LVGL UI task (g_lvglMutex) —
+// no extra synchronisation needed for s_slotBusy / s_tagPool.
+constexpr size_t kWarningTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
+WarningTag s_tagPool[kWarningTagPoolSize];
+bool s_slotBusy[kWarningTagPoolSize] = {};
+
+WarningTag *allocTag() {
+    for (size_t i = 0; i < kWarningTagPoolSize; ++i) {
+        if (!s_slotBusy[i]) {
+            s_slotBusy[i] = true;
+            s_tagPool[i] = WarningTag{};
+            return &s_tagPool[i];
+        }
+    }
+    return nullptr;
+}
+
+void releaseTag(WarningTag *tag) {
+    for (size_t i = 0; i < kWarningTagPoolSize; ++i) {
+        if (&s_tagPool[i] == tag) {
+            s_slotBusy[i] = false;
+            return;
+        }
+    }
+}
 
 void blinkAnimCb(void *target, int32_t v) {
     auto *root = static_cast<lv_obj_t *>(target);
@@ -102,7 +130,18 @@ lv_obj_t *WarningWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t 
         lv_obj_set_style_text_letter_space(signalLabel, 1, 0);
     }
 
-    auto *tag = new WarningTag{root, iconImg, signalLabel, lv_anim_t{}, false, critRgb};
+    WarningTag *tag = allocTag();
+    if (!tag) {
+        LOG_WARN("WARN", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
+                 static_cast<unsigned>(kWarningTagPoolSize));
+        lv_obj_del(root);
+        return nullptr;
+    }
+    tag->root = root;
+    tag->iconImg = iconImg;
+    tag->signalLabel = signalLabel;
+    tag->wasActive = false;
+    tag->bgColor = critRgb;
     lv_obj_set_user_data(root, tag);
     lv_obj_add_event_cb(
         root,
@@ -110,13 +149,13 @@ lv_obj_t *WarningWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t 
             auto *t = static_cast<WarningTag *>(lv_event_get_user_data(e));
             if (t) {
                 // Nuke ALL animations bound to this object (not just blinkAnimCb)
-                // before freeing the tag. lv_anim_del is synchronous in LVGL 8.3
-                // but does not flush an exec_cb that's already in-flight on the
-                // current animation tick — by clearing every anim slot on this
-                // var we close any window where a queued callback could fire
-                // against root after delete t. Issue #886.
+                // before releasing the slot. lv_anim_del is synchronous in LVGL
+                // 8.3 but does not flush an exec_cb that's already in-flight on
+                // the current animation tick — by clearing every anim slot on
+                // this var we close any window where a queued callback could
+                // fire against root after the tag is reused. Issue #886.
                 lv_anim_del(t->root, nullptr);
-                delete t;
+                releaseTag(t);
             }
         },
         LV_EVENT_DELETE, tag);
