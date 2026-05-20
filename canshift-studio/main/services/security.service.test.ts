@@ -3,7 +3,7 @@
 // @vitest-environment node
 
 import { describe, it, expect } from 'vitest'
-import { isExternalUrlAllowed } from './security.service'
+import { __csp, isExternalUrlAllowed } from './security.service'
 
 describe('isExternalUrlAllowed — scheme allowlist for shell.openExternal', () => {
   it('allows https:// in prod', () => {
@@ -41,5 +41,27 @@ describe('isExternalUrlAllowed — scheme allowlist for shell.openExternal', () 
   it('denies non-http(s) schemes (ftp, etc.) regardless of mode', () => {
     expect(isExternalUrlAllowed('ftp://files.example.com', false)).toBe(false)
     expect(isExternalUrlAllowed('ftp://files.example.com', true)).toBe(false)
+  })
+})
+
+describe('Content-Security-Policy — style-src hardening (#900)', () => {
+  it('prod CSP forbids inline <style> blocks (style-src has no unsafe-inline)', () => {
+    expect(__csp.PROD_CSP).toContain("style-src 'self'")
+    expect(__csp.PROD_CSP).not.toContain("style-src 'self' 'unsafe-inline'")
+  })
+
+  it('prod CSP still allows inline style="" attributes via style-src-attr (Radix popper/portals)', () => {
+    expect(__csp.PROD_CSP).toContain("style-src-attr 'unsafe-inline'")
+  })
+
+  it('dev CSP keeps unsafe-inline on style-src so Vite HMR can inject <style>', () => {
+    expect(__csp.DEV_CSP).toContain("style-src 'self' 'unsafe-inline'")
+  })
+
+  it('script-src is locked to self in both prod and dev (never relaxed)', () => {
+    expect(__csp.PROD_CSP).toContain("script-src 'self'")
+    expect(__csp.DEV_CSP).toContain("script-src 'self'")
+    expect(__csp.PROD_CSP).not.toMatch(/script-src[^;]*unsafe-(inline|eval)/)
+    expect(__csp.DEV_CSP).not.toMatch(/script-src[^;]*unsafe-(inline|eval)/)
   })
 })
