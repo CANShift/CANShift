@@ -595,11 +595,12 @@ export class BleService {
       BLE_CHAR_STATUS,
       (error: Error | null, char: Characteristic | null) => {
         if (error || !char?.value) return
-        const s = parseBleStatus(decodeBase64(char.value))
-        if (!s) {
-          log('warn', 'BLE: rejected malformed status payload')
+        const result = parseBleStatus(decodeBase64(char.value))
+        if (result.kind !== 'ok') {
+          log('warn', `BLE: rejected malformed status payload (${result.kind})`)
           return
         }
+        const s = result.status
         const store = useDeviceStore.getState()
         store.setFirmwareStatus(s.firmwareVersion ?? '?', s.canHealthy ?? false)
         store.setWifiApSsid(s.apSsid ?? null)
@@ -694,11 +695,12 @@ export class BleService {
         device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_STATUS)
       )
       if (!statusChar.value) return
-      const status = parseBleStatus(decodeBase64(statusChar.value))
-      if (!status) {
-        log('warn', 'BLE: rejected malformed initial status payload')
+      const result = parseBleStatus(decodeBase64(statusChar.value))
+      if (result.kind !== 'ok') {
+        log('warn', `BLE: rejected malformed initial status payload (${result.kind})`)
         return
       }
+      const status = result.status
       setFirmwareStatus(status.firmwareVersion ?? '?', status.canHealthy ?? false)
       const store = useDeviceStore.getState()
       store.setWifiApSsid(status.apSsid ?? null)
