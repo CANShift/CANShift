@@ -28,7 +28,7 @@ if (isCliSurface()) {
     <React.StrictMode>
       <Suspense
         fallback={
-          <div style={{ background: '#0A0A0A', height: '100vh' }} aria-label="Loading CLI" />
+          <div style={{ background: 'hsl(var(--bg))', height: '100vh' }} aria-label="Loading CLI" />
         }
       >
         <CliDetachedShell />
