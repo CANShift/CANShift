@@ -19,11 +19,21 @@ export interface Migration {
   migrate: MigrationFn
 }
 
-// Deep-clone a JSON-shaped config via a JSON round-trip. Configs are pure JSON,
-// so the round-trip is safe. We don't use `structuredClone` here to keep
-// canshift-core's build dependency-free (no @types/node required).
+// Deep-clone a JSON-shaped config via a JSON round-trip. Configs are pure
+// JSON, so the round-trip is safe. We don't use `structuredClone` here to
+// keep canshift-core's build dependency-free (no @types/node required).
+//
+// Wrapped so a caller passing an in-memory JS object that drifted from the
+// JSON shape (a circular reference, an undefined value at the root) gets a
+// typed boundary error rather than a raw `TypeError: Converting circular
+// structure to JSON` bubbling out of `migrateConfig`. Audit C-LO-6.
 function deepClone(value: Record<string, unknown>): Record<string, unknown> {
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err)
+    throw new Error(`Invalid config: not serializable to JSON (${reason})`, { cause: err })
+  }
 }
 
 // ---------------------------------------------------------------------------
