@@ -1,4 +1,4 @@
-// sensorDefaults.ts — Built-in color ramps for the standard sensor catalog
+// sensor-defaults.ts — Built-in color ramps for the standard sensor catalog
 // (issue #430). Keeps firmware and studio in lockstep on the visual semantics
 // of common gauges (green / amber / red) without forcing the user to define a
 // ramp on every signal. The C++ table in

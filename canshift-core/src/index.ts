@@ -112,8 +112,8 @@ export {
   resolveDefaultRamp,
   resolveSensorKind,
   colorAtValue,
-} from './sensorDefaults'
-export type { SensorKind } from './sensorDefaults'
+} from './sensor-defaults.js'
+export type { SensorKind } from './sensor-defaults.js'
 
 // Sensor semantic two-zone palette (issue #954)
 export { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from './sensor-palette'

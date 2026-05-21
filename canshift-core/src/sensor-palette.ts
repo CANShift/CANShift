@@ -8,7 +8,7 @@
 //
 // Design rules locked in by the issue:
 //   - Exactly two zones per gauge — no multi-stop gradients (kept in
-//     `sensorDefaults.ts` for the legacy ramp path).
+//     `sensor-defaults.ts` for the legacy ramp path).
 //   - The OK colour is opaque; the value fill grows from min toward max in
 //     that colour and flips to the warning colour above `warningLevel`.
 //   - A missing or unknown `iconName` falls back to the widget's
