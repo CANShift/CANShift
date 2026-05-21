@@ -1,7 +1,6 @@
 // gauge_widget.cpp — Arc-based gauge widget with colored zone sectors
 
 #include "gauge_widget.h"
-#include "app_config.h"
 #include "ui/alert_flash.h"
 #include "ui/font_manager.h"
 #include "ui/sensor_color_ramp.h"
@@ -10,6 +9,7 @@
 #include "ui/widget_label.h"
 #include "ui/widget_styles.h"
 #include "ui/widgets/widget_helpers.h"
+#include "ui/widgets/widget_tag_pool.h"
 #include "config/config_loader.h"
 #include "hardware_profile.h"
 #include "diag/logger.h"
@@ -194,39 +194,8 @@ struct GaugeTag {
     uint32_t lastFillRgb;
 };
 
-// Fixed-size pool of GaugeTag slots (F-HI-2). Sized to the per-page widget
-// ceiling so a page of nothing-but-gauges still fits. Pool bookkeeping
-// runs under the LVGL UI task (g_lvglMutex) — no extra synchronisation
-// needed for s_slotBusy / s_tagPool.
-constexpr size_t kGaugeTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
-GaugeTag s_tagPool[kGaugeTagPoolSize];
-bool s_slotBusy[kGaugeTagPoolSize] = {};
-
-GaugeTag *allocTag() {
-    for (size_t i = 0; i < kGaugeTagPoolSize; ++i) {
-        if (!s_slotBusy[i]) {
-            s_slotBusy[i] = true;
-            s_tagPool[i] = GaugeTag{};
-            return &s_tagPool[i];
-        }
-    }
-    return nullptr;
-}
-
-void releaseTag(GaugeTag *tag) {
-    for (size_t i = 0; i < kGaugeTagPoolSize; ++i) {
-        if (&s_tagPool[i] == tag) {
-            s_slotBusy[i] = false;
-            return;
-        }
-    }
-}
-
-void gaugeTagDeleteHandler(lv_event_t *e) {
-    auto *t = static_cast<GaugeTag *>(lv_event_get_user_data(e));
-    if (t)
-        releaseTag(t);
-}
+// GaugeTag storage comes from the shared WidgetTagPool slab (#1031
+// F-HI-2 follow-up). See ui/widgets/widget_tag_pool.h.
 
 // Combine the per-signal alertThreshold (issue #133) with the revFlash trigger
 // (issue #263) into a single value that AlertFlash::update() can consume. The
@@ -402,10 +371,10 @@ lv_obj_t *GaugeWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     WidgetLabelOverlay::apply(cont, cfg.gauge.label, cfg.gauge.labelPosition, textRgb);
 
     // Allocate and attach tag from the fixed pool (F-HI-2).
-    GaugeTag *tag = allocTag();
+    GaugeTag *tag = WidgetTagPool::alloc<GaugeTag>();
     if (!tag) {
         LOG_WARN("GAUGE", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
-                 static_cast<unsigned>(kGaugeTagPoolSize));
+                 static_cast<unsigned>(WidgetTagPool::kPoolSlots));
         lv_obj_del(cont);
         return nullptr;
     }
@@ -458,7 +427,7 @@ lv_obj_t *GaugeWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     }
 
     lv_obj_set_user_data(cont, tag);
-    lv_obj_add_event_cb(cont, gaugeTagDeleteHandler, LV_EVENT_DELETE, tag);
+    lv_obj_add_event_cb(cont, WidgetTagPool::deleteHandler<GaugeTag>, LV_EVENT_DELETE, tag);
 
     return cont;
 }

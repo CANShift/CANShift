@@ -4,7 +4,6 @@
 // optional widget label at a chosen corner.
 
 #include "bar_widget.h"
-#include "app_config.h"
 #include "ui/alert_flash.h"
 #include "ui/font_manager.h"
 #include "ui/icon_assets.h"
@@ -14,6 +13,7 @@
 #include "ui/widget_label.h"
 #include "ui/widget_styles.h"
 #include "ui/widgets/widget_helpers.h"
+#include "ui/widgets/widget_tag_pool.h"
 #include "diag/logger.h"
 
 #include <cmath>
@@ -60,40 +60,8 @@ struct BarTag {
     uint32_t lastFillRgb;
 };
 
-// Fixed-size pool of BarTag slots (F-HI-2). A page can host up to
-// CONFIG_MAX_WIDGETS_PER_PAGE widgets so the pool ceiling matches that
-// budget — if a single page maxed out as bars they'd all still fit.
-// Pool bookkeeping runs under the LVGL UI task (g_lvglMutex) so no extra
-// synchronisation is needed for s_slotBusy / s_tagPool access.
-constexpr size_t kBarTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
-BarTag s_tagPool[kBarTagPoolSize];
-bool s_slotBusy[kBarTagPoolSize] = {};
-
-BarTag *allocTag() {
-    for (size_t i = 0; i < kBarTagPoolSize; ++i) {
-        if (!s_slotBusy[i]) {
-            s_slotBusy[i] = true;
-            s_tagPool[i] = BarTag{};
-            return &s_tagPool[i];
-        }
-    }
-    return nullptr;
-}
-
-void releaseTag(BarTag *tag) {
-    for (size_t i = 0; i < kBarTagPoolSize; ++i) {
-        if (&s_tagPool[i] == tag) {
-            s_slotBusy[i] = false;
-            return;
-        }
-    }
-}
-
-void barTagDeleteHandler(lv_event_t *e) {
-    auto *t = static_cast<BarTag *>(lv_event_get_user_data(e));
-    if (t)
-        releaseTag(t);
-}
+// BarTag storage comes from the shared WidgetTagPool slab (#1031 F-HI-2
+// follow-up). See ui/widgets/widget_tag_pool.h.
 
 // Studio uses a faint grey for label text when dimmed. We use the same fixed
 // tone so the bar reads identically across themes.
@@ -123,10 +91,10 @@ lv_obj_t *BarWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOff
     WidgetHelpers::initContainer(cont, cfg, yOffset, cfg.style.hasBorder,
                                  cfg.style.borderColor.rgb);
 
-    BarTag *t = allocTag();
+    BarTag *t = WidgetTagPool::alloc<BarTag>();
     if (!t) {
         LOG_WARN("BAR", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
-                 static_cast<unsigned>(kBarTagPoolSize));
+                 static_cast<unsigned>(WidgetTagPool::kPoolSlots));
         lv_obj_del(cont);
         return nullptr;
     }
@@ -393,7 +361,7 @@ lv_obj_t *BarWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOff
         AlertFlash::watchLabel(t->alert, t->valueLabel, VALUE_TEXT_RGB);
 
     lv_obj_set_user_data(cont, t);
-    lv_obj_add_event_cb(cont, barTagDeleteHandler, LV_EVENT_DELETE, t);
+    lv_obj_add_event_cb(cont, WidgetTagPool::deleteHandler<BarTag>, LV_EVENT_DELETE, t);
 
     // Initial paint: invalid → 0 (per design).
     BarWidget::update(cont, cfg.bar.minValue, false, cfg);

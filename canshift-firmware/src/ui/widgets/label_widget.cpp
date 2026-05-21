@@ -12,7 +12,6 @@
 // value so a corner-anchored user label can never collide with the unit.
 
 #include "label_widget.h"
-#include "app_config.h"
 #include "diag/logger.h"
 #include "ui/alert_flash.h"
 #include "ui/font_manager.h"
@@ -21,6 +20,7 @@
 #include "ui/widget_label.h"
 #include "ui/widget_styles.h"
 #include "ui/widgets/widget_helpers.h"
+#include "ui/widgets/widget_tag_pool.h"
 #include <cmath>
 #include <lvgl.h>
 #include <stdio.h>
@@ -76,39 +76,8 @@ struct LabelTag {
     uint32_t lastTintRgb;
 };
 
-// Fixed-size pool of LabelTag slots (F-HI-2). Sized to the per-page widget
-// ceiling so a page of nothing-but-numeric widgets still fits. Pool
-// bookkeeping runs under the LVGL UI task (g_lvglMutex) — no extra
-// synchronisation needed for s_slotBusy / s_tagPool.
-constexpr size_t kLabelTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
-LabelTag s_tagPool[kLabelTagPoolSize];
-bool s_slotBusy[kLabelTagPoolSize] = {};
-
-LabelTag *allocTag() {
-    for (size_t i = 0; i < kLabelTagPoolSize; ++i) {
-        if (!s_slotBusy[i]) {
-            s_slotBusy[i] = true;
-            s_tagPool[i] = LabelTag{};
-            return &s_tagPool[i];
-        }
-    }
-    return nullptr;
-}
-
-void releaseTag(LabelTag *tag) {
-    for (size_t i = 0; i < kLabelTagPoolSize; ++i) {
-        if (&s_tagPool[i] == tag) {
-            s_slotBusy[i] = false;
-            return;
-        }
-    }
-}
-
-void labelTagDeleteHandler(lv_event_t *e) {
-    auto *t = static_cast<LabelTag *>(lv_event_get_user_data(e));
-    if (t)
-        releaseTag(t);
-}
+// LabelTag storage comes from the shared WidgetTagPool slab (#1031
+// F-HI-2 follow-up). See ui/widgets/widget_tag_pool.h.
 
 } // namespace
 
@@ -223,10 +192,10 @@ lv_obj_t *LabelWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
         }
     }
 
-    LabelTag *tag = allocTag();
+    LabelTag *tag = WidgetTagPool::alloc<LabelTag>();
     if (!tag) {
         LOG_WARN("WF", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
-                 static_cast<unsigned>(kLabelTagPoolSize));
+                 static_cast<unsigned>(WidgetTagPool::kPoolSlots));
         lv_obj_del(cont);
         return nullptr;
     }
@@ -246,7 +215,7 @@ lv_obj_t *LabelWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
         AlertFlash::watchLabel(tag->alert, fracLabel, textRgb);
 
     lv_obj_set_user_data(cont, tag);
-    lv_obj_add_event_cb(cont, labelTagDeleteHandler, LV_EVENT_DELETE, tag);
+    lv_obj_add_event_cb(cont, WidgetTagPool::deleteHandler<LabelTag>, LV_EVENT_DELETE, tag);
 
     return cont;
 }
