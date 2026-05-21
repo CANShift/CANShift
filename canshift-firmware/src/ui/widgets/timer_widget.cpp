@@ -16,13 +16,13 @@
 // `lv_label_set_text` call from #236 still hits its short-circuit.
 
 #include "timer_widget.h"
-#include "app_config.h"
 #include "runtime/timer_service.h"
 #include "ui/font_manager.h"
 #include "ui/theme_manager.h"
 #include "ui/widget_label.h"
 #include "ui/widget_styles.h"
 #include "ui/widgets/widget_helpers.h"
+#include "ui/widgets/widget_tag_pool.h"
 #include "diag/logger.h"
 
 #include <esp_timer.h>
@@ -48,38 +48,8 @@ struct TimerTag {
     char lastText[12];             // #236 cache — skips lv_label_set_text re-allocs
 };
 
-// Fixed-size pool of TimerTag slots (F-HI-2). Sized to the per-page widget
-// ceiling. Pool bookkeeping runs under the LVGL UI task (g_lvglMutex) —
-// no extra synchronisation needed for s_slotBusy / s_tagPool.
-constexpr size_t kTimerTagPoolSize = CONFIG_MAX_WIDGETS_PER_PAGE;
-TimerTag s_tagPool[kTimerTagPoolSize];
-bool s_slotBusy[kTimerTagPoolSize] = {};
-
-TimerTag *allocTag() {
-    for (size_t i = 0; i < kTimerTagPoolSize; ++i) {
-        if (!s_slotBusy[i]) {
-            s_slotBusy[i] = true;
-            s_tagPool[i] = TimerTag{};
-            return &s_tagPool[i];
-        }
-    }
-    return nullptr;
-}
-
-void releaseTag(TimerTag *tag) {
-    for (size_t i = 0; i < kTimerTagPoolSize; ++i) {
-        if (&s_tagPool[i] == tag) {
-            s_slotBusy[i] = false;
-            return;
-        }
-    }
-}
-
-void timerTagDeleteHandler(lv_event_t *e) {
-    auto *t = static_cast<TimerTag *>(lv_event_get_user_data(e));
-    if (t)
-        releaseTag(t);
-}
+// TimerTag storage comes from the shared WidgetTagPool slab (#1031
+// F-HI-2 follow-up). See ui/widgets/widget_tag_pool.h.
 
 constexpr uint32_t LONG_PRESS_MS = 600;
 constexpr uint32_t BLINK_PERIOD_MS = 1000; // Half-on, half-off → 500 ms each phase.
@@ -204,10 +174,10 @@ lv_obj_t *TimerWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     lv_label_set_text(label, cfg.timer.formatMsec ? "00.000" : "00:00");
 
     // Allocate tag from the fixed pool (F-HI-2).
-    TimerTag *tag = allocTag();
+    TimerTag *tag = WidgetTagPool::alloc<TimerTag>();
     if (!tag) {
         LOG_WARN("TMR", "Tag pool exhausted for '%s' (all %u slots busy)", cfg.id,
-                 static_cast<unsigned>(kTimerTagPoolSize));
+                 static_cast<unsigned>(WidgetTagPool::kPoolSlots));
         lv_obj_del(cont);
         return nullptr;
     }
@@ -233,7 +203,7 @@ lv_obj_t *TimerWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     }
 
     lv_obj_set_user_data(cont, tag);
-    lv_obj_add_event_cb(cont, timerTagDeleteHandler, LV_EVENT_DELETE, tag);
+    lv_obj_add_event_cb(cont, WidgetTagPool::deleteHandler<TimerTag>, LV_EVENT_DELETE, tag);
 
     // Register touch events for start / pause / resume / reset.
     lv_obj_add_event_cb(cont, onTimerTouch, LV_EVENT_PRESSED, tag);
