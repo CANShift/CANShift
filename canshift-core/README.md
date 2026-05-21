@@ -8,12 +8,16 @@
 
 `canshift-core` is the single source of truth for:
 
-- **Configuration types** — `DashboardConfig`, `Widget` discriminated union, `PageConfig`, `TopBarConfig`, `ButtonAction`, `DeviceConfig`, `SignalConfig`
+- **Configuration types** — `DashboardConfig`, `Widget` discriminated union, `PageConfig`, `TopBarConfig`, `ButtonAction`, `DeviceConfig`, `SignalConfig`, `InputBindingsConfig`
 - **Validation** — runtime checks on dashboard, signal, and device configs
 - **Schema migrations** — versioned chain that brings older configs forward to `CURRENT_SCHEMA_VERSION`
-- **IPC return-shape contracts** — types describing what the studio's main process returns to the renderer
+- **Design tokens** — `DARK_TOKENS` palette + `tokensToCssVars` consumed by studio's Tailwind layer
+- **Wire-format schemas** — `BleStatusWireSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, ECU profiles, hardware profiles
 
-It is pure TypeScript with no Node.js, browser, or React Native APIs. Today it is consumed by `canshift-studio`. `canshift-mobile` consumes the same package as needed.
+It is pure TypeScript with no Node.js, browser, or React Native APIs. Today
+it is consumed by `canshift-studio` and `canshift-mobile`. IPC return-shape
+types are intentionally **not** shipped from here — they live in
+`canshift-studio/shared/ipc-contract.ts` so core can stay Electron-free.
 
 It does **not** contain:
 
@@ -34,20 +38,38 @@ canshift-core/
     ├── index.ts                          # Public API barrel — only import from here
     ├── constants/
     │   └── firmware-caps.ts              # FIRMWARE_CAPS, CANVAS, REV_LIMIT_RPM, HEX_COLOR_REGEX
-    ├── migrations/
-    │   └── migration-runner.ts           # BUILTIN_MIGRATIONS, migrateConfig, validateMigrationChain
-    ├── types/
+    ├── schemas/                          # Single home for every contract (#914)
     │   ├── common.ts                     # HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer
     │   ├── dashboard.ts                  # DashboardConfig, Widget union, PageConfig, TopBar, ButtonAction
-    │   ├── device.ts                     # DeviceConfig, CanSpeedKbps, DEFAULT_DEVICE_CONFIG
-    │   ├── ipc.ts                        # PortInfo, ConnectionStatus, UsbResult, OpenResult, SaveResult
-    │   └── signal.ts                     # SignalConfig, SignalDef
+    │   ├── device.ts                     # DeviceConfig + wire schema, Esp32{Input,Output}GpioSchema
+    │   ├── signal.ts                     # SignalConfig, SignalDef, ColorRamp, CanSpeedKbps
+    │   ├── ble-status.ts                 # BLE STATUS characteristic (firmware → mobile, #887)
+    │   ├── input-bindings.ts             # Physical GPIO button bindings (#833)
+    │   ├── screen-settings.ts            # CMD_SCREEN_SETTINGS / BLE SETTINGS payload (S-H-1)
+    │   ├── track-telemetry.ts            # Track-mode BLE telemetry contract (#843)
+    │   └── hardware-profile.ts           # HARDWARE_PROFILES per-board pin tables (#831)
+    ├── migrations/
+    │   └── migration-runner.ts           # BUILTIN_MIGRATIONS, migrateConfig, validateMigrationChain
     ├── validation/
     │   ├── validate-dashboard.ts         # Bounds, hex colors, signal refs, duplicate IDs, firmware caps
-    │   ├── validate-device.ts            # CAN speed and pin sanity
-    │   └── validate-signals.ts           # Signal catalog structure
+    │   ├── validate-signal-config.ts     # SignalConfig structural sanity
+    │   └── validate-signal.ts            # validateSignalCatalog (color-ramp anchored)
+    ├── ecu-profiles/                     # Built-in ECU presets (MaxxECU, …) — #570
+    ├── realdash/                         # RealDash CAN XML import (parseRealDashXML, #609)
+    ├── types/
+    │   └── releases.ts                   # GitHub ReleaseInfo / LatestReleaseResult (#571)
+    ├── design-tokens.ts                  # DARK_TOKENS, tokensToCssVars (#526)
+    ├── day-theme-defaults.ts             # DAY_PALETTE_DEFAULT / DAY_BG_DEFAULT (#901)
+    ├── sensor-defaults.ts                # SENSOR_DEFAULT_RAMPS + resolveDefaultRamp (#430)
+    ├── sensor-palette.ts                 # Two-zone semantic palette (#954)
+    ├── topbar-metrics.ts                 # TopBar proportion table (mirrored in firmware)
+    ├── topbar-colors.ts                  # TopBar status palette (mirrored in firmware)
     └── __tests__/                        # Jest specs pinning behaviour
 ```
+
+The previously-published `types/{common,dashboard,device,ipc,signal}.ts`
+barrels were collapsed into the corresponding `schemas/*.ts` files in #914 —
+every contract now has exactly one home.
 
 ---
 
@@ -57,24 +79,46 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 
 **Types**
 
-- Dashboard: `DashboardConfig`, `PageConfig`, `PagePalette`, `Widget`, `WidgetConfig` (discriminated union on `type`), `GaugeWidgetConfig`, `GaugeDisplayStyle`, `WarningWidgetConfig`, `ButtonWidgetConfig`, `TimerWidgetConfig`, `BarWidgetConfig`, `GearWidgetConfig`, `ImageWidgetConfig`, `SensorIconName`, `WidgetLabelPosition`, `ThemePreset`, `TopBarConfig`, `TopBarItem`, `TopBarItemPosition`
-- Button actions: `ButtonAction`, `DashboardButtonAction`, `EcuButtonAction`, `NavigateAction`, `MapSwitchAction`, `CanRawAction`
+- Dashboard: `DashboardConfig`, `PageConfig`, `PagePalette`, `Widget`, `WidgetConfig` (discriminated union on `type`), `GaugeWidgetConfig`, `GaugeDisplayStyle`, `GaugeArcFillStyle`, `WarningWidgetConfig`, `ButtonWidgetConfig`, `TimerWidgetConfig`, `BarWidgetConfig`, `GearWidgetConfig`, `ImageWidgetConfig`, `SensorIconName`, `WidgetLabelPosition`, `ThemePreset`, `TopBarConfig`, `TopBarItem`, `TopBarItemPosition`
+- Button actions: `ButtonAction`, `DashboardButtonAction`, `EcuButtonAction`, `NavigateAction`, `MapSwitchAction`, `CanRawAction`, `CruiseControlAction`, `CruiseControlOp`
 - Common primitives: `HexColor`, `WidgetType`, `WidgetLayout`, `WidgetStyle`, `SemVer`
-- Signals: `SignalConfig`, `SignalDef`
-- Device: `DeviceConfig`, `CanSpeedKbps`
-- IPC: `PortInfo`, `ConnectionStatus`, `UsbResult`, `OpenResult`, `SaveResult`
+- Signals: `SignalConfig`, `SignalDef`, `ColorRamp`, `ColorRampStop`, `RampInterpolation`
+- Device: `DeviceConfig`, `DeviceConfigWire`, `CanSpeedKbps`
+- Input bindings (#833): `InputBinding`, `InputBindingWire`, `InputBindingsConfig`, `InputBindingsConfigWire`, `InputActiveLevel`, `InputPressKind`
+- Track telemetry (#843): `TrackTelemetry`
+- Screen settings (S-H-1): `ScreenSettings`
+- BLE STATUS (#887): `BleStatusWire`, `BleStatus`, `BleStatusResult`
+- Releases (#571): `ReleaseAsset`, `ReleaseInfo`, `LatestReleaseResult`
+- Design tokens (#526): `DesignTokens`
+- Hardware profiles (#831): `HardwareProfileId`, `HardwareProfile`
+- ECU profiles (#570): `EcuProfile`
+- RealDash import (#609): `ParseRealDashXMLResult`
+- TopBar mirror types: `TopBarMetricsRatios`, `TopBarColorPalette`
+- Sensors: `SensorKind`, `SensorPaletteEntry`
 
-**Runtime constants**
+**Runtime values**
 
-- `DEFAULT_PAGE_PALETTE`, `DEFAULT_TOP_BAR_LAYOUT` — dashboard defaults
-- `DEFAULT_DEVICE_CONFIG`, `CAN_SPEED_OPTIONS` — device defaults
-- `FIRMWARE_CAPS`, `CANVAS`, `TOPBAR_HEIGHT`, `REV_LIMIT_RPM`, `DECIMAL_PLACES`, `HEX_COLOR_REGEX` — firmware caps and validation primitives
+- Dashboard: `DEFAULT_PAGE_PALETTE`, `DEFAULT_TOP_BAR_LAYOUT`, button-action discriminator helpers (`BUTTON_ACTION_TYPES`, `CRUISE_CONTROL_OPS`, `isNavigateAction`, `isMapSwitchAction`, `isCanRawAction`, `isCruiseControlAction`)
+- Device: `DEFAULT_DEVICE_CONFIG`, `CAN_SPEED_OPTIONS`, `deviceConfigFromWire`, `deviceConfigToWire`
+- Input bindings: `InputBindingSchema`, `InputBindingsConfigSchema`, `InputBindingWireSchema`, `InputBindingsConfigWireSchema`, `inputBindingsFromWire`, `inputBindingsToWire`, `MAX_INPUT_BINDINGS`, `INPUT_BINDING_ID_MAX_LEN`
+- Schemas (boundary parsing): `DashboardConfigSchema`, `SignalConfigSchema`, `DeviceConfigSchema`, `DeviceConfigWireSchema`, `Esp32OutputGpioSchema`, `Esp32InputGpioSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, `BleStatusWireSchema`
+- BLE STATUS helpers: `BLE_STATUS_MAX_STRING_LEN`, `SCREEN_SETTINGS_BOUNDS`, `bleStatusFromWire`, `parseBleStatus`
+- Sensors: `SENSOR_DEFAULT_RAMPS`, `SENSOR_PALETTE`, `resolveDefaultRamp`, `resolveSensorKind`, `colorAtValue`, `sensorOkColor`, `sensorWarningColor`
+- Design tokens: `COLOR_KEY_TO_CSS_VAR`, `DARK_TOKENS`, `tokensToCssVars`, `DAY_PALETTE_DEFAULT`, `DAY_BG_DEFAULT`, `DAY_THEME_PRESET`
+- Hardware / ECU: `HARDWARE_PROFILES`, `isPinAvailableForBoard`, `ECU_PROFILES`, `DEFAULT_PROFILE_ID`, `MAXXECU_SIGNAL_UNITS`
+- RealDash: `parseRealDashXML`
+- TopBar mirrors: `TopBarMetrics`, `TopBarColors`
+- Firmware caps: `FIRMWARE_CAPS`, `CANVAS`, `TOPBAR_HEIGHT`, `REV_LIMIT_RPM`, `DECIMAL_PLACES`, `HEX_COLOR_REGEX`, `MAX_RAMP_STOPS`
 
-**Validators** — all return `{ ok: boolean, errors: string[] }`
+`LIGHT_TOKENS` is intentionally **not** re-exported — it is a placeholder for
+the on-hold theme editor (#21) and stays internal until a real consumer
+lands.
+
+**Validators** — all return `{ valid: boolean, errors: string[], warnings: string[], config?: T }`
 
 - `validateDashboard(config, options?)` plus types `ValidationResult`, `ValidateDashboardOptions`
-- `validateSignals(signals)`
-- `validateDevice(device)`
+- `validateSignalConfig(config)`
+- `validateSignalCatalog(signals)`
 
 **Migrations**
 
@@ -139,11 +183,15 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 
 ## Validation
 
-Validation is **custom TypeScript code, not JSON Schema**. Each validator returns:
+Validation is **Zod-backed** (Zod is `canshift-core`'s only runtime
+dependency). Each validator returns:
 
 ```ts
-{ ok: boolean; errors: string[] }
+{ valid: boolean; errors: string[]; warnings: string[]; config?: T }
 ```
+
+`config` is only present on the success branch and is the validated
+`DashboardConfig` (or equivalent) ready to consume.
 
 `validateDashboard` covers:
 
@@ -168,7 +216,12 @@ Validation is **custom TypeScript code, not JSON Schema**. Each validator return
 4. Update `config_types.h` in firmware to match
 5. Update `config_loader.cpp` in firmware to read the new field
 
-Schema mismatches between firmware and core are detected at runtime so a stale firmware paired with a newer config logs a clear error rather than silently misreading bytes (#259).
+Schema mismatches between firmware and core are detected at runtime so a
+stale firmware paired with a newer config logs a clear error rather than
+silently misreading bytes (#259). The firmware **does not run the migration
+chain** — only Studio migrates configs forward. Issue #1019 (A-COMPAT-1)
+tracks the firmware-side preflight that will reject mismatched pushes
+instead of degrading silently.
 
 ---
 

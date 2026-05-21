@@ -63,13 +63,20 @@ src/
 ├── App.tsx
 ├── components/        DashTopBar.tsx, SignalCard.tsx
 ├── constants/ble.ts   GATT UUIDs + telemetry key map
+├── diag/              cold-start probe + diagnostics helpers
+├── hooks/             use-ble-foreground-reconnect, use-graph-tick,
+│                      use-latest-release
+├── lib/               lap-detect, shared utilities
 ├── navigation/        index.tsx, ConnectedNavigator.tsx
 ├── screens/           ScanScreen, DashScreen, GraphScreen, LogScreen,
-│                      SettingsScreen, UpdateScreen
-├── services/          ble.service.ts, ble.validators.ts, ble-permissions.ts,
-│                      last-device.ts, ota.service.ts, sim.service.ts
-├── stores/            device, signals, telemetry, log, reconnect (Zustand)
-└── theme/
+│                      SettingsScreen, UpdateScreen, AboutScreen
+├── services/          ble.service.ts, ble.validators.ts, ble.errors.ts,
+│                      ble-permissions.ts, last-device.ts, ota.service.ts,
+│                      releases.service.ts, sim.service.ts,
+│                      track-telemetry-publisher.ts
+├── stores/            device, signals, telemetry, log, reconnect,
+│                      ota-releases, track-session (Zustand)
+└── theme/             tokens consumed by NativeWind + StyleSheet bridges
 ```
 
 ---
@@ -95,10 +102,10 @@ Device-name filter on scan: `CANShift`.
 
 ### Characteristics
 
-- `BLE_CHAR_TELE` — telemetry notifications, compact JSON
-- `BLE_CHAR_STATUS` — device status notifications
-- `BLE_CHAR_SETTINGS` — read/write settings (brightness, sleep, …)
-- `BLE_CHAR_CMD` — command channel (`set_day_night`, `start_calibration`,
+- `BLE_CHAR_TELE` — read + notify; compact telemetry JSON pushed at ~10 Hz
+- `BLE_CHAR_STATUS` — read + notify; firmware version, CAN health, day/night, AP SSID
+- `BLE_CHAR_SETTINGS` — read/write; brightness, sleep, rotation
+- `BLE_CHAR_CMD` — write; command channel (`set_day_night`, `start_calibration`,
   `start_wifi_ap`, …)
 
 ### Telemetry key map
@@ -121,8 +128,12 @@ Full map (matches firmware `addSignalIfValid()` calls):
 | `s` | Speed | kph |
 | `g` | Gear | — |
 | `bat` | Battery | V |
+| `mi` | Active MAP index | — |
 
-A 500 ms watchdog tick marks data stale after 2 s without a notification.
+`mi` (active MAP index, read at `src/components/DashTopBar.tsx`) is not in
+`SIGNAL_META` because it has no display label/unit — `DashTopBar` consumes
+it directly. A 500 ms watchdog tick marks data stale after 2 s without a
+notification.
 
 ### Service shape
 
@@ -151,10 +162,10 @@ Tunables (module-level constants in `ble.service.ts`):
 The last-connected device id is persisted in `expo-secure-store` at the key
 `canshift.lastBleDeviceId` (`src/services/last-device.ts`). On startup the
 app calls `tryReconnectLastDevice()`; the `useReconnectStore` exposes
-`isReconnecting`, `attempt`, and `maxAttempts` so `ScanScreen` can render
-"Reconnecting to dashboard… (n/m)" while the loop runs. Reconnect is
-cancelled on user-initiated scan, manual disconnect, or after the attempt
-cap is reached.
+`isReconnecting`, `attempt`, `maxAttempts`, and `deviceId` so `ScanScreen`
+can render "Reconnecting to dashboard… (n/m)" while the loop runs.
+Reconnect is cancelled on user-initiated scan, manual disconnect, or after
+the attempt cap is reached.
 
 ---
 
@@ -256,12 +267,18 @@ Configured in `app.json > expo.plugins`:
 
 ## canshift-core integration
 
-`canshift-core` is **not** currently in `canshift-mobile/package.json`.
-The BLE telemetry shape is owned locally in `src/constants/ble.ts`,
-which is enough for read-only telemetry/settings. The dependency will be
-added on demand once the mobile surface gains config editing — long-term
-direction is to share the telemetry-key types with the studio so a new
-signal lights up everywhere at once.
+`canshift-core` is shipped as a workspace dependency since #887:
+
+```json
+"@tmbk/canshift-core": "file:../canshift-core"
+```
+
+The `prestart` / `prebuild` / `prepare` scripts in `package.json` rebuild
+core before every mobile script (lint, typecheck, test, etc.) so consumers
+always see the latest `dist/`. Mobile currently consumes the BLE STATUS
+schema, screen-settings bounds, and design tokens from core; the local
+`src/constants/ble.ts` still owns the compact telemetry key map until the
+mobile surface gains config editing.
 
 ---
 

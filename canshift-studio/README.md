@@ -35,10 +35,6 @@ flasher — all over a single USB serial cable. See the
 
 ---
 
-## Screenshots
-
-<!-- TODO: add screenshots -->
-
 ---
 
 ## Stack & supported platforms
@@ -62,8 +58,8 @@ flasher — all over a single USB serial cable. See the
   ```bash
   cd canshift-core && npm install && npm run build
   ```
-  Rebuild it whenever its types change (notably the IPC return types
-  deduped into core in #292) — Studio reads them at compile time.
+  Rebuild it whenever its types change — Studio reads them at compile time.
+  Studio's `prestart` / `predev` hooks chain this build automatically.
 
 ### Install and run
 
@@ -112,20 +108,34 @@ state live in renderer. They talk only through the IPC bridge below.
 
 ```
 canshift-studio/
+├── shared/                            # Shared between main and renderer
+│   ├── ipc-channels.ts                # Channel name constants — SINGLE source of truth
+│   ├── ipc-contract.ts                # IPC return-shape types (renderer ↔ main)
+│   ├── ipc-payloads.ts                # Shared payload types (device log, CLI log, …)
+│   ├── cli-detach.types.ts            # CLI panel detach types (#433)
+│   ├── firmware.service.types.ts
+│   ├── updater.service.types.ts
+│   └── usb.service.types.ts
 ├── main/                              # Electron main process (Node.js)
-│   ├── index.ts                       # Entry, window/menu setup, auto-update
+│   ├── index.ts                       # Entry, BrowserWindow + auto-update setup
 │   ├── menu.ts                        # Application menu (incl. Help → Reset First-Run)
 │   ├── preload.ts                     # Context bridge (exposes window.ipc)
 │   ├── ipc/
-│   │   ├── ipc-channels.ts            # Channel name constants — single source of truth
-│   │   ├── ipc-allowlist.ts           # Per-direction allowlists for the preload bridge
+│   │   ├── ipc-allowlist.ts           # Per-direction allowlists (INVOKE/SEND/LISTEN)
 │   │   └── ipc-handlers.ts            # All ipcMain.handle / ipcMain.on registrations
-│   └── services/
-│       ├── config-file.service.ts     # Open / save / import / export config JSON
-│       ├── usb.service.ts             # USB serial — connect, push config, CAN scan
-│       ├── firmware.service.ts        # GitHub releases, bootloader DTR/RTS pulse, downloads
-│       ├── session.service.ts         # Persist last file / last port / first-run flag
-│       └── updater.service.ts         # electron-updater integration
+│   ├── services/
+│   │   ├── cli-log-bus.ts             # Coalesced CLI log fan-out (#712)
+│   │   ├── cli-window.service.ts      # Detached CLI BrowserWindow lifecycle (#433)
+│   │   ├── config-file.service.ts     # Open / save / import / export config JSON
+│   │   ├── firmware.service.ts        # GitHub releases, DTR/RTS pulse, downloads
+│   │   ├── ota-hmac.service.ts        # OTA HMAC trailer verify/build helpers
+│   │   ├── releases.service.ts        # `RELEASES_GET_LATEST` (#571) cached fetcher
+│   │   ├── security.service.ts        # URL allowlist + safe-shell wrapper
+│   │   ├── session.service.ts         # Persist last file / last port / first-run flag
+│   │   ├── updater.service.ts         # electron-updater integration
+│   │   └── usb.service.ts             # USB serial — connect, push config, CAN scan
+│   ├── utils/                         # Process-side helpers
+│   └── windows/                       # BrowserWindow factories (main + CLI)
 └── src/                               # Renderer (React 18 + Vite)
     ├── App.tsx                        # Root, routes, global hooks
     ├── routes/
@@ -134,37 +144,47 @@ canshift-studio/
     │   ├── CanScannerRoute.tsx        # Live CAN frame scanner
     │   ├── UpdateRoute.tsx            # Firmware update UI (Flash Latest + manual)
     │   └── DeviceConfigRoute.tsx      # On-device hardware config read/write
+    ├── cli/                           # Detached CLI surface entry point (#433)
     ├── components/                    # editor/ + shared/ UI
+    ├── config/                        # Renderer-side static config
+    ├── constants/                     # Renderer-side constants
+    ├── data/                          # Bundled JSON fixtures shown in editor
     ├── hooks/
     │   ├── useFirmwareFlash.ts        # esptool-js Web Serial flash logic
     │   ├── useFirstRunCheck.ts        # Drives the first-run onboarding modal
     │   └── …                          # config actions, USB, telemetry, updater, etc.
+    ├── services/
+    │   └── ipc.service.ts             # Type-safe wrappers for all IPC calls
     ├── stores/                        # Zustand stores (see table below)
-    └── services/
-        └── ipc.service.ts             # Type-safe wrappers for all IPC calls
+    ├── styles/                        # tokens.generated.css + global Tailwind layer
+    └── types/                         # Renderer-only types
 ```
 
 ---
 
 ## IPC bridge & channel convention
 
-All renderer ↔ main communication goes through `main/ipc/ipc-channels.ts`
-(33 channels). Hardcoded strings are forbidden — always import the constants.
+All renderer ↔ main communication goes through `shared/ipc-channels.ts`
+(61 channels — kept in `shared/` so both processes import the same module).
+Hardcoded strings are forbidden — always import the constants.
 
 The preload bridge enforces a 3-way allowlist (`main/ipc/ipc-allowlist.ts`,
 landed in #280) so a compromised renderer can only reach approved channels:
 
 | Direction | Set | Count | Method |
 |-----------|-----|-------|--------|
-| Renderer → main, request/response | `INVOKE_ALLOWED` | 31 | `ipcRenderer.invoke` ↔ `ipcMain.handle` |
-| Renderer → main, fire-and-forget | `SEND_ALLOWED` | 1 | `ipcRenderer.send` ↔ `ipcMain.on` |
-| Main → renderer, push events | `LISTEN_ALLOWED` | 17 | `webContents.send` ↔ `window.ipc.on` |
+| Renderer → main, request/response | `INVOKE_ALLOWED` | 43 | `ipcRenderer.invoke` ↔ `ipcMain.handle` |
+| Renderer → main, fire-and-forget | `SEND_ALLOWED` | 2 | `ipcRenderer.send` ↔ `ipcMain.on` |
+| Main → renderer, push events | `LISTEN_ALLOWED` | 22 | `webContents.send` ↔ `window.ipc.on` |
 
-`assertChannelCoverage` ensures every entry in `IpcChannels` is classified —
-adding a new channel without classifying it fails fast in tests.
+`findUnclassifiedChannels()` ensures every entry in `IpcChannels` is
+classified across the three sets — adding a new channel without classifying
+it fails fast in tests.
 
-Return types for IPC handlers are deduplicated into `canshift-core` (#292):
-when those types change, rebuild core before starting Studio.
+IPC return-shape types live in `shared/ipc-contract.ts` (kept inside the
+studio package because they describe Electron-specific results — file
+dialog cancel, serial-port enumeration, etc.). They are **not** in
+`canshift-core`; if they were, core would need to import Electron types.
 
 ---
 
@@ -276,9 +296,11 @@ menu exposes **Reset First-Run Onboarding** (`SESSION_RESET_FIRST_RUN`,
 ```
 
 All config types (`DashboardConfig`, `Widget`, `PageConfig`, signals
-schema, IPC return types) come from `canshift-core`. Always run
-`npm run build` in `canshift-core/` before starting Studio in dev — Studio's
-`tsc` resolves the package from the built `dist/` folder.
+schema, design tokens, migrations) come from `canshift-core`. IPC return
+types remain studio-local in `shared/ipc-contract.ts` because they describe
+Electron-specific results. Always run `npm run build` in `canshift-core/`
+before starting Studio in dev — Studio's `tsc` resolves the package from
+the built `dist/` folder.
 
 ---
 
