@@ -2,7 +2,6 @@
 
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } from 'electron'
 import { join, basename } from 'path'
-import { readFileSync } from 'fs'
 import { disposeIpcHandlers, registerIpcHandlers, usbService } from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
@@ -13,7 +12,6 @@ import { disposeCliWindow } from './windows/cli-window'
 import { subscribe as subscribeLog } from './services/cli-log-bus'
 
 let mainWindow: BrowserWindow | null = null
-let splashWindow: BrowserWindow | null = null
 
 // USB-UART bridges shipped on supported CANShift boards (CH340, CH9102, CP210x).
 // Used to gate Web Serial device permission AND auto-pick a flash port.
@@ -66,73 +64,6 @@ function loadIcon(): Electron.NativeImage | undefined {
   } catch {
     return undefined
   }
-}
-
-function createSplash(): void {
-  splashWindow = new BrowserWindow({
-    width: 480,
-    height: 320,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    skipTaskbar: true,
-    center: true,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-    },
-  })
-
-  // Read logo as base64 to avoid file:// CSP issues inside a data: page
-  let logoSrc = ''
-  try {
-    const logoPath = join(__dirname, '../../assets/CANShift_studio_logo.png')
-    const logoB64 = readFileSync(logoPath).toString('base64')
-    logoSrc = `data:image/png;base64,${logoB64}`
-  } catch {
-    // Logo not found — splash still shows without it
-  }
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    width: 480px; height: 320px;
-    background: #0D0D0D;
-    border-radius: 12px;
-    border: 1px solid #2A2A2A;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    overflow: hidden;
-    -webkit-app-region: drag;
-  }
-  img { max-width: 320px; max-height: 160px; object-fit: contain; }
-  .label {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 11px;
-    color: #333333;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-</style>
-</head>
-<body>
-  ${logoSrc ? `<img src="${logoSrc}" alt="CS Studio" />` : ''}
-  <span class="label">Loading…</span>
-</body>
-</html>`
-
-  void splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
 }
 
 function createWindow(): void {
@@ -267,45 +198,37 @@ function createWindow(): void {
     callback(picked?.portId ?? '')
   })
 
-  // Belt-and-suspenders splash teardown. Three independent paths can fire:
-  //   1. happy path  — `ready-to-show` from the renderer (preferred)
-  //   2. renderer crash — `did-fail-load` / `render-process-gone`
-  //   3. last resort — a 10 s safety timer for the case where neither event
-  //                    fires (e.g. main blocks before the renderer attaches)
-  // Without these the splash window stays on top forever with no menu to
-  // recover, forcing a force-quit (#699).
-  const SPLASH_SAFETY_TIMEOUT_MS = 10_000
-  const dismissSplash = (): void => {
-    if (splashWindow !== null && !splashWindow.isDestroyed()) {
-      splashWindow.close()
-    }
-    splashWindow = null
-  }
+  // No separate splash window — the in-app `BootScreen` React overlay is the
+  // single splash surface. We keep `show: false` so the BrowserWindow stays
+  // hidden until the renderer has at least the first paint ready
+  // (`ready-to-show`), then reveal — that way the dock icon bounces into a
+  // window already painting the BootScreen instead of a blank canvas. A
+  // 10 s safety timer still fires `show()` if the renderer never signals,
+  // so a stalled boot can never leave us with no visible window (#699 — the
+  // original concern that motivated the native splash teardown, now scoped
+  // to the same belt-and-suspenders we want for the main window itself).
+  const RENDERER_SHOW_TIMEOUT_MS = 10_000
 
   mainWindow.on('ready-to-show', () => {
-    dismissSplash()
     mainWindow?.show()
     if (mainWindow) buildMenu(mainWindow)
   })
 
   mainWindow.webContents.on('did-fail-load', (_e, code, description) => {
     logMain('error', `Renderer did-fail-load (${String(code)}): ${description}`)
-    dismissSplash()
     mainWindow?.show()
   })
 
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     logMain('error', `Renderer process gone: ${details.reason}`)
-    dismissSplash()
   })
 
   setTimeout(() => {
-    if (splashWindow !== null && !splashWindow.isDestroyed()) {
-      logMain('warn', `Splash safety timer fired — renderer never signalled ready-to-show`)
-      dismissSplash()
-      mainWindow?.show()
+    if (mainWindow !== null && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      logMain('warn', `Window-show safety timer fired — renderer never signalled ready-to-show`)
+      mainWindow.show()
     }
-  }, SPLASH_SAFETY_TIMEOUT_MS)
+  }, RENDERER_SHOW_TIMEOUT_MS)
 
   // Prompt before closing the window if there are unsaved config changes.
   // The renderer keeps `configIsDirty` in sync via WINDOW_SET_DIRTY.
@@ -369,7 +292,6 @@ app
     installContentSecurityPolicy()
     registerIpcHandlers(() => mainWindow)
     initUpdater(() => mainWindow)
-    createSplash()
     createWindow()
 
     app.on('activate', () => {
