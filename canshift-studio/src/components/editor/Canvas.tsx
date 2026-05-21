@@ -456,7 +456,7 @@ function DashTopBar({
     else if (dy < -SWIPE_DOWN_THRESHOLD && settingsOpen) onOpenSettings()
   }
 
-  const layout: TopBarItem[] = topBar.layout ?? DEFAULT_TOP_BAR_LAYOUT
+  const layout: readonly TopBarItem[] = topBar.layout ?? DEFAULT_TOP_BAR_LAYOUT
   const leftItems = layout.filter((it) => it.position === 'left')
   const centerItems = layout.filter((it) => it.position === 'center')
   const rightItems = layout.filter((it) => it.position === 'right')
