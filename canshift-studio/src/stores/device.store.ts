@@ -163,6 +163,12 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       isDayMode: null,
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
+      // Clear `lastPushedConfig` too — it represents the config running on the
+      // device we were connected to. Keeping it after disconnect makes the
+      // diff dialog show "Modified" against the *previous* device on the next
+      // connect+push, even when the new device runs a completely different
+      // image (audit S-L-6).
+      lastPushedConfig: null,
     })
   },
 
