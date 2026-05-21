@@ -32,7 +32,7 @@ import { useDeviceStore } from '../stores/device.store'
 import type { FirmwareCheck } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
-import { firmwareIpc } from '../services/ipc.service'
+import { firmwareIpc, isDeviceLogPayload } from '../services/ipc.service'
 import { IpcChannels } from '../../shared/ipc-channels'
 import type { FirmwareRelease, FirmwareStatus } from '../services/ipc.service'
 
@@ -65,23 +65,9 @@ export const POST_TIMEOUT_RETRY_DELAY_MS = PROBE_BACKOFF_MS[0]
  */
 export const BOOT_VERSION_RE = /\bCANShift v(\d+\.\d+\.\d+)\b/
 
-interface DeviceLogPayload {
-  level: string
-  tag: string
-  message: string
-}
-
-function isDeviceLogPayload(v: unknown): v is DeviceLogPayload {
-  return (
-    typeof v === 'object' &&
-    v !== null &&
-    'level' in v &&
-    'tag' in v &&
-    'message' in v &&
-    typeof (v as { tag?: unknown }).tag === 'string' &&
-    typeof (v as { message?: unknown }).message === 'string'
-  )
-}
+// `DeviceLogPayload` + `isDeviceLogPayload` come from `services/ipc.service`,
+// which re-exports the canonical definitions from `shared/ipc-payloads.ts`.
+// A local copy used to drift from the shared one (audit S-M-3).
 
 function compareSemver(a: string, b: string): number {
   const parse = (s: string): number[] => s.split('.').map((n) => parseInt(n, 10))
