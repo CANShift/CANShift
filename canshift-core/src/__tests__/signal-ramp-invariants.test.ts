@@ -129,6 +129,22 @@ describe('SignalDefSchema — ramp-direction invariants (#1010)', () => {
     expect(result.success).toBe(false)
   })
 
+  // Pins invariant #4 in SignalDefSchema's contract (#1036): low-side
+  // warningLevel must be STRICTLY below highWarningLevel — equality leaves
+  // no safe-zone gap and would collapse the two-sided topology.
+  it('rejects a two-sided signal where warningLevel equals highWarningLevel', () => {
+    const result = SignalDefSchema.safeParse({
+      ...BASE,
+      min: 0,
+      max: 20,
+      warningLevel: 12.0,
+      dangerLevel: 11.0,
+      highWarningLevel: 12.0,
+      highDangerLevel: 14.0,
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('accepts the oil_press_bar pattern (low-side: warn 1.5, danger 1.0)', () => {
     const result = SignalDefSchema.safeParse({
       ...BASE,

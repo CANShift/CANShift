@@ -62,7 +62,65 @@ export const ColorRampSchema = z
   })
   .strict()
 
-/** Individual CAN signal definition. */
+/**
+ * Individual CAN signal definition.
+ *
+ * # Threshold-zone contract (issue #1036)
+ *
+ * A signal can carry up to four threshold levels that partition `[min, max]`
+ * into "safe / warning / danger" bands. There are three valid topologies:
+ *
+ * ## High-side only (e.g. coolant temp, IAT)
+ * ```
+ *   min                  warningLevel        dangerLevel       max
+ *   |--------- safe ---------|---- warning ---|---- danger ----|
+ * ```
+ * Set `warningLevel <= dangerLevel`. Leave the `high*` pair undefined.
+ *
+ * ## Low-side only (e.g. oil pressure, fuel pressure)
+ * ```
+ *   min       dangerLevel       warningLevel              max
+ *   |- danger -|---- warning ----|---------- safe ----------|
+ * ```
+ * Set `dangerLevel <= warningLevel`. Leave the `high*` pair undefined.
+ *
+ * ## Two-sided (e.g. battery voltage: undervolt + overcharge)
+ * ```
+ *   min  danger  warning           highWarning  highDanger  max
+ *   |-D----|--W---|------ safe -----|----W------|----D------|
+ *           ↑                       ↑
+ *      low-side                 high-side
+ * ```
+ * Set all four. The low-side primary pair (`dangerLevel`, `warningLevel`)
+ * must sit STRICTLY below the high-side pair (`highWarningLevel`,
+ * `highDangerLevel`) — see invariants below.
+ *
+ * # Enforced invariants (validator)
+ *
+ * 1. Each defined level lies within `[min, max]`.
+ * 2. Primary pair is monotonic: `warningLevel <= dangerLevel` (high-side) OR
+ *    `dangerLevel <= warningLevel` (low-side). Equal values pass — degenerate
+ *    but unambiguous.
+ * 3. High-side dual pair: `highWarningLevel <= highDangerLevel`.
+ * 4. Two-sided (all four present, primary detected as low-side): the low-side
+ *    `warningLevel` must be `< highWarningLevel`. Equality is rejected to
+ *    keep the safe-zone gap non-empty.
+ *
+ * # NOT enforced (caller's responsibility)
+ *
+ * - **Two-sided with a high-side primary pair** (`warningLevel < dangerLevel`
+ *   plus both `high*` set) is accepted by the schema today even though it is
+ *   semantically incoherent (two overlapping high-side ramps). Such configs
+ *   have not appeared in the wild; reject in a follow-up if they do.
+ * - **Inclusive vs exclusive boundary semantics at thresholds** are decided
+ *   by the consumer (firmware `SignalDef` ramp logic, studio preview, mobile
+ *   readout). The schema accepts any numeric value; renderers treat a sample
+ *   `v == warningLevel` as "in warning" by convention.
+ * - **Gap width between low-side `warningLevel` and `highWarningLevel`** is
+ *   only required to be non-zero (invariant 4). A 0.1-unit gap passes
+ *   validation; whether that is meaningful for a given signal is a config
+ *   choice, not a schema invariant.
+ */
 export const SignalDefSchema = z
   .object({
     name: z.string(),
