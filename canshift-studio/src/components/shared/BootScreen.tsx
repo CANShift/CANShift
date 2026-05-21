@@ -12,6 +12,7 @@
 // purely cosmetic. Click anywhere (or press Esc) to skip.
 
 import { useEffect, useState, type ReactNode } from 'react'
+import logoUrl from '../../../assets/CANShift_studio_logo.png'
 
 interface BootStage {
   label: string
@@ -103,17 +104,18 @@ export function BootScreen({ onDone }: BootScreenProps): ReactNode {
         userSelect: 'none',
       }}
     >
-      <div
+      <img
+        src={logoUrl}
+        alt="CANShift Studio"
         style={{
-          fontFamily: 'Orbitron, system-ui, sans-serif',
-          fontWeight: 900,
-          fontSize: 36,
-          letterSpacing: '0.18em',
-          color: '#CC3333',
+          width: 240,
+          height: 'auto',
+          maxHeight: 80,
+          objectFit: 'contain',
+          userSelect: 'none',
         }}
-      >
-        CANSHIFT
-      </div>
+        draggable={false}
+      />
       <div
         style={{
           width: 260,
