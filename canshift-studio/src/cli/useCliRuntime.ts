@@ -3,12 +3,12 @@
 // The hook exposes a stable ref to `CommandContext`; consumers (the CliTerminal
 // keystroke handler) read from the ref synchronously to avoid stale closures.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
-import { appIpc } from '../services/ipc.service'
+import { useAppVersionStore } from '../stores/appVersion.store'
 import { COMMANDS } from './commands'
 import { buildActions } from './actions'
 import type { CliTerminalHandle, CommandContext } from './types'
@@ -23,17 +23,16 @@ import type { CliTerminalHandle, CommandContext } from './types'
 export function useCliRuntime(terminal: CliTerminalHandle): {
   ctxRef: React.MutableRefObject<CommandContext>
 } {
-  const [appVersion, setAppVersion] = useState<string>('')
-  const fetchedVersion = useRef<boolean>(false)
+  const storedVersion = useAppVersionStore((s) => s.version)
+  const loadVersion = useAppVersionStore((s) => s.loadVersion)
+  // CLI commands historically saw an empty string before the IPC landed —
+  // preserve that behaviour rather than leaking `null` into the context.
+  const appVersion = storedVersion ?? ''
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (fetchedVersion.current) return
-    fetchedVersion.current = true
-    void appIpc.version().then((v) => {
-      setAppVersion(v)
-    })
-  }, [])
+    void loadVersion()
+  }, [loadVersion])
 
   const connected = useDeviceStore((s) => s.connected)
   const portPath = useDeviceStore((s) => s.portPath)

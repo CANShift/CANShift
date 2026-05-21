@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
-import { appIpc } from '../../services/ipc.service'
+import { useAppVersionStore } from '../../stores/appVersion.store'
 
 interface Semver {
   major: number
@@ -32,18 +32,13 @@ export default function VersionMismatchBanner() {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const [studioVersion, setStudioVersion] = useState<string | null>(null)
+  const studioVersion = useAppVersionStore((s) => s.version)
+  const loadVersion = useAppVersionStore((s) => s.loadVersion)
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    void appIpc.version().then((v) => {
-      if (!cancelled) setStudioVersion(v)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    void loadVersion()
+  }, [loadVersion])
 
   // Reset the dismissed state whenever the firmware version changes — a fresh
   // device should resurface the warning rather than stay silent.
