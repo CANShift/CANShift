@@ -17,6 +17,7 @@ import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 import { usbService } from '../../services/ipc.service'
+import { decideDayNightAction } from './dayNightToggle'
 
 // ---------------------------------------------------------------------------
 // Canvas layout constants
@@ -524,6 +525,11 @@ function DashTopBar({
           </span>
         )
       case 'themeToggle':
+        // Firmware top_bar.cpp shows the CURRENT mode (icon_day.bin in day,
+        // icon_night.bin in night) — see `THEME_TOGGLE` branch + `reapplyTheme`.
+        // Mirror that here: sun glyph in day mode, moon glyph in night mode.
+        // The tooltip still describes the action (the OTHER mode you'd switch to)
+        // so users don't lose the affordance hint. Issue #957.
         return (
           <button
             key={key}
@@ -549,7 +555,7 @@ function DashTopBar({
               flexShrink: 0,
             }}
           >
-            {isDayMode ? '☾' : '☀'}
+            {isDayMode ? '☀' : '☾'}
           </button>
         )
       case 'modeFlag':
@@ -658,6 +664,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
   const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
+  const setDeviceIsDayMode = useDeviceStore((s) => s.setIsDayMode)
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const selectPage = useDashboardStore((s) => s.selectPage)
@@ -722,19 +729,26 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   // When a device is connected, the device's reported `isDayMode` takes
   // precedence over the local preview flag (the live device is the source
   // of truth). Toggling the local flag alone wouldn't repaint anything in
-  // that case — issue #957. Send the toggle over USB so the firmware
-  // flips, the next status sweep updates `deviceIsDayMode`, and the
-  // preview follows. Offline (or in simulation mode), fall back to the
-  // local preview flag so the canvas still toggles for design work.
+  // that case — issue #957. Round-trip the toggle over USB so the firmware
+  // flips, and optimistically mirror the new mode into the device store so
+  // the preview repaints in the same tick (there is no unsolicited
+  // status-echo channel for isDayMode — `useUsbEvents` only listens for
+  // connection / log / CAN-health events, so without this optimistic write
+  // the preview would stay frozen until the next manual reconnect probe).
+  // If the USB call fails we roll the mirror back to the previous value.
+  // Offline (or in simulation mode) fall back to the studio-only preview
+  // flag so the canvas still toggles for design work.
   const handleToggleTheme = useCallback(() => {
-    if (deviceIsDayMode !== null) {
-      // Device connected and reporting day mode — round-trip the toggle so
-      // the firmware repaints and `useUsbEvents` echoes the new state back.
-      void usbService.setDayNight(!deviceIsDayMode)
+    const action = decideDayNightAction(deviceIsDayMode)
+    if (action.kind === 'connected') {
+      setDeviceIsDayMode(action.next)
+      void usbService.setDayNight(action.next).then((result) => {
+        if (!result.success) setDeviceIsDayMode(!action.next)
+      })
       return
     }
     togglePreviewTheme()
-  }, [deviceIsDayMode, togglePreviewTheme])
+  }, [deviceIsDayMode, setDeviceIsDayMode, togglePreviewTheme])
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [diagOpen, setDiagOpen] = useState(false)

@@ -755,10 +755,12 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   // already conveys the unit, and "195km/h" overflows 80-px-wide cells.
   // Matches firmware label_widget.cpp behaviour.
 
-  // Signal name shown bottom-left when no custom label — matches firmware
-  // applySignalHeader() position so studio preview reads identically to the
-  // device. The auto-header reserves a 14-px band at the bottom (Orbitron
-  // Medium 12 line height) and the value floats above it.
+  // Signal name shown top-left when no custom label — matches firmware
+  // applySignalHeader() in canshift-firmware/src/ui/widget_label.cpp, which
+  // pins the auto-header to CfgLabelPos::TOP_LEFT (the previous bottom-left
+  // placement in studio drifted out of sync after PR #967, issue #957).
+  // The auto-header reserves a 14-px band at the TOP (Orbitron Medium 12 line
+  // height) and the value floats below it.
   const showSignalHeader = labelText === null
   const signalLabel = formatSignalLabel(widget.signal)
   const sigHeaderH = showSignalHeader ? 14 : 0
@@ -783,21 +785,22 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        // Reserve the band at the BOTTOM (not the top) so the auto-header
-        // sits below the value — matches firmware applySignalHeader().
-        padding: `2px 4px ${String(sigHeaderH + 2)}px`,
+        // Reserve the band at the TOP so the auto-header sits above the value
+        // — matches firmware applySignalHeader() in widget_label.cpp.
+        padding: `${String(sigHeaderH + 2)}px 4px 2px`,
         boxSizing: 'border-box',
         overflow: 'hidden',
         gap: 0,
       }}
     >
-      {/* Signal name auto-header — bottom-left, dim caps. Matches firmware
-          applySignalHeader() position and padding (kEdgeInsetX=4, Y=1). */}
+      {/* Signal name auto-header — top-left, dim caps. Matches firmware
+          applySignalHeader() position and padding (kEdgeInsetX=4, Y=1) in
+          canshift-firmware/src/ui/widget_label.cpp. */}
       {showSignalHeader && (
         <span
           style={{
             position: 'absolute',
-            bottom: 1,
+            top: 1,
             left: 4,
             fontSize: 11,
             fontFamily: FONT_FAMILY,
