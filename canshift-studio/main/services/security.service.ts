@@ -26,10 +26,21 @@ const DEV_CONNECT_SRC = `${PROD_CONNECT_SRC} http://localhost:* ws://localhost:*
 // Dev still needs `style-src 'unsafe-inline'`: Vite injects CSS through
 // dynamically created `<style>` blocks during HMR. Locking dev down would
 // break hot reload without buying a real security guarantee (dev is local).
-function buildCsp(connectSrc: string, styleSrc: string, styleSrcAttr: string | null): string {
+// Dev needs `script-src 'unsafe-inline'`: @vitejs/plugin-react injects an
+// inline preamble script for React Fast Refresh, and Vite's HMR client also
+// runs from inline modules. Blocking inline scripts in dev silently breaks
+// the renderer mount (preamble error → React never starts → grey window).
+// Prod keeps `script-src 'self'` — production bundles emit a single hashed
+// script tag with no inline gadgets.
+function buildCsp(
+  connectSrc: string,
+  scriptSrc: string,
+  styleSrc: string,
+  styleSrcAttr: string | null
+): string {
   const directives = [
     "default-src 'self'",
-    "script-src 'self'",
+    scriptSrc,
     styleSrc,
     ...(styleSrcAttr ? [styleSrcAttr] : []),
     "img-src 'self' data:",
@@ -43,8 +54,18 @@ function buildCsp(connectSrc: string, styleSrc: string, styleSrcAttr: string | n
   return directives.join('; ')
 }
 
-const PROD_CSP = buildCsp(PROD_CONNECT_SRC, "style-src 'self'", "style-src-attr 'unsafe-inline'")
-const DEV_CSP = buildCsp(DEV_CONNECT_SRC, "style-src 'self' 'unsafe-inline'", null)
+const PROD_CSP = buildCsp(
+  PROD_CONNECT_SRC,
+  "script-src 'self'",
+  "style-src 'self'",
+  "style-src-attr 'unsafe-inline'"
+)
+const DEV_CSP = buildCsp(
+  DEV_CONNECT_SRC,
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  null
+)
 
 // Exported for tests — keep in sync with the values installed by
 // `installContentSecurityPolicy`.
