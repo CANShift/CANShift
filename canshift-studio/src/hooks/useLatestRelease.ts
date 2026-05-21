@@ -1,18 +1,14 @@
-// useLatestRelease.ts — Renderer-side hook around `releasesIpc.getLatest`.
+// useLatestRelease.ts — Renderer-side selector around the releases store.
 //
-// Issue #571: surface the current vs latest GitHub release in the studio. The
-// hook keeps the loading / success / error state in one place so the card can
-// stay declarative. The main-process service does the actual caching; this
-// hook only retains the latest result it has seen so the component can render
-// immediately on remount without flashing the loading skeleton.
+// Issue #571 introduced this hook; issue #905 moved the IPC + state transitions
+// into `releases.store.ts` so we follow the studio rule "no useEffect for data
+// fetching — use Zustand actions". This file is now a thin bridge: it selects
+// from the store and kicks off the initial fetch on mount.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { LatestReleaseResult } from '@tmbk/canshift-core'
-import { releasesIpc } from '../services/ipc.service'
+import { useCallback, useEffect } from 'react'
+import { useReleasesStore, type LatestReleaseState } from '../stores/releases.store'
 
-export type LatestReleaseState =
-  | { status: 'loading'; previous: LatestReleaseResult | null }
-  | { status: 'ready'; result: LatestReleaseResult }
+export type { LatestReleaseState }
 
 export interface UseLatestReleaseReturn {
   state: LatestReleaseState
@@ -23,59 +19,20 @@ export interface UseLatestReleaseReturn {
 }
 
 export function useLatestRelease(): UseLatestReleaseReturn {
-  const [state, setState] = useState<LatestReleaseState>({
-    status: 'loading',
-    previous: null,
-  })
-  const [isFetching, setIsFetching] = useState(true)
-  // `Strict mode` mounts effects twice in dev — guard against the second pass
-  // overwriting a result that has already landed.
-  const cancelledRef = useRef(false)
+  const state = useReleasesStore((s) => s.state)
+  const isFetching = useReleasesStore((s) => s.isFetching)
+  const loadLatest = useReleasesStore((s) => s.loadLatest)
+  const refreshAction = useReleasesStore((s) => s.refresh)
 
-  const fetchOnce = useCallback(async (force: boolean): Promise<void> => {
-    setIsFetching(true)
-    try {
-      const result = await releasesIpc.getLatest(force)
-      if (cancelledRef.current) return
-      setState({ status: 'ready', result })
-    } catch (err) {
-      if (cancelledRef.current) return
-      // The IPC bridge itself failed — this is distinct from the main-process
-      // service surfacing a typed failure. Surface a minimal offline-style
-      // result so the card can keep its single rendering path.
-      const message = err instanceof Error ? err.message : 'IPC error'
-      setState({
-        status: 'ready',
-        result: {
-          ok: false,
-          reason: 'offline',
-          message,
-          fetchedAt: new Date().toISOString(),
-          cached: null,
-        },
-      })
-    } finally {
-      if (!cancelledRef.current) setIsFetching(false)
-    }
-  }, [])
-
+  // Idiomatic Zustand bridge — the side effect is in the store action; this
+  // effect only schedules the first invocation when the consumer mounts.
   useEffect(() => {
-    cancelledRef.current = false
-    void fetchOnce(false)
-    return () => {
-      cancelledRef.current = true
-    }
-  }, [fetchOnce])
+    void loadLatest()
+  }, [loadLatest])
 
   const refresh = useCallback((): void => {
-    // Preserve the latest known result while we refresh so the card doesn't
-    // collapse back to a skeleton during the round-trip.
-    setState((prev) => {
-      if (prev.status === 'ready') return { status: 'loading', previous: prev.result }
-      return prev
-    })
-    void fetchOnce(true)
-  }, [fetchOnce])
+    void refreshAction()
+  }, [refreshAction])
 
   return { state, isFetching, refresh }
 }

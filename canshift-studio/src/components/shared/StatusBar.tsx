@@ -1,11 +1,11 @@
 // StatusBar.tsx — Bottom status bar
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDeviceStore } from '../../stores/device.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useCanHealthStore } from '../../stores/canHealth.store'
-import { appIpc } from '../../services/ipc.service'
+import { useAppVersionStore } from '../../stores/appVersion.store'
 
 const HEALTH_STALE_MS = 6_000
 
@@ -20,11 +20,12 @@ export default function StatusBar() {
   const canUpdatedAt = useCanHealthStore((s) => s.updatedAt)
   const navigate = useNavigate()
 
-  const [studioVersion, setStudioVersion] = useState<string | null>(null)
+  const studioVersion = useAppVersionStore((s) => s.version)
+  const loadVersion = useAppVersionStore((s) => s.loadVersion)
 
   useEffect(() => {
-    void appIpc.version().then(setStudioVersion)
-  }, [])
+    void loadVersion()
+  }, [loadVersion])
 
   const canFresh =
     canFps !== null && canUpdatedAt !== null && Date.now() - canUpdatedAt < HEALTH_STALE_MS

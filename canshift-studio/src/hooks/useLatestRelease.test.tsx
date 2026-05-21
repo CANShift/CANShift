@@ -21,6 +21,7 @@ vi.mock('../services/ipc.service', () => ({
 }))
 
 import { useLatestRelease, type UseLatestReleaseReturn } from './useLatestRelease'
+import { useReleasesStore } from '../stores/releases.store'
 
 function makeOkResult(version: string, fromCache = false): LatestReleaseResult {
   return {
@@ -68,6 +69,11 @@ async function flush(): Promise<void> {
 
 beforeEach(() => {
   getLatestMock.mockReset()
+  // Reset the singleton store so each test starts from a clean loading state.
+  useReleasesStore.setState({
+    state: { status: 'loading', previous: null },
+    isFetching: false,
+  })
   Object.defineProperty(window, 'ipc', {
     configurable: true,
     writable: true,

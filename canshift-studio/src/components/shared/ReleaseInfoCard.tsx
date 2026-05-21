@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import type { LatestReleaseResult, ReleaseInfo } from '@tmbk/canshift-core'
-import { appIpc } from '../../services/ipc.service'
+import { useAppVersionStore } from '../../stores/appVersion.store'
 import { useLatestRelease } from '../../hooks/useLatestRelease'
 import { SafeMarkdown } from './SafeMarkdown'
 
@@ -170,24 +170,14 @@ const COMPARISON_COPY: Record<ComparisonKind['kind'], { tone: string; label: str
 
 export default function ReleaseInfoCard(): JSX.Element {
   const { state, isFetching, refresh } = useLatestRelease()
-  const [currentVersion, setCurrentVersion] = useState<string | null>(null)
+  const currentVersion = useAppVersionStore((s) => s.version)
+  const loadVersion = useAppVersionStore((s) => s.loadVersion)
   const [showPreRelease, setShowPreRelease] = useState<boolean>(loadPreReleaseToggle)
   const [notesOpen, setNotesOpen] = useState(true)
 
   useEffect(() => {
-    let cancelled = false
-    appIpc
-      .version()
-      .then((v) => {
-        if (!cancelled) setCurrentVersion(v)
-      })
-      .catch(() => {
-        if (!cancelled) setCurrentVersion(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    void loadVersion()
+  }, [loadVersion])
 
   const handleTogglePreRelease = (next: boolean): void => {
     setShowPreRelease(next)

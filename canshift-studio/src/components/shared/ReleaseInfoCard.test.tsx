@@ -26,6 +26,8 @@ vi.mock('../../services/ipc.service', () => ({
 }))
 
 import ReleaseInfoCard from './ReleaseInfoCard'
+import { useAppVersionStore } from '../../stores/appVersion.store'
+import { useReleasesStore } from '../../stores/releases.store'
 
 let container: HTMLDivElement | null = null
 let root: Root | null = null
@@ -73,6 +75,12 @@ beforeEach(() => {
   versionMock.mockReset()
   getLatestMock.mockReset()
   window.localStorage.clear()
+  // Reset shared store state so each test starts from a clean baseline.
+  useAppVersionStore.setState({ version: null, isLoading: false })
+  useReleasesStore.setState({
+    state: { status: 'loading', previous: null },
+    isFetching: false,
+  })
   Object.defineProperty(window, 'ipc', {
     configurable: true,
     writable: true,
