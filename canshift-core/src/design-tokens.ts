@@ -170,7 +170,13 @@ export function hexToHslChannels(hex: string): string {
  * does NOT introduce new variables — the studio migration in Phase 1 will
  * adopt this helper as the single source of truth without renaming anything.
  */
-const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> = {
+/**
+ * Map every token color key (e.g. `bg`, `primaryForeground`) to its
+ * corresponding `--*` CSS variable name. Exposed so downstream Tailwind /
+ * styled-components configs can derive their color tables from a single
+ * source of truth instead of re-listing the keys by hand (issue #906).
+ */
+export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> = {
   bg: '--bg',
   surface: '--surface',
   surface2: '--surface-2',
