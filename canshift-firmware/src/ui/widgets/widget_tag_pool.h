@@ -52,14 +52,16 @@ void *allocRaw();
 // helpers below which run the C++ destructor automatically).
 void releaseRaw(void *p);
 
-template <typename T> T *alloc() {
+template <typename T>
+T *alloc() {
     static_assert(sizeof(T) <= kSlotBytes, "widget Tag exceeds kSlotBytes — bump it");
     static_assert(alignof(T) <= kSlotAlign, "widget Tag alignment exceeds kSlotAlign");
     void *raw = allocRaw();
     return raw ? new (raw) T() : nullptr;
 }
 
-template <typename T> void release(T *tag) {
+template <typename T>
+void release(T *tag) {
     if (!tag)
         return;
     tag->~T();
@@ -69,7 +71,8 @@ template <typename T> void release(T *tag) {
 // Generic LV_EVENT_DELETE handler — wire it up via
 //     lv_obj_add_event_cb(obj, WidgetTagPool::deleteHandler<XxxTag>,
 //                         LV_EVENT_DELETE, tag);
-template <typename T> void deleteHandler(lv_event_t *e) {
+template <typename T>
+void deleteHandler(lv_event_t *e) {
     auto *t = static_cast<T *>(lv_event_get_user_data(e));
     release(t);
 }

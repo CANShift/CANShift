@@ -14,8 +14,8 @@ static_assert(WidgetTagPool::kPoolSlots == CONFIG_MAX_WIDGETS_PER_PAGE,
 
 namespace {
 
-alignas(WidgetTagPool::kSlotAlign) uint8_t s_pool[WidgetTagPool::kPoolSlots]
-                                                 [WidgetTagPool::kSlotBytes];
+alignas(
+    WidgetTagPool::kSlotAlign) uint8_t s_pool[WidgetTagPool::kPoolSlots][WidgetTagPool::kSlotBytes];
 
 bool s_busy[WidgetTagPool::kPoolSlots] = {};
 
