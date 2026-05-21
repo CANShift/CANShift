@@ -54,6 +54,17 @@ describe('migrateConfig — no migration needed', () => {
     expect(result.applied).toHaveLength(0)
     expect(result.config).toEqual(config)
   })
+
+  it('throws a typed boundary error on a circular config (audit C-LO-6)', () => {
+    interface Cyclic extends Record<string, unknown> {
+      self?: Cyclic
+    }
+    const config: Cyclic = { version: '1.0.0' }
+    config.self = config
+    // We must target a version that requires migration so deepClone runs —
+    // a no-op path returns the input unchanged without cloning.
+    expect(() => migrateConfig(config, '1.1.0')).toThrow(/not serializable to JSON/i)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -202,6 +213,64 @@ describe('migrateConfig — multi-step chain (1.0.0 → 1.2.0)', () => {
 
     // Label was migrated in 1.1.0→1.2.0
     expect(widgets[1]!.type).toBe('gauge')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 1.2.0 → 1.3.0: every page gains a `palette` block — snapshot lock
+//
+// The migration emits a frozen palette literal (see DEFAULT_PALETTE in
+// migration-runner.ts). This test pins the exact bytes so a future
+// refactor that imports `DEFAULT_PAGE_PALETTE` from schemas — and then
+// silently mutates yesterday's configs the next time the active palette
+// is refreshed — fails fast. Audit C-ME-3.
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.2.0 → 1.3.0 (palette snapshot)', () => {
+  it('emits the locked v1.3.0 palette literal on every existing page', () => {
+    const config = {
+      version: '1.2.0',
+      pages: [
+        { id: 'p1', widgets: [] },
+        { id: 'p2', widgets: [] },
+      ],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.3.0')
+    expect(applied).toEqual(['1.2.0 → 1.3.0'])
+
+    const pages = out.pages as Record<string, unknown>[]
+    const expectedPalette = {
+      surface: '#1E1E1E',
+      primary: '#FF4444',
+      accent: '#FF8800',
+      text: '#FFFFFF',
+      textDim: '#888888',
+      warning: '#FF8800',
+      danger: '#FF4444',
+      success: '#00CC44',
+    }
+    expect(pages[0]!.palette).toEqual(expectedPalette)
+    expect(pages[1]!.palette).toEqual(expectedPalette)
+  })
+
+  it('does not overwrite a page that already carries a palette', () => {
+    const userPalette = {
+      surface: '#000000',
+      primary: '#0000FF',
+      accent: '#00FF00',
+      text: '#EEEEEE',
+      textDim: '#777777',
+      warning: '#FFAA00',
+      danger: '#FF0000',
+      success: '#22CC22',
+    }
+    const config = {
+      version: '1.2.0',
+      pages: [{ id: 'p1', palette: userPalette, widgets: [] }],
+    }
+    const { config: out } = migrateConfig(config, '1.3.0')
+    const pages = out.pages as Record<string, unknown>[]
+    expect(pages[0]!.palette).toEqual(userPalette)
   })
 })
 
