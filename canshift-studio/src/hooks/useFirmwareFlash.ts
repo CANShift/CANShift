@@ -21,7 +21,7 @@ async function downloadBinaryViaIpc(
   url: string,
   onProgress: (pct: number) => void
 ): Promise<ArrayBuffer> {
-  const downloadId = `dl-${String(Date.now())}-${Math.random().toString(36).slice(2)}`
+  const downloadId = `dl-${crypto.randomUUID()}`
 
   const handleProgress = (payload: unknown): void => {
     if (typeof payload !== 'object' || payload === null) return
