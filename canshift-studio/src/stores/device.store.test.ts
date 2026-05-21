@@ -284,6 +284,14 @@ describe('device.store — burn / flash / lastPushedConfig', () => {
     expect(useDeviceStore.getState().lastPushedConfig).toBe(config)
   })
 
+  it('setDisconnected() clears lastPushedConfig (audit S-L-6)', () => {
+    // Keeping the previous device's config after disconnect makes the diff
+    // dialog show "Modified" against an image that is no longer connected.
+    useDeviceStore.getState().setLastPushedConfig(makeConfig('previous'))
+    useDeviceStore.getState().setDisconnected()
+    expect(useDeviceStore.getState().lastPushedConfig).toBeNull()
+  })
+
   it('setBurnPhase() walks the burn lifecycle (idle → pushing → rebooting → done)', () => {
     const phases = ['idle', 'pushing', 'rebooting', 'done'] as const
 
