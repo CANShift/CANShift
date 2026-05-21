@@ -54,6 +54,17 @@ describe('migrateConfig — no migration needed', () => {
     expect(result.applied).toHaveLength(0)
     expect(result.config).toEqual(config)
   })
+
+  it('throws a typed boundary error on a circular config (audit C-LO-6)', () => {
+    interface Cyclic extends Record<string, unknown> {
+      self?: Cyclic
+    }
+    const config: Cyclic = { version: '1.0.0' }
+    config.self = config
+    // We must target a version that requires migration so deepClone runs —
+    // a no-op path returns the input unchanged without cloning.
+    expect(() => migrateConfig(config, '1.1.0')).toThrow(/not serializable to JSON/i)
+  })
 })
 
 // ---------------------------------------------------------------------------
