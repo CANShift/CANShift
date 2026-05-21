@@ -58,10 +58,18 @@ describe('Content-Security-Policy — style-src hardening (#900)', () => {
     expect(__csp.DEV_CSP).toContain("style-src 'self' 'unsafe-inline'")
   })
 
-  it('script-src is locked to self in both prod and dev (never relaxed)', () => {
+  it('prod script-src is locked to self with no unsafe-inline / unsafe-eval', () => {
     expect(__csp.PROD_CSP).toContain("script-src 'self'")
-    expect(__csp.DEV_CSP).toContain("script-src 'self'")
     expect(__csp.PROD_CSP).not.toMatch(/script-src[^;]*unsafe-(inline|eval)/)
-    expect(__csp.DEV_CSP).not.toMatch(/script-src[^;]*unsafe-(inline|eval)/)
+  })
+
+  it('dev script-src allows unsafe-inline so @vitejs/plugin-react preamble runs', () => {
+    // React Fast Refresh injects an inline preamble script that Vite cannot
+    // pre-hash or move to a separate file. Blocking it leaves the renderer
+    // grey on mount (preamble throws → React never starts). Dev is local-only
+    // so the practical XSS surface is nil.
+    expect(__csp.DEV_CSP).toContain("script-src 'self' 'unsafe-inline'")
+    // unsafe-eval is still forbidden — Vite doesn't need it.
+    expect(__csp.DEV_CSP).not.toMatch(/script-src[^;]*unsafe-eval/)
   })
 })
