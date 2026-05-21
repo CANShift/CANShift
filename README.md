@@ -47,7 +47,7 @@ The firmware is **autonomous** — it runs without any app connected. Studio and
 |-----------|------|
 | Display / MCU | Elecrow CrowPanel 2.8" (ESP32, ILI9341, XPT2046 touch) |
 | ECU | Any CAN-enabled ECU |
-| CAN transceiver | Adafruit CAN Pal (TJA1051T/3) |
+| CAN transceiver | [Adafruit CAN Pal (TJA1051T/3)](https://www.digikey.ch/fr/products/detail/adafruit-industries-llc/5708/18716420) |
 
 **CAN wiring** (default — pins are configurable from Studio → Device Config and persisted in `device.json`):
 
