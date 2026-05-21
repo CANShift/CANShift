@@ -11,7 +11,7 @@
 // barrel.
 
 export * from '../../canshift-core/src/design-tokens'
-export * from '../../canshift-core/src/sensorDefaults'
+export * from '../../canshift-core/src/sensor-defaults'
 export * from '../../canshift-core/src/schemas/ble-status'
 export * from '../../canshift-core/src/schemas/track-telemetry'
 export type {

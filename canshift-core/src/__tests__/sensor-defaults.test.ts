@@ -8,8 +8,8 @@ import {
   colorAtValue,
   resolveDefaultRamp,
   resolveSensorKind,
-} from '../sensorDefaults.js'
-import type { SensorKind } from '../sensorDefaults.js'
+} from '../sensor-defaults.js'
+import type { SensorKind } from '../sensor-defaults.js'
 import { HEX_COLOR_REGEX, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
 import type { ColorRamp } from '../schemas/signal.js'
 
