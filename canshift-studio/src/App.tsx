@@ -21,17 +21,18 @@ const CliReattachStub = lazy(() => import('./components/shared/CliReattachStub')
 function CliPanelFallback() {
   // Lightweight placeholder while the xterm chunk is fetching. Matches the
   // panel chrome (dark background, top border) so the layout doesn't jump.
+  // Colors flow through CSS vars (#906) — no hex literals in renderer source.
   return (
     <div
       style={{
         height: 240,
         flexShrink: 0,
-        background: '#0A0A0A',
-        borderTop: '1px solid #222222',
+        background: 'hsl(var(--bg))',
+        borderTop: '1px solid hsl(var(--border))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#3A3A3A',
+        color: 'hsl(var(--text-muted))',
         fontSize: 10,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
@@ -50,7 +51,7 @@ function RouteLoading() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#444444',
+        color: 'hsl(var(--text-dim))',
         fontSize: 12,
       }}
     >
@@ -144,8 +145,8 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        background: '#111111',
-        color: '#FFFFFF',
+        background: 'hsl(var(--bg))',
+        color: 'hsl(var(--text))',
         fontFamily: 'system-ui, sans-serif',
       }}
     >
