@@ -19,16 +19,36 @@ export interface Migration {
   migrate: MigrationFn
 }
 
-// Deep-clone a JSON-shaped config via a JSON round-trip. Configs are pure JSON,
-// so the round-trip is safe. We don't use `structuredClone` here to keep
-// canshift-core's build dependency-free (no @types/node required).
+// Deep-clone a JSON-shaped config via a JSON round-trip. Configs are pure
+// JSON, so the round-trip is safe. We don't use `structuredClone` here to
+// keep canshift-core's build dependency-free (no @types/node required).
+//
+// Wrapped so a caller passing an in-memory JS object that drifted from the
+// JSON shape (a circular reference, an undefined value at the root) gets a
+// typed boundary error rather than a raw `TypeError: Converting circular
+// structure to JSON` bubbling out of `migrateConfig`. Audit C-LO-6.
 function deepClone(value: Record<string, unknown>): Record<string, unknown> {
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err)
+    throw new Error(`Invalid config: not serializable to JSON (${reason})`, { cause: err })
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Registered migrations (add new migrations here as schema evolves)
 // ---------------------------------------------------------------------------
+// Frozen snapshot of `DEFAULT_PAGE_PALETTE` (schemas/dashboard.ts) at the
+// time the 1.2 → 1.3 migration shipped. Migrations must be deterministic:
+// re-running the upgrade against the same legacy config must produce the
+// same bytes today and in five years. That guarantee would break if we
+// imported the live `DEFAULT_PAGE_PALETTE` here and a future palette
+// refresh silently re-wrote every old config on the next load.
+//
+// Locked by a dedicated `1.2.0 → 1.3.0` test (see migration-runner.test.ts)
+// — do NOT change the values without bumping the schema version and adding
+// a fresh migration. Audit C-ME-3.
 const DEFAULT_PALETTE = {
   surface: '#1E1E1E',
   primary: '#FF4444',
@@ -38,7 +58,7 @@ const DEFAULT_PALETTE = {
   warning: '#FF8800',
   danger: '#FF4444',
   success: '#00CC44',
-}
+} as const
 
 // Standard widget types that follow the L/XL size scale (issue #131).
 // Bar gauges keep their own narrow tokens — never resize them here.
