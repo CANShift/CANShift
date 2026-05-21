@@ -442,6 +442,69 @@ jobs:
             echo "Flash usage ${FLASH_PCT}% within budget"
           fi
 
+      - name: DRAM budget gate (fail >70%, warn >65%)
+        # Static .data/.bss only — runtime heap (LVGL pool, NimBLE host heap,
+        # FreeRTOS task stacks + scheduler) consumes the rest of dram0_0_seg
+        # at runtime. Budget reserves ≈ 104 KB of the 320 KB DRAM region for
+        # those runtime allocations: 24 KB LVGL pool, 16 KB NimBLE floor,
+        # 64 KB tasks/scheduler. That leaves ~223 KB (≈ 68%) for static
+        # linker allocations. Thresholds set defensively below that ceiling
+        # so a BSS-adding PR gets a CI warning before the next change pushes
+        # past the link-time `region 'dram0_0_seg' overflowed` failure that
+        # only fired post-merge of PR #1028's first attempt (#1038).
+        run: |
+          set -euo pipefail
+          if [ ! -f build.log ]; then
+            echo "::error::build.log not found — production build step did not run"
+            exit 1
+          fi
+          RAM_PCT=$(grep -E '^(RAM|Flash):' build.log \
+            | grep -E '^RAM:' \
+            | grep -oE '[0-9]+\.[0-9]+%' \
+            | head -n 1 \
+            | tr -d '%')
+          if [ -z "${RAM_PCT:-}" ]; then
+            echo "::error::Could not parse RAM usage from build.log"
+            grep -E '^(RAM|Flash):' build.log || true
+            exit 1
+          fi
+          FAIL_THRESHOLD=70
+          WARN_THRESHOLD=65
+          echo "Parsed static DRAM usage: ${RAM_PCT}% (fail >${FAIL_THRESHOLD}%, warn >${WARN_THRESHOLD}%)"
+          OVER_FAIL=$(awk -v p="$RAM_PCT" -v t="$FAIL_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
+          OVER_WARN=$(awk -v p="$RAM_PCT" -v t="$WARN_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
+          if [ "$OVER_FAIL" = "1" ]; then
+            echo "::error::Static DRAM usage ${RAM_PCT}% exceeds budget (>${FAIL_THRESHOLD}%) — see audit #1038"
+            exit 1
+          elif [ "$OVER_WARN" = "1" ]; then
+            echo "::warning::Static DRAM usage ${RAM_PCT}% above target (>${WARN_THRESHOLD}%) — approaching runtime-heap headroom (#1038)"
+          else
+            echo "Static DRAM usage ${RAM_PCT}% within budget"
+          fi
+
+      - name: Emit ELF section sizes (visibility)
+        # `xtensa-esp32-elf-size --format=sysv` lists every section with byte
+        # counts. The output is too noisy for a budget gate but invaluable for
+        # reviewers diagnosing *why* a PR moved the RAM/Flash percentages —
+        # which sections grew, by how much. PlatformIO ships the toolchain
+        # under ~/.platformio/packages/toolchain-xtensa-esp32. The ELF lives
+        # at .pio/build/crowpanel_28/firmware.elf after the production build
+        # step.
+        if: always()
+        run: |
+          ELF=.pio/build/crowpanel_28/firmware.elf
+          if [ ! -f "$ELF" ]; then
+            echo "::warning::ELF not produced; size summary skipped"
+            exit 0
+          fi
+          SIZE_BIN=$(find ~/.platformio/packages/toolchain-xtensa-esp32 -name 'xtensa-esp32-elf-size' -type f -print -quit 2>/dev/null || true)
+          if [ -z "${SIZE_BIN:-}" ]; then
+            echo "::warning::xtensa-esp32-elf-size not found in PlatformIO packages"
+            exit 0
+          fi
+          echo "### ELF section sizes (firmware.elf)"
+          "$SIZE_BIN" --format=sysv "$ELF"
+
   # ─── Firmware — native unit tests ───────────────────────────────────────────
   # Compiles a subset of the firmware sources (config loader, JSON reader,
   # signal store, MaxxECU parser, signal map) on the host via the [env:native]
