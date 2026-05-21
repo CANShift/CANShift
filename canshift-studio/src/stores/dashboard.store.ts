@@ -573,7 +573,7 @@ export const useDashboardStore = create<DashboardState>()(
         const newIds: string[] = []
 
         for (const src of sources) {
-          const newId = `${src.type}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+          const newId = `${src.type}_${crypto.randomUUID()}`
           // Try to land just below the source first; fall back to the right,
           // then to the first free slot anywhere on the page.
           const candidates = [
@@ -887,7 +887,7 @@ export const useDashboardStore = create<DashboardState>()(
         const newIds: string[] = []
 
         for (const src of s.clipboardWidgets) {
-          const newId = `${src.type}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+          const newId = `${src.type}_${crypto.randomUUID()}`
           const candidates = [
             { x: src.layout.x + 16, y: src.layout.y + 16 },
             { x: src.layout.x, y: src.layout.y + src.layout.h + LAYOUT_GAP },
