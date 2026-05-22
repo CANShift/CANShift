@@ -6,6 +6,7 @@
 // byte; the parity is enforced by an anchor test against the JSON fixture
 // emitted by `npm run export:sensor-defaults`.
 
+import { HEX_REGEX } from './colors/hex.js'
 import type { HexColor } from './schemas/common.js'
 import type { ColorRamp } from './schemas/signal.js'
 
@@ -179,9 +180,6 @@ export function resolveSensorKind(signalName: string): SensorKind | undefined {
 // Color sampling
 // ---------------------------------------------------------------------------
 
-/** Hex regex — accepts "#RRGGBB" only. Trailing whitespace is rejected. */
-const HEX_RE = /^#([0-9A-Fa-f]{6})$/
-
 interface RgbChannels {
   r: number
   g: number
@@ -189,7 +187,7 @@ interface RgbChannels {
 }
 
 function parseHex(color: HexColor): RgbChannels {
-  const m = HEX_RE.exec(color)
+  const m = HEX_REGEX.exec(color)
   if (!m) return { r: 0, g: 0, b: 0 }
   const n = Number.parseInt(m[1] ?? '000000', 16)
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }

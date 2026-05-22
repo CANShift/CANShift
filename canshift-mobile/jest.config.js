@@ -23,6 +23,13 @@ module.exports = {
     // helpers that jest can't locate from outside mobile's node_modules
     // tree).
     '^@tmbk/canshift-core$': '<rootDir>/__mocks__/canshift-core-shim.ts',
+    // canshift-core source uses ESM-strict `.js` suffixes on relative imports
+    // (Node's ESM resolver requires them; the `fix-esm-extensions.mjs` build
+    // step adds them automatically to dist). When the mobile shim resolves
+    // these TS source files through jest's CJS resolver the `.js` suffix
+    // points at non-existent files — strip it so `./colors/hex.js` resolves
+    // to `colors/hex.ts`.
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transformIgnorePatterns: [
     '/node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|nativewind|react-native-css-interop)',

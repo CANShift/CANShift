@@ -27,20 +27,35 @@ import { z } from 'zod'
 import { CanSpeedKbpsSchema } from './signal.js'
 
 /**
- * ESP32 pins safe to use as OUTPUTS. Excludes:
+ * ESP32-WROOM-32 pins safe to use as OUTPUTS. Excludes:
  *  - 6-11: connected to internal SPI flash — writing bricks the device.
  *  - 34-39: input-only pins (no output driver).
  *  - 20, 24, 28, 29, 30, 31: not bonded out on most ESP32 packages.
+ *
+ * Exported (#1016, audit C-LO-7) so studio's pin pickers can render the same
+ * safe set the schema enforces instead of hard-coding a parallel copy. Mirrors
+ * the `CAN_SPEED_OPTIONS` / `CanSpeedKbpsSchema` convention in `./signal.ts`.
  */
-const ESP32_SAFE_OUTPUT_PINS = new Set<number>([
+export const SAFE_OUTPUT_PINS_WROOM32 = [
   0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
-])
+] as const
 
 /**
- * ESP32 pins safe to use as INPUTS. Superset of output-safe — includes 34-39
- * (input-only pins).
+ * ESP32-WROOM-32 pins safe to use as INPUTS. Superset of `SAFE_OUTPUT_PINS_WROOM32`
+ * — adds 34-39 (input-only pins).
  */
-const ESP32_SAFE_INPUT_PINS = new Set<number>([...ESP32_SAFE_OUTPUT_PINS, 34, 35, 36, 37, 38, 39])
+export const SAFE_INPUT_PINS_WROOM32 = [
+  ...SAFE_OUTPUT_PINS_WROOM32,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+] as const
+
+const ESP32_SAFE_OUTPUT_PINS = new Set<number>(SAFE_OUTPUT_PINS_WROOM32)
+const ESP32_SAFE_INPUT_PINS = new Set<number>(SAFE_INPUT_PINS_WROOM32)
 
 /**
  * ESP32 GPIO usable as an OUTPUT pin. Rejects flash-SPI (6-11), input-only
