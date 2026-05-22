@@ -15,13 +15,7 @@ import {
   TOPBAR_HEIGHT,
 } from '../constants/firmware-caps.js'
 
-import {
-  HexColorSchema,
-  SemVerSchema,
-  WidgetLayoutSchema,
-  WidgetStyleSchema,
-  WidgetTypeSchema,
-} from './common.js'
+import { HexColorSchema, SemVerSchema, WidgetLayoutSchema, WidgetStyleSchema } from './common.js'
 
 // ---------------------------------------------------------------------------
 // Label position — used by gauge and bar widgets
@@ -333,6 +327,23 @@ export const WidgetConfigSchema = z.discriminatedUnion('type', [
   ImageWidgetConfigSchema,
 ])
 
+/**
+ * Widget type discriminant — derived from `WidgetConfigSchema.options` so the
+ * enum can never drift from the union of supported widget variants. Adding a
+ * new config schema to the union above automatically extends this enum (audit
+ * C-LO-2, umbrella #1016). The `WidgetConfigValueType` indirection narrows the
+ * `z.enum` tuple to the variant literals — a plain `string[]` cast would
+ * widen the inferred `WidgetType` back to `string`.
+ */
+type WidgetConfigValueType =
+  (typeof WidgetConfigSchema)['options'][number]['shape']['type']['value']
+export const WidgetTypeSchema = z.enum(
+  WidgetConfigSchema.options.map((o) => o.shape.type.value) as [
+    WidgetConfigValueType,
+    ...WidgetConfigValueType[],
+  ]
+)
+
 // ---------------------------------------------------------------------------
 // Widget
 // ---------------------------------------------------------------------------
@@ -459,40 +470,43 @@ export const PageConfigSchema = z
 
 export const TopBarItemPositionSchema = z.enum(['left', 'center', 'right'])
 
+/**
+ * Common shape for icon-only top-bar items — variants that carry no payload
+ * beyond the discriminator and the layout position (separator, usbIcon,
+ * bleIcon, themeToggle, trackBadge). Each variant `.extend`s this with its
+ * own `type` literal so the four+ variants share one definition instead of
+ * duplicating the strict object (audit C-LO-3, umbrella #1016).
+ */
+const iconOnlyTopBarItemShape = z.object({ position: TopBarItemPositionSchema })
+
+/**
+ * Common shape for signal-bound top-bar items — variants whose payload is
+ * a `signal` reference plus the layout position (statusDot, signal,
+ * modeFlag). Variants `.extend` with their own `type` literal and any
+ * variant-specific fields (`signal` adds optional `format`, `modeFlag`
+ * adds `text`).
+ */
+const signalBoundTopBarItemShape = z.object({
+  signal: z.string(),
+  position: TopBarItemPositionSchema,
+})
+
 export const TopBarItemSchema = z.discriminatedUnion('type', [
-  z
-    .object({
-      type: z.literal('statusDot'),
-      signal: z.string(),
-      position: TopBarItemPositionSchema,
-    })
-    .strict(),
+  signalBoundTopBarItemShape.extend({ type: z.literal('statusDot') }).strict(),
   z
     .object({ type: z.literal('label'), text: z.string(), position: TopBarItemPositionSchema })
     .strict(),
-  z.object({ type: z.literal('separator'), position: TopBarItemPositionSchema }).strict(),
-  z
-    .object({
-      type: z.literal('signal'),
-      signal: z.string(),
-      format: z.string().optional(),
-      position: TopBarItemPositionSchema,
-    })
+  iconOnlyTopBarItemShape.extend({ type: z.literal('separator') }).strict(),
+  signalBoundTopBarItemShape
+    .extend({ type: z.literal('signal'), format: z.string().optional() })
     .strict(),
-  z.object({ type: z.literal('usbIcon'), position: TopBarItemPositionSchema }).strict(),
-  z.object({ type: z.literal('bleIcon'), position: TopBarItemPositionSchema }).strict(),
-  z.object({ type: z.literal('themeToggle'), position: TopBarItemPositionSchema }).strict(),
-  z
-    .object({
-      type: z.literal('modeFlag'),
-      signal: z.string(),
-      text: z.string(),
-      position: TopBarItemPositionSchema,
-    })
-    .strict(),
+  iconOnlyTopBarItemShape.extend({ type: z.literal('usbIcon') }).strict(),
+  iconOnlyTopBarItemShape.extend({ type: z.literal('bleIcon') }).strict(),
+  iconOnlyTopBarItemShape.extend({ type: z.literal('themeToggle') }).strict(),
+  signalBoundTopBarItemShape.extend({ type: z.literal('modeFlag'), text: z.string() }).strict(),
   // Track-mode indicator — lit when canshift-mobile pushes `trackMode: true`
   // through the BLE CMD `track_state` envelope. Issue #844.
-  z.object({ type: z.literal('trackBadge'), position: TopBarItemPositionSchema }).strict(),
+  iconOnlyTopBarItemShape.extend({ type: z.literal('trackBadge') }).strict(),
 ])
 
 export const TopBarConfigSchema = z
@@ -579,6 +593,8 @@ type ExactOptional<T> = {
 
 export type WidgetLabelPosition = z.infer<typeof WidgetLabelPositionSchema>
 export type SensorIconName = z.infer<typeof SensorIconNameSchema>
+/** Widget type discriminant — derived from `WidgetConfigSchema`. */
+export type WidgetType = z.infer<typeof WidgetTypeSchema>
 export type GaugeDisplayStyle = z.infer<typeof GaugeDisplayStyleSchema>
 export type GaugeArcFillStyle = z.infer<typeof GaugeArcFillStyleSchema>
 export type GaugeWidgetConfig = ExactOptional<z.infer<typeof GaugeWidgetConfigSchema>>

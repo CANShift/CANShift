@@ -8,7 +8,6 @@
 import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
 import type { ColorRampStop, SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
-import { validateSignalCatalog } from '../validation/validate-signal.js'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -150,14 +149,20 @@ describe('validateDashboard — button.actions cap (issue #700)', () => {
 // Part B — colorRamp.stops cap + monotonic value
 // ---------------------------------------------------------------------------
 
-describe('validateSignalCatalog — colorRamp.stops (issue #700)', () => {
+// Ramp validation now flows through per-signal `ColorRampSchema.safeParse`
+// inside `validateDashboard` — see C-LO-4 (umbrella #1016) which retired the
+// standalone `validateSignalCatalog`. `ColorRampSchema` is the single source
+// of truth for ramp invariants, so coverage runs through the public
+// `validateDashboard` entry point with a `signalCatalog` option.
+describe('validateDashboard — signalCatalog colorRamp.stops (issue #700)', () => {
   it('accepts a valid 3-stop ascending ramp', () => {
-    const catalog = signalCatalogWithRamp([
-      { value: 0, color: '#00FF00' },
-      { value: 50, color: '#FFFF00' },
-      { value: 100, color: '#FF0000' },
-    ])
-    const result = validateSignalCatalog(catalog)
+    const result = validateDashboard(minimalConfig(), {
+      signalCatalog: signalCatalogWithRamp([
+        { value: 0, color: '#00FF00' },
+        { value: 50, color: '#FFFF00' },
+        { value: 100, color: '#FF0000' },
+      ]),
+    })
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
   })
@@ -167,56 +172,21 @@ describe('validateSignalCatalog — colorRamp.stops (issue #700)', () => {
       value: i * 10,
       color: '#00FF00',
     }))
-    const result = validateSignalCatalog(signalCatalogWithRamp(stops))
+    const result = validateDashboard(minimalConfig(), {
+      signalCatalog: signalCatalogWithRamp(stops),
+    })
     expect(result.valid).toBe(true)
   })
 
   it('rejects a ramp with only 1 stop (below the floor of 2)', () => {
-    const result = validateSignalCatalog(signalCatalogWithRamp([{ value: 0, color: '#00FF00' }]))
+    const result = validateDashboard(minimalConfig(), {
+      signalCatalog: signalCatalogWithRamp([{ value: 0, color: '#00FF00' }]),
+    })
     expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('too few stops'))).toBe(true)
+    expect(result.errors.some((e) => e.includes('at least 2 stops'))).toBe(true)
   })
 
   it('rejects a ramp with 9 stops (above MAX_RAMP_STOPS=8)', () => {
-    const stops: ColorRampStop[] = Array.from(
-      { length: FIRMWARE_CAPS.MAX_RAMP_STOPS + 1 },
-      (_, i) => ({ value: i * 10, color: '#00FF00' })
-    )
-    const result = validateSignalCatalog(signalCatalogWithRamp(stops))
-    expect(result.valid).toBe(false)
-    expect(
-      result.errors.some(
-        (e) =>
-          e.includes('too many stops') && e.includes(`> ${FIRMWARE_CAPS.MAX_RAMP_STOPS.toString()}`)
-      )
-    ).toBe(true)
-  })
-
-  it('rejects a ramp with non-ascending values (equal)', () => {
-    const result = validateSignalCatalog(
-      signalCatalogWithRamp([
-        { value: 0, color: '#00FF00' },
-        { value: 50, color: '#FFFF00' },
-        { value: 50, color: '#FF0000' },
-      ])
-    )
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('strictly greater than previous'))).toBe(true)
-  })
-
-  it('rejects a ramp with non-ascending values (descending)', () => {
-    const result = validateSignalCatalog(
-      signalCatalogWithRamp([
-        { value: 100, color: '#00FF00' },
-        { value: 50, color: '#FFFF00' },
-        { value: 0, color: '#FF0000' },
-      ])
-    )
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('strictly greater than previous'))).toBe(true)
-  })
-
-  it('passes through ramp errors via validateDashboard when signalCatalog option is supplied', () => {
     const stops: ColorRampStop[] = Array.from(
       { length: FIRMWARE_CAPS.MAX_RAMP_STOPS + 1 },
       (_, i) => ({ value: i * 10, color: '#00FF00' })
@@ -225,6 +195,45 @@ describe('validateSignalCatalog — colorRamp.stops (issue #700)', () => {
       signalCatalog: signalCatalogWithRamp(stops),
     })
     expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('too many stops'))).toBe(true)
+    expect(
+      result.errors.some(
+        (e) => e.includes('cannot exceed') && e.includes(FIRMWARE_CAPS.MAX_RAMP_STOPS.toString())
+      )
+    ).toBe(true)
+  })
+
+  it('rejects a ramp with non-ascending values (equal)', () => {
+    const result = validateDashboard(minimalConfig(), {
+      signalCatalog: signalCatalogWithRamp([
+        { value: 0, color: '#00FF00' },
+        { value: 50, color: '#FFFF00' },
+        { value: 50, color: '#FF0000' },
+      ]),
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('sorted strictly ascending'))).toBe(true)
+  })
+
+  it('rejects a ramp with non-ascending values (descending)', () => {
+    const result = validateDashboard(minimalConfig(), {
+      signalCatalog: signalCatalogWithRamp([
+        { value: 100, color: '#00FF00' },
+        { value: 50, color: '#FFFF00' },
+        { value: 0, color: '#FF0000' },
+      ]),
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('sorted strictly ascending'))).toBe(true)
+  })
+
+  it('still surfaces ramp errors when the dashboard itself fails to parse', () => {
+    const stops: ColorRampStop[] = Array.from(
+      { length: FIRMWARE_CAPS.MAX_RAMP_STOPS + 1 },
+      (_, i) => ({ value: i * 10, color: '#00FF00' })
+    )
+    // Empty object → DashboardConfig parse fails AND catalog still checked.
+    const result = validateDashboard({}, { signalCatalog: signalCatalogWithRamp(stops) })
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('cannot exceed'))).toBe(true)
   })
 })

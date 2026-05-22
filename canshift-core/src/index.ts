@@ -7,7 +7,7 @@
 // of truth. The intermediate `./types/*` barrels were removed in #914 — there
 // is exactly one home for every contract now.
 // ---------------------------------------------------------------------------
-export type { HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer } from './schemas/common.js'
+export type { HexColor, WidgetLayout, WidgetStyle, SemVer } from './schemas/common.js'
 
 export type {
   // Dashboard
@@ -15,6 +15,7 @@ export type {
   PageConfig,
   PagePalette,
   Widget,
+  WidgetType,
   TopBarConfig,
   TopBarItem,
   TopBarItemPosition,
@@ -128,7 +129,6 @@ export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/rel
 export { validateDashboard } from './validation/validate-dashboard.js'
 export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard.js'
 export { validateSignalConfig } from './validation/validate-signal-config.js'
-export { validateSignalCatalog } from './validation/validate-signal.js'
 
 // ---------------------------------------------------------------------------
 // Zod schemas (issue #673) — runtime source of truth for Dashboard, Signal,

@@ -360,7 +360,8 @@ describe('validateDashboard — signal cross-reference', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Signal catalog structural pass-through (#700 ramps live in validate-signal)
+// Signal catalog structural pass-through (#700 ramps re-checked via
+// ColorRampSchema since C-LO-4 retired validate-signal.ts)
 // ---------------------------------------------------------------------------
 
 describe('validateDashboard — signalCatalog option pass-through', () => {
@@ -389,6 +390,6 @@ describe('validateDashboard — signalCatalog option pass-through', () => {
     }
     const result = validateDashboard(validConfig(), { signalCatalog: bogusCatalog })
     expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('too few stops'))).toBe(true)
+    expect(result.errors.some((e) => e.includes('at least 2 stops'))).toBe(true)
   })
 })
