@@ -5,12 +5,20 @@
 
 import { z } from 'zod'
 
-import { CANVAS, HEX_COLOR_REGEX } from '../constants/firmware-caps.js'
+import { HEX_REGEX } from '../colors/hex.js'
+import { CANVAS } from '../constants/firmware-caps.js'
 
-/** Hex color string — e.g. "#FF4444" (6-digit, with leading `#`). */
-export const HexColorSchema = z
-  .string()
-  .regex(HEX_COLOR_REGEX, 'must be a 6-digit hex color (e.g. "#FF4444")') as z.ZodType<`#${string}`>
+/**
+ * Hex color string — e.g. "#FF4444" (6-digit, with leading `#`).
+ *
+ * Uses `z.custom` rather than `z.string().regex(...) as z.ZodType<...>` so the
+ * template-literal type is enforced by a real runtime check instead of an
+ * unchecked `as` cast (audit C-ME-1, umbrella #1016).
+ */
+export const HexColorSchema = z.custom<`#${string}`>(
+  (v) => typeof v === 'string' && HEX_REGEX.test(v),
+  { message: 'must be a 6-digit hex color (e.g. "#FF4444")' }
+)
 
 /** Widget type discriminant. */
 export const WidgetTypeSchema = z.enum([
@@ -77,13 +85,17 @@ export const WidgetStyleSchema = z
   })
   .strict()
 
-/** Semantic version string — "MAJOR.MINOR.PATCH". */
-export const SemVerSchema = z
-  .string()
-  .regex(
-    /^\d+\.\d+\.\d+$/,
-    'must be a semver string "MAJOR.MINOR.PATCH"'
-  ) as z.ZodType<`${number}.${number}.${number}`>
+/**
+ * Semantic version string — "MAJOR.MINOR.PATCH".
+ *
+ * `z.custom` enforces the template-literal type at runtime instead of via an
+ * unchecked `as` cast (audit C-ME-1, umbrella #1016).
+ */
+const SEMVER_REGEX = /^\d+\.\d+\.\d+$/
+export const SemVerSchema = z.custom<`${number}.${number}.${number}`>(
+  (v) => typeof v === 'string' && SEMVER_REGEX.test(v),
+  { message: 'must be a semver string "MAJOR.MINOR.PATCH"' }
+)
 
 /** Hex color string — e.g. "#FF4444". */
 export type HexColor = z.infer<typeof HexColorSchema>
