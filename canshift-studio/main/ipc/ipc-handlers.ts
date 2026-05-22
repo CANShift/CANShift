@@ -26,6 +26,7 @@ import {
 } from '../../shared/cli-detach.types'
 import { ConfigFileService } from '../services/config-file.service'
 import { UsbService } from '../services/usb.service'
+import { WifiService, DEFAULT_WIFI_PORT } from '../services/wifi.service'
 import { checkForUpdates, installUpdate } from '../services/updater.service'
 import { firmwareService } from '../services/firmware.service'
 import { releasesService } from '../services/releases.service'
@@ -185,6 +186,25 @@ function formatZodIssues(error: z.ZodError): string[] {
  */
 export const usbService = new UsbService()
 
+/**
+ * Singleton WiFi (TCP) service instance — parallel to `usbService` (#1071).
+ * Same JSON-lines protocol; the renderer picks one transport at connect time.
+ * Exported so main/index.ts can disconnect on quit.
+ */
+export const wifiService = new WifiService()
+
+/**
+ * Transport-agnostic command surface — the IPC layer dispatches every
+ * USB_* /command channel through this so the renderer never has to branch
+ * on transport. Selection priority: WiFi when connected, otherwise USB.
+ * Both transports run the same JSON-lines protocol, so the call sites only
+ * differ in the underlying socket.
+ */
+function activeTransport(): UsbService | WifiService {
+  if (wifiService.isConnected()) return wifiService
+  return usbService
+}
+
 // CAN-frame flush timer handle — captured here so disposeIpcHandlers() can
 // clear it on app shutdown. Without this the 10 Hz timer keeps Node's event
 // loop alive past app.quit().
@@ -230,6 +250,32 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       // Renderer is the single source of truth for device-store connection
       // flags (#696) — every transition is published, both true and false.
       safeSend(IpcChannels.USB_CONNECTION_CHANGED, event)
+    },
+    onError: (message) => {
+      safeSend(IpcChannels.USB_ERROR, message)
+    },
+    onTelemetry: (values) => {
+      safeSend(IpcChannels.USB_DATA_RECEIVED, values)
+    },
+    onCanFrame: (frame) => {
+      canFrameBatch.push(frame)
+    },
+    onCanHealth: (health) => {
+      safeSend(IpcChannels.CAN_HEALTH_UPDATE, health)
+    },
+    onDeviceLog: (entry) => {
+      safeSend(IpcChannels.USB_DEVICE_LOG, entry)
+    },
+  })
+
+  // Wire WiFi device events to the renderer window (issue #1071).
+  // Telemetry / CAN / log events reuse the USB-side channels so every
+  // renderer surface stays transport-agnostic — only the connection-changed
+  // event has its own channel, because the payload shape differs (`host` vs
+  // `portPath`).
+  wifiService.setEventHandlers({
+    onConnectionChanged: (event) => {
+      safeSend(IpcChannels.WIFI_CONNECTION_CHANGED, event)
     },
     onError: (message) => {
       safeSend(IpcChannels.USB_ERROR, message)
@@ -391,7 +437,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
         friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
-    return usbService.pushConfig(parsed.data)
+    return activeTransport().pushConfig(parsed.data)
   })
 
   ipcMain.handle(IpcChannels.USB_SCREEN_SETTINGS, async (_event, settings: unknown) => {
@@ -412,7 +458,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
         friendlyIssues: friendlyZodIssues(parsed.error),
       }
     }
-    return usbService.pushScreenSettings(parsed.data)
+    return activeTransport().pushScreenSettings(parsed.data)
   })
 
   ipcMain.handle(IpcChannels.USB_GET_STATUS, () => {
@@ -420,22 +466,22 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   ipcMain.handle(IpcChannels.USB_REBOOT, async () => {
-    return usbService.rebootDevice()
+    return activeTransport().rebootDevice()
   })
 
   ipcMain.handle(IpcChannels.USB_TOGGLE_DAY_NIGHT, async () => {
-    return usbService.toggleDayNight()
+    return activeTransport().toggleDayNight()
   })
 
   ipcMain.handle(IpcChannels.USB_SET_DAY_NIGHT, async (_event, day: unknown) => {
     if (typeof day !== 'boolean') {
       return { success: false, error: 'set-day-night payload must be a boolean' }
     }
-    return usbService.setDayNight(day)
+    return activeTransport().setDayNight(day)
   })
 
   ipcMain.handle(IpcChannels.USB_CALIBRATE_TOUCH, async () => {
-    return usbService.calibrateTouch()
+    return activeTransport().calibrateTouch()
   })
 
   // ---------------------------------------------------------------------------
@@ -443,11 +489,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.CAN_SCAN_START, async () => {
-    return usbService.startCanScan()
+    return activeTransport().startCanScan()
   })
 
   ipcMain.handle(IpcChannels.CAN_SCAN_STOP, async () => {
-    return usbService.stopCanScan()
+    return activeTransport().stopCanScan()
   })
 
   // ---------------------------------------------------------------------------
@@ -455,11 +501,50 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.FIRMWARE_QUERY_VERSION, async () => {
-    return usbService.queryVersion()
+    return activeTransport().queryVersion()
   })
 
   ipcMain.handle(IpcChannels.DEVICE_GET_CONFIG, async () => {
-    return usbService.getConfig()
+    return activeTransport().getConfig()
+  })
+
+  // ---------------------------------------------------------------------------
+  // WiFi device operations (issue #1071)
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle(IpcChannels.WIFI_DISCOVER, async () => {
+    return wifiService.discover()
+  })
+
+  // Renderer payload: { host: string; port?: number }
+  const WifiConnectPayloadSchema = z.object({
+    host: z.string().min(1).max(253),
+    port: z.number().int().min(1).max(65_535).optional(),
+  })
+
+  ipcMain.handle(IpcChannels.WIFI_CONNECT, async (_event, payload: unknown) => {
+    const parsed = WifiConnectPayloadSchema.safeParse(payload)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: `WiFi connect payload invalid — ${summarizeZodError(parsed.error)}`,
+        issues: formatZodIssues(parsed.error),
+        friendlyIssues: friendlyZodIssues(parsed.error),
+      }
+    }
+    // Single transport at a time — if a USB session is live, close it first.
+    if (usbService.getStatus().connected) {
+      await usbService.disconnect()
+    }
+    return wifiService.connect(parsed.data.host, parsed.data.port ?? DEFAULT_WIFI_PORT)
+  })
+
+  ipcMain.handle(IpcChannels.WIFI_DISCONNECT, async () => {
+    return wifiService.disconnect()
+  })
+
+  ipcMain.handle(IpcChannels.WIFI_GET_STATUS, () => {
+    return wifiService.getStatus()
   })
 
   ipcMain.handle(IpcChannels.FIRMWARE_LIST_RELEASES, async (_event, channel: unknown) => {

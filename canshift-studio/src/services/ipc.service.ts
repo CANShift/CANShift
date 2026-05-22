@@ -160,6 +160,38 @@ export const usbService = {
 }
 
 // ---------------------------------------------------------------------------
+// WiFi device operations (issue #1071)
+// ---------------------------------------------------------------------------
+
+/** A dash instance surfaced by `wifiService.discover()`. */
+export interface DiscoveredDevice {
+  name: string
+  host: string
+  port: number
+  hostname?: string
+}
+
+/** WiFi connection-status snapshot returned by `wifiService.getStatus()`. */
+export interface WifiStatus {
+  connected: boolean
+  host?: string
+  port?: number
+}
+
+// mDNS discovery runs for ~3 s in main; allow generous headroom for the IPC
+// hop and slow networks.
+const WIFI_DISCOVER_TIMEOUT_MS = 10_000
+
+export const wifiService = {
+  discover: () =>
+    invokeWithTimeout<DiscoveredDevice[]>(IpcChannels.WIFI_DISCOVER, [], WIFI_DISCOVER_TIMEOUT_MS),
+  connect: (host: string, port?: number) =>
+    invoke<UsbResult>(IpcChannels.WIFI_CONNECT, { host, port }),
+  disconnect: () => invoke<UsbResult>(IpcChannels.WIFI_DISCONNECT),
+  getStatus: () => invoke<WifiStatus>(IpcChannels.WIFI_GET_STATUS),
+}
+
+// ---------------------------------------------------------------------------
 // Firmware management
 // ---------------------------------------------------------------------------
 
