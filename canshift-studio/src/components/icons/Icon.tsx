@@ -58,6 +58,10 @@ export const IconBurn = icon(
 export const IconUsb = icon('M8 2v8M5 7l3 3 3-3M4 10h8a2 2 0 0 1 0 4H4a2 2 0 0 1 0-4Z')
 export const IconSimulation = icon('M3 8a5 5 0 1 0 10 0A5 5 0 0 0 3 8Zm3-2 4 2-4 2V6Z')
 export const IconDisconnect = icon('M10 6 6 10M4 4l8 8M2 8a6 6 0 1 0 12 0A6 6 0 0 0 2 8Z')
+// WiFi — three concentric arcs + dot. Used by the WiFi connect tab (#1071).
+export const IconWifi = icon(
+  'M1 6.5a10 10 0 0 1 14 0M3 9a7 7 0 0 1 10 0M5 11.5a4 4 0 0 1 6 0M8 13.5h.01'
+)
 
 // Actions
 export const IconTrash = icon('M3 5h10M5 5V3h6v2M6 8v4M10 8v4M4 5l1 9h6l1-9')

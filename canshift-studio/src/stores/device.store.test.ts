@@ -39,6 +39,8 @@ function resetDeviceStore(): void {
   useDeviceStore.setState({
     status: 'disconnected',
     portPath: null,
+    transport: null,
+    wifiHost: null,
     firmwareVersion: null,
     lastSyncAt: null,
     errorMessage: null,

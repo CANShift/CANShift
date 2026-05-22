@@ -1,9 +1,22 @@
-// device.store.ts — USB device connection state
+// device.store.ts — Device connection state (USB or WiFi).
+//
+// Transport selection is recorded alongside the existing `connected` flag:
+// the renderer's command-issuing code stays transport-agnostic (the IPC
+// dispatch routes through the active transport in main), but UI surfaces
+// that need to label the active link (TopBar, ConnectModal) read `transport`.
 
 import { create } from 'zustand'
 import type { DashboardConfig } from '@tmbk/canshift-core'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
+
+/**
+ * Active link between Studio and the dash (issue #1071).
+ * `null` while disconnected; otherwise the underlying transport that flipped
+ * `connected:true`. The renderer never branches on this for commands — it's
+ * a display-only signal (TopBar label, modal status row).
+ */
+export type Transport = 'usb' | 'wifi'
 
 /**
  * Visible stage of the burn cycle, drives BurnProgressModal:
@@ -39,6 +52,14 @@ export type FirmwareCheck =
 interface DeviceState {
   status: ConnectionStatus
   portPath: string | null
+  /**
+   * Active transport while `connected`. `null` when disconnected. Display-only:
+   * the IPC layer in main dispatches every device command through the active
+   * transport, so call sites never read this to pick a code path (#1071).
+   */
+  transport: Transport | null
+  /** Host address while `transport === 'wifi'`. `null` otherwise. */
+  wifiHost: string | null
   firmwareVersion: string | null
   lastSyncAt: Date | null
   errorMessage: string | null
@@ -68,6 +89,8 @@ interface DeviceState {
   isDayMode: boolean | null
 
   setConnected: (portPath: string) => void
+  /** Mark the device as connected over WiFi at `host`. */
+  setConnectedWifi: (host: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
   setSyncComplete: (at: Date) => void
@@ -136,6 +159,8 @@ function writeManualDisconnect(flag: boolean): void {
 export const useDeviceStore = create<DeviceState>()((set) => ({
   status: 'disconnected',
   portPath: null,
+  transport: null,
+  wifiHost: null,
   firmwareVersion: null,
   lastSyncAt: null,
   errorMessage: null,
@@ -151,13 +176,35 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   manualDisconnect: readManualDisconnect(),
 
   setConnected: (portPath) => {
-    set({ status: 'connected', portPath, connected: true, syncing: false, errorMessage: null })
+    set({
+      status: 'connected',
+      portPath,
+      transport: 'usb',
+      wifiHost: null,
+      connected: true,
+      syncing: false,
+      errorMessage: null,
+    })
+  },
+
+  setConnectedWifi: (host) => {
+    set({
+      status: 'connected',
+      portPath: null,
+      transport: 'wifi',
+      wifiHost: host,
+      connected: true,
+      syncing: false,
+      errorMessage: null,
+    })
   },
 
   setDisconnected: () => {
     set({
       status: 'disconnected',
       portPath: null,
+      transport: null,
+      wifiHost: null,
       connected: false,
       syncing: false,
       isDayMode: null,
@@ -211,11 +258,25 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   },
 
   enterSimulation: () => {
-    set({ simulationMode: true, status: 'connected', connected: true, portPath: null })
+    set({
+      simulationMode: true,
+      status: 'connected',
+      connected: true,
+      portPath: null,
+      transport: null,
+      wifiHost: null,
+    })
   },
 
   exitSimulation: () => {
-    set({ simulationMode: false, status: 'disconnected', connected: false, portPath: null })
+    set({
+      simulationMode: false,
+      status: 'disconnected',
+      connected: false,
+      portPath: null,
+      transport: null,
+      wifiHost: null,
+    })
   },
 
   setLastPushedConfig: (config) => {
