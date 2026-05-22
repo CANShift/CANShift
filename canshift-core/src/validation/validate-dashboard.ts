@@ -17,9 +17,8 @@ import type { z } from 'zod'
 
 import { DashboardConfigSchema } from '../schemas/dashboard.js'
 import type { DashboardConfig } from '../schemas/dashboard.js'
+import { ColorRampSchema } from '../schemas/signal.js'
 import type { SignalConfig } from '../schemas/signal.js'
-
-import { validateSignalCatalog } from './validate-signal.js'
 
 export interface ValidationResult {
   valid: boolean
@@ -54,9 +53,7 @@ export function validateDashboard(
     errors.push(...formatZodIssues(parsed.error.issues))
     // Run the signal catalog check anyway so authors get all errors at once.
     if (options?.signalCatalog) {
-      const sigResult = validateSignalCatalog(options.signalCatalog)
-      errors.push(...sigResult.errors)
-      warnings.push(...sigResult.warnings)
+      errors.push(...validateSignalCatalogIssues(options.signalCatalog))
     }
     return { valid: false, errors, warnings }
   }
@@ -82,9 +79,7 @@ export function validateDashboard(
   }
 
   if (options?.signalCatalog) {
-    const sigResult = validateSignalCatalog(options.signalCatalog)
-    errors.push(...sigResult.errors)
-    warnings.push(...sigResult.warnings)
+    errors.push(...validateSignalCatalogIssues(options.signalCatalog))
   }
 
   // `dashboard` is already the Zod-parsed shape — surface it so callers can
@@ -122,6 +117,40 @@ function formatPath(path: readonly (string | number)[]): string {
     }
   }
   return out
+}
+
+// ---------------------------------------------------------------------------
+// Signal catalog structural check
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-check each signal's `colorRamp` through `ColorRampSchema`. The standalone
+ * `validateSignalCatalog` helper (retired in C-LO-4, umbrella #1016) only ever
+ * checked ramp length + monotonic ascent — the same invariants the schema now
+ * enforces. Callers may hand in an object literal that bypassed the schema
+ * (tests, IPC payloads), so we re-parse the rare per-signal `colorRamp` here
+ * rather than relying on the type. Full-catalog re-parsing is intentionally
+ * skipped — legacy demo `signals.json` files carry `_comment` keys that the
+ * strict catalog schema would reject, and those were never the target of #700.
+ */
+function validateSignalCatalogIssues(catalog: SignalConfig): string[] {
+  const errors: string[] = []
+  catalog.signals.forEach((signal, idx) => {
+    const ramp = signal.colorRamp
+    if (!ramp) return
+    const result = ColorRampSchema.safeParse(ramp)
+    if (result.success) return
+    const prefix = `signals[${idx.toString()}] (${signal.name}).colorRamp`
+    for (const issue of result.error.issues) {
+      const subPath = formatPath(issue.path)
+      errors.push(
+        subPath.length === 0
+          ? `${prefix}: ${issue.message}`
+          : `${prefix}.${subPath}: ${issue.message}`
+      )
+    }
+  })
+  return errors
 }
 
 // ---------------------------------------------------------------------------

@@ -20,17 +20,6 @@ export const HexColorSchema = z.custom<`#${string}`>(
   { message: 'must be a 6-digit hex color (e.g. "#FF4444")' }
 )
 
-/** Widget type discriminant. */
-export const WidgetTypeSchema = z.enum([
-  'gauge',
-  'warning',
-  'button',
-  'timer',
-  'bar',
-  'gear',
-  'image',
-])
-
 /**
  * Widget position and size in pixels on the 320×240 canvas.
  *
@@ -99,9 +88,6 @@ export const SemVerSchema = z.custom<`${number}.${number}.${number}`>(
 
 /** Hex color string — e.g. "#FF4444". */
 export type HexColor = z.infer<typeof HexColorSchema>
-
-/** Widget type discriminant. */
-export type WidgetType = z.infer<typeof WidgetTypeSchema>
 
 /** Widget position and size in pixels on a 320×240 canvas. */
 export type WidgetLayout = z.infer<typeof WidgetLayoutSchema>
