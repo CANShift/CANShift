@@ -2,10 +2,13 @@
 
 import { lazy, Suspense, type ReactElement } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import EditorRoute from './routes/EditorRoute'
 
-// Secondary routes — code-split so the editor's first paint isn't blocked on
-// signal mapping, CAN scanner, firmware updater, or device config bundles.
+// All routes are code-split. `EditorRoute` is the largest payload (Canvas,
+// WidgetPalette, PropertyPanel, TestValuesPanel) so deferring it shaves the
+// initial chunk substantially even though `/editor` is the default landing
+// route — the chunk fetches in parallel while the Suspense fallback renders.
+// Audit S-M-1, umbrella #1015.
+const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 const SignalRoute = lazy(() => import('./routes/SignalRoute'))
 const UpdateRoute = lazy(() => import('./routes/UpdateRoute'))
 const CanScannerRoute = lazy(() => import('./routes/CanScannerRoute'))
@@ -69,18 +72,9 @@ import VersionMismatchBanner from './components/shared/VersionMismatchBanner'
 import DemoFallbackBanner from './components/shared/DemoFallbackBanner'
 import BootLoopBanner from './components/shared/BootLoopBanner'
 import ErrorBoundary from './components/shared/ErrorBoundary'
-import { useMenuEvents } from './hooks/useMenuEvents'
-import { useFirmwareCheck } from './hooks/useFirmwareCheck'
-import { useSessionRestore } from './hooks/useSessionRestore'
-import { useAutoConnect } from './hooks/useAutoConnect'
-import { useDeviceConfigLoad } from './hooks/useDeviceConfigLoad'
-import { useDirtySync } from './hooks/useDirtySync'
-import { useBurnPhaseTracker } from './hooks/useBurnPhaseTracker'
-import { useUsbEvents } from './hooks/useUsbEvents'
-import { useBootLoopDetector } from './hooks/useBootLoopDetector'
+import { useApplicationBoot } from './hooks/useApplicationBoot'
 import { useDeviceStore } from './stores/device.store'
 import { useCliDetach } from './cli/useCliDetach'
-import { useCliLogBridge } from './cli/useCliLogBridge'
 import PushDiffDialog from './components/shared/PushDiffDialog'
 import BurnProgressModal from './components/shared/BurnProgressModal'
 import BurnFailedDialog from './components/shared/BurnFailedDialog'
@@ -95,16 +89,9 @@ function assertNever(value: never): never {
 }
 
 export default function App() {
-  useUsbEvents()
-  useMenuEvents()
-  useFirmwareCheck()
-  useDeviceConfigLoad()
-  useSessionRestore()
-  useAutoConnect()
-  useDirtySync()
-  useBurnPhaseTracker()
-  useCliLogBridge()
-  useBootLoopDetector()
+  // Single root-mount call — see useApplicationBoot.ts for the hook order
+  // contract and rationale (audit S-L-5, umbrella #1015).
+  useApplicationBoot()
 
   // Boot splash — hides once `BootScreen` calls back `onDone`. Lives in
   // `App` state (not a store) because every fresh React mount should replay
@@ -173,7 +160,9 @@ export default function App() {
                 path="/editor"
                 element={
                   <ErrorBoundary>
-                    <EditorRoute />
+                    <Suspense fallback={<RouteLoading />}>
+                      <EditorRoute />
+                    </Suspense>
                   </ErrorBoundary>
                 }
               />
