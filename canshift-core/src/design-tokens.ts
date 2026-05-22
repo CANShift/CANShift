@@ -80,37 +80,18 @@ export const DARK_TOKENS = {
 } as const satisfies DesignTokens
 
 /**
- * Light palette — placeholder values mirroring DARK_TOKENS. The theme editor
- * (issue #21) is on hold; intentionally *not* re-exported from the package
- * barrel until a real consumer lands. Kept exported here so the shape check
- * in design-tokens.test.ts catches drift against DARK_TOKENS.
+ * Light palette — placeholder alias of `DARK_TOKENS`. The theme editor
+ * (issue #21) is on hold, so until a real light palette lands we deliberately
+ * point at the dark one rather than duplicating the literal (audit C-ME-7,
+ * umbrella #1016) — a future divergence then has to be intentional.
+ *
+ * Intentionally *not* re-exported from the package barrel until a real
+ * consumer lands. Kept exported here so the shape check in
+ * design-tokens.test.ts catches drift against DARK_TOKENS.
+ *
+ * TODO(#21): replace with a real light-mode palette when the theme editor ships.
  */
-export const LIGHT_TOKENS = {
-  colors: {
-    bg: '#121212',
-    surface: '#1F1F1F',
-    surface2: '#292929',
-    border: '#333333',
-    primary: '#FF4747',
-    primaryForeground: '#FFFFFF',
-    secondary: '#292929',
-    secondaryForeground: '#FFFFFF',
-    accent: '#FF8800',
-    accentForeground: '#FFFFFF',
-    destructive: '#FF0000',
-    destructiveForeground: '#FFFFFF',
-    text: '#FFFFFF',
-    textDim: '#BABABA',
-    textMuted: '#8F8F8F',
-    success: '#00CC2A',
-    warning: '#FF8800',
-    danger: '#FF0000',
-    ring: '#FF4747',
-  },
-  radii: { sm: 4, md: 8, lg: 12, full: 9999 },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
-  typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
-} as const satisfies DesignTokens
+export const LIGHT_TOKENS: DesignTokens = DARK_TOKENS
 
 interface RgbChannels {
   r: number
