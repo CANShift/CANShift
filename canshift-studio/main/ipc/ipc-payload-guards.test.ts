@@ -117,17 +117,17 @@ describe('isPlainObject — payload guard for config / settings / device-config'
 describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
   it('accepts a payload with brightness + sleep + rotation 0', () => {
     const result = parseScreenSettings({ brightness: 80, sleep: 30, rotation: 0 })
-    expect(result).toEqual({ brightness: 80, sleep: 30, rotation: 0 })
+    expect(result).toEqual({ ok: true, data: { brightness: 80, sleep: 30, rotation: 0 } })
   })
 
   it('accepts a payload with rotation 180', () => {
     const result = parseScreenSettings({ brightness: 50, sleep: 0, rotation: 180 })
-    expect(result).toEqual({ brightness: 50, sleep: 0, rotation: 180 })
+    expect(result).toEqual({ ok: true, data: { brightness: 50, sleep: 0, rotation: 180 } })
   })
 
   it('accepts a payload without rotation (omitted is fine)', () => {
     const result = parseScreenSettings({ brightness: 100, sleep: 60 })
-    expect(result).toEqual({ brightness: 100, sleep: 60 })
+    expect(result).toEqual({ ok: true, data: { brightness: 100, sleep: 60 } })
   })
 
   it('drops the rotation key entirely when it was undefined (vs. setting it to undefined)', () => {
@@ -136,8 +136,27 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
     // in some serialisers. The current implementation guarantees the key is
     // omitted, lock that down.
     const result = parseScreenSettings({ brightness: 100, sleep: 60 })
-    expect(result).not.toBeNull()
-    expect(Object.prototype.hasOwnProperty.call(result, 'rotation')).toBe(false)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(Object.prototype.hasOwnProperty.call(result.data, 'rotation')).toBe(false)
+    }
+  })
+
+  // Audit S-H-1 (#1015) round 2 — the helper now returns a structured Result
+  // envelope so the IPC handler can forward typed `error` / `issues` /
+  // `friendlyIssues` arrays straight to the renderer without re-running the
+  // parse. Lock the shape down so a regression that drops one of those keys
+  // is caught here, not when a user surfaces a broken toast.
+  it('returns ok:false with a typed error envelope on failure', () => {
+    const result = parseScreenSettings({ brightness: -9999, sleep: 0 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(typeof result.error).toBe('string')
+      expect(result.error.length).toBeGreaterThan(0)
+      expect(Array.isArray(result.issues)).toBe(true)
+      expect(result.issues.length).toBeGreaterThan(0)
+      expect(Array.isArray(result.friendlyIssues)).toBe(true)
+    }
   })
 
   // Critical regression: 90/270 must not slip through. A device that boots
@@ -158,7 +177,7 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
 
   for (const { label, rotation } of invalidRotations) {
     it(`rejects rotation ${label}`, () => {
-      expect(parseScreenSettings({ brightness: 50, sleep: 30, rotation })).toBeNull()
+      expect(parseScreenSettings({ brightness: 50, sleep: 30, rotation }).ok).toBe(false)
     })
   }
 
@@ -178,7 +197,7 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
 
   for (const { label, value } of invalidEnvelopes) {
     it(`rejects ${label}`, () => {
-      expect(parseScreenSettings(value)).toBeNull()
+      expect(parseScreenSettings(value).ok).toBe(false)
     })
   }
 
@@ -186,7 +205,10 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
     // 0 is the documented lower bound for brightness so users can turn the
     // backlight off. Locking it down prevents an over-eager refactor from
     // bumping the floor and breaking that behaviour.
-    expect(parseScreenSettings({ brightness: 0, sleep: 0 })).toEqual({ brightness: 0, sleep: 0 })
+    expect(parseScreenSettings({ brightness: 0, sleep: 0 })).toEqual({
+      ok: true,
+      data: { brightness: 0, sleep: 0 },
+    })
   })
 
   // Audit finding S-H-1 (#1015) — the previous Number.isFinite-only guard
@@ -204,12 +226,12 @@ describe('parseScreenSettings — rotation must be 0 | 180 only', () => {
   ]
   for (const { label, payload } of outOfBoundsCases) {
     it(`rejects ${label} (audit S-H-1)`, () => {
-      expect(parseScreenSettings(payload)).toBeNull()
+      expect(parseScreenSettings(payload).ok).toBe(false)
     })
   }
 
   it('rejects unknown top-level keys (strict schema)', () => {
-    expect(parseScreenSettings({ brightness: 80, sleep: 30, mystery: 1 })).toBeNull()
+    expect(parseScreenSettings({ brightness: 80, sleep: 30, mystery: 1 }).ok).toBe(false)
   })
 })
 
