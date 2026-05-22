@@ -2,7 +2,12 @@
 
 import { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } from 'electron'
 import { join, basename } from 'path'
-import { disposeIpcHandlers, registerIpcHandlers, usbService } from './ipc/ipc-handlers'
+import {
+  disposeIpcHandlers,
+  registerIpcHandlers,
+  usbService,
+  wifiService,
+} from './ipc/ipc-handlers'
 import { buildMenu } from './menu'
 import { initUpdater } from './services/updater.service'
 import { firmwareService } from './services/firmware.service'
@@ -311,6 +316,13 @@ app.on('before-quit', () => {
     logMain(
       'warn',
       `USB disconnect on quit failed: ${err instanceof Error ? err.message : String(err)}`
+    )
+  })
+  // Close WiFi socket if open (issue #1071) — same best-effort policy.
+  wifiService.disconnect().catch((err: unknown) => {
+    logMain(
+      'warn',
+      `WiFi disconnect on quit failed: ${err instanceof Error ? err.message : String(err)}`
     )
   })
   // Stop the 10 Hz CAN-frame flush interval so Node's event loop can drain.

@@ -41,6 +41,11 @@ export const INVOKE_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.USB_TOGGLE_DAY_NIGHT,
   C.USB_SET_DAY_NIGHT,
   C.USB_CALIBRATE_TOUCH,
+  // WiFi device operations (issue #1071)
+  C.WIFI_DISCOVER,
+  C.WIFI_CONNECT,
+  C.WIFI_DISCONNECT,
+  C.WIFI_GET_STATUS,
   // CAN scanner
   C.CAN_SCAN_START,
   C.CAN_SCAN_STOP,
@@ -97,6 +102,9 @@ export const LISTEN_ALLOWED: ReadonlySet<IpcChannel> = new Set<IpcChannel>([
   C.USB_DATA_RECEIVED,
   C.USB_ERROR,
   C.USB_DEVICE_LOG,
+  // WiFi events (issue #1071) — connection edges only; telemetry / CAN / log
+  // events are reused from the USB channels (transport-agnostic dispatch).
+  C.WIFI_CONNECTION_CHANGED,
   C.CAN_FRAME_BATCH,
   C.CAN_HEALTH_UPDATE,
   // Firmware download progress

@@ -89,7 +89,9 @@ const usbServiceMock = vi.hoisted(() => ({
   disconnect: vi.fn(),
   pushConfig: vi.fn(),
   pushScreenSettings: vi.fn(),
-  getStatus: vi.fn(),
+  // Default to a disconnected USB so activeTransport() doesn't claim a
+  // session was live during WIFI_CONNECT tests. Individual tests override.
+  getStatus: vi.fn<() => { connected: boolean }>(() => ({ connected: false })),
   rebootDevice: vi.fn(),
   toggleDayNight: vi.fn(),
   setDayNight: vi.fn(),
@@ -103,6 +105,34 @@ vi.mock('../services/usb.service', () => ({
   UsbService: function UsbService(): unknown {
     return usbServiceMock
   },
+}))
+
+// WiFi service mock (#1071) — same shape contract as the USB service. The
+// activeTransport() helper in ipc-handlers.ts selects this over USB whenever
+// `isConnected()` returns true.
+const wifiServiceMock = vi.hoisted(() => ({
+  setEventHandlers: vi.fn(),
+  discover: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  pushConfig: vi.fn(),
+  pushScreenSettings: vi.fn(),
+  getStatus: vi.fn<() => { connected: boolean }>(() => ({ connected: false })),
+  rebootDevice: vi.fn(),
+  toggleDayNight: vi.fn(),
+  setDayNight: vi.fn(),
+  calibrateTouch: vi.fn(),
+  startCanScan: vi.fn(),
+  stopCanScan: vi.fn(),
+  queryVersion: vi.fn(),
+  getConfig: vi.fn(),
+  isConnected: vi.fn<() => boolean>(() => false),
+}))
+vi.mock('../services/wifi.service', () => ({
+  WifiService: function WifiService(): unknown {
+    return wifiServiceMock
+  },
+  DEFAULT_WIFI_PORT: 5050,
 }))
 
 const updaterMock = vi.hoisted(() => ({
@@ -219,6 +249,11 @@ beforeEach(() => {
   handlerRegistry.on.mockClear()
   for (const fn of Object.values(configFileMock)) fn.mockReset()
   for (const fn of Object.values(usbServiceMock)) fn.mockReset()
+  // Restore the default getStatus stub after the reset above wipes it.
+  usbServiceMock.getStatus.mockImplementation(() => ({ connected: false }))
+  for (const fn of Object.values(wifiServiceMock)) fn.mockReset()
+  wifiServiceMock.getStatus.mockImplementation(() => ({ connected: false }))
+  wifiServiceMock.isConnected.mockImplementation(() => false)
   for (const fn of Object.values(firmwareMock)) fn.mockReset()
   for (const fn of Object.values(sessionMock)) fn.mockReset()
   for (const fn of Object.values(cliWindowMock)) fn.mockReset()
@@ -259,6 +294,10 @@ describe('registerIpcHandlers — channel registration', () => {
       IpcChannels.USB_TOGGLE_DAY_NIGHT,
       IpcChannels.USB_SET_DAY_NIGHT,
       IpcChannels.USB_CALIBRATE_TOUCH,
+      IpcChannels.WIFI_DISCOVER,
+      IpcChannels.WIFI_CONNECT,
+      IpcChannels.WIFI_DISCONNECT,
+      IpcChannels.WIFI_GET_STATUS,
       IpcChannels.CAN_SCAN_START,
       IpcChannels.CAN_SCAN_STOP,
       IpcChannels.FIRMWARE_QUERY_VERSION,

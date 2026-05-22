@@ -32,6 +32,19 @@ export const IpcChannels = {
   // Structured firmware log line — payload: { level, tag, message }
   USB_DEVICE_LOG: 'usb:device-log',
 
+  // WiFi device operations (issue #1071) — parallel to the USB surface.
+  // Discovery uses mDNS (`_canshift._tcp`); transport is TCP JSON-lines on
+  // port 5050. Same protocol as USB so the renderer's command-issuing path
+  // is transport-agnostic at the IPC dispatch level.
+  WIFI_DISCOVER: 'wifi:discover',
+  WIFI_CONNECT: 'wifi:connect',
+  WIFI_DISCONNECT: 'wifi:disconnect',
+  WIFI_GET_STATUS: 'wifi:get-status',
+  // WiFi events (main → renderer) — connection edges only. Telemetry, CAN
+  // frames, CAN health and device logs are reused from the USB channels so
+  // every renderer surface stays transport-agnostic.
+  WIFI_CONNECTION_CHANGED: 'wifi:connection-changed',
+
   // CAN scanner
   CAN_SCAN_START: 'can:scan-start',
   CAN_SCAN_STOP: 'can:scan-stop',

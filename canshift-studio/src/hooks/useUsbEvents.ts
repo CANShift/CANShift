@@ -28,6 +28,18 @@ interface ConnectionChangedPayload {
   intentional: boolean
 }
 
+/**
+ * WiFi-side connection-changed payload (#1071). Same shape as the USB one
+ * except `portPath` is replaced by `host` (the dash's IP address). Kept as a
+ * distinct interface so the renderer doesn't have to invent a synthetic
+ * portPath for the WiFi transport.
+ */
+interface WifiConnectionChangedPayload {
+  connected: boolean
+  host: string | null
+  intentional: boolean
+}
+
 interface AppLogPayload {
   level: LogLevel
   message: string
@@ -57,6 +69,12 @@ function isConnectionChangedPayload(v: unknown): v is ConnectionChangedPayload {
   return typeof o.connected === 'boolean' && typeof o.intentional === 'boolean'
 }
 
+function isWifiConnectionChangedPayload(v: unknown): v is WifiConnectionChangedPayload {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.connected === 'boolean' && typeof o.intentional === 'boolean'
+}
+
 function isAppLogPayload(v: unknown): v is AppLogPayload {
   return typeof v === 'object' && v !== null && 'message' in v && 'level' in v
 }
@@ -78,6 +96,7 @@ function isCanHealth(v: unknown): v is CanHealth {
  */
 export function useUsbEvents(): void {
   const setConnected = useDeviceStore((s) => s.setConnected)
+  const setConnectedWifi = useDeviceStore((s) => s.setConnectedWifi)
   const setDisconnected = useDeviceStore((s) => s.setDisconnected)
   const setError = useDeviceStore((s) => s.setError)
   const log = useLogStore((s) => s.push)
@@ -98,6 +117,19 @@ export function useUsbEvents(): void {
       if (!isConnectionChangedPayload(payload)) return
       if (payload.connected) {
         if (payload.portPath !== null) setConnected(payload.portPath)
+      } else {
+        setDisconnected()
+        if (!payload.intentional) log('warn', 'Device disconnected unexpectedly')
+      }
+    }
+
+    // WiFi connection edges (#1071). Same intentional-flag contract as USB so
+    // voluntary disconnects don't pollute the log with "disconnected
+    // unexpectedly". Payload carries `host` instead of `portPath`.
+    const handleWifiConnectionChanged = (payload: unknown): void => {
+      if (!isWifiConnectionChangedPayload(payload)) return
+      if (payload.connected) {
+        if (payload.host !== null) setConnectedWifi(payload.host)
       } else {
         setDisconnected()
         if (!payload.intentional) log('warn', 'Device disconnected unexpectedly')
@@ -150,6 +182,7 @@ export function useUsbEvents(): void {
     }
 
     window.ipc.on(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
+    window.ipc.on(IpcChannels.WIFI_CONNECTION_CHANGED, handleWifiConnectionChanged)
     window.ipc.on(IpcChannels.USB_ERROR, handleError)
     window.ipc.on(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
     window.ipc.on(IpcChannels.APP_LOG, handleAppLog)
@@ -157,10 +190,20 @@ export function useUsbEvents(): void {
 
     return () => {
       window.ipc.off(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
+      window.ipc.off(IpcChannels.WIFI_CONNECTION_CHANGED, handleWifiConnectionChanged)
       window.ipc.off(IpcChannels.USB_ERROR, handleError)
       window.ipc.off(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
       window.ipc.off(IpcChannels.APP_LOG, handleAppLog)
       window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
     }
-  }, [setConnected, setDisconnected, setError, log, updateCanHealth, pushError, pushOrUpdateError])
+  }, [
+    setConnected,
+    setConnectedWifi,
+    setDisconnected,
+    setError,
+    log,
+    updateCanHealth,
+    pushError,
+    pushOrUpdateError,
+  ])
 }
