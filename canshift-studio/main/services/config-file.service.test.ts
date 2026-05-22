@@ -416,3 +416,85 @@ describe('ConfigFileService.exportFile — does not bind the working file', () =
     expect(result.error).toMatch(/Failed to export config:/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Safe error codes for openFilePath (umbrella #1018, SEC-L-1)
+// ---------------------------------------------------------------------------
+//
+// Previously the renderer received raw OS errno strings like
+// "ENOENT: no such file or directory, open '/Users/foo/secret.json'".
+// Those leak FS layout AND the platform's libuv vocabulary. openFilePath
+// now collapses to a small safe set: not_found, permission_denied,
+// io_error, invalid_path. The full underlying error is logged main-side.
+import { mapFileError, type ConfigFileErrorCode } from './config-file.service'
+
+describe('mapFileError — safe error code mapping (#1018, SEC-L-1)', () => {
+  it.each<[string, ConfigFileErrorCode]>([
+    ['ENOENT', 'not_found'],
+    ['EACCES', 'permission_denied'],
+    ['EPERM', 'permission_denied'],
+    ['EISDIR', 'invalid_path'],
+    ['ENOTDIR', 'invalid_path'],
+    ['EINVAL', 'invalid_path'],
+    ['EIO', 'io_error'],
+    ['EBUSY', 'io_error'],
+    ['UNKNOWN', 'io_error'],
+  ])('maps Node fs error code %s to %s', (code, expected) => {
+    const err = Object.assign(new Error('fs error'), { code })
+    expect(mapFileError(err)).toBe(expected)
+  })
+
+  it('maps a JSON parse SyntaxError to invalid_path', () => {
+    let err: unknown
+    try {
+      JSON.parse('{ not json')
+    } catch (caught) {
+      err = caught
+    }
+    expect(mapFileError(err)).toBe('invalid_path')
+  })
+
+  it('falls back to io_error for non-Error values', () => {
+    expect(mapFileError('something went wrong')).toBe('io_error')
+    expect(mapFileError(undefined)).toBe('io_error')
+    expect(mapFileError(null)).toBe('io_error')
+  })
+})
+
+describe('ConfigFileService.openFilePath — error responses use safe codes (#1018, SEC-L-1)', () => {
+  it('returns "not_found" without leaking the path on a missing file', async () => {
+    const target = join(workDir, 'does-not-exist.json')
+    const service = new ConfigFileService(() => [target])
+
+    const result = await service.openFilePath(target)
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('not_found')
+    // Must not surface the absolute path or the libuv message.
+    expect(result.error).not.toContain(workDir)
+    expect(result.error).not.toMatch(/ENOENT/i)
+  })
+
+  it('returns "invalid_path" on malformed JSON without leaking the parser message', async () => {
+    const target = join(workDir, 'broken.json')
+    await writeFile(target, '{ not json', 'utf-8')
+    const service = new ConfigFileService(() => [target])
+
+    const result = await service.openFilePath(target)
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('invalid_path')
+    expect(result.error).not.toContain('JSON')
+    expect(result.error).not.toContain(target)
+  })
+
+  it('still returns the unchanged "blocked: …" message for an unsurfaced path', async () => {
+    // The allowlist guard runs before the FS reach, so its message stays
+    // unchanged — it's not an OS errno and carries no FS structure.
+    const service = new ConfigFileService(() => [])
+    const result = await service.openFilePath(join(workDir, 'never-shown.json'))
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('blocked: path not previously surfaced')
+  })
+})

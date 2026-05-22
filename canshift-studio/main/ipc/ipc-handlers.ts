@@ -210,6 +210,29 @@ function activeTransport(): UsbService | WifiService {
 // loop alive past app.quit().
 let canBatchFlushTimer: NodeJS.Timeout | null = null
 
+// ---------------------------------------------------------------------------
+// Surfaced-port allowlist (umbrella #1018, SEC-M-3)
+// ---------------------------------------------------------------------------
+//
+// The renderer passes a `portPath` string straight into `new SerialPort({path})`
+// from three handlers: USB_CONNECT, FIRMWARE_ENTER_FLASH, FIRMWARE_RETRY_RESET.
+// Without a guard, a compromised renderer could pass an arbitrary OS device
+// path (e.g. `/dev/disk0`) and open it for read/write. We mitigate by tracking
+// the set of paths the main process has actually enumerated via
+// `usbService.listPorts()` and refusing any path the renderer was never shown.
+//
+// The set is rebuilt on every USB_LIST_PORTS — invalidation is implicit: paths
+// that disappear from a fresh enumeration are dropped. Exported for tests.
+const surfacedPortPaths = new Set<string>()
+
+export function _resetSurfacedPortsForTest(): void {
+  surfacedPortPaths.clear()
+}
+
+export function _surfacedPortsForTest(): ReadonlySet<string> {
+  return surfacedPortPaths
+}
+
 /** Stop background timers owned by ipc-handlers. Call from app `before-quit`. */
 export function disposeIpcHandlers(): void {
   if (canBatchFlushTimer !== null) {
@@ -401,12 +424,50 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // ---------------------------------------------------------------------------
 
   ipcMain.handle(IpcChannels.USB_LIST_PORTS, async () => {
-    return usbService.listPorts()
+    const ports = await usbService.listPorts()
+    // Rebuild the allowlist from scratch on every enumeration (#1018, SEC-M-3).
+    // A path that was unplugged drops out; a freshly-plugged one becomes
+    // openable. The renderer can only request paths it was just shown.
+    surfacedPortPaths.clear()
+    for (const p of ports) {
+      if (typeof p.path === 'string' && p.path.length > 0) {
+        surfacedPortPaths.add(p.path)
+      }
+    }
+    // Pre-seed any persisted "last port" so SESSION_GET_LAST_PORT-driven
+    // auto-reconnect still works after the OS re-enumerates with the same
+    // path. The renderer's auto-connect path doesn't always call
+    // USB_LIST_PORTS first (#696).
+    const lastPort = sessionService.getLastPortPath()
+    if (typeof lastPort === 'string' && lastPort.length > 0) {
+      surfacedPortPaths.add(lastPort)
+    }
+    return ports
   })
+
+  /**
+   * Refuse a renderer-supplied port path the main process never enumerated.
+   * The three handlers below feed `portPath` straight into `new SerialPort`,
+   * which on a Unix-y OS would happily open `/dev/disk0` for read/write.
+   */
+  function rejectUnsurfacedPort(
+    channel: string,
+    portPath: string
+  ): { status: 'error'; message: 'unknown_port' } {
+    safeSend(IpcChannels.APP_LOG, {
+      level: 'warn',
+      message: `Refused ${channel} — unknown port ${portPath} (not in surfaced allowlist)`,
+      ts: Date.now(),
+    })
+    return { status: 'error', message: 'unknown_port' }
+  }
 
   ipcMain.handle(IpcChannels.USB_CONNECT, async (_event, portPath: unknown) => {
     if (!isNonEmptyString(portPath)) {
       return { success: false, error: 'portPath must be a non-empty string' }
+    }
+    if (!surfacedPortPaths.has(portPath)) {
+      return rejectUnsurfacedPort('USB_CONNECT', portPath)
     }
     // Refuse any USB connect while a flash is in progress — the renderer's auto-connect
     // would otherwise grab the port between enterFlash() and navigator.serial.requestPort().
@@ -559,6 +620,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!isNonEmptyString(portPath)) {
       return { success: false, error: 'portPath must be a non-empty string' }
     }
+    if (!surfacedPortPaths.has(portPath)) {
+      return rejectUnsurfacedPort('FIRMWARE_ENTER_FLASH', portPath)
+    }
     // Disconnect the Node.js serial port so the renderer can use Web Serial API on the same port
     await usbService.disconnect()
     // Drive the BOOT-mode reset from the main process — Web Serial's setSignals
@@ -600,6 +664,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.FIRMWARE_RETRY_RESET, async (_event, portPath: unknown) => {
     if (!isNonEmptyString(portPath)) {
       return { success: false, error: 'portPath must be a non-empty string' }
+    }
+    if (!surfacedPortPaths.has(portPath)) {
+      return rejectUnsurfacedPort('FIRMWARE_RETRY_RESET', portPath)
     }
     const reset = await firmwareService.resetIntoBootloader(portPath)
     if (!reset.success) {

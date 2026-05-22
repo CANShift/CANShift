@@ -193,7 +193,7 @@ vi.mock('node:fs/promises', async () => {
   return { ...actual, writeFile: vi.fn(), readFile: vi.fn() }
 })
 
-import { registerIpcHandlers } from './ipc-handlers'
+import { registerIpcHandlers, _resetSurfacedPortsForTest } from './ipc-handlers'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -247,6 +247,8 @@ beforeEach(() => {
   handlerRegistry.sendListeners.clear()
   handlerRegistry.handle.mockClear()
   handlerRegistry.on.mockClear()
+  // Module-level allowlist state must not leak between tests (#1018 SEC-M-3).
+  _resetSurfacedPortsForTest()
   for (const fn of Object.values(configFileMock)) fn.mockReset()
   for (const fn of Object.values(usbServiceMock)) fn.mockReset()
   // Restore the default getStatus stub after the reset above wipes it.
@@ -341,7 +343,16 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
     expect(result).toEqual({ success: false, error: 'portPath must be a non-empty string' })
   })
 
+  // Helper — populate the surfaced-port allowlist by invoking USB_LIST_PORTS
+  // the way the renderer does at app boot. Tests that need to reach the
+  // service must first surface the port through enumerate (#1018, SEC-M-3).
+  async function surfacePort(path: string): Promise<void> {
+    usbServiceMock.listPorts.mockResolvedValueOnce([{ path }])
+    await getHandler(IpcChannels.USB_LIST_PORTS)(makeEvent())
+  }
+
   it('USB_CONNECT short-circuits while a flash is in progress (no connect call)', async () => {
+    await surfacePort('/dev/tty.usbserial')
     firmwareMock.getFlashPort.mockReturnValue('/dev/tty.usbserial')
     const handler = getHandler(IpcChannels.USB_CONNECT)
     const result = await handler(makeEvent(), '/dev/tty.usbserial')
@@ -350,6 +361,7 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
   })
 
   it('USB_CONNECT delegates and persists the port on success', async () => {
+    await surfacePort('/dev/tty.usbserial')
     firmwareMock.getFlashPort.mockReturnValue(null)
     usbServiceMock.connect.mockResolvedValueOnce({ success: true })
     const handler = getHandler(IpcChannels.USB_CONNECT)
@@ -361,12 +373,107 @@ describe('USB IPC handlers — payload validation and service delegation', () =>
   })
 
   it('USB_CONNECT does NOT persist the port when the connect fails', async () => {
+    await surfacePort('/dev/tty.usbserial')
     firmwareMock.getFlashPort.mockReturnValue(null)
     usbServiceMock.connect.mockResolvedValueOnce({ success: false, error: 'EBUSY' })
     const handler = getHandler(IpcChannels.USB_CONNECT)
 
     await handler(makeEvent(), '/dev/tty.usbserial')
     expect(sessionMock.setLastPortPath).not.toHaveBeenCalled()
+  })
+
+  // -----------------------------------------------------------------------
+  // Surfaced-port allowlist (umbrella #1018, SEC-M-3)
+  // -----------------------------------------------------------------------
+
+  it('USB_LIST_PORTS populates the allowlist with enumerated paths', async () => {
+    usbServiceMock.listPorts.mockResolvedValueOnce([
+      { path: '/dev/tty.usbserial-A' },
+      { path: '/dev/tty.usbserial-B' },
+    ])
+    await getHandler(IpcChannels.USB_LIST_PORTS)(makeEvent())
+
+    // Both surfaced paths are now connectable.
+    firmwareMock.getFlashPort.mockReturnValue(null)
+    usbServiceMock.connect.mockResolvedValue({ success: true })
+
+    const a = await getHandler(IpcChannels.USB_CONNECT)(makeEvent(), '/dev/tty.usbserial-A')
+    const b = await getHandler(IpcChannels.USB_CONNECT)(makeEvent(), '/dev/tty.usbserial-B')
+    expect(a).toEqual({ success: true })
+    expect(b).toEqual({ success: true })
+  })
+
+  it('USB_CONNECT rejects a path that was never surfaced via USB_LIST_PORTS', async () => {
+    // No prior enumerate → allowlist is empty.
+    firmwareMock.getFlashPort.mockReturnValue(null)
+    const handler = getHandler(IpcChannels.USB_CONNECT)
+
+    const result = await handler(makeEvent(), '/dev/disk0')
+    expect(result).toEqual({ status: 'error', message: 'unknown_port' })
+    expect(usbServiceMock.connect).not.toHaveBeenCalled()
+  })
+
+  it('USB_LIST_PORTS rebuilds the allowlist from scratch on every call', async () => {
+    // First enumerate surfaces port A.
+    await surfacePort('/dev/tty.usbserial-A')
+
+    // Second enumerate surfaces only B — A must drop out of the allowlist.
+    usbServiceMock.listPorts.mockResolvedValueOnce([{ path: '/dev/tty.usbserial-B' }])
+    await getHandler(IpcChannels.USB_LIST_PORTS)(makeEvent())
+
+    firmwareMock.getFlashPort.mockReturnValue(null)
+    const stale = await getHandler(IpcChannels.USB_CONNECT)(makeEvent(), '/dev/tty.usbserial-A')
+    expect(stale).toEqual({ status: 'error', message: 'unknown_port' })
+    expect(usbServiceMock.connect).not.toHaveBeenCalled()
+  })
+
+  it('USB_LIST_PORTS also seeds the persisted last-port path so auto-reconnect survives a relaunch', async () => {
+    sessionMock.getLastPortPath.mockReturnValue('/dev/tty.usbserial-A')
+    usbServiceMock.listPorts.mockResolvedValueOnce([])
+    await getHandler(IpcChannels.USB_LIST_PORTS)(makeEvent())
+
+    firmwareMock.getFlashPort.mockReturnValue(null)
+    usbServiceMock.connect.mockResolvedValueOnce({ success: true })
+    const result = await getHandler(IpcChannels.USB_CONNECT)(makeEvent(), '/dev/tty.usbserial-A')
+    expect(result).toEqual({ success: true })
+  })
+
+  it('FIRMWARE_ENTER_FLASH rejects an unsurfaced port path', async () => {
+    const result = await getHandler(IpcChannels.FIRMWARE_ENTER_FLASH)(makeEvent(), '/dev/disk0')
+    expect(result).toEqual({ status: 'error', message: 'unknown_port' })
+    expect(firmwareMock.resetIntoBootloader).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_ENTER_FLASH accepts a surfaced port path', async () => {
+    await surfacePort('/dev/tty.usbserial')
+    usbServiceMock.disconnect.mockResolvedValueOnce({ success: true })
+    firmwareMock.resetIntoBootloader.mockResolvedValueOnce({ success: true })
+
+    const result = await getHandler(IpcChannels.FIRMWARE_ENTER_FLASH)(
+      makeEvent(),
+      '/dev/tty.usbserial'
+    )
+    expect(result).toEqual({ success: true })
+    expect(firmwareMock.resetIntoBootloader).toHaveBeenCalledWith('/dev/tty.usbserial')
+    expect(firmwareMock.setFlashPort).toHaveBeenCalledWith('/dev/tty.usbserial')
+  })
+
+  it('FIRMWARE_RETRY_RESET rejects an unsurfaced port path', async () => {
+    const result = await getHandler(IpcChannels.FIRMWARE_RETRY_RESET)(makeEvent(), '/dev/disk0')
+    expect(result).toEqual({ status: 'error', message: 'unknown_port' })
+    expect(firmwareMock.resetIntoBootloader).not.toHaveBeenCalled()
+  })
+
+  it('FIRMWARE_RETRY_RESET accepts a surfaced port path', async () => {
+    await surfacePort('/dev/tty.usbserial')
+    firmwareMock.resetIntoBootloader.mockResolvedValueOnce({ success: true })
+
+    const result = await getHandler(IpcChannels.FIRMWARE_RETRY_RESET)(
+      makeEvent(),
+      '/dev/tty.usbserial'
+    )
+    expect(result).toEqual({ success: true })
+    expect(firmwareMock.resetIntoBootloader).toHaveBeenCalledWith('/dev/tty.usbserial')
   })
 
   it('USB_PUSH_CONFIG rejects a non-object config with structured Zod issues (issue #698)', async () => {
@@ -826,6 +933,13 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
     registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
   })
 
+  // Helper — populate the surfaced-port allowlist (#1018, SEC-M-3). Firmware
+  // flash handlers refuse a port the main process never enumerated.
+  async function surfaceFlashPort(path: string): Promise<void> {
+    usbServiceMock.listPorts.mockResolvedValueOnce([{ path }])
+    await getHandler(IpcChannels.USB_LIST_PORTS)(makeEvent())
+  }
+
   it('FIRMWARE_LIST_RELEASES forwards the channel arg', async () => {
     firmwareMock.listReleases.mockResolvedValueOnce([])
     await getHandler(IpcChannels.FIRMWARE_LIST_RELEASES)(makeEvent(), 'beta')
@@ -843,6 +957,7 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
   })
 
   it('FIRMWARE_ENTER_FLASH disconnects USB, resets bootloader, and locks the flash port', async () => {
+    await surfaceFlashPort('/dev/tty.usbserial')
     usbServiceMock.disconnect.mockResolvedValueOnce({ success: true })
     firmwareMock.resetIntoBootloader.mockResolvedValueOnce({ success: true })
 
@@ -879,6 +994,7 @@ describe('Firmware IPC handlers — flash and download plumbing', () => {
   })
 
   it('FIRMWARE_RETRY_RESET re-runs resetIntoBootloader and validates the port path (#482)', async () => {
+    await surfaceFlashPort('/dev/tty.usbserial')
     firmwareMock.resetIntoBootloader.mockResolvedValueOnce({ success: true })
     const handler = getHandler(IpcChannels.FIRMWARE_RETRY_RESET)
 
