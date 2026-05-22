@@ -32,9 +32,10 @@ import { useDeviceStore } from '../stores/device.store'
 import type { FirmwareCheck } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
-import { firmwareIpc, isDeviceLogPayload } from '../services/ipc.service'
-import { IpcChannels } from '../../shared/ipc-channels'
+import { firmwareIpc } from '../services/ipc.service'
 import type { FirmwareRelease, FirmwareStatus } from '../services/ipc.service'
+import { useDeviceLogStore } from '../stores/deviceLog.store'
+import { BOOT_VERSION_RE as SHARED_BOOT_VERSION_RE } from '../stores/deviceLog.boot-regex'
 
 /**
  * Backoff delays (ms) inserted BEFORE attempts 2..N. Length defines the
@@ -60,10 +61,11 @@ export const POST_TIMEOUT_RETRY_DELAY_MS = PROBE_BACKOFF_MS[0]
  * against the formatted device-log entry the renderer emits, which is
  * `[device][BOOT] CANShift vX.Y.Z starting`.
  *
- * Exported so the boot-loop detector (`useBootLoopDetector`) can reuse the
- * same regex without parsing the boot banner twice (#498).
+ * Re-exported from `stores/deviceLog.boot-regex` so the boot-loop detector
+ * (`useBootLoopDetector`) and the device-log store can reuse the same regex
+ * without parsing the boot banner twice (#498, S-M-2).
  */
-export const BOOT_VERSION_RE = /\bCANShift v(\d+\.\d+\.\d+)\b/
+export const BOOT_VERSION_RE = SHARED_BOOT_VERSION_RE
 
 // `DeviceLogPayload` + `isDeviceLogPayload` come from `services/ipc.service`,
 // which re-exports the canonical definitions from `shared/ipc-payloads.ts`.
@@ -234,29 +236,9 @@ export function useFirmwareCheck(): void {
   // Last tick we acted on — bumped externally via requestFirmwareRecheck().
   const lastHandledTickRef = useRef(0)
 
-  // Most recent version captured from the firmware boot-banner log line.
-  // Populated by the listener below, consumed by the probe orchestrator as a
-  // last-resort fallback when CMD_GET_STATUS never round-trips (#485).
-  const bootLogVersionRef = useRef<string | null>(null)
-
-  // Listen for the `[BOOT] CANShift vX.Y.Z starting` device log so the probe
-  // can short-circuit when the device is still booting up its USB command
-  // task. The listener is mounted unconditionally — it's a tiny cost compared
-  // to the value of catching the version banner before `useFirmwareCheck`'s
-  // effect re-runs on the connect transition.
-  useEffect(() => {
-    const handleDeviceLog = (payload: unknown): void => {
-      if (!isDeviceLogPayload(payload)) return
-      if (payload.tag !== 'BOOT') return
-      const match = BOOT_VERSION_RE.exec(payload.message)
-      if (!match?.[1]) return
-      bootLogVersionRef.current = match[1]
-    }
-    window.ipc.on(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
-    return () => {
-      window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
-    }
-  }, [])
+  // Most recent boot-banner version is now derived in `useDeviceLogStore`
+  // (#1015 S-M-2) — no per-mount IPC listener here. The store ingests the
+  // single USB_DEVICE_LOG stream and parses the banner once on entry.
 
   useEffect(() => {
     // Reset the latch when the device is gone so the next fresh connect probes.
@@ -265,7 +247,7 @@ export function useFirmwareCheck(): void {
       inFlightPortRef.current = null
       // A fresh connect may bring a new device — drop the stale boot-log
       // version so it can't leak across boards.
-      bootLogVersionRef.current = null
+      useDeviceLogStore.getState().reset()
       return
     }
 
@@ -300,7 +282,7 @@ export function useFirmwareCheck(): void {
       setFirmwareVersion,
       setIsDayMode,
       log,
-      getBootLogVersion: () => bootLogVersionRef.current,
+      getBootLogVersion: () => useDeviceLogStore.getState().bootLogVersion,
     }
 
     void runFirmwareProbe(report, () => cancelled || inFlightPortRef.current !== currentPort)

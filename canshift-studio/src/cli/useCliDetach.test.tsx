@@ -9,6 +9,7 @@ import { act, useEffect } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useCliDetach } from './useCliDetach'
 import { IpcChannels } from '../../shared/ipc-channels'
+import { _resetCliStateStoreForTest } from '../stores/cliState.store'
 
 const ipcInvoke = vi.fn<(channel: string, ...args: unknown[]) => Promise<unknown>>()
 const ipcSend = vi.fn<(channel: string, ...args: unknown[]) => void>()
@@ -18,6 +19,7 @@ const ipcOff = vi.fn<(channel: string, listener: (...args: unknown[]) => void) =
 let stateChangedListener: ((...args: unknown[]) => void) | null = null
 
 beforeEach(() => {
+  _resetCliStateStoreForTest()
   ipcInvoke.mockReset()
   ipcSend.mockReset()
   ipcOn.mockReset()
@@ -55,6 +57,7 @@ afterEach(() => {
     container.remove()
     container = null
   }
+  _resetCliStateStoreForTest()
 })
 
 interface ProbeResult {
@@ -135,5 +138,64 @@ describe('useCliDetach', () => {
     ipcInvoke.mockResolvedValueOnce({ success: true })
     await probe.get().reattach()
     expect(ipcInvoke).toHaveBeenCalledWith(IpcChannels.CLI_REATTACH)
+  })
+
+  it('IPCs CLI_GET_STATE exactly once across multiple hook mounts (S-M-8)', async () => {
+    ipcInvoke.mockResolvedValue({ state: { kind: 'inApp' } })
+
+    await mountProbe()
+    const firstGetStateCalls = ipcInvoke.mock.calls.filter(
+      (c) => c[0] === IpcChannels.CLI_GET_STATE
+    ).length
+    expect(firstGetStateCalls).toBe(1)
+
+    // Mount a second probe — should hit the cache, not the IPC.
+    const secondContainer = document.createElement('div')
+    document.body.appendChild(secondContainer)
+    const secondRoot = createRoot(secondContainer)
+    await act(async () => {
+      secondRoot.render(
+        <Probe
+          onApi={(): void => {
+            /* not inspected here */
+          }}
+        />
+      )
+      await Promise.resolve()
+    })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    const totalGetStateCalls = ipcInvoke.mock.calls.filter(
+      (c) => c[0] === IpcChannels.CLI_GET_STATE
+    ).length
+    expect(totalGetStateCalls).toBe(1)
+
+    act(() => {
+      secondRoot.unmount()
+    })
+    secondContainer.remove()
+  })
+
+  it('continues to receive CLI_STATE_CHANGED updates after the cache is seeded', async () => {
+    ipcInvoke.mockResolvedValueOnce({ state: { kind: 'inApp' } })
+    const probe = await mountProbe()
+    expect(probe.get().state).toEqual({ kind: 'inApp' })
+
+    // A live broadcast must still flip the cached state — the listener stays
+    // installed when the cache is hit.
+    expect(stateChangedListener).not.toBeNull()
+    await act(async () => {
+      stateChangedListener?.({ state: { kind: 'detached', windowId: 21 } })
+      await Promise.resolve()
+    })
+    expect(probe.get().state).toEqual({ kind: 'detached', windowId: 21 })
+
+    await act(async () => {
+      stateChangedListener?.({ state: { kind: 'inApp' } })
+      await Promise.resolve()
+    })
+    expect(probe.get().state).toEqual({ kind: 'inApp' })
   })
 })

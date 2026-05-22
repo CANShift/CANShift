@@ -16,6 +16,7 @@ import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { IpcChannels } from '../../shared/ipc-channels'
 import { useUsbEvents } from './useUsbEvents'
+import { _resetDeviceLogStoreForTest } from '../stores/deviceLog.store'
 
 interface IpcStub {
   invoke: ReturnType<typeof vi.fn>
@@ -29,6 +30,7 @@ const listeners = new Map<string, ((...args: unknown[]) => void)[]>()
 
 beforeEach(() => {
   listeners.clear()
+  _resetDeviceLogStoreForTest()
   useLogStore.setState({ entries: [], verbose: false })
   useDeviceStore.getState().setDisconnected()
   const stub: IpcStub = {
@@ -115,14 +117,19 @@ describe('useUsbEvents — single device-log subscription (#484)', () => {
     expect(entries[1]?.message).toBe('[device][HEAP] entry: free=166860 largest=110580')
   })
 
-  it('removes its USB_DEVICE_LOG listener on unmount', async () => {
+  it('keeps a single USB_DEVICE_LOG listener owned by the device-log store', async () => {
+    // S-M-2 (#1015) funnelled the USB_DEVICE_LOG IPC stream through
+    // `useDeviceLogStore` so the three former consumers share one listener.
+    // The store owns the listener — unmounting the hook unsubscribes the
+    // hook's per-entry handler but the IPC subscription stays mounted for
+    // the rest of the app.
     await mount()
     expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(1)
     act(() => {
       root?.unmount()
     })
     root = null
-    expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(0)
+    expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(1)
   })
 
   it('drops malformed device-log payloads silently', async () => {

@@ -234,6 +234,16 @@ function activeTransport(): UsbService | WifiService {
 // loop alive past app.quit().
 let canBatchFlushTimer: NodeJS.Timeout | null = null
 
+/**
+ * Upper bound on the CAN-frame accumulator before a synchronous flush kicks
+ * in (audit S-L-4, umbrella #1015). At ~250 kbps with worst-case 11-bit
+ * frames this fills in ~50 ms; once the buffer reaches this size we drain
+ * immediately instead of waiting for the 100 ms timer, keeping the renderer
+ * from going idle on a bursty bus then drowning under a single mega-batch.
+ * Exported so a future tunable + the test can read the same constant.
+ */
+export const CAN_BATCH_MAX_FRAMES = 256
+
 // ---------------------------------------------------------------------------
 // Surfaced-port allowlist (umbrella #1018, SEC-M-3)
 // ---------------------------------------------------------------------------
@@ -281,13 +291,20 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   }
   const configService = new ConfigFileService()
 
-  // Batch CAN frames: accumulate for 100ms then push to renderer in one IPC call.
-  // Avoids per-frame IPC overhead on busy CAN buses.
+  // Batch CAN frames: accumulate for up to 100 ms OR up to CAN_BATCH_MAX_FRAMES
+  // before pushing to the renderer in one IPC call. The timer keeps idle
+  // streams flushing predictably; the size cap drains bursty streams without
+  // letting them sit in the buffer for the full 100 ms window (audit S-L-4,
+  // umbrella #1015 — mitigates UI lag during heavy CAN traffic).
   let canFrameBatch: CanFrame[] = []
   const flushCanBatch = (): void => {
     if (canFrameBatch.length === 0) return
     safeSend(IpcChannels.CAN_FRAME_BATCH, canFrameBatch)
     canFrameBatch = []
+  }
+  const pushCanFrame = (frame: CanFrame): void => {
+    canFrameBatch.push(frame)
+    if (canFrameBatch.length >= CAN_BATCH_MAX_FRAMES) flushCanBatch()
   }
   canBatchFlushTimer = setInterval(flushCanBatch, 100)
 
@@ -305,7 +322,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       safeSend(IpcChannels.USB_DATA_RECEIVED, values)
     },
     onCanFrame: (frame) => {
-      canFrameBatch.push(frame)
+      pushCanFrame(frame)
     },
     onCanHealth: (health) => {
       safeSend(IpcChannels.CAN_HEALTH_UPDATE, health)
@@ -331,7 +348,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       safeSend(IpcChannels.USB_DATA_RECEIVED, values)
     },
     onCanFrame: (frame) => {
-      canFrameBatch.push(frame)
+      pushCanFrame(frame)
     },
     onCanHealth: (health) => {
       safeSend(IpcChannels.CAN_HEALTH_UPDATE, health)

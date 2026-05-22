@@ -193,7 +193,12 @@ vi.mock('node:fs/promises', async () => {
   return { ...actual, writeFile: vi.fn(), readFile: vi.fn() }
 })
 
-import { registerIpcHandlers, _resetSurfacedPortsForTest } from './ipc-handlers'
+import {
+  registerIpcHandlers,
+  _resetSurfacedPortsForTest,
+  CAN_BATCH_MAX_FRAMES,
+  disposeIpcHandlers,
+} from './ipc-handlers'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1275,6 +1280,80 @@ describe('App-info IPC handler', () => {
     const { win } = makeWindow()
     registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
     expect(await getHandler(IpcChannels.APP_VERSION)(makeEvent())).toBe('0.0.0-test')
+  })
+})
+
+describe('CAN-frame batch flush (audit S-L-4, umbrella #1015)', () => {
+  interface UsbEventHandlers {
+    onCanFrame?: (frame: unknown) => void
+  }
+
+  function makeFrame(id: number): { id: number; data: number[]; timestampMs: number } {
+    return { id, data: [0, 0, 0, 0, 0, 0, 0, 0], timestampMs: id }
+  }
+
+  it('flushes synchronously once the batch hits CAN_BATCH_MAX_FRAMES', () => {
+    const { win, sends } = makeWindow()
+    registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
+
+    const usbCall = usbServiceMock.setEventHandlers.mock.calls[0]
+    const handlers = usbCall?.[0] as UsbEventHandlers | undefined
+    expect(handlers?.onCanFrame).toBeTypeOf('function')
+
+    // Push (CAN_BATCH_MAX_FRAMES - 1) frames — must NOT flush yet.
+    for (let i = 0; i < CAN_BATCH_MAX_FRAMES - 1; i++) {
+      handlers?.onCanFrame?.(makeFrame(i))
+    }
+    expect(sends.filter((s) => s.channel === IpcChannels.CAN_FRAME_BATCH)).toEqual([])
+
+    // The CAN_BATCH_MAX_FRAMES'th frame must trigger an immediate flush
+    // rather than waiting for the 100 ms timer.
+    handlers?.onCanFrame?.(makeFrame(CAN_BATCH_MAX_FRAMES - 1))
+    const flushes = sends.filter((s) => s.channel === IpcChannels.CAN_FRAME_BATCH)
+    expect(flushes.length).toBe(1)
+    expect((flushes[0]?.payload as unknown[]).length).toBe(CAN_BATCH_MAX_FRAMES)
+
+    disposeIpcHandlers()
+  })
+
+  it('keeps the 100 ms timer as a second flush trigger for sub-cap batches', () => {
+    vi.useFakeTimers()
+    const { win, sends } = makeWindow()
+    registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
+
+    const usbCall = usbServiceMock.setEventHandlers.mock.calls[0]
+    const handlers = usbCall?.[0] as UsbEventHandlers | undefined
+
+    // A small burst that never reaches the cap — only the timer can flush it.
+    handlers?.onCanFrame?.(makeFrame(1))
+    handlers?.onCanFrame?.(makeFrame(2))
+    expect(sends.filter((s) => s.channel === IpcChannels.CAN_FRAME_BATCH)).toEqual([])
+
+    vi.advanceTimersByTime(100)
+    const flushes = sends.filter((s) => s.channel === IpcChannels.CAN_FRAME_BATCH)
+    expect(flushes.length).toBe(1)
+    expect((flushes[0]?.payload as unknown[]).length).toBe(2)
+
+    disposeIpcHandlers()
+    vi.useRealTimers()
+  })
+
+  it('also caps WiFi-sourced batches (#1071)', () => {
+    const { win, sends } = makeWindow()
+    registerIpcHandlers(() => win as unknown as Electron.BrowserWindow)
+
+    const wifiCall = wifiServiceMock.setEventHandlers.mock.calls[0]
+    const handlers = wifiCall?.[0] as UsbEventHandlers | undefined
+    expect(handlers?.onCanFrame).toBeTypeOf('function')
+
+    for (let i = 0; i < CAN_BATCH_MAX_FRAMES; i++) {
+      handlers?.onCanFrame?.(makeFrame(i))
+    }
+    const flushes = sends.filter((s) => s.channel === IpcChannels.CAN_FRAME_BATCH)
+    expect(flushes.length).toBe(1)
+    expect((flushes[0]?.payload as unknown[]).length).toBe(CAN_BATCH_MAX_FRAMES)
+
+    disposeIpcHandlers()
   })
 })
 

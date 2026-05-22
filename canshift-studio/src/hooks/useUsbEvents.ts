@@ -19,7 +19,7 @@ import { useCanHealthStore } from '../stores/canHealth.store'
 import { useErrorStore } from '../stores/error.store'
 import { IpcChannels } from '../../shared/ipc-channels'
 import type { CanHealth } from '../services/ipc.service'
-import { isDeviceLogPayload } from '../services/ipc.service'
+import { useDeviceLogStore } from '../stores/deviceLog.store'
 import type { LogLevel } from '../stores/log.store'
 
 interface ConnectionChangedPayload {
@@ -171,22 +171,24 @@ export function useUsbEvents(): void {
       }
     }
 
-    const handleDeviceLog = (payload: unknown): void => {
-      if (!isDeviceLogPayload(payload)) return
+    // USB_DEVICE_LOG is funnelled through `useDeviceLogStore` (#1015 S-M-2)
+    // so we get one IPC listener for all three consumers. Mount the store on
+    // first use, then receive entries via `subscribeEntry`.
+    useDeviceLogStore.getState().start()
+    const unsubscribeDeviceLog = useDeviceLogStore.getState().subscribeEntry((payload) => {
       const mapped = mapDeviceLevel(payload.level)
       const formatted = `[device][${payload.tag}] ${payload.message}`
       log(mapped, formatted)
       if (mapped === 'error') {
         pushError({ source: 'usb', code: 'DEVICE_ERROR', message: formatted })
       }
-    }
+    })
 
     window.ipc.on(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
     window.ipc.on(IpcChannels.WIFI_CONNECTION_CHANGED, handleWifiConnectionChanged)
     window.ipc.on(IpcChannels.USB_ERROR, handleError)
     window.ipc.on(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
     window.ipc.on(IpcChannels.APP_LOG, handleAppLog)
-    window.ipc.on(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
 
     return () => {
       window.ipc.off(IpcChannels.USB_CONNECTION_CHANGED, handleConnectionChanged)
@@ -194,7 +196,7 @@ export function useUsbEvents(): void {
       window.ipc.off(IpcChannels.USB_ERROR, handleError)
       window.ipc.off(IpcChannels.CAN_HEALTH_UPDATE, handleCanHealth)
       window.ipc.off(IpcChannels.APP_LOG, handleAppLog)
-      window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
+      unsubscribeDeviceLog()
     }
   }, [
     setConnected,
