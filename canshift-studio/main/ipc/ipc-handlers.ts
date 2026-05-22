@@ -82,6 +82,22 @@ export function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 /**
+ * Discriminated result of parsing a CMD_SCREEN_SETTINGS IPC payload — the
+ * IPC handler needs the typed error envelope so the renderer can surface
+ * issues per field. Audit S-H-1 (#1015) round 2 — replaces the previous
+ * `null`-on-failure shape with a Result so the same helper drives both the
+ * unit tests and the live handler (no more duplicated `safeParse` block).
+ */
+export type ParseScreenSettingsResult =
+  | { ok: true; data: ScreenSettingsPayload }
+  | {
+      ok: false
+      error: string
+      issues: string[]
+      friendlyIssues: ReturnType<typeof friendlyZodIssues>
+    }
+
+/**
  * Validate the CMD_SCREEN_SETTINGS payload against the shared bounded schema
  * in `@tmbk/canshift-core` (issue #1015, audit finding S-H-1). The previous
  * implementation accepted any finite number for brightness/sleep — a
@@ -89,11 +105,19 @@ export function isPlainObject(v: unknown): v is Record<string, unknown> {
  * (24 h) and the handler would forward it unchecked. Now bounds live in
  * the schema and out-of-range payloads are rejected at the IPC boundary.
  *
- * Exported for table-driven tests in `ipc-handlers.test.ts`.
+ * Returns a structured Result so the IPC handler can forward typed issues
+ * to the renderer without re-running the parse. Exported for table-driven
+ * tests in `ipc-payload-guards.test.ts`.
  */
-export function parseScreenSettings(v: unknown): ScreenSettingsPayload | null {
+export function parseScreenSettings(v: unknown): ParseScreenSettingsResult {
   const parsed = ScreenSettingsSchema.safeParse(v)
-  return parsed.success ? parsed.data : null
+  if (parsed.success) return { ok: true, data: parsed.data }
+  return {
+    ok: false,
+    error: `Screen settings payload invalid — ${summarizeZodError(parsed.error)}`,
+    issues: formatZodIssues(parsed.error),
+    friendlyIssues: friendlyZodIssues(parsed.error),
+  }
 }
 
 export function isFirmwareChannel(v: unknown): v is 'stable' | 'beta' {
@@ -504,22 +528,24 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   ipcMain.handle(IpcChannels.USB_SCREEN_SETTINGS, async (_event, settings: unknown) => {
     // Bounded validation lives in canshift-core's ScreenSettingsSchema
     // (#1015 / audit S-H-1). The previous Number.isFinite-only guard
-    // accepted brightness=-9999 and sleep=24h; safeParse rejects both.
-    const parsed = ScreenSettingsSchema.safeParse(settings)
-    if (!parsed.success) {
+    // accepted brightness=-9999 and sleep=24h; the shared helper rejects
+    // both and returns a structured error envelope so the renderer can
+    // surface per-field issues without re-running the parse.
+    const result = parseScreenSettings(settings)
+    if (!result.ok) {
       safeSend(IpcChannels.APP_LOG, {
         level: 'warn',
-        message: `Rejected screen settings IPC — ${summarizeZodError(parsed.error)}`,
+        message: `Rejected screen settings IPC — ${result.error}`,
         ts: Date.now(),
       })
       return {
         success: false,
-        error: `Screen settings payload invalid — ${summarizeZodError(parsed.error)}`,
-        issues: formatZodIssues(parsed.error),
-        friendlyIssues: friendlyZodIssues(parsed.error),
+        error: result.error,
+        issues: result.issues,
+        friendlyIssues: result.friendlyIssues,
       }
     }
-    return activeTransport().pushScreenSettings(parsed.data)
+    return activeTransport().pushScreenSettings(result.data)
   })
 
   ipcMain.handle(IpcChannels.USB_GET_STATUS, () => {
