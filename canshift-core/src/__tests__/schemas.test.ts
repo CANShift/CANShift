@@ -24,6 +24,8 @@ import {
   inputBindingsToWire,
   isPinAvailableForBoard,
   MAX_INPUT_BINDINGS,
+  SAFE_OUTPUT_PINS_WROOM32,
+  SAFE_INPUT_PINS_WROOM32,
   TrackTelemetrySchema,
 } from '../index.js'
 import type {
@@ -500,6 +502,38 @@ describe('Esp32InputGpioSchema', () => {
 
   it.each([6, 7, 8, 9, 10, 11])('still rejects SPI-flash pin %i', (pin) => {
     expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SAFE_OUTPUT_PINS_WROOM32 / SAFE_INPUT_PINS_WROOM32 (audit C-LO-7, #1016)
+// ---------------------------------------------------------------------------
+
+describe('SAFE_OUTPUT_PINS_WROOM32', () => {
+  it('matches the canonical snapshot', () => {
+    expect([...SAFE_OUTPUT_PINS_WROOM32]).toEqual([
+      0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
+    ])
+  })
+
+  it('stays in lockstep with Esp32OutputGpioSchema', () => {
+    for (const pin of SAFE_OUTPUT_PINS_WROOM32) {
+      expect(Esp32OutputGpioSchema.safeParse(pin).success).toBe(true)
+    }
+  })
+
+  it('excludes every SPI-flash pin (6-11)', () => {
+    for (const pin of [6, 7, 8, 9, 10, 11]) {
+      expect((SAFE_OUTPUT_PINS_WROOM32 as readonly number[]).includes(pin)).toBe(false)
+    }
+  })
+})
+
+describe('SAFE_INPUT_PINS_WROOM32', () => {
+  it('is a superset of SAFE_OUTPUT_PINS_WROOM32 + (34-39)', () => {
+    const input = new Set<number>(SAFE_INPUT_PINS_WROOM32)
+    for (const pin of SAFE_OUTPUT_PINS_WROOM32) expect(input.has(pin)).toBe(true)
+    for (const pin of [34, 35, 36, 37, 38, 39]) expect(input.has(pin)).toBe(true)
   })
 })
 

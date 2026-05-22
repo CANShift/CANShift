@@ -3,6 +3,7 @@
 
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { useLogStore } from '../../stores/log.store'
 
 interface ErrorBoundaryProps {
   /** Optional custom fallback — overrides the built-in error panel. */
@@ -27,6 +28,15 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // Log to the renderer console so DevTools captures it.
     console.error('[ErrorBoundary] Uncaught render error:', error, info.componentStack)
+    // Also surface the failure in the in-app log panel (#1015 S-L-8).
+    try {
+      const stack = info.componentStack ?? ''
+      useLogStore
+        .getState()
+        .push('error', `Uncaught render error: ${error.message}${stack ? `\n${stack}` : ''}`)
+    } catch {
+      /* log store unavailable — console.error above is the fallback */
+    }
   }
 
   render(): ReactNode {

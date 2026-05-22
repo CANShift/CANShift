@@ -11,6 +11,8 @@
 // Append new migrations to the `BUILTIN_MIGRATIONS` array below as the
 // schema evolves; the chain currently spans 1.0.0 → 1.15.0 (issue #850).
 
+import { HEX_REGEX } from '../colors/hex.js'
+
 export type MigrationFn = (config: Record<string, unknown>) => Record<string, unknown>
 
 export interface Migration {
@@ -78,7 +80,7 @@ function upgradeLegacySize(w: number, h: number): { w: number; h: number } | nul
 // Used by the 1.7→1.8 migration to derive a button "active" colour from the
 // pre-existing primaryColor — gives a contrasting hover shade by default.
 function brightenHex(hex: string, delta = 0x33): string {
-  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  const m = HEX_REGEX.exec(hex)
   if (!m) return hex
   const value = m[1]
   if (!value) return hex
