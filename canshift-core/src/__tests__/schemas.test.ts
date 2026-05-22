@@ -6,20 +6,17 @@
 // Plus an explicit guard that `ButtonActionSchema` does not accept the legacy
 // `targetPageId` field removed in #672.
 
-// `DashboardConfigSchema` is the only schema re-exported from the package
-// barrel (#771); the rest are internal — import them directly from the
-// schemas modules.
+// `DashboardConfigSchema` / `SignalConfigSchema` / `DeviceConfigSchema` /
+// `InputBindingsConfigSchema` are re-exported from the package barrel (#771,
+// #1016); sub-schemas (single binding, wire variants) are internal and
+// imported directly from the schemas modules.
 import {
   DashboardConfigSchema,
   DeviceConfigSchema,
-  DeviceConfigWireSchema,
   Esp32OutputGpioSchema,
   Esp32InputGpioSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
-  InputBindingSchema,
-  InputBindingWireSchema,
-  InputBindingsConfigWireSchema,
   inputBindingsFromWire,
   inputBindingsToWire,
   isPinAvailableForBoard,
@@ -28,14 +25,15 @@ import {
   SAFE_INPUT_PINS_WROOM32,
   TrackTelemetrySchema,
 } from '../index.js'
-import type {
-  DeviceConfig,
-  DeviceConfigWire,
-  InputBinding,
-  InputBindingsConfig,
-  InputBindingsConfigWire,
-} from '../index.js'
+import type { DeviceConfig, InputBinding, InputBindingsConfig } from '../index.js'
 import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
+import { DeviceConfigWireSchema, type DeviceConfigWire } from '../schemas/device.js'
+import {
+  InputBindingSchema,
+  InputBindingWireSchema,
+  InputBindingsConfigWireSchema,
+  type InputBindingsConfigWire,
+} from '../schemas/input-bindings.js'
 import { SignalConfigSchema } from '../schemas/signal.js'
 
 // ---------------------------------------------------------------------------
