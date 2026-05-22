@@ -77,7 +77,7 @@ export type {
   InputBindingsConfigWire,
   InputActiveLevel,
   InputPressKind,
-} from './schemas/input-bindings'
+} from './schemas/input-bindings.js'
 export {
   InputBindingSchema,
   InputBindingsConfigSchema,
@@ -87,24 +87,24 @@ export {
   inputBindingsToWire,
   MAX_INPUT_BINDINGS,
   INPUT_BINDING_ID_MAX_LEN,
-} from './schemas/input-bindings'
+} from './schemas/input-bindings.js'
 
 // Track-mode telemetry — BLE message contract between mobile and firmware (issue #843)
-export type { TrackTelemetry } from './schemas/track-telemetry'
-export { TrackTelemetrySchema } from './schemas/track-telemetry'
+export type { TrackTelemetry } from './schemas/track-telemetry.js'
+export { TrackTelemetrySchema } from './schemas/track-telemetry.js'
 
 // Screen settings — CMD_SCREEN_SETTINGS / BLE SETTINGS payload (issue #1015, S-H-1)
-export type { ScreenSettings } from './schemas/screen-settings'
-export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-settings'
+export type { ScreenSettings } from './schemas/screen-settings.js'
+export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-settings.js'
 
 // BLE STATUS characteristic — firmware → mobile health/config payload (issue #887)
-export type { BleStatusWire, BleStatus, BleStatusResult } from './schemas/ble-status'
+export type { BleStatusWire, BleStatus, BleStatusResult } from './schemas/ble-status.js'
 export {
   BleStatusWireSchema,
   BLE_STATUS_MAX_STRING_LEN,
   bleStatusFromWire,
   parseBleStatus,
-} from './schemas/ble-status'
+} from './schemas/ble-status.js'
 
 // Sensor color-ramp defaults (issue #430)
 export {
@@ -116,19 +116,19 @@ export {
 export type { SensorKind } from './sensor-defaults.js'
 
 // Sensor semantic two-zone palette (issue #954)
-export { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from './sensor-palette'
-export type { SensorPaletteEntry } from './sensor-palette'
+export { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from './sensor-palette.js'
+export type { SensorPaletteEntry } from './sensor-palette.js'
 
 // GitHub release info (shared by studio + mobile — issue #571)
-export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/releases'
+export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/releases.js'
 
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
-export { validateDashboard } from './validation/validate-dashboard'
-export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard'
-export { validateSignalConfig } from './validation/validate-signal-config'
-export { validateSignalCatalog } from './validation/validate-signal'
+export { validateDashboard } from './validation/validate-dashboard.js'
+export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard.js'
+export { validateSignalConfig } from './validation/validate-signal-config.js'
+export { validateSignalCatalog } from './validation/validate-signal.js'
 
 // ---------------------------------------------------------------------------
 // Zod schemas (issue #673) — runtime source of truth for Dashboard, Signal,
@@ -139,19 +139,21 @@ export { validateSignalCatalog } from './validation/validate-signal'
 // to keep the public API surface narrow (#771). Add a re-export here when a
 // real consumer needs runtime parsing on the boundary.
 // ---------------------------------------------------------------------------
-export { DashboardConfigSchema } from './schemas/dashboard'
-export { SignalConfigSchema } from './schemas/signal'
+export { DashboardConfigSchema } from './schemas/dashboard.js'
+export { SignalConfigSchema } from './schemas/signal.js'
 export {
   DeviceConfigSchema,
   DeviceConfigWireSchema,
   Esp32OutputGpioSchema,
   Esp32InputGpioSchema,
-} from './schemas/device'
+  SAFE_OUTPUT_PINS_WROOM32,
+  SAFE_INPUT_PINS_WROOM32,
+} from './schemas/device.js'
 
 // Hardware profiles (#831) — per-board reserved/expansion pin tables that
 // studio's pin pickers consume to surface only board-safe choices.
-export { HARDWARE_PROFILES, isPinAvailableForBoard } from './schemas/hardware-profile'
-export type { HardwareProfileId, HardwareProfile } from './schemas/hardware-profile'
+export { HARDWARE_PROFILES, isPinAvailableForBoard } from './schemas/hardware-profile.js'
+export type { HardwareProfileId, HardwareProfile } from './schemas/hardware-profile.js'
 
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
@@ -164,25 +166,25 @@ export {
   DECIMAL_PLACES,
   HEX_COLOR_REGEX,
   MAX_RAMP_STOPS,
-} from './constants/firmware-caps'
+} from './constants/firmware-caps.js'
 
 // ---------------------------------------------------------------------------
 // TopBar proportion table — shared with firmware (mirrored in top_bar.cpp)
 // ---------------------------------------------------------------------------
-export { TopBarMetrics } from './topbar-metrics'
-export type { TopBarMetricsRatios } from './topbar-metrics'
+export { TopBarMetrics } from './topbar-metrics.js'
+export type { TopBarMetricsRatios } from './topbar-metrics.js'
 
 // ---------------------------------------------------------------------------
 // TopBar status colours — shared with firmware (mirrored in top_bar.cpp)
 // ---------------------------------------------------------------------------
-export { TopBarColors } from './topbar-colors'
-export type { TopBarColorPalette } from './topbar-colors'
+export { TopBarColors } from './topbar-colors.js'
+export type { TopBarColorPalette } from './topbar-colors.js'
 
 // ---------------------------------------------------------------------------
 // Day-theme defaults — fallback palette + bg consumed by the studio canvas
 // (and eventually the mobile renderer) when `dayTheme` is absent. Issue #901.
 // ---------------------------------------------------------------------------
-export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults'
+export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults.js'
 
 // ---------------------------------------------------------------------------
 // Migrations
@@ -191,21 +193,21 @@ export {
   BUILTIN_MIGRATIONS,
   migrateConfig,
   validateMigrationChain,
-} from './migrations/migration-runner'
+} from './migrations/migration-runner.js'
 export type {
   Migration,
   MigrationFn,
   MigrationRegistry,
   MigrationResult,
-} from './migrations/migration-runner'
+} from './migrations/migration-runner.js'
 
 // ---------------------------------------------------------------------------
 // Design tokens — canonical UI palette/spacing/typography (issue #526)
 // ---------------------------------------------------------------------------
-export type { DesignTokens } from './design-tokens'
+export type { DesignTokens } from './design-tokens.js'
 // LIGHT_TOKENS deliberately not re-exported — placeholder values for the
 // on-hold theme editor (#21), kept internal until a real consumer lands.
-export { COLOR_KEY_TO_CSS_VAR, DARK_TOKENS, tokensToCssVars } from './design-tokens'
+export { COLOR_KEY_TO_CSS_VAR, DARK_TOKENS, tokensToCssVars } from './design-tokens.js'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -220,11 +222,11 @@ export const PRODUCT_NAME = 'CANShift' as const
 // ---------------------------------------------------------------------------
 // ECU profiles — built-in signal presets (issue #570)
 // ---------------------------------------------------------------------------
-export type { EcuProfile } from './ecu-profiles'
-export { ECU_PROFILES, DEFAULT_PROFILE_ID, MAXXECU_SIGNAL_UNITS } from './ecu-profiles'
+export type { EcuProfile } from './ecu-profiles/index.js'
+export { ECU_PROFILES, DEFAULT_PROFILE_ID, MAXXECU_SIGNAL_UNITS } from './ecu-profiles/index.js'
 
 // ---------------------------------------------------------------------------
 // RealDash CAN XML import (issue #609)
 // ---------------------------------------------------------------------------
-export type { ParseRealDashXMLResult } from './realdash/parse-realdash-xml'
-export { parseRealDashXML } from './realdash/parse-realdash-xml'
+export type { ParseRealDashXMLResult } from './realdash/parse-realdash-xml.js'
+export { parseRealDashXML } from './realdash/parse-realdash-xml.js'

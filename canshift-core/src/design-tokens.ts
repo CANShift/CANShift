@@ -9,6 +9,8 @@
 // into the `H S% L%` HSL channel format that studio's tailwind config
 // consumes via `hsl(var(--x) / <alpha-value>)`.
 
+import { HEX_REGEX } from './colors/hex.js'
+
 export interface DesignTokens {
   colors: {
     bg: string
@@ -109,8 +111,6 @@ export const LIGHT_TOKENS = {
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
   typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
 } as const satisfies DesignTokens
-
-const HEX_REGEX = /^#([0-9a-fA-F]{6})$/
 
 interface RgbChannels {
   r: number
