@@ -11,6 +11,7 @@ import { IpcChannels } from '../../shared/ipc-channels'
 import { useDeviceStore } from '../stores/device.store'
 import { CONTEXT_LINES, QUIET_RESET_MS, useBootLoopStore } from '../stores/bootLoop.store'
 import { useBootLoopDetector } from './useBootLoopDetector'
+import { _resetDeviceLogStoreForTest, useDeviceLogStore } from '../stores/deviceLog.store'
 
 interface IpcStub {
   invoke: ReturnType<typeof vi.fn>
@@ -43,6 +44,7 @@ function disconnectDevice(): void {
 
 beforeEach(() => {
   listeners.clear()
+  _resetDeviceLogStoreForTest()
   resetBootLoopStore()
   disconnectDevice()
   const stub: IpcStub = {
@@ -66,6 +68,11 @@ beforeEach(() => {
     writable: true,
     value: stub,
   })
+  // The boot-loop detector subscribes to the device-log store, which only
+  // gets its IPC listener mounted via `start()`. The hook used to mount its
+  // own listener; now the store owns it (S-M-2). Start it here so the
+  // dispatch() helper still reaches both store + subscriber.
+  useDeviceLogStore.getState().start()
 })
 
 let container: HTMLDivElement | null = null
@@ -210,7 +217,10 @@ describe('useBootLoopDetector (#498)', () => {
     expect(ctx.some((l) => l.tag === 'POST')).toBe(false)
   })
 
-  it('removes its USB_DEVICE_LOG listener on unmount', async () => {
+  it('shares a single USB_DEVICE_LOG listener with the rest of the app', async () => {
+    // S-M-2 (#1015) moved the USB_DEVICE_LOG subscription into
+    // `useDeviceLogStore`. The hook subscribes to the store, not to IPC, so
+    // mount/unmount no longer toggles the IPC listener — the store owns it.
     connectDevice()
     await mount()
     expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(1)
@@ -220,7 +230,7 @@ describe('useBootLoopDetector (#498)', () => {
     })
     root = null
 
-    expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(0)
+    expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(1)
   })
 
   it('resets store + listener when the device disconnects', async () => {
@@ -242,7 +252,9 @@ describe('useBootLoopDetector (#498)', () => {
 
     expect(useBootLoopStore.getState().looping).toBe(false)
     expect(useBootLoopStore.getState().bootMarkers).toEqual([])
-    // Effect tears the listener down on disconnect (effect dep changed).
-    expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(0)
+    // The store owns the IPC listener (S-M-2) — it stays mounted even when
+    // the hook's effect re-runs on disconnect; only the hook's per-entry
+    // subscription cycles.
+    expect(listeners.get(IpcChannels.USB_DEVICE_LOG)?.length ?? 0).toBe(1)
   })
 })

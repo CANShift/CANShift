@@ -22,9 +22,8 @@ import {
   type CapturedLine,
   useBootLoopStore,
 } from '../stores/bootLoop.store'
-import { BOOT_VERSION_RE } from './useFirmwareCheck'
-import { IpcChannels } from '../../shared/ipc-channels'
-import { isDeviceLogPayload } from '../services/ipc.service'
+import { BOOT_VERSION_RE } from '../stores/deviceLog.boot-regex'
+import { useDeviceLogStore } from '../stores/deviceLog.store'
 
 /** Sentinel emitted by the firmware once setup() finishes — see #486. */
 const BOOT_READY_RE = /\bReady\b/
@@ -70,9 +69,10 @@ export function useBootLoopDetector(): void {
       }, QUIET_RESET_MS)
     }
 
-    const handleDeviceLog = (payload: unknown): void => {
-      if (!isDeviceLogPayload(payload)) return
-
+    // Subscribe to the shared device-log funnel (#1015 S-M-2). The store owns
+    // the single IPC listener and dispatches valid payloads here — we no
+    // longer mount a second `window.ipc.on(USB_DEVICE_LOG, …)` of our own.
+    const unsubscribe = useDeviceLogStore.getState().subscribeEntry((payload) => {
       if (payload.tag === 'BOOT') {
         const versionMatch = BOOT_VERSION_RE.exec(payload.message)
         if (versionMatch?.[1]) {
@@ -103,12 +103,10 @@ export function useBootLoopDetector(): void {
       if (ringRef.current.length > CONTEXT_LINES) {
         ringRef.current.splice(0, ringRef.current.length - CONTEXT_LINES)
       }
-    }
-
-    window.ipc.on(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
+    })
 
     return () => {
-      window.ipc.off(IpcChannels.USB_DEVICE_LOG, handleDeviceLog)
+      unsubscribe()
       clearQuietTimer()
     }
   }, [connected, portPath, simulationMode])
