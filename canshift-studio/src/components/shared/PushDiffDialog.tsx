@@ -5,6 +5,7 @@
 // the push or cancel.
 
 import type { DashboardConfig, Widget } from '@tmbk/canshift-core'
+import deepEqual from 'fast-deep-equal'
 import { usePushDiffStore } from '../../stores/pushDiff.store'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,7 +49,7 @@ function computeDiff(current: DashboardConfig, last: DashboardConfig): WidgetDif
     const prev = lastMap.get(id)
     if (!prev) {
       added.push(widget)
-    } else if (JSON.stringify(widget) !== JSON.stringify(prev)) {
+    } else if (!deepEqual(widget, prev)) {
       modified.push(widget)
     }
   }
