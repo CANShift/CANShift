@@ -96,6 +96,8 @@
     "directories": {
       "output": "release"
     },
+    "asar": true,
+    "asarIntegrity": true,
     "files": [
       "dist/**/*",
       "assets/icon.png"

@@ -19,6 +19,62 @@ const PATH_NOT_SURFACED_ERROR = 'blocked: path not previously surfaced'
 // path (firmware bundle, asset stream) not the config open path.
 const MAX_CONFIG_BYTES = 1024 * 1024
 
+// ---------------------------------------------------------------------------
+// Safe error codes (umbrella #1018, SEC-L-1)
+// ---------------------------------------------------------------------------
+//
+// Previous behaviour bubbled raw OS errno strings (e.g.
+// "ENOENT: no such file or directory, open '/Users/foo/.ssh/id_rsa'") through
+// IPC to the renderer. That leaks both the actual filesystem layout the main
+// process can see AND the platform's libuv-mapped error vocabulary. Collapse
+// to a small, stable set so the renderer surface stays opaque. The full
+// underlying error is still logged server-side via the main-process console
+// (see logFileError below) so debugging stays possible.
+export type ConfigFileErrorCode = 'not_found' | 'permission_denied' | 'io_error' | 'invalid_path'
+
+interface NodeFsError {
+  code?: string
+}
+
+function isNodeFsError(err: unknown): err is NodeFsError {
+  return typeof err === 'object' && err !== null && 'code' in err
+}
+
+/**
+ * Map a thrown filesystem error to one of the safe codes. SyntaxError from
+ * `JSON.parse` is treated as `invalid_path` because the file was readable but
+ * not a valid config — surfacing `io_error` for that case would be misleading.
+ */
+export function mapFileError(err: unknown): ConfigFileErrorCode {
+  if (err instanceof SyntaxError) return 'invalid_path'
+  if (isNodeFsError(err)) {
+    switch (err.code) {
+      case 'ENOENT':
+        return 'not_found'
+      case 'EACCES':
+      case 'EPERM':
+        return 'permission_denied'
+      case 'EISDIR':
+      case 'ENOTDIR':
+      case 'EINVAL':
+        return 'invalid_path'
+      default:
+        return 'io_error'
+    }
+  }
+  return 'io_error'
+}
+
+/**
+ * Log the raw error to the main-process console so an operator running with
+ * `--enable-logging` can still see the underlying errno. The renderer never
+ * sees this string.
+ */
+function logFileError(context: string, err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err)
+  console.warn(`[config-file] ${context}: ${message}`)
+}
+
 async function readConfigJson(filePath: string): Promise<unknown> {
   const stats = await stat(filePath)
   if (stats.size > MAX_CONFIG_BYTES) {
@@ -112,8 +168,11 @@ export class ConfigFileService {
       this.currentFilePath = filePath
       return { success: true, filePath, content }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { success: false, error: `Failed to read config: ${message}` }
+      // Collapse to a safe code so OS errno strings and absolute paths never
+      // reach the renderer (#1018, SEC-L-1). The full error is logged
+      // server-side so debugging stays possible.
+      logFileError('openFilePath', err)
+      return { success: false, error: mapFileError(err) }
     }
   }
 
