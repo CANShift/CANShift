@@ -23,11 +23,16 @@
 |------|---------|
 | `overall-architecture.md` | Multi-project system architecture and data flow |
 | `roadmap.md` | Phased delivery plan and milestones |
+| `architecture-roadmap-2026.md` | Themed roadmap synthesized from the 2026-05-20 audit (closes #1019) |
+| `audit-2026-05-20.md` | Source audit transcript — feeds the roadmap above |
 | `FIRST_FLASH.md` | Pre-flight checklist for first hardware power-up |
 | `usb-first-strategy.md` | Phase 1 USB communication design |
 | `config-contract.md` | JSON config schema specification |
 | `can-integration-notes.md` | CAN bus wiring and signal mapping |
 | `future-wireless-strategy.md` | Phase 2+ Wi-Fi and BLE design |
+| `ecu-integration.md` | ECU integration notes — validator + naming conventions |
+| `secure-boot-setup.md` | Secure-boot first-flash + key management |
+| `mobile-sdk-upgrade.md` | Mobile SDK upgrade decisions |
 
 ---
 

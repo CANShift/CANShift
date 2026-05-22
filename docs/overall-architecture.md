@@ -97,9 +97,9 @@ Developer / User
     │ opens/edits
     ▼
 canshift-studio
-    │ saves JSON
+    │ saves JSON (dayTheme is part of dashboard.json since schema 1.14 / #901)
     ▼
-dashboard.json / signals.json / theme.json
+dashboard.json / signals.json / device.json
     │
     │ USB serial (115200 baud, JSON framing)
     ▼
@@ -148,7 +148,8 @@ When schema changes:
   1. Update canshift-core types and bump version
   2. Add migration in canshift-core/src/migrations/
   3. Update config_types.h in firmware to match
-  4. Both desktop and firmware can now handle old and new configs
+  4. Studio runs the migration chain on load; firmware does NOT migrate —
+     it logs VER_MISMATCH and reads what it can. Push pre-migrated configs.
 ```
 
 ---
@@ -189,18 +190,24 @@ Data-driven pages from JSON config means:
 
 ## Memory Budget (approximate, ESP32 no PSRAM)
 
+Source of truth: `canshift-firmware/include/app_config.h` and
+`include/lv_conf.h`. Run `pio run -v` and parse the linker report for the
+authoritative DRAM split.
+
 | Component | RAM usage |
 |-----------|-----------|
-| LVGL frame buffer (2 × 40 lines × 320 × 2) | ~51 KB |
-| LVGL heap (LV_MEM_SIZE) | 48 KB |
-| ArduinoJson doc (max 8KB) | ~8 KB |
+| LVGL frame buffer (2 × 20 lines × 320 × 2) | ~25.6 KB |
+| LVGL heap (LV_MEM_SIZE, bumped in #555) | 80 KB |
+| ArduinoJson doc (max 8 KB) | ~8 KB |
 | CAN RX queue (32 frames × ~16B) | ~0.5 KB |
-| Signal store (64 signals × 24B) | ~1.5 KB |
-| FreeRTOS task stacks (4 tasks) | ~20 KB |
-| **Total** | **~129 KB** |
+| Signal store (~64 signals × 24B) | ~1.5 KB |
+| FreeRTOS task stacks (UI/CAN/USB/BLE/Input/Sim, see firmware CLAUDE.md table) | ~26 KB |
+| NimBLE DRAM overhead (peripheral-only) | ~30 KB |
+| **Total** | **~170 KB** |
 
-ESP32 available SRAM: ~320 KB heap (varies by framework).
-This leaves ~190 KB for other allocations. Monitor with `ESP.getFreeHeap()`.
+ESP32 available SRAM: ~320 KB heap (varies by framework). On the
+`crowpanel_28` build, `ESP.getFreeHeap()` after `[BOOT] Ready` should sit
+around 120–140 KB — anything materially lower indicates a leak.
 
 If memory pressure occurs:
 1. Reduce LVGL_BUF_LINE_COUNT (accept slower scroll)
