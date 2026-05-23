@@ -206,34 +206,6 @@ export type DashboardButtonAction = NavigateAction
 export type EcuButtonAction = MapSwitchAction | CanRawAction | CruiseControlAction
 export type ButtonAction = z.infer<typeof ButtonActionSchema>
 
-/**
- * Runtime tuple of valid `(category, type)` pairs for ButtonAction (issue
- * #716). Single source of truth for action-editor UIs — consumers can iterate
- * instead of hand-maintaining a list that drifts from the schema above.
- */
-export const BUTTON_ACTION_TYPES = [
-  { category: 'dashboard', type: 'navigate' },
-  { category: 'ecu', type: 'map_switch' },
-  { category: 'ecu', type: 'can_raw' },
-  { category: 'ecu', type: 'cruise_control' },
-] as const
-
-export function isNavigateAction(action: ButtonAction): action is NavigateAction {
-  return action.type === 'navigate'
-}
-
-export function isMapSwitchAction(action: ButtonAction): action is MapSwitchAction {
-  return action.type === 'map_switch'
-}
-
-export function isCanRawAction(action: ButtonAction): action is CanRawAction {
-  return action.type === 'can_raw'
-}
-
-export function isCruiseControlAction(action: ButtonAction): action is CruiseControlAction {
-  return action.type === 'cruise_control'
-}
-
 // ---------------------------------------------------------------------------
 // Button widget config
 // ---------------------------------------------------------------------------

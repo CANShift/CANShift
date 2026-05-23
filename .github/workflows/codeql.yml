@@ -1,0 +1,37 @@
+# CodeQL — static analysis for the TypeScript/JavaScript surface (canshift-core,
+# canshift-studio, canshift-mobile). Firmware (C++17 / ESP32) is intentionally
+# excluded: CodeQL's C++ mode needs a build that runs on a standard GitHub
+# Actions runner, which the PlatformIO/ESP-IDF toolchain isn't out of the box.
+#
+# Tracked recommendation from security umbrella #1018.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'

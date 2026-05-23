@@ -14,17 +14,7 @@ import type {
   InputBinding,
   InputPressKind,
 } from '@tmbk/canshift-core'
-import { MAX_INPUT_BINDINGS } from '@tmbk/canshift-core'
-
-const CRUISE_OPS: CruiseControlOp[] = [
-  'on',
-  'off',
-  'toggle',
-  'set',
-  'resume',
-  'increment',
-  'decrement',
-]
+import { CRUISE_CONTROL_OPS, MAX_INPUT_BINDINGS } from '@tmbk/canshift-core'
 
 const PRESS_KINDS: InputPressKind[] = ['short', 'long', 'double']
 const ACTIVE_LEVELS: InputActiveLevel[] = ['low', 'high']
@@ -455,7 +445,7 @@ function ActionEditor({ action, onChange }: ActionEditorProps) {
                 }}
                 style={inputStyle}
               >
-                {CRUISE_OPS.map((op) => (
+                {CRUISE_CONTROL_OPS.map((op) => (
                   <option key={op} value={op}>
                     {op}
                   </option>
