@@ -44,18 +44,13 @@ export type {
 } from './schemas/dashboard.js'
 
 export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './schemas/dashboard.js'
-// Button-action discriminator helpers — exposed because studio's ActionRow
-// (#852) consumes them in `editor/ButtonActionEditor.tsx`. The previous
-// "kept internal until needed" comment (referencing #793) is no longer
-// accurate now that the studio editor ships.
-export {
-  BUTTON_ACTION_TYPES,
-  CRUISE_CONTROL_OPS,
-  isNavigateAction,
-  isMapSwitchAction,
-  isCanRawAction,
-  isCruiseControlAction,
-} from './schemas/dashboard.js'
+// Cruise-control op tuple — single source of truth for the studio editor
+// (`property-panel/button-fields.tsx`) and the device input-bindings UI
+// (`device/InputBindingsSection.tsx`). Issue #1016 — replaces the previous
+// per-file `CRUISE_OPS` copies. The `BUTTON_ACTION_TYPES` tuple and
+// `is{Navigate,MapSwitch,CanRaw,CruiseControl}Action` type guards were
+// dropped in the same pass — no non-test consumers found.
+export { CRUISE_CONTROL_OPS } from './schemas/dashboard.js'
 export type {
   SignalConfig,
   SignalDef,
@@ -67,22 +62,17 @@ export type { DeviceConfig } from './schemas/device.js'
 export type { CanSpeedKbps } from './schemas/signal.js'
 export { CAN_SPEED_OPTIONS } from './schemas/signal.js'
 export { DEFAULT_DEVICE_CONFIG } from './schemas/device.js'
-export type { DeviceConfigWire } from './schemas/device.js'
 export { deviceConfigFromWire, deviceConfigToWire } from './schemas/device.js'
 
 // Input bindings — physical GPIO buttons → dashboard actions (issue #833)
 export type {
   InputBinding,
-  InputBindingWire,
   InputBindingsConfig,
-  InputBindingsConfigWire,
   InputActiveLevel,
   InputPressKind,
 } from './schemas/input-bindings.js'
 export {
-  InputBindingSchema,
   InputBindingsConfigSchema,
-  InputBindingWireSchema,
   InputBindingsConfigWireSchema,
   inputBindingsFromWire,
   inputBindingsToWire,
@@ -99,13 +89,8 @@ export type { ScreenSettings } from './schemas/screen-settings.js'
 export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-settings.js'
 
 // BLE STATUS characteristic — firmware → mobile health/config payload (issue #887)
-export type { BleStatusWire, BleStatus, BleStatusResult } from './schemas/ble-status.js'
-export {
-  BleStatusWireSchema,
-  BLE_STATUS_MAX_STRING_LEN,
-  bleStatusFromWire,
-  parseBleStatus,
-} from './schemas/ble-status.js'
+export type { BleStatus, BleStatusResult } from './schemas/ble-status.js'
+export { BLE_STATUS_MAX_STRING_LEN, parseBleStatus } from './schemas/ble-status.js'
 
 // Sensor color-ramp defaults (issue #430)
 export {

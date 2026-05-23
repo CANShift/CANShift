@@ -12,7 +12,7 @@
 - **Validation** — runtime checks on dashboard, signal, and device configs
 - **Schema migrations** — versioned chain that brings older configs forward to `CURRENT_SCHEMA_VERSION`
 - **Design tokens** — `DARK_TOKENS` palette + `tokensToCssVars` consumed by studio's Tailwind layer
-- **Wire-format schemas** — `BleStatusWireSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, ECU profiles, hardware profiles
+- **Wire-format schemas** — `DeviceConfigWireSchema`, `InputBindingsConfigWireSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, ECU profiles, hardware profiles
 
 It is pure TypeScript with no Node.js, browser, or React Native APIs. Today
 it is consumed by `canshift-studio` and `canshift-mobile`. IPC return-shape
@@ -98,11 +98,11 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 
 **Runtime values**
 
-- Dashboard: `DEFAULT_PAGE_PALETTE`, `DEFAULT_TOP_BAR_LAYOUT`, button-action discriminator helpers (`BUTTON_ACTION_TYPES`, `CRUISE_CONTROL_OPS`, `isNavigateAction`, `isMapSwitchAction`, `isCanRawAction`, `isCruiseControlAction`)
+- Dashboard: `DEFAULT_PAGE_PALETTE`, `DEFAULT_TOP_BAR_LAYOUT`, `CRUISE_CONTROL_OPS`
 - Device: `DEFAULT_DEVICE_CONFIG`, `CAN_SPEED_OPTIONS`, `deviceConfigFromWire`, `deviceConfigToWire`
-- Input bindings: `InputBindingSchema`, `InputBindingsConfigSchema`, `InputBindingWireSchema`, `InputBindingsConfigWireSchema`, `inputBindingsFromWire`, `inputBindingsToWire`, `MAX_INPUT_BINDINGS`, `INPUT_BINDING_ID_MAX_LEN`
-- Schemas (boundary parsing): `DashboardConfigSchema`, `SignalConfigSchema`, `DeviceConfigSchema`, `DeviceConfigWireSchema`, `Esp32OutputGpioSchema`, `Esp32InputGpioSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, `BleStatusWireSchema`
-- BLE STATUS helpers: `BLE_STATUS_MAX_STRING_LEN`, `SCREEN_SETTINGS_BOUNDS`, `bleStatusFromWire`, `parseBleStatus`
+- Input bindings: `InputBindingsConfigSchema`, `InputBindingsConfigWireSchema`, `inputBindingsFromWire`, `inputBindingsToWire`, `MAX_INPUT_BINDINGS`, `INPUT_BINDING_ID_MAX_LEN`
+- Schemas (boundary parsing): `DashboardConfigSchema`, `SignalConfigSchema`, `DeviceConfigSchema`, `DeviceConfigWireSchema`, `Esp32OutputGpioSchema`, `Esp32InputGpioSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`
+- BLE STATUS helpers: `BLE_STATUS_MAX_STRING_LEN`, `SCREEN_SETTINGS_BOUNDS`, `parseBleStatus`
 - Sensors: `SENSOR_DEFAULT_RAMPS`, `SENSOR_PALETTE`, `resolveDefaultRamp`, `resolveSensorKind`, `colorAtValue`, `sensorOkColor`, `sensorWarningColor`
 - Design tokens: `COLOR_KEY_TO_CSS_VAR`, `DARK_TOKENS`, `tokensToCssVars`, `DAY_PALETTE_DEFAULT`, `DAY_BG_DEFAULT`, `DAY_THEME_PRESET`
 - Hardware / ECU: `HARDWARE_PROFILES`, `isPinAvailableForBoard`, `ECU_PROFILES`, `DEFAULT_PROFILE_ID`, `MAXXECU_SIGNAL_UNITS`
