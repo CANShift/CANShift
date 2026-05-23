@@ -1,22 +1,30 @@
 // useUsbConnection.ts — Shared USB connect / disconnect / refresh logic.
 //
+// The port-discovery state (ports / selectedPort / loading) lives in
+// `usbPorts.store.ts` since issue #1015 (S-H-3) — same pattern as
+// `releases.store` / `appVersion.store` from #1067. This hook is now a thin
+// selector + imperative bridge over the connect/disconnect side, which is
+// user-driven action, not data-fetching, and stays in the hook.
+//
 // Unsolicited device events (unexpected disconnect, errors, device logs)
 // live in `useUsbEvents` which is mounted ONCE at the App root. Mounting
 // the listeners here would duplicate every device log line for each
 // concurrently-mounted ConnectModal (#484).
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { useErrorStore } from '../stores/error.store'
-import type { PortInfo } from '../../shared/ipc-contract'
+import { useUsbPortsStore } from '../stores/usbPorts.store'
 import { usbService } from '../services/ipc.service'
 
 export function useUsbConnection() {
-  const [ports, setPorts] = useState<PortInfo[]>([])
-  const [selectedPort, setSelectedPort] = useState('')
-  const [loading, setLoading] = useState(false)
+  const ports = useUsbPortsStore((s) => s.ports)
+  const selectedPort = useUsbPortsStore((s) => s.selectedPort)
+  const loading = useUsbPortsStore((s) => s.loading)
+  const setSelectedPort = useUsbPortsStore((s) => s.setSelectedPort)
+  const refreshPorts = useUsbPortsStore((s) => s.refresh)
 
   const connected = useDeviceStore((s) => s.connected)
   const setError = useDeviceStore((s) => s.setError)
@@ -25,35 +33,12 @@ export function useUsbConnection() {
   const log = useLogStore((s) => s.push)
   const pushError = useErrorStore((s) => s.push)
 
-  const refreshPorts = useCallback(() => {
-    setLoading(true)
-    clearError()
-    usbService
-      .listPorts()
-      .then((list) => {
-        setPorts(list)
-        if (list.length === 1 && list[0]) setSelectedPort(list[0].path)
-        else setSelectedPort('')
-        log('info', `Found ${String(list.length)} port${list.length !== 1 ? 's' : ''}`)
-      })
-      .catch(() => {
-        const msg = 'Failed to list serial ports'
-        setError(msg)
-        log('error', msg)
-        pushError({ source: 'usb', code: 'PORT_LIST_FAILED', message: msg })
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [clearError, setError, log, pushError])
-
   const connect = useCallback(() => {
     if (!selectedPort) return
     // Clear the manual-disconnect flag — the user is explicitly opting back
     // into the connection, so let `useAutoConnect`'s polling resume after a
     // future drop. Issue #977.
     setManualDisconnect(false)
-    setLoading(true)
     clearError()
     log('info', `Connecting to ${selectedPort}…`)
     usbService
@@ -76,9 +61,6 @@ export function useUsbConnection() {
         setError(msg)
         log('error', `Connection error on ${selectedPort}`)
         pushError({ source: 'usb', code: 'CONNECT_FAILED', message: msg, detail: selectedPort })
-      })
-      .finally(() => {
-        setLoading(false)
       })
   }, [selectedPort, setError, clearError, setManualDisconnect, log, pushError])
 

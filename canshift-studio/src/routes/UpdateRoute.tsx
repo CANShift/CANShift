@@ -9,16 +9,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
+import { useFirmwareReleasesStore } from '../stores/firmwareReleases.store'
 import { IconUsb } from '../components/icons/Icon'
 import { Spinner } from '../components/shared/PhaseIndicator'
 import { SafeMarkdown } from '../components/shared/SafeMarkdown'
-import { firmwareIpc } from '../services/ipc.service'
 import { useFirmwareFlash } from '../hooks/useFirmwareFlash'
 import { Label } from '@/components/ui/label'
 import type { FirmwareRelease } from '../services/ipc.service'
 import type { FirmwareCheck } from '../stores/device.store'
+import type { FirmwareChannel } from '../stores/firmwareReleases.store'
 
-type FlashChannel = 'stable' | 'beta'
+type FlashChannel = FirmwareChannel
 type ActiveFlash = { type: 'release'; tag: string } | { type: 'manual' } | null
 
 // Heuristic flash speed used to render an ETA next to the Flash button.
@@ -137,9 +138,10 @@ export default function UpdateRoute() {
 
   // ---- Release list state ----
   const [channel, setChannel] = useState<FlashChannel>('stable')
-  const [releases, setReleases] = useState<FirmwareRelease[]>([])
-  const [releasesLoading, setReleasesLoading] = useState(false)
-  const [releasesError, setReleasesError] = useState<string | null>(null)
+  const releases = useFirmwareReleasesStore((s) => s.byChannel[channel].releases)
+  const releasesLoading = useFirmwareReleasesStore((s) => s.byChannel[channel].loading)
+  const releasesError = useFirmwareReleasesStore((s) => s.byChannel[channel].error)
+  const loadReleasesChannel = useFirmwareReleasesStore((s) => s.loadChannel)
   const [latestNotesOpen, setLatestNotesOpen] = useState(false)
   const [selectedOlderTag, setSelectedOlderTag] = useState<string>('')
   const [olderNotesOpen, setOlderNotesOpen] = useState(false)
@@ -152,27 +154,11 @@ export default function UpdateRoute() {
   const [manualError, setManualError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Idiomatic Zustand bridge — the side effect is in the store action; this
+  // effect only schedules the fetch when the channel changes.
   useEffect(() => {
-    let cancelled = false
-    setReleasesLoading(true)
-    setReleasesError(null)
-    setReleases([])
-    firmwareIpc
-      .listReleases(channel)
-      .then((list) => {
-        if (!cancelled) setReleases(list)
-      })
-      .catch((err: unknown) => {
-        if (!cancelled)
-          setReleasesError(err instanceof Error ? err.message : 'Failed to fetch releases')
-      })
-      .finally(() => {
-        if (!cancelled) setReleasesLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [channel])
+    void loadReleasesChannel(channel)
+  }, [channel, loadReleasesChannel])
 
   // ---- Derived state ----
 

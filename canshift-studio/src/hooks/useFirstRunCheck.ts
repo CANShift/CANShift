@@ -1,14 +1,14 @@
-// useFirstRunCheck.ts — Resolve the first-run onboarding state from the main process.
+// useFirstRunCheck.ts — Renderer-side selector around the first-run store.
 //
-// Reads `session.firstRunCompleted` once on mount and exposes a stable
-// `markCompleted()` callback that both persists the flag and updates the local
-// state. Silently treats IPC failures as "already completed" so a broken
-// userData file never traps the user behind the welcome modal.
+// Issue #1015 (S-H-3) moved the IPC + state transitions into
+// `firstRun.store.ts` so we follow the studio rule "no useEffect for data
+// fetching — use Zustand actions". This file is now a thin bridge: it selects
+// from the store and schedules the initial fetch on mount.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { sessionIpc } from '../services/ipc.service'
+import { useEffect } from 'react'
+import { useFirstRunStore, type FirstRunStatus } from '../stores/firstRun.store'
 
-export type FirstRunState = 'loading' | 'pending' | 'completed'
+export type FirstRunState = FirstRunStatus
 
 export interface UseFirstRunCheckResult {
   state: FirstRunState
@@ -16,33 +16,15 @@ export interface UseFirstRunCheckResult {
 }
 
 export function useFirstRunCheck(): UseFirstRunCheckResult {
-  const [state, setState] = useState<FirstRunState>('loading')
-  const cancelledRef = useRef(false)
+  const state = useFirstRunStore((s) => s.status)
+  const load = useFirstRunStore((s) => s.load)
+  const markCompleted = useFirstRunStore((s) => s.markCompleted)
 
+  // Idiomatic Zustand bridge — the side effect is in the store action; this
+  // effect only schedules the first invocation when the consumer mounts.
   useEffect(() => {
-    cancelledRef.current = false
-    void (async () => {
-      try {
-        const completed = await sessionIpc.getFirstRunCompleted()
-        if (cancelledRef.current) return
-        setState(completed ? 'completed' : 'pending')
-      } catch {
-        if (cancelledRef.current) return
-        // If we can't read the flag, suppress onboarding rather than nag.
-        setState('completed')
-      }
-    })()
-    return () => {
-      cancelledRef.current = true
-    }
-  }, [])
-
-  const markCompleted = useCallback(() => {
-    setState('completed')
-    void sessionIpc.markFirstRunCompleted().catch(() => {
-      // Best-effort persistence — user keeps the dismissed state for this session.
-    })
-  }, [])
+    void load()
+  }, [load])
 
   return { state, markCompleted }
 }

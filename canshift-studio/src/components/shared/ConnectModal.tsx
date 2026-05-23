@@ -132,7 +132,7 @@ function UsbTab({ onClose }: { onClose: () => void }) {
 
   // Refresh ports when the modal opens AND when the user switches to the USB tab.
   useEffect(() => {
-    if (!connected) refreshPorts()
+    if (!connected) void refreshPorts()
   }, [connected, refreshPorts])
 
   // Only show the USB Disconnect button when USB is the active transport —
