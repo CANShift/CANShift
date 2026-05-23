@@ -6,27 +6,13 @@
 // component.
 
 import { useState } from 'react'
-import type { ButtonAction, CruiseControlOp } from '@tmbk/canshift-core'
+import { CRUISE_CONTROL_OPS, type ButtonAction, type CruiseControlOp } from '@tmbk/canshift-core'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { IconTrash } from '../../icons/Icon'
 import { WidgetPreview } from '../WidgetPreview'
 import { useDashboardStore } from '../../../stores/dashboard.store'
 import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } from './shared'
-
-// Cruise-control ops the editor exposes — mirrors `CRUISE_CONTROL_OPS` in
-// canshift-core. Kept inline (not imported as a value) because the schema
-// barrel re-exports only the types today; if a downstream consumer needs the
-// runtime tuple too we can promote it. Issue #852.
-const CRUISE_OPS: CruiseControlOp[] = [
-  'on',
-  'off',
-  'toggle',
-  'set',
-  'resume',
-  'increment',
-  'decrement',
-]
 
 // Ops that accept an optional `stepKmh` adjustment.
 const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])
@@ -179,7 +165,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
                 onUpdate({ ...action, op: nextOp })
               }}
             >
-              {CRUISE_OPS.map((op) => (
+              {CRUISE_CONTROL_OPS.map((op) => (
                 <option key={op} value={op}>
                   {op}
                 </option>
