@@ -1,44 +1,52 @@
 #!/usr/bin/env node
 // scripts/check-renderer-size.mjs — Fail the build when the renderer main chunk exceeds the budget.
 
-import { readdirSync, statSync } from 'node:fs'
-import { join, resolve, dirname } from 'node:path'
+import { readFileSync, statSync } from 'node:fs'
+import { join, resolve, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const ASSETS_DIR = resolve(__dirname, '..', 'dist', 'renderer', 'assets')
+const RENDERER_DIR = resolve(__dirname, '..', 'dist', 'renderer')
+const ASSETS_DIR = join(RENDERER_DIR, 'assets')
+const INDEX_HTML = join(RENDERER_DIR, 'index.html')
 
 // Budget for the renderer main chunk (`index-*.js`).
-// Baseline at v0.10.0: ~1208 KB minified (Radix Select for the signal
-// picker, sensor palette helpers, unit fallback table, fractional digit
-// split path). 1280 KB gives ~6 % headroom — keeps the gate honest but
-// absorbs the UX features that landed together. Issue #193: revisit and
-// tighten as routes get further code-split.
-const MAIN_CHUNK_BUDGET_BYTES = 1280 * 1024
+// After audit S-M-1 (umbrella #1015) — lazied `EditorRoute` — the chunk
+// dropped from ~1236 KB to ~895 KB. New budget of 940 KB gives ~5 %
+// headroom on top of the current size so the gate fails fast on the
+// next PR that would re-grow the initial payload by 5 % or more.
+// Prior budget: 1280 KB. Re-tighten if further route splits or vendor
+// extraction drop the baseline another 50+ KB.
+const MAIN_CHUNK_BUDGET_BYTES = 940 * 1024
 
 const KIB = 1024
 
 const args = process.argv.slice(2)
 const verbose = args.includes('--verbose') || args.includes('-v')
 
-function findMainChunk(dir) {
-  let entries
+// Parse `index.html` for the actual `<script type="module" … src="…">` the
+// browser bootstraps from. We can't just glob `index-*.js` any more: once
+// `EditorRoute` was lazied (audit S-M-1), Rollup started emitting sibling
+// `index-*.js` shared chunks for code split out of the editor tree, which
+// have nothing to do with the initial payload the budget is meant to guard.
+function findEntryChunk() {
+  let html
   try {
-    entries = readdirSync(dir)
+    html = readFileSync(INDEX_HTML, 'utf8')
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
-    throw new Error(`Renderer assets directory not found at ${dir}: ${error}`)
+    throw new Error(`Renderer index.html not found at ${INDEX_HTML}: ${error}`)
   }
-  const matches = entries.filter((name) => /^index-[A-Za-z0-9_-]+\.js$/.test(name))
-  if (matches.length === 0) {
+  const match = html.match(
+    /<script[^>]*type=["']module["'][^>]*src=["']([^"']+\/(index-[A-Za-z0-9_-]+\.js))["']/
+  )
+  if (!match) {
     throw new Error(
-      `No main renderer chunk (index-*.js) found in ${dir}. Did you run \`npm run build\`?`
+      `No module entry <script src="…/index-*.js"> found in ${INDEX_HTML}. ` +
+        `Did you run \`npm run build\`?`
     )
   }
-  if (matches.length > 1) {
-    throw new Error(`Multiple main renderer chunks found in ${dir}: ${matches.join(', ')}`)
-  }
-  return matches[0]
+  return basename(match[2])
 }
 
 function formatKb(bytes) {
@@ -46,7 +54,7 @@ function formatKb(bytes) {
 }
 
 function main() {
-  const chunkName = findMainChunk(ASSETS_DIR)
+  const chunkName = findEntryChunk()
   const chunkPath = join(ASSETS_DIR, chunkName)
   const { size } = statSync(chunkPath)
   const overBudget = size > MAIN_CHUNK_BUDGET_BYTES
