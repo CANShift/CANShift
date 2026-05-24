@@ -8,6 +8,21 @@ import { useState, useCallback } from 'react'
 import { useErrorStore } from '../../stores/error.store'
 import type { AppError } from '../../stores/error.store'
 
+// Custom error palette — these shades do not yet map to core design tokens
+// (`--destructive` / `--danger` are pure #FF0000 and are too bright for the
+// sustained "error chrome" look). Hoisted so the planned token promotion
+// (audit S-H-5, umbrella #1015) is a one-line swap per shade.
+const ERR_BAR_BG = '#160808' // MIRROR: deep red bar background
+const ERR_ACCENT = '#CC3333' // MIRROR: accent strip + count badge
+const ERR_BORDER = '#441818' // MIRROR: badge border
+const ERR_BORDER_DIM = '#2A1010' // MIRROR: row separator / badge bg
+const ERR_DETAIL_BG = '#110A0A' // MIRROR: detail block background
+const ERR_BADGE_TEXT = '#884444' // MIRROR
+const ERR_TIME_TEXT = '#664444' // MIRROR
+const ERR_DETAIL_TEXT = '#886666' // MIRROR
+const ERR_MSG_TEXT = '#DDAAAA' // MIRROR
+const ERR_CLEAR_TEXT = '#553333' // MIRROR
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -39,20 +54,20 @@ function ErrorRow({ error, onDismiss }: { error: AppError; onDismiss: () => void
   return (
     <div
       style={{
-        borderBottom: '1px solid #2A1010',
+        borderBottom: `1px solid ${ERR_BORDER_DIM}`,
         padding: '5px 10px 5px 12px',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 10, color: '#664444', flexShrink: 0 }}>
+        <span style={{ fontSize: 10, color: ERR_TIME_TEXT, flexShrink: 0 }}>
           {formatTime(error.timestamp)}
         </span>
         <span
           style={{
             fontSize: 10,
-            color: '#884444',
-            background: '#2A1010',
-            border: '1px solid #441818',
+            color: ERR_BADGE_TEXT,
+            background: ERR_BORDER_DIM,
+            border: `1px solid ${ERR_BORDER}`,
             borderRadius: 3,
             padding: '1px 5px',
             fontFamily: 'monospace',
@@ -64,7 +79,7 @@ function ErrorRow({ error, onDismiss }: { error: AppError; onDismiss: () => void
         <span
           style={{
             fontSize: 11,
-            color: '#DDAAAA',
+            color: ERR_MSG_TEXT,
             flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -96,9 +111,9 @@ function ErrorRow({ error, onDismiss }: { error: AppError; onDismiss: () => void
             padding: '6px 8px',
             fontSize: 10,
             fontFamily: 'monospace',
-            color: '#886666',
-            background: '#110A0A',
-            border: '1px solid #2A1010',
+            color: ERR_DETAIL_TEXT,
+            background: ERR_DETAIL_BG,
+            border: `1px solid ${ERR_BORDER_DIM}`,
             borderRadius: 3,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
@@ -120,7 +135,7 @@ function ErrorRow({ error, onDismiss }: { error: AppError; onDismiss: () => void
 const iconBtn: React.CSSProperties = {
   background: 'none',
   border: 'none',
-  color: '#664444',
+  color: ERR_TIME_TEXT,
   cursor: 'pointer',
   fontSize: 13,
   lineHeight: 1,
@@ -144,9 +159,9 @@ export default function ErrorBar() {
   return (
     <div
       style={{
-        background: '#160808',
-        borderTop: '1px solid #441818',
-        borderLeft: '3px solid #CC3333',
+        background: ERR_BAR_BG,
+        borderTop: `1px solid ${ERR_BORDER}`,
+        borderLeft: `3px solid ${ERR_ACCENT}`,
         flexShrink: 0,
       }}
     >
@@ -166,8 +181,8 @@ export default function ErrorBar() {
         {errors.length > 1 ? (
           <span
             style={{
-              background: '#CC3333',
-              color: '#FFFFFF',
+              background: ERR_ACCENT,
+              color: 'hsl(var(--text))',
               fontSize: 10,
               fontWeight: 700,
               borderRadius: 10,
@@ -178,16 +193,16 @@ export default function ErrorBar() {
             {errors.length}
           </span>
         ) : (
-          <span style={{ color: '#CC3333', fontSize: 13, flexShrink: 0 }}>⚠</span>
+          <span style={{ color: ERR_ACCENT, fontSize: 13, flexShrink: 0 }}>⚠</span>
         )}
 
         {/* Latest error code */}
         <span
           style={{
             fontSize: 10,
-            color: '#884444',
-            background: '#2A1010',
-            border: '1px solid #441818',
+            color: ERR_BADGE_TEXT,
+            background: ERR_BORDER_DIM,
+            border: `1px solid ${ERR_BORDER}`,
             borderRadius: 3,
             padding: '1px 5px',
             fontFamily: 'monospace',
@@ -201,7 +216,7 @@ export default function ErrorBar() {
         <span
           style={{
             fontSize: 11,
-            color: '#DDAAAA',
+            color: ERR_MSG_TEXT,
             flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -231,7 +246,7 @@ export default function ErrorBar() {
               setExpanded(false)
             }}
             title="Clear all errors"
-            style={{ ...iconBtn, color: '#553333', fontSize: 11 }}
+            style={{ ...iconBtn, color: ERR_CLEAR_TEXT, fontSize: 11 }}
           >
             Clear all
           </button>
@@ -256,7 +271,7 @@ export default function ErrorBar() {
           style={{
             maxHeight: 220,
             overflowY: 'auto',
-            borderTop: '1px solid #2A1010',
+            borderTop: `1px solid ${ERR_BORDER_DIM}`,
           }}
         >
           {errors.map((err) => (

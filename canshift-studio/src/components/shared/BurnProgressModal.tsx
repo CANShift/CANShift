@@ -10,6 +10,13 @@ import type { BurnPhase } from '../../stores/device.store'
 import PhaseIndicator from './PhaseIndicator'
 import type { PhaseTone } from './PhaseIndicator'
 
+// Modal chrome shades not yet mapped to core design tokens. Hoisted so the
+// planned token promotion (audit S-H-5, umbrella #1015) is a one-line swap.
+const OVERLAY_BG = '#00000088' // MIRROR: 53% black backdrop (no alpha token)
+const MODAL_BG = '#161616' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const MODAL_BORDER = '#2A2A2A' // MIRROR: ≈ --surface-2 (#292929)
+const MODAL_SHADOW = '#00000088' // MIRROR: matches overlay
+
 interface PhaseCopy {
   title: string
   detail: string
@@ -66,7 +73,7 @@ export default function BurnProgressModal() {
       style={{
         position: 'fixed',
         inset: 0,
-        background: '#00000088',
+        background: OVERLAY_BG,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -78,13 +85,13 @@ export default function BurnProgressModal() {
     >
       <div
         style={{
-          background: '#161616',
-          border: '1px solid #2A2A2A',
+          background: MODAL_BG,
+          border: `1px solid ${MODAL_BORDER}`,
           borderRadius: 8,
           padding: '24px 32px',
           minWidth: 320,
           maxWidth: 460,
-          boxShadow: '0 8px 32px #00000088',
+          boxShadow: `0 8px 32px ${MODAL_SHADOW}`,
         }}
       >
         <PhaseIndicator tone={copy.tone} title={copy.title} detail={copy.detail} />
