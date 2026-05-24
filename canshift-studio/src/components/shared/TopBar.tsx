@@ -8,11 +8,31 @@ import ConnectModal from './ConnectModal'
 import { useLogStore } from '../../stores/log.store'
 import { IconLoad, IconExport, IconBurn, IconExit, IconUsb } from '../icons/Icon'
 
+// Chrome / brand shades not yet mapped to a core token. Hoisted to constants
+// so the planned token promotion (audit S-H-5, umbrella #1015) only swaps one
+// place per shade. See PR body for the proposed follow-up token additions.
+const CHROME_BG = '#0A0A0A' // MIRROR: darker than --bg (#121212)
+const CHROME_BORDER = '#1A1A1A' // MIRROR: between --bg and --surface
+const CHROME_DIVIDER = '#1E1E1E' // MIRROR: ≈ --surface (#1F1F1F)
+const CHROME_BUTTON_BORDER = '#202020' // MIRROR: subtle button outline
+const CHROME_BUTTON_HOVER_BG = '#141414' // MIRROR: button pressed state
+const CHROME_BUTTON_HOVER_BORDER = '#282828' // MIRROR: button pressed state border
+const BRAND_RED = '#E03030' // MIRROR: darker variant of --primary (#FF4747)
+const BRAND_RED_BORDER = '#3A1A1A' // MIRROR: accent button outline
+const BRAND_ORANGE = '#E08030' // MIRROR: darker variant of --warning (#FF8800)
+const STATUS_GREEN = '#3DB86B' // MIRROR: darker variant of --success (#00CC2A)
+const SIM_PURPLE = '#8844FF' // MIRROR: simulation badge (no token)
+const SIM_PURPLE_TEXT = '#7744CC' // MIRROR: simulation badge text (no token)
+const TEXT_DISABLED = '#3A3A3A' // MIRROR: disabled text shade
+const TEXT_DIM_2 = '#444444' // MIRROR: deeper dim than --text-muted
+const TEXT_DIM_4 = '#777777' // MIRROR
+const TEXT_DIM_5 = '#888888' // MIRROR
+
 const STATUS_COLOR: Record<string, string> = {
-  connected: '#3DB86B',
-  burning: '#E08030',
-  error: '#E03030',
-  disconnected: '#3A3A3A',
+  connected: STATUS_GREEN,
+  burning: BRAND_ORANGE,
+  error: BRAND_RED,
+  disconnected: TEXT_DISABLED,
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -47,11 +67,11 @@ function ToolBtn({
           gap: 5,
           padding: '4px 11px',
           background: 'transparent',
-          border: `1px solid ${accent ? '#3A1A1A' : '#202020'}`,
+          border: `1px solid ${accent ? BRAND_RED_BORDER : CHROME_BUTTON_BORDER}`,
           borderRadius: 5,
           cursor: disabled ? 'not-allowed' : 'pointer',
           fontSize: 12,
-          color: disabled ? '#3A3A3A' : accent ? '#E03030' : '#777777',
+          color: disabled ? TEXT_DISABLED : accent ? BRAND_RED : TEXT_DIM_4,
           transition: 'border-color 0.1s, color 0.1s',
           WebkitAppRegion: 'no-drag',
         } as React.CSSProperties
@@ -94,7 +114,7 @@ export default function TopBar() {
     ? 'Push config to device'
     : (burnBlockedReason ?? 'Push config to device')
 
-  const statusColor = simulationMode ? '#8844FF' : (STATUS_COLOR[status] ?? '#3A3A3A')
+  const statusColor = simulationMode ? SIM_PURPLE : (STATUS_COLOR[status] ?? TEXT_DISABLED)
   const statusLabel = simulationMode
     ? 'Simulation'
     : `${STATUS_LABEL[status] ?? 'No device'}${status === 'connected' && portPath ? ` · ${portPath}` : ''}`
@@ -107,8 +127,8 @@ export default function TopBar() {
             display: 'flex',
             alignItems: 'center',
             height: 52,
-            background: '#0A0A0A',
-            borderBottom: '1px solid #1A1A1A',
+            background: CHROME_BG,
+            borderBottom: `1px solid ${CHROME_BORDER}`,
             padding: '0 14px 0 72px',
             gap: 10,
             WebkitAppRegion: 'drag',
@@ -153,11 +173,11 @@ export default function TopBar() {
           </ToolBtn>
 
           <ToolBtn onClick={burnConfig} disabled={!canBurn} title={burnTooltip} accent={canBurn}>
-            <IconBurn size={12} color={canBurn ? '#E03030' : '#3A3A3A'} />
+            <IconBurn size={12} color={canBurn ? BRAND_RED : TEXT_DISABLED} />
             {syncing ? 'Burning…' : 'Burn'}
           </ToolBtn>
 
-          <div style={{ width: 1, height: 18, background: '#1E1E1E', margin: '0 4px' }} />
+          <div style={{ width: 1, height: 18, background: CHROME_DIVIDER, margin: '0 4px' }} />
 
           {/* Exit simulation */}
           {simulationMode && (
@@ -168,8 +188,8 @@ export default function TopBar() {
               }}
               title="Exit simulation"
             >
-              <IconExit size={12} color="#7744CC" />
-              <span style={{ color: '#7744CC' }}>Exit sim</span>
+              <IconExit size={12} color={SIM_PURPLE_TEXT} />
+              <span style={{ color: SIM_PURPLE_TEXT }}>Exit sim</span>
             </ToolBtn>
           )}
 
@@ -185,12 +205,12 @@ export default function TopBar() {
                 alignItems: 'center',
                 gap: 6,
                 padding: '4px 10px',
-                background: modalOpen ? '#141414' : 'transparent',
-                border: `1px solid ${modalOpen ? '#282828' : '#202020'}`,
+                background: modalOpen ? CHROME_BUTTON_HOVER_BG : 'transparent',
+                border: `1px solid ${modalOpen ? CHROME_BUTTON_HOVER_BORDER : CHROME_BUTTON_BORDER}`,
                 borderRadius: 5,
                 cursor: simulationMode ? 'default' : 'pointer',
                 fontSize: 12,
-                color: status === 'disconnected' && !simulationMode ? '#444444' : '#888888',
+                color: status === 'disconnected' && !simulationMode ? TEXT_DIM_2 : TEXT_DIM_5,
                 transition: 'background 0.1s',
                 WebkitAppRegion: 'no-drag',
               } as React.CSSProperties
