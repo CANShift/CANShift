@@ -5,8 +5,8 @@
 // signal name so an on-screen button widget bound to the same signal can
 // stay in lockstep with the physical button.
 
-import { useCallback, useEffect, useState } from 'react'
-import { inputBindingsIpc } from '../../services/ipc.service'
+import { useEffect } from 'react'
+import { useInputBindingsStore } from '../../stores/inputBindings.store'
 import type {
   ButtonAction,
   CruiseControlOp,
@@ -111,39 +111,35 @@ function actionFactory(type: (typeof ACTION_TYPES)[number]): ButtonAction {
 }
 
 export default function InputBindingsSection() {
-  const [bindings, setBindings] = useState<InputBinding[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [saveError, setSaveError] = useState('')
+  const bindings = useInputBindingsStore((s) => s.bindings)
+  const loaded = useInputBindingsStore((s) => s.loaded)
+  const saveStatus = useInputBindingsStore((s) => s.saveStatus)
+  const saveError = useInputBindingsStore((s) => s.saveError)
+  const load = useInputBindingsStore((s) => s.load)
+  const addBinding = useInputBindingsStore((s) => s.addBinding)
+  const removeBinding = useInputBindingsStore((s) => s.removeBinding)
+  const updateBinding = useInputBindingsStore((s) => s.updateBinding)
+  const save = useInputBindingsStore((s) => s.save)
+  const clearSaveStatus = useInputBindingsStore((s) => s.clearSaveStatus)
 
+  // Idiomatic Zustand bridge — the side effect is in the store action; this
+  // effect only schedules the first invocation when the consumer mounts.
   useEffect(() => {
-    void inputBindingsIpc.read().then((result) => {
-      if (result.success && result.config) {
-        setBindings(result.config.inputBindings)
-      }
-      setLoaded(true)
-    })
-  }, [])
+    void load()
+  }, [load])
 
-  const updateBinding = useCallback((idx: number, patch: Partial<InputBinding>) => {
-    setBindings((current) => current.map((b, i) => (i === idx ? { ...b, ...patch } : b)))
-  }, [])
-
-  const handleSave = useCallback(async () => {
-    setSaving(true)
-    setSaveError('')
-    const result = await inputBindingsIpc.write({ inputBindings: bindings })
-    setSaving(false)
-    if (result.success) {
-      setSaved(true)
-      setTimeout(() => {
-        setSaved(false)
-      }, 2000)
-    } else {
-      setSaveError(result.error ?? 'Save failed')
+  // Fade the "Saved" badge after 2 s — preserves the original UX.
+  useEffect(() => {
+    if (saveStatus !== 'saved') return
+    const t = setTimeout(() => {
+      clearSaveStatus()
+    }, 2000)
+    return () => {
+      clearTimeout(t)
     }
-  }, [bindings])
+  }, [saveStatus, clearSaveStatus])
+
+  const saving = saveStatus === 'saving'
 
   if (!loaded) return null
 
@@ -168,7 +164,7 @@ export default function InputBindingsSection() {
           style={smallButton}
           disabled={bindings.length >= MAX_INPUT_BINDINGS}
           onClick={() => {
-            setBindings((current) => [...current, newBinding(current.length)])
+            addBinding(newBinding(bindings.length))
           }}
         >
           + Add binding
@@ -190,7 +186,7 @@ export default function InputBindingsSection() {
             updateBinding(idx, patch)
           }}
           onRemove={() => {
-            setBindings((current) => current.filter((_, i) => i !== idx))
+            removeBinding(idx)
           }}
         />
       ))}
@@ -199,7 +195,7 @@ export default function InputBindingsSection() {
         <button
           type="button"
           onClick={() => {
-            void handleSave()
+            void save()
           }}
           disabled={saving}
           style={{
@@ -215,7 +211,7 @@ export default function InputBindingsSection() {
         >
           {saving ? 'Saving…' : 'Save bindings'}
         </button>
-        {saved && <span style={{ fontSize: 11, color: '#44CC44' }}>Saved</span>}
+        {saveStatus === 'saved' && <span style={{ fontSize: 11, color: '#44CC44' }}>Saved</span>}
         {saveError && <span style={{ fontSize: 11, color: '#CC3333' }}>{saveError}</span>}
       </div>
     </div>
