@@ -15,6 +15,18 @@ import {
 
 const COPY_FEEDBACK_MS = 1_500
 
+// Danger-chrome palette — `--destructive` / `--danger` (#FF0000) is too
+// saturated for a sustained banner background. Hoisted as MIRROR consts per
+// audit S-H-5 (umbrella #1015); the matching ErrorBar palette in batch 1
+// uses the same shades and is the obvious promotion target.
+const DANGER_BG = '#1A0808' // MIRROR: deep red banner background
+const DANGER_BORDER = '#AA2222' // MIRROR: dim red border + copy button bg
+const DANGER_TEXT = '#DDAAAA' // MIRROR: red body text (matches ErrorBar ERR_MSG_TEXT)
+const DANGER_CODE_TEXT = '#FFCCCC' // MIRROR: brighter pinkish-white for the inline <code>
+const DANGER_BTN_BORDER = '#553333' // MIRROR: darker red for dismiss button border (matches ERR_CLEAR_TEXT family)
+const DANGER_BTN_TEXT = '#AA7777' // MIRROR: dismiss button label
+const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+
 function formatTimestamp(ms: number): string {
   return new Date(ms).toISOString().slice(11, 23)
 }
@@ -64,17 +76,17 @@ export default function BootLoopBanner() {
         bottom: 32,
         left: 16,
         zIndex: 9996,
-        background: '#1A0808',
-        border: '1px solid #AA2222',
+        background: DANGER_BG,
+        border: `1px solid ${DANGER_BORDER}`,
         borderRadius: 6,
         padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         fontSize: 12,
-        color: '#DDAAAA',
+        color: DANGER_TEXT,
         maxWidth: 520,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+        boxShadow: BANNER_SHADOW,
       }}
     >
       <span style={{ flex: 1 }}>
@@ -94,7 +106,7 @@ export default function BootLoopBanner() {
         {lastLine ? (
           <>
             Last log line:{' '}
-            <code style={{ color: '#FFCCCC' }}>
+            <code style={{ color: DANGER_CODE_TEXT }}>
               [{lastLine.tag}] {lastLine.message}
             </code>
             .{' '}
@@ -107,10 +119,10 @@ export default function BootLoopBanner() {
         disabled={lastBootContext.length === 0}
         style={{
           padding: '4px 10px',
-          background: '#AA2222',
-          border: '1px solid #AA2222',
+          background: DANGER_BORDER,
+          border: `1px solid ${DANGER_BORDER}`,
           borderRadius: 3,
-          color: '#FFFFFF',
+          color: 'hsl(var(--text))',
           fontSize: 11,
           cursor: lastBootContext.length === 0 ? 'not-allowed' : 'pointer',
           opacity: lastBootContext.length === 0 ? 0.6 : 1,
@@ -124,9 +136,9 @@ export default function BootLoopBanner() {
         style={{
           padding: '3px 8px',
           background: 'transparent',
-          border: '1px solid #553333',
+          border: `1px solid ${DANGER_BTN_BORDER}`,
           borderRadius: 3,
-          color: '#AA7777',
+          color: DANGER_BTN_TEXT,
           fontSize: 11,
           cursor: 'pointer',
         }}
