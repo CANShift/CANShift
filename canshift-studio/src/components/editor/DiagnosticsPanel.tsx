@@ -7,6 +7,28 @@ import { useLiveSignals } from '../../hooks/useLiveSignals'
 import { useSignalStore } from '../../stores/signal.store'
 import { useDeviceStore } from '../../stores/device.store'
 
+// On-device preview chrome — this overlay simulates a live device-side
+// diagnostics page so every colour is a 1:1 mirror of the firmware palette.
+// Kept as named constants for the planned token promotion (audit S-H-5,
+// umbrella #1015). MUST stay literal — do NOT swap for studio chrome tokens
+// without firmware review (preview-fidelity surface, see #957 / #1068).
+const PANEL_BG = '#0D0D0D' // MIRROR: darker than --bg, device-page background
+const HEADER_BORDER = '#2A2A2A' // MIRROR: between --bg and --surface
+const ROW_BORDER = '#181818' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const LABEL_FG = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
+const MUTED_FG = '#888888' // MIRROR: ≈ --text-muted (#8F8F8F), empty-state text
+const DIM_FG = '#444444' // MIRROR: dim hint text (timestamp / swipe hint)
+const UNIT_FG = '#555555' // MIRROR: dim variant of --text-muted
+const NO_DATA_FG = '#555555' // MIRROR: same dim as UNIT_FG, "NO DATA" badge
+const BAR_TRACK = '#1E1E1E' // MIRROR: between --bg and --surface, mini-bar track
+const VALUE_FG = '#CCCCCC' // MIRROR: brighter than --text-dim, default value text
+const SIM_FG = '#FF8800' // = --accent / --warning (#FF8800); kept literal to mirror firmware sim badge
+const LIVE_FG = '#33CC55' // MIRROR: dimmer than --success (#00CC2A), firmware LIVE badge
+const DANGER_FG = '#FF4444' // MIRROR: dimmer than --destructive (#FF0000), value-in-danger text
+const DANGER_BAR = '#FF444488' // MIRROR: DANGER_FG with 53% alpha, mini-bar fill
+const WARN_BAR = '#FF880088' // MIRROR: SIM_FG with 53% alpha, mini-bar fill
+const OK_BAR = '#33CC5555' // MIRROR: LIVE_FG with 33% alpha, mini-bar fill
+
 interface DiagnosticsPanelProps {
   scale: number
 }
@@ -29,7 +51,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
       style={{
         position: 'absolute',
         inset: 0,
-        background: '#0D0D0D',
+        background: PANEL_BG,
         zIndex: 100,
         display: 'flex',
         flexDirection: 'column',
@@ -40,7 +62,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
       <div
         style={{
           padding: `${String(pad)}px ${String(pad)}px ${String(Math.round(scale * 3))}px`,
-          borderBottom: '1px solid #2A2A2A',
+          borderBottom: `1px solid ${HEADER_BORDER}`,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'baseline',
@@ -50,7 +72,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
         <span
           style={{
             fontSize: fs + 2,
-            color: '#FFFFFF',
+            color: 'hsl(var(--text))',
             fontWeight: 600,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -62,14 +84,14 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
         <span
           style={{
             fontSize: fs - 1,
-            color: isLive ? '#33CC55' : simulationMode ? '#FF8800' : '#555555',
+            color: isLive ? LIVE_FG : simulationMode ? SIM_FG : NO_DATA_FG,
             fontWeight: 600,
             letterSpacing: '0.06em',
           }}
         >
           {isLive ? 'LIVE' : simulationMode ? 'SIM' : 'NO DATA'}
         </span>
-        <span style={{ fontSize: fs - 1, color: '#444444', marginLeft: 'auto' }}>
+        <span style={{ fontSize: fs - 1, color: DIM_FG, marginLeft: 'auto' }}>
           swipe ↓ to close
         </span>
       </div>
@@ -81,7 +103,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
             style={{
               padding: pad,
               fontSize: fs,
-              color: '#888888',
+              color: MUTED_FG,
               textAlign: 'center',
               paddingTop: pad * 3,
             }}
@@ -95,8 +117,8 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
             const pct = raw !== undefined ? Math.max(0, Math.min(1, (raw - sig.min) / range)) : null
             const isDanger = pct !== null && pct >= 0.95
             const isWarn = pct !== null && !isDanger && pct >= 0.8
-            const valueColor = isDanger ? '#FF4444' : isWarn ? '#FF8800' : '#CCCCCC'
-            const barColor = isDanger ? '#FF444488' : isWarn ? '#FF880088' : '#33CC5555'
+            const valueColor = isDanger ? DANGER_FG : isWarn ? SIM_FG : VALUE_FG
+            const barColor = isDanger ? DANGER_BAR : isWarn ? WARN_BAR : OK_BAR
             const valueStr = raw !== undefined ? raw.toFixed(1) : '—'
 
             return (
@@ -106,7 +128,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                   display: 'flex',
                   alignItems: 'center',
                   padding: `${String(rowPad)}px ${String(pad)}px`,
-                  borderBottom: '1px solid #181818',
+                  borderBottom: `1px solid ${ROW_BORDER}`,
                   gap: Math.round(scale * 3),
                 }}
               >
@@ -114,7 +136,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                 <span
                   style={{
                     fontSize: fs,
-                    color: '#AAAAAA',
+                    color: LABEL_FG,
                     flex: 1,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -129,7 +151,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                   style={{
                     width: barW,
                     height: barH,
-                    background: '#1E1E1E',
+                    background: BAR_TRACK,
                     borderRadius: 2,
                     flexShrink: 0,
                     overflow: 'hidden',
@@ -166,7 +188,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                 <span
                   style={{
                     fontSize: fs - 1,
-                    color: '#555555',
+                    color: UNIT_FG,
                     minWidth: Math.round(scale * 10),
                     flexShrink: 0,
                   }}

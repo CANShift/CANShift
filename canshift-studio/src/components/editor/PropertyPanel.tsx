@@ -21,6 +21,21 @@ import { GearFields } from './property-panel/gear-fields'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { ImageFields } from './property-panel/image-fields'
 
+// Chrome shades that do not yet map to a core design token. Kept as named
+// constants so the planned token promotion (audit S-H-5, umbrella #1015) only
+// has to swap one place per shade. Documented in PR body as follow-up.
+const PANEL_LABEL = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
+const PANEL_HINT = '#333333' // MIRROR: ≈ --border (#333333) repurposed as dim hint
+const TYPE_BADGE = '#CC4444' // MIRROR: darker than --status-danger (#E03030), widget-type badge
+const DELETE_FG = '#AA3333' // MIRROR: darker than --status-danger (#E03030), delete button
+const INPUT_BG = '#111111' // MIRROR: between --scrim (#000000) and --bg (#121212), color-picker chrome
+const INPUT_BORDER = '#333333' // MIRROR: ≈ --border (#333333)
+const TOKEN_TILE_BG = '#111111' // MIRROR: same chrome as INPUT_BG for inactive size tiles
+const TOKEN_TILE_BORDER = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const TOKEN_TILE_ACTIVE_BG = '#1A2A1A' // MIRROR: custom dim-green active chrome; no token match
+const TOKEN_TILE_ACTIVE_BORDER = '#448844' // MIRROR: darker than --success (#00CC2A)
+const TOKEN_TILE_ACTIVE_FG = '#66AA66' // MIRROR: dimmer green than --success
+
 const CONFIG_FIELDS: Partial<
   Record<WidgetType, (props: ConfigFieldsProps) => React.JSX.Element | null>
 > = {
@@ -53,7 +68,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     if (!page || !config) {
       return (
         <div style={{ padding: 12 }}>
-          <p style={{ color: '#333333', fontSize: 11 }}>No config loaded.</p>
+          <p style={{ color: PANEL_HINT, fontSize: 11 }}>No config loaded.</p>
         </div>
       )
     }
@@ -62,7 +77,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         <div
           style={{
             fontSize: 10,
-            color: '#AAAAAA',
+            color: PANEL_LABEL,
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
             marginBottom: 10,
@@ -74,7 +89,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         <div
           style={{
             fontSize: 10,
-            color: '#AAAAAA',
+            color: PANEL_LABEL,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             marginBottom: 6,
@@ -92,8 +107,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                 width: '100%',
                 height: 28,
                 padding: 2,
-                background: '#111',
-                border: '1px solid #333',
+                background: INPUT_BG,
+                border: `1px solid ${INPUT_BORDER}`,
                 borderRadius: 3,
                 cursor: 'pointer',
                 boxSizing: 'border-box',
@@ -111,8 +126,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                 width: '100%',
                 height: 28,
                 padding: 2,
-                background: '#111',
-                border: '1px solid #333',
+                background: INPUT_BG,
+                border: `1px solid ${INPUT_BORDER}`,
                 borderRadius: 3,
                 cursor: 'pointer',
                 boxSizing: 'border-box',
@@ -123,7 +138,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             />
           </Field>
         </Row>
-        <div style={{ fontSize: 10, color: '#333', marginTop: 12 }}>
+        <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 12 }}>
           Select a widget to edit its properties.
         </div>
       </div>
@@ -152,14 +167,14 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           <div
             style={{
               fontSize: 10,
-              color: '#AAAAAA',
+              color: PANEL_LABEL,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
             }}
           >
             Properties
           </div>
-          <div style={{ fontSize: 12, color: '#CC4444', fontWeight: 600, marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: TYPE_BADGE, fontWeight: 600, marginTop: 2 }}>
             {widget.type}
           </div>
         </div>
@@ -173,22 +188,24 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             alignItems: 'center',
             gap: 4,
             background: 'none',
-            border: '1px solid #3A1A1A',
+            border: '1px solid hsl(var(--status-danger-dim))',
             borderRadius: 3,
-            color: '#AA3333',
+            color: DELETE_FG,
             cursor: 'pointer',
             fontSize: 11,
             padding: '3px 7px',
           }}
         >
-          <IconTrash size={11} color="#AA3333" />
+          <IconTrash size={11} color={DELETE_FG} />
           Delete
         </button>
       </div>
 
       {/* ID (read-only) */}
       <Field label="ID">
-        <div style={{ fontSize: 10, color: '#AAAAAA', fontFamily: 'monospace', padding: '3px 0' }}>
+        <div
+          style={{ fontSize: 10, color: PANEL_LABEL, fontFamily: 'monospace', padding: '3px 0' }}
+        >
           {widget.id}
         </div>
       </Field>
@@ -214,10 +231,10 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                   style={{
                     flex: 1,
                     padding: '3px 0',
-                    background: isActive ? '#1A2A1A' : '#111111',
-                    border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
+                    background: isActive ? TOKEN_TILE_ACTIVE_BG : TOKEN_TILE_BG,
+                    border: `1px solid ${isActive ? TOKEN_TILE_ACTIVE_BORDER : TOKEN_TILE_BORDER}`,
                     borderRadius: 3,
-                    color: isActive ? '#66AA66' : '#AAAAAA',
+                    color: isActive ? TOKEN_TILE_ACTIVE_FG : PANEL_LABEL,
                     cursor: 'pointer',
                     fontSize: 10,
                     fontWeight: isActive ? 700 : 400,
@@ -297,7 +314,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            color: '#AAAAAA',
+            color: PANEL_LABEL,
             cursor: 'pointer',
           }}
         >
@@ -327,7 +344,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           <div
             style={{
               fontSize: 10,
-              color: '#AAAAAA',
+              color: PANEL_LABEL,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               marginBottom: 6,
@@ -350,8 +367,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                       width: '100%',
                       height: 28,
                       padding: 2,
-                      background: '#111',
-                      border: '1px solid #333',
+                      background: INPUT_BG,
+                      border: `1px solid ${INPUT_BORDER}`,
                       borderRadius: 3,
                       cursor: 'pointer',
                     }}
@@ -372,8 +389,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                       width: '100%',
                       height: 28,
                       padding: 2,
-                      background: '#111',
-                      border: '1px solid #333',
+                      background: INPUT_BG,
+                      border: `1px solid ${INPUT_BORDER}`,
                       borderRadius: 3,
                       cursor: 'pointer',
                     }}
@@ -398,7 +415,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           <div
             style={{
               fontSize: 10,
-              color: '#AAAAAA',
+              color: PANEL_LABEL,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               marginBottom: 6,

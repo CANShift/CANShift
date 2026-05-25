@@ -8,9 +8,26 @@ import type { SignalDef } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
 import { useTestModeStore } from '../../stores/testMode.store'
 
-const HEADER_BG = '#161616'
-const HEADER_FG = '#AAAAAA'
-const ROW_BG = '#0F0F0F'
+// Chrome shades that do not yet map to a core design token. Kept as named
+// constants so the planned token promotion (audit S-H-5, umbrella #1015) only
+// has to swap one place per shade. Documented in PR body as follow-up.
+const HEADER_BG = '#161616' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const HEADER_FG = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
+const ROW_BG = '#0F0F0F' // MIRROR: between --scrim (#000000) and --bg (#121212)
+const HEADER_DIVIDER = '#222222' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const PILL_ON_FG = '#88CC88' // MIRROR: dim variant of --success (#00CC2A)
+const PILL_OFF_FG = '#555555' // MIRROR: dim variant of --text-muted (#8F8F8F)
+const PILL_ON_BG = '#1A2A1A' // MIRROR: custom dim-green wash; no token match
+const PILL_OFF_BG = '#1A1A1A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const PILL_ON_BORDER = '#336633' // MIRROR: dim variant of --success (#00CC2A)
+const PILL_OFF_BORDER = '#2A2A2A' // MIRROR: between --bg and --surface
+const FILTER_BG = '#0A0A0A' // MIRROR: between --scrim and --bg
+const FILTER_BORDER = '#2A2A2A' // MIRROR: between --bg and --surface
+const FILTER_FG = '#CCCCCC' // MIRROR: brighter than --text-dim (#BABABA), input text
+const EMPTY_FG = '#444444' // MIRROR: between --bg and --text-muted, empty-state text
+const NUMBER_FG = '#DDDDDD' // MIRROR: brighter than --text-dim, number-input text
+const RANGE_ACCENT = '#88AACC' // MIRROR: custom cool-blue range accent; no token match
+const TICK_FG = '#444444' // MIRROR: dim min/max tick labels
 
 function midpoint(s: SignalDef): number {
   return Number.isFinite(s.min) && Number.isFinite(s.max) && s.max > s.min ? (s.min + s.max) / 2 : 0
@@ -55,7 +72,7 @@ export default function TestValuesPanel() {
           justifyContent: 'space-between',
           background: HEADER_BG,
           border: 'none',
-          borderTop: '1px solid #222222',
+          borderTop: `1px solid ${HEADER_DIVIDER}`,
           color: HEADER_FG,
           padding: '8px 12px',
           fontSize: 11,
@@ -70,9 +87,9 @@ export default function TestValuesPanel() {
         <span
           style={{
             fontSize: 9,
-            color: enabled ? '#88CC88' : '#555555',
-            background: enabled ? '#1A2A1A' : '#1A1A1A',
-            border: `1px solid ${enabled ? '#336633' : '#2A2A2A'}`,
+            color: enabled ? PILL_ON_FG : PILL_OFF_FG,
+            background: enabled ? PILL_ON_BG : PILL_OFF_BG,
+            border: `1px solid ${enabled ? PILL_ON_BORDER : PILL_OFF_BORDER}`,
             padding: '1px 6px',
             borderRadius: 8,
           }}
@@ -102,10 +119,10 @@ export default function TestValuesPanel() {
             style={{
               width: '100%',
               padding: '4px 7px',
-              background: '#0A0A0A',
-              border: '1px solid #2A2A2A',
+              background: FILTER_BG,
+              border: `1px solid ${FILTER_BORDER}`,
               borderRadius: 3,
-              color: '#CCCCCC',
+              color: FILTER_FG,
               fontSize: 11,
               boxSizing: 'border-box',
               outline: 'none',
@@ -113,7 +130,7 @@ export default function TestValuesPanel() {
             }}
           />
           {visible.length === 0 && (
-            <div style={{ color: '#444444', fontSize: 11, padding: '6px 4px' }}>
+            <div style={{ color: EMPTY_FG, fontSize: 11, padding: '6px 4px' }}>
               No signals match
             </div>
           )}
@@ -143,7 +160,7 @@ export default function TestValuesPanel() {
                 >
                   <span
                     style={{
-                      color: '#AAAAAA',
+                      color: HEADER_FG,
                       fontSize: 10,
                       fontWeight: 600,
                       letterSpacing: '0.03em',
@@ -166,10 +183,10 @@ export default function TestValuesPanel() {
                     style={{
                       width: 64,
                       padding: '1px 4px',
-                      background: '#0A0A0A',
-                      border: '1px solid #2A2A2A',
+                      background: FILTER_BG,
+                      border: `1px solid ${FILTER_BORDER}`,
                       borderRadius: 2,
-                      color: '#DDDDDD',
+                      color: NUMBER_FG,
                       fontSize: 10,
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
@@ -185,14 +202,14 @@ export default function TestValuesPanel() {
                   onChange={(e) => {
                     setValue(sig.name, Number(e.target.value))
                   }}
-                  style={{ width: '100%', accentColor: '#88AACC' }}
+                  style={{ width: '100%', accentColor: RANGE_ACCENT }}
                 />
                 <div
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     fontSize: 8,
-                    color: '#444444',
+                    color: TICK_FG,
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >

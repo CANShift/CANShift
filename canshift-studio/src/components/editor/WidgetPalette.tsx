@@ -6,6 +6,17 @@ import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/sizeTokens'
 
+// Chrome shades that do not yet map to a core design token. Kept as named
+// constants so the planned token promotion (audit S-H-5, umbrella #1015) only
+// has to swap one place per shade. Documented in PR body as follow-up.
+//
+// NOTE: the hex literals inside `addWidget(..., { style: { ... } })` below
+// are widget-config defaults persisted on the dashboard (HexColorSchema), not
+// UI chrome — they MUST stay literal.
+const TILE_LABEL = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
+const TILE_HOVER_BG = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const TILE_HOVER_BORDER = '#3A3A3A' // MIRROR: dim variant of --border (#333333)
+
 // 'bar' is not in the palette — it is a display style inside gauge
 type PaletteWidgetType = Exclude<WidgetType, 'bar'>
 
@@ -143,7 +154,7 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
       <div
         style={{
           fontSize: 10,
-          color: '#AAAAAA',
+          color: TILE_LABEL,
           marginBottom: 8,
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
@@ -168,21 +179,21 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
               background: 'transparent',
               border: '1px solid transparent',
               borderRadius: 4,
-              color: '#AAAAAA',
+              color: TILE_LABEL,
               cursor: 'pointer',
               fontSize: 12,
               textAlign: 'left',
               transition: 'all 0.1s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#2A2A2A'
-              e.currentTarget.style.borderColor = '#3A3A3A'
-              e.currentTarget.style.color = '#FFFFFF'
+              e.currentTarget.style.background = TILE_HOVER_BG
+              e.currentTarget.style.borderColor = TILE_HOVER_BORDER
+              e.currentTarget.style.color = 'hsl(var(--text))'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent'
               e.currentTarget.style.borderColor = 'transparent'
-              e.currentTarget.style.color = '#AAAAAA'
+              e.currentTarget.style.color = TILE_LABEL
             }}
           >
             <SensorIcon name={item.icon} size={14} color="currentColor" />

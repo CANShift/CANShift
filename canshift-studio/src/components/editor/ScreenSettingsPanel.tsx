@@ -20,6 +20,29 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
+// On-device preview chrome — this panel simulates a physical screen page, so
+// every colour is a 1:1 mirror of the firmware palette. Kept as named
+// constants for the planned token promotion (audit S-H-5, umbrella #1015).
+// MUST stay literal — do NOT swap for studio chrome tokens without firmware
+// review (preview-fidelity surface, see #957 / #1068).
+const SCREEN_BG = '#0D0D0D' // MIRROR: device-page background (darker than --bg)
+const SCREEN_LABEL = '#AAAAAA' // MIRROR: device-page row label
+const SCREEN_VALUE = '#888888' // MIRROR: device-page row value (≈ --text-muted #8F8F8F)
+const SCREEN_HEADER = '#CCCCCC' // MIRROR: device-page header text
+const BTN_BG = '#111111' // MIRROR: device-button idle bg
+const BTN_BORDER = '#2A2A2A' // MIRROR: device-button idle border
+const BTN_BORDER_DIM = '#1E1E1E' // MIRROR: device-button disabled border
+const BTN_FG_DISABLED = '#444444' // MIRROR: device-button disabled fg
+const BTN_FG_DISABLED2 = '#333333' // MIRROR: device-button disabled fg (firmware variant)
+const ACCENT_RED = '#CC3333' // MIRROR: dimmer than --primary (#FF4747), device accent red
+const ACCENT_RED_BG = '#1A0A0A' // MIRROR: device-page selected red wash
+const ACCENT_GREEN = '#55AA55' // MIRROR: dimmer than --success (#00CC2A), device firmware-ready
+const ACCENT_GREEN_BG = '#111B11' // MIRROR: device-page ready-state green wash
+const ACCENT_GREEN_BORDER = '#2A4A2A' // MIRROR: device-page ready-state green border
+const SAVE_GREEN_BG = '#1A3A1A' // MIRROR: device-save-button active bg
+const SAVE_GREEN_BORDER = '#336633' // MIRROR: device-save-button active border
+const DIVIDER = '#1E1E1E' // MIRROR: device-page divider line
+
 interface ScreenSettingsPanelProps {
   scale: number
 }
@@ -142,7 +165,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
         style={{
           position: 'absolute',
           inset: 0,
-          background: '#0D0D0D',
+          background: SCREEN_BG,
           zIndex: 50,
           display: 'flex',
           flexDirection: 'column',
@@ -160,7 +183,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           style={{
             fontSize: fsLg,
             fontWeight: 700,
-            color: '#CCCCCC',
+            color: SCREEN_HEADER,
             letterSpacing: '0.05em',
             marginBottom: Math.round(scale * 2),
           }}
@@ -180,7 +203,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             }}
             style={{
               width: '100%',
-              accentColor: '#CC3333',
+              accentColor: ACCENT_RED,
               cursor: 'pointer',
               height: Math.round(scale * 3),
             }}
@@ -201,10 +224,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
                   style={{
                     flex: 1,
                     padding: `${String(Math.round(scale * 2))}px 0`,
-                    background: active ? '#1A0A0A' : '#111111',
-                    border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                    background: active ? ACCENT_RED_BG : BTN_BG,
+                    border: `1px solid ${active ? ACCENT_RED : BTN_BORDER}`,
                     borderRadius: 3,
-                    color: active ? '#CC3333' : '#AAAAAA',
+                    color: active ? ACCENT_RED : SCREEN_LABEL,
                     fontSize: fs,
                     cursor: 'pointer',
                     lineHeight: 1,
@@ -232,10 +255,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
                   style={{
                     flex: 1,
                     padding: `${String(Math.round(scale * 2))}px 0`,
-                    background: active ? '#1A0A0A' : '#111111',
-                    border: `1px solid ${active ? '#CC3333' : '#2A2A2A'}`,
+                    background: active ? ACCENT_RED_BG : BTN_BG,
+                    border: `1px solid ${active ? ACCENT_RED : BTN_BORDER}`,
                     borderRadius: 3,
-                    color: active ? '#CC3333' : '#AAAAAA',
+                    color: active ? ACCENT_RED : SCREEN_LABEL,
                     fontSize: fs,
                     cursor: 'pointer',
                     lineHeight: 1,
@@ -257,10 +280,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
               style={{
                 flex: 1,
                 padding: `${String(Math.round(scale * 2))}px 0`,
-                background: '#111111',
-                border: `1px solid ${canDeviceAction ? '#2A2A2A' : '#1E1E1E'}`,
+                background: BTN_BG,
+                border: `1px solid ${canDeviceAction ? BTN_BORDER : BTN_BORDER_DIM}`,
                 borderRadius: 3,
-                color: canDeviceAction ? '#AAAAAA' : '#444444',
+                color: canDeviceAction ? SCREEN_LABEL : BTN_FG_DISABLED,
                 fontSize: fs,
                 cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
                 lineHeight: 1,
@@ -273,10 +296,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
               style={{
                 flex: 1,
                 padding: `${String(Math.round(scale * 2))}px 0`,
-                background: '#111111',
-                border: '1px solid #2A2A2A',
+                background: BTN_BG,
+                border: `1px solid ${BTN_BORDER}`,
                 borderRadius: 3,
-                color: '#AAAAAA',
+                color: SCREEN_LABEL,
                 fontSize: fs,
                 cursor: 'pointer',
                 lineHeight: 1,
@@ -288,11 +311,11 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
         </SettingRow>
 
         {/* Firmware update */}
-        <div style={{ borderTop: '1px solid #1E1E1E', paddingTop: gap }}>
+        <div style={{ borderTop: `1px solid ${DIVIDER}`, paddingTop: gap }}>
           <span
             style={{
               fontSize: Math.round(scale * 5.5),
-              color: '#AAAAAA',
+              color: SCREEN_LABEL,
               letterSpacing: '0.06em',
               display: 'block',
               marginBottom: Math.round(scale * 3),
@@ -306,10 +329,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             style={{
               width: '100%',
               padding: `${String(Math.round(scale * 2.5))}px 0`,
-              background: connected ? '#111B11' : '#111111',
-              border: `1px solid ${connected ? '#2A4A2A' : '#1E1E1E'}`,
+              background: connected ? ACCENT_GREEN_BG : BTN_BG,
+              border: `1px solid ${connected ? ACCENT_GREEN_BORDER : BTN_BORDER_DIM}`,
               borderRadius: 3,
-              color: connected ? '#55AA55' : '#333333',
+              color: connected ? ACCENT_GREEN : BTN_FG_DISABLED2,
               fontSize: fs,
               cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
               lineHeight: 1,
@@ -327,10 +350,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             style={{
               width: '100%',
               padding: `${String(Math.round(scale * 3))}px 0`,
-              background: canSave ? '#1A3A1A' : '#111111',
-              border: `1px solid ${canSave ? '#336633' : '#2A2A2A'}`,
+              background: canSave ? SAVE_GREEN_BG : BTN_BG,
+              border: `1px solid ${canSave ? SAVE_GREEN_BORDER : BTN_BORDER}`,
               borderRadius: 4,
-              color: canSave ? '#55AA55' : '#333333',
+              color: canSave ? ACCENT_GREEN : BTN_FG_DISABLED2,
               fontSize: fs,
               fontWeight: 600,
               cursor: canSave ? 'pointer' : 'default',
@@ -403,8 +426,8 @@ function SettingRow({
           marginBottom: Math.round(scale * 2.5),
         }}
       >
-        <span style={{ fontSize: fs, color: '#AAAAAA', letterSpacing: '0.06em' }}>{label}</span>
-        <span style={{ fontSize: fs, color: '#888888' }}>{value}</span>
+        <span style={{ fontSize: fs, color: SCREEN_LABEL, letterSpacing: '0.06em' }}>{label}</span>
+        <span style={{ fontSize: fs, color: SCREEN_VALUE }}>{value}</span>
       </div>
       {children}
     </div>
