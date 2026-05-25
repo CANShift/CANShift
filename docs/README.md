@@ -33,6 +33,7 @@
 | `ecu-integration.md` | ECU integration notes — validator + naming conventions |
 | `secure-boot-setup.md` | Secure-boot first-flash + key management |
 | `mobile-sdk-upgrade.md` | Mobile SDK upgrade decisions |
+| `dash-hosted-readiness-audit.md` | Pre-flight audit (2026-05-26) — what blocks first-flash → dash-hosted Studio end-to-end |
 
 ---
 
