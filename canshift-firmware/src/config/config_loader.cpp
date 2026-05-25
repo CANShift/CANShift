@@ -47,7 +47,8 @@ static CfgInputBindings s_inputs = {};
 // Previously these snapshots were heap-allocated on each load* entry and freed
 // on exit (~22 KB + ~5 KB of malloc/free churn per reload), which fragmented
 // the LVGL pool when fonts/SPIFFS loaded right after boot (related to #895 /
-// #976). Now BSS-resident so load*() never touches the heap.
+// #976). They were then moved to a single BSS-resident buffer so load*() never
+// touches the heap.
 //
 // loadDashboard() and loadSignals() run sequentially on the same task
 // (ConfigLoader::loadAll drives them in order) and each completes before the
@@ -56,9 +57,26 @@ static CfgInputBindings s_inputs = {};
 // production crowpanel_28 image past the DRAM ceiling (umbrella #1014).
 // The static_assert pins the invariant so a future struct growth on the
 // other type can't silently underflow this buffer.
+//
+// Storage is hidden behind acquireRollbackSnapshot(): callers ask for the
+// buffer, snapshot into it before mutating live state, and on parse failure
+// memcpy it back. This indirection (issue #1073) lets a follow-up swap the
+// backing buffer for a PSRAM heap allocation on WROVER variants — the
+// `crowpanel_28_wifi` env needs ~1.7 KB of DRAM back to fit the WiFi / mDNS /
+// lwip BSS that the WS bridge brings in. For now the only backend is the BSS
+// reservation below, so behaviour is byte-identical to the pre-#1073 code.
 static_assert(sizeof(CfgDashboard) >= sizeof(CfgSignalConfig),
               "rollback snapshot buffer must fit CfgDashboard (the larger of the two)");
-alignas(CfgDashboard) static uint8_t s_rollback_snapshot[sizeof(CfgDashboard)];
+static constexpr size_t kRollbackSnapshotSize = sizeof(CfgDashboard);
+alignas(CfgDashboard) static uint8_t s_rollback_snapshot_bss[kRollbackSnapshotSize];
+
+// Returns the snapshot buffer or nullptr when no backing storage is available.
+// The BSS-only build can never return nullptr — kept as the return contract so
+// the follow-up PSRAM path can degrade gracefully (PSRAM alloc may fail on a
+// WROOM module) without forcing every caller to grow a #ifdef branch.
+uint8_t *acquireRollbackSnapshot() {
+    return s_rollback_snapshot_bss;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -733,20 +751,32 @@ void parseWidget(JsonObjectConst src, CfgWidget *w) {
 }
 
 bool loadDashboard() {
-    // Snapshot the previous in-memory state into the BSS-resident buffer
-    // before touching s_dashboard so we can roll back atomically on any parse
-    // failure (issue #458, audit F-HI-3 / umbrella #1014). All subsequent
-    // mutations write directly into s_dashboard; on failure the snapshot is
-    // copied back, leaving observable state byte-identical to the pre-call
-    // value. BSS storage cannot fail, so the previous "fall through without
-    // rollback on alloc failure" branch is gone.
-    memcpy(s_rollback_snapshot, &s_dashboard, sizeof(CfgDashboard));
+    // Snapshot the previous in-memory state into the rollback buffer before
+    // touching s_dashboard so we can roll back atomically on any parse failure
+    // (issue #458, audit F-HI-3 / umbrella #1014). All subsequent mutations
+    // write directly into s_dashboard; on failure the snapshot is copied back,
+    // leaving observable state byte-identical to the pre-call value.
+    //
+    // acquireRollbackSnapshot() can return nullptr once PSRAM-backed storage
+    // lands (issue #1073) and the PSRAM alloc fails on a no-PSRAM WROOM
+    // module. Today the BSS-only backend cannot fail; the null guard is the
+    // forward-compatibility hook so the follow-up doesn't need to touch this
+    // function. When snapshot storage is unavailable, parse failures bypass
+    // the memcpy-restore step — the load proceeds with whatever fields got
+    // written, which is the same risk profile as the pre-#458 single-buffer
+    // path (issue #1073 PR body documents the trade-off).
+    uint8_t *snapshot = acquireRollbackSnapshot();
+    if (snapshot) {
+        memcpy(snapshot, &s_dashboard, sizeof(CfgDashboard));
+    }
 
     JsonDocument doc; // ArduinoJson v7 — dynamic, no capacity() needed
     if (!readAndParseWithBak(CONFIG_PATH_DASHBOARD, doc)) {
         LOG_ERROR("CFG", "dashboard.json unreadable (primary + .bak)");
         ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "dashboard.json unreadable");
-        memcpy(&s_dashboard, s_rollback_snapshot, sizeof(CfgDashboard));
+        if (snapshot) {
+            memcpy(&s_dashboard, snapshot, sizeof(CfgDashboard));
+        }
         return false;
     }
 
@@ -859,17 +889,23 @@ bool loadDashboard() {
 }
 
 bool loadSignals() {
-    // Snapshot prior state into the BSS-resident buffer for rollback on parse
+    // Snapshot prior state into the rollback buffer for rollback on parse
     // failure (issue #458, audit F-HI-3 / umbrella #1014) — same pattern as
     // loadDashboard(). Boot-time config load is serial and loadDashboard has
     // already returned, so the shared rollback buffer is free to reuse here.
-    memcpy(s_rollback_snapshot, &s_signals, sizeof(CfgSignalConfig));
+    // See loadDashboard() for the null-snapshot rationale (issue #1073).
+    uint8_t *snapshot = acquireRollbackSnapshot();
+    if (snapshot) {
+        memcpy(snapshot, &s_signals, sizeof(CfgSignalConfig));
+    }
 
     JsonDocument doc; // ArduinoJson v7 — dynamic
     if (!readAndParseWithBak(CONFIG_PATH_SIGNALS, doc)) {
         LOG_ERROR("CFG", "signals.json unreadable (primary + .bak)");
         ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "signals.json unreadable");
-        memcpy(&s_signals, s_rollback_snapshot, sizeof(CfgSignalConfig));
+        if (snapshot) {
+            memcpy(&s_signals, snapshot, sizeof(CfgSignalConfig));
+        }
         return false;
     }
 
