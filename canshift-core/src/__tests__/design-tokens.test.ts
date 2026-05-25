@@ -3,7 +3,14 @@
 // Any change to DARK_TOKENS values is intentional and must show up in review.
 // LIGHT_TOKENS shares the same shape so consumers can swap themes safely.
 
-import { DARK_TOKENS, LIGHT_TOKENS, hexToHslChannels, tokensToCssVars } from '../design-tokens.js'
+import {
+  COLOR_KEY_TO_CSS_VAR,
+  DARK_TOKENS,
+  LIGHT_TOKENS,
+  hexToHslChannels,
+  tokensToCssVars,
+} from '../design-tokens.js'
+import { isHexColor } from '../colors/hex.js'
 
 describe('DARK_TOKENS', () => {
   it('matches the canonical snapshot', () => {
@@ -27,6 +34,9 @@ describe('DARK_TOKENS', () => {
         success: '#00CC2A',
         warning: '#FF8800',
         danger: '#FF0000',
+        statusDanger: '#E03030',
+        statusDangerDim: '#3A1A1A',
+        scrim: '#000000',
         ring: '#FF4747',
       },
       radii: { sm: 4, md: 8, lg: 12, full: 9999 },
@@ -88,6 +98,9 @@ describe('tokensToCssVars', () => {
     '--success',
     '--warning',
     '--danger',
+    '--status-danger',
+    '--status-danger-dim',
+    '--scrim',
     '--ring',
   ] as const
 
@@ -103,5 +116,22 @@ describe('tokensToCssVars', () => {
     expect(vars['--text']).toBe('0 0% 100%')
     expect(vars['--bg']).toBe('0 0% 7%')
     expect(vars['--danger']).toBe('0 100% 50%')
+  })
+})
+
+describe('S-H-5 batch-1 promoted tokens (#1093 follow-up)', () => {
+  const PROMOTED_KEYS = ['statusDanger', 'statusDangerDim', 'scrim'] as const
+
+  it.each(PROMOTED_KEYS)('DARK_TOKENS.colors.%s is defined as a valid #RRGGBB hex', (key) => {
+    const value = DARK_TOKENS.colors[key]
+    expect(value).toBeDefined()
+    expect(isHexColor(value)).toBe(true)
+  })
+
+  it.each(PROMOTED_KEYS)('emits a CSS variable mapping for %s', (key) => {
+    const vars = tokensToCssVars(DARK_TOKENS)
+    const cssVar = COLOR_KEY_TO_CSS_VAR[key]
+    expect(cssVar).toBeDefined()
+    expect(vars[cssVar]).toBeDefined()
   })
 })
