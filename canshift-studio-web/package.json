@@ -7,6 +7,7 @@
   "scripts": {
     "predev": "npm --prefix ../canshift-core ci --omit=dev --ignore-scripts && npm --prefix ../canshift-core run build && npm run tokens:gen",
     "dev": "vite",
+    "dev:mock": "node scripts/mock-ws.mjs",
     "prebuild": "npm --prefix ../canshift-core ci --omit=dev --ignore-scripts && npm --prefix ../canshift-core run build && npm run tokens:gen",
     "build": "vite build",
     "preview": "vite preview",
@@ -37,12 +38,14 @@
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.10",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.5.3",
-    "vite": "^7.3.2"
+    "vite": "^7.3.2",
+    "ws": "^8.18.0"
   }
 }
