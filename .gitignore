@@ -21,3 +21,7 @@ CLAUDE.md
 # Local docs — keep on disk, never push
 *.pdf
 3D
+
+# Sibling repos cloned inside the monorepo for convenient editing
+# (each has its own .git + remote; never tracked by this monorepo).
+/canshift-flasher
