@@ -29,6 +29,23 @@ export default defineConfig({
     reportCompressedSize: true,
     rollupOptions: {
       output: {
+        // Stable, hash-free filenames. The dash isn't a CDN — the SPA ships
+        // inside the OTA firmware payload (#1077 phase 4), so cache-busting
+        // via content hash buys nothing and breaks `board_build.embed_files`
+        // (which needs deterministic paths). Hash-free names let the embed
+        // list live in `platformio.ini` and the HTTP route table in
+        // `wifi_ap.cpp` stay 1:1 with what Vite emits.
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: (assetInfo) => {
+          // Fonts keep a stable name so the CSS @font-face URL matches the
+          // embedded file path verbatim. Same applies to the index CSS.
+          const name = assetInfo.name ?? 'asset'
+          if (/\.(woff2?|ttf|otf|eot)$/i.test(name)) {
+            return 'assets/[name][extname]'
+          }
+          return 'assets/[name][extname]'
+        },
         manualChunks(id) {
           // React + router stay in a single vendor chunk: they're needed at
           // first paint, so isolating them just trades inline cost for a
