@@ -1,14 +1,15 @@
-// transport/index.ts — Dash-hosted transport stub (phase 1, spike #1104).
+// transport/index.ts — Dash-hosted transport surface (#1077 phase 3).
 //
 // Plays the role that `services/ipc.service.ts` plays in Electron Studio: a
 // single typed surface every store/component reaches for when it needs to
-// talk to the device. In phase 3 (#1105) the bodies of these functions get
-// replaced with real `fetch(...)` calls and a single WebSocket subscription
-// against the firmware's HTTP/WS endpoints. For now they return canned data
-// so the renderer can mount, render, and have its bundle weight measured.
+// talk to the device. The bodies are now backed by `WsClient` against the
+// firmware's `/ws` port-81 endpoint (#1108) — the function signatures stay
+// identical to the phase-1 stub so call sites in Canvas / ScreenSettingsPanel
+// / useLiveSignals didn't need restructuring.
 //
-// Surface intentionally mirrors the existing services so the call sites in
-// dashboard.store / Canvas / ScreenSettingsPanel keep working unchanged.
+// Anything that used to be Electron-host-only (file dialogs, native menus,
+// release feed, esptool) stays stubbed — those surfaces are out of scope for
+// the dash-hosted renderer per the architectural freeze in #1077.
 
 import type {
   DashboardConfig,
@@ -16,10 +17,27 @@ import type {
   DeviceConfig,
   InputBindingsConfig,
   LatestReleaseResult,
+  ScreenSettings,
 } from '@tmbk/canshift-core'
+import { getWsClient } from './ws-client'
 
 // ---------------------------------------------------------------------------
-// Shared result shapes — kept structurally identical to shared/ipc-contract.
+// Firmware command opcodes — sourced from `canshift-studio/main/services/`.
+// ---------------------------------------------------------------------------
+
+const CMD_GET_CONFIG = 0x01
+const CMD_PUSH_CONFIG = 0x02
+const CMD_SCREEN_SETTINGS = 0x05
+const CMD_TOGGLE_DAY_NIGHT = 0x07
+const CMD_CALIBRATE_TOUCH = 0x08
+const CMD_SET_DAY_NIGHT = 0x09
+const CMD_QUERY_VERSION = 0x10
+const CMD_CAN_SCAN_START = 0x20
+const CMD_CAN_SCAN_STOP = 0x21
+const CMD_REBOOT = 0xf0
+
+// ---------------------------------------------------------------------------
+// Shared result shapes — kept structurally identical to the phase-1 stub.
 // ---------------------------------------------------------------------------
 
 export interface PortInfo {
@@ -57,10 +75,7 @@ export interface ConnectionStatus {
   firmwareVersion?: string | null
 }
 
-// Mirrors canshift-core's ScreenSettings — re-exported here so the spike
-// renderer keeps a single import surface without reaching into shared/.
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
-import type { ScreenSettings } from '@tmbk/canshift-core'
 
 export interface DiscoveredDevice {
   name: string
@@ -80,13 +95,17 @@ export type DeviceConfigResult =
   | { kind: 'none' }
   | { kind: 'error'; error: string }
 
-// Canned "no device" status — every getter resolves with a connected:false
-// shape so the connect screen renders even without firmware in the loop.
-const DISCONNECTED: ConnectionStatus = { connected: false, portPath: null, firmwareVersion: null }
 const OK: UsbResult = { success: true }
 
+function toUsbResult(result: { ok: boolean; error?: string }): UsbResult {
+  if (result.ok) return OK
+  return { success: false, error: result.error ?? 'unknown_error' }
+}
+
 // ---------------------------------------------------------------------------
-// Config file operations
+// Config file operations — stubbed. The dash-hosted renderer doesn't own a
+// native file system; import/export will land later as a dash-side endpoint
+// (open question logged in README).
 // ---------------------------------------------------------------------------
 
 export const configService = {
@@ -103,8 +122,9 @@ export const configService = {
 }
 
 // ---------------------------------------------------------------------------
-// Session persistence — browser localStorage is intentionally NOT used here
-// (decision: dash owns persistence). Stub returns "no prior session".
+// Session persistence — dash owns it (no browser localStorage for config per
+// the #1077 architectural freeze). The host/port pair the user picks lives in
+// `connection.store.ts` instead (UI preference, not device config).
 // ---------------------------------------------------------------------------
 
 export const sessionIpc = {
@@ -116,39 +136,105 @@ export const sessionIpc = {
 }
 
 // ---------------------------------------------------------------------------
-// USB device operations — every command resolves "ok, but nothing happened".
-// Phase 3 replaces these with WS commands against the dash.
+// Device commands — the public surface call sites depend on. Backed by the
+// shared `WsClient` singleton; the name `usbService` is preserved so the
+// phase-1 imports keep compiling.
 // ---------------------------------------------------------------------------
 
 export const usbService = {
+  /** USB port listing is unused on the dash transport — return empty. */
   listPorts: (): Promise<PortInfo[]> => Promise.resolve([]),
   connect: (_portPath: string): Promise<UsbResult> => Promise.resolve(OK),
   disconnect: (): Promise<UsbResult> => Promise.resolve(OK),
-  pushConfig: (_config: DashboardConfig): Promise<UsbResult> => Promise.resolve(OK),
-  pushScreenSettings: (_settings: ScreenSettings): Promise<UsbResult> => Promise.resolve(OK),
-  getStatus: (): Promise<ConnectionStatus> => Promise.resolve(DISCONNECTED),
-  reboot: (): Promise<UsbResult> => Promise.resolve(OK),
-  toggleDayNight: (): Promise<UsbResult> => Promise.resolve(OK),
-  setDayNight: (_day: boolean): Promise<UsbResult> => Promise.resolve(OK),
-  calibrateTouch: (): Promise<UsbResult> => Promise.resolve(OK),
+
+  pushConfig: async (config: DashboardConfig): Promise<UsbResult> => {
+    const result = await getWsClient().send(
+      CMD_PUSH_CONFIG,
+      { payload: config },
+      { scaleWithPayload: true }
+    )
+    return toUsbResult(result)
+  },
+
+  pushScreenSettings: async (settings: ScreenSettings): Promise<UsbResult> => {
+    const result = await getWsClient().send(CMD_SCREEN_SETTINGS, { ...settings })
+    return toUsbResult(result)
+  },
+
+  getStatus: (): Promise<ConnectionStatus> => {
+    const client = getWsClient()
+    return Promise.resolve({
+      connected: client.getStatus() === 'connected',
+      portPath: null,
+      firmwareVersion: null,
+    })
+  },
+
+  reboot: async (): Promise<UsbResult> => {
+    // Reboot drops the socket before any ack lands; treat a missing ack as
+    // success so the UI doesn't surface a spurious timeout.
+    const result = await getWsClient().send(CMD_REBOOT, {}, { timeoutMs: 1_000 })
+    if (result.ok) return OK
+    if (result.error === 'ack_timeout' || result.error === 'connection_closed') return OK
+    return toUsbResult(result)
+  },
+
+  toggleDayNight: async (): Promise<UsbResult> => {
+    return toUsbResult(await getWsClient().send(CMD_TOGGLE_DAY_NIGHT))
+  },
+
+  setDayNight: async (day: boolean): Promise<UsbResult> => {
+    return toUsbResult(await getWsClient().send(CMD_SET_DAY_NIGHT, { day }))
+  },
+
+  calibrateTouch: async (): Promise<UsbResult> => {
+    return toUsbResult(await getWsClient().send(CMD_CALIBRATE_TOUCH))
+  },
 }
 
+// WiFi discovery via mDNS isn't available from the browser — the user
+// types/selects the host manually in the connection screen. Kept as a noop
+// surface so any phase-1 caller still mounts.
 export const wifiService = {
   discover: (): Promise<DiscoveredDevice[]> => Promise.resolve([]),
   connect: (_host: string, _port?: number): Promise<UsbResult> => Promise.resolve(OK),
   disconnect: (): Promise<UsbResult> => Promise.resolve(OK),
-  getStatus: (): Promise<WifiStatus> => Promise.resolve({ connected: false }),
+  getStatus: (): Promise<WifiStatus> => {
+    const client = getWsClient()
+    return Promise.resolve({
+      connected: client.getStatus() === 'connected',
+      host: client.getHost(),
+      port: client.getPort(),
+    })
+  },
 }
 
 export const deviceIpc = {
-  getConfig: (): Promise<DeviceConfigResult> => Promise.resolve({ kind: 'none' as const }),
+  getConfig: async (): Promise<DeviceConfigResult> => {
+    const result = await getWsClient().send(CMD_GET_CONFIG, {}, { timeoutMs: 8_000 })
+    if (result.ok) {
+      const cfg = result.data?.config
+      if (cfg && typeof cfg === 'object') {
+        return { kind: 'ok', config: cfg as DashboardConfig }
+      }
+      return { kind: 'none' }
+    }
+    if (result.error === 'config_not_found') return { kind: 'none' }
+    return { kind: 'error', error: result.error ?? 'unknown_error' }
+  },
 }
 
 export const canScannerIpc = {
-  start: (): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: false }),
-  stop: (): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: false }),
+  start: async (): Promise<{ success: boolean; error?: string }> => {
+    return toUsbResult(await getWsClient().send(CMD_CAN_SCAN_START))
+  },
+  stop: async (): Promise<{ success: boolean; error?: string }> => {
+    return toUsbResult(await getWsClient().send(CMD_CAN_SCAN_STOP))
+  },
 }
 
+// Device-level metadata reads — dash doesn't expose dedicated endpoints for
+// these yet; phase 4 wires them. Until then the stubs keep the editor mounted.
 export const deviceConfigIpc = {
   read: (): Promise<{ success: boolean; config: DeviceConfig | null }> =>
     Promise.resolve({ success: true, config: null }),
@@ -164,18 +250,16 @@ export const inputBindingsIpc = {
 }
 
 export const appIpc = {
-  version: (): Promise<string> => Promise.resolve('0.0.0-spike'),
+  version: (): Promise<string> => Promise.resolve('0.0.0-web'),
 }
 
 export const releasesIpc = {
-  // Phase 3 wires this against a dash-hosted /releases endpoint. Until then
-  // the stub returns the "no live data, no cache" shape so the renderer can
-  // render the empty/error state without crashing.
+  // Dash-hosted release feed lands in a later sub-issue under #1077.
   getLatest: (_force = false): Promise<LatestReleaseResult> =>
     Promise.resolve({
       ok: false,
       reason: 'offline',
-      message: 'spike-stub: release info disabled in phase-1',
+      message: 'web: release feed not yet wired',
       fetchedAt: new Date(0).toISOString(),
       cached: null,
     }),
@@ -189,23 +273,88 @@ export const signalIpc = {
 }
 
 // ---------------------------------------------------------------------------
-// Event subscriptions — Electron's `window.ipc.on(channel, listener)` returned
-// nothing; we return an unsubscribe so phase-3 callers can swap the body for
-// a real WS subscription without restructuring the call sites.
+// Event subscriptions — backed by `WsClient.subscribe()` discriminator routing.
+// Each helper returns an unsubscribe so the call sites (`useLiveSignals` et al.)
+// keep their existing teardown shape.
 // ---------------------------------------------------------------------------
 
 export type Unsubscribe = () => void
 type Handler<T> = (event: T) => void
 
-const noopSubscribe = <T,>(_handler: Handler<T>): Unsubscribe => () => {}
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
 
 export const deviceEvents = {
-  /** Device log lines (e.g. `[BOOT] CANShift vX.Y.Z`). Phase-3: WS frames. */
-  onLogLine: noopSubscribe,
-  /** CAN frames captured by the scanner. Phase-3: WS frames. */
-  onCanFrame: noopSubscribe,
-  /** Live signal values for the editor preview. Phase-3: WS frames. */
-  onSignal: noopSubscribe,
-  /** USB/WS connection state changes. Phase-3: WS handshake events. */
-  onConnectionChange: noopSubscribe,
+  /** Device log lines. Frame shape: `{ log: 1, lvl, tag, msg }`. */
+  onLogLine: (handler: Handler<{ level: string; tag: string; message: string }>): Unsubscribe => {
+    return getWsClient().subscribe('log', (frame) => {
+      if (!isRecord(frame)) return
+      handler({
+        level: typeof frame.lvl === 'string' ? frame.lvl : 'I',
+        tag: typeof frame.tag === 'string' ? frame.tag : '',
+        message: typeof frame.msg === 'string' ? frame.msg : '',
+      })
+    })
+  },
+
+  /** Raw CAN frames captured by the scanner. Shape: `{ can: 1, id, len, d }`. */
+  onCanFrame: (handler: Handler<{ id: number; len: number; data: number[] }>): Unsubscribe => {
+    return getWsClient().subscribe('can', (frame) => {
+      if (!isRecord(frame)) return
+      const id = typeof frame.id === 'number' ? frame.id : null
+      const len = typeof frame.len === 'number' ? frame.len : null
+      const raw = Array.isArray(frame.d) ? frame.d : null
+      if (id === null || len === null || raw === null) return
+      const data = raw.filter((b): b is number => typeof b === 'number')
+      handler({ id, len, data })
+    })
+  },
+
+  /** Live signal values. Shape: `{ tele: 1, v: { signalName: number } }`. */
+  onSignal: (handler: Handler<Record<string, number>>): Unsubscribe => {
+    return getWsClient().subscribe('tele', (frame) => {
+      if (!isRecord(frame)) return
+      const values = frame.v
+      if (!isRecord(values)) return
+      const flat: Record<string, number> = {}
+      for (const [k, v] of Object.entries(values)) {
+        if (typeof v === 'number') flat[k] = v
+      }
+      handler(flat)
+    })
+  },
+
+  /**
+   * CAN health snapshot. Shape: `{ can_stat: 1, fps, errors }`. The phase-1
+   * stub passed `unknown` through; we surface a typed shape here.
+   */
+  onCanHealth: (handler: Handler<{ fps: number; errors: number }>): Unsubscribe => {
+    return getWsClient().subscribe('can_stat', (frame) => {
+      if (!isRecord(frame)) return
+      handler({
+        fps: typeof frame.fps === 'number' ? frame.fps : 0,
+        errors: typeof frame.errors === 'number' ? frame.errors : 0,
+      })
+    })
+  },
+
+  /**
+   * Connection state changes. Wired off the `WsClient` status — emits
+   * `{ connected: true }` on OPEN and `{ connected: false, reason? }` on every
+   * disconnect / reconnect attempt.
+   */
+  onConnectionChange: (
+    handler: Handler<{ connected: boolean; reason?: string }>
+  ): Unsubscribe => {
+    return getWsClient().onStatus((status, error) => {
+      if (status === 'connected') {
+        handler({ connected: true })
+      } else if (error !== undefined) {
+        handler({ connected: false, reason: error })
+      } else {
+        handler({ connected: false })
+      }
+    })
+  },
 }
