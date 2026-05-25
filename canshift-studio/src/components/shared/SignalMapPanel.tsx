@@ -12,6 +12,22 @@ import type { SignalConfig } from '@tmbk/canshift-core'
 
 const PANEL_WIDTH = 280
 
+// Chrome shades not yet mapped to core design tokens. Hoisted as MIRROR consts
+// per audit S-H-5 (umbrella #1015). `--text` is adopted inline below; the rest
+// stay as mirrors pending design review.
+const PANEL_BG = '#0D0D0D' // MIRROR: deepest chrome — between TopBar CHROME_BG (#0A0A0A) and --bg (#121212)
+const PANEL_BORDER = '#1E1E1E' // MIRROR: ≈ --surface (#1F1F1F), chrome divider
+const HEADER_LABEL = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
+const BTN_BORDER = '#2A2A2A' // MIRROR: ≈ --surface-2 (#292929)
+const BTN_TEXT_ENABLED = '#666' // MIRROR: dimmer than --text-muted, clear/remove enabled label
+const BTN_TEXT_DISABLED = '#333' // MIRROR: deepest dim, clear disabled label
+const EXPORT_BG_ENABLED = '#CC3333' // MIRROR: dimmer red than --primary (#FF4747); matches ErrorBar ERR_ACCENT
+const EXPORT_BG_DISABLED = '#2A2A2A' // MIRROR: matches BTN_BORDER
+const EXPORT_TEXT_DISABLED = '#444' // MIRROR: deeper than --text-muted
+const ROW_BORDER = '#161616' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const SIGNAL_NAME_TEXT = '#CCCCCC' // MIRROR: between --text-dim and --text
+const META_TEXT = '#555' // MIRROR: dim metadata + placeholder + remove icon
+
 export default function SignalMapPanel(): React.ReactElement {
   const signals = useSignalMapperStore((s) => s.signals)
   const removeSignal = useSignalMapperStore((s) => s.removeSignal)
@@ -33,8 +49,8 @@ export default function SignalMapPanel(): React.ReactElement {
       style={{
         width: PANEL_WIDTH,
         flexShrink: 0,
-        background: '#0D0D0D',
-        borderLeft: '1px solid #1E1E1E',
+        background: PANEL_BG,
+        borderLeft: `1px solid ${PANEL_BORDER}`,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -44,14 +60,14 @@ export default function SignalMapPanel(): React.ReactElement {
       <div
         style={{
           padding: '10px 14px',
-          borderBottom: '1px solid #1E1E1E',
+          borderBottom: `1px solid ${PANEL_BORDER}`,
           display: 'flex',
           alignItems: 'center',
           gap: 8,
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 11, fontWeight: 600, color: '#AAAAAA', flex: 1 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: HEADER_LABEL, flex: 1 }}>
           Signal map ({signals.length})
         </span>
         <button
@@ -65,9 +81,9 @@ export default function SignalMapPanel(): React.ReactElement {
             borderRadius: 3,
             fontSize: 10,
             cursor: signals.length > 0 ? 'pointer' : 'not-allowed',
-            border: '1px solid #2A2A2A',
+            border: `1px solid ${BTN_BORDER}`,
             background: 'transparent',
-            color: signals.length > 0 ? '#666' : '#333',
+            color: signals.length > 0 ? BTN_TEXT_ENABLED : BTN_TEXT_DISABLED,
           }}
         >
           Clear
@@ -84,8 +100,8 @@ export default function SignalMapPanel(): React.ReactElement {
             fontWeight: 600,
             cursor: signals.length > 0 ? 'pointer' : 'not-allowed',
             border: 'none',
-            background: signals.length > 0 ? '#CC3333' : '#2A2A2A',
-            color: signals.length > 0 ? '#FFFFFF' : '#444',
+            background: signals.length > 0 ? EXPORT_BG_ENABLED : EXPORT_BG_DISABLED,
+            color: signals.length > 0 ? 'hsl(var(--text))' : EXPORT_TEXT_DISABLED,
           }}
         >
           Export
@@ -99,7 +115,7 @@ export default function SignalMapPanel(): React.ReactElement {
             style={{
               padding: '24px 14px',
               fontSize: 11,
-              color: '#444',
+              color: EXPORT_TEXT_DISABLED,
               textAlign: 'center',
               lineHeight: 1.6,
             }}
@@ -112,7 +128,7 @@ export default function SignalMapPanel(): React.ReactElement {
               key={sig.name}
               style={{
                 padding: '8px 14px',
-                borderBottom: '1px solid #161616',
+                borderBottom: `1px solid ${ROW_BORDER}`,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 3,
@@ -123,7 +139,7 @@ export default function SignalMapPanel(): React.ReactElement {
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: '#CCCCCC',
+                    color: SIGNAL_NAME_TEXT,
                     flex: 1,
                     minWidth: 0,
                     overflow: 'hidden',
@@ -143,22 +159,22 @@ export default function SignalMapPanel(): React.ReactElement {
                     borderRadius: 3,
                     fontSize: 10,
                     cursor: 'pointer',
-                    border: '1px solid #2A2A2A',
+                    border: `1px solid ${BTN_BORDER}`,
                     background: 'transparent',
-                    color: '#555',
+                    color: META_TEXT,
                     flexShrink: 0,
                   }}
                 >
                   ✕
                 </button>
               </div>
-              <div style={{ fontSize: 10, color: '#555', fontFamily: 'monospace' }}>
+              <div style={{ fontSize: 10, color: META_TEXT, fontFamily: 'monospace' }}>
                 {sig.canFrameId} · b{sig.startByte}
                 {sig.byteLength > 1 ? `–${String(sig.startByte + sig.byteLength - 1)}` : ''} ·{' '}
                 {sig.bigEndian ? 'BE' : 'LE'} · {sig.signed ? 'int' : 'uint'}
                 {String(sig.byteLength * 8)}
               </div>
-              <div style={{ fontSize: 10, color: '#666' }}>
+              <div style={{ fontSize: 10, color: BTN_TEXT_ENABLED }}>
                 ×{sig.scale}
                 {sig.offset !== 0 ? ` +${String(sig.offset)}` : ''} {sig.unit ? sig.unit : ''}
                 {' · '}

@@ -15,7 +15,8 @@ const WARN_BORDER = '#AA6622' // MIRROR: dim amber border
 const WARN_TEXT = '#DDAA66' // MIRROR: amber body text
 const WARN_BTN_BORDER = '#553311' // MIRROR: darker amber for dismiss button border
 const WARN_BTN_TEXT = '#AA7733' // MIRROR: dismiss button label
-const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+// `--scrim` is the canonical token since #1097 — 0.6 alpha matches the original rgba.
+const BANNER_SHADOW = '0 4px 16px hsl(var(--scrim) / 0.6)'
 
 interface Semver {
   major: number

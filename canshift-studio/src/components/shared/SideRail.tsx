@@ -12,8 +12,9 @@ import { ensureSpinKeyframes } from './PhaseIndicator'
 const CHROME_BG = '#0A0A0A' // MIRROR: darker than --bg (#121212), used as nav chrome
 const CHROME_BORDER = '#1A1A1A' // MIRROR: between --bg and --surface
 const CHROME_DIVIDER = '#1E1E1E' // MIRROR: ≈ --surface (#1F1F1F)
-const BRAND_RED = '#E03030' // MIRROR: darker variant of --primary (#FF4747)
 const ICON_MUTED = '#555555' // MIRROR: between bg and --text-muted (#8F8F8F)
+// `--status-danger` (= old BRAND_RED #E03030) is the canonical token since #1097.
+const BRAND_RED = 'hsl(var(--status-danger))'
 
 const TOP_ITEMS = [
   { to: '/editor', label: 'Editor', Icon: IconEditor },
