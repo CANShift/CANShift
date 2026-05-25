@@ -19,7 +19,8 @@ const OK_BORDER = '#2A6A3F' // MIRROR: dim green border + accept button bg
 const OK_TEXT = '#A8D0B5' // MIRROR: green body text
 const OK_BTN_BORDER = '#355541' // MIRROR: darker green for dismiss button border
 const OK_BTN_TEXT = '#88AA99' // MIRROR: dismiss button label
-const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+// `--scrim` is the canonical token since #1097 — 0.6 alpha matches the original rgba.
+const BANNER_SHADOW = '0 4px 16px hsl(var(--scrim) / 0.6)'
 
 export default function DemoFallbackBanner() {
   const pendingDeviceConfig = useDashboardStore((s) => s.pendingDeviceConfig)

@@ -12,10 +12,11 @@ import type { PhaseTone } from './PhaseIndicator'
 
 // Modal chrome shades not yet mapped to core design tokens. Hoisted so the
 // planned token promotion (audit S-H-5, umbrella #1015) is a one-line swap.
-const OVERLAY_BG = '#00000088' // MIRROR: 53% black backdrop (no alpha token)
 const MODAL_BG = '#161616' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
 const MODAL_BORDER = '#2A2A2A' // MIRROR: ≈ --surface-2 (#292929)
-const MODAL_SHADOW = '#00000088' // MIRROR: matches overlay
+// `--scrim` is the canonical token since #1097 — 0x88 alpha = 53%.
+const OVERLAY_BG = 'hsl(var(--scrim) / 0.53)'
+const MODAL_SHADOW = 'hsl(var(--scrim) / 0.53)'
 
 interface PhaseCopy {
   title: string

@@ -9,7 +9,8 @@ const BANNER_BG = '#161616' // MIRROR: chrome surface, darker than --surface (#1
 const BORDER_READY = '#CC4444' // MIRROR: dim brand red signalling "ready to install"
 const BORDER_IDLE = '#2A2A2A' // MIRROR: subdued chrome divider
 const BANNER_TEXT = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
-const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+// `--scrim` is the canonical token since #1097 — 0.6 alpha matches the original rgba.
+const BANNER_SHADOW = '0 4px 16px hsl(var(--scrim) / 0.6)'
 
 export default function UpdateBanner() {
   const { status, version, installUpdate } = useUpdater()
