@@ -1,8 +1,10 @@
 # canshift-studio-web
 
-Dash-hosted Studio renderer — **phase-1 spike for issue #1104**, part of the architectural shift described in #1077.
+Dash-hosted Studio renderer for the architectural shift described in #1077.
 
-The package is intentionally isolated from the root workspace until the phase-1 go/no-go gate is signed off. Once green, phase 3 (#1105) wires the firmware WebServer/WS endpoints and decommissioning of `canshift-studio/` begins.
+Phase 1 spike (#1104) shipped the scaffold and bundle-size verdict.
+Phase 3 (#1105 / #1108) — current — replaces the stub transport with a real
+WebSocket client against the firmware's `/ws` endpoint on port 81.
 
 ---
 
@@ -26,10 +28,25 @@ The Electron Studio's heavy dependencies — xterm, esptool-js, react-markdown +
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173, stubbed transport
+npm run dev          # http://localhost:5173
 ```
 
-The dev server boots against `src/transport/index.ts`, which returns canned data for every device action so the renderer mounts with no firmware in the loop. Click "Enter simulation" on the connect screen to seed the dashboard store with `DEFAULT_SIM_CONFIG` and render the editor against that.
+The connect screen offers three paths:
+
+1. Connect to a real dash over WebSocket (default `canshift.local:81`, with a
+   manual host/port input for environments where mDNS doesn't resolve).
+2. Boot the in-repo **mock WS server** in a second terminal and connect to it:
+
+   ```bash
+   npm run dev:mock     # ws://127.0.0.1:8181/
+   ```
+
+   Then point the renderer at `127.0.0.1` port `8181`. The mock replies to
+   every command with canned data and streams telemetry on a 200 ms timer so
+   the editor's live-signal hooks light up.
+3. Click "enter simulation mode" — same shortcut as the phase-1 spike, seeds
+   the dashboard store with `DEFAULT_SIM_CONFIG` so the editor renders
+   without any backend.
 
 ## Build
 
@@ -90,10 +107,33 @@ TOTAL              497.38 KB raw  / 151.14 KB gzip
 - **Electron leftovers** — all `main/`, `preload/`, `shared/ipc-*`, `electron-builder`, `electron-updater`, `asarIntegrity`, `security.service` CSP wiring.
 - **Renderer-shaped wrong-place deps** — `serialport`, `bonjour-service`, `fast-deep-equal`, `spark-md5`.
 
-### Stubbed
+### Real transport (phase 3)
 
-- **`src/transport/index.ts`** — every method returns a benign canned response so the renderer mounts and renders. Phase 3 (#1105) replaces the bodies with `fetch` + a single WS subscription against the firmware's `/ws` endpoint. The function signatures are deliberately preserved so the swap is mechanical.
-- **`src/hooks/useLiveSignals.ts`** — simulation path is intact (rAF oscillator over `signal.store`); connected path subscribes through the transport stub instead of the Electron IPC channel.
+- **`src/transport/ws-client.ts`** — `WsClient` owns the native browser
+  `WebSocket`. Exposes `connect`/`disconnect`/`send(cmd, fields)`/`subscribe`
+  with exponential reconnect (cap 30 s) and single-client refusal handling
+  (firmware sends a `single-client only` text frame then closes — surfaced as
+  the `single_client` error so the connect screen can show a meaningful
+  message).
+- **`src/transport/index.ts`** — same surface as the phase-1 stub, but
+  command methods now route through `WsClient.send()` and the event
+  subscribers route through discriminator dispatch (`tele`, `can_stat`,
+  `can`, `log`). Stubbed surfaces (file dialogs, release feed, native menus)
+  stay stubbed — they're out of scope for the dash-hosted renderer per the
+  #1077 architectural freeze.
+- **`src/stores/connection.store.ts`** — owns the host/port pair, the live
+  `WsStatus`, and the connect/disconnect actions. Mirrors successful opens
+  into `device.store` so the editor's `connected` flag stays the single
+  source of truth.
+
+### Still stubbed
+
+- `configService.{open,save,saveAs,import,export}` — browser has no native
+  file dialogs. The dash-hosted import/export endpoint is a follow-up.
+- `releasesIpc.getLatest` — release feed moves to a dash-hosted endpoint in
+  phase 4.
+- `deviceConfigIpc` / `inputBindingsIpc` — these are dash-side payloads that
+  don't have dedicated WS commands yet.
 
 ---
 
