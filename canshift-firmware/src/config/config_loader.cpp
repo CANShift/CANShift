@@ -17,6 +17,7 @@
 
 #ifdef ARDUINO
     #include <esp_heap_caps.h>
+    #include "hal/memory/psram.h"
 #endif
 
 namespace {
@@ -53,29 +54,61 @@ static CfgInputBindings s_inputs = {};
 // loadDashboard() and loadSignals() run sequentially on the same task
 // (ConfigLoader::loadAll drives them in order) and each completes before the
 // next begins, so a single shared buffer sized to the larger of the two types
-// is enough. Two separate buffers cost ~5 KB extra BSS and pushed the
-// production crowpanel_28 image past the DRAM ceiling (umbrella #1014).
-// The static_assert pins the invariant so a future struct growth on the
-// other type can't silently underflow this buffer.
+// is enough. The static_assert pins the invariant so a future struct growth
+// on the other type can't silently underflow this buffer.
 //
-// Storage is hidden behind acquireRollbackSnapshot(): callers ask for the
-// buffer, snapshot into it before mutating live state, and on parse failure
-// memcpy it back. This indirection (issue #1073) lets a follow-up swap the
-// backing buffer for a PSRAM heap allocation on WROVER variants — the
-// `crowpanel_28_wifi` env needs ~1.7 KB of DRAM back to fit the WiFi / mDNS /
-// lwip BSS that the WS bridge brings in. For now the only backend is the BSS
-// reservation below, so behaviour is byte-identical to the pre-#1073 code.
+// Storage selection (issue #1073):
+//   - BOARD_HAS_PSRAM builds (crowpanel_28 / crowpanel_28_wifi) prefer a
+//     one-shot PSRAM allocation. On a WROVER module this reclaims ~5 KB of
+//     `dram0_0_seg` — exactly the room `crowpanel_28_wifi` needs to fit the
+//     WiFi / mDNS / lwip BSS that the dash-hosted Studio WS bridge brings in
+//     (issues #1073, #1108; the env link-overflowed by ~1.7 KB before this
+//     change). On a WROOM module the runtime PSRAM probe in
+//     `hal/memory/psram.cpp` reports 0 bytes, the alloc returns null, and
+//     the rollback feature degrades to a no-op (parse failures no longer
+//     restore the prior in-memory state — same risk profile as the pre-#458
+//     single-buffer path, documented in the #1073 PR body).
+//   - Non-PSRAM builds (host / native test, `[env:native]`) keep the BSS
+//     buffer so unit tests still exercise the rollback path byte-for-byte.
 static_assert(sizeof(CfgDashboard) >= sizeof(CfgSignalConfig),
               "rollback snapshot buffer must fit CfgDashboard (the larger of the two)");
 static constexpr size_t kRollbackSnapshotSize = sizeof(CfgDashboard);
+
+#ifndef BOARD_HAS_PSRAM
 alignas(CfgDashboard) static uint8_t s_rollback_snapshot_bss[kRollbackSnapshotSize];
+#endif
 
 // Returns the snapshot buffer or nullptr when no backing storage is available.
-// The BSS-only build can never return nullptr — kept as the return contract so
-// the follow-up PSRAM path can degrade gracefully (PSRAM alloc may fail on a
-// WROOM module) without forcing every caller to grow a #ifdef branch.
+//   - BOARD_HAS_PSRAM: lazy-allocate from PSRAM on first call; nullptr on the
+//     WROOM no-PSRAM runtime path so callers skip the snapshot step.
+//   - Otherwise: returns the BSS reservation (cannot fail).
 uint8_t *acquireRollbackSnapshot() {
+#ifdef BOARD_HAS_PSRAM
+    static uint8_t *s_rollback_snapshot_psram = nullptr;
+    static bool s_psram_alloc_attempted = false;
+    if (!s_psram_alloc_attempted) {
+        s_psram_alloc_attempted = true;
+    #ifdef ARDUINO
+        if (canshift::hal::memory::isPsramAvailable()) {
+            s_rollback_snapshot_psram =
+                static_cast<uint8_t *>(heap_caps_malloc(kRollbackSnapshotSize, MALLOC_CAP_SPIRAM));
+            if (s_rollback_snapshot_psram) {
+                LOG_INFO("CFG", "rollback snapshot (%u B) allocated in PSRAM",
+                         static_cast<unsigned>(kRollbackSnapshotSize));
+            } else {
+                LOG_WARN("CFG", "rollback snapshot PSRAM alloc (%u B) failed — rollback disabled",
+                         static_cast<unsigned>(kRollbackSnapshotSize));
+            }
+        } else {
+            LOG_WARN("CFG", "no PSRAM detected — rollback snapshot disabled (WROOM variant; "
+                            "parse-failure restore will no-op)");
+        }
+    #endif
+    }
+    return s_rollback_snapshot_psram;
+#else
     return s_rollback_snapshot_bss;
+#endif
 }
 
 // ---------------------------------------------------------------------------
