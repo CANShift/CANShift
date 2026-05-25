@@ -29,6 +29,7 @@ jobs:
     outputs:
       core: ${{ steps.detect.outputs.core }}
       studio: ${{ steps.detect.outputs.studio }}
+      studio-web: ${{ steps.detect.outputs.studio-web }}
       mobile: ${{ steps.detect.outputs.mobile }}
       firmware: ${{ steps.detect.outputs.firmware }}
 
@@ -53,9 +54,10 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          # core runs if core, studio, OR mobile changed (studio downloads core artifact)
-          echo "core=$(echo "$CHANGED" | grep -qE '^(canshift-core|canshift-studio|canshift-mobile)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # core runs if core, studio, studio-web, OR mobile changed (all consume the core dist artifact)
+          echo "core=$(echo "$CHANGED" | grep -qE '^(canshift-core|canshift-studio|canshift-studio-web|canshift-mobile)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "studio=$(echo "$CHANGED" | grep -qE '^(canshift-studio|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "studio-web=$(echo "$CHANGED" | grep -qE '^(canshift-studio-web|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "mobile=$(echo "$CHANGED" | grep -qE '^(canshift-mobile|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "firmware=$(echo "$CHANGED" | grep -qE '^canshift-firmware/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
