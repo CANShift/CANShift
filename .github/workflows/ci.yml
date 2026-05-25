@@ -154,6 +154,48 @@ jobs:
       - name: Renderer size budget
         run: npm run size:check
 
+  # ─── Web Studio (dash-hosted refactor — #1077) ─────────────────────────────
+  # Apply the 'ci:skip-studio-web' label to a PR to bypass this job (WIP, proto,
+  # or trivial changes where you know the studio-web checks add no signal).
+  # Sister to the Electron `studio` job — both will run side-by-side until the
+  # phase 3 cutover is complete and the Electron package is decommissioned.
+  studio-web:
+    name: studio-web — typecheck + build
+    runs-on: ubuntu-latest
+    needs: [changes, core]
+    if: needs.changes.outputs.studio-web == 'true' && !contains(github.event.pull_request.labels.*.name, 'ci:skip-studio-web')
+    defaults:
+      run:
+        working-directory: canshift-studio-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: canshift-studio-web/package-lock.json
+
+      - name: Download core dist
+        uses: actions/download-artifact@v4
+        with:
+          name: canshift-core-dist
+          path: canshift-core/dist
+
+      - name: Install core dependencies
+        run: npm ci
+        working-directory: canshift-core
+
+      - name: Install studio-web dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
   # ─── Mobile app ─────────────────────────────────────────────────────────────
   # Job name kept verbatim — it's referenced by branch-protection required checks.
   mobile:
