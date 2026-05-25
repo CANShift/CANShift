@@ -25,7 +25,8 @@ const DANGER_TEXT = '#DDAAAA' // MIRROR: red body text (matches ErrorBar ERR_MSG
 const DANGER_CODE_TEXT = '#FFCCCC' // MIRROR: brighter pinkish-white for the inline <code>
 const DANGER_BTN_BORDER = '#553333' // MIRROR: darker red for dismiss button border (matches ERR_CLEAR_TEXT family)
 const DANGER_BTN_TEXT = '#AA7777' // MIRROR: dismiss button label
-const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+// `--scrim` is the canonical token since #1097 — 0.6 alpha matches the original rgba.
+const BANNER_SHADOW = '0 4px 16px hsl(var(--scrim) / 0.6)'
 
 function formatTimestamp(ms: number): string {
   return new Date(ms).toISOString().slice(11, 23)

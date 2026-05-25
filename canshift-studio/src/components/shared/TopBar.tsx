@@ -17,8 +17,6 @@ const CHROME_DIVIDER = '#1E1E1E' // MIRROR: ≈ --surface (#1F1F1F)
 const CHROME_BUTTON_BORDER = '#202020' // MIRROR: subtle button outline
 const CHROME_BUTTON_HOVER_BG = '#141414' // MIRROR: button pressed state
 const CHROME_BUTTON_HOVER_BORDER = '#282828' // MIRROR: button pressed state border
-const BRAND_RED = '#E03030' // MIRROR: darker variant of --primary (#FF4747)
-const BRAND_RED_BORDER = '#3A1A1A' // MIRROR: accent button outline
 const BRAND_ORANGE = '#E08030' // MIRROR: darker variant of --warning (#FF8800)
 const STATUS_GREEN = '#3DB86B' // MIRROR: darker variant of --success (#00CC2A)
 const SIM_PURPLE = '#8844FF' // MIRROR: simulation badge (no token)
@@ -27,6 +25,9 @@ const TEXT_DISABLED = '#3A3A3A' // MIRROR: disabled text shade
 const TEXT_DIM_2 = '#444444' // MIRROR: deeper dim than --text-muted
 const TEXT_DIM_4 = '#777777' // MIRROR
 const TEXT_DIM_5 = '#888888' // MIRROR
+// `--status-danger` / `--status-danger-dim` are the canonical tokens since #1097.
+const BRAND_RED = 'hsl(var(--status-danger))'
+const BRAND_RED_BORDER = 'hsl(var(--status-danger-dim))'
 
 const STATUS_COLOR: Record<string, string> = {
   connected: STATUS_GREEN,
