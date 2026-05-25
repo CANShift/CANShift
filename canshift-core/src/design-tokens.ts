@@ -31,6 +31,9 @@ export interface DesignTokens {
     success: string
     warning: string
     danger: string
+    statusDanger: string
+    statusDangerDim: string
+    scrim: string
     ring: string
   }
   radii: { sm: number; md: number; lg: number; full: number }
@@ -72,6 +75,9 @@ export const DARK_TOKENS = {
     success: '#00CC2A',
     warning: '#FF8800',
     danger: '#FF0000',
+    statusDanger: '#E03030',
+    statusDangerDim: '#3A1A1A',
+    scrim: '#000000',
     ring: '#FF4747',
   },
   radii: { sm: 4, md: 8, lg: 12, full: 9999 },
@@ -176,6 +182,9 @@ export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> 
   success: '--success',
   warning: '--warning',
   danger: '--danger',
+  statusDanger: '--status-danger',
+  statusDangerDim: '--status-danger-dim',
+  scrim: '--scrim',
   ring: '--ring',
 }
 
