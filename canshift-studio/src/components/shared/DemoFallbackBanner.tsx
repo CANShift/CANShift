@@ -11,6 +11,16 @@
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useLogStore } from '../../stores/log.store'
 
+// Success-chrome palette — `--success` (#00CC2A) is too saturated for a
+// sustained banner background. Hoisted as MIRROR consts per audit S-H-5
+// (umbrella #1015) so a future token promotion is a single-line swap.
+const OK_BG = '#0F1A14' // MIRROR: deep green banner background
+const OK_BORDER = '#2A6A3F' // MIRROR: dim green border + accept button bg
+const OK_TEXT = '#A8D0B5' // MIRROR: green body text
+const OK_BTN_BORDER = '#355541' // MIRROR: darker green for dismiss button border
+const OK_BTN_TEXT = '#88AA99' // MIRROR: dismiss button label
+const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+
 export default function DemoFallbackBanner() {
   const pendingDeviceConfig = useDashboardStore((s) => s.pendingDeviceConfig)
   const loadedFromDemoFallback = useDashboardStore((s) => s.loadedFromDemoFallback)
@@ -46,17 +56,17 @@ export default function DemoFallbackBanner() {
           bottom: 32,
           left: 16,
           zIndex: 9997,
-          background: '#0F1A14',
-          border: '1px solid #2A6A3F',
+          background: OK_BG,
+          border: `1px solid ${OK_BORDER}`,
           borderRadius: 6,
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
           fontSize: 12,
-          color: '#A8D0B5',
+          color: OK_TEXT,
           maxWidth: 460,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+          boxShadow: BANNER_SHADOW,
         }}
       >
         <span>No config on device — showing default. Edit and burn to deploy.</span>
@@ -65,9 +75,9 @@ export default function DemoFallbackBanner() {
           style={{
             padding: '3px 8px',
             background: 'transparent',
-            border: '1px solid #355541',
+            border: `1px solid ${OK_BTN_BORDER}`,
             borderRadius: 3,
-            color: '#88AA99',
+            color: OK_BTN_TEXT,
             fontSize: 11,
             cursor: 'pointer',
           }}
@@ -89,17 +99,17 @@ export default function DemoFallbackBanner() {
         bottom: 32,
         left: 16,
         zIndex: 9997,
-        background: '#0F1A14',
-        border: '1px solid #2A6A3F',
+        background: OK_BG,
+        border: `1px solid ${OK_BORDER}`,
         borderRadius: 6,
         padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         fontSize: 12,
-        color: '#A8D0B5',
+        color: OK_TEXT,
         maxWidth: 460,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+        boxShadow: BANNER_SHADOW,
       }}
     >
       <span>Device has a saved config — swap it in and replace the demo?</span>
@@ -107,10 +117,10 @@ export default function DemoFallbackBanner() {
         onClick={handleAccept}
         style={{
           padding: '4px 10px',
-          background: '#2A6A3F',
-          border: '1px solid #2A6A3F',
+          background: OK_BORDER,
+          border: `1px solid ${OK_BORDER}`,
           borderRadius: 3,
-          color: '#FFFFFF',
+          color: 'hsl(var(--text))',
           fontSize: 11,
           cursor: 'pointer',
         }}
@@ -122,9 +132,9 @@ export default function DemoFallbackBanner() {
         style={{
           padding: '3px 8px',
           background: 'transparent',
-          border: '1px solid #355541',
+          border: `1px solid ${OK_BTN_BORDER}`,
           borderRadius: 3,
-          color: '#88AA99',
+          color: OK_BTN_TEXT,
           fontSize: 11,
           cursor: 'pointer',
         }}
