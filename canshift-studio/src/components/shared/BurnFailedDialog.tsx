@@ -16,6 +16,13 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog'
 
+// Metadata text shades not yet mapped to core design tokens. Hoisted as MIRROR
+// consts per audit S-H-5 (umbrella #1015). `--text-dim` is the canonical value
+// text and is adopted inline; the rest stay as mirrors pending design review.
+const META_LABEL = '#888' // MIRROR: ≈ --text-muted (#8F8F8F), used for grid labels
+const TRY_LABEL = '#666' // MIRROR: dimmer than --text-muted, uppercase section heading
+const HINT_TEXT = '#CCC' // MIRROR: between --text-dim and --text, list item body
+
 function formatPayloadSize(bytes: number): string {
   const kb = bytes / 1024
   return `${kb.toFixed(1)} KB (${String(bytes)} bytes)`
@@ -56,15 +63,17 @@ export default function BurnFailedDialog() {
               columnGap: 12,
               rowGap: 4,
               fontSize: 12,
-              color: '#888',
+              color: META_LABEL,
             }}
           >
             <span>Elapsed</span>
-            <span style={{ color: '#BBB' }}>{String(details.elapsedMs)} ms</span>
+            <span style={{ color: 'hsl(var(--text-dim))' }}>{String(details.elapsedMs)} ms</span>
             <span>Schema</span>
-            <span style={{ color: '#BBB' }}>v{details.schemaVersion}</span>
+            <span style={{ color: 'hsl(var(--text-dim))' }}>v{details.schemaVersion}</span>
             <span>Payload</span>
-            <span style={{ color: '#BBB' }}>{formatPayloadSize(details.payloadBytes)}</span>
+            <span style={{ color: 'hsl(var(--text-dim))' }}>
+              {formatPayloadSize(details.payloadBytes)}
+            </span>
           </div>
 
           {details.hints.length > 0 && (
@@ -72,7 +81,7 @@ export default function BurnFailedDialog() {
               <div
                 style={{
                   fontSize: 11,
-                  color: '#666',
+                  color: TRY_LABEL,
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
                   marginBottom: 6,
@@ -85,7 +94,7 @@ export default function BurnFailedDialog() {
                   margin: 0,
                   paddingLeft: 18,
                   fontSize: 12,
-                  color: '#CCC',
+                  color: HINT_TEXT,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 4,

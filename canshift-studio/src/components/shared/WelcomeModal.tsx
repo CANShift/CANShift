@@ -18,6 +18,21 @@ import { useLogStore } from '../../stores/log.store'
 import { useConfigActions } from '../../hooks/useConfigActions'
 import ConnectModal from './ConnectModal'
 
+// Modal chrome shades not yet mapped to core design tokens. Hoisted as MIRROR
+// consts per audit S-H-5 (umbrella #1015) so a future token promotion is a
+// single-line swap. `--text`, `--text-dim` and `--scrim` (since #1097) are
+// already adopted inline below — these mirrors cover the remaining gap.
+const DIALOG_BG = '#161616' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
+const DIALOG_BORDER = '#2A2A2A' // MIRROR: ≈ --surface-2 (#292929)
+const HEADER_BORDER = '#222222' // MIRROR: chrome divider, between --surface and --border
+const TEXT_DIM_5 = '#888888' // MIRROR: header / ghost label
+const TEXT_DIM_3 = '#AAAAAA' // MIRROR: close button (matches UpdateBanner BANNER_TEXT)
+const TEXT_LIST = '#999999' // MIRROR: between --text-muted (#8F8F8F) and TEXT_DIM_3
+const TEXT_SECONDARY = '#CCCCCC' // MIRROR: secondary button label
+const PRIMARY_BTN_BG = '#CC3333' // MIRROR: dimmer red than --primary (#FF4747); matches ErrorBar ERR_ACCENT
+const PRIMARY_BTN_BG_DISABLED = '#3A1818' // MIRROR: disabled red (≈ status-danger-dim #3A1A1A, kept distinct)
+const SECONDARY_BTN_BORDER = '#333333' // MIRROR: deeper than --border (#333333 ≈ --border but stays explicit)
+
 type Step = 'welcome' | 'connect' | 'burn'
 
 interface WelcomeModalProps {
@@ -29,7 +44,7 @@ const overlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
   zIndex: 9500,
-  background: 'rgba(0,0,0,0.78)',
+  background: 'hsl(var(--scrim) / 0.78)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -37,10 +52,10 @@ const overlay: React.CSSProperties = {
 
 const dialog: React.CSSProperties = {
   width: 460,
-  background: '#161616',
-  border: '1px solid #2A2A2A',
+  background: DIALOG_BG,
+  border: `1px solid ${DIALOG_BORDER}`,
   borderRadius: 10,
-  boxShadow: '0 24px 64px #00000099',
+  boxShadow: '0 24px 64px hsl(var(--scrim) / 0.6)',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -51,12 +66,12 @@ const header: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: '12px 16px',
-  borderBottom: '1px solid #222222',
+  borderBottom: `1px solid ${HEADER_BORDER}`,
 }
 
 const headerLabel: React.CSSProperties = {
   fontSize: 11,
-  color: '#888888',
+  color: TEXT_DIM_5,
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
 }
@@ -64,7 +79,7 @@ const headerLabel: React.CSSProperties = {
 const closeBtn: React.CSSProperties = {
   background: 'none',
   border: 'none',
-  color: '#AAAAAA',
+  color: TEXT_DIM_3,
   cursor: 'pointer',
   fontSize: 18,
   lineHeight: 1,
@@ -81,13 +96,13 @@ const body: React.CSSProperties = {
 const title: React.CSSProperties = {
   fontSize: 18,
   fontWeight: 600,
-  color: '#FFFFFF',
+  color: 'hsl(var(--text))',
   margin: 0,
 }
 
 const paragraph: React.CSSProperties = {
   fontSize: 13,
-  color: '#BBBBBB',
+  color: 'hsl(var(--text-dim))',
   lineHeight: 1.55,
   margin: 0,
 }
@@ -96,7 +111,7 @@ const list: React.CSSProperties = {
   margin: '4px 0 0',
   padding: '0 0 0 18px',
   fontSize: 13,
-  color: '#999999',
+  color: TEXT_LIST,
   lineHeight: 1.7,
 }
 
@@ -110,10 +125,10 @@ const buttonRow: React.CSSProperties = {
 const primaryBtn: React.CSSProperties = {
   flex: 1,
   padding: '9px 14px',
-  background: '#CC3333',
+  background: PRIMARY_BTN_BG,
   border: 'none',
   borderRadius: 6,
-  color: '#FFFFFF',
+  color: 'hsl(var(--text))',
   fontSize: 13,
   fontWeight: 600,
   cursor: 'pointer',
@@ -123,9 +138,9 @@ const secondaryBtn: React.CSSProperties = {
   flex: 1,
   padding: '9px 14px',
   background: 'transparent',
-  border: '1px solid #333333',
+  border: `1px solid ${SECONDARY_BTN_BORDER}`,
   borderRadius: 6,
-  color: '#CCCCCC',
+  color: TEXT_SECONDARY,
   fontSize: 13,
   cursor: 'pointer',
 }
@@ -133,7 +148,7 @@ const secondaryBtn: React.CSSProperties = {
 const ghostBtn: React.CSSProperties = {
   background: 'none',
   border: 'none',
-  color: '#888888',
+  color: TEXT_DIM_5,
   fontSize: 12,
   cursor: 'pointer',
   padding: '6px 0',
@@ -307,7 +322,8 @@ export default function WelcomeModal({ onDismiss }: WelcomeModalProps) {
                 disabled={!canBurn || status === 'burning'}
                 style={{
                   ...primaryBtn,
-                  background: canBurn && status !== 'burning' ? '#CC3333' : '#3A1818',
+                  background:
+                    canBurn && status !== 'burning' ? PRIMARY_BTN_BG : PRIMARY_BTN_BG_DISABLED,
                   cursor: canBurn && status !== 'burning' ? 'pointer' : 'not-allowed',
                 }}
               >
