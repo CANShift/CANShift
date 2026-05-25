@@ -20,5 +20,8 @@
   --success: 132 100% 40%;
   --warning: 32 100% 50%;
   --danger: 0 100% 50%;
+  --status-danger: 0 74% 53%;
+  --status-danger-dim: 0 38% 16%;
+  --scrim: 0 0% 0%;
   --ring: 0 100% 64%;
 }
