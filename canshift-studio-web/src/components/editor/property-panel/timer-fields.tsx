@@ -1,17 +1,7 @@
 // property-panel/timer-fields.tsx — Editor for `timer` widgets.
 
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  ConfigFieldsProps,
-  Field,
-  LabelFields,
-  PANEL_INPUT_BG,
-  PANEL_TEXT_DIM,
-  PANEL_TILE_BORDER,
-  TILE_ACTIVE_BLUE_BG,
-  TILE_ACTIVE_BLUE_BORDER,
-  TILE_ACTIVE_BLUE_FG,
-} from './shared'
+import { ConfigFieldsProps, Field, LabelFields } from './shared'
 
 export function TimerFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'timer' ? widget.config : null
@@ -32,10 +22,10 @@ export function TimerFields({ widget, onChange }: ConfigFieldsProps) {
                   flex: 1,
                   padding: '3px 0',
                   fontSize: 10,
-                  background: isActive ? TILE_ACTIVE_BLUE_BG : PANEL_INPUT_BG,
-                  border: `1px solid ${isActive ? TILE_ACTIVE_BLUE_BORDER : PANEL_TILE_BORDER}`,
+                  background: isActive ? '#2A2A3A' : '#111111',
+                  border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
                   borderRadius: 3,
-                  color: isActive ? TILE_ACTIVE_BLUE_FG : PANEL_TEXT_DIM,
+                  color: isActive ? '#7788CC' : '#AAAAAA',
                   cursor: 'pointer',
                   fontFamily: 'monospace',
                 }}

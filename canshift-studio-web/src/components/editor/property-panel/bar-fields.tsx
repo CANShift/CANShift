@@ -1,22 +1,6 @@
 // property-panel/bar-fields.tsx — Editor for `bar` widgets.
 
-import {
-  ALL_UNITS,
-  ConfigFieldsProps,
-  Field,
-  IconPicker,
-  PANEL_INPUT_BG,
-  PANEL_TEXT_DIM,
-  PANEL_TILE_BORDER,
-  Row,
-  TILE_ACTIVE_BLUE_BG,
-  TILE_ACTIVE_BLUE_BORDER,
-  TILE_ACTIVE_BLUE_FG,
-  TILE_ACTIVE_GREEN_BG,
-  TILE_ACTIVE_GREEN_BORDER,
-  TILE_ACTIVE_GREEN_FG,
-  inputStyle,
-} from './shared'
+import { ALL_UNITS, ConfigFieldsProps, Field, IconPicker, Row, inputStyle } from './shared'
 
 export function BarFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'bar' ? widget.config : null
@@ -37,10 +21,10 @@ export function BarFields({ widget, onChange }: ConfigFieldsProps) {
               style={{
                 padding: '2px 6px',
                 fontSize: 10,
-                background: cfg.suffix === u ? TILE_ACTIVE_GREEN_BG : PANEL_INPUT_BG,
-                border: `1px solid ${cfg.suffix === u ? TILE_ACTIVE_GREEN_BORDER : PANEL_TILE_BORDER}`,
+                background: cfg.suffix === u ? '#1A2A1A' : '#111111',
+                border: `1px solid ${cfg.suffix === u ? '#448844' : '#2A2A2A'}`,
                 borderRadius: 3,
-                color: cfg.suffix === u ? TILE_ACTIVE_GREEN_FG : PANEL_TEXT_DIM,
+                color: cfg.suffix === u ? '#66AA66' : '#AAAAAA',
                 cursor: 'pointer',
               }}
             >
@@ -113,10 +97,10 @@ export function BarFields({ widget, onChange }: ConfigFieldsProps) {
                     flex: 1,
                     padding: '3px 0',
                     fontSize: 10,
-                    background: isActive ? TILE_ACTIVE_BLUE_BG : PANEL_INPUT_BG,
-                    border: `1px solid ${isActive ? TILE_ACTIVE_BLUE_BORDER : PANEL_TILE_BORDER}`,
+                    background: isActive ? '#2A2A3A' : '#111111',
+                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: isActive ? TILE_ACTIVE_BLUE_FG : PANEL_TEXT_DIM,
+                    color: isActive ? '#7788CC' : '#AAAAAA',
                     cursor: 'pointer',
                   }}
                 >

@@ -12,30 +12,10 @@ import { Switch } from '@/components/ui/switch'
 import { IconTrash } from '../../icons/Icon'
 import { WidgetPreview } from '../WidgetPreview'
 import { useDashboardStore } from '../../../stores/dashboard.store'
-import {
-  ConfigFieldsProps,
-  Field,
-  IconPicker,
-  PANEL_INPUT_BG,
-  PANEL_LABEL_MUTED,
-  PANEL_TEXT_DIM,
-  PANEL_TILE_BORDER,
-  inputStyle,
-  numberInputStyle,
-} from './shared'
+import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } from './shared'
 
 // Ops that accept an optional `stepKmh` adjustment.
 const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])
-
-// MIRROR: per-category badge colors used in the action list — custom warm-amber
-// / cool-blue accents with no token match. Audit S-H-5, umbrella #1015.
-const ACTION_BADGE_ECU = '#CC8800' // MIRROR: warm amber, between --accent (#FF8800) and a darker tone
-const ACTION_BADGE_DASHBOARD = '#5577CC' // MIRROR: cool blue, custom dashboard category accent
-const ACTION_DELETE_FG = '#553333' // MIRROR: dim red trash-icon foreground, no token match
-// MIRROR: button-widget "active state" preview chrome — dim-red family, no token match.
-const PREVIEW_ACTIVE_BG = '#2A1A1A' // MIRROR: dim-red active background
-const PREVIEW_ACTIVE_BORDER = '#AA3333' // MIRROR: darker than --status-danger (#E03030)
-const PREVIEW_ACTIVE_FG = '#FF4444' // MIRROR: lighter red than --danger (#FF0000)
 
 interface ActionRowProps {
   action: ButtonAction
@@ -54,13 +34,13 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
           ? 'CAN Raw'
           : 'Cruise Ctrl'
 
-  const categoryColor = action.category === 'ecu' ? ACTION_BADGE_ECU : ACTION_BADGE_DASHBOARD
+  const categoryColor = action.category === 'ecu' ? '#CC8800' : '#5577CC'
 
   return (
     <div
       style={{
-        background: PANEL_INPUT_BG,
-        border: `1px solid ${PANEL_TILE_BORDER}`,
+        background: '#111111',
+        border: '1px solid #2A2A2A',
         borderRadius: 3,
         padding: '6px 8px',
         marginBottom: 5,
@@ -91,14 +71,14 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
           style={{
             background: 'none',
             border: 'none',
-            color: ACTION_DELETE_FG,
+            color: '#553333',
             cursor: 'pointer',
             padding: 0,
             display: 'flex',
           }}
           title="Remove action"
         >
-          <IconTrash size={11} color={ACTION_DELETE_FG} />
+          <IconTrash size={11} color="#553333" />
         </button>
       </div>
 
@@ -122,7 +102,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
 
       {action.category === 'ecu' && action.type === 'map_switch' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 10, color: PANEL_LABEL_MUTED }}>Map</span>
+          <span style={{ fontSize: 10, color: '#666666' }}>Map</span>
           <input
             type="number"
             min={1}
@@ -139,7 +119,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
       {action.category === 'ecu' && action.type === 'can_raw' && (
         <div style={{ display: 'flex', gap: 6 }}>
           <div style={{ flex: '0 0 70px' }}>
-            <div style={{ fontSize: 9, color: PANEL_TEXT_DIM, marginBottom: 2 }}>FRAME ID</div>
+            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>FRAME ID</div>
             <input
               style={{ ...inputStyle, fontSize: 10 }}
               placeholder="0x123"
@@ -151,7 +131,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color: PANEL_TEXT_DIM, marginBottom: 2 }}>DATA (HEX)</div>
+            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>DATA (HEX)</div>
             <input
               style={{ ...inputStyle, fontSize: 10, fontFamily: 'monospace' }}
               placeholder="0102030405060708"
@@ -167,7 +147,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
       {action.category === 'ecu' && action.type === 'cruise_control' && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color: PANEL_TEXT_DIM, marginBottom: 2 }}>OP</div>
+            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>OP</div>
             <select
               style={{ ...inputStyle, fontSize: 11 }}
               value={action.op}
@@ -194,7 +174,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
           </div>
           {CRUISE_STEP_OPS.has(action.op) && (
             <div style={{ flex: '0 0 80px' }}>
-              <div style={{ fontSize: 9, color: PANEL_TEXT_DIM, marginBottom: 2 }}>STEP (KM/H)</div>
+              <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>STEP (KM/H)</div>
               <input
                 type="number"
                 min={1}
@@ -231,17 +211,17 @@ function AddActionMenu({
             type: 'navigate',
             pageId: pageIds[0] ?? '',
           }),
-          color: ACTION_BADGE_DASHBOARD,
+          color: '#5577CC',
         },
         {
           label: 'Map Switch',
           action: (): ButtonAction => ({ category: 'ecu', type: 'map_switch', mapIndex: 1 }),
-          color: ACTION_BADGE_ECU,
+          color: '#CC8800',
         },
         {
           label: 'CAN Raw',
           action: (): ButtonAction => ({ category: 'ecu', type: 'can_raw', frameId: 0, data: '' }),
-          color: ACTION_BADGE_ECU,
+          color: '#CC8800',
         },
         {
           label: 'Cruise Ctrl',
@@ -250,7 +230,7 @@ function AddActionMenu({
             type: 'cruise_control',
             op: 'toggle',
           }),
-          color: ACTION_BADGE_ECU,
+          color: '#CC8800',
         },
       ].map(({ label, action, color }) => (
         <button
@@ -306,7 +286,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div
             style={{
-              border: `1px solid ${previewActive ? widget.style.primaryColor : PANEL_TILE_BORDER}`,
+              border: `1px solid ${previewActive ? widget.style.primaryColor : '#2A2A2A'}`,
               borderRadius: 3,
               overflow: 'hidden',
               display: 'inline-block',
@@ -326,10 +306,10 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
             style={{
               fontSize: 10,
               padding: '3px 8px',
-              background: previewActive ? PREVIEW_ACTIVE_BG : 'transparent',
-              border: `1px solid ${previewActive ? PREVIEW_ACTIVE_BORDER : PANEL_TILE_BORDER}`,
+              background: previewActive ? '#2A1A1A' : 'transparent',
+              border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
               borderRadius: 3,
-              color: previewActive ? PREVIEW_ACTIVE_FG : PANEL_TEXT_DIM,
+              color: previewActive ? '#FF4444' : '#AAAAAA',
               cursor: 'pointer',
             }}
           >
@@ -345,7 +325,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            color: PANEL_TEXT_DIM,
+            color: '#AAAAAA',
             cursor: 'pointer',
           }}
         >
@@ -370,7 +350,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
       </Field>
 
       <Field label="Show">
-        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: PANEL_TEXT_DIM }}>
+        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#AAAAAA' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
             <Checkbox
               checked={cfg.showLabel !== false}
@@ -408,7 +388,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
       <div
         style={{
           fontSize: 10,
-          color: PANEL_TEXT_DIM,
+          color: '#AAAAAA',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
           marginBottom: 5,
@@ -419,7 +399,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
       </div>
 
       {cfg.actions.length === 0 && (
-        <div style={{ fontSize: 11, color: PANEL_TEXT_DIM, marginBottom: 6 }}>No actions yet.</div>
+        <div style={{ fontSize: 11, color: '#AAAAAA', marginBottom: 6 }}>No actions yet.</div>
       )}
 
       {cfg.actions.map((action, idx) => (

@@ -13,34 +13,10 @@ import type {
 import { SENSOR_ICON_LABELS, SENSOR_ICON_NAMES, SensorIcon } from '../../icons/SensorIcons'
 
 // ---------------------------------------------------------------------------
-// MIRROR chrome shades — preserved verbatim because they do not yet map to a
-// core design token. Re-exported so every per-widget editor in this folder
-// shares a single source for the property-panel chip / tile chrome (no per-
-// file copies). Audit S-H-5, umbrella #1015 — flagged for token promotion.
-// ---------------------------------------------------------------------------
-export const PANEL_INPUT_BG = '#111111' // MIRROR: between --scrim (#000000) and --bg (#121212)
-export const PANEL_TILE_BORDER = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
-export const PANEL_TEXT_DIM = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
-export const PANEL_LABEL_MUTED = '#666666' // MIRROR: darker than --text-muted (#8F8F8F)
-// Green "active" tile family (success-tinted) — custom dim-green chrome, no token match.
-export const TILE_ACTIVE_GREEN_BG = '#1A2A1A' // MIRROR: dim-green active chrome
-export const TILE_ACTIVE_GREEN_BORDER = '#448844' // MIRROR: darker than --success (#00CC2A)
-export const TILE_ACTIVE_GREEN_FG = '#66AA66' // MIRROR: dimmer green than --success
-// Blue "active" tile family — custom cool-blue accent, no token match.
-export const TILE_ACTIVE_BLUE_BG = '#2A2A3A' // MIRROR: custom dim-blue active chrome
-export const TILE_ACTIVE_BLUE_BORDER = '#5566AA' // MIRROR: cool-blue accent (no token)
-export const TILE_ACTIVE_BLUE_FG = '#7788CC' // MIRROR: lighter cool-blue accent
-
-// ---------------------------------------------------------------------------
 // Field + Row primitives — keep the original look-and-feel verbatim. Inline
 // styles are deliberate: PropertyPanel pre-dates the Tailwind migration and
 // a wholesale rewrite is out of scope for this refactor.
 // ---------------------------------------------------------------------------
-
-// File-local MIRRORs not exported (single-use).
-const RESET_BTN_FG = '#555555' // MIRROR: slightly darker than PANEL_LABEL_MUTED (#666666)
-const INPUT_TEXT = '#CCCCCC' // MIRROR: close to --text-dim (#BABABA), input text
-const ICON_PICKER_BG = '#1A1A1A' // MIRROR: between PANEL_INPUT_BG (#111111) and --bg (#121212)
 
 export function Field({
   label,
@@ -59,7 +35,7 @@ export function Field({
           style={{
             display: 'block',
             fontSize: 10,
-            color: PANEL_LABEL_MUTED,
+            color: '#666666',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
           }}
@@ -77,7 +53,7 @@ export function Field({
               height: 14,
               background: 'transparent',
               border: 'none',
-              color: RESET_BTN_FG,
+              color: '#555555',
               cursor: 'pointer',
               fontSize: 11,
               lineHeight: '14px',
@@ -95,10 +71,10 @@ export function Field({
 export const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '4px 7px',
-  background: PANEL_INPUT_BG,
-  border: '1px solid hsl(var(--border))',
+  background: '#111111',
+  border: '1px solid #333333',
   borderRadius: 3,
-  color: INPUT_TEXT,
+  color: '#CCCCCC',
   fontSize: 12,
   boxSizing: 'border-box',
   outline: 'none',
@@ -143,8 +119,8 @@ export function IconPicker({
             }}
             style={{
               padding: 5,
-              background: value === name ? TILE_ACTIVE_BLUE_BG : ICON_PICKER_BG,
-              border: `1px solid ${value === name ? TILE_ACTIVE_BLUE_BORDER : PANEL_TILE_BORDER}`,
+              background: value === name ? '#2A2A3A' : '#1A1A1A',
+              border: `1px solid ${value === name ? '#5566AA' : '#2A2A2A'}`,
               borderRadius: 4,
               cursor: 'pointer',
               display: 'flex',
@@ -152,16 +128,12 @@ export function IconPicker({
               justifyContent: 'center',
             }}
           >
-            <SensorIcon
-              name={name}
-              size={16}
-              color={value === name ? TILE_ACTIVE_BLUE_FG : PANEL_TEXT_DIM}
-            />
+            <SensorIcon name={name} size={16} color={value === name ? '#7788CC' : '#AAAAAA'} />
           </button>
         ))}
       </div>
       {value && (
-        <div style={{ fontSize: 10, color: TILE_ACTIVE_BLUE_BORDER }}>
+        <div style={{ fontSize: 10, color: '#5566AA' }}>
           {SENSOR_ICON_LABELS[value]}
           <button
             onClick={() => {
@@ -171,7 +143,7 @@ export function IconPicker({
               marginLeft: 6,
               background: 'none',
               border: 'none',
-              color: PANEL_TEXT_DIM,
+              color: '#AAAAAA',
               cursor: 'pointer',
               fontSize: 10,
             }}
@@ -285,10 +257,10 @@ export function LabelFields<T extends LabelEditableConfig>({
                     flex: 1,
                     padding: '3px 0',
                     fontSize: 9,
-                    background: isActive ? TILE_ACTIVE_BLUE_BG : PANEL_INPUT_BG,
-                    border: `1px solid ${isActive ? TILE_ACTIVE_BLUE_BORDER : PANEL_TILE_BORDER}`,
+                    background: isActive ? '#2A2A3A' : '#111111',
+                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
                     borderRadius: 3,
-                    color: isActive ? TILE_ACTIVE_BLUE_FG : PANEL_TEXT_DIM,
+                    color: isActive ? '#7788CC' : '#AAAAAA',
                     cursor: 'pointer',
                   }}
                 >
