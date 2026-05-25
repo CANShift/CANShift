@@ -7,6 +7,16 @@ import { useEffect, useState } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 import { useAppVersionStore } from '../../stores/appVersion.store'
 
+// Warning chrome palette — `--warning` (#FF8800) is too bright for a sustained
+// banner background. Hoisted as MIRROR consts per audit S-H-5 (umbrella #1015)
+// so the future token promotion is a single-line swap.
+const WARN_BG = '#1A1208' // MIRROR: deep amber banner background
+const WARN_BORDER = '#AA6622' // MIRROR: dim amber border
+const WARN_TEXT = '#DDAA66' // MIRROR: amber body text
+const WARN_BTN_BORDER = '#553311' // MIRROR: darker amber for dismiss button border
+const WARN_BTN_TEXT = '#AA7733' // MIRROR: dismiss button label
+const BANNER_SHADOW = '0 4px 16px rgba(0,0,0,0.6)' // MIRROR: drop shadow overlay (no alpha token yet)
+
 interface Semver {
   major: number
   minor: number
@@ -59,17 +69,17 @@ export default function VersionMismatchBanner() {
         bottom: 32,
         left: 16,
         zIndex: 9998,
-        background: '#1A1208',
-        border: '1px solid #AA6622',
+        background: WARN_BG,
+        border: `1px solid ${WARN_BORDER}`,
         borderRadius: 6,
         padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         fontSize: 12,
-        color: '#DDAA66',
+        color: WARN_TEXT,
         maxWidth: 460,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+        boxShadow: BANNER_SHADOW,
       }}
     >
       <span>
@@ -83,9 +93,9 @@ export default function VersionMismatchBanner() {
         style={{
           padding: '3px 8px',
           background: 'transparent',
-          border: '1px solid #553311',
+          border: `1px solid ${WARN_BTN_BORDER}`,
           borderRadius: 3,
-          color: '#AA7733',
+          color: WARN_BTN_TEXT,
           fontSize: 11,
           cursor: 'pointer',
         }}
