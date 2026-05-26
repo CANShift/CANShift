@@ -269,7 +269,17 @@ const char *errorSrcLabel(ErrorSource src) {
     return "?";
 }
 
-void onCloseClicked(lv_event_t * /*e*/) {
+void onCloseReleased(lv_event_t * /*e*/) {
+    // Listen on LV_EVENT_RELEASED (not LV_EVENT_CLICKED) because the panel
+    // is LV_OBJ_FLAG_SCROLLABLE and resistive-touch jitter routinely starts
+    // a scroll. From lv_indev.c (LVGL 8.3, line 973):
+    //     /*Send CLICK if no scrolling*/
+    //     if(scroll_obj == NULL) { … SHORT_CLICKED … CLICKED … }
+    // — i.e. CLICKED and SHORT_CLICKED are BOTH suppressed once any scroll
+    // begins. RELEASED is the only release event guaranteed to fire on the
+    // currently-pressed object regardless of scroll state, and combined
+    // with LV_OBJ_FLAG_PRESS_LOCK (which keeps the press anchored on this
+    // button) it gives a reliable tap-to-close on a noisy touch panel.
     close();
 }
 
@@ -374,7 +384,7 @@ void init() {
     lv_obj_set_style_border_color(s_closeBtn, lv_color_hex(COL_PANEL_BORDER), LV_PART_MAIN);
     lv_obj_set_style_radius(s_closeBtn, 4, LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_closeBtn, 0, LV_PART_MAIN);
-    lv_obj_add_event_cb(s_closeBtn, onCloseClicked, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_event_cb(s_closeBtn, onCloseReleased, LV_EVENT_RELEASED, nullptr);
 
     lv_obj_t *closeLabel = lv_label_create(s_closeBtn);
     // Plain "X" — LV_SYMBOL_CLOSE (U+F00D, FontAwesome PUA) is not in our
