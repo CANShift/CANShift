@@ -218,6 +218,13 @@ export {
 } from './night-theme-defaults.js'
 
 // ---------------------------------------------------------------------------
+// Theme presets — named catalog the studio picker drops into dayTheme or
+// nightTheme in one click. Issue #21 v2.
+// ---------------------------------------------------------------------------
+export { THEME_PRESETS, getThemePreset } from './theme-presets.js'
+export type { ThemePresetEntry, ThemePresetId } from './theme-presets.js'
+
+// ---------------------------------------------------------------------------
 // Migrations
 // ---------------------------------------------------------------------------
 export {
