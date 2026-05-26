@@ -1,5 +1,5 @@
 // stores/__tests__/dashboard-theme.test.ts — Coverage for the dashboard
-// store's day-theme actions exercised by ThemePanel (#21).
+// store's day + night theme actions exercised by ThemePanel (#21 v2).
 //
 // Vitest runs in `node` environment per `vitest.config.ts`, so the store
 // (Zustand + Immer) executes without a DOM. We reset the store between
@@ -7,7 +7,16 @@
 // edits from one test don't bleed into the next.
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DAY_BG_DEFAULT, DAY_PALETTE_DEFAULT, DAY_THEME_PRESET } from '@tmbk/canshift-core'
+import {
+  DAY_BG_DEFAULT,
+  DAY_PALETTE_DEFAULT,
+  DAY_THEME_PRESET,
+  NIGHT_BG_DEFAULT,
+  NIGHT_PALETTE_DEFAULT,
+  NIGHT_THEME_PRESET,
+  THEME_PRESETS,
+  getThemePreset,
+} from '@tmbk/canshift-core'
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../dashboard.store'
 import { DEFAULT_SIM_CONFIG } from '../../config/defaultSimConfig'
@@ -90,5 +99,125 @@ describe('dashboard.store — dayTheme actions', () => {
     const dayTheme = useDashboardStore.getState().config?.dayTheme
     expect(dayTheme?.bgColor).toBe(DAY_BG_DEFAULT)
     expect(dayTheme?.palette).toEqual(DAY_PALETTE_DEFAULT)
+  })
+})
+
+describe('dashboard.store — nightTheme actions (#21 v2)', () => {
+  beforeEach(() => {
+    useDashboardStore.getState().setConfig(freshConfig())
+  })
+
+  it('leaves nightTheme undefined on a fresh config (backward compat)', () => {
+    expect(useDashboardStore.getState().config?.nightTheme).toBeUndefined()
+  })
+
+  it('setNightTheme writes the value through to the config', () => {
+    const custom = {
+      bgColor: '#020202' as const,
+      palette: { ...NIGHT_PALETTE_DEFAULT, primary: '#FF00AA' as const },
+    }
+    useDashboardStore.getState().setNightTheme(custom)
+
+    const nightTheme = useDashboardStore.getState().config?.nightTheme
+    expect(nightTheme?.bgColor).toBe('#020202')
+    expect(nightTheme?.palette?.primary).toBe('#FF00AA')
+    expect(nightTheme?.palette?.surface).toBe(NIGHT_PALETTE_DEFAULT.surface)
+  })
+
+  it('setNightTheme marks the config dirty and pushes one history entry per call', () => {
+    const before = useDashboardStore.getState()
+    expect(before.isDirty).toBe(false)
+    const initialPast = before.past.length
+
+    useDashboardStore.getState().setNightTheme(NIGHT_THEME_PRESET)
+
+    const after = useDashboardStore.getState()
+    expect(after.isDirty).toBe(true)
+    expect(after.past.length).toBe(initialPast + 1)
+  })
+
+  it('setNightTheme(null) clears the field', () => {
+    useDashboardStore.getState().setNightTheme(NIGHT_THEME_PRESET)
+    expect(useDashboardStore.getState().config?.nightTheme).toBeDefined()
+
+    useDashboardStore.getState().setNightTheme(null)
+    expect(useDashboardStore.getState().config?.nightTheme).toBeUndefined()
+  })
+
+  it('undo restores nightTheme to its previous value', () => {
+    useDashboardStore.getState().setNightTheme(NIGHT_THEME_PRESET)
+    const original = useDashboardStore.getState().config?.nightTheme
+
+    useDashboardStore.getState().setNightTheme({
+      bgColor: '#ABCDEF',
+      palette: { ...NIGHT_PALETTE_DEFAULT, primary: '#123456' },
+    })
+    expect(useDashboardStore.getState().config?.nightTheme?.bgColor).toBe('#ABCDEF')
+
+    useDashboardStore.getState().undo()
+    expect(useDashboardStore.getState().config?.nightTheme).toEqual(original)
+  })
+
+  it('setNightTheme(NIGHT_THEME_PRESET) lands the night defaults', () => {
+    useDashboardStore.getState().setNightTheme(NIGHT_THEME_PRESET)
+    const nightTheme = useDashboardStore.getState().config?.nightTheme
+    expect(nightTheme?.bgColor).toBe(NIGHT_BG_DEFAULT)
+    expect(nightTheme?.palette).toEqual(NIGHT_PALETTE_DEFAULT)
+  })
+
+  it('setDayTheme does not touch nightTheme (independent slots)', () => {
+    useDashboardStore.getState().setNightTheme(NIGHT_THEME_PRESET)
+    useDashboardStore.getState().setDayTheme(DAY_THEME_PRESET)
+
+    const config = useDashboardStore.getState().config
+    expect(config?.dayTheme).toEqual(DAY_THEME_PRESET)
+    expect(config?.nightTheme).toEqual(NIGHT_THEME_PRESET)
+  })
+})
+
+describe('dashboard.store — preset application (#21 v2)', () => {
+  beforeEach(() => {
+    useDashboardStore.getState().setConfig(freshConfig())
+  })
+
+  it.each(THEME_PRESETS.map((p) => [p.id] as const))(
+    'applies preset %s to the day theme via setDayTheme',
+    (id) => {
+      const entry = getThemePreset(id)
+      expect(entry).toBeDefined()
+      if (!entry) return
+      useDashboardStore.getState().setDayTheme(entry.theme)
+      expect(useDashboardStore.getState().config?.dayTheme).toEqual(entry.theme)
+    }
+  )
+
+  it.each(THEME_PRESETS.map((p) => [p.id] as const))(
+    'applies preset %s to the night theme via setNightTheme',
+    (id) => {
+      const entry = getThemePreset(id)
+      expect(entry).toBeDefined()
+      if (!entry) return
+      useDashboardStore.getState().setNightTheme(entry.theme)
+      expect(useDashboardStore.getState().config?.nightTheme).toEqual(entry.theme)
+    }
+  )
+
+  it('copy day → night replicates the current day theme into nightTheme', () => {
+    const customDay = {
+      bgColor: '#EEDDCC' as const,
+      palette: { ...DAY_PALETTE_DEFAULT, primary: '#112233' as const },
+    }
+    useDashboardStore.getState().setDayTheme(customDay)
+    // Simulate the ThemePanel's "Copy day → night" button
+    const dayThemeNow = useDashboardStore.getState().config?.dayTheme
+    expect(dayThemeNow).toBeDefined()
+    if (dayThemeNow) {
+      useDashboardStore.getState().setNightTheme({
+        bgColor: dayThemeNow.bgColor,
+        palette: dayThemeNow.palette,
+      })
+    }
+    expect(useDashboardStore.getState().config?.nightTheme?.bgColor).toBe('#EEDDCC')
+    expect(useDashboardStore.getState().config?.nightTheme?.palette?.primary).toBe('#112233')
   })
 })
