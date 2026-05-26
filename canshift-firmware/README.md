@@ -140,7 +140,7 @@ esptool.py --chip esp32 -p "$PORT" -b 460800 \
   --before default_reset --after hard_reset write_flash \
   --flash_mode keep --flash_size keep --flash_freq keep \
   0x0      "canshift-firmware-${TAG}-crowpanel_28-merged.bin" \
-  0x380000 "canshift-spiffs-${TAG}-crowpanel_28.bin"
+  0x370000 "canshift-spiffs-${TAG}-crowpanel_28.bin"
 ```
 
 **Notes:**
@@ -148,7 +148,7 @@ esptool.py --chip esp32 -p "$PORT" -b 460800 \
 - The merged firmware binary already starts at offset `0x0` (it embeds the
   bootloader at its own internal `0x1000` offset). Writing it at `0x1000`
   would shift every component and brick the boot.
-- SPIFFS partition offset `0x380000` matches `ota_4mb_wifi.csv` (the
+- SPIFFS partition offset `0x370000` matches `ota_4mb_wifi.csv` (the
   partition layout shipped since #1117 — see
   [Partition upgrade path](#partition-upgrade-path-1117) below). Dashes
   carrying a pre-#1117 firmware image (SPIFFS at `0x310000`) must be
@@ -176,15 +176,15 @@ table compatible.
 | Region        | Before (`ota_4mb.csv`) | After (`ota_4mb_wifi.csv`) |
 |---------------|------------------------|----------------------------|
 | `app0` / `app1` (each) | 1536 KB @ `0x10000` / `0x190000` | 1856 KB @ `0x10000` / `0x1E0000` |
-| `spiffs`      | 832 KB @ `0x310000`    | 448 KB @ `0x380000`        |
+| `spiffs`      | 832 KB @ `0x310000`    | 512 KB @ `0x370000`        |
 | `coredump`    | 128 KB @ `0x3E0000`    | 64 KB @ `0x3F0000`         |
 
 App slots grew by 320 KB each (+640 KB total) so the WiFi build can link
 firmware + WebSocket bridge + WiFi/mDNS/lwip stacks + the gzipped Studio SPA
 in a single OTA payload. SPIFFS shrank because the runtime content sums to
 ~220 KB (5 Orbitron .bin fonts ~34 KB + canonical JSON configs ~25 KB + 25
-sensor icons ~77 KB + `.bak` atomic-write companions ~25 KB + ~30 % SPIFFS
-overhead at small partition sizes ~55 KB) — well under 448 KB with headroom
+sensor icons ~77 KB + `.bak` atomic-write companions ~25 KB + ~25 % SPIFFS
+overhead at small partition sizes ~55 KB) — well under 512 KB with headroom
 for future user pushes.
 
 **Field-upgrade story.** Dashes already deployed with a pre-#1117 image
@@ -203,7 +203,7 @@ runtime, and the table is identical across `crowpanel_28` /
 **Known follow-ups (separate PRs):**
 
 - `canshift-studio/src/hooks/useFirmwareFlash.ts` (`0x310000` constant) —
-  update to `0x380000` before the bundled Studio flasher can image a #1117+
+  update to `0x370000` before the bundled Studio flasher can image a #1117+
   build.
 - `canshift-flasher/src/constants.ts` (`SPIFFS_FLASH_OFFSET = 0x310000`) —
   same update; this is what end-users will run from `canshift.tmbk.ch`.
