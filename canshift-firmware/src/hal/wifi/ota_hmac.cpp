@@ -11,6 +11,7 @@
 
 #if !defined(UNIT_TEST)
     #include "app_config.h" // OTA_HMAC_SECRET embedded fallback (issue #521)
+    #include "diag/logger.h"
     #include <Preferences.h>
     #include <esp_random.h>
     #include <mbedtls/sha256.h>
@@ -322,6 +323,47 @@ const uint8_t *loadOrGenerateKey(KeySource *outSource) {
         *outSource = s_cachedSource;
     }
     return s_cachedKey;
+}
+
+namespace {
+
+const char *keySourceName(KeySource src) {
+    switch (src) {
+        case KeySource::Nvs:
+            return "NVS";
+        case KeySource::NvsGenerated:
+            return "NVS (generated)";
+        case KeySource::Embedded:
+            return "embedded (legacy)";
+    }
+    return "?";
+}
+
+} // namespace
+
+void logBootKeyFingerprint() {
+    static bool s_logged = false;
+    if (s_logged) {
+        return;
+    }
+    s_logged = true;
+
+    KeySource src;
+    const uint8_t *key = loadOrGenerateKey(&src);
+    if (key == nullptr) {
+        LOG_ERROR("OTA", "HMAC key load failed at boot — OTA will refuse uploads");
+        return;
+    }
+    char fp[9] = {};
+    if (!computeKeyFingerprint(key, kHmacLen, fp)) {
+        LOG_WARN("OTA", "HMAC key sha-256 fingerprint compute failed");
+        return;
+    }
+    // Format: source tag + 8-hex prefix of SHA-256(key). Embedded fingerprint
+    // is identical across the fleet; NVS-derived fingerprints are unique per
+    // device. Operators eyeballing logs can tell at a glance which key the
+    // device is using.
+    LOG_INFO("OTA", "HMAC key source=%s sha256=%s", keySourceName(src), fp);
 }
 
 bool computeKeyFingerprint(const uint8_t *key, size_t keyLen, char out[9]) {

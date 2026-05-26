@@ -166,6 +166,14 @@ bool computeKeyFingerprint(const uint8_t *key, size_t keyLen, char out[9]);
 // `outSource` is optional; when non-null it reports the provenance of the
 // returned key (cached on first call, returned identically thereafter).
 const uint8_t *loadOrGenerateKey(KeySource *outSource = nullptr);
+
+// One-shot boot diagnostic — resolves the in-use key (triggering NVS
+// load-or-generate the first time) and logs its SHA-256 fingerprint plus
+// provenance. Lets operators correlate which devices have rolled over to
+// per-device NVS keys vs which still ride the embedded fallback, without
+// exposing the actual key bytes. Safe to call multiple times — only logs
+// once. Issue #521.
+void logBootKeyFingerprint();
 #endif
 
 } // namespace OtaHmac
