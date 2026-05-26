@@ -159,6 +159,7 @@ CONFIG_FLASH_ENCRYPTION_ENABLED=y
 CONFIG_SECURE_FLASH_ENC_ENABLED=y
 CONFIG_SECURE_FLASH_ENCRYPTION_MODE_RELEASE=y
 CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK=y
+CONFIG_BOOTLOADER_APP_SEC_VER=2
 ```
 
 `MODE_RELEASE` is mandatory for production — `MODE_DEVELOPMENT` allows a
@@ -404,10 +405,12 @@ The OTA flow changes posture:
    bumping `CONFIG_BOOTLOADER_APP_SEC_VER` per-release in the
    `sdkconfig.defaults.secure` file. The bootloader stores the highest
    `SEC_VER` ever booted in eFuse and refuses to boot any image with a
-   lower version. **This is flagged as follow-up work** — wiring it
-   correctly requires a per-release ratchet that this PR does not
-   implement. Until then, anti-rollback is enabled at config but no
-   `SEC_VER` is committed, so the practical effect is none.
+   lower version. The floor is currently `2` (bumped in #531 to leave
+   headroom for an emergency v1 → v2 downgrade cutoff). The per-release
+   ratchet — "what triggers a SEC_VER bump on the next signed build" — is
+   still maintainer-driven, not CI-enforced: bump only when the release
+   fixes a remotely exploitable bug, because every bump permanently
+   raises the floor on every chip that boots the new image.
 4. **Bootloader is signed but not OTA-updatable.** The bootloader sits in
    the boot region, which `Update.h` does not write. A bootloader bug
    that survives QA is a production incident with no remote fix.
