@@ -415,7 +415,8 @@ void init() {
     // Diagnostic stamp — bumped each time this PR's bug-batch lands so the
     // user can confirm at boot that the device is actually running the new
     // build (vs. a stale upload). Grep the serial log for "DIAG_DRAWER".
-    LOG_INFO("DIAG_DRAWER", "init done — z-reaffirm + scroll + 12px badges + frac digits build");
+    LOG_INFO("DIAG_DRAWER",
+             "init done — close-btn v3: press-lock + ext-click + RELEASED + press/release logs");
 }
 
 void open() {
