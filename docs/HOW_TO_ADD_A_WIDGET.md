@@ -349,5 +349,5 @@ In order of complexity:
 
 - [`docs/config-contract.md`](config-contract.md) — JSON config shape
 - [`docs/overall-architecture.md`](overall-architecture.md) — package boundaries
-- [`canshift-firmware/CLAUDE.md`](../canshift-firmware/CLAUDE.md) — firmware coding rules
-- [`canshift-core/CLAUDE.md`](../canshift-core/CLAUDE.md) — schema rules
+- [`canshift-firmware/README.md`](../canshift-firmware/README.md) — firmware package overview
+- [`canshift-core/README.md`](../canshift-core/README.md) — core package overview
