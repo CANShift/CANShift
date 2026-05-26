@@ -10,7 +10,7 @@
 // selector.
 
 import type { PagePalette } from '@tmbk/canshift-core'
-import { DAY_BG_DEFAULT, DAY_PALETTE_DEFAULT } from '@tmbk/canshift-core'
+import { DAY_BG_DEFAULT, DAY_PALETTE_DEFAULT, DAY_THEME_PRESET } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 
 // Chrome — mirrors PropertyPanel so the two panels feel like one surface.
@@ -20,6 +20,7 @@ const PANEL_SECTION = '#888888'
 const INPUT_BG = '#111111'
 const INPUT_BORDER = '#333333'
 const HEX_FG = '#CCCCCC'
+const RESET_FG = '#7788CC'
 
 // Display labels for each palette slot — kept here (not in canshift-core) so
 // the wording can iterate without bumping the shared library.
@@ -121,18 +122,46 @@ export default function ThemePanel() {
     setDayTheme({ bgColor, palette: { ...palette, [key]: hex } })
   }
 
+  const resetToDefault = () => {
+    setDayTheme(DAY_THEME_PRESET)
+  }
+
   return (
     <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
       <div
         style={{
-          fontSize: 10,
-          color: PANEL_LABEL,
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           marginBottom: 10,
         }}
       >
-        Day theme
+        <span
+          style={{
+            fontSize: 10,
+            color: PANEL_LABEL,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
+          Day theme
+        </span>
+        <button
+          type="button"
+          onClick={resetToDefault}
+          title="Reset to default day theme"
+          style={{
+            background: 'none',
+            border: `1px solid ${INPUT_BORDER}`,
+            borderRadius: 3,
+            color: RESET_FG,
+            cursor: 'pointer',
+            fontSize: 10,
+            padding: '3px 7px',
+          }}
+        >
+          Reset
+        </button>
       </div>
 
       <div
