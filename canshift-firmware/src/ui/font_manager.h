@@ -15,11 +15,12 @@
 // the accessor falls back to the built-in `lv_font_orbitron_medium_14_nk`
 // shipped in flash, so text always renders even without `pio run -t uploadfs`.
 //
-// Family selection (issues #971 + #500): the active family resolves through
-// a `FontFamilyAssets` catalog row keyed on the `FontFamilyId` enum from
-// canshift-core. v1 ships a single family (`orbitron`); the resolver is the
-// seat every future family slots into without changing the loader, the
-// accessor tier, or any widget call site.
+// Family selection (issues #971 + #500): `init(family)` resolves the
+// `CfgDashboard.fontFamily` id to a `FontFamilyAssets` catalog row. v1 ships
+// a single family (`orbitron`) so the lookup is trivial; the indirection is
+// the scaffold every future family slots into. Unknown / empty ids log a
+// WARN and fall back to the canonical default so a hand-edited dashboard.json
+// never bricks rendering. Mirrors `resolveFontFamily()` in canshift-core.
 //
 // SPIFFS must be mounted (StorageDriver::init) and the LVGL FS driver
 // registered (LvglFsDriver::init) before calling FontManager::init().
@@ -28,8 +29,14 @@
 
 class FontManager {
   public:
-    // Loads font assets for the canonical default family (`orbitron`) and
-    // caches them. Safe to call multiple times — re-loading is a no-op.
+    // Loads font assets for the active dashboard family. Unknown / empty /
+    // null ids log a WARN and fall back to the canonical default (`orbitron`)
+    // so the device always renders text. Safe to call multiple times —
+    // re-loading is a no-op.
+    static void init(const char *family);
+
+    // Loads font assets for the canonical default family (`orbitron`).
+    // Kept so test harnesses and pre-#971 call sites compile unchanged.
     static void init();
 
     // Frees every loaded font and clears the cache. Optional teardown hook.

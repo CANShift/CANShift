@@ -304,12 +304,32 @@ void applyFamily(const FontFamilyAssets &assets) {
 
 } // namespace
 
-void FontManager::init() {
+void FontManager::init(const char *family) {
     if (s_initialized) {
         return;
     }
-    applyFamily(*kDefaultFamily);
+    const FontFamilyAssets *assets = resolveFamily(family);
+    if (assets == nullptr) {
+        // Unknown / missing id — fall back to the canonical default and keep
+        // booting. Empty / null inputs (legacy dashboards pre-#1132) are
+        // silent because the parser already substitutes "orbitron" by the
+        // time we get here; only a hand-edited file with a typo lands a real
+        // string here.
+        if (family && family[0] != '\0') {
+            LOG_WARN("FONT", "unknown fontFamily='%s' — falling back to default '%s'", family,
+                     kDefaultFamily->id);
+            char detail[48];
+            snprintf(detail, sizeof(detail), "unknown family '%s'", family);
+            ErrorStore::push(ERROR_SRC_SYSTEM, "FONT_FAMILY", detail);
+        }
+        assets = kDefaultFamily;
+    }
+    applyFamily(*assets);
     s_initialized = true;
+}
+
+void FontManager::init() {
+    init(kDefaultFamily->id);
 }
 
 void FontManager::shutdown() {
