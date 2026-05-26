@@ -453,8 +453,9 @@ export function useFirmwareFlash() {
           { data: new Uint8Array(fwBuffer), address: 0x0 },
         ]
         if (spiffsBuffer) {
-          // SPIFFS partition offset per ota_4mb.csv
-          fileArray.push({ data: new Uint8Array(spiffsBuffer), address: 0x310000 })
+          // SPIFFS partition offset per ota_4mb_wifi.csv (moved from 0x310000
+          // in #1117/#1120 — app0/app1 grew to 1728 KB, spiffs shrunk to 512 KB).
+          fileArray.push({ data: new Uint8Array(spiffsBuffer), address: 0x370000 })
         }
         appendLog(`Calling writeFlash with ${String(fileArray.length)} image(s)`)
 
