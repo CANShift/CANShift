@@ -118,6 +118,13 @@ function handleFrame(socket, raw) {
       console.log('[mock-ws] push-config received (size:', JSON.stringify(parsed.payload).length, 'bytes)')
       socket.send(jsonFrame({ status: 'ok' }))
       return
+    case 0x03: // get-device-config
+      socket.send(jsonFrame({ status: 'ok', device_config: DEMO_DEVICE_CONFIG }))
+      return
+    case 0x04: // put-device-config
+      console.log('[mock-ws] put-device-config received:', parsed.device_config)
+      socket.send(jsonFrame({ status: 'ok' }))
+      return
     case 0x05: // screen-settings
       console.log('[mock-ws] screen-settings:', parsed)
       socket.send(jsonFrame({ status: 'ok' }))
@@ -130,6 +137,13 @@ function handleFrame(socket, raw) {
       return
     case 0x09: // set day
       console.log('[mock-ws] set day:', parsed.day)
+      socket.send(jsonFrame({ status: 'ok' }))
+      return
+    case 0x0b: // get-input-bindings
+      socket.send(jsonFrame({ status: 'ok', input_bindings: DEMO_INPUT_BINDINGS.input_bindings }))
+      return
+    case 0x0c: // put-input-bindings
+      console.log('[mock-ws] put-input-bindings received:', parsed.input_bindings)
       socket.send(jsonFrame({ status: 'ok' }))
       return
     case 0x10: // query-version
@@ -189,4 +203,18 @@ const DEMO_CONFIG = {
     isSigned: false,
   })),
   topBar: { layout: 'minimal' },
+}
+
+// Canned ESP32 hardware config served by CMD_GET_DEVICE_CONFIG (snake_case
+// wire shape, mirrors `/config/device.json` on a real device).
+const DEMO_DEVICE_CONFIG = {
+  can_speed_kbps: 500,
+  twai_tx_pin: 22,
+  twai_rx_pin: 21,
+}
+
+// Canned input bindings served by CMD_GET_INPUT_BINDINGS. Empty by default so
+// the editor mounts the "no bindings yet" state cleanly.
+const DEMO_INPUT_BINDINGS = {
+  input_bindings: [],
 }
