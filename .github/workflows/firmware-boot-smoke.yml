@@ -45,6 +45,9 @@ jobs:
         working-directory: canshift-firmware
 
     env:
+      # Pinned toolchain versions — kept in sync with ci.yml's top-level env
+      # block so a bump touches one workflow at a time.
+      PYTHON_VERSION: '3.12'
       # Pinned Espressif QEMU prebuilt — keeps the gate reproducible.
       # Bump deliberately: a new tag means re-validating the assertion logic
       # against the new fork's serial output.
@@ -56,7 +59,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       # ─── PlatformIO + simulation build ──────────────────────────────────────
       - name: Cache PlatformIO packages
