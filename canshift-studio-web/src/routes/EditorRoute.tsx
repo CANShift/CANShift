@@ -31,6 +31,7 @@ interface PageThumbnailProps {
 
 function PageThumbnail({ page, topBar }: PageThumbnailProps) {
   const barH = page.showTopBar ? topBar.height * THUMB_SCALE : 0
+  const isCruiseTemplate = page.template === 'cruise_control'
 
   return (
     <div
@@ -59,27 +60,64 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
         />
       )}
 
-      {/* Widgets */}
-      {page.widgets.map((widget) => (
+      {/* Body — template-rendered pages show a fixed 2×2 glyph; otherwise the
+          widget thumbnails. Mirrors the firmware contract: when `template` is
+          set, the widgets[] array is ignored on-device (#451). */}
+      {isCruiseTemplate ? (
         <div
-          key={widget.id}
           style={{
             position: 'absolute',
-            left: widget.layout.x * THUMB_SCALE,
-            top: barH + widget.layout.y * THUMB_SCALE,
-            width: widget.layout.w * THUMB_SCALE,
-            height: widget.layout.h * THUMB_SCALE,
-            overflow: 'hidden',
+            top: barH + 4,
+            left: 4,
+            right: 4,
+            bottom: 4,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gridTemplateRows: '1fr 1fr',
+            gap: 3,
           }}
         >
-          <WidgetPreview
-            widget={widget}
-            displayW={widget.layout.w * THUMB_SCALE}
-            displayH={widget.layout.h * THUMB_SCALE}
-            noAnimate
-          />
+          {['+', 'SET', '−', 'OFF'].map((glyph) => (
+            <div
+              key={glyph}
+              style={{
+                background: '#FFFFFF14',
+                border: '1px solid #FFFFFF28',
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFFAA',
+                fontSize: 10,
+                fontWeight: 700,
+              }}
+            >
+              {glyph}
+            </div>
+          ))}
         </div>
-      ))}
+      ) : (
+        page.widgets.map((widget) => (
+          <div
+            key={widget.id}
+            style={{
+              position: 'absolute',
+              left: widget.layout.x * THUMB_SCALE,
+              top: barH + widget.layout.y * THUMB_SCALE,
+              width: widget.layout.w * THUMB_SCALE,
+              height: widget.layout.h * THUMB_SCALE,
+              overflow: 'hidden',
+            }}
+          >
+            <WidgetPreview
+              widget={widget}
+              displayW={widget.layout.w * THUMB_SCALE}
+              displayH={widget.layout.h * THUMB_SCALE}
+              noAnimate
+            />
+          </div>
+        ))
+      )}
     </div>
   )
 }
