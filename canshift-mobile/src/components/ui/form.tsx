@@ -91,7 +91,7 @@ export interface FormItemProps extends ViewProps {
   className?: string
 }
 
-const FormItem = React.forwardRef<React.ElementRef<typeof View>, FormItemProps>(
+const FormItem = React.forwardRef<React.ComponentRef<typeof View>, FormItemProps>(
   ({ className, ...props }, ref) => {
     const idValue = React.useId()
     const contextValue = React.useMemo<FormItemContextValue>(() => ({ id: idValue }), [idValue])
@@ -106,7 +106,7 @@ FormItem.displayName = 'FormItem'
 
 export type FormLabelProps = LabelProps
 
-const FormLabel = React.forwardRef<React.ElementRef<typeof Text>, FormLabelProps>(
+const FormLabel = React.forwardRef<React.ComponentRef<typeof Text>, FormLabelProps>(
   ({ className, ...props }, ref) => {
     const { error } = useFormField()
     return (
@@ -120,7 +120,7 @@ export interface FormControlProps extends ViewProps {
   className?: string
 }
 
-const FormControl = React.forwardRef<React.ElementRef<typeof View>, FormControlProps>(
+const FormControl = React.forwardRef<React.ComponentRef<typeof View>, FormControlProps>(
   ({ className, ...props }, ref) => <View ref={ref} className={cn(className)} {...props} />
 )
 FormControl.displayName = 'FormControl'
@@ -129,7 +129,7 @@ export interface FormDescriptionProps extends TextProps {
   className?: string
 }
 
-const FormDescription = React.forwardRef<React.ElementRef<typeof Text>, FormDescriptionProps>(
+const FormDescription = React.forwardRef<React.ComponentRef<typeof Text>, FormDescriptionProps>(
   ({ className, ...props }, ref) => (
     <Text ref={ref} className={cn('text-sm text-text-muted', className)} {...props} />
   )
@@ -140,7 +140,7 @@ export interface FormMessageProps extends TextProps {
   className?: string
 }
 
-const FormMessage = React.forwardRef<React.ElementRef<typeof Text>, FormMessageProps>(
+const FormMessage = React.forwardRef<React.ComponentRef<typeof Text>, FormMessageProps>(
   ({ className, children, ...props }, ref) => {
     const { error } = useFormField()
     const body = error?.message ?? children

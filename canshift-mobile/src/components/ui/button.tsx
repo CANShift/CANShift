@@ -52,7 +52,7 @@ export interface ButtonProps
   textClassName?: string
 }
 
-export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>(
+export const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProps>(
   ({ className, textClassName, variant, size, disabled, children, ...props }, ref) => {
     return (
       <Pressable

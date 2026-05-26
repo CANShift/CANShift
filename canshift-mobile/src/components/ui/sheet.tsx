@@ -86,7 +86,7 @@ export interface SheetTriggerProps extends Omit<PressableProps, 'onPress' | 'sty
   className?: string
 }
 
-export const SheetTrigger = React.forwardRef<React.ElementRef<typeof Pressable>, SheetTriggerProps>(
+export const SheetTrigger = React.forwardRef<React.ComponentRef<typeof Pressable>, SheetTriggerProps>(
   ({ children, className, ...props }, ref) => {
     const { setOpen } = useSheetContext()
     return (
@@ -247,7 +247,7 @@ export interface SheetCloseProps extends Omit<PressableProps, 'onPress' | 'style
   className?: string
 }
 
-export const SheetClose = React.forwardRef<React.ElementRef<typeof Pressable>, SheetCloseProps>(
+export const SheetClose = React.forwardRef<React.ComponentRef<typeof Pressable>, SheetCloseProps>(
   ({ children, className, ...props }, ref) => {
     const { setOpen } = useSheetContext()
     return (
