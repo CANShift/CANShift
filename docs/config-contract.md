@@ -100,9 +100,41 @@ default-resolution rule applies at the read side.
   "backgroundImage": null | "string",  // path in SPIFFS assets/
   "backgroundColor": "#RRGGBB",
   "showTopBar": boolean,
+  "template": "custom" | "cruise_control",  // optional — see Page templates below
   "widgets": [Widget]
 }
 ```
+
+### Page templates (`template`) — issue #451
+
+The optional `template` field selects how the firmware draws a page.
+
+| Value | Behaviour |
+|-------|-----------|
+| absent / `"custom"` | Default. Firmware renders `widgets[]` as a free-form grid (legacy behaviour). |
+| `"cruise_control"` | Firmware draws a fixed 2×2 grid of touch-targets (`+`, `SET`, `−`, `OFF`) and **ignores `widgets[]`**. Each button dispatches the matching `cruise_control` action op via `ActionDispatcher`. |
+
+Notes:
+
+- The two-zone palette (#954) and day/night theming apply to template-rendered
+  pages — they re-use the regular `ButtonWidget` create path.
+- The studio editor surfaces the template picker under **Page settings →
+  Template**. When a non-`custom` template is active, the canvas displays a
+  read-only preview placeholder and the widget palette is locked out — this
+  mirrors what the firmware will render on-device.
+- Studio keeps any previously authored `widgets[]` content even while a
+  template is active so flipping back to `custom` doesn't lose work.
+- Backward compatibility: the field is optional. Pages predating this feature
+  parse cleanly and default to `custom`; no migration is required.
+
+Adding a new template requires three coordinated edits:
+
+1. `canshift-core/src/schemas/dashboard.ts` — add the literal to
+   `PAGE_TEMPLATES` and document the new branch.
+2. `canshift-studio-web/src/components/editor/PropertyPanel.tsx` — extend
+   `PAGE_TEMPLATE_LABELS` and provide a canvas preview.
+3. `canshift-firmware/src/ui/page_manager.cpp` — add a procedural builder
+   alongside `buildCruiseControlTemplate` and route to it from `buildPage`.
 
 ### Widget
 ```json
