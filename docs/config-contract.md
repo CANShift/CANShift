@@ -31,6 +31,7 @@ root. Schema version is defined in `canshift-core/src/index.ts` as
   "name": "string",          // display name
   "defaultPageId": "string", // id of first page to show
   "revLimitRpm": number,     // for alert engine
+  "targetProfile": "crowpanel-28",  // optional — see Target screen profile below
   "topBar": {
     "height": number,        // pixels (default 24)
     "showMapName": boolean,
@@ -41,6 +42,27 @@ root. Schema version is defined in `canshift-core/src/index.ts` as
   "pages": [PageConfig]
 }
 ```
+
+### Target screen profile (`targetProfile`) — issue #548
+
+The optional `targetProfile` field declares which LCD the dashboard was
+authored against. Today CANShift ships a single profile (`crowpanel-28` →
+320×240, the only panel firmware v1 supports), so the field is omitted from
+most configs and the studio + firmware default to `crowpanel-28` via
+`resolveScreenProfile` (`canshift-core/src/schemas/screen-profile.ts`).
+
+- **Studio**: the editor canvas uses the resolved profile's `width` × `height`
+  to size the preview. The picker lives in the Page settings panel
+  (`canshift-studio-web/src/components/editor/PropertyPanel.tsx`).
+- **Firmware v1**: reads but ignores the field — there is only one panel.
+- **Phase 2 (#17, multi-board)**: branches off `targetProfile` to pick the
+  board hardware config.
+- **Phase 3 (#18, multi-screen LVGL)**: scales widgets based on the resolved
+  profile's dimensions.
+
+Backward compatibility: dashboards predating this field continue to parse —
+`migrateConfig` does NOT add `targetProfile` to existing configs; the
+default-resolution rule applies at the read side.
 
 ### PageConfig
 ```json
