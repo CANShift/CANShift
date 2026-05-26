@@ -7,6 +7,7 @@ import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
 import PropertyPanel from '../components/editor/PropertyPanel'
+import ThemePanel from '../components/editor/ThemePanel'
 import TestValuesPanel from '../components/editor/TestValuesPanel'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
 
@@ -202,6 +203,25 @@ function generateId(prefix: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Right-sidebar tab strip — Properties vs Theme (issue #21).
+// Mirrors the chrome of the page-list pills above so the right sidebar reads
+// like one continuous surface. Extending with extra tabs is a one-row change
+// to RIGHT_SIDEBAR_TABS.
+// ---------------------------------------------------------------------------
+
+type RightSidebarTab = 'properties' | 'theme'
+
+const RIGHT_SIDEBAR_TABS: { id: RightSidebarTab; label: string }[] = [
+  { id: 'properties', label: 'Properties' },
+  { id: 'theme', label: 'Theme' },
+]
+
+const TAB_ACTIVE_BG = '#1F1F1F'
+const TAB_ACTIVE_FG = '#FFFFFF'
+const TAB_IDLE_FG = '#777777'
+const TAB_BORDER = '#222222'
+
+// ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
@@ -222,6 +242,8 @@ export default function EditorRoute() {
     x: number
     y: number
   } | null>(null)
+
+  const [rightTab, setRightTab] = useState<RightSidebarTab>('properties')
 
   const dragFromIndex = useRef<number | null>(null)
 
@@ -518,7 +540,7 @@ export default function EditorRoute() {
         </div>
       )}
 
-      {/* ── Right sidebar: property panel ────────────────────────────────── */}
+      {/* ── Right sidebar: property panel + theme panel (#21) ─────────────── */}
       <aside
         style={{
           width: 220,
@@ -529,7 +551,46 @@ export default function EditorRoute() {
           overflow: 'hidden',
         }}
       >
-        {currentPage && <PropertyPanel pageId={currentPage.id} />}
+        <div
+          role="tablist"
+          aria-label="Editor sidebar tabs"
+          style={{
+            display: 'flex',
+            borderBottom: `1px solid ${TAB_BORDER}`,
+            flexShrink: 0,
+          }}
+        >
+          {RIGHT_SIDEBAR_TABS.map((tab) => {
+            const isActive = rightTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => {
+                  setRightTab(tab.id)
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  background: isActive ? TAB_ACTIVE_BG : 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? `1px solid ${TAB_ACTIVE_FG}` : '1px solid transparent',
+                  color: isActive ? TAB_ACTIVE_FG : TAB_IDLE_FG,
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        {rightTab === 'properties' && currentPage && <PropertyPanel pageId={currentPage.id} />}
+        {rightTab === 'theme' && <ThemePanel />}
       </aside>
 
       {/* ── Context menu ─────────────────────────────────────────────────── */}
