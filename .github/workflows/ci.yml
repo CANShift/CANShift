@@ -14,6 +14,13 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Toolchain versions — single source of truth so a bump touches one line, not
+# every job. Bump deliberately: each new minor on Node or Python may shift
+# lockfile resolution or PlatformIO compatibility.
+env:
+  NODE_VERSION: '24'
+  PYTHON_VERSION: '3.12'
+
 jobs:
   # ─── Path-change detection ───────────────────────────────────────────────────
   # Compares the PR head against the base branch and outputs one boolean per
@@ -76,7 +83,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-core/package-lock.json
 
@@ -119,7 +126,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-studio/package-lock.json
 
@@ -173,7 +180,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-studio-web/package-lock.json
 
@@ -212,7 +219,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-mobile/package-lock.json
 
@@ -289,7 +296,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-mobile/package-lock.json
 
@@ -398,7 +405,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache PlatformIO packages + build objects
         uses: actions/cache@v4
@@ -569,7 +576,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v4
@@ -647,7 +654,7 @@ jobs:
       - uses: actions/setup-python@v5
         if: steps.gate.outputs.run == 'true'
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache PlatformIO packages + build objects
         if: steps.gate.outputs.run == 'true'
@@ -736,7 +743,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install PlatformIO + clang-tidy
         run: |
@@ -884,7 +891,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install PlatformIO + clang-tidy
         run: |
