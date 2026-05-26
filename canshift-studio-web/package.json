@@ -1,6 +1,6 @@
 {
   "name": "canshift-studio-web",
-  "version": "0.0.0-spike",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "description": "Phase-1 spike: dash-hosted Studio renderer (issue #1104).",

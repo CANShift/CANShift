@@ -17,6 +17,31 @@
 
 ---
 
+## Release v0.11.0 — dash-hosted Studio v1 (in flight)
+
+First release after the firmware-only pipeline cutover (#1077). The Electron Studio installer is no longer published; the dash-hosted Studio SPA ships embedded in the firmware OTA payload and is served from the on-device WebServer.
+
+**Highlights**
+
+- Dash-hosted Studio reaches v1 — Vite + React SPA served from the firmware over WiFi AP, live data on WebSocket port 81 (#1104 / #1107 / #1108 / #1114 / #1117).
+- On-device WiFi AP trigger for phone-less Studio users — toggle from the dash without going through the mobile app (#1119).
+- 4 MB flash repartition to unblock the `_wifi` build env (`ota_4mb_wifi.csv`, SPIFFS moved to `0x370000`, 1856 KB app slots) (#1117 / #1120 / #1126).
+- Dispatcher handlers for `device-config` and `input-bindings` WS commands, with `CMD_GET_CONFIG` routed through `sendLine` for WS/TCP parity (#1123 / #1124).
+- Target screen profile selector + per-profile dashboard layouts (#1128).
+- Visual theme editor scaffold in studio-web (#1131).
+- User-selectable dashboard font scaffold (#1132).
+- Optional cruise-control screen template (#1133).
+- Secure-boot v2 rollout — partition + CI + docs (#1134).
+- Firmware: BarWidget / taskUI split into orchestrator + phase helpers (#1014 — #1127 / #1129).
+- Firmware: clang-tidy promoted to gating + UBSan on sim (#936 Phase 0 — #1130).
+- Docs: README sweep for dash-hosted Studio architecture (#1113 / #1122).
+
+**Pipeline change** — `release.yml` now contains only `check-version` + `firmware-release`. The `studio-release` matrix job (electron-builder for DMG / NSIS / AppImage) is gone. Release artifacts are limited to the merged firmware binary, the OTA partition image, and the SPIFFS image.
+
+**Mobile** — tracks separately and is deferred while firmware + studio-web stabilise; `canshift-mobile/package.json` is intentionally not bumped with this release.
+
+---
+
 ## What Is CANShift
 
 CANShift is a custom instrument cluster you design yourself. The ESP32 reads CAN frames from your ECU and renders live gauges, bars, and warnings on a small touchscreen. Three companion surfaces let you configure, update, and inspect the dash without recompiling firmware:
