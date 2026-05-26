@@ -177,6 +177,51 @@ describe('DashboardConfigSchema', () => {
       expect(result.error.issues.some((i) => i.path.includes('fontFamily'))).toBe(true)
     }
   })
+
+  // Issue #451 — optional `template` field on PageConfig. Backward compat:
+  // pages predating the field must parse and default to `custom` semantics.
+  describe('PageConfigSchema.template', () => {
+    it('accepts a page with no template (defaults to custom behavior)', () => {
+      const result = DashboardConfigSchema.safeParse(validDashboard)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.pages[0]?.template).toBeUndefined()
+      }
+    })
+
+    it('accepts a page with template: "custom"', () => {
+      const page0 = validDashboard.pages[0] as Record<string, unknown>
+      const dash = {
+        ...validDashboard,
+        pages: [{ ...page0, template: 'custom' }],
+      }
+      const result = DashboardConfigSchema.safeParse(dash)
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts a page with template: "cruise_control" — widgets[] still required (may be empty)', () => {
+      const page0 = validDashboard.pages[0] as Record<string, unknown>
+      const dash = {
+        ...validDashboard,
+        pages: [{ ...page0, template: 'cruise_control', widgets: [] }],
+      }
+      const result = DashboardConfigSchema.safeParse(dash)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.pages[0]?.template).toBe('cruise_control')
+      }
+    })
+
+    it('rejects an unknown template value', () => {
+      const page0 = validDashboard.pages[0] as Record<string, unknown>
+      const dash = {
+        ...validDashboard,
+        pages: [{ ...page0, template: 'tempomat' }],
+      }
+      const result = DashboardConfigSchema.safeParse(dash)
+      expect(result.success).toBe(false)
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------

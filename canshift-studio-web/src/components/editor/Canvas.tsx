@@ -11,6 +11,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useTestModeStore } from '../../stores/testMode.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
+import { CruiseControlPreview } from './CruiseControlPreview'
 import { WidgetPreview } from './WidgetPreview'
 import { rectsOverlap } from '../../utils/layout'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
@@ -1271,31 +1272,44 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   }}
                 />
 
-                {/* Widgets — warnings always rendered last (on top) */}
-                {[
-                  ...page.widgets.filter((w) => w.type !== 'warning'),
-                  ...page.widgets.filter((w) => w.type === 'warning'),
-                ].map((widget) => (
-                  <WidgetBox
-                    key={widget.id}
-                    widget={widget}
+                {/* Page body — either the free-form widget grid (default) or
+                    a fixed template preview (#451). When a template is set,
+                    the firmware ignores widgets[]; the canvas mirrors that
+                    contract so what the user sees is what the device renders. */}
+                {(page.template ?? 'custom') === 'cruise_control' ? (
+                  <CruiseControlPreview
+                    scale={SCALE}
+                    canvasW={CANVAS_W}
+                    contentH={widgetAreaH * SCALE}
                     palette={effectivePalette}
-                    isSelected={widget.id === selectedWidgetId}
-                    isInMultiSelection={
-                      selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
-                    }
-                    isOverlapping={overlappingIds.has(widget.id)}
-                    revLimiting={revLimiting}
-                    testValue={
-                      testModeEnabled && widget.signal in testValues
-                        ? (testValues[widget.signal] ?? null)
-                        : null
-                    }
-                    onSelect={selectWidget}
-                    onShiftSelect={toggleWidgetSelection}
-                    onDragStart={handleDragStart}
                   />
-                ))}
+                ) : (
+                  /* Widgets — warnings always rendered last (on top) */
+                  [
+                    ...page.widgets.filter((w) => w.type !== 'warning'),
+                    ...page.widgets.filter((w) => w.type === 'warning'),
+                  ].map((widget) => (
+                    <WidgetBox
+                      key={widget.id}
+                      widget={widget}
+                      palette={effectivePalette}
+                      isSelected={widget.id === selectedWidgetId}
+                      isInMultiSelection={
+                        selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
+                      }
+                      isOverlapping={overlappingIds.has(widget.id)}
+                      revLimiting={revLimiting}
+                      testValue={
+                        testModeEnabled && widget.signal in testValues
+                          ? (testValues[widget.signal] ?? null)
+                          : null
+                      }
+                      onSelect={selectWidget}
+                      onShiftSelect={toggleWidgetSelection}
+                      onDragStart={handleDragStart}
+                    />
+                  ))
+                )}
 
                 {/* Rubber-band selection rect */}
                 {rubberBand && (

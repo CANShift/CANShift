@@ -7,6 +7,7 @@ import type {
   DashboardConfig,
   FontFamilyId,
   PageConfig,
+  PageTemplate,
   ScreenProfileId,
   ThemePreset,
   TopBarConfig,
@@ -145,6 +146,12 @@ interface DashboardState {
   removePage: (pageId: string) => void
   setDefaultPage: (pageId: string) => void
   updatePage: (pageId: string, patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
+  /**
+   * Set the page rendering template (#451). Passing `custom` clears the field
+   * so default configs stay byte-stable when re-saved; any other value writes
+   * the template literal as-is.
+   */
+  setPageTemplate: (pageId: string, template: PageTemplate) => void
   movePage: (fromIndex: number, toIndex: number) => void
   updateTopBar: (patch: Partial<TopBarConfig>) => void
 
@@ -463,6 +470,28 @@ export const useDashboardStore = create<DashboardState>()(
         const existing = s.config.pages[idx]
         if (!existing) return
         s.config.pages[idx] = { ...existing, ...patch }
+        s.isDirty = true
+      })
+    },
+
+    setPageTemplate: (pageId, template) => {
+      set((s) => {
+        if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        const idx = s.config.pages.findIndex((p) => p.id === pageId)
+        if (idx === -1) return
+        const existing = s.config.pages[idx]
+        if (!existing) return
+        if (template === 'custom') {
+          // `custom` is the implicit default — drop the field so existing
+          // configs re-serialize byte-for-byte.
+          const { template: _drop, ...rest } = existing
+          s.config.pages[idx] = rest
+        } else {
+          s.config.pages[idx] = { ...existing, template }
+        }
         s.isDirty = true
       })
     },
