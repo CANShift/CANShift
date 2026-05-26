@@ -564,8 +564,18 @@ void apTaskFn(void *) {
 
     s_server.begin();
 
+    // Persistent auto-start opts out of the 5-minute safety timeout (#1077
+    // audit blocker #3). Rationale: the timeout exists so a one-off BLE-CMD
+    // start_wifi_ap leaves no lingering RF surface / battery draw if the
+    // user forgets to stop the AP. When the user has explicitly toggled
+    // the persistent AP preference ON from the on-device Settings page,
+    // they want the dash-hosted Studio reachable indefinitely; auto-stop
+    // would silently kill that contract. Read once at task entry — the
+    // preference can't flip mid-session without going through
+    // setAutoStartEnabled() (which also routes through start/stop).
+    const bool persistOn = WifiAp::isAutoStartEnabled();
     const uint32_t startMs = millis();
-    while (s_active && (millis() - startMs < BLE_WIFI_AP_TIMEOUT_MS)) {
+    while (s_active && (persistOn || (millis() - startMs < BLE_WIFI_AP_TIMEOUT_MS))) {
         s_server.handleClient();
 
         // Issue #1006 — WiFi AP task WDT feed. Placed AFTER handleClient()
