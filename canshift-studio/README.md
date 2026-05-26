@@ -270,7 +270,9 @@ the renderer over the Web Serial API — no Python `esptool` install required.
    discriminator (`url` vs `file`) differs between them.
    The merged image already embeds the bootloader at its internal `0x1000`
    offset; writing at `0x1000` instead would shift everything and brick boot.
-7. Optional SPIFFS image is written at `0x310000` per `ota_4mb.csv`.
+7. Optional SPIFFS image is written at `0x370000` per `ota_4mb_wifi.csv`
+   (moved from `0x310000` in #1117/#1120 — see firmware README's
+   "Partition upgrade path" section).
 8. Flash progress is held in the renderer hook state — there is no
    `FIRMWARE_PROGRESS` IPC channel; only `FIRMWARE_DOWNLOAD_PROGRESS` is sent
    from main.
