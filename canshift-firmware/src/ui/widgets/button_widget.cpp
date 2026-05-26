@@ -7,6 +7,7 @@
 #include "can/signal_map.h"
 #include "ui/font_manager.h"
 #include "ui/icon_assets.h"
+#include "ui/screen_profile.h"
 #include "ui/widgets/widget_helpers.h"
 #include "ui/widgets/widget_tag_pool.h"
 #include "diag/logger.h"
@@ -170,8 +171,13 @@ void btnClickHandler(lv_event_t *e) {
 
 lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOffset) {
     lv_obj_t *btn = lv_btn_create(parent);
-    lv_obj_set_pos(btn, cfg.layout.x, cfg.layout.y + yOffset);
-    lv_obj_set_size(btn, cfg.layout.w, cfg.layout.h);
+    // Design-space → physical coordinate scaling (issues #17, #18). Identity
+    // on the only v1 profile (`crowpanel-28`), so output is byte-identical.
+    const int16_t px = ScreenProfile::scaleXVal(cfg.layout.x);
+    const int16_t py = static_cast<int16_t>(ScreenProfile::scaleYVal(cfg.layout.y) + yOffset);
+    lv_obj_set_pos(btn, px, py);
+    lv_obj_set_size(btn, ScreenProfile::scaleXVal(cfg.layout.w),
+                    ScreenProfile::scaleYVal(cfg.layout.h));
 
     const CfgButtonParams &p = cfg.button;
 
