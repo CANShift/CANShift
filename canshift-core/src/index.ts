@@ -140,6 +140,21 @@ export {
 export { HARDWARE_PROFILES, isPinAvailableForBoard } from './schemas/hardware-profile.js'
 export type { HardwareProfileId, HardwareProfile } from './schemas/hardware-profile.js'
 
+// Target screen profiles (#548) — catalog + schema for the LCD a dashboard
+// was authored against. Drives studio canvas dimensions and the future
+// firmware multi-board / multi-screen paths (#17, #18). v1 ships a single
+// profile (`crowpanel-28`); the field on DashboardConfig is optional and
+// defaults to this profile for backward compatibility.
+export {
+  SCREEN_PROFILES,
+  DEFAULT_SCREEN_PROFILE_ID,
+  ScreenProfileSchema,
+  ScreenProfileIdSchema,
+  getScreenProfile,
+  resolveScreenProfile,
+} from './schemas/screen-profile.js'
+export type { ScreenProfile, ScreenProfileId } from './schemas/screen-profile.js'
+
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
 // ---------------------------------------------------------------------------
