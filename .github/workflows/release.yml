@@ -125,10 +125,21 @@ jobs:
         run: |
           VERSION=${{ needs.check-version.outputs.version }}
           ELF=.pio/build/crowpanel_28/firmware.elf
-          if ! strings "$ELF" | grep -qF "CANShift v${VERSION} starting"; then
-            echo "::error::APP_VERSION_STR mismatch — expected v${VERSION} in $ELF"
+          # The boot banner LOG_INFO is compiled out in prod (APP_LOG_LEVEL=1)
+          # so we can't rely on its string. The splash label literal
+          # `"v" APP_VERSION_STR` in boot_sequence.cpp survives because it's a
+          # plain string passed to lv_label_set_text. Use the explicit `0.0.0-unset`
+          # fallback as the negative signal — if it appears, the macro wasn't
+          # injected.
+          if strings "$ELF" | grep -qF "0.0.0-unset"; then
+            echo "::error::APP_VERSION_STR fell back to 0.0.0-unset in $ELF"
             echo "extra_targets.py likely failed to inject the macro into projenv."
-            strings "$ELF" | grep -E "CANShift v|0\.0\.0-unset" | head -5
+            strings "$ELF" | grep -E "v[0-9]+\.[0-9]+\.[0-9]+|0\.0\.0-unset" | head -10
+            exit 1
+          fi
+          if ! strings "$ELF" | grep -qF "v${VERSION}"; then
+            echo "::error::APP_VERSION_STR mismatch — no 'v${VERSION}' literal in $ELF"
+            strings "$ELF" | grep -E "v[0-9]+\.[0-9]+\.[0-9]+|0\.0\.0-unset" | head -10
             exit 1
           fi
           echo "APP_VERSION_STR=v${VERSION} confirmed in firmware ELF."
