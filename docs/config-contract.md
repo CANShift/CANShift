@@ -32,6 +32,7 @@ root. Schema version is defined in `canshift-core/src/index.ts` as
   "defaultPageId": "string", // id of first page to show
   "revLimitRpm": number,     // for alert engine
   "targetProfile": "crowpanel-28",  // optional — see Target screen profile below
+  "fontFamily": "orbitron",          // optional — see Font family below
   "topBar": {
     "height": number,        // pixels (default 24)
     "showMapName": boolean,
@@ -62,6 +63,33 @@ most configs and the studio + firmware default to `crowpanel-28` via
 
 Backward compatibility: dashboards predating this field continue to parse —
 `migrateConfig` does NOT add `targetProfile` to existing configs; the
+default-resolution rule applies at the read side.
+
+### Font family (`fontFamily`) — issues #971 + #500
+
+The optional `fontFamily` field picks the typeface bundle the firmware
+loads from SPIFFS for every text element in the dashboard (gauge numbers,
+labels, top-bar text). Today CANShift bundles a single family (`orbitron`,
+the default), so the field is omitted from most configs and the studio +
+firmware default to `orbitron` via `resolveFontFamily`
+(`canshift-core/src/schemas/font-family.ts`).
+
+- **Studio**: the picker lives in the Page settings panel
+  (`canshift-studio-web/src/components/editor/PropertyPanel.tsx`). Preview
+  is a no-op while the catalog has one entry; the surfaced hint makes that
+  explicit.
+- **Firmware v1**: reads but ignores the field — there is only one bundled
+  family (Orbitron, the historical default).
+- **Follow-up PR (#971)**: bundles additional `.bin` files under
+  `data/fonts/<family>/`, extends `FontManager::init` to route the load
+  path off `fontFamily`, and grows the `SCREEN_PROFILES` budget if the
+  combined flash footprint approaches `LV_MEM_SIZE`. Extending the
+  catalog also requires updating `FONT_FAMILIES` and `FontFamilyIdSchema`
+  in canshift-core — no schema migration is needed because the field is
+  optional and the enum extension is backward-compatible.
+
+Backward compatibility: dashboards predating this field continue to parse —
+`migrateConfig` does NOT add `fontFamily` to existing configs; the
 default-resolution rule applies at the read side.
 
 ### PageConfig
