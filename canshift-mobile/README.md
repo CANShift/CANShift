@@ -189,6 +189,15 @@ crosshairs and waits for the user to tap each point.
 
 ## OTA over Wi-Fi (`192.168.4.1`)
 
+> Mobile **retains** the WiFi-OTA path as the in-car update flow. The
+> dash-hosted Studio (`canshift-studio-web/`) and the USB flasher
+> ([canshift.tmbk.ch](https://canshift.tmbk.ch), separate repo
+> [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher),
+> #1081) are independent install / update paths and do **not** affect this
+> flow — mobile and dash-hosted Studio coexist on different transports
+> (BLE + `POST /update` for mobile, browser + WS port 81 for the Studio
+> SPA served from the same firmware).
+
 OTA is **Wi-Fi only** — BLE only triggers it. Flow:
 
 1. App fetches `https://api.github.com/repos/tburkhalterr/CANShift/releases`
@@ -199,7 +208,10 @@ OTA is **Wi-Fi only** — BLE only triggers it. Flow:
 3. App sends a BLE command to put the dashboard into Wi-Fi AP mode.
 4. The phone joins the dashboard's AP, then `pushFirmware()` POSTs the
    binary to `http://192.168.4.1/ota` via `XMLHttpRequest` so we get
-   `xhr.upload.onprogress` events for the upload bar.
+   `xhr.upload.onprogress` events for the upload bar. Endpoint constant
+   `ESP32_OTA_PATH` lives in `src/constants/ota.ts`; firmware handler in
+   `canshift-firmware/src/hal/wifi/wifi_ap.cpp` (`handleOtaUpload` +
+   `handleOtaComplete`).
 
 The plaintext HTTP exception is scoped to that single host — the ESP32
 softAP has no TLS cert.
