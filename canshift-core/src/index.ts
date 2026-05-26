@@ -208,6 +208,16 @@ export type { TopBarColorPalette } from './topbar-colors.js'
 export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults.js'
 
 // ---------------------------------------------------------------------------
+// Night-theme defaults — fallback palette + bg consumed by the studio canvas
+// when `nightTheme` is absent. Issue #21 v2 — mirror of the day defaults.
+// ---------------------------------------------------------------------------
+export {
+  NIGHT_PALETTE_DEFAULT,
+  NIGHT_BG_DEFAULT,
+  NIGHT_THEME_PRESET,
+} from './night-theme-defaults.js'
+
+// ---------------------------------------------------------------------------
 // Migrations
 // ---------------------------------------------------------------------------
 export {
