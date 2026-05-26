@@ -4,9 +4,10 @@
 // `config.dayTheme` as a list of color rows: label + native `<input type="color">`
 // + hex display.
 //
-// Skeleton commit — read-only rendering against the store. Write wiring
-// (color edits + reset-to-default + tab switching) lands in follow-up commits
-// per the issue #21 scaffold split.
+// Color edits flow back through the dashboard store's `setDayTheme` so they
+// participate in undo / redo and dirty-tracking, and the Canvas re-renders
+// live thanks to its existing `useDashboardStore((s) => s.config?.dayTheme)`
+// selector.
 
 import type { PagePalette } from '@tmbk/canshift-core'
 import { DAY_BG_DEFAULT, DAY_PALETTE_DEFAULT } from '@tmbk/canshift-core'
@@ -47,9 +48,10 @@ const PALETTE_KEYS: (keyof PagePalette)[] = [
 interface ColorRowProps {
   label: string
   value: `#${string}`
+  onChange: (hex: `#${string}`) => void
 }
 
-function ColorRow({ label, value }: ColorRowProps) {
+function ColorRow({ label, value, onChange }: ColorRowProps) {
   return (
     <div
       style={{
@@ -75,7 +77,9 @@ function ColorRow({ label, value }: ColorRowProps) {
         type="color"
         value={value}
         aria-label={`${label} color`}
-        readOnly
+        onChange={(e) => {
+          onChange(e.target.value as `#${string}`)
+        }}
         style={{
           width: 32,
           height: 24,
@@ -93,6 +97,7 @@ function ColorRow({ label, value }: ColorRowProps) {
 
 export default function ThemePanel() {
   const config = useDashboardStore((s) => s.config)
+  const setDayTheme = useDashboardStore((s) => s.setDayTheme)
 
   if (!config) {
     return (
@@ -107,6 +112,14 @@ export default function ThemePanel() {
   // carry only `bgColor` without an explicit palette).
   const bgColor = config.dayTheme?.bgColor ?? DAY_BG_DEFAULT
   const palette = config.dayTheme?.palette ?? DAY_PALETTE_DEFAULT
+
+  const updateBgColor = (hex: `#${string}`) => {
+    setDayTheme({ bgColor: hex, palette })
+  }
+
+  const updatePaletteColor = (key: keyof PagePalette, hex: `#${string}`) => {
+    setDayTheme({ bgColor, palette: { ...palette, [key]: hex } })
+  }
 
   return (
     <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
@@ -133,7 +146,7 @@ export default function ThemePanel() {
       >
         Background
       </div>
-      <ColorRow label="Page background" value={bgColor} />
+      <ColorRow label="Page background" value={bgColor} onChange={updateBgColor} />
 
       <div
         style={{
@@ -148,7 +161,14 @@ export default function ThemePanel() {
         Palette
       </div>
       {PALETTE_KEYS.map((key) => (
-        <ColorRow key={key} label={PALETTE_LABELS[key]} value={palette[key]} />
+        <ColorRow
+          key={key}
+          label={PALETTE_LABELS[key]}
+          value={palette[key]}
+          onChange={(hex) => {
+            updatePaletteColor(key, hex)
+          }}
+        />
       ))}
     </div>
   )
