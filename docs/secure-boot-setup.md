@@ -49,7 +49,8 @@ remaining items are picked up.
 - **Flash dump attack.** Flash Encryption (AES-XTS-256, key in eFuse
   BLOCK1) means `esptool.py read_flash` returns ciphertext. An attacker
   with physical access who pulls the SPI flash chip cannot recover
-  firmware, NVS contents, SPIFFS configs, or the OTA HMAC secret.
+  firmware, NVS contents, SPIFFS configs, or the per-device OTA HMAC
+  key (stored in NVS since #521).
 - **OTA downgrade attack.** Combined with `CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK`
   and a per-release-incremented `CONFIG_BOOTLOADER_APP_SEC_VER`, the chip
   refuses to boot any signed image with a security-version lower than the
@@ -398,9 +399,38 @@ of the signer's environment plus the PIN/PIV credential.
 
 `canshift-firmware/src/hal/wifi/ota_hmac.cpp` appends a 32-byte HMAC-SHA256
 trailer to every uploaded image. The firmware verifies the HMAC against
-a build-time secret (`OTA_HMAC_SECRET`) before accepting the image. This
-is **transport-layer integrity** — it proves the image came from a party
+a key it resolves on first boot before accepting the image. This is
+**transport-layer integrity** — it proves the image came from a party
 that holds the shared HMAC secret.
+
+#### Key provisioning (#521 — per-device NVS key)
+
+The verification key resolves through a three-step fallback chain at boot:
+
+1. **NVS hit** — read 32 bytes from namespace `ota`, key `hmac_key`. This
+   is the steady state for any device that booted at least once after
+   the #521 rollout. The key is unique per device — leaking one chip's
+   key does not compromise the fleet.
+2. **NVS miss (first boot)** — generate 32 fresh bytes via
+   `esp_fill_random()`, persist them to NVS, return them. Subsequent
+   boots take path 1.
+3. **NVS write failure** — fall back to the build-time `OTA_HMAC_SECRET`
+   macro injected by `scripts/extra_targets.py` from `secrets.ini`. This
+   keeps **legacy installs working** through the rollout window: a dash
+   running pre-#521 firmware that gets upgraded reads no NVS entry,
+   tries to generate, and lands on the embedded key if the NVS partition
+   is somehow unwritable. This branch is the only reason the embedded
+   macro still exists; remove it once the fleet has rolled over.
+
+At boot the firmware emits a single diag line tagged `OTA` of the form:
+
+    [I][OTA] HMAC key source=NVS sha256=a3f1b2c0
+    [I][OTA] HMAC key source=NVS (generated) sha256=...
+    [I][OTA] HMAC key source=embedded (legacy) sha256=...
+
+The 8-hex prefix is the leading 4 bytes of `SHA-256(key)`. The actual key
+bytes never reach logs. Operators eyeballing a field dash can tell at a
+glance which provenance the device is on without compromising the secret.
 
 ### With secure boot v2 enabled
 
