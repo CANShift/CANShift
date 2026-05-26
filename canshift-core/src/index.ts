@@ -17,6 +17,7 @@ export type {
   Widget,
   WidgetType,
   TopBarConfig,
+  // (ScreenProfile / ScreenProfileId are exported from screen-profile.js — see below)
   TopBarItem,
   TopBarItemPosition,
   WidgetConfig,
