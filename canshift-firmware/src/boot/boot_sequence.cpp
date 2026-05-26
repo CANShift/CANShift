@@ -36,6 +36,10 @@
     #include "hal/wifi/wifi_ap.h"
 #endif
 
+#if APP_BLE_ENABLED && APP_WIFI_OTA_ENABLED
+    #include "hal/wifi/ota_hmac.h"
+#endif
+
 #include <Arduino.h>
 #include <esp_heap_caps.h>
 #include <esp_log.h>
@@ -407,11 +411,16 @@ static void provisionDefaultFontsIfNeeded(bool storageOk) {
     logHeap("before FontManager");
 }
 
-// Load SPIFFS-backed fonts before showSplash() so the logo renders at
-// Orbitron Black 32 from the very first frame — no two-phase appearance.
+// Load SPIFFS-backed fonts before showSplash() so the logo renders at the
+// active family's primary size from the very first frame — no two-phase
+// appearance. The family id arrives from the just-parsed dashboard config
+// (`CfgDashboard.fontFamily`, issues #971 + #500). v1 only ships `orbitron`,
+// so the call equals the pre-#971 path; the indirection is the seat for the
+// next family the catalog gains.
 static void initFontManagerWithHeapLog() {
     LOG_INFO("BOOT", "Initializing FontManager...");
-    FontManager::init();
+    const char *family = ConfigLoader::getDashboardConfig().fontFamily;
+    FontManager::init(family);
     LOG_INFO("BOOT", "FontManager ready");
     logHeap("after FontManager");
 }
@@ -491,6 +500,17 @@ static void autoStartWifiApIfPersisted() {
 #endif
 }
 
+// Boot-time diagnostic for the OTA HMAC key (issue #521). Eagerly resolves
+// the in-use key — provoking the first-boot NVS generation when applicable
+// — and logs only the SHA-256 prefix plus provenance. Running this early
+// also means the first OTA upload doesn't pay the generate+persist cost
+// inside the WebServer upload callback.
+static void logOtaHmacKeyDiag() {
+#if APP_BLE_ENABLED && APP_WIFI_OTA_ENABLED && APP_OTA_REQUIRE_HMAC
+    OtaHmac::logBootKeyFingerprint();
+#endif
+}
+
 // Build the UI from config.
 // updateSplash("Ready") must happen BEFORE buildUI() because
 // PageManager::init() calls lv_obj_clean(lv_scr_act()) to free the
@@ -565,6 +585,7 @@ void BootSequence::run() {
     initRuntimeServices();
     initCanOrSplashSimNotice();
     initUsbCommPhase();
+    logOtaHmacKeyDiag();
     autoStartWifiApIfPersisted();
     buildUiWithHeapBracket();
 

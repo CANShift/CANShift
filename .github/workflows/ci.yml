@@ -14,6 +14,18 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Toolchain versions + CI-only secrets — single source of truth so a bump
+# touches one line, not every job. Bump Node/Python deliberately: each new
+# minor may shift lockfile resolution or PlatformIO compatibility. The
+# OTA_HMAC_CI_FALLBACK string is used by every firmware build job when the
+# OTA_HMAC_SECRET repo secret isn't available (fork PR / unconfigured repo).
+# Published artefacts never come from PR CI, so a known CI-only secret is
+# harmless — release.yml uses the real secret.
+env:
+  NODE_VERSION: '24'
+  PYTHON_VERSION: '3.12'
+  OTA_HMAC_CI_FALLBACK: 'ci_fallback_not_for_production_use_change_for_release_workflow'
+
 jobs:
   # ─── Path-change detection ───────────────────────────────────────────────────
   # Compares the PR head against the base branch and outputs one boolean per
@@ -76,7 +88,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-core/package-lock.json
 
@@ -119,7 +131,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-studio/package-lock.json
 
@@ -173,7 +185,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-studio-web/package-lock.json
 
@@ -212,7 +224,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-mobile/package-lock.json
 
@@ -289,7 +301,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: canshift-mobile/package-lock.json
 
@@ -398,7 +410,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache PlatformIO packages + build objects
         uses: actions/cache@v4
@@ -434,7 +446,7 @@ jobs:
             SECRET="${OTA_HMAC_SECRET}"
           else
             echo "OTA_HMAC_SECRET not available (fork PR or unconfigured) — using CI-only fallback"
-            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+            SECRET="${OTA_HMAC_CI_FALLBACK}"
           fi
           cat > secrets.ini <<EOF
           [ota]
@@ -569,7 +581,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v4
@@ -647,7 +659,7 @@ jobs:
       - uses: actions/setup-python@v5
         if: steps.gate.outputs.run == 'true'
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache PlatformIO packages + build objects
         if: steps.gate.outputs.run == 'true'
@@ -692,7 +704,7 @@ jobs:
           if [ -n "${OTA_HMAC_SECRET:-}" ]; then
             SECRET="${OTA_HMAC_SECRET}"
           else
-            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+            SECRET="${OTA_HMAC_CI_FALLBACK}"
           fi
           cat > secrets.ini <<EOF
           [ota]
@@ -736,7 +748,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install PlatformIO + clang-tidy
         run: |
@@ -760,7 +772,7 @@ jobs:
           if [ -n "${OTA_HMAC_SECRET:-}" ]; then
             SECRET="${OTA_HMAC_SECRET}"
           else
-            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+            SECRET="${OTA_HMAC_CI_FALLBACK}"
           fi
           cat > secrets.ini <<EOF
           [ota]
@@ -884,7 +896,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install PlatformIO + clang-tidy
         run: |
