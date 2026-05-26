@@ -35,6 +35,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Source of truth: canshift-studio/package.json `version`. This is also
+      # read by canshift-firmware/scripts/extra_targets.py to inject
+      # APP_VERSION_STR into the firmware binary, so studio + firmware can
+      # never disagree as long as both pipelines point at the same file.
+      #
+      # Future move: once canshift-studio/ is decommissioned (post phase-3
+      # cutover of #1077), shift the version source of truth to
+      # canshift-firmware/package.json (or a dedicated VERSION file at the
+      # repo root). Update this step and `extra_targets.py:read_studio_version`
+      # together — they are the only two readers.
       - name: Read studio version
         id: ver
         run: |
