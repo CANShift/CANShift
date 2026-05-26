@@ -1,19 +1,25 @@
 #pragma once
-// font_manager.h — Intent-based font lookup for the Orbitron typography tier.
+// font_manager.h — Intent-based font lookup for the active dashboard family.
 //
 // Three intents map to three weights (issues #431 + #487):
-//   primary   → Orbitron Black  (900) — RPM, speed, gear, lap time   (32)
-//   secondary → Orbitron Bold   (700) — boost, oil temp, voltage     (20, 24)
-//   label     → Orbitron Medium (500) — small labels, top bar, hints (12, 14, 16)
+//   primary   → Black  / 900 weight — RPM, speed, gear, lap time   (32, 48)
+//   secondary → Bold   / 700 weight — boost, oil temp, voltage     (20, 24)
+//   label     → Medium / 500 weight — small labels, top bar, hints (12, 14, 16)
 //
 // Each call snaps the requested size DOWN to the nearest cached size within
 // the intent's tier. Picking the nearest cached size up front lets the widget
 // code stay unchanged when we add/drop a size — the ramp never overflows.
 //
-// Fonts are loaded at boot from SPIFFS (`S:/fonts/orbitron_<weight>_<N>.bin`)
+// Fonts are loaded at boot from SPIFFS (`S:/fonts/<family>_<weight>_<N>.bin`)
 // via `lv_font_load()` and cached in a static array. If a size fails to load,
 // the accessor falls back to the built-in `lv_font_orbitron_medium_14_nk`
 // shipped in flash, so text always renders even without `pio run -t uploadfs`.
+//
+// Family selection (issues #971 + #500): the active family resolves through
+// a `FontFamilyAssets` catalog row keyed on the `FontFamilyId` enum from
+// canshift-core. v1 ships a single family (`orbitron`); the resolver is the
+// seat every future family slots into without changing the loader, the
+// accessor tier, or any widget call site.
 //
 // SPIFFS must be mounted (StorageDriver::init) and the LVGL FS driver
 // registered (LvglFsDriver::init) before calling FontManager::init().
@@ -22,8 +28,8 @@
 
 class FontManager {
   public:
-    // Loads all Orbitron .bin fonts from SPIFFS and caches them.
-    // Safe to call multiple times — re-loading is a no-op.
+    // Loads font assets for the canonical default family (`orbitron`) and
+    // caches them. Safe to call multiple times — re-loading is a no-op.
     static void init();
 
     // Frees every loaded font and clears the cache. Optional teardown hook.
