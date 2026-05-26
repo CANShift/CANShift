@@ -11,6 +11,40 @@ opened here — only ordering of work the audit already surfaced.
 
 ---
 
+## Theme 0 — Dash-hosted Studio cutover (#1077, in flight)
+
+The single largest cross-package shift since the audit landed. Moves the
+canonical Studio surface from the Electron desktop package into a browser
+SPA served directly from the firmware's WiFi AP, and splits the
+first-flash / recovery surface out into the standalone `canshift-flasher`
+repo (#1081). Touches every theme below by changing the transport
+assumptions.
+
+| Phase | Issue | Status | Scope |
+|-------|-------|--------|-------|
+| 1 — bundle-size spike | #1107 | shipped | Scaffold `canshift-studio-web/`, verdict at ~151 KB gzip total |
+| 2 — port the editor surfaces | #1105 | shipped | Lift editor, signal mapper, screen settings panels from Electron Studio |
+| 3 — real WS transport | #1114 | shipped | `WsClient` + `connection.store`; same dispatcher as USB |
+| 4 — firmware-embedded hosting | #1117 | shipped | `board_build.embed_files` + `kSpaAssets[]` in `wifi_ap.cpp` |
+| 4a — partition repartition | #1117 / #1120 | shipped | Move SPIFFS from 0x310000 (832 KB) to 0x370000 (512 KB); 1856 KB app slots |
+| 5 — first-flash story | #1081 | shipped | Browser-based USB flasher at canshift.tmbk.ch (separate repo `tburkhalterr/canshift-flasher`) |
+| 6 — Electron Studio retirement | n/a | pending | Removal lands once dash-hosted Studio reaches parity in production |
+
+**Cross-cutting follow-ups** still open:
+
+- `canshift-studio/src/hooks/useFirmwareFlash.ts` and
+  `scripts/secure_boot_first_flash.sh`: update `0x310000` → `0x370000` so
+  the legacy Studio's flasher can image a #1117+ build before the package
+  retires.
+- Theme 1 (wire contract) gains the new device-config + input-bindings
+  command pairs (0x03 / 0x04 / 0x0B / 0x0C, wired host-side in #1118; the
+  firmware dispatcher handler lands alongside this wave).
+- Theme 3 (studio consolidation) — the WidgetPreview split (#1015) is
+  absorbed by the dash-hosted Studio rewrite (no Electron-IPC plumbing
+  to drag along).
+
+---
+
 ## Theme 1 — Wire contract & cross-package compatibility
 
 The single highest-leverage area. Today firmware degrades silently on a
