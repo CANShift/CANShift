@@ -6,6 +6,7 @@ import { current } from 'immer'
 import type {
   DashboardConfig,
   PageConfig,
+  ScreenProfileId,
   ThemePreset,
   TopBarConfig,
   Widget,
@@ -86,6 +87,13 @@ interface DashboardState {
   setConfig: (config: DashboardConfig, filePath?: string) => void
   /** Stamp the active ECU profile key into the current config so it survives a device push/read cycle. */
   setEcuProfileKey: (key: string) => void
+  /**
+   * Pick the target screen profile this dashboard is authored for (issue #548).
+   * Drives the canvas dimensions in the editor preview and travels with the
+   * config through every push-config / save cycle. Goes through undo history
+   * so the user can revert a misclick like any other dashboard edit.
+   */
+  setTargetProfile: (id: ScreenProfileId) => void
   /**
    * Replace the current config from an imported source (Import menu, shared
    * dashboard) — clears `filePath`, marks dirty so the user is prompted to
@@ -227,6 +235,20 @@ export const useDashboardStore = create<DashboardState>()(
           s.config.ecuProfileKey = key
           s.isDirty = true
         }
+      })
+    },
+
+    setTargetProfile: (id) => {
+      set((s) => {
+        if (!s.config) return
+        // No-op when the value isn't actually changing — keeps the undo
+        // stack uncluttered when the user re-selects the current profile.
+        if (s.config.targetProfile === id) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        s.config.targetProfile = id
+        s.isDirty = true
       })
     },
 
