@@ -141,8 +141,19 @@ TOTAL              497.38 KB raw  / 151.14 KB gzip
   file dialogs. The dash-hosted import/export endpoint is a follow-up.
 - `releasesIpc.getLatest` — release feed moves to a dash-hosted endpoint in
   phase 4.
-- `deviceConfigIpc` / `inputBindingsIpc` — these are dash-side payloads that
-  don't have dedicated WS commands yet.
+
+### Wired in the audit follow-up
+
+- `deviceConfigIpc.{read,write}` — backed by `CMD_GET_DEVICE_CONFIG` (0x03)
+  and `CMD_PUT_DEVICE_CONFIG` (0x04). The IPC validates against
+  `DeviceConfigSchema` and maps to the snake_case wire shape via
+  `deviceConfigToWire` before send. Plugged into `useDeviceConfigStore`.
+- `inputBindingsIpc.{read,write}` — backed by `CMD_GET_INPUT_BINDINGS` (0x0B)
+  and `CMD_PUT_INPUT_BINDINGS` (0x0C). Same wire ↔ domain pattern via
+  `inputBindingsToWire`. Plugged into `useInputBindingsStore`. The matching
+  firmware dispatcher handlers land in a coordinated follow-up; until then
+  the firmware acks the cmd via its `default` branch and the IPC surfaces it
+  as a no-op success / `config_not_found` empty read.
 
 ---
 
