@@ -14,12 +14,17 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Toolchain versions — single source of truth so a bump touches one line, not
-# every job. Bump deliberately: each new minor on Node or Python may shift
-# lockfile resolution or PlatformIO compatibility.
+# Toolchain versions + CI-only secrets — single source of truth so a bump
+# touches one line, not every job. Bump Node/Python deliberately: each new
+# minor may shift lockfile resolution or PlatformIO compatibility. The
+# OTA_HMAC_CI_FALLBACK string is used by every firmware build job when the
+# OTA_HMAC_SECRET repo secret isn't available (fork PR / unconfigured repo).
+# Published artefacts never come from PR CI, so a known CI-only secret is
+# harmless — release.yml uses the real secret.
 env:
   NODE_VERSION: '24'
   PYTHON_VERSION: '3.12'
+  OTA_HMAC_CI_FALLBACK: 'ci_fallback_not_for_production_use_change_for_release_workflow'
 
 jobs:
   # ─── Path-change detection ───────────────────────────────────────────────────
@@ -441,7 +446,7 @@ jobs:
             SECRET="${OTA_HMAC_SECRET}"
           else
             echo "OTA_HMAC_SECRET not available (fork PR or unconfigured) — using CI-only fallback"
-            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+            SECRET="${OTA_HMAC_CI_FALLBACK}"
           fi
           cat > secrets.ini <<EOF
           [ota]
@@ -699,7 +704,7 @@ jobs:
           if [ -n "${OTA_HMAC_SECRET:-}" ]; then
             SECRET="${OTA_HMAC_SECRET}"
           else
-            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+            SECRET="${OTA_HMAC_CI_FALLBACK}"
           fi
           cat > secrets.ini <<EOF
           [ota]
@@ -767,7 +772,7 @@ jobs:
           if [ -n "${OTA_HMAC_SECRET:-}" ]; then
             SECRET="${OTA_HMAC_SECRET}"
           else
-            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+            SECRET="${OTA_HMAC_CI_FALLBACK}"
           fi
           cat > secrets.ini <<EOF
           [ota]
