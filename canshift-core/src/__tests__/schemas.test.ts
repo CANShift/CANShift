@@ -111,6 +111,38 @@ describe('DashboardConfigSchema', () => {
       expect(result.error.issues.some((i) => i.code === 'unrecognized_keys')).toBe(true)
     }
   })
+
+  // Issue #548 — optional `targetProfile` field. Backward compatibility:
+  // dashboards predating the field must parse cleanly without one.
+  it('accepts a dashboard with no targetProfile (backward compat)', () => {
+    const result = DashboardConfigSchema.safeParse(validDashboard)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.targetProfile).toBeUndefined()
+    }
+  })
+
+  it('accepts a dashboard with a known targetProfile', () => {
+    const result = DashboardConfigSchema.safeParse({
+      ...validDashboard,
+      targetProfile: 'crowpanel-28',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.targetProfile).toBe('crowpanel-28')
+    }
+  })
+
+  it('rejects a dashboard with an unknown targetProfile', () => {
+    const result = DashboardConfigSchema.safeParse({
+      ...validDashboard,
+      targetProfile: 'crowpanel-99',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('targetProfile'))).toBe(true)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------

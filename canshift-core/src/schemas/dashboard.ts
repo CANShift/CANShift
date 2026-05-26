@@ -16,6 +16,7 @@ import {
 } from '../constants/firmware-caps.js'
 
 import { HexColorSchema, SemVerSchema, WidgetLayoutSchema, WidgetStyleSchema } from './common.js'
+import { ScreenProfileIdSchema } from './screen-profile.js'
 
 // ---------------------------------------------------------------------------
 // Label position — used by gauge and bar widgets
@@ -536,6 +537,13 @@ export const DashboardConfigSchema = z
         `pages cannot exceed ${String(FIRMWARE_CAPS.MAX_PAGES)} entries (firmware cap)`
       ),
     ecuProfileKey: z.string().optional(),
+    // Target screen profile this dashboard was authored against (issue #548).
+    // Optional for backward compatibility — dashboards written before this
+    // field existed parse cleanly and are resolved to `DEFAULT_SCREEN_PROFILE_ID`
+    // (`crowpanel-28`, 320×240) by `resolveScreenProfile` at the read side.
+    // Firmware v1 reads but ignores the value; phase 2 (#17 multi-board) and
+    // phase 3 (#18 multi-screen LVGL) will branch off it.
+    targetProfile: ScreenProfileIdSchema.optional(),
   })
   .strict()
 
