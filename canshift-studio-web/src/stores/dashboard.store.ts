@@ -160,6 +160,11 @@ interface DashboardState {
   togglePreviewTheme: () => void
   /** Save (or clear) the day theme in the config. Goes through undo history. */
   setDayTheme: (theme: ThemePreset | null) => void
+  /**
+   * Save (or clear) the night theme in the config. Mirror of {@link setDayTheme}
+   * — goes through undo history, marks dirty. Issue #21 v2.
+   */
+  setNightTheme: (theme: ThemePreset | null) => void
 
   // Widget operations
   selectWidget: (widgetId: string | null) => void
@@ -512,6 +517,21 @@ export const useDashboardStore = create<DashboardState>()(
           delete s.config.dayTheme
         } else {
           s.config.dayTheme = theme
+        }
+        s.isDirty = true
+      })
+    },
+
+    setNightTheme: (theme) => {
+      set((s) => {
+        if (!s.config) return
+        s.past.push(current(s.config))
+        if (s.past.length > HISTORY_LIMIT) s.past.shift()
+        s.future = []
+        if (theme === null) {
+          delete s.config.nightTheme
+        } else {
+          s.config.nightTheme = theme
         }
         s.isDirty = true
       })

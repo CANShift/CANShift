@@ -1,16 +1,31 @@
-// ThemePanel.tsx — Editor for the dashboard's day-theme palette (#21).
+// ThemePanel.tsx — Editor for the dashboard's day + night themes (#21 v2).
 //
-// Lives next to PropertyPanel in the editor sidebar. Renders the active
-// `config.dayTheme` as a list of color rows: label + native `<input type="color">`
-// + hex display.
+// Lives next to PropertyPanel in the editor sidebar. The panel has its own
+// day/night toggle (the user is *editing* whichever side is active) — this is
+// deliberately decoupled from the canvas "Preview as" toggle so the user can
+// edit day while previewing night, or vice versa.
 //
-// Color edits flow back through the dashboard store's `setDayTheme` so they
-// participate in undo / redo and dirty-tracking, and the Canvas re-renders
-// live thanks to its existing `useDashboardStore((s) => s.config?.dayTheme)`
-// selector.
+// Top of the panel:
+//   - Day / Night tab — pick which theme you're editing
+//   - "Apply preset" dropdown — drops a built-in preset into the active theme
+//   - Copy day → night / Copy night → day — handy for symmetric setups
+//   - Reset — restores the built-in default for the active theme
+//
+// Color edits flow back through the dashboard store's `setDayTheme` /
+// `setNightTheme` so they participate in undo / redo and dirty-tracking.
 
-import type { PagePalette } from '@tmbk/canshift-core'
-import { DAY_BG_DEFAULT, DAY_PALETTE_DEFAULT, DAY_THEME_PRESET } from '@tmbk/canshift-core'
+import type { PagePalette, ThemePreset, ThemePresetId } from '@tmbk/canshift-core'
+import {
+  DAY_BG_DEFAULT,
+  DAY_PALETTE_DEFAULT,
+  DAY_THEME_PRESET,
+  NIGHT_BG_DEFAULT,
+  NIGHT_PALETTE_DEFAULT,
+  NIGHT_THEME_PRESET,
+  THEME_PRESETS,
+  getThemePreset,
+} from '@tmbk/canshift-core'
+import { useState } from 'react'
 import { useDashboardStore } from '../../stores/dashboard.store'
 
 // Chrome — mirrors PropertyPanel so the two panels feel like one surface.
@@ -21,6 +36,9 @@ const INPUT_BG = '#111111'
 const INPUT_BORDER = '#333333'
 const HEX_FG = '#CCCCCC'
 const RESET_FG = '#7788CC'
+const TAB_ACTIVE_BG = '#1A1A1A'
+const TAB_ACTIVE_BORDER = '#444444'
+const TAB_FG = '#AAAAAA'
 
 // Display labels for each palette slot — kept here (not in canshift-core) so
 // the wording can iterate without bumping the shared library.
@@ -45,6 +63,8 @@ const PALETTE_KEYS: (keyof PagePalette)[] = [
   'danger',
   'success',
 ]
+
+type ActiveMode = 'day' | 'night'
 
 interface ColorRowProps {
   label: string
@@ -96,9 +116,42 @@ function ColorRow({ label, value, onChange }: ColorRowProps) {
   )
 }
 
+interface ModeTabProps {
+  label: string
+  active: boolean
+  onClick: () => void
+}
+
+function ModeTab({ label, active, onClick }: ModeTabProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        flex: 1,
+        padding: '4px 8px',
+        fontSize: 10,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        background: active ? TAB_ACTIVE_BG : 'transparent',
+        border: `1px solid ${active ? TAB_ACTIVE_BORDER : INPUT_BORDER}`,
+        borderRadius: 3,
+        color: TAB_FG,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function ThemePanel() {
   const config = useDashboardStore((s) => s.config)
   const setDayTheme = useDashboardStore((s) => s.setDayTheme)
+  const setNightTheme = useDashboardStore((s) => s.setNightTheme)
+
+  const [activeMode, setActiveMode] = useState<ActiveMode>('day')
 
   if (!config) {
     return (
@@ -111,45 +164,112 @@ export default function ThemePanel() {
   // Resolve to defaults so the user always sees real values to edit even when
   // the loaded config is missing one half of the theme (older configs may
   // carry only `bgColor` without an explicit palette).
-  const bgColor = config.dayTheme?.bgColor ?? DAY_BG_DEFAULT
-  const palette = config.dayTheme?.palette ?? DAY_PALETTE_DEFAULT
+  const dayBg = config.dayTheme?.bgColor ?? DAY_BG_DEFAULT
+  const dayPalette = config.dayTheme?.palette ?? DAY_PALETTE_DEFAULT
+  const nightBg = config.nightTheme?.bgColor ?? NIGHT_BG_DEFAULT
+  const nightPalette = config.nightTheme?.palette ?? NIGHT_PALETTE_DEFAULT
+
+  const activeBg = activeMode === 'day' ? dayBg : nightBg
+  const activePalette = activeMode === 'day' ? dayPalette : nightPalette
+  const setActiveTheme = activeMode === 'day' ? setDayTheme : setNightTheme
+  const defaultPreset = activeMode === 'day' ? DAY_THEME_PRESET : NIGHT_THEME_PRESET
+  const sectionLabel = activeMode === 'day' ? 'Day theme' : 'Night theme'
 
   const updateBgColor = (hex: `#${string}`) => {
-    setDayTheme({ bgColor: hex, palette })
+    setActiveTheme({ bgColor: hex, palette: activePalette })
   }
 
   const updatePaletteColor = (key: keyof PagePalette, hex: `#${string}`) => {
-    setDayTheme({ bgColor, palette: { ...palette, [key]: hex } })
+    setActiveTheme({ bgColor: activeBg, palette: { ...activePalette, [key]: hex } })
   }
 
   const resetToDefault = () => {
-    setDayTheme(DAY_THEME_PRESET)
+    setActiveTheme(defaultPreset)
+  }
+
+  const applyPreset = (id: ThemePresetId) => {
+    const entry = getThemePreset(id)
+    if (!entry) return
+    setActiveTheme(entry.theme)
+  }
+
+  const copyDayToNight = () => {
+    const snapshot: ThemePreset = { bgColor: dayBg, palette: dayPalette }
+    setNightTheme(snapshot)
+  }
+
+  const copyNightToDay = () => {
+    const snapshot: ThemePreset = { bgColor: nightBg, palette: nightPalette }
+    setDayTheme(snapshot)
   }
 
   return (
     <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
+      {/* Day / Night editor tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        <ModeTab
+          label="Day theme"
+          active={activeMode === 'day'}
+          onClick={() => {
+            setActiveMode('day')
+          }}
+        />
+        <ModeTab
+          label="Night theme"
+          active={activeMode === 'night'}
+          onClick={() => {
+            setActiveMode('night')
+          }}
+        />
+      </div>
+
+      {/* Preset picker + reset */}
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 6,
           marginBottom: 10,
         }}
       >
-        <span
+        <label
+          htmlFor="theme-preset-picker"
+          style={{ fontSize: 10, color: PANEL_LABEL, letterSpacing: '0.04em' }}
+        >
+          Preset
+        </label>
+        <select
+          id="theme-preset-picker"
+          aria-label="Apply theme preset to active theme"
+          defaultValue=""
+          onChange={(e) => {
+            const value = e.target.value
+            if (value === '') return
+            applyPreset(value as ThemePresetId)
+            // Reset the select so re-picking the same preset re-applies it.
+            e.target.value = ''
+          }}
           style={{
+            flex: 1,
+            background: INPUT_BG,
+            border: `1px solid ${INPUT_BORDER}`,
+            borderRadius: 3,
+            color: HEX_FG,
             fontSize: 10,
-            color: PANEL_LABEL,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
+            padding: '3px 6px',
           }}
         >
-          Day theme
-        </span>
+          <option value="">Apply preset…</option>
+          {THEME_PRESETS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={resetToDefault}
-          title="Reset to default day theme"
+          title={`Reset to default ${sectionLabel.toLowerCase()}`}
           style={{
             background: 'none',
             border: `1px solid ${INPUT_BORDER}`,
@@ -164,6 +284,44 @@ export default function ThemePanel() {
         </button>
       </div>
 
+      {/* Copy helpers */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <button
+          type="button"
+          onClick={copyDayToNight}
+          title="Copy current day theme into night theme"
+          style={{
+            flex: 1,
+            background: 'none',
+            border: `1px solid ${INPUT_BORDER}`,
+            borderRadius: 3,
+            color: TAB_FG,
+            cursor: 'pointer',
+            fontSize: 10,
+            padding: '3px 7px',
+          }}
+        >
+          Copy day → night
+        </button>
+        <button
+          type="button"
+          onClick={copyNightToDay}
+          title="Copy current night theme into day theme"
+          style={{
+            flex: 1,
+            background: 'none',
+            border: `1px solid ${INPUT_BORDER}`,
+            borderRadius: 3,
+            color: TAB_FG,
+            cursor: 'pointer',
+            fontSize: 10,
+            padding: '3px 7px',
+          }}
+        >
+          Copy night → day
+        </button>
+      </div>
+
       <div
         style={{
           fontSize: 10,
@@ -173,9 +331,9 @@ export default function ThemePanel() {
           marginBottom: 6,
         }}
       >
-        Background
+        Background ({sectionLabel})
       </div>
-      <ColorRow label="Page background" value={bgColor} onChange={updateBgColor} />
+      <ColorRow label="Page background" value={activeBg} onChange={updateBgColor} />
 
       <div
         style={{
@@ -193,7 +351,7 @@ export default function ThemePanel() {
         <ColorRow
           key={key}
           label={PALETTE_LABELS[key]}
-          value={palette[key]}
+          value={activePalette[key]}
           onChange={(hex) => {
             updatePaletteColor(key, hex)
           }}

@@ -551,6 +551,12 @@ export const DashboardConfigSchema = z
     revLimitRpm: z.number().min(REV_LIMIT_RPM.MIN).max(REV_LIMIT_RPM.MAX),
     topBar: TopBarConfigSchema,
     dayTheme: ThemePresetSchema.optional(),
+    // Optional night-mode theme (issue #21 v2). Mirrors `dayTheme` — when
+    // absent, the studio canvas and firmware fall back to per-page palette /
+    // page-level `backgroundColor`, matching pre-#21 behaviour. v2 ships the
+    // schema + studio editor surface; firmware-side read lands in a follow-up
+    // so existing dashboards stay byte-compatible with current firmware.
+    nightTheme: ThemePresetSchema.optional(),
     // Firmware allocates a fixed page array — over-limit configs would silently
     // drop tail pages at load time. `min(1)` because a 0-page dashboard would
     // boot with no content to render.

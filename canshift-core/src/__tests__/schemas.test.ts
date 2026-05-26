@@ -178,6 +178,77 @@ describe('DashboardConfigSchema', () => {
     }
   })
 
+  // Issue #21 v2 — optional `nightTheme` field, mirror of `dayTheme`. Backward
+  // compat: dashboards predating the field must parse cleanly without one and
+  // resolve their night-mode colours from per-page palette + backgroundColor.
+  describe('DashboardConfigSchema.nightTheme', () => {
+    const validNightTheme = {
+      bgColor: '#000000',
+      palette: {
+        surface: '#1E1E1E',
+        primary: '#FF4444',
+        accent: '#FF8800',
+        text: '#FFFFFF',
+        textDim: '#888888',
+        warning: '#FF8800',
+        danger: '#FF4444',
+        success: '#00CC44',
+      },
+    }
+
+    it('accepts a dashboard with no nightTheme (backward compat)', () => {
+      const result = DashboardConfigSchema.safeParse(validDashboard)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.nightTheme).toBeUndefined()
+      }
+    })
+
+    it('accepts a dashboard with a full nightTheme', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        nightTheme: validNightTheme,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.nightTheme?.bgColor).toBe('#000000')
+        expect(result.data.nightTheme?.palette?.primary).toBe('#FF4444')
+      }
+    })
+
+    it('accepts a nightTheme with bgColor only (palette is optional)', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        nightTheme: { bgColor: '#101010' },
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects a nightTheme with a malformed bgColor', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        nightTheme: { bgColor: 'not-a-hex' },
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes('nightTheme'))).toBe(true)
+      }
+    })
+
+    it('accepts both dayTheme and nightTheme on the same dashboard', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        dayTheme: { bgColor: '#DDDDDD' },
+        nightTheme: validNightTheme,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.dayTheme?.bgColor).toBe('#DDDDDD')
+        expect(result.data.nightTheme?.bgColor).toBe('#000000')
+      }
+    })
+  })
+
   // Issue #451 — optional `template` field on PageConfig. Backward compat:
   // pages predating the field must parse and default to `custom` semantics.
   describe('PageConfigSchema.template', () => {
