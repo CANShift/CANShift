@@ -712,7 +712,11 @@ jobs:
         #   for the TUs that DO parse cleanly — pure-logic modules that don't
         #   touch the toolchain sysroot. The step prints the full output and
         #   always exits 0 so the rest of the firmware checks see this job as
-        #   passing; promote to a hard gate once the toolchain hurdle is gone.
+        #   passing. The complementary `firmware — clang-tidy (gating, native
+        #   subset)` job is the real required check — it runs against the
+        #   native env compile DB where every TU parses cleanly with system
+        #   clang and `WarningsAsErrors: '*'` in `.clang-tidy` turns any rule
+        #   emit into a build failure (#936 Phase 0).
         run: |
           FILES=$(find src -name '*.cpp')
           if [ -z "$FILES" ]; then
@@ -729,3 +733,91 @@ jobs:
           set -e
           echo "clang-tidy exited with status $STATUS (non-blocking — see footnote)"
           exit 0
+
+  # ─── Firmware — clang-tidy (gating, native subset, #936 Phase 0) ────────────
+  # Required check. Runs clang-tidy against the [env:native] compilation DB —
+  # the 11 first-party TUs that the native unit-test build compiles on the
+  # host (config loader, JSON reader, signal store, parsers, error store,
+  # logger, USB envelope, OTA HMAC, sensor color ramp/palette). These TUs
+  # parse cleanly with stock Ubuntu clang because the native env links
+  # against host headers, not the ESP32 newlib sysroot — so every rule in
+  # `.clang-tidy` (`bugprone-*`, `cert-*`, `clang-analyzer-core.*`,
+  # `clang-analyzer-cplusplus.*`, `concurrency-*`) can run end-to-end and
+  # `WarningsAsErrors: '*'` makes the job fail on the first violation.
+  #
+  # Sister job to the (still informational) `firmware — clang-tidy
+  # (non-blocking)` above, which runs against the Xtensa compile DB and is
+  # dominated by toolchain-induced clang-diagnostic-error noise until the
+  # ESP-IDF Xtensa-aware clang is wired into CI.
+  firmware-clang-tidy-gating:
+    name: firmware — clang-tidy (gating, native subset)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.firmware == 'true'
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO + clang-tidy
+        run: |
+          pip install platformio
+          sudo apt-get install -y clang-tidy
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+          key: pio-clang-tidy-native-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: |
+            pio-clang-tidy-native-${{ runner.os }}-
+
+      - name: Emit native compile_commands.json
+        # `pio run -e native -t compiledb` writes a host-targeted compilation
+        # database to compile_commands.json. Every entry compiles with g++
+        # against host headers — no Xtensa toolchain patching required.
+        run: platformio run -e native -t compiledb
+
+      - name: Run clang-tidy (gating)
+        # Parse the DB ourselves so we run only on the first-party src/
+        # entries (skip the shim TU under test/native/shim/). Each file is
+        # invoked individually so a single failure surfaces the offending
+        # path in the GitHub Actions log without one giant interleaved blob.
+        run: |
+          set -euo pipefail
+          FILES=$(python3 -c "
+          import json
+          with open('compile_commands.json') as f:
+              db = json.load(f)
+          for e in db:
+              if e['file'].startswith('src/'):
+                  print(e['file'])
+          ")
+          if [ -z "$FILES" ]; then
+            echo "::error::No src/ entries in compile_commands.json — native compileDB regression?"
+            exit 1
+          fi
+          echo "Running clang-tidy on:"
+          echo "$FILES"
+          FAILED=0
+          for f in $FILES; do
+            echo "::group::clang-tidy $f"
+            if ! clang-tidy -p . --quiet "$f"; then
+              FAILED=1
+              echo "::error file=canshift-firmware/$f::clang-tidy rule violation in $f"
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo "::error::clang-tidy gating job failed — see annotations above"
+            exit 1
+          fi
+          echo "clang-tidy gating job passed across all native-env TUs"
