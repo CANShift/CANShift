@@ -22,6 +22,10 @@ namespace {
 // Maximum LVGL FS path length including the "S:" SPIFFS drive prefix.
 constexpr size_t LVGL_PATH_LEN = 2 + CFG_MAX_PATH_LEN;
 
+// TODO(#18): tier thresholds (20/28/40/56 px) and font sizes (12..24) are
+// hard-coded against the v1 320×240 canvas. When a second screen profile
+// lands, thresholds must scale with `ScreenProfile::scaleYVal` and the font
+// ladder needs proportionally larger Orbitron tiers baked into FontManager.
 const lv_font_t *selectButtonFont(int16_t h) {
     if (h >= 56)
         return FontManager::secondary(24);

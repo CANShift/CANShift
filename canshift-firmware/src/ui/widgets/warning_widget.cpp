@@ -96,6 +96,9 @@ lv_obj_t *WarningWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t 
     // Signal label below the icon — replaced by the user-configured corner
     // label (handled by WidgetLabelOverlay below) when one is set, and dropped
     // entirely on very small layouts where there is no room for it.
+    // TODO(#18): 28 / 56 px thresholds + 12/14 px font sizes are calibrated
+    // against the v1 320×240 canvas — scale with `ScreenProfile::scaleYVal`
+    // and pick proportional FontManager::label sizes on larger panels.
     lv_obj_t *signalLabel = nullptr;
     if (cfg.warning.label[0] == '\0' && cfg.layout.h >= 28) {
         char labelBuf[CFG_MAX_SIGNAL_LEN + 4];
