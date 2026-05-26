@@ -184,11 +184,51 @@ Adding a new template requires three coordinated edits:
       "unit": "string",
       "min": number,
       "max": number,
-      "timeoutMs": number
+      "timeoutMs": number,
+      "polling": {          // optional — see "OBD-II polling" below
+        "mode": 0x01,
+        "pid": 0x0C,
+        "intervalMs": 1000
+      }
     }
   ]
 }
 ```
+
+### OBD-II polling — `signals[].polling` (issue #841)
+
+Default behaviour is **passive broadcast**: the firmware listens to whatever
+the ECU sends on its own. MaxxECU / Haltech / MegaSquirt and most race ECUs
+publish their telemetry this way — leave `polling` absent.
+
+OBD-II ECUs are different: they speak request/response, so the dash must SEND
+a query frame (`0x7DF`, mode `0x01`, PID byte) and decode the response
+(`0x7E8`). When a signal carries a `polling` block, the firmware's
+`Obd2Poller` schedules requests at `intervalMs` and writes the matched
+response into the signal — `canFrameId` should be set to the response ID
+(`0x7E8`) so the byte-decode path mirrors the broadcast contract.
+
+| Field        | Type        | Notes                                                     |
+|--------------|-------------|-----------------------------------------------------------|
+| `mode`       | `0x01`      | Mode 01 only in v1 (current data PIDs).                   |
+| `pid`        | `0x00..0xFF`| SAE J1979 PID byte. The studio editor surfaces a catalog. |
+| `intervalMs` | 100..60000  | Poll interval. ≥100 ms keeps the bus polite.              |
+
+Constraints — **v1 scope (#841)**:
+
+- Mode 01 only. Modes 02..09 (freeze frame, O2 sensor monitors, VIN, …) are
+  deferred. Out-of-range modes are rejected by the studio validator and
+  silently dropped at firmware parse time with a WARN log.
+- Single ECU at `0x7DF / 0x7E8`. Multi-ECU vehicles emit additional
+  responses at `0x7E9..0x7EF` — not consumed in v1.
+- One PID = one signal. ISO-TP multi-frame responses (length > 7) are out
+  of scope.
+
+The default `signals.json` shipped with the firmware (MaxxECU-style) does
+**not** include any polling blocks. To use OBD-II, push a custom
+`signals.json` via Studio with the polling fields populated. See
+`canshift-firmware/data/signals_obd2_mode01.json.example` for a starter
+catalog targeting the J1979 standard PIDs (RPM, speed, coolant, throttle).
 
 ---
 
