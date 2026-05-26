@@ -13,6 +13,7 @@
 import { z } from 'zod'
 
 import { HexColorSchema, SemVerSchema } from './common.js'
+import { Obd2PollingSchema } from './obd2.js'
 import { MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
 
 /** CAN frame identifier — 11-bit standard hex literal, e.g. "0x123" or "0X7FF". */
@@ -143,6 +144,12 @@ export const SignalDefSchema = z
     highDangerLevel: z.number().optional(),
     timeoutMs: z.number(),
     colorRamp: ColorRampSchema.optional(),
+    // Issue #841 — when present, switches this signal from passive broadcast
+    // decoding (`canFrameId` is the frame the ECU sends unsolicited) to
+    // request/response polling. The firmware Obd2Poller sends a query at
+    // `intervalMs` and decodes the response into this signal. Absent =
+    // legacy broadcast behaviour. v1 supports Mode 01 + single ECU only.
+    polling: Obd2PollingSchema.optional(),
   })
   .strict()
   .refine((s) => s.min < s.max, {
