@@ -14,6 +14,7 @@ export type {
   DashboardConfig,
   PageConfig,
   PagePalette,
+  PageTemplate,
   Widget,
   WidgetType,
   TopBarConfig,
@@ -52,6 +53,9 @@ export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './schemas/dashboar
 // `is{Navigate,MapSwitch,CanRaw,CruiseControl}Action` type guards were
 // dropped in the same pass — no non-test consumers found.
 export { CRUISE_CONTROL_OPS } from './schemas/dashboard.js'
+// Page template enum + tuple — drives the studio editor's template picker and
+// the firmware page builder's procedural-layout branch (issue #451).
+export { PAGE_TEMPLATES, PageTemplateSchema } from './schemas/dashboard.js'
 export type {
   SignalConfig,
   SignalDef,

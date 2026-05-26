@@ -414,6 +414,25 @@ export const ThemePresetSchema = z
   .strict()
 
 // ---------------------------------------------------------------------------
+// Page template — built-in screen layouts that bypass the free-form widget grid
+// ---------------------------------------------------------------------------
+
+// Page rendering mode.
+//
+// `custom` (default + back-compat): the firmware draws the page from the
+// `widgets[]` array exactly as today.
+//
+// `cruise_control` (issue #451): the firmware draws a fixed 2×2 grid of
+// touch-targets (+, −, SET, OFF) wired to the corresponding `cruise_control`
+// action operations. The page's `widgets[]` array is **ignored** when this
+// template is active — the studio renders a placeholder preview in its place
+// and gates widget editing on the same condition. Studio still keeps the
+// widgets[] field so a user can flip the template back to `custom` without
+// losing a previously authored layout.
+export const PAGE_TEMPLATES = ['custom', 'cruise_control'] as const
+export const PageTemplateSchema = z.enum(PAGE_TEMPLATES)
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -427,6 +446,11 @@ export const PageConfigSchema = z
     palette: PagePaletteSchema.optional(),
     showTopBar: z.boolean(),
     visible: z.boolean().optional(),
+    // Optional page rendering template (issue #451). Omitted = `custom`, which
+    // preserves the legacy free-form widgets[] behavior. When set to a built-in
+    // template (e.g. `cruise_control`), the firmware draws a procedural layout
+    // and ignores `widgets[]`.
+    template: PageTemplateSchema.optional(),
     // Firmware allocates a fixed-size widget array per page — over-limit configs
     // would silently drop tail widgets at load time. Enforce at the boundary.
     widgets: z
@@ -610,6 +634,7 @@ export type Widget = Omit<ExactOptional<z.infer<typeof WidgetSchema>>, 'config'>
 }
 export type PagePalette = z.infer<typeof PagePaletteSchema>
 export type ThemePreset = z.infer<typeof ThemePresetSchema>
+export type PageTemplate = z.infer<typeof PageTemplateSchema>
 export type PageConfig = Omit<ExactOptional<z.infer<typeof PageConfigSchema>>, 'widgets'> & {
   widgets: Widget[]
 }
