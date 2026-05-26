@@ -48,6 +48,15 @@ The connect screen offers three paths:
    the dashboard store with `DEFAULT_SIM_CONFIG` so the editor renders
    without any backend.
 
+> **Phone-less first connect** — on a fresh device the WiFi AP is dormant
+> (only the BLE mobile app or a manual toggle can bring it up). If the laptop
+> can't see the `CANShift-XXXX` SSID, walk to the dash, swipe the top bar
+> down to open Settings, and toggle **WIFI AP → ON**. The setting is
+> persisted in NVS so subsequent boots bring the AP up automatically and the
+> laptop browser can hit `http://canshift.local` (or the AP IP) without
+> another dash trip. See `canshift-firmware/src/hal/wifi/wifi_ap.cpp` for the
+> auto-start mechanics.
+
 ## Build
 
 ```bash
