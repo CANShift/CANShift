@@ -1,7 +1,9 @@
 // bar_widget.cpp — Horizontal / vertical bar widget that mirrors studio's
 // GaugeBarPreview: a proportional track with translucent warning/danger
 // zones, a threshold-coloured fill, signal label, value readout, and an
-// optional widget label at a chosen corner.
+// optional widget label at a chosen corner. `create()` split into 19 phase
+// helpers in #1125 (umbrella #1014); see the file's anonymous-namespace
+// block below for the helpers + the orchestrator at the bottom.
 
 #include "bar_widget.h"
 #include "ui/alert_flash.h"
