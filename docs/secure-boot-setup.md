@@ -126,11 +126,22 @@ host-side copy is mostly an audit artifact.
 
 ### Partition table
 
-`canshift-firmware/ota_4mb_secure.csv` — sibling to `ota_4mb.csv`. Adds:
+`canshift-firmware/ota_4mb_secure.csv` — sibling to `ota_4mb_wifi.csv`
+(aligned post-#1117 / #531). Adds:
 
 - A 4 KB `nvs_keys` partition for encrypted-NVS key storage (encrypted
   separately under a key in eFuse).
-- `encrypted` flag set on `nvs`, `otadata`, `app0`, `app1`, `spiffs`.
+- `encrypted` flag set on `nvs`, `nvs_keys`, `otadata`, `app0`, `app1`,
+  `spiffs`.
+
+Layout identity vs `ota_4mb_wifi.csv`: app slots stay at `0x1B0000`
+(1728 KB) each, SPIFFS stays at `0x80000` @ `0x370000`, coredump at
+`0x10000` @ `0x3F0000`. The only geometry change is `nvs` shrinking
+from 20 KB to 16 KB to make room for the 4 KB `nvs_keys` partition.
+That alignment means a fielded dash on the post-#1117 layout can move
+to a signed/encrypted image via a one-shot USB reflash without
+relocating any data partition, and the SPIFFS offset (`0x370000`) is a
+single constant across every host-side flasher.
 
 The bootloader and partition table themselves stay plaintext (signed,
 not encrypted) — Espressif's ROM reads them in the clear.

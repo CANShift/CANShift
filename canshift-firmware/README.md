@@ -215,9 +215,10 @@ runtime, and the table is identical across `crowpanel_28` /
   build.
 - `canshift-flasher/src/constants.ts` (`SPIFFS_FLASH_OFFSET = 0x310000`) —
   same update; this is what end-users will run from `canshift.tmbk.ch`.
-- `scripts/secure_boot_first_flash.sh` (`0x310000` argument) — secure-boot
-  variant; `ota_4mb_secure.csv` is intentionally unchanged in #1117 so the
-  secure-boot flow keeps booting until its own repartition PR lands.
+- `scripts/secure_boot_first_flash.sh` — bumped to `0x370000` in #531 once
+  `ota_4mb_secure.csv` was re-aligned to the post-#1117 `_wifi` layout.
+  Single SPIFFS offset across every flasher (Studio, canshift-flasher,
+  this script, the QEMU smoke harness).
 - `.github/workflows/firmware-boot-smoke.yml` (`0x310000` argument to
   `esptool merge_bin`) — QEMU smoke harness will still boot (SPIFFS-mount
   failure is non-fatal pre-`[BOOT] Ready`) but the SPIFFS-resident default
