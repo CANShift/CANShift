@@ -4,6 +4,13 @@
   <img src="../logo/CANShift_studio_logo.png" alt="Studio logo" width="600">
 </p>
 
+> **STATUS — Legacy.** This Electron package is being replaced by
+> [`canshift-studio-web/`](../canshift-studio-web/README.md) (#1077). It stays
+> in the tree as a reference and as an alternative path during the cutover.
+> New work goes in `canshift-studio-web/`. The rest of this README is
+> preserved as-is for the USB-serial legacy flow until the phase 3 cutover
+> reaches production parity.
+
 Desktop configuration and management application for the CANShift dashboard.
 Visual layout editor, signal mapper, CAN bus scanner, and in-renderer firmware
 flasher — all over a single USB serial cable. See the

@@ -8,10 +8,10 @@ The CANShift dashboard is configured by these JSON files stored on the device:
 
 | File | Purpose | Where to edit |
 |------|---------|---------------|
-| `dashboard.json` | Pages, widgets, layout, signal bindings, day theme | Desktop config studio |
-| `signals.json` | CAN frame IDs, signal byte positions, scaling | Desktop config studio |
-| `device.json` | TWAI pins, CAN speed, optional hardware overrides | Desktop config studio |
-| `input_bindings.json` | Physical GPIO button → action map (issue #833) | Desktop config studio |
+| `dashboard.json` | Pages, widgets, layout, signal bindings, day theme | Dash-hosted Studio (`canshift-studio-web/`) or legacy Electron Studio (`canshift-studio/`) until cutover |
+| `signals.json` | CAN frame IDs, signal byte positions, scaling | Same |
+| `device.json` | TWAI pins, CAN speed, optional hardware overrides | Same — wired host-side in studio-web (#1118) via `CMD_GET_DEVICE_CONFIG` (0x03) / `CMD_PUT_DEVICE_CONFIG` (0x04) |
+| `input_bindings.json` | Physical GPIO button → action map (issue #833) | Same — wired host-side via `CMD_GET_INPUT_BINDINGS` (0x0B) / `CMD_PUT_INPUT_BINDINGS` (0x0C) |
 
 The standalone `theme.json` file was folded into `dashboard.json.dayTheme` in
 schema 1.13 → 1.14 (issue #901). Older configs are migrated transparently by
@@ -142,29 +142,34 @@ Dark-mode tokens are baked into the firmware (`DARK_TOKENS` in
 
 ## How Config Flows Through the System
 
-### Write path (desktop → device)
+### Write path (Studio → device)
 
 ```
-User edits layout in canshift-studio
+User edits layout in canshift-studio-web (dash-hosted, browser SPA)
+              ─OR─ canshift-studio (Electron, legacy until cutover)
     │
     ▼
-Desktop validates config using canshift-core validators
+Studio validates config using canshift-core validators (+ migrations
+                              chain if loading an older file)
     │
     ▼
-Desktop saves dashboard.json, signals.json (and device.json on demand)
+Studio sends dashboard.json, signals.json (and device.json /
+              input_bindings.json on demand) via the chosen transport:
     │
-    │ USB serial (CMD_PUT_CONFIG)
-    ▼
-Firmware UsbComm task receives JSON
-    │
-    ▼
-StorageDriver writes to SPIFFS
-    │
-    ▼
-ConfigLoader::reloadAll() is called
+    ├── USB serial (CMD_PUT_CONFIG = 0x02)            ← legacy Electron path
+    ├── WebSocket on port 81 (#1108, same dispatcher) ← dash-hosted path
+    └── Wire-format mapping (snake_case) via deviceConfigToWire /
+        inputBindingsToWire from canshift-core for the device /
+        input-bindings cmds (0x03 / 0x04 / 0x0B / 0x0C)
     │
     ▼
-PageManager rebuilds UI from new config
+Firmware UsbComm::handleLine() — shared dispatcher across USB / TCP / WS
+    │
+    ▼
+StorageDriver writes to SPIFFS atomically (with .bak companion)
+    │
+    ▼
+ConfigLoader::reloadAll() → PageManager rebuilds UI from new config
 ```
 
 ### Read path (device boot)
