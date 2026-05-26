@@ -271,7 +271,7 @@ Per-ECU integration notes for built-in presets:
 | Preset | Notes |
 |--------|-------|
 | **MaxxECU Street / Race** | Default frame group at `0x370`-`0x375`. Verify against your MaxxECU's "CAN Output" page in MaxxECU PC software — Street and Race share the layout but Race adds extra frames (race-specific telemetry) you may want to map manually. |
-| **OBD-II J1979** | **Polling not yet shipped** — see [#841](https://github.com/tburkhalterr/CANShift/issues/841). The preset's frame IDs (`0x7E8`) are correct, but until the firmware sends J1979 mode-01 requests, no decoded values arrive. Track #841 for status. |
+| **OBD-II J1979** | Polling shipped in [#841](https://github.com/tburkhalterr/CANShift/issues/841). Add a `polling: { mode: 0x01, pid, intervalMs }` block to each signal; the firmware's `Obd2Poller` then sends `0x7DF` requests and decodes the `0x7E8` responses. See `data/signals_obd2_mode01.json.example` for a starter catalog, and the Studio editor's **Signals** tab for the Mode 01 PID picker. v1 scope = Mode 01 + single ECU at `0x7DF/0x7E8`; multi-ECU + ISO-TP deferred. |
 | **Generic (blank)** | Use as the starting point for any ECU not yet covered. No signals predefined — add them via the Studio editor or by editing the exported `signals.json` directly. |
 
 ### Want to add a vendor preset?

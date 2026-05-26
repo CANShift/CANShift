@@ -63,6 +63,29 @@ export type {
   ColorRampStop,
   RampInterpolation,
 } from './schemas/signal.js'
+
+// OBD-II polling configuration (issue #841 — phase 3 of #556). Optional
+// per-signal block that flips a signal from passive broadcast to active
+// request/response. v1 ships Mode 01 + single ECU at 0x7DF/0x7E8.
+export type { Obd2Mode, Obd2Pid, Obd2Polling } from './schemas/obd2.js'
+export {
+  Obd2ModeSchema,
+  Obd2PidSchema,
+  Obd2PollingSchema,
+  OBD2_MIN_INTERVAL_MS,
+  OBD2_MAX_INTERVAL_MS,
+  OBD2_DEFAULT_INTERVAL_MS,
+} from './schemas/obd2.js'
+// Standard J1979 Mode 01 PID catalog — drives the studio editor's PID picker
+// (issue #841). Firmware ignores this; it just reuses the per-signal decode
+// fields the editor writes into SignalDef.
+export type { Obd2Mode01PidEntry } from './ecu-profiles/obd2-mode01-pids.js'
+export {
+  OBD2_MODE01_PIDS,
+  OBD2_REQUEST_FRAME_ID,
+  OBD2_RESPONSE_FRAME_ID,
+  obd2PidLookup,
+} from './ecu-profiles/obd2-mode01-pids.js'
 export type { DeviceConfig } from './schemas/device.js'
 export type { CanSpeedKbps } from './schemas/signal.js'
 export { CAN_SPEED_OPTIONS } from './schemas/signal.js'

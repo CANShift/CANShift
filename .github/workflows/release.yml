@@ -4,6 +4,14 @@
 #
 # To ship a release: bump the version in canshift-studio/package.json in your PR.
 # When that PR merges, this workflow fires and creates the GitHub Release automatically.
+#
+# Releases are firmware-only since the dash-hosted Studio refactor (#1077). The
+# Studio SPA ships embedded in the firmware OTA payload (board_build.embed_files
+# in canshift-firmware/platformio.ini per #1117). The Electron canshift-studio/
+# package is legacy and is not released — its installer (DMG / NSIS / AppImage)
+# is no longer published. canshift-flasher (separate repo, canshift.tmbk.ch)
+# handles install / update over USB; mobile distributes through TestFlight /
+# Play Store on its own cadence.
 
 name: Release
 
@@ -27,6 +35,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Source of truth: canshift-studio/package.json `version`. This is also
+      # read by canshift-firmware/scripts/extra_targets.py to inject
+      # APP_VERSION_STR into the firmware binary, so studio + firmware can
+      # never disagree as long as both pipelines point at the same file.
+      #
+      # Future move: once canshift-studio/ is decommissioned (post phase-3
+      # cutover of #1077), shift the version source of truth to
+      # canshift-firmware/package.json (or a dedicated VERSION file at the
+      # repo root). Update this step and `extra_targets.py:read_studio_version`
+      # together — they are the only two readers.
       - name: Read studio version
         id: ver
         run: |
@@ -47,59 +65,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Build and publish the Electron studio app
-  studio-release:
-    name: Studio — build & release (${{ matrix.os }})
-    needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
-    permissions:
-      contents: write
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: canshift-studio
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            canshift-core/package-lock.json
-            canshift-studio/package-lock.json
-
-      - name: Install core dependencies
-        run: npm ci
-        working-directory: canshift-core
-
-      - name: Build core
-        run: npm run build
-        working-directory: canshift-core
-
-      - name: Install Linux build dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y rpm libfuse2
-
-      - name: Install studio dependencies
-        run: npm ci
-
-      # electron-builder publishes directly to GitHub Releases when GH_TOKEN is set.
-      # Creates a draft release tagged with the studio package version.
-      - name: Build and publish
-        run: npm run build && npx electron-builder --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Build firmware and attach .bin files to the same GitHub Release
+  # Build firmware and attach .bin files to the GitHub Release
   firmware-release:
     name: Firmware — build & attach
-    needs: [check-version, studio-release]
+    needs: [check-version]
     if: needs.check-version.outputs.should_release == 'true'
     permissions:
       contents: write
@@ -181,6 +150,23 @@ jobs:
           cp .pio/build/crowpanel_28/firmware.bin canshift-firmware-${TAG}-crowpanel_28-firmware.bin
           # SPIFFS image — flashed to the data partition.
           cp .pio/build/crowpanel_28/spiffs.bin canshift-spiffs-${TAG}-crowpanel_28.bin
+
+      # electron-builder used to create the draft Release as a side effect of
+      # the (now-removed) studio-release job. With that job gone, the firmware
+      # job is solely responsible for creating the Release before uploading
+      # assets.
+      - name: Create GitHub Release if missing
+        run: |
+          TAG=${{ needs.check-version.outputs.tag }}
+          if ! gh release view "${TAG}" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release create "${TAG}" \
+              --repo "${{ github.repository }}" \
+              --title "${TAG}" \
+              --notes "Firmware-only release. See README.md for the bundled changes." \
+              --draft
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Attach firmware, OTA partition image and SPIFFS to GitHub Release
         run: |
