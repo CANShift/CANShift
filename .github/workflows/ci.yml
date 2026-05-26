@@ -594,6 +594,127 @@ jobs:
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: platformio test -e native
 
+  # ─── Firmware — secure-boot build (non-blocking, #531) ─────────────────────
+  # Compiles the opt-in [env:secure] PlatformIO environment (RSA-3072 signed,
+  # AES-XTS-256 flash-encrypted image — see docs/secure-boot-setup.md) on
+  # every firmware-touching PR. The build needs a signing key on disk at
+  # canshift-firmware/secrets/secure_boot_signing_key.pem; the production
+  # key never enters CI, so this job uses a SEPARATE test key provisioned
+  # via the SECURE_BOOT_SIGNING_KEY_TEST repository secret (PEM contents,
+  # whitespace preserved). When the secret is absent (fork PR, secret not
+  # yet provisioned), the gate step skips the remaining steps with a notice
+  # so the job remains green-as-skip rather than red-as-fail.
+  #
+  # NON-BLOCKING for now (`continue-on-error: true`). Promote to blocking
+  # once the key is provisioned and a clean run has been observed on a few
+  # firmware-touching PRs — at that point flip `continue-on-error` to false
+  # and add this job to branch-protection required checks.
+  #
+  # The test signing key is NOT the production key. The production key
+  # never lives in CI — it is generated once on a controlled workstation
+  # via scripts/generate_keys.sh and kept offline (HSM / YubiKey /
+  # encrypted offline backup). See docs/secure-boot-setup.md section 6.
+  firmware-secure-build:
+    name: firmware — secure-boot build (non-blocking)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.firmware == 'true'
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: canshift-firmware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate on signing key secret presence
+        id: gate
+        # GitHub Actions does not expose secrets inside top-level `if:`, so
+        # the gate runs as a step that emits `run=true|false`. Downstream
+        # steps key off the output. Fork PRs and unconfigured repos skip
+        # transparently (job stays green-as-skip).
+        env:
+          SECURE_BOOT_SIGNING_KEY_TEST: ${{ secrets.SECURE_BOOT_SIGNING_KEY_TEST }}
+        run: |
+          if [ -n "${SECURE_BOOT_SIGNING_KEY_TEST:-}" ]; then
+            echo "SECURE_BOOT_SIGNING_KEY_TEST present — running secure-boot build"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SECURE_BOOT_SIGNING_KEY_TEST not configured — skipping secure-boot build (expected on fork PRs and pre-rollout repos). See docs/secure-boot-setup.md."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO packages + build objects
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.packages
+            ~/.platformio/.cache
+            canshift-firmware/.pio
+          key: pio-secure-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini', 'canshift-firmware/sdkconfig.defaults.secure', 'canshift-firmware/ota_4mb_secure.csv') }}
+          restore-keys: |
+            pio-secure-${{ runner.os }}-
+
+      - name: Install PlatformIO CLI
+        if: steps.gate.outputs.run == 'true'
+        run: pip install platformio
+
+      - name: Materialize test signing key
+        if: steps.gate.outputs.run == 'true'
+        # The PEM is dropped at the path baked into sdkconfig.defaults.secure
+        # (CONFIG_SECURE_BOOT_SIGNING_KEY="secrets/secure_boot_signing_key.pem").
+        # 0600 mirrors how scripts/generate_keys.sh chmods the on-disk file
+        # so a future on-runner espsecure.py invocation behaves identically.
+        env:
+          SECURE_BOOT_SIGNING_KEY_TEST: ${{ secrets.SECURE_BOOT_SIGNING_KEY_TEST }}
+        run: |
+          mkdir -p secrets
+          chmod 700 secrets
+          printf '%s' "${SECURE_BOOT_SIGNING_KEY_TEST}" > secrets/secure_boot_signing_key.pem
+          chmod 600 secrets/secure_boot_signing_key.pem
+          echo "Test signing key written to secrets/secure_boot_signing_key.pem"
+
+      - name: Write secrets.ini (CI-only OTA secret)
+        if: steps.gate.outputs.run == 'true'
+        # [env:secure] extends [env:crowpanel_28], which refuses to build
+        # without a real OTA HMAC secret (#910). Reuse the same CI fallback
+        # pattern as firmware-build above — published artifact is never
+        # produced from this job, so a known CI-only secret is harmless.
+        env:
+          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
+        run: |
+          if [ -n "${OTA_HMAC_SECRET:-}" ]; then
+            SECRET="${OTA_HMAC_SECRET}"
+          else
+            SECRET="ci_fallback_not_for_production_use_change_for_release_workflow"
+          fi
+          cat > secrets.ini <<EOF
+          [ota]
+          hmac_secret = ${SECRET}
+          EOF
+
+      - name: Build [env:secure]
+        if: steps.gate.outputs.run == 'true'
+        # Signs the app image with the test key + builds the encryptable
+        # bootloader + partitions. Does NOT flash anything (no hardware in
+        # CI). Failure here means the secure-boot config or the partition
+        # table is out of sync with the rest of the firmware.
+        run: platformio run -e secure
+
+      - name: Scrub test signing key
+        if: always() && steps.gate.outputs.run == 'true'
+        # Defense in depth: the runner is ephemeral but we want the .pem to
+        # be unreadable if a later step somehow uploads artifacts.
+        run: |
+          rm -f secrets/secure_boot_signing_key.pem
+          echo "Test signing key scrubbed"
+
   # ─── Firmware — clang-tidy (informational, ramping to blocking, #829) ───────
   # clang-tidy runs on a compilation database emitted by PlatformIO. Until the
   # baseline is clean (planned fix-up PRs) the job is non-blocking — it surfaces
