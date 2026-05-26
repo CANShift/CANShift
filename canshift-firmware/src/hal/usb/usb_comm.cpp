@@ -485,6 +485,70 @@ void handlePutFile(const JsonObjectConst &obj) {
     UsbComm::sendLine("{\"status\":\"ok\"}");
 }
 
+// ---------------------------------------------------------------------------
+// Typed config GET — device.json + input_bindings.json
+//
+// Mirrors CMD_GET_CONFIG (0x01) but parses the on-disk JSON and wraps it in
+// a typed envelope so the studio-web wire schema can validate the shape.
+// Feeds the assembled response through `UsbComm::sendLine` so WS / TCP / USB
+// sinks all receive it (the legacy GET_CONFIG path writes to Serial directly
+// and would not reach a WS-connected Studio — kept as-is to limit blast
+// radius, but new GETs go via the sink to play nice with #1108 / #1105).
+//
+// PUT counterparts land in a follow-up commit (0x04 / 0x0C).
+// ---------------------------------------------------------------------------
+
+// Send a `{"status":"ok","<key>":<value>}` envelope by parsing the on-disk
+// JSON file and lifting `unwrapKey` out of it (when non-null) before
+// embedding the result under `fieldKey`. The unwrap is needed for
+// input_bindings.json — on disk the file is `{"input_bindings":[...]}` but
+// the wire envelope expects the bare array under the same key so the
+// studio-side wire schema (`InputBindingsConfigWireSchema`) parses cleanly.
+// For device.json the file body is already the flat shape the studio
+// expects, so callers pass unwrapKey=nullptr to send it verbatim.
+//
+// On a missing file: sends `{"status":"error","message":"config_not_found"}`.
+void sendTypedConfigGet(const char *path, const char *fieldKey, const char *unwrapKey) {
+    if (!StorageDriver::fileExists(path)) {
+        UsbComm::sendLine("{\"status\":\"error\",\"message\":\"config_not_found\"}");
+        return;
+    }
+
+    JsonDocument fileDoc;
+    DeserializationError err = StorageDriver::parseJsonFile(path, fileDoc);
+    if (err) {
+        LOG_WARN("USB", "GET %s parse error: %s", path, err.c_str());
+        UsbComm::sendLine("{\"status\":\"error\",\"message\":\"parse_error\"}");
+        return;
+    }
+
+    JsonVariantConst body =
+        unwrapKey ? fileDoc[unwrapKey].as<JsonVariantConst>() : fileDoc.as<JsonVariantConst>();
+    if (body.isNull()) {
+        LOG_WARN("USB", "GET %s: missing '%s' in file body", path,
+                 unwrapKey ? unwrapKey : "(root)");
+        UsbComm::sendLine("{\"status\":\"error\",\"message\":\"config_not_found\"}");
+        return;
+    }
+
+    JsonDocument resp;
+    resp["status"] = "ok";
+    resp[fieldKey] = body;
+
+    const size_t needed = measureJson(resp) + 2; // payload + '\n' + NUL terminator
+    char *buf = static_cast<char *>(malloc(needed));
+    if (!buf) {
+        LOG_ERROR("USB", "GET %s: response buffer alloc (%u B) failed", path,
+                  static_cast<unsigned>(needed));
+        UsbComm::sendLine("{\"status\":\"error\",\"message\":\"oom\"}");
+        return;
+    }
+    const size_t written = serializeJson(resp, buf, needed);
+    buf[written] = '\0';
+    UsbComm::sendLine(buf);
+    free(buf);
+}
+
 void handleScreenSettings(const JsonObjectConst &obj) {
     uint8_t brightness = obj["brightness"] | 80;
 
@@ -614,6 +678,17 @@ void handleCommand(const char *jsonLine) {
             }
             break;
         }
+        case UsbComm::CMD_GET_DEVICE_CONFIG:
+            // device.json on disk is already the flat snake_case shape the
+            // wire schema expects — pass it through unwrapped.
+            sendTypedConfigGet(CONFIG_PATH_DEVICE, "device_config", nullptr);
+            break;
+        case UsbComm::CMD_GET_INPUT_BINDINGS:
+            // input_bindings.json wraps the array as `{"input_bindings":[...]}`
+            // — lift the inner array so the wire envelope carries the bare
+            // array under the same key (matches InputBindingsConfigWireSchema).
+            sendTypedConfigGet(CONFIG_PATH_INPUTS, "input_bindings", "input_bindings");
+            break;
         case UsbComm::CMD_SCREEN_SETTINGS:
             handleScreenSettings(doc.as<JsonObjectConst>());
             break;
