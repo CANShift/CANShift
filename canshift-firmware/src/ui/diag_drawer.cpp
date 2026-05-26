@@ -280,7 +280,21 @@ void onCloseReleased(lv_event_t * /*e*/) {
     // currently-pressed object regardless of scroll state, and combined
     // with LV_OBJ_FLAG_PRESS_LOCK (which keeps the press anchored on this
     // button) it gives a reliable tap-to-close on a noisy touch panel.
+    LOG_INFO("DIAG_DRAWER", "close release");
     close();
+}
+
+void onClosePressed(lv_event_t * /*e*/) {
+    // Diagnostic shim — fires before any scroll arbitration so we can
+    // distinguish two failure modes on device:
+    //   1. "press" line absent  → touch is NOT reaching the button at all
+    //      (hit-area, z-order, or coord/clip issue — H5)
+    //   2. "press" line present but "release" line absent → press arrived
+    //      but RELEASED never reached the button (PRESS_LOCK is unset or
+    //      the indev re-resolved act_obj — H1/H3)
+    // Leave this log in until a user-confirmed close cycle is observed on
+    // the hardware build; then it can be removed in a follow-up.
+    LOG_INFO("DIAG_DRAWER", "close press");
 }
 
 void onVerticalSwipe(lv_dir_t dir) {
@@ -385,6 +399,9 @@ void init() {
     lv_obj_set_style_radius(s_closeBtn, 4, LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_closeBtn, 0, LV_PART_MAIN);
     lv_obj_add_event_cb(s_closeBtn, onCloseReleased, LV_EVENT_RELEASED, nullptr);
+    // Diagnostic — see onClosePressed comment. Lets the user disambiguate
+    // hit-test failure vs. event-routing failure on hardware.
+    lv_obj_add_event_cb(s_closeBtn, onClosePressed, LV_EVENT_PRESSED, nullptr);
 
     lv_obj_t *closeLabel = lv_label_create(s_closeBtn);
     // Plain "X" — LV_SYMBOL_CLOSE (U+F00D, FontAwesome PUA) is not in our
