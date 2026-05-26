@@ -15,6 +15,8 @@
 
 **Before first hardware power-up:** read `FIRST_FLASH.md` — pre-flight checklist for pin verification, CAN frame ID confirmation, and CAN Pal wiring.
 
+**Contributing a new widget or ECU:** read the matching `HOW_TO_*.md` walkthrough below.
+
 ---
 
 ## Document Index
@@ -31,6 +33,8 @@
 | `can-integration-notes.md` | CAN bus wiring and signal mapping |
 | `future-wireless-strategy.md` | Phase 2+ Wi-Fi and BLE design |
 | `ecu-integration.md` | ECU integration notes — validator + naming conventions |
+| `HOW_TO_ADD_A_WIDGET.md` | Contributor walkthrough — add a new widget type across core/firmware/studio |
+| `HOW_TO_ADD_AN_ECU.md` | Contributor walkthrough — add support for a new ECU's CAN protocol |
 | `secure-boot-setup.md` | Secure-boot first-flash + key management |
 | `mobile-sdk-upgrade.md` | Mobile SDK upgrade decisions |
 | `dash-hosted-readiness-audit.md` | Pre-flight audit (2026-05-26) — what blocks first-flash → dash-hosted Studio end-to-end |
