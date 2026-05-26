@@ -14,10 +14,25 @@ boots **unsigned** images and runs **unencrypted** flash. Enabling these
 features is a one-way decision per chip and is performed exactly once,
 during the production-flash procedure for that specific unit.
 
-The PR that introduces this guide ships only documentation, an opt-in
-PlatformIO env, and gated host-side scripts. **No CI workflow, no runtime
-code path, no existing build is touched.** Adoption is per-device, by an
-operator, in a controlled environment.
+The original PR that introduced this guide shipped only documentation,
+an opt-in PlatformIO env, and gated host-side scripts. **No runtime code
+path is touched** — the existing unsigned/unencrypted production firmware
+keeps building byte-for-byte identical to before. Adoption is per-device,
+by an operator, in a controlled environment.
+
+#### Rollout state (updated #531)
+
+| Capability | State |
+|---|---|
+| `[env:secure]` PlatformIO env | Ready — partition table aligned to `ota_4mb_wifi.csv` post-#1117 |
+| Anti-rollback floor (`CONFIG_BOOTLOADER_APP_SEC_VER`) | `2` — see section 7 |
+| CI build of `[env:secure]` | Non-blocking job `firmware-secure-build` in `.github/workflows/ci.yml`, gated on `SECURE_BOOT_SIGNING_KEY_TEST` repo secret being present (otherwise skips with a notice) |
+| Project signing key | **Not yet generated.** Run `scripts/generate_keys.sh` on a controlled workstation |
+| First-flash on a real chip | **Not yet performed.** Gated on sacrificial-board QA |
+| `canshift-flasher` signed-build support | **Not yet.** Browser flasher writes raw bytes — signed flashing is out of scope for the standalone flasher today |
+
+Everything below this point is the operational reference for when those
+remaining items are picked up.
 
 ---
 
@@ -433,13 +448,17 @@ The OTA flow changes posture:
 
 ## 9. Acceptance + verification
 
-This PR is considered done when:
+The scaffolding PRs are considered done when:
 
 - `pio run -e crowpanel_28` continues to build cleanly, unchanged.
 - `pio run -e sim` continues to build cleanly, unchanged.
 - `pio run -e secure` builds (after running `generate_keys.sh`) and
   produces a signed image. `esptool.py image_info --version 2` reports
   `Secure Boot v2: enabled`.
+- The CI job `firmware — secure-boot build (non-blocking)` runs end to
+  end on every firmware-touching PR when the
+  `SECURE_BOOT_SIGNING_KEY_TEST` secret is provisioned, and skips with
+  a notice when it is not.
 - `secure_boot_first_flash.sh` invoked without args prints the safety
   banner and exits with status 1.
 - `secure_boot_first_flash.sh` invoked with `DEV_BOARD_DO_NOT_RUN=1`
@@ -449,28 +468,44 @@ This PR is considered done when:
   exists.
 - `git check-ignore secrets/` prints the path (i.e., is gitignored).
 
-End-to-end verification on a real chip is **out of scope for this PR**.
-The on-hardware acceptance test is gated on Issue #531 follow-up tasks
-and runs on a dedicated, known-disposable chip.
+End-to-end verification on a real chip is **still out of scope**. The
+on-hardware acceptance test (sacrificial board → confirmed signed boot →
+documented recovery procedure run at least once) is an Issue #531
+follow-up that runs on a dedicated, known-disposable chip.
 
 ---
 
 ## 10. Out-of-scope future work
 
-- **Tag-gated CI signing.** A separate PR will add a `release.yml` job
-  that signs the release artifact only when triggered by a tag matching
-  `v*.*.*`, with the signing key fetched from a hardened secret store
-  (GitHub Actions OIDC + dedicated signing repo with restricted
-  branch-protection rules).
+- **Tag-gated CI signing of release artifacts.** The `ci.yml`
+  `firmware-secure-build` job (added in #531) compiles `[env:secure]`
+  on every firmware-touching PR with a TEST signing key, but the
+  `release.yml` workflow does NOT yet sign the published release binary
+  with the production key. That requires a tag-only job
+  (`if: startsWith(github.ref, 'refs/tags/v')`) plus a hardened secret
+  store — GitHub Actions OIDC + dedicated signing repo with restricted
+  branch-protection rules. Production signing key must stay out of the
+  main repo's secrets.
 - **Per-chip key escrow tooling.** Today `keys/escrow.csv` is a flat
   text file. A future PR may move escrow into a signed, append-only
   log on a dedicated host (e.g., a small SQLite database with a
   per-row HMAC chain) so that escrow tampering is detectable.
-- **Anti-rollback enforcement.** The release pipeline must increment
-  `CONFIG_BOOTLOADER_APP_SEC_VER` for any release that fixes a remotely
-  exploitable bug. Wiring this requires a per-release ratchet (the
-  `SEC_VER` is monotonic in eFuse) and a commit-message convention. PR
-  to follow.
+- **Per-release SEC_VER ratchet automation.** The `sdkconfig.defaults.secure`
+  floor is currently `2` (#531 rollout-readiness bump), and bumping is
+  maintainer-driven. A future PR may add a release-tag hook that fails
+  if a release labelled `security:remote-exploit-fix` ships without
+  bumping the floor, so the per-release ratchet does not depend on
+  reviewer memory.
+- **`canshift-flasher` signed-build support.** The standalone browser
+  flasher writes raw bytes via esptool — it has no `write_flash --encrypt`
+  path, no signed-bootloader awareness, and no `nvs_keys` partition
+  handling. Signed builds today are flashable only via
+  `scripts/secure_boot_first_flash.sh` on a controlled workstation. A
+  v2 of the flasher would need to pre-encrypt payloads on the host side
+  before pushing them through Web Serial. Tracked as a separate-repo
+  follow-up; file an issue in
+  [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher)
+  when the project commits to the secure-boot rollout on real chips.
 - **HSM-backed signing.** `espsecure.py` 4.x does not natively support
   HSM. The wrapper that pre-computes the digest and splices the
   signature is a self-contained Python module — TBD.
