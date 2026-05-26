@@ -281,6 +281,94 @@ function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarProps) {
 void ALIGN_BUTTONS
 
 // ---------------------------------------------------------------------------
+// "Preview as" day/night toggle — small segmented control rendered in the
+// canvas chrome (#21 v2). Independent from the ThemePanel editor mode so the
+// user can edit one theme while previewing the other. When a device is
+// connected its reported `isDayMode` is authoritative and the toggle is
+// disabled to keep the canvas in sync with the live screen.
+// ---------------------------------------------------------------------------
+
+interface PreviewAsToggleProps {
+  previewDayMode: boolean
+  disabled: boolean
+  onSelect: (next: boolean) => void
+}
+
+function PreviewAsToggle({ previewDayMode, disabled, onSelect }: PreviewAsToggleProps) {
+  const segBase: React.CSSProperties = {
+    padding: '2px 8px',
+    fontSize: 10,
+    background: '#1A1A1A',
+    border: '1px solid #2A2A2A',
+    color: '#888888',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    fontWeight: 500,
+    opacity: disabled ? 0.5 : 1,
+  }
+  const activeSeg: React.CSSProperties = {
+    ...segBase,
+    background: '#2A2A2A',
+    color: '#DDDDDD',
+    borderColor: '#555555',
+  }
+
+  return (
+    <div
+      role="group"
+      aria-label="Preview as day or night theme"
+      style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+      title={
+        disabled
+          ? 'Device controls preview mode while connected'
+          : 'Preview canvas as day or night theme'
+      }
+    >
+      <span
+        style={{
+          fontSize: 9,
+          color: '#555555',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Preview as
+      </span>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-pressed={previewDayMode}
+        onClick={() => {
+          onSelect(true)
+        }}
+        style={{
+          ...(previewDayMode ? activeSeg : segBase),
+          borderRadius: '3px 0 0 3px',
+        }}
+      >
+        Day
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-pressed={!previewDayMode}
+        onClick={() => {
+          onSelect(false)
+        }}
+        style={{
+          ...(!previewDayMode ? activeSeg : segBase),
+          borderRadius: '0 3px 3px 0',
+          marginLeft: -1,
+        }}
+      >
+        Night
+      </button>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Single widget renderer
 // ---------------------------------------------------------------------------
 
@@ -676,6 +764,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
   const setDeviceIsDayMode = useDeviceStore((s) => s.setIsDayMode)
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
+  const nightTheme = useDashboardStore((s) => s.config?.nightTheme)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
   const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -721,7 +810,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const activeDayMode = deviceIsDayMode ?? isPreviewDayMode
 
   // Effective palette and background — follow the active day/night mode.
-  // Falls back to built-in defaults when config.dayTheme hasn't been configured yet.
+  // Day picks `dayTheme`, night picks `nightTheme` when set, otherwise falls
+  // back to the page-level palette / backgroundColor (pre-#21 v2 behaviour).
   // Memoized so the reference stays stable across drag ticks (otherwise every
   // mouse move would invalidate the WidgetPreview React.memo cache via a new
   // palette object literal even though contents are unchanged).
@@ -729,12 +819,12 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     () =>
       activeDayMode
         ? (dayTheme?.palette ?? DAY_PALETTE_DEFAULT)
-        : (page.palette ?? DEFAULT_PAGE_PALETTE),
-    [activeDayMode, dayTheme?.palette, page.palette]
+        : (nightTheme?.palette ?? page.palette ?? DEFAULT_PAGE_PALETTE),
+    [activeDayMode, dayTheme?.palette, nightTheme?.palette, page.palette]
   )
   const effectiveBgColor: string = activeDayMode
     ? (dayTheme?.bgColor ?? DAY_BG_DEFAULT)
-    : page.backgroundColor
+    : (nightTheme?.bgColor ?? page.backgroundColor)
 
   // When a device is connected, the device's reported `isDayMode` takes
   // precedence over the local preview flag (the live device is the source
@@ -1137,6 +1227,18 @@ export default function Canvas({ page, topBar }: CanvasProps) {
             {String(selectedWidgetIds.length)} selected
           </span>
         )}
+
+        {/* "Preview as" day/night toggle — independent from the panel editor
+            mode so the user can edit one theme while previewing the other.
+            Disabled when a device is connected because its reported isDayMode
+            is the single source of truth in that case (#21 v2). */}
+        <PreviewAsToggle
+          previewDayMode={isPreviewDayMode}
+          disabled={deviceIsDayMode !== null}
+          onSelect={(next) => {
+            if (next !== isPreviewDayMode) togglePreviewTheme()
+          }}
+        />
 
         <button
           onClick={() => {
