@@ -4,7 +4,7 @@
 
 import { memo, useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, TopBarItem, Widget } from '@tmbk/canshift-core'
-import { DEFAULT_TOP_BAR_LAYOUT, TopBarMetrics } from '@tmbk/canshift-core'
+import { DEFAULT_TOP_BAR_LAYOUT, TopBarMetrics, resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -23,11 +23,13 @@ import { decideDayNightAction } from './dayNightToggle'
 // Canvas layout constants
 // ---------------------------------------------------------------------------
 
-// Display scale factor: the firmware renders at 320×240; we show it at 1.5× for
-// readability. All firmware-pixel values are multiplied by SCALE before rendering.
+// Display scale factor: the firmware renders at the target screen profile's
+// native dimensions (today: 320×240); we show it at 1.5× for readability. All
+// firmware-pixel values are multiplied by SCALE before rendering. The canvas
+// pixel dimensions are derived from the active dashboard's `targetProfile`
+// (issue #548) rather than hard-coded, so adding a new profile to the catalog
+// (#17 / #18) will reshape the preview automatically.
 const SCALE = 1.5
-const CANVAS_W = 320 * SCALE
-const CANVAS_H = 240 * SCALE
 
 // Snap grid in firmware pixels — match the firmware's minimum token dimensions.
 // X_SNAP = 40 px wide (narrowest visible column), Y_SNAP = 28 px tall (narrowest row).
@@ -648,6 +650,13 @@ interface CanvasProps {
 }
 
 export default function Canvas({ page, topBar }: CanvasProps) {
+  // Pull the target screen profile id from the active dashboard; falls back
+  // to the default profile (`crowpanel-28`, 320×240) when the field is
+  // missing on legacy configs (issue #548).
+  const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
+  const screenProfile = useMemo(() => resolveScreenProfile(targetProfileId), [targetProfileId])
+  const CANVAS_W = screenProfile.width * SCALE
+  const CANVAS_H = screenProfile.height * SCALE
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectedWidgetIds = useDashboardStore((s) => s.selectedWidgetIds)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
@@ -1115,7 +1124,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           />
         ) : (
           <span style={{ fontSize: 9, color: '#333333', letterSpacing: '0.05em' }}>
-            PREVIEW — 320 × 240
+            PREVIEW — {screenProfile.width} × {screenProfile.height}
           </span>
         )}
 
