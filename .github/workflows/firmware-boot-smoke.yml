@@ -115,7 +115,7 @@ jobs:
       #   bootloader  @ 0x1000
       #   partitions  @ 0x8000
       #   firmware    @ 0x10000  (ota_0)
-      #   spiffs      @ 0x310000
+      #   spiffs      @ 0x370000  (per ota_4mb_wifi.csv — #1120)
       # Pad to 4 MB so QEMU sees a valid full-flash image.
       - name: Merge flash binary
         run: |
@@ -143,7 +143,7 @@ jobs:
             0x1000   "$BOOT_BIN" \
             0x8000   "$PART_BIN" \
             0x10000  "$APP_BIN" \
-            0x310000 "$SPIFFS_BIN"
+            0x370000 "$SPIFFS_BIN"
 
           ls -la flash.bin
 
