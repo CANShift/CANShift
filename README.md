@@ -293,7 +293,9 @@ Full architecture docs in [`docs/`](docs/):
 
 | File | Content |
 |------|---------|
-| `overall-architecture.md` | System overview and data flow |
+| `ARCHITECTURE.md` | C4-style architecture — system context, containers, components, data flow, invariants |
+| `overall-architecture.md` | System overview and data flow (narrative companion) |
+| `RELEASE.md` | Release process — cadence, artifacts, validation, rollback |
 | `roadmap.md` | Phase breakdown and milestones |
 | `FIRST_FLASH.md` | Pre-flight checklist for first hardware power-up |
 | `usb-first-strategy.md` | Phase 1 USB communication design |
