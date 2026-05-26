@@ -1,10 +1,25 @@
 # canshift-studio-web
 
 Dash-hosted Studio renderer for the architectural shift described in #1077.
+The browser SPA that the firmware serves from its WiFi AP on port 80; live
+data flows over the firmware's WebSocket endpoint on port 81 (#1108).
 
-Phase 1 spike (#1104) shipped the scaffold and bundle-size verdict.
-Phase 3 (#1105 / #1108) — current — replaces the stub transport with a real
-WebSocket client against the firmware's `/ws` endpoint on port 81.
+Phase status (sub-issues under #1077):
+
+| Phase | Issue | What landed |
+|---|---|---|
+| 1 — bundle-size spike | #1107 | Scaffold + go/no-go verdict at ~151 KB gzip total |
+| 2 — port the editor | #1105 | Editor surfaces lifted from the Electron Studio |
+| 3 — real WS transport | #1114 | `WsClient` against the firmware `/` endpoint on port 81 |
+| 4 — firmware-embedded hosting | #1117 | `board_build.embed_files` + `wifi_ap.cpp` routes |
+
+## Stack
+
+Vite 7 + React 18 + TypeScript (strict) + Zustand 5 + Tailwind v3 + Radix UI +
+`react-router-dom` (hash router) + `@tmbk/canshift-core` (schemas, design
+tokens, validators, migrations). No Electron, no Node, no Web Serial — the
+whole package is a plain browser SPA so the firmware can serve it from
+`embed_files`.
 
 ---
 
@@ -56,6 +71,75 @@ The connect screen offers three paths:
 > laptop browser can hit `http://canshift.local` (or the AP IP) without
 > another dash trip. See `canshift-firmware/src/hal/wifi/wifi_ap.cpp` for the
 > auto-start mechanics.
+
+## Connection flow
+
+`ConnectScreen` is the only route a freshly-loaded SPA can reach without a
+connected dash. It owns three paths in the same UI:
+
+1. **Manual host/port picker** (canonical). Two text inputs default to
+   `canshift.local` + `81`. The form writes to `connection.store`, which
+   calls `WsClient.connect()`; on success the route changes to the editor
+   and `device.store.connected` flips true. The picker is the canonical
+   path because **mDNS resolution doesn't work reliably from a browser** —
+   neither Chrome nor Safari resolves `.local` hostnames consistently
+   across desktop OS / mobile browser combinations, so users pasting the
+   dash's AP IP (visible from the Settings page on the dash itself) is the
+   reliable fallback.
+2. **Mock WS** (dev only). Same form, IP `127.0.0.1`, port `8181` — points
+   at `npm run dev:mock` (see below).
+3. **Simulation mode**. Click "enter simulation mode" — seeds
+   `dashboard.store` with `DEFAULT_SIM_CONFIG`, leaves `WsClient`
+   disconnected. The editor renders against the static config so layout
+   work can happen without any backend.
+
+Reconnect is automatic with exponential backoff capped at 30 s. The
+firmware refuses a second client per transport with a `single-client only`
+text frame; the connect screen surfaces it as a distinct
+`single_client` error so the user knows another tab / the Electron Studio
+is already attached.
+
+> **Phone-less first connect** — on a fresh device the WiFi AP is dormant
+> (only the BLE mobile app or a manual toggle can bring it up). If the
+> laptop can't see the `CANShift-XXXX` SSID, walk to the dash, swipe the
+> top bar down to open Settings, and toggle **WIFI AP → ON**. The setting
+> is persisted in NVS so subsequent boots bring the AP up automatically.
+> See `canshift-firmware/src/hal/wifi/wifi_ap.cpp` for the auto-start
+> mechanics.
+
+---
+
+## Deployment
+
+The SPA is **not** deployed to a CDN — every build is bundled into the
+firmware OTA payload and served from the dash itself.
+
+```
+canshift-studio-web/dist/  (Vite output, gzipped by gzip-dist.mjs)
+        │
+        │ canshift-firmware/scripts/sync_studio_web.py
+        ▼
+canshift-firmware/data/web/*.gz + *.woff2
+        │
+        │ board_build.embed_files (platformio.ini)
+        ▼
+linker emits _binary_data_web_<path>_start / _end symbol pairs
+        │
+        ▼
+canshift-firmware/src/hal/wifi/wifi_ap.cpp builds kSpaAssets[] and
+registers one HTTP handler per row on AP start
+```
+
+Net effect: the SPA rotates atomically with the firmware OTA — there is
+no separate deploy step, no cache-bust concern, and no internet access
+required from the dash. Compile-gated by `APP_SPA_SERVE` in
+`canshift-firmware/include/app_config.h` (default `1` on
+`[env:crowpanel_28_wifi]`).
+
+Skip the SPA rebuild on the firmware side with
+`CANSHIFT_SKIP_STUDIO_WEB_BUILD=1` when iterating without touching the SPA.
+
+---
 
 ## Build
 
