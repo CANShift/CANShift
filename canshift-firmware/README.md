@@ -671,10 +671,10 @@ side, and partition-resize PR can land in any order.
 
 ## Wi-Fi OTA (issue #667)
 
-The firmware exposes an HTTP `/ota` (legacy) and `/update` (mobile) endpoint
-on its softAP for over-the-air firmware updates. The flow is intentionally
-minimal — no TLS (the AP has no cert), but every write is HMAC-authenticated
-against a per-device bearer token and an HMAC trailer on the binary itself.
+The firmware exposes an HTTP `/ota` endpoint on its softAP for over-the-air
+firmware updates. The flow is intentionally minimal — no TLS (the AP has no
+cert), but every write is HMAC-authenticated against a per-device bearer
+token and an HMAC trailer on the binary itself.
 
 > **Audience: mobile-only.** Studio no longer drives OTA — the dash-hosted
 > Studio (`canshift-studio-web/`) is served from the same firmware image it
@@ -682,8 +682,9 @@ against a per-device bearer token and an HMAC trailer on the binary itself.
 > retired in favour of the browser-based USB flasher at
 > [canshift.tmbk.ch](https://canshift.tmbk.ch) (separate repo
 > [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher),
-> #1081). The mobile app retains the WiFi-OTA path via `POST /update` so a
-> user in the car can update without a laptop.
+> #1081). The mobile app retains the WiFi-OTA path via
+> `POST http://192.168.4.1/ota` so a user in the car can update without a
+> laptop.
 
 ### Per-device bearer token
 
