@@ -48,6 +48,15 @@ The connect screen offers three paths:
    the dashboard store with `DEFAULT_SIM_CONFIG` so the editor renders
    without any backend.
 
+> **Phone-less first connect** — on a fresh device the WiFi AP is dormant
+> (only the BLE mobile app or a manual toggle can bring it up). If the laptop
+> can't see the `CANShift-XXXX` SSID, walk to the dash, swipe the top bar
+> down to open Settings, and toggle **WIFI AP → ON**. The setting is
+> persisted in NVS so subsequent boots bring the AP up automatically and the
+> laptop browser can hit `http://canshift.local` (or the AP IP) without
+> another dash trip. See `canshift-firmware/src/hal/wifi/wifi_ap.cpp` for the
+> auto-start mechanics.
+
 ## Build
 
 ```bash
@@ -132,8 +141,19 @@ TOTAL              497.38 KB raw  / 151.14 KB gzip
   file dialogs. The dash-hosted import/export endpoint is a follow-up.
 - `releasesIpc.getLatest` — release feed moves to a dash-hosted endpoint in
   phase 4.
-- `deviceConfigIpc` / `inputBindingsIpc` — these are dash-side payloads that
-  don't have dedicated WS commands yet.
+
+### Wired in the audit follow-up
+
+- `deviceConfigIpc.{read,write}` — backed by `CMD_GET_DEVICE_CONFIG` (0x03)
+  and `CMD_PUT_DEVICE_CONFIG` (0x04). The IPC validates against
+  `DeviceConfigSchema` and maps to the snake_case wire shape via
+  `deviceConfigToWire` before send. Plugged into `useDeviceConfigStore`.
+- `inputBindingsIpc.{read,write}` — backed by `CMD_GET_INPUT_BINDINGS` (0x0B)
+  and `CMD_PUT_INPUT_BINDINGS` (0x0C). Same wire ↔ domain pattern via
+  `inputBindingsToWire`. Plugged into `useInputBindingsStore`. The matching
+  firmware dispatcher handlers land in a coordinated follow-up; until then
+  the firmware acks the cmd via its `default` branch and the IPC surfaces it
+  as a no-op success / `config_not_found` empty read.
 
 ---
 
