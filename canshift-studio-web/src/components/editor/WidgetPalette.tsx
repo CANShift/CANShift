@@ -91,8 +91,16 @@ interface WidgetPaletteProps {
 
 export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
   const addWidget = useDashboardStore((s) => s.addWidget)
+  const page = useDashboardStore((s) =>
+    s.config?.pages.find((p) => p.id === pageId)
+  )
+  // Pages running a built-in template (#451) render a procedural layout — the
+  // free-form widget grid is ignored on-device, so adding widgets here would
+  // be a silent dead end. Surface the lock-out + a hint instead.
+  const templateLocked = (page?.template ?? 'custom') !== 'custom'
 
   const handleAdd = (item: PaletteItem) => {
+    if (templateLocked) return
     const id = generateId(item.type)
 
     const baseConfig = (() => {
@@ -150,7 +158,7 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
   }
 
   return (
-    <div style={{ padding: '8px 4px' }}>
+    <div style={{ padding: '8px 4px', opacity: templateLocked ? 0.4 : 1 }}>
       <div
         style={{
           fontSize: 10,
@@ -163,6 +171,19 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
       >
         Add Widget
       </div>
+      {templateLocked && (
+        <div
+          style={{
+            fontSize: 10,
+            color: TILE_LABEL,
+            padding: '4px 6px 8px',
+            lineHeight: 1.4,
+          }}
+        >
+          This page uses a built-in template — widget edits are ignored. Switch
+          the page template back to <em>Custom layout</em> to add widgets.
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {PALETTE_ITEMS.map((item) => (
           <button
@@ -170,7 +191,8 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
             onClick={() => {
               handleAdd(item)
             }}
-            title={`Add ${item.label}`}
+            disabled={templateLocked}
+            title={templateLocked ? 'Disabled — page uses a template' : `Add ${item.label}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -180,12 +202,13 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
               border: '1px solid transparent',
               borderRadius: 4,
               color: TILE_LABEL,
-              cursor: 'pointer',
+              cursor: templateLocked ? 'not-allowed' : 'pointer',
               fontSize: 12,
               textAlign: 'left',
               transition: 'all 0.1s',
             }}
             onMouseEnter={(e) => {
+              if (templateLocked) return
               e.currentTarget.style.background = TILE_HOVER_BG
               e.currentTarget.style.borderColor = TILE_HOVER_BORDER
               e.currentTarget.style.color = 'hsl(var(--text))'

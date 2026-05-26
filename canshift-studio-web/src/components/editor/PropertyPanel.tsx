@@ -6,11 +6,18 @@
 // signal binding, button colors), and the dispatch to the right widget
 // editor (#697).
 
-import type { FontFamilyId, ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
+import type {
+  FontFamilyId,
+  PageTemplate,
+  ScreenProfileId,
+  Widget,
+  WidgetType,
+} from '@tmbk/canshift-core'
 import {
   DEFAULT_FONT_FAMILY_ID,
   DEFAULT_SCREEN_PROFILE_ID,
   FONT_FAMILIES,
+  PAGE_TEMPLATES,
   SCREEN_PROFILES,
 } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -58,6 +65,20 @@ interface PropertyPanelProps {
   pageId: string
 }
 
+// Human-readable label + helper hint for each page template. Single source of
+// truth for the picker so adding a new template only requires updating this
+// table + the matching firmware renderer (issue #451).
+const PAGE_TEMPLATE_LABELS: Record<PageTemplate, { label: string; hint: string }> = {
+  custom: {
+    label: 'Custom layout',
+    hint: 'Place widgets freely on the canvas.',
+  },
+  cruise_control: {
+    label: 'Cruise control',
+    hint: 'Firmware draws +/−/SET/OFF buttons automatically. The widget list is ignored.',
+  },
+}
+
 export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const config = useDashboardStore((s) => s.config)
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
@@ -66,6 +87,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const updateTopBar = useDashboardStore((s) => s.updateTopBar)
   const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
   const setFontFamily = useDashboardStore((s) => s.setFontFamily)
+  const setPageTemplate = useDashboardStore((s) => s.setPageTemplate)
   const signals = useSignalStore((s) => s.signals)
 
   const page = config?.pages.find((p) => p.id === pageId)
@@ -220,6 +242,46 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             />
           </Field>
         </Row>
+        {/* Page template — picks how the firmware draws this page (#451).
+            `custom` keeps the legacy free-form widget grid; built-in templates
+            (e.g. `cruise_control`) render a procedural layout and ignore the
+            widgets[] array. Studio still keeps widgets[] so a user can flip
+            back to `custom` without losing a previously authored layout. */}
+        <div
+          style={{
+            fontSize: 10,
+            color: PANEL_LABEL,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: 6,
+            marginTop: 12,
+          }}
+        >
+          Template
+        </div>
+        <Field label="Layout">
+          <Select
+            value={page.template ?? 'custom'}
+            onValueChange={(raw) => {
+              setPageTemplate(page.id, raw as PageTemplate)
+            }}
+          >
+            <SelectTrigger style={inputStyle}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_TEMPLATES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {PAGE_TEMPLATE_LABELS[t].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 6, marginBottom: 4 }}>
+          {PAGE_TEMPLATE_LABELS[page.template ?? 'custom'].hint}
+        </div>
+
         <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 12 }}>
           Select a widget to edit its properties.
         </div>
