@@ -22,20 +22,25 @@ import type {
 import {
   DeviceConfigSchema,
   DeviceConfigWireSchema,
+  InputBindingsConfigSchema,
+  InputBindingsConfigWireSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
+  inputBindingsFromWire,
+  inputBindingsToWire,
 } from '@tmbk/canshift-core'
 import { getWsClient } from './ws-client'
 
 // ---------------------------------------------------------------------------
 // Firmware command opcodes — sourced from `canshift-firmware/src/hal/usb/usb_comm.h`
 // (the legacy Electron studio mirrors these same bytes, the firmware header is
-// canonical). The device-config opcodes (0x03/0x04) occupy the next free slot
-// pair after CMD_PUSH_CONFIG and are wired here on the studio-web side; the
-// matching firmware dispatcher lands in a coordinated follow-up. Until then
-// the firmware's `default` branch acks every unknown cmd with `{status:"ok"}`,
-// so `put` succeeds without persistence and `get` returns no config — both
-// surface as a "no_config" outcome to callers.
+// canonical). The device-config opcodes (0x03/0x04) and input-bindings opcodes
+// (0x0B/0x0C) occupy the next free slots in the existing dispatcher table and
+// are wired here on the studio-web side; the matching firmware dispatchers
+// land in a coordinated follow-up. Until then the firmware's `default` branch
+// acks every unknown cmd with `{status:"ok"}`, so `put` succeeds without
+// persistence and `get` returns no config — both surface as a "no_config"
+// outcome to callers.
 // ---------------------------------------------------------------------------
 
 const CMD_GET_CONFIG = 0x01
@@ -46,6 +51,8 @@ const CMD_SCREEN_SETTINGS = 0x05
 const CMD_TOGGLE_DAY_NIGHT = 0x07
 const CMD_CALIBRATE_TOUCH = 0x08
 const CMD_SET_DAY_NIGHT = 0x09
+const CMD_GET_INPUT_BINDINGS = 0x0b
+const CMD_PUT_INPUT_BINDINGS = 0x0c
 const CMD_QUERY_VERSION = 0x10
 const CMD_CAN_SCAN_START = 0x20
 const CMD_CAN_SCAN_STOP = 0x21
@@ -290,11 +297,54 @@ export const deviceConfigIpc = {
   },
 }
 
+// ---------------------------------------------------------------------------
+// Input bindings (#1077 follow-up — replaces the phase-3 stub).
+//
+// Same wire↔domain pattern as device config. A missing on-device file is a
+// valid "no bindings yet" state — surface as success with an empty list so
+// the editor mounts an empty draft instead of an error.
+//
+// The firmware accepts either `{ input_bindings: [...] }` (the same wrapping
+// shape used by `/config/input_bindings.json`) or the bare array under
+// `input_bindings`. The read path normalises both into the wrapping object
+// before validating against `InputBindingsConfigWireSchema`.
+// ---------------------------------------------------------------------------
+
 export const inputBindingsIpc = {
-  read: (): Promise<{ success: boolean; config: InputBindingsConfig | null }> =>
-    Promise.resolve({ success: true, config: null }),
-  write: (_config: InputBindingsConfig): Promise<{ success: boolean; error?: string }> =>
-    Promise.resolve({ success: true }),
+  read: async (): Promise<{
+    success: boolean
+    config: InputBindingsConfig | null
+    error?: string
+  }> => {
+    const result = await getWsClient().send(CMD_GET_INPUT_BINDINGS)
+    if (!result.ok) {
+      if (result.error === 'config_not_found') {
+        return { success: true, config: { inputBindings: [] } }
+      }
+      return { success: false, config: null, error: result.error ?? 'unknown_error' }
+    }
+    const raw = result.data?.input_bindings
+    if (raw === undefined) {
+      return { success: true, config: { inputBindings: [] } }
+    }
+    const wireDoc = Array.isArray(raw) ? { input_bindings: raw } : raw
+    const parsed = InputBindingsConfigWireSchema.safeParse(wireDoc)
+    if (!parsed.success) {
+      return { success: false, config: null, error: 'invalid_input_bindings' }
+    }
+    return { success: true, config: inputBindingsFromWire(parsed.data) }
+  },
+
+  write: async (config: InputBindingsConfig): Promise<{ success: boolean; error?: string }> => {
+    const parsed = InputBindingsConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return { success: false, error: 'invalid_input_bindings' }
+    }
+    const wire = inputBindingsToWire(parsed.data)
+    const result = await getWsClient().send(CMD_PUT_INPUT_BINDINGS, wire)
+    if (result.ok) return { success: true }
+    return { success: false, error: result.error ?? 'unknown_error' }
+  },
 }
 
 export const appIpc = {
