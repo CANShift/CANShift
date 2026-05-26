@@ -68,12 +68,12 @@ describe('Obd2PollingSchema', () => {
   })
 
   it('rejects a PID outside the byte range', () => {
-    expect(
-      Obd2PollingSchema.safeParse({ mode: 0x01, pid: -1, intervalMs: 1000 }).success
-    ).toBe(false)
-    expect(
-      Obd2PollingSchema.safeParse({ mode: 0x01, pid: 0x100, intervalMs: 1000 }).success
-    ).toBe(false)
+    expect(Obd2PollingSchema.safeParse({ mode: 0x01, pid: -1, intervalMs: 1000 }).success).toBe(
+      false
+    )
+    expect(Obd2PollingSchema.safeParse({ mode: 0x01, pid: 0x100, intervalMs: 1000 }).success).toBe(
+      false
+    )
   })
 
   it('rejects an unknown extra field (strict)', () => {
