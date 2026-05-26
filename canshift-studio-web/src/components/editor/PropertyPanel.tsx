@@ -6,7 +6,8 @@
 // signal binding, button colors), and the dispatch to the right widget
 // editor (#697).
 
-import type { Widget, WidgetType } from '@tmbk/canshift-core'
+import type { ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
+import { DEFAULT_SCREEN_PROFILE_ID, SCREEN_PROFILES } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { IconTrash } from '../icons/Icon'
@@ -58,6 +59,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const updateTopBar = useDashboardStore((s) => s.updateTopBar)
+  const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
   const signals = useSignalStore((s) => s.signals)
 
   const page = config?.pages.find((p) => p.id === pageId)
@@ -85,6 +87,40 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         >
           Page settings
         </div>
+
+        {/* Target screen profile — picks the LCD dimensions the canvas previews
+            at (issue #548). v1 ships a single entry; the dropdown is the seat
+            we extend when new boards (#17) or larger panels (#18) land. */}
+        <div
+          style={{
+            fontSize: 10,
+            color: PANEL_LABEL,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: 6,
+          }}
+        >
+          Target screen
+        </div>
+        <Field label="Profile">
+          <Select
+            value={config.targetProfile ?? DEFAULT_SCREEN_PROFILE_ID}
+            onValueChange={(raw) => {
+              setTargetProfile(raw as ScreenProfileId)
+            }}
+          >
+            <SelectTrigger style={inputStyle}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SCREEN_PROFILES.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} — {p.width}×{p.height}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
 
         <div
           style={{
