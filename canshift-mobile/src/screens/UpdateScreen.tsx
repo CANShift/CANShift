@@ -20,6 +20,7 @@ import * as OtaService from '../services/ota.service'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
 import { describeOtaErrorForUser, mapOtaError, OtaServiceError } from '../services/ota.errors'
+import { getStudioUrl, openStudioInBrowser } from '../services/open-studio'
 import { getWifiApPassword } from '../services/wifi-ap-password'
 import { useDeviceStore } from '../stores/device.store'
 import { loadOtaReleases, useOtaReleasesStore } from '../stores/ota-releases.store'
@@ -261,6 +262,14 @@ export default function UpdateScreen({ navigation }: Props) {
     [handleBleFailure, describeFlowError]
   )
 
+  const handleOpenStudio = useCallback(async () => {
+    try {
+      await openStudioInBrowser(getStudioUrl())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to open Studio')
+    }
+  }, [])
+
   const handlePush = useCallback(async () => {
     if (!localPath || !selectedRelease) return
     setStep('pushing')
@@ -386,6 +395,16 @@ export default function UpdateScreen({ navigation }: Props) {
                     }}
                   >
                     <Text style={styles.primaryBtnText}>Push firmware →</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={() => {
+                      void handleOpenStudio()
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open Studio in browser"
+                  >
+                    <Text style={styles.secondaryBtnText}>Open Studio in Browser</Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -583,6 +602,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxl,
   },
   primaryBtnText: { fontSize: Typography.md, color: Colors.white, fontWeight: '700' },
+
+  secondaryBtn: {
+    backgroundColor: 'transparent',
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xxl,
+  },
+  secondaryBtnText: { fontSize: Typography.md, color: Colors.text, fontWeight: '600' },
 
   doneCircle: {
     width: 64,
