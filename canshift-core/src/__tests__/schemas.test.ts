@@ -143,6 +143,40 @@ describe('DashboardConfigSchema', () => {
       expect(result.error.issues.some((i) => i.path.includes('targetProfile'))).toBe(true)
     }
   })
+
+  // Issues #971 + #500 — optional `fontFamily` field. Backward compatibility:
+  // dashboards predating the field must parse cleanly without one. v1 only
+  // accepts `orbitron`; new bundles extend `FontFamilyIdSchema` as they land
+  // (see `schemas/font-family.ts`).
+  it('accepts a dashboard with no fontFamily (backward compat)', () => {
+    const result = DashboardConfigSchema.safeParse(validDashboard)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.fontFamily).toBeUndefined()
+    }
+  })
+
+  it('accepts a dashboard with a known fontFamily', () => {
+    const result = DashboardConfigSchema.safeParse({
+      ...validDashboard,
+      fontFamily: 'orbitron',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.fontFamily).toBe('orbitron')
+    }
+  })
+
+  it('rejects a dashboard with an unknown fontFamily', () => {
+    const result = DashboardConfigSchema.safeParse({
+      ...validDashboard,
+      fontFamily: 'comic-sans',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('fontFamily'))).toBe(true)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------

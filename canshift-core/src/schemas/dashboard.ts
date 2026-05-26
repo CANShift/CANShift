@@ -16,6 +16,7 @@ import {
 } from '../constants/firmware-caps.js'
 
 import { HexColorSchema, SemVerSchema, WidgetLayoutSchema, WidgetStyleSchema } from './common.js'
+import { FontFamilyIdSchema } from './font-family.js'
 import { ScreenProfileIdSchema } from './screen-profile.js'
 
 // ---------------------------------------------------------------------------
@@ -544,6 +545,14 @@ export const DashboardConfigSchema = z
     // Firmware v1 reads but ignores the value; phase 2 (#17 multi-board) and
     // phase 3 (#18 multi-screen LVGL) will branch off it.
     targetProfile: ScreenProfileIdSchema.optional(),
+    // Font family the firmware should load for every text element in this
+    // dashboard (issues #971 + #500). Optional for backward compatibility —
+    // dashboards predating this field parse cleanly and are resolved to
+    // `DEFAULT_FONT_FAMILY_ID` (`orbitron`) by `resolveFontFamily` at the
+    // read side. v1 ships a single family, so the field is effectively the
+    // seat for the studio picker; firmware-side font swap lands in a
+    // follow-up PR.
+    fontFamily: FontFamilyIdSchema.optional(),
   })
   .strict()
 
