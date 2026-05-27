@@ -70,7 +70,7 @@ export interface AlertDialogTriggerProps extends Omit<PressableProps, 'onPress' 
 }
 
 export const AlertDialogTrigger = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
+  React.ComponentRef<typeof Pressable>,
   AlertDialogTriggerProps
 >(({ children, className, ...props }, ref) => {
   const { setOpen } = useAlertDialogContext()
@@ -189,7 +189,7 @@ export interface AlertDialogActionProps extends Omit<ButtonProps, 'onPress'> {
 }
 
 export const AlertDialogAction = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
+  React.ComponentRef<typeof Pressable>,
   AlertDialogActionProps
 >(({ onPress, variant = 'destructive', children, ...props }, ref) => {
   const { setOpen } = useAlertDialogContext()
@@ -214,7 +214,7 @@ export interface AlertDialogCancelProps extends Omit<ButtonProps, 'onPress'> {
 }
 
 export const AlertDialogCancel = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
+  React.ComponentRef<typeof Pressable>,
   AlertDialogCancelProps
 >(({ onPress, variant = 'outline', children, ...props }, ref) => {
   const { setOpen } = useAlertDialogContext()

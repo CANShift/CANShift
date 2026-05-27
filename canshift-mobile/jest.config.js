@@ -15,6 +15,17 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^.+\\.css$': '<rootDir>/__mocks__/styleMock.js',
+    // expo-file-system SDK 54 splits the API: the new File/Directory class-
+    // based default + a `/legacy` subpath exposing `documentDirectory`,
+    // `cacheDirectory`, `readAsStringAsync`, `createDownloadResumable`, etc.
+    // The package ships a `legacy.ts` source re-export but no
+    // `legacy.d.ts`; tsconfig maps the legacy subpath to the built `.d.ts`
+    // for typechecking. Jest needs the runtime source instead — the package
+    // has no built `.js` for legacy, only metro-transformable TS sources.
+    // This override sends jest to `node_modules/expo-file-system/src/legacy`
+    // (re-exports the actual implementation files) so test mocks of
+    // `expo-file-system/legacy` still resolve at module load.
+    '^expo-file-system/legacy$': '<rootDir>/node_modules/expo-file-system/src/legacy',
     // canshift-core publishes ESM-only "exports" (import/types only) and the
     // dist files use ESM syntax that jest's CJS resolver can't load directly.
     // Map to a small re-export shim that hand-picks the symbols mobile unit

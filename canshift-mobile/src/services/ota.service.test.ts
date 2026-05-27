@@ -1,10 +1,13 @@
 // ota.service.test.ts — fetchReleases, downloadFirmware, verifyFirmware,
 // pushFirmware (HMAC trailer staging)
 //
-// We mock `expo-file-system` to a tiny in-memory FS so we can drive the
-// service without touching a real device. Network calls go through a
-// jest-mocked global `fetch`. `expo-constants` is mocked so the OTA secret
-// loader returns the dev fallback deterministically.
+// We mock `expo-file-system/legacy` to a tiny in-memory FS so we can drive
+// the service without touching a real device. (Expo SDK 54 moved the
+// classic FS primitives the OTA service depends on — readAsStringAsync,
+// createDownloadResumable — to the `/legacy` subpath; see ota.service.ts.)
+// Network calls go through a jest-mocked global `fetch`. `expo-constants`
+// is mocked so the OTA secret loader returns the dev fallback
+// deterministically.
 
 // ---------------------------------------------------------------------------
 // In-memory expo-file-system mock
@@ -19,7 +22,7 @@ const mockFs: Record<string, MockFile> = {}
 let mockNextDownloadBytes: Uint8Array = new Uint8Array(0)
 let mockNextDownloadShouldThrow: Error | null = null
 
-jest.mock('expo-file-system', () => {
+jest.mock('expo-file-system/legacy', () => {
   // Inline base64 codecs — jest forbids referencing top-level `Buffer` from
   // the mock factory, so we use the global `btoa` / `atob` over binary
   // strings.
@@ -183,7 +186,7 @@ function captureStagedOnDelete(out: { bytes?: Uint8Array }, stagedPath: string):
   // jest.requireMock returns the same module factory we registered above, so
   // we know the shape; the `unknown` cast keeps the boundary explicit without
   // pulling in @types/expo-file-system here.
-  const fs = jest.requireMock('expo-file-system') as unknown as { deleteAsync: jest.Mock }
+  const fs = jest.requireMock('expo-file-system/legacy') as unknown as { deleteAsync: jest.Mock }
   const originalDeleteAsync = fs.deleteAsync.getMockImplementation()
   fs.deleteAsync.mockImplementationOnce((uri: string, opts?: unknown): Promise<void> => {
     if (uri === stagedPath) {

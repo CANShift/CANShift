@@ -5,7 +5,7 @@
 // per-service so cache TTL assertions stay deterministic.
 
 import { ReleasesService } from './releases.service'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 
 // ---------------------------------------------------------------------------
 // expo-file-system mock — in-memory filesystem
@@ -13,7 +13,7 @@ import * as FileSystem from 'expo-file-system'
 
 const mockFs = new Map<string, string>()
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   __esModule: true,
   documentDirectory: '/mock-document-dir/',
   readAsStringAsync: jest.fn((path: string) => {
