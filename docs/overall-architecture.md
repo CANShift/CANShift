@@ -23,51 +23,57 @@ Hardware context:
                             - USB JSON-lines on UART0
                             - BLE GATT (TELE/STATUS/SETTINGS/CMD)
                             - WiFi AP — HTTP on 80, WS on 81 (#1108)
-                            - Embeds canshift-studio-web SPA via
-                              board_build.embed_files (#1077 phase 4)
+                            - Serves canshift-studio-web SPA from
+                              SPIFFS data partition (#1077 phase 4 / #1123)
                                           │
-        ┌─────────────────┬───────────────┼─────────────────┬─────────────────┐
-        ▼                 ▼               ▼                 ▼                 ▼
-  CAN bus (ECU)     USB (115200       BLE GATT         WiFi AP            WiFi AP
-                     JSON lines)                       — HTTP/WS          — POST /ota
-                          ▲                ▲                ▲                 ▲
-                          │                │                │                 │
-              ┌───────────┴────────┐       │     ┌──────────┴─────────┐       │
-              │  canshift-studio   │       │     │ canshift-studio-web│       │
-              │  (Electron, LEGACY │       │     │ (dash-hosted, the  │       │
-              │   until phase 3    │       │     │  canonical Studio  │       │
-              │   cutover)         │       │     │  since #1077)      │       │
-              │  - USB serial      │       │     │  - Browser SPA     │       │
-              │  - Web Serial      │       │     │    served from the │       │
-              │    flasher         │       │     │    firmware itself │       │
-              │  - electron-       │       │     │  - Live data via   │       │
-              │    builder         │       │     │    WS on port 81   │       │
-              └────────────────────┘       │     └────────────────────┘       │
-                                           │                                  │
-                                           │     ┌──────────────────────┐     │
-                                           │     │  canshift-flasher    │     │
-                                           │     │  (separate repo,     │     │
-                                           │     │  #1081 — browser     │     │
-                                           │     │  esptool hosted at   │     │
-                                           │     │  canshift.tmbk.ch)   │     │
-                                           │     │  - First-flash       │     │
-                                           │     │  - Recovery          │     │
-                                           │     │  - Partition migrate │     │
-                                           │     └──────────────────────┘     │
-                                           │                                  │
-                                  ┌────────┴────────┐                ┌────────┴────────┐
-                                  │ canshift-mobile │                │ canshift-mobile │
-                                  │ (iOS / Android) │                │ (Wi-Fi OTA only)│
-                                  │ - BLE telemetry │                │ - POST /ota on  │
-                                  │ - Settings push │                │   192.168.4.1   │
-                                  │ - Triggers AP   │                │   with HMAC     │
-                                  └─────────────────┘                └─────────────────┘
+              ┌───────────────────────────┼─────────────────────────┐
+              ▼                           ▼                         ▼
+        CAN bus (ECU)                BLE GATT                   WiFi AP
+                                                          ┌────────┴─────────┐
+                                                          ▼                  ▼
+                                                       HTTP/WS          POST /ota
+                                                          ▲                  ▲
+                                                          │                  │
+                                                ┌─────────┴────────┐         │
+                                                │canshift-studio-web│         │
+                                                │(dash-hosted, the │         │
+                                                │ canonical Studio │         │
+                                                │ since #1077)     │         │
+                                                │- Browser SPA     │         │
+                                                │  served from the │         │
+                                                │  firmware itself │         │
+                                                │- Live data via   │         │
+                                                │  WS on port 81   │         │
+                                                └──────────────────┘         │
+                                                                             │
+              ┌──────────────────────┐                                       │
+              │  canshift-flasher    │                                       │
+              │  (separate repo,     │                                       │
+              │  #1081 — browser     │                                       │
+              │  esptool hosted at   │                                       │
+              │  canshift.tmbk.ch)   │                                       │
+              │  - First-flash       │                                       │
+              │  - Recovery          │                                       │
+              │  - Partition migrate │                                       │
+              └──────────────────────┘                                       │
+                                                                             │
+                                                                  ┌──────────┴──────┐
+                                                                  │ canshift-mobile │
+                                                                  │ (iOS / Android) │
+                                                                  │ - BLE telemetry │
+                                                                  │ - Settings push │
+                                                                  │ - Triggers AP   │
+                                                                  │ - Wi-Fi OTA via │
+                                                                  │   POST /ota on  │
+                                                                  │   192.168.4.1   │
+                                                                  │   with HMAC     │
+                                                                  └─────────────────┘
 
                             canshift-core (TypeScript library)
                             ──────────────────────────────────
                             Config types · Zod schemas · validation · migration chain
                             Design tokens (DARK_TOKENS, statusDanger, scrim, …)
-                            Consumed by studio, studio-web, and mobile;
+                            Consumed by studio-web and mobile;
                             mirrored in firmware src/config/config_types.h
 ```
 
@@ -131,29 +137,6 @@ StorageDriver → atomic writes to SPIFFS
 ConfigLoader::reloadAll() → PageManager / WidgetFactory rebuild UI
 ```
 
-### Bench configuration workflow — Electron Studio (legacy until cutover)
-
-```
-Developer / User
-    │
-    │ opens/edits
-    ▼
-canshift-studio (Electron, legacy)
-    │ saves JSON (dayTheme is part of dashboard.json since schema 1.14 / #901)
-    ▼
-dashboard.json / signals.json / device.json
-    │
-    │ USB serial (115200 baud, JSON framing)   ─OR─   WS on port 81 (#1108)
-    ▼
-ESP32 (UsbComm task — shared dispatcher with WS)
-    │
-    ▼
-StorageDriver → writes to SPIFFS
-    │
-    ▼
-ConfigLoader::reloadAll() → PageManager / WidgetFactory rebuild UI
-```
-
 ### First-flash / recovery — USB flasher (canshift.tmbk.ch, #1081)
 
 ```
@@ -205,7 +188,6 @@ Both the desktop app and the firmware must agree on the schema.
 canshift-core (TypeScript)
     │ defines schema, validators, migrations, design tokens
     ├── consumed by canshift-studio-web (dash-hosted Studio, #1077)
-    ├── consumed by canshift-studio    (Electron, legacy until cutover)
     ├── consumed by canshift-mobile    (BLE STATUS, screen-settings bounds, tokens)
     └── mirrored in canshift-firmware/src/config/config_types.h (C++ structs)
 
@@ -213,9 +195,9 @@ When schema changes:
   1. Update canshift-core types and bump version
   2. Add migration in canshift-core/src/migrations/
   3. Update config_types.h in firmware to match
-  4. Both Studios run the migration chain on load; firmware does NOT
-     migrate — it logs VER_MISMATCH and reads what it can. Push
-     pre-migrated configs.
+  4. Studio runs the migration chain on load; firmware does NOT migrate
+     — it logs VER_MISMATCH and reads what it can. Push pre-migrated
+     configs.
 ```
 
 ---

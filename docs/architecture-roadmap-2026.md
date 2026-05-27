@@ -28,14 +28,10 @@ assumptions.
 | 4 — firmware-embedded hosting | #1117 | shipped | `board_build.embed_files` + `kSpaAssets[]` in `wifi_ap.cpp` |
 | 4a — partition repartition | #1117 / #1120 | shipped | Move SPIFFS from 0x310000 (832 KB) to 0x370000 (512 KB); 1856 KB app slots |
 | 5 — first-flash story | #1081 | shipped | Browser-based USB flasher at canshift.tmbk.ch (separate repo `tburkhalterr/canshift-flasher`) |
-| 6 — Electron Studio retirement | n/a | pending | Removal lands once dash-hosted Studio reaches parity in production |
+| 6 — Electron Studio retirement | n/a | shipped | `canshift-studio/` Electron package dropped; version source-of-truth moved to `canshift-firmware/package.json` |
 
 **Cross-cutting follow-ups** still open:
 
-- `canshift-studio/src/hooks/useFirmwareFlash.ts` and
-  `scripts/secure_boot_first_flash.sh`: update `0x310000` → `0x370000` so
-  the legacy Studio's flasher can image a #1117+ build before the package
-  retires.
 - Theme 1 (wire contract) gains the new device-config + input-bindings
   command pairs (0x03 / 0x04 / 0x0B / 0x0C, wired host-side in #1118; the
   firmware dispatcher handler lands alongside this wave).

@@ -1,6 +1,6 @@
 # Release Process — CANShift
 
-How a version bump in `canshift-studio/package.json` becomes a published
+How a version bump in `canshift-firmware/package.json` becomes a published
 GitHub Release with firmware artifacts attached to it. Concrete steps,
 what ships, what doesn't, how to validate before promoting, and how to
 roll back.
@@ -16,7 +16,7 @@ roll back.
 
 CANShift releases on **every version bump merged to `main`**. There is no
 fixed schedule. The pipeline keys off the `version` field in
-[`canshift-studio/package.json`](../canshift-studio/package.json):
+[`canshift-firmware/package.json`](../canshift-firmware/package.json):
 
 - Version unchanged → workflow exits idempotently. No release created.
 - Version new → workflow builds firmware, creates a **draft** GitHub
@@ -52,12 +52,11 @@ The following are intentionally absent from GitHub Releases. Each has its
 own distribution path:
 
 - **Electron Studio installer** (`canshift-studio.dmg`, `.exe`,
-  `.AppImage`). The Electron app is legacy — it stays compilable for the
-  cutover window but is no longer published. The canonical Studio is
-  now [`canshift-studio-web`](../canshift-studio-web/), and that ships
-  embedded in the firmware SPIFFS image above. Users get the matching
-  Studio version automatically because it rides on the firmware they
-  flashed.
+  `.AppImage`). The Electron `canshift-studio/` package was decommissioned
+  post-cutover; the canonical Studio is now
+  [`canshift-studio-web`](../canshift-studio-web/), and that ships in the
+  firmware SPIFFS image above. Users get the matching Studio version
+  automatically because it rides on the firmware they flashed.
 - **Mobile app artifacts** (`.ipa`, `.apk`, `.aab`). `canshift-mobile` is
   distributed through TestFlight (iOS) and the Google Play Store
   (Android) on its own cadence, decoupled from firmware versioning.
@@ -81,13 +80,12 @@ contract.
    ```
    type/<package>/short-description   ← e.g. chore/release/v0.12.0
    ```
-2. Edit [`canshift-studio/package.json`](../canshift-studio/package.json),
+2. Edit [`canshift-firmware/package.json`](../canshift-firmware/package.json),
    bump the `version` field:
    ```jsonc
    {
-     "name": "canshift-studio",
-     "version": "0.12.0",  // ← bump this
-     ...
+     "name": "canshift-firmware",
+     "version": "0.12.0"  // ← bump this
    }
    ```
 3. (Optional) Update `README.md` / `CHANGELOG.md` if your bump warrants
@@ -101,11 +99,10 @@ contract.
 
 **The same value flows to the firmware automatically.**
 [`canshift-firmware/scripts/extra_targets.py`](../canshift-firmware/scripts/extra_targets.py)
-reads `canshift-studio/package.json` and injects the version as the
+reads `canshift-firmware/package.json` and injects the version as the
 `APP_VERSION_STR` macro into the firmware build. The splash screen, BLE
 STATUS characteristic, and `/status` HTTP endpoint all surface this
-value. Studio and firmware therefore cannot disagree on the version
-they're paired with.
+value. Release tag and firmware splash therefore cannot disagree.
 
 ---
 
@@ -117,7 +114,7 @@ on every push to `main`. Two jobs in series:
 ### Job 1 — `check-version`
 
 1. Checks out the repo.
-2. Reads `canshift-studio/package.json` `version` → exposes
+2. Reads `canshift-firmware/package.json` `version` → exposes
    `tag=vX.Y.Z`.
 3. Queries `gh release view vX.Y.Z`. If a Release with that tag already
    exists, sets `should_release=false`. The next job is gated on this
@@ -304,7 +301,7 @@ data exceeding it causes `mkspiffs` to abort. Fix path:
 
 Two root causes:
 - **Macro injection broken.** `extra_targets.py` failed to read
-  `canshift-studio/package.json` (permissions, malformed JSON, missing
+  `canshift-firmware/package.json` (permissions, malformed JSON, missing
   `version` field). Run `python canshift-firmware/scripts/extra_targets.py`
   locally inside a `pio run -v` to see the trace.
 - **The splash label literal was changed.** The CI assertion relies on
@@ -340,11 +337,6 @@ job once it's green.
 
 ## Decommissioning History
 
-Context for "wait, why is the studio package.json the version source of
-truth if studio is being decommissioned?" — short answer: it predates
-the dash-hosted Studio and we haven't migrated the source-of-truth file
-yet.
-
 - **Before #1077.** Releases attached both an Electron Studio installer
   (DMG / NSIS / AppImage built by `electron-builder`) and the firmware
   binaries. Users installed Studio locally, plugged the dash via USB,
@@ -358,7 +350,7 @@ yet.
   the firmware they're running.
 - **#1106 — pipeline trimmed to firmware-only.** Electron installer
   builds + mobile artifact uploads removed from the workflow. The
-  Electron Studio is kept compilable for the cutover window but no
+  Electron Studio was kept compilable for the cutover window but no
   longer published.
 - **#1117 — partition-table shift.** SPIFFS moved from `0x310000` to
   `0x370000` to enlarge the app slots. Pre-#1117 dashes must be
@@ -369,14 +361,16 @@ yet.
   Moving the gzipped SPA into `data/web/` (SPIFFS) recovered ~185 KB
   of flash. The pipeline now produces and publishes a separate
   `spiffs.bin` artifact for first-flash.
-- **Future — `canshift-studio/` removal.** Once the dash-hosted Studio
-  passes end-to-end validation on a fielded device, the Electron
-  package is dropped from the monorepo. The version source-of-truth
-  moves to either `canshift-firmware/package.json` or a root `VERSION`
-  file. Both
+- **`canshift-studio/` decommission (this PR).** With the dash-hosted
+  Studio validated end-to-end on fielded devices and the standalone
+  flasher (`canshift.tmbk.ch`) covering first-flash + recovery, the
+  Electron package was dropped from the monorepo. The version
+  source-of-truth moved from `canshift-studio/package.json` to
+  `canshift-firmware/package.json` — firmware is the only artifact in
+  releases now, so the version naturally tracks the firmware.
   [`release.yml`](../.github/workflows/release.yml) and
   [`extra_targets.py`](../canshift-firmware/scripts/extra_targets.py)
-  are the only two readers; they'll be updated together in the same PR.
+  are the only two readers; both were updated in the same PR.
 
 ---
 

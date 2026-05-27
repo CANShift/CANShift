@@ -49,6 +49,6 @@
 
 - Repo root: [`../README.md`](../README.md)
 - Firmware: [`../canshift-firmware/README.md`](../canshift-firmware/README.md)
-- Studio: [`../canshift-studio/README.md`](../canshift-studio/README.md)
+- Studio: [`../canshift-studio-web/README.md`](../canshift-studio-web/README.md)
 - Mobile: [`../canshift-mobile/README.md`](../canshift-mobile/README.md)
 - Core: [`../canshift-core/README.md`](../canshift-core/README.md)

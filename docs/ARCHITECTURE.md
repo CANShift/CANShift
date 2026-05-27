@@ -16,16 +16,16 @@ level zooms one step deeper, from "what is this thing in the world" down to
 
 CANShift is a configurable real-time automotive dashboard that reads a
 vehicle's CAN bus and renders gauges, bars, labels and warnings on a small
-ESP32-driven touchscreen. The system is a monorepo of four packages:
+ESP32-driven touchscreen. The system is a monorepo of three packages:
 [`canshift-core`](../canshift-core/) (TypeScript schemas + design tokens —
 the single source of truth for config),
 [`canshift-firmware`](../canshift-firmware/) (C++17 / Arduino / PlatformIO
-ESP32 application), [`canshift-studio-web`](../canshift-studio-web/) (a
-dash-hosted React SPA that ships embedded in the firmware data partition),
-and [`canshift-studio`](../canshift-studio/) (the legacy Electron editor
-being decommissioned). [`canshift-mobile`](../canshift-mobile/) (React
-Native, deferred from the active workstream) handles in-car BLE telemetry
-and Wi-Fi OTA, and the standalone
+ESP32 application), and [`canshift-studio-web`](../canshift-studio-web/) (a
+dash-hosted React SPA that ships in the firmware SPIFFS data partition —
+the canonical Studio since the Electron `canshift-studio/` package was
+decommissioned post-cutover). [`canshift-mobile`](../canshift-mobile/)
+(React Native, deferred from the active workstream) handles in-car BLE
+telemetry and Wi-Fi OTA, and the standalone
 [`canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) repo
 (deployed to [canshift.tmbk.ch](https://canshift.tmbk.ch)) covers
 first-flash and recovery over Web Serial.
@@ -87,7 +87,6 @@ graph TD
     subgraph monorepo["Monorepo source (build-time only)"]
         core["canshift-core<br/>(TypeScript library)<br/>Zod schemas · migrations ·<br/>design tokens"]
         studio_web_src["canshift-studio-web<br/>(Vite + React + Zustand)"]
-        studio_legacy["canshift-studio<br/>(Electron — LEGACY,<br/>retiring post-cutover)"]
         mobile_src["canshift-mobile<br/>(Expo / React Native —<br/>deferred from active scope)"]
     end
 
@@ -99,7 +98,6 @@ graph TD
     phone["Phone<br/>(canshift-mobile install)"]
 
     core -- "build artifacts<br/>(types + Zod)" --> studio_web_src
-    core -- "build artifacts<br/>(types + Zod)" --> studio_legacy
     core -- "build artifacts<br/>(types + Zod)" --> mobile_src
     core -- "mirrored to<br/>config_types.h" --> fw
     core -- "CURRENT_SCHEMA_VERSION<br/>injected via<br/>extra_targets.py" --> fw
@@ -110,8 +108,6 @@ graph TD
     laptop -- "WS on :81<br/>(JSON frames,<br/>same dispatch as USB)" --> fw
     phone -- "BLE GATT" --> fw
     phone -- "POST /ota<br/>(HMAC trailer)" --> fw
-
-    studio_legacy -- "USB JSON-lines<br/>(115200 baud)" --> fw
 
     laptop -- "first-flash:<br/>Web Serial" --> flasher_repo
 ```
@@ -132,9 +128,6 @@ graph TD
   not the OTA `firmware.bin`. (Original #1077 plan embedded them via
   `board_build.embed_files`; that was reverted when it overran the app
   partition.)
-- `canshift-studio` (Electron) shares the same TypeScript surface as
-  `canshift-studio-web` for config validation. It is being kept compilable
-  for the cutover window only — no new feature work targets it.
 - `canshift-mobile` is currently deferred. The BLE + OTA paths are still
   validated in firmware, but the mobile half of phone-driven features
   (e.g. dash timer, #285) is out of scope until the firmware + dash-hosted
@@ -506,10 +499,13 @@ runs as a PlatformIO `extra_scripts` hook on every env and injects three
 build-time macros:
 
 - `APP_VERSION_STR` — read from
-  [`canshift-studio/package.json`](../canshift-studio/package.json)
+  [`canshift-firmware/package.json`](../canshift-firmware/package.json)
   `version` field. The splash screen, BLE STATUS char, and `/status` HTTP
   endpoint all read this. The release pipeline asserts the literal
-  appears in the linked ELF before publishing.
+  appears in the linked ELF before publishing. Source-of-truth moved here
+  from `canshift-studio/package.json` once the Electron Studio package was
+  decommissioned post-cutover — firmware is now the only artifact in
+  releases, so the version naturally tracks the firmware.
 - `CONFIG_SCHEMA_VERSION` — mirrored from
   [`canshift-core/src/index.ts`](../canshift-core/src/index.ts)
   `CURRENT_SCHEMA_VERSION`. Hard-fails the build if the literal is missing.
@@ -544,7 +540,7 @@ schema-mismatch error frame, not silently corrupt.)
 
 Produced by [`.github/workflows/release.yml`](../.github/workflows/release.yml)
 on every merge to `main` that bumps
-[`canshift-studio/package.json`](../canshift-studio/package.json) version:
+[`canshift-firmware/package.json`](../canshift-firmware/package.json) version:
 
 | Artifact                                                | Use                                              |
 |---------------------------------------------------------|--------------------------------------------------|
@@ -562,11 +558,6 @@ procedure.
 What's NOT in this architecture today but is planned. None of these is
 ready for the diagram above; this section is the holding pen.
 
-- **`canshift-studio` decommission** — once the dash-hosted Studio passes
-  end-to-end validation on a fielded device, the Electron app is dropped
-  from the monorepo. The version source-of-truth shifts to either
-  `canshift-firmware/package.json` or a root `VERSION` file. Tracked
-  alongside #1077.
 - **OBD-II v2 — multi-ECU, ISO-TP, Modes 02-09.** Current
   [`obd2_poller`](../canshift-firmware/src/can/obd2_poller.h) handles
   Mode 01 single-ECU request/response. Multi-ECU arbitration, ISO-TP

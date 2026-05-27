@@ -2,10 +2,11 @@
 
 > Pre-flight audit of every component the end-user crosses between **plugging
 > a virgin ESP32 into USB** and **editing a dashboard from a browser tab over
-> the dash's WiFi AP**. Scope is "everything Studio Electron does today, but
-> served by the dash itself". The Electron `canshift-studio` package stays
-> read-only as the reference implementation until the dash-hosted path is
-> validated end-to-end.
+> the dash's WiFi AP**. Scope was "everything Studio Electron does today, but
+> served by the dash itself". The audit ran while the Electron
+> `canshift-studio` package was still in-tree as a read-only reference; that
+> package has since been decommissioned (see `RELEASE.md` → Decommissioning
+> History).
 
 ## TL;DR
 

@@ -4,9 +4,9 @@
 // referenced by both the Studio canvas preview and (eventually) the mobile
 // renderer when it grows day-mode support. Lives in canshift-core so every
 // consumer pulls the same hex values — the previous Studio-local copy in
-// `canshift-studio/src/constants/theme.ts` drifted out of sync with the
-// firmware whenever the renderer team tweaked a colour without updating the
-// preview.
+// the (now-decommissioned) Electron `canshift-studio/src/constants/theme.ts`
+// drifted out of sync with the firmware whenever the renderer team tweaked a
+// colour without updating the preview.
 //
 // Issue #901: share theme defaults across packages.
 

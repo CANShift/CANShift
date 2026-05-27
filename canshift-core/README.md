@@ -11,21 +11,18 @@
 - **Configuration types** — `DashboardConfig`, `Widget` discriminated union, `PageConfig`, `TopBarConfig`, `ButtonAction`, `DeviceConfig`, `SignalConfig`, `InputBindingsConfig`
 - **Validation** — runtime checks on dashboard, signal, and device configs
 - **Schema migrations** — versioned chain that brings older configs forward to `CURRENT_SCHEMA_VERSION`
-- **Design tokens** — `DARK_TOKENS` palette + `tokensToCssVars` consumed by both `canshift-studio/` (Electron, legacy) and `canshift-studio-web/` (dash-hosted) via their respective generated `src/styles/tokens.generated.css`. Recently extended in #1097 with `statusDanger`, `statusDangerDim`, and `scrim` for danger-state widget surfaces and dialog backdrops — exposed as `--status-danger`, `--status-danger-dim`, `--scrim` CSS variables.
+- **Design tokens** — `DARK_TOKENS` palette + `tokensToCssVars` consumed by `canshift-studio-web/` (dash-hosted Studio) via its generated `src/styles/tokens.generated.css`. Recently extended in #1097 with `statusDanger`, `statusDangerDim`, and `scrim` for danger-state widget surfaces and dialog backdrops — exposed as `--status-danger`, `--status-danger-dim`, `--scrim` CSS variables.
 - **Wire-format schemas** — `DeviceConfigWireSchema`, `InputBindingsConfigWireSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, ECU profiles, hardware profiles
 
 It is pure TypeScript with no Node.js, browser, or React Native APIs. Today
-it is consumed by `canshift-studio` (Electron, legacy), `canshift-studio-web`
-(dash-hosted Studio, #1077), and `canshift-mobile`. IPC return-shape types
-are intentionally **not** shipped from here — they live in
-`canshift-studio/shared/ipc-contract.ts` so core can stay Electron-free, and
-the dash-hosted Studio re-uses the same transport surface via a thin
-adapter in `canshift-studio-web/src/transport/`.
+it is consumed by `canshift-studio-web` (dash-hosted Studio, #1077) and
+`canshift-mobile`. Transport-shape types live in
+`canshift-studio-web/src/transport/` so core can stay browser/Node-neutral.
 
 It does **not** contain:
 
 - Firmware C++ code (lives in `canshift-firmware/`)
-- UI components (live in `canshift-studio/src/`)
+- UI components (live in `canshift-studio-web/src/`)
 - Electron, Node, or React Native specific APIs
 
 ---
@@ -272,7 +269,6 @@ The Jest suite under `src/__tests__/` covers migrations, dashboard validation (f
 
 ## Connections To Other Projects
 
-- **canshift-studio-web** (dash-hosted Studio, #1077) — primary consumer going forward; imports types, validators, migrations, design tokens, and re-uses the same transport surface as the Electron package via a thin adapter
-- **canshift-studio** (Electron, legacy) — same consumer set; kept until phase 3 cutover. IPC return shapes still live here (`shared/ipc-contract.ts`) to keep core Electron-free
+- **canshift-studio-web** (dash-hosted Studio, #1077) — canonical Studio since the Electron package was decommissioned; imports types, validators, migrations, design tokens
 - **canshift-firmware** — `config_types.h` mirrors these types in C++; loaders read the same JSON shapes. The firmware also consumes `DARK_TOKENS` indirectly through the embedded dash-hosted Studio SPA (#1077 phase 4)
 - **canshift-mobile** — consumes the same package directly when it needs config or telemetry types (BLE STATUS schema, screen-settings bounds, design tokens)

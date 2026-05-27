@@ -1,4 +1,4 @@
-// canshift-studio/src/components/icons/SensorIcons.tsx
+// canshift-studio-web/src/components/icons/SensorIcons.tsx
 // Sensor icon set sourced from Phosphor Icons (Fill weight, MIT).
 // Mirrors the firmware bundle in canshift-firmware/data/assets/sensor_*.bin.
 // Public API (SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS, ICON_MAP)

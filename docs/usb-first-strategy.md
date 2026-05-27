@@ -1,8 +1,11 @@
 # USB-First Strategy — Decision Record
 
-> **Status:** Shipped. USB serial is the live bench/config transport between
-> `canshift-studio` and the ESP32 firmware. BLE + WiFi-OTA shipped later for the
-> in-car path via `canshift-mobile` (see `overall-architecture.md`).
+> **Status:** Historical. USB serial was the original bench/config transport
+> between the now-decommissioned `canshift-studio` Electron app and the ESP32
+> firmware. BLE + WiFi-OTA shipped later for the in-car path via
+> `canshift-mobile`, and the dash-hosted Studio (`canshift-studio-web`) took
+> over bench config via WebSocket on port 81 (#1077). The USB serial dispatcher
+> in `usb_comm.cpp` is still the canonical command surface — WS shares it.
 >
 > This document is preserved as a record of *why* USB was the first transport
 > and what the protocol looks like today. For the canonical command list, see
@@ -75,17 +78,17 @@ Desktop app                     Firmware
     │                               │
 ```
 
-### Studio side
+### Studio side (historical)
 
-Implemented in
-[`canshift-studio/main/services/usb.service.ts`](../canshift-studio/main/services/usb.service.ts):
-- `SerialPort.list()` enumerates real ports via the `serialport` Node module
-- `connect(path)` opens a real `SerialPort` at 115200 baud
-- `ReadlineParser` parses `\n`-delimited JSON responses
-- `pushConfig`, `getStatus`, `toggleDayNight`, etc. dispatch the commands above
+The Electron Studio (`canshift-studio/`, now decommissioned) implemented the
+desktop side via the `serialport` Node module: `SerialPort.list()` to enumerate
+ports, `SerialPort.open(path)` at 115200 baud, `ReadlineParser` for `\n`-delimited
+JSON responses, and `pushConfig` / `getStatus` / `toggleDayNight` etc. dispatching
+the commands above. The same module also handled firmware flashing over USB.
 
-Firmware flashing reuses the same module via
-[`firmware.service.ts`](../canshift-studio/main/services/firmware.service.ts).
+The canonical Studio today (`canshift-studio-web/`) talks to the firmware over
+WebSocket on port 81 instead — the firmware-side dispatcher (`UsbComm::handleLine`)
+is shared between USB and WS, so the command shapes carried over.
 
 ### Firmware side
 
@@ -117,16 +120,18 @@ Implemented in
 
 ## What Came After
 
-USB was *not* removed when wireless landed. It is still:
+USB serial in the firmware (`UsbComm`) was *not* removed when wireless landed.
+It is still:
 
-- The flashing path (used by Studio and `esptool`)
-- The primary bench-side config path
-- The diag/log monitoring path
-- A fallback if BLE/WiFi fails
+- A fallback transport for the WS dispatcher (same `handleLine()` entry point)
+- The diag/log monitoring path (`pio device monitor`)
+- The flashing path used by `esptool` and `canshift-flasher`
 
-BLE + WiFi shipped as a **parallel** transport in `canshift-mobile`:
-- **BLE GATT** for live telemetry and quick settings (`ble.service.ts`)
-- **WiFi AP + HMAC-signed OTA** for firmware updates (`ota.service.ts`)
+BLE + WiFi shipped as **parallel** transports:
+- **WS port 81** for the dash-hosted Studio (`canshift-studio-web`) — JSON
+  frame per WebSocket text message, routed through the same dispatcher as USB.
+- **BLE GATT** for live telemetry and quick settings from mobile (`ble.service.ts`)
+- **WiFi AP + HMAC-signed OTA** for mobile firmware updates (`ota.service.ts`)
 
 The JSON command shapes were reused where it made sense; the BLE service uses
 GATT characteristics rather than line-delimited JSON, but the underlying
