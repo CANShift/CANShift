@@ -46,17 +46,10 @@ export function tokenFromDimensions(w: number, h: number): SizeTokenId | null {
   return null
 }
 
-/** Allowed size tokens for a gauge based on display style and bar orientation */
-export function gaugeTokenIds(
-  displayStyle: GaugeDisplayStyle,
-  barOrientation?: 'horizontal' | 'vertical'
-): SizeTokenId[] {
+/** Allowed size tokens for a gauge based on display style. */
+export function gaugeTokenIds(displayStyle: GaugeDisplayStyle): SizeTokenId[] {
   if (displayStyle === 'arc') return ['XL', 'XXL']
-  if (displayStyle === 'numeric') return ['XL', 'L']
-  // bar — depends on orientation
-  if (barOrientation === 'horizontal') return ['H-FULL']
-  // Vertical bars use the narrow tokens only
-  return ['V-M', 'V']
+  return ['XL', 'L']
 }
 
 /** Allowed size tokens for non-gauge widget types */
@@ -65,6 +58,5 @@ export const STANDARD_TOKEN_IDS: SizeTokenId[] = ['XL', 'L']
 /** Default token when adding a new gauge by display style */
 export const GAUGE_DEFAULT_TOKEN: Record<GaugeDisplayStyle, SizeTokenId> = {
   arc: 'XL',
-  bar: 'V-M',
   numeric: 'L',
 }

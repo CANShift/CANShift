@@ -32,8 +32,7 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
   // TypeScript can't follow signalDef?.X through the chained ternaries inside
   // the JSX, so we hoist the value once.
   const defaultDanger = signalDef?.dangerLevel
-  const barOrientation = cfg.barOrientation ?? 'vertical'
-  const allowedTokenIds = gaugeTokenIds(style, barOrientation)
+  const allowedTokenIds = gaugeTokenIds(style)
   // If current dimensions don't match any token, fall back to the first available
   const activeTokenId =
     tokenFromDimensions(widget.layout.w, widget.layout.h) ?? allowedTokenIds[0] ?? null
