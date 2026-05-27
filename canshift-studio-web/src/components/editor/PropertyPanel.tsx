@@ -7,16 +7,13 @@
 // editor (#697).
 
 import type {
-  FontFamilyId,
   PageTemplate,
   ScreenProfileId,
   Widget,
   WidgetType,
 } from '@tmbk/canshift-core'
 import {
-  DEFAULT_FONT_FAMILY_ID,
   DEFAULT_SCREEN_PROFILE_ID,
-  FONT_FAMILIES,
   PAGE_TEMPLATES,
   SCREEN_PROFILES,
 } from '@tmbk/canshift-core'
@@ -86,7 +83,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const updateTopBar = useDashboardStore((s) => s.updateTopBar)
   const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
-  const setFontFamily = useDashboardStore((s) => s.setFontFamily)
   const setPageTemplate = useDashboardStore((s) => s.setPageTemplate)
   const signals = useSignalStore((s) => s.signals)
 
@@ -149,46 +145,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             </SelectContent>
           </Select>
         </Field>
-
-        {/* Font family — picks the typeface bundle the firmware loads at boot
-            (issues #971 + #500). v1 ships a single entry; the dropdown is the
-            seat we extend when alternate font bundles land. Preview here is a
-            no-op while the catalog has one entry; the note below makes that
-            explicit so the empty-state isn't read as a bug. */}
-        <div
-          style={{
-            fontSize: 10,
-            color: PANEL_LABEL,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: 6,
-            marginTop: 8,
-          }}
-        >
-          Font family
-        </div>
-        <Field label="Family">
-          <Select
-            value={config.fontFamily ?? DEFAULT_FONT_FAMILY_ID}
-            onValueChange={(raw) => {
-              setFontFamily(raw as FontFamilyId)
-            }}
-          >
-            <SelectTrigger style={inputStyle}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FONT_FAMILIES.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.displayName} — {f.description}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: -2, marginBottom: 8 }}>
-          More families coming — preview updates when alternate fonts ship in firmware.
-        </div>
 
         <div
           style={{
