@@ -47,8 +47,8 @@ interface CruiseButton {
 }
 
 const BUTTONS: readonly CruiseButton[] = [
-  { label: '+', hint: 'Increment setpoint', op: 'increment', corner: 'top-left' },
-  { label: '−', hint: 'Decrement setpoint', op: 'decrement', corner: 'top-right' },
+  { label: '−', hint: 'Decrement setpoint', op: 'decrement', corner: 'top-left' },
+  { label: '+', hint: 'Increment setpoint', op: 'increment', corner: 'top-right' },
   { label: 'SET', hint: 'Capture current speed', op: 'set', corner: 'bottom-left' },
   { label: 'OFF', hint: 'Disable cruise', op: 'off', corner: 'bottom-right' },
 ]
