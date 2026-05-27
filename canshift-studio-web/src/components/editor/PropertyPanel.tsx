@@ -6,15 +6,10 @@
 // signal binding, button colors), and the dispatch to the right widget
 // editor (#697).
 
-import type {
-  PageTemplate,
-  ScreenProfileId,
-  Widget,
-  WidgetType,
-} from '@tmbk/canshift-core'
+import type { ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
 import {
+  DEFAULT_PAGE_PALETTE,
   DEFAULT_SCREEN_PROFILE_ID,
-  PAGE_TEMPLATES,
   SCREEN_PROFILES,
 } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -62,19 +57,7 @@ interface PropertyPanelProps {
   pageId: string
 }
 
-// Human-readable label + helper hint for each page template. Single source of
-// truth for the picker so adding a new template only requires updating this
-// table + the matching firmware renderer (issue #451).
-const PAGE_TEMPLATE_LABELS: Record<PageTemplate, { label: string; hint: string }> = {
-  custom: {
-    label: 'Custom layout',
-    hint: 'Place widgets freely on the canvas.',
-  },
-  cruise_control: {
-    label: 'Cruise control',
-    hint: 'Firmware draws +/−/SET/OFF buttons automatically. The widget list is ignored.',
-  },
-}
+const CRUISE_CONTROL_PAGE_ID = 'cruise_control'
 
 export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const config = useDashboardStore((s) => s.config)
@@ -82,8 +65,27 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
-  const setPageTemplate = useDashboardStore((s) => s.setPageTemplate)
+  const addPage = useDashboardStore((s) => s.addPage)
+  const removePage = useDashboardStore((s) => s.removePage)
   const signals = useSignalStore((s) => s.signals)
+
+  const toggleCruiseControlPage = (enabled: boolean) => {
+    if (!config) return
+    const existing = config.pages.find((p) => p.template === 'cruise_control')
+    if (enabled && !existing) {
+      addPage({
+        id: CRUISE_CONTROL_PAGE_ID,
+        backgroundImage: null,
+        backgroundColor: '#000000',
+        palette: DEFAULT_PAGE_PALETTE,
+        showTopBar: true,
+        template: 'cruise_control',
+        widgets: [],
+      })
+    } else if (!enabled && existing) {
+      removePage(existing.id)
+    }
+  }
 
   const page = config?.pages.find((p) => p.id === pageId)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
@@ -99,18 +101,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     }
     return (
       <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-        <div
-          style={{
-            fontSize: 10,
-            color: PANEL_LABEL,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 10,
-          }}
-        >
-          Page settings
-        </div>
-
         {/* Target screen profile — picks the LCD dimensions the canvas previews
             at (issue #548). v1 ships a single entry; the dropdown is the seat
             we extend when new boards (#17) or larger panels (#18) land. */}
@@ -145,11 +135,10 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           </Select>
         </Field>
 
-        {/* Page template — picks how the firmware draws this page (#451).
-            `custom` keeps the legacy free-form widget grid; built-in templates
-            (e.g. `cruise_control`) render a procedural layout and ignore the
-            widgets[] array. Studio still keeps widgets[] so a user can flip
-            back to `custom` without losing a previously authored layout. */}
+        {/* Cruise control — opt-in checkbox that ensures a `cruise_control`
+            templated page exists at the end of the dashboard. The firmware
+            draws this page procedurally (ignores widgets[]); studio just
+            tracks its presence. Unchecking removes the page. */}
         <div
           style={{
             fontSize: 10,
@@ -160,29 +149,30 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             marginTop: 12,
           }}
         >
-          Template
+          Modes
         </div>
-        <Field label="Layout">
-          <Select
-            value={page.template ?? 'custom'}
-            onValueChange={(raw) => {
-              setPageTemplate(page.id, raw as PageTemplate)
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 11,
+            color: 'hsl(var(--text))',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={config.pages.some((p) => p.template === 'cruise_control')}
+            onChange={(e) => {
+              toggleCruiseControlPage(e.target.checked)
             }}
-          >
-            <SelectTrigger style={inputStyle}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_TEMPLATES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {PAGE_TEMPLATE_LABELS[t].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 6, marginBottom: 4 }}>
-          {PAGE_TEMPLATE_LABELS[page.template ?? 'custom'].hint}
+          />
+          Cruise control page
+        </label>
+        <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 4, marginBottom: 4 }}>
+          Adds a dedicated cruise control page at the end of the dashboard.
         </div>
 
         <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 12 }}>
