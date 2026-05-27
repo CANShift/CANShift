@@ -51,8 +51,10 @@ static char s_ssid[20] = {};
 // secret (and surface it via Studio so the user can read it).
 static constexpr bool AP_PASSWORD_USE_RANDOM = false;
 static constexpr char AP_PASSWORD_DEFAULT[] = "canshift";
-static constexpr size_t AP_PASSWORD_LEN = 32; // capacity — buffer holds either default or 32-hex random
-static constexpr size_t AP_PASSWORD_ENTROPY_BYTES = 16; // 128 bits, hex-encoded (random path only)
+// Buffer capacity — holds either the default or a 32-hex random secret.
+static constexpr size_t AP_PASSWORD_LEN = 32;
+// 128 bits, hex-encoded (random path only).
+static constexpr size_t AP_PASSWORD_ENTROPY_BYTES = 16;
 static char s_password[AP_PASSWORD_LEN + 1] = {};
 
 static constexpr char NVS_NS_WIFI_AP[] = "wifi_ap";
@@ -496,8 +498,7 @@ void apTaskFn(void *) {
         #endif
 
     WiFi.softAP(s_ssid, s_password);
-    LOG_INFO("WiFi", "AP started — SSID: %s  IP: %s", s_ssid,
-             WiFi.softAPIP().toString().c_str());
+    LOG_INFO("WiFi", "AP started — SSID: %s  IP: %s", s_ssid, WiFi.softAPIP().toString().c_str());
 
     // mDNS responder — exposes the dash as `canshift.local` and advertises
     // the JSON-lines TCP server as `_canshift._tcp` so Studio can discover

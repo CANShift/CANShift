@@ -29,6 +29,17 @@ import sys
 from pathlib import Path
 
 
+# Skip the SPA sync when the active env doesn't actually serve it. crowpanel_28
+# inherits from base envs and so do sim / native / debug / secure / rust — they
+# all picked this script up via `extends = env:crowpanel_28`, but only envs
+# that link the WebServer + WS code need the SPA bundle in data/web/. Gate on
+# the APP_SPA_SERVE build flag so the dependency graph stays correct.
+_BUILD_FLAGS = " ".join(env.get("BUILD_FLAGS", []) or [])
+if "APP_SPA_SERVE=1" not in _BUILD_FLAGS:
+    print(f"[sync_studio_web] skipping — APP_SPA_SERVE not set on env '{env.get('PIOENV', '?')}'")
+    Return()
+
+
 PROJECT_DIR = Path(env["PROJECT_DIR"])
 STUDIO_WEB_DIR = (PROJECT_DIR / ".." / "canshift-studio-web").resolve()
 STUDIO_WEB_DIST = STUDIO_WEB_DIR / "dist"
