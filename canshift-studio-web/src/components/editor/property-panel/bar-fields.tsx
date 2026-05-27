@@ -1,28 +1,11 @@
 // property-panel/bar-fields.tsx — Editor for `bar` widgets.
 //
-// Stripped to the essentials: the bar widget reads its unit from the bound
-// signal definition and renders the signal name as an auto-label (no custom
-// label / prefix / decimals / unit-override fields here). Sensor icon stays
-// because the bar widget's danger flash still resolves through the legacy
-// sensor palette; the signal-type palette migration will pick this up.
+// All per-widget chrome (label, unit, prefix, decimals, sensor icon picker)
+// was dropped — the widget reads its unit from the bound signal definition,
+// renders the signal name as an auto-header, and the palette resolves
+// through the signal's `type` field (signalTypeOkColor in canshift-core).
+// Nothing widget-specific remains to edit on bar widgets at the moment.
 
-import { ConfigFieldsProps, Field, IconPicker } from './shared'
-
-export function BarFields({ widget, onChange }: ConfigFieldsProps) {
-  const cfg = widget.config.type === 'bar' ? widget.config : null
-  if (!cfg) return null
-  return (
-    <>
-      <Field label="Sensor">
-        <IconPicker
-          value={cfg.iconName}
-          onChange={(name) => {
-            onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
-            })
-          }}
-        />
-      </Field>
-    </>
-  )
+export function BarFields() {
+  return null
 }

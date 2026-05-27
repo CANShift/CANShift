@@ -12,14 +12,10 @@ import {
   tokenFromDimensions,
 } from '../../../utils/sizeTokens'
 import {
-  ALL_UNITS,
   ConfigFieldsProps,
   Field,
   GAUGE_STYLES,
-  IconPicker,
-  LabelFields,
   Row,
-  SIGNAL_UNITS,
   inputStyle,
   numberInputStyle,
 } from './shared'
@@ -36,10 +32,6 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
   // If current dimensions don't match any token, fall back to the first available
   const activeTokenId =
     tokenFromDimensions(widget.layout.w, widget.layout.h) ?? allowedTokenIds[0] ?? null
-
-  // Units filtered to what makes sense for the bound signal
-  const signalUnits = widget.signal ? SIGNAL_UNITS[widget.signal] : undefined
-  const unitList = signalUnits ?? ALL_UNITS
 
   return (
     <>
@@ -251,25 +243,11 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </>
       )}
 
-      {/* Sensor — drives the two-zone palette (issue #954). */}
-      <Field label="Sensor">
-        <IconPicker
-          value={cfg.iconName}
-          onChange={(name) => {
-            onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
-            })
-          }}
-        />
-      </Field>
-
-      {/* Widget label */}
-      <LabelFields
-        cfg={cfg}
-        onChange={(next) => {
-          onChange({ config: next })
-        }}
-      />
+      {/* Sensor + Label blocks were dropped from the gauge editor. The
+          two-zone palette now resolves through the bound signal's `type`
+          (see SignalType / signalTypeOkColor in canshift-core), and the
+          widget renders the signal name as an auto-header — no per-widget
+          icon or custom label fields needed here. */}
     </>
   )
 }
