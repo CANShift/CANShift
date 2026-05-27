@@ -182,51 +182,8 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </>
       )}
 
-      {/* Bar orientation — horizontal removed per user feedback (the horizontal
-          bar gauge layout didn't read well in the dashboard); only the vertical
-          orientation is offered now. Existing horizontal bar gauges still
-          render but the picker won't surface 'horizontal' as a new choice. */}
-      {style === 'bar' && (
-        <Field label="Orientation">
-          <div style={{ display: 'flex', gap: 4 }}>
-            {(['vertical'] as const).map((dir) => {
-              const isActive = barOrientation === dir
-              return (
-                <button
-                  key={dir}
-                  onClick={() => {
-                    const newTokenId = 'V-M'
-                    const newToken = SIZE_TOKENS[newTokenId]
-                    onChange({
-                      config: { ...cfg, barOrientation: dir },
-                      layout: { ...widget.layout, w: newToken.w, h: newToken.h },
-                    })
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '3px 0',
-                    background: isActive ? '#2A2A3A' : '#111111',
-                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
-                    borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#AAAAAA',
-                    cursor: 'pointer',
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {/* Always vertical now — the conditional below is preserved as
-                      a no-op so reintroducing 'horizontal' later only requires
-                      adding it back to the picker array, not rewriting this row. */}
-                  ↕ V
-                </button>
-              )
-            })}
-          </div>
-        </Field>
-      )}
-
-      {/* Arc / bar shared range fields */}
-      {(style === 'arc' || style === 'bar') && (
+      {/* Arc range fields (legacy: bar style also used these — bar removed). */}
+      {style === 'arc' && (
         <>
           <Row>
             <Field

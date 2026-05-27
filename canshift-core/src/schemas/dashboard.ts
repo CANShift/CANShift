@@ -69,7 +69,7 @@ export const SensorIconNameSchema = z.enum([
 // Widget config variants (discriminated union on `type`)
 // ---------------------------------------------------------------------------
 
-export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc', 'bar'])
+export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc'])
 export const GaugeArcFillStyleSchema = z.enum(['zones', 'gradient'])
 const BarOrientationSchema = z.enum(['vertical', 'horizontal'])
 

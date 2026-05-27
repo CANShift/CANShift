@@ -9,6 +9,7 @@ import WidgetPalette from '../components/editor/WidgetPalette'
 import PropertyPanel from '../components/editor/PropertyPanel'
 import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
+import { CruiseControlPreview } from '../components/editor/CruiseControlPreview'
 
 // Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
 // Click toggles the default. Replaces the prior diamond marker per #142.
@@ -29,9 +30,15 @@ interface PageThumbnailProps {
 }
 
 function PageThumbnail({ page, topBar }: PageThumbnailProps) {
-  const barH = page.showTopBar ? topBar.height * THUMB_SCALE : 0
+  const fullBarH = page.showTopBar ? topBar.height : 0
   const isCruiseTemplate = page.template === 'cruise_control'
 
+  // Render the page at full firmware resolution (320×240) into an absolutely-
+  // sized container, then apply a single CSS `transform: scale()` to shrink
+  // it to thumbnail size. Avoids the broken-proportions problem where each
+  // widget's font-size formula has `Math.max(N, ...)` floors that don't
+  // scale down — the full-render-then-scale approach keeps every typographic
+  // ratio identical to the live canvas.
   return (
     <div
       style={{
@@ -44,108 +51,68 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
         flexShrink: 0,
       }}
     >
-      {/* Top bar stripe */}
-      {page.showTopBar && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: barH,
-            background: topBar.bgColor,
-            borderBottom: '1px solid #1E1E1E',
-          }}
-        />
-      )}
+      <div
+        style={{
+          width: 320,
+          height: 240,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          background: page.backgroundColor,
+          transform: `scale(${String(THUMB_SCALE)})`,
+          transformOrigin: 'top left',
+        }}
+      >
+        {/* Top bar stripe */}
+        {page.showTopBar && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: fullBarH,
+              background: topBar.bgColor,
+              borderBottom: '1px solid #1E1E1E',
+            }}
+          />
+        )}
 
-      {/* Body — template-rendered pages show a fixed 2×2 glyph; otherwise the
-          widget thumbnails. Mirrors the firmware contract: when `template` is
-          set, the widgets[] array is ignored on-device (#451). The cruise
-          template thumbnail mirrors the live CruiseControlPreview: four
-          corner buttons around a central SET-speed readout. */}
-      {isCruiseTemplate ? (
-        <div
-          style={{
-            position: 'absolute',
-            top: barH + 3,
-            left: 3,
-            right: 3,
-            bottom: 3,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gridTemplateRows: '1fr 1fr',
-            gap: 2,
-          }}
-        >
-          {[
-            { glyph: '−', corner: 'tl' },
-            { glyph: '+', corner: 'tr' },
-            { glyph: 'SET', corner: 'bl' },
-            { glyph: 'OFF', corner: 'br' },
-          ].map(({ glyph, corner }) => (
+        {/* Body — template-rendered pages render via CruiseControlPreview
+            (same component the live canvas uses); custom pages render each
+            widget at its native firmware-px dimensions. Both paths share the
+            outer scale transform so the thumbnail mirrors the canvas
+            pixel-for-pixel. */}
+        {isCruiseTemplate ? (
+          <CruiseControlPreview
+            scale={1}
+            canvasW={320}
+            contentH={240 - fullBarH}
+            palette={page.palette ?? DEFAULT_PAGE_PALETTE}
+          />
+        ) : (
+          page.widgets.map((widget) => (
             <div
-              key={corner}
+              key={widget.id}
               style={{
-                background: '#FFFFFF14',
-                border: '1px solid #FFFFFF28',
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFFAA',
-                fontSize: glyph === '+' || glyph === '−' ? 11 : 8,
-                fontWeight: 700,
-                letterSpacing: '0.04em',
+                position: 'absolute',
+                left: widget.layout.x,
+                top: fullBarH + widget.layout.y,
+                width: widget.layout.w,
+                height: widget.layout.h,
+                overflow: 'hidden',
               }}
             >
-              {glyph}
+              <WidgetPreview
+                widget={widget}
+                displayW={widget.layout.w}
+                displayH={widget.layout.h}
+                noAnimate
+              />
             </div>
-          ))}
-          {/* Centred SET-speed readout — overlays the grid centre, matches the
-              transparent floating widget used in the live preview. */}
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 0,
-              color: '#FFFFFFCC',
-              fontFamily: 'Orbitron, sans-serif',
-              pointerEvents: 'none',
-            }}
-          >
-            <span style={{ fontSize: 5, color: '#FFFFFF77', letterSpacing: '0.08em' }}>SET</span>
-            <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1 }}>100</span>
-            <span style={{ fontSize: 5, color: '#FFFFFF77' }}>km/h</span>
-          </div>
-        </div>
-      ) : (
-        page.widgets.map((widget) => (
-          <div
-            key={widget.id}
-            style={{
-              position: 'absolute',
-              left: widget.layout.x * THUMB_SCALE,
-              top: barH + widget.layout.y * THUMB_SCALE,
-              width: widget.layout.w * THUMB_SCALE,
-              height: widget.layout.h * THUMB_SCALE,
-              overflow: 'hidden',
-            }}
-          >
-            <WidgetPreview
-              widget={widget}
-              displayW={widget.layout.w * THUMB_SCALE}
-              displayH={widget.layout.h * THUMB_SCALE}
-              noAnimate
-            />
-          </div>
-        ))
-      )}
+          ))
+        )}
+      </div>
     </div>
   )
 }
