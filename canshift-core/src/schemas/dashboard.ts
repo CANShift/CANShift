@@ -7,11 +7,14 @@
 import { z } from 'zod'
 
 import {
+  CAN_29BIT_MAX,
   CAN_RAW_DATA_MAX_HEX_CHARS,
   CAN_RAW_DATA_REGEX,
   DECIMAL_PLACES,
   FIRMWARE_CAPS,
+  MAP_INDEX_MAX,
   REV_LIMIT_RPM,
+  STRING_CAPS,
   TOPBAR_HEIGHT,
 } from '../constants/firmware-caps.js'
 
@@ -82,15 +85,15 @@ export const GaugeWidgetConfigSchema = z
     // (#954) only needs one cut-off.
     dangerLevel: z.number(),
     decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
-    prefix: z.string().optional(),
-    suffix: z.string().optional(),
+    prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
+    suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
     hideWhenInvalid: z.boolean().optional(),
     showNeedle: z.boolean().optional(),
     arcFillStyle: GaugeArcFillStyleSchema.optional(),
     revFlash: z.boolean().optional(),
     alertThreshold: z.number().optional(),
     barOrientation: BarOrientationSchema.optional(),
-    label: z.string().optional(),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
     // Sensor identifier — drives the semantic two-zone palette (issue #954).
     // When set to a known name, gauge fills opaquely in the per-sensor OK
@@ -106,7 +109,7 @@ export const WarningWidgetConfigSchema = z
     invertLogic: z.boolean().optional(),
     threshold: z.number(),
     iconName: SensorIconNameSchema.optional(),
-    label: z.string().optional(),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
@@ -127,7 +130,7 @@ const MapSwitchActionSchema = z
   .object({
     category: z.literal('ecu'),
     type: z.literal('map_switch'),
-    mapIndex: z.number(),
+    mapIndex: z.number().int().min(0).max(MAP_INDEX_MAX),
   })
   .strict()
 
@@ -142,7 +145,7 @@ const CanRawActionSchema = z
   .object({
     category: z.literal('ecu'),
     type: z.literal('can_raw'),
-    frameId: z.number(),
+    frameId: z.number().int().min(0).max(CAN_29BIT_MAX),
     data: CanRawDataSchema,
     dataOff: CanRawDataSchema.optional(),
     extended: z.boolean({ invalid_type_error: 'extended must be a boolean when set' }).optional(),
@@ -215,9 +218,9 @@ export type ButtonAction = z.infer<typeof ButtonActionSchema>
 export const ButtonWidgetConfigSchema = z
   .object({
     type: z.literal('button'),
-    label: z.string(),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL),
     iconName: SensorIconNameSchema.optional(),
-    iconPath: z.string().optional(),
+    iconPath: z.string().max(STRING_CAPS.ICON_PATH).optional(),
     showIcon: z.boolean().optional(),
     showLabel: z.boolean().optional(),
     isToggle: z.boolean().optional(),
@@ -246,7 +249,7 @@ export const TimerWidgetConfigSchema = z
     type: z.literal('timer'),
     autoStart: z.boolean().optional(),
     format: z.enum(['mm:ss', 'ss.mmm']).optional(),
-    label: z.string().optional(),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
@@ -255,9 +258,9 @@ export const BarWidgetConfigSchema = z
   .object({
     type: z.literal('bar'),
     decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
-    prefix: z.string().optional(),
-    suffix: z.string().optional(),
-    label: z.string().optional(),
+    prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
+    suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: z.enum(['top-center', 'bottom-center']).optional(),
     minValue: z.number().optional(),
     maxValue: z.number().optional(),
@@ -274,10 +277,10 @@ export const GearWidgetConfigSchema = z
   .object({
     type: z.literal('gear'),
     decimalPlaces: z.literal(0),
-    prefix: z.string().optional(),
-    suffix: z.string().optional(),
+    prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
+    suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
     hideWhenInvalid: z.boolean().optional(),
-    label: z.string().optional(),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
@@ -285,8 +288,8 @@ export const GearWidgetConfigSchema = z
 export const ImageWidgetConfigSchema = z
   .object({
     type: z.literal('image'),
-    imagePath: z.string(),
-    label: z.string().optional(),
+    imagePath: z.string().max(STRING_CAPS.IMAGE_PATH),
+    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()

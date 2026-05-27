@@ -25,6 +25,17 @@ import {
   SAFE_INPUT_PINS_WROOM32,
   TrackTelemetrySchema,
 } from '../index.js'
+import {
+  CAN_29BIT_MAX,
+  CAN_FRAME_MAX_BYTES,
+  FIRMWARE_CAPS,
+  FONT_SIZE_MAX,
+  FONT_SIZE_MIN,
+  MAP_INDEX_MAX,
+  STRING_CAPS,
+} from '../constants/firmware-caps.js'
+import { SignalDefSchema } from '../schemas/signal.js'
+import { WidgetLayoutSchema, WidgetStyleSchema } from '../schemas/common.js'
 import type { DeviceConfig, InputBinding, InputBindingsConfig } from '../index.js'
 import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
 import { DeviceConfigWireSchema, type DeviceConfigWire } from '../schemas/device.js'
@@ -1067,5 +1078,366 @@ describe('TrackTelemetrySchema', () => {
 
   it('rejects an unknown top-level key — .strict()', () => {
     expect(TrackTelemetrySchema.safeParse({ trackMode: true, sectorMs: 12345 }).success).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// schema bounds hardening (#1168, #1169, #1170)
+// ---------------------------------------------------------------------------
+
+describe('schema bounds hardening', () => {
+  function validSignal(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      name: 'rpm',
+      canFrameId: '0x370',
+      startByte: 0,
+      byteLength: 2,
+      bigEndian: true,
+      signed: false,
+      scale: 1,
+      offset: 0,
+      unit: 'rpm',
+      min: 0,
+      max: 8000,
+      timeoutMs: 1000,
+      ...overrides,
+    }
+  }
+
+  function validSignalConfig(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      version: '1.14.0',
+      protocol: 'custom_v1.0',
+      canSpeedKbps: 500,
+      signals: [validSignal()],
+      ...overrides,
+    }
+  }
+
+  function validStyle(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      primaryColor: '#FFFFFF',
+      secondaryColor: '#2A2A2A',
+      warningColor: '#FF8800',
+      criticalColor: '#FF4444',
+      textColor: '#FFFFFF',
+      fontSize: 14,
+      ...overrides,
+    }
+  }
+
+  function validLayout(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return { x: 0, y: 0, w: 80, h: 40, zOrder: 0, ...overrides }
+  }
+
+  // -- #1168: signals[] cap ---------------------------------------------------
+
+  describe('signals[] cap (#1168)', () => {
+    it(`accepts a catalog with exactly ${String(FIRMWARE_CAPS.MAX_SIGNALS)} signals`, () => {
+      const signals = Array.from({ length: FIRMWARE_CAPS.MAX_SIGNALS }, (_, i) =>
+        validSignal({ name: `s${String(i)}` })
+      )
+      const result = SignalConfigSchema.safeParse(validSignalConfig({ signals }))
+      expect(result.success).toBe(true)
+    })
+
+    it(`rejects a catalog with ${String(FIRMWARE_CAPS.MAX_SIGNALS + 1)} signals`, () => {
+      const signals = Array.from({ length: FIRMWARE_CAPS.MAX_SIGNALS + 1 }, (_, i) =>
+        validSignal({ name: `s${String(i)}` })
+      )
+      const result = SignalConfigSchema.safeParse(validSignalConfig({ signals }))
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes('signals'))).toBe(true)
+      }
+    })
+  })
+
+  // -- #1169: numeric bounds --------------------------------------------------
+
+  describe('SignalDef.startByte', () => {
+    it('accepts the high boundary (CAN_FRAME_MAX_BYTES - 1)', () => {
+      expect(
+        SignalDefSchema.safeParse(validSignal({ startByte: CAN_FRAME_MAX_BYTES - 1 })).success
+      ).toBe(true)
+    })
+
+    it('rejects startByte = CAN_FRAME_MAX_BYTES (would read past the frame)', () => {
+      expect(
+        SignalDefSchema.safeParse(validSignal({ startByte: CAN_FRAME_MAX_BYTES })).success
+      ).toBe(false)
+    })
+
+    it('rejects a negative startByte', () => {
+      expect(SignalDefSchema.safeParse(validSignal({ startByte: -1 })).success).toBe(false)
+    })
+
+    it('rejects a non-integer startByte', () => {
+      expect(SignalDefSchema.safeParse(validSignal({ startByte: 1.5 })).success).toBe(false)
+    })
+  })
+
+  describe('SignalDef.scale / offset finiteness', () => {
+    it('rejects NaN scale', () => {
+      expect(SignalDefSchema.safeParse(validSignal({ scale: NaN })).success).toBe(false)
+    })
+
+    it('rejects Infinity scale', () => {
+      expect(SignalDefSchema.safeParse(validSignal({ scale: Infinity })).success).toBe(false)
+    })
+
+    it('rejects NaN offset', () => {
+      expect(SignalDefSchema.safeParse(validSignal({ offset: NaN })).success).toBe(false)
+    })
+
+    it('rejects Infinity offset', () => {
+      expect(SignalDefSchema.safeParse(validSignal({ offset: -Infinity })).success).toBe(false)
+    })
+  })
+
+  describe('WidgetLayout.zOrder integer-only', () => {
+    it('accepts an integer zOrder', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ zOrder: 3 })).success).toBe(true)
+    })
+
+    it('rejects a non-integer zOrder', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ zOrder: 1.5 })).success).toBe(false)
+    })
+  })
+
+  describe('WidgetStyle.fontSize bounds', () => {
+    it('accepts fontSize at the lower boundary', () => {
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MIN })).success).toBe(
+        true
+      )
+    })
+
+    it('accepts fontSize at the upper boundary', () => {
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MAX })).success).toBe(
+        true
+      )
+    })
+
+    it('rejects fontSize below the lower boundary', () => {
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MIN - 1 })).success).toBe(
+        false
+      )
+    })
+
+    it('rejects fontSize above the upper boundary', () => {
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MAX + 1 })).success).toBe(
+        false
+      )
+    })
+
+    it('rejects a non-integer fontSize', () => {
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: 14.5 })).success).toBe(false)
+    })
+  })
+
+  describe('MapSwitchAction.mapIndex bounds', () => {
+    it('accepts mapIndex at the high boundary', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'map_switch',
+          mapIndex: MAP_INDEX_MAX,
+        }).success
+      ).toBe(true)
+    })
+
+    it('rejects mapIndex past the high boundary', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'map_switch',
+          mapIndex: MAP_INDEX_MAX + 1,
+        }).success
+      ).toBe(false)
+    })
+
+    it('rejects a negative mapIndex', () => {
+      expect(
+        ButtonActionSchema.safeParse({ category: 'ecu', type: 'map_switch', mapIndex: -1 }).success
+      ).toBe(false)
+    })
+
+    it('rejects a non-integer mapIndex', () => {
+      expect(
+        ButtonActionSchema.safeParse({ category: 'ecu', type: 'map_switch', mapIndex: 1.5 }).success
+      ).toBe(false)
+    })
+  })
+
+  describe('CanRawAction.frameId bounds', () => {
+    it('accepts frameId at the 29-bit boundary', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: CAN_29BIT_MAX,
+          data: 'DEAD',
+        }).success
+      ).toBe(true)
+    })
+
+    it('rejects frameId past the 29-bit boundary', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: CAN_29BIT_MAX + 1,
+          data: 'DEAD',
+        }).success
+      ).toBe(false)
+    })
+
+    it('rejects a negative frameId', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: -1,
+          data: 'DEAD',
+        }).success
+      ).toBe(false)
+    })
+
+    it('rejects a non-integer frameId', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: 1.5,
+          data: 'DEAD',
+        }).success
+      ).toBe(false)
+    })
+  })
+
+  // -- #1170: string caps -----------------------------------------------------
+
+  describe('SignalDef.name cap', () => {
+    it('accepts a name at the cap', () => {
+      expect(
+        SignalDefSchema.safeParse(validSignal({ name: 'a'.repeat(STRING_CAPS.SIGNAL_NAME) }))
+          .success
+      ).toBe(true)
+    })
+
+    it('rejects a name one over the cap', () => {
+      expect(
+        SignalDefSchema.safeParse(validSignal({ name: 'a'.repeat(STRING_CAPS.SIGNAL_NAME + 1) }))
+          .success
+      ).toBe(false)
+    })
+  })
+
+  describe('SignalDef.unit cap', () => {
+    it('accepts a unit at the cap', () => {
+      expect(
+        SignalDefSchema.safeParse(validSignal({ unit: 'u'.repeat(STRING_CAPS.SIGNAL_UNIT) }))
+          .success
+      ).toBe(true)
+    })
+
+    it('rejects a unit one over the cap', () => {
+      expect(
+        SignalDefSchema.safeParse(validSignal({ unit: 'u'.repeat(STRING_CAPS.SIGNAL_UNIT + 1) }))
+          .success
+      ).toBe(false)
+    })
+  })
+
+  describe('SignalConfig.protocol cap', () => {
+    it('accepts a protocol string at the cap', () => {
+      expect(
+        SignalConfigSchema.safeParse(
+          validSignalConfig({ protocol: 'p'.repeat(STRING_CAPS.PROTOCOL) })
+        ).success
+      ).toBe(true)
+    })
+
+    it('rejects a protocol string one over the cap', () => {
+      expect(
+        SignalConfigSchema.safeParse(
+          validSignalConfig({ protocol: 'p'.repeat(STRING_CAPS.PROTOCOL + 1) })
+        ).success
+      ).toBe(false)
+    })
+  })
+
+  describe('ButtonWidgetConfig.label cap', () => {
+    it('accepts a label at the cap', () => {
+      const result = ButtonWidgetConfigSchema.safeParse({
+        type: 'button',
+        label: 'l'.repeat(STRING_CAPS.WIDGET_LABEL),
+        actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p' }],
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects a label one over the cap', () => {
+      const result = ButtonWidgetConfigSchema.safeParse({
+        type: 'button',
+        label: 'l'.repeat(STRING_CAPS.WIDGET_LABEL + 1),
+        actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p' }],
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects an iconPath one over the cap', () => {
+      const result = ButtonWidgetConfigSchema.safeParse({
+        type: 'button',
+        label: 'btn',
+        iconPath: 'i'.repeat(STRING_CAPS.ICON_PATH + 1),
+        actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p' }],
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('InputBinding.signal cap', () => {
+    const baseWire = {
+      id: 'b1',
+      pin: 32,
+      active: 'low' as const,
+      pullup: true,
+      debounce_ms: 20,
+      kind: 'short' as const,
+      action: { category: 'ecu', type: 'cruise_control', op: 'toggle' },
+    }
+
+    it('accepts a wire signal at the cap', () => {
+      expect(
+        InputBindingWireSchema.safeParse({
+          ...baseWire,
+          signal: 's'.repeat(STRING_CAPS.BINDING_SIGNAL),
+        }).success
+      ).toBe(true)
+    })
+
+    it('rejects a wire signal one over the cap', () => {
+      expect(
+        InputBindingWireSchema.safeParse({
+          ...baseWire,
+          signal: 's'.repeat(STRING_CAPS.BINDING_SIGNAL + 1),
+        }).success
+      ).toBe(false)
+    })
+
+    it('rejects a domain signal one over the cap', () => {
+      const domainShape: InputBinding = {
+        id: 'b1',
+        pin: 32,
+        active: 'low',
+        pullup: true,
+        debounceMs: 20,
+        kind: 'short',
+        action: { category: 'ecu', type: 'cruise_control', op: 'toggle' },
+        signal: 's'.repeat(STRING_CAPS.BINDING_SIGNAL + 1),
+      }
+      expect(InputBindingSchema.safeParse(domainShape).success).toBe(false)
+    })
   })
 })
