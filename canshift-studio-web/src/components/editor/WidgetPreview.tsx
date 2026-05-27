@@ -1119,6 +1119,8 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
         height: h,
         display: 'flex',
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignContent: 'center',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
@@ -1127,7 +1129,11 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
         background: bgColor,
         border: `1px solid ${borderColor}`,
         borderRadius: 0,
-        overflow: 'hidden',
+        // `overflow: visible` so a long label that wraps under the icon stays
+        // readable — issue request: "au pire le texte passe dessous, jamais
+        // crop". The button container still clips at the widget bounds via
+        // its parent WidgetBox (which keeps `overflow: hidden`).
+        overflow: 'visible',
         transition: 'background 0.1s, border-color 0.1s',
       }}
     >
@@ -1142,13 +1148,17 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
             color: textColor,
             fontSize,
             fontWeight: 500,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            // Allow wrap to a second line if the label doesn't fit on one
+            // line at the computed font size. Word-break handles tokens that
+            // are individually longer than the available width.
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            overflow: 'visible',
             letterSpacing: '0.04em',
             minWidth: 0,
             flex: '1 1 auto',
             textAlign: 'center',
+            lineHeight: 1.1,
           }}
         >
           {cfg.label}
