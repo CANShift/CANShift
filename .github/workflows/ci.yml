@@ -1,9 +1,3 @@
-# CI — runs on every pull request targeting main.
-# Checks: lint, typecheck, build for canshift-core, canshift-studio, canshift-mobile,
-# plus a macOS-hosted iOS native build (prebuild + pod install + xcodebuild) and
-# firmware compile via PlatformIO.
-# No deployment happens here — releases are triggered by merging to main (see release.yml).
-
 name: CI
 
 on:
@@ -14,949 +8,126 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Toolchain versions + CI-only secrets — single source of truth so a bump
-# touches one line, not every job. Bump Node/Python deliberately: each new
-# minor may shift lockfile resolution or PlatformIO compatibility. The
-# OTA_HMAC_CI_FALLBACK string is used by every firmware build job when the
-# OTA_HMAC_SECRET repo secret isn't available (fork PR / unconfigured repo).
-# Published artefacts never come from PR CI, so a known CI-only secret is
-# harmless — release.yml uses the real secret.
 env:
   NODE_VERSION: '24'
   PYTHON_VERSION: '3.12'
   OTA_HMAC_CI_FALLBACK: 'ci_fallback_not_for_production_use_change_for_release_workflow'
 
 jobs:
-  # ─── Path-change detection ───────────────────────────────────────────────────
-  # Compares the PR head against the base branch and outputs one boolean per
-  # scope. Downstream jobs read these outputs and skip themselves when their
-  # scope did not change, cutting CI time on scope-isolated PRs.
-  #
-  # Dependency note: core is flagged true whenever studio OR mobile changed
-  # because the studio job downloads the canshift-core-dist artifact — if core
-  # is skipped the artifact upload never happens and the studio job would fail.
-  changes:
-    name: detect changed scopes
+  js:
+    name: js — lint + typecheck + test + build
     runs-on: ubuntu-latest
-    outputs:
-      core: ${{ steps.detect.outputs.core }}
-      studio: ${{ steps.detect.outputs.studio }}
-      studio-web: ${{ steps.detect.outputs.studio-web }}
-      mobile: ${{ steps.detect.outputs.mobile }}
-      firmware: ${{ steps.detect.outputs.firmware }}
-
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Detect changed scopes
-        id: detect
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: core
+        working-directory: canshift-core
         run: |
-          BASE="origin/${{ github.base_ref || 'main' }}"
-          # Refresh the base ref WITHOUT --depth=1: a shallow re-fetch can
-          # truncate origin/main to its current tip and leave the PR merge
-          # ref's older base parent unreachable, producing
-          # "fatal: origin/main...HEAD: no merge base" on long-running PRs
-          # whose base advanced mid-CI. `actions/checkout@v4` with
-          # `fetch-depth: 0` already fetched full history, so this is just a
-          # safety net for the rare case where the ref is missing.
-          git fetch origin "${{ github.base_ref || 'main' }}" >/dev/null 2>&1 || true
-          CHANGED=$(git diff --name-only "$BASE"...HEAD)
-          echo "Changed files:"
-          echo "$CHANGED"
+          npm ci
+          npm run lint
+          npm run format:check
+          npm test
+          npm run build
 
-          # core runs if core, studio, studio-web, OR mobile changed (all consume the core dist artifact)
-          echo "core=$(echo "$CHANGED" | grep -qE '^(canshift-core|canshift-studio|canshift-studio-web|canshift-mobile)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "studio=$(echo "$CHANGED" | grep -qE '^(canshift-studio|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "studio-web=$(echo "$CHANGED" | grep -qE '^(canshift-studio-web|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "mobile=$(echo "$CHANGED" | grep -qE '^(canshift-mobile|canshift-core)/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "firmware=$(echo "$CHANGED" | grep -qE '^canshift-firmware/|^\.github/workflows/ci\.yml$' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-
-  # ─── Shared core ────────────────────────────────────────────────────────────
-  core:
-    name: core — lint + build
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.core == 'true'
-    defaults:
-      run:
-        working-directory: canshift-core
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: canshift-core/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Format check
-        run: npm run format:check
-
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: canshift-core-dist
-          path: canshift-core/dist
-          retention-days: 1
-
-  # ─── Desktop studio ─────────────────────────────────────────────────────────
-  # Apply the 'ci:skip-studio' label to a PR to bypass this job (WIP, proto,
-  # or trivial changes where you know the studio checks add no signal).
-  studio:
-    name: studio — lint + typecheck + build
-    runs-on: ubuntu-latest
-    needs: [changes, core]
-    if: needs.changes.outputs.studio == 'true' && !contains(github.event.pull_request.labels.*.name, 'ci:skip-studio')
-    defaults:
-      run:
-        working-directory: canshift-studio
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: canshift-studio/package-lock.json
-
-      - name: Download core dist
-        uses: actions/download-artifact@v4
-        with:
-          name: canshift-core-dist
-          path: canshift-core/dist
-
-      - name: Install core dependencies
-        run: npm ci
-        working-directory: canshift-core
-
-      - name: Install studio dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Format check
-        run: npm run format:check
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm run test
-
-      - name: Build
-        run: npm run build
-
-      - name: Renderer size budget
-        run: npm run size:check
-
-  # ─── Web Studio (dash-hosted refactor — #1077) ─────────────────────────────
-  # Apply the 'ci:skip-studio-web' label to a PR to bypass this job (WIP, proto,
-  # or trivial changes where you know the studio-web checks add no signal).
-  # Sister to the Electron `studio` job — both will run side-by-side until the
-  # phase 3 cutover is complete and the Electron package is decommissioned.
-  studio-web:
-    name: studio-web — typecheck + build
-    runs-on: ubuntu-latest
-    needs: [changes, core]
-    if: needs.changes.outputs.studio-web == 'true' && !contains(github.event.pull_request.labels.*.name, 'ci:skip-studio-web')
-    defaults:
-      run:
+      - name: studio-web
         working-directory: canshift-studio-web
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
 
-    steps:
-      - uses: actions/checkout@v4
+      - name: mobile
+        working-directory: canshift-mobile
+        run: |
+          npm ci
+          npm run lint
+          npm run format:check
+          npm run typecheck
+          npm test
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: canshift-studio-web/package-lock.json
-
-      - name: Download core dist
-        uses: actions/download-artifact@v4
-        with:
-          name: canshift-core-dist
-          path: canshift-core/dist
-
-      - name: Install core dependencies
-        run: npm ci
-        working-directory: canshift-core
-
-      - name: Install studio-web dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Build
-        run: npm run build
-
-  # ─── Mobile app ─────────────────────────────────────────────────────────────
-  # Job name kept verbatim — it's referenced by branch-protection required checks.
-  mobile:
-    name: mobile — typecheck + bundle
+  firmware:
+    name: firmware — build + tests + lint
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.mobile == 'true'
     defaults:
       run:
-        working-directory: canshift-mobile
-
+        working-directory: canshift-firmware
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: canshift-mobile/package-lock.json
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/.packages
+            canshift-firmware/.pio
+          key: pio-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
 
-      - name: Lint
-        run: npm run lint
+      - name: Install PlatformIO
+        run: pip install platformio
 
-      - name: Format check
-        run: npm run format:check
+      - name: Write secrets.ini
+        env:
+          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
+        run: |
+          SECRET="${OTA_HMAC_SECRET:-${OTA_HMAC_CI_FALLBACK}}"
+          printf "[ota]\nhmac_secret = %s\n" "$SECRET" > secrets.ini
 
-      - name: Typecheck
-        run: npm run typecheck
+      - name: clang-format
+        run: |
+          FILES=$(find src include -name "*.cpp" -o -name "*.h" | grep -v 'lv_conf\.h')
+          clang-format --dry-run --Werror --style=file $FILES
 
-      - name: Test
-        run: npm test
+      - name: native tests
+        run: pio test -e native
 
-      - name: Bundle check (iOS)
-        run: npx expo export --platform ios --output-dir /tmp/expo-bundle
+      - name: build (crowpanel_28)
+        run: pio run -e crowpanel_28 2>&1 | tee build.log
 
-      # Soft check — surfaces SDK / schema / dependency drift without blocking the PR.
-      # Policy: warning-only. expo-doctor findings are tracked as their own issues
-      # (e.g. unmaintained-package or unknown-metadata advisories are policy decisions,
-      # not auto-blockers). Output stays visible in CI logs; promote to a hard check
-      # once the audit backlog (#384) is fully cleared.
-      - name: Expo doctor (soft)
-        continue-on-error: true
-        run: npx expo-doctor
+      - name: flash budget gate
+        run: |
+          PCT=$(grep '^Flash:' build.log | grep -oE '[0-9]+\.[0-9]+%' | head -1 | tr -d '%')
+          awk -v p="$PCT" 'BEGIN { exit (p > 98) ? 1 : 0 }' \
+            || (echo "::error::flash ${PCT}% > 98% (#305 / #158)" && exit 1)
 
-  # ─── Mobile — iOS native build ──────────────────────────────────────────────
-  # Runs on macOS so it exercises the full native pipeline that
-  # `mobile — typecheck + bundle` cannot (prebuild + CocoaPods + xcodebuild).
-  # macOS minutes cost ~10x ubuntu — keep this lean and cache aggressively.
-  #
-  # Runtime path-gate: only proceeds when the PR touches files that can affect
-  # the native build (package.json, plugins/, app.json, babel.config.js). TS-
-  # only changes under src/ are already covered by the ubuntu typecheck job.
-  mobile-ios-build:
+  mobile-ios:
     name: mobile — iOS native build
     runs-on: macos-latest
-    needs: [changes]
-    if: needs.changes.outputs.mobile == 'true'
     defaults:
       run:
         working-directory: canshift-mobile
-
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect native-impacting changes
-        id: gate
-        working-directory: ${{ github.workspace }}
-        run: |
-          BASE="origin/${{ github.base_ref || 'main' }}"
-          # Refresh the base ref WITHOUT --depth=1: a shallow re-fetch can
-          # truncate origin/main to its current tip and leave the PR merge
-          # ref's older base parent unreachable, producing
-          # "fatal: origin/main...HEAD: no merge base" on long-running PRs
-          # whose base advanced mid-CI. `actions/checkout@v4` with
-          # `fetch-depth: 0` already fetched full history, so this is just a
-          # safety net for the rare case where the ref is missing.
-          git fetch origin "${{ github.base_ref || 'main' }}" >/dev/null 2>&1 || true
-          if git diff --name-only "$BASE"...HEAD | grep -qE '^canshift-mobile/(package\.json|package-lock\.json|app\.json|babel\.config\.js|plugins/)|^\.github/workflows/'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "Native-impacting files changed — running iOS build"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "No native-impacting files changed — skipping iOS build"
-          fi
 
       - uses: actions/setup-node@v4
-        if: steps.gate.outputs.run == 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: canshift-mobile/package-lock.json
 
-      - name: Install dependencies
-        if: steps.gate.outputs.run == 'true'
-        run: npm ci
+      - run: npm ci
 
-      - name: Expo prebuild (iOS)
-        if: steps.gate.outputs.run == 'true'
+      - name: prebuild
         run: npx expo prebuild --clean --platform ios
 
-      - name: Resolve iOS workspace + scheme
-        if: steps.gate.outputs.run == 'true'
-        id: ios
-        run: |
-          WORKSPACE=$(ls ios | grep '\.xcworkspace$' | head -n 1)
-          SCHEME="${WORKSPACE%.xcworkspace}"
-          if [ -z "$WORKSPACE" ] || [ -z "$SCHEME" ]; then
-            echo "Failed to locate generated .xcworkspace under ios/" >&2
-            ls -la ios || true
-            exit 1
-          fi
-          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
-          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
-          echo "Resolved workspace=$WORKSPACE scheme=$SCHEME"
-
-      - name: Cache CocoaPods
-        if: steps.gate.outputs.run == 'true'
-        uses: actions/cache@v4
-        with:
-          path: canshift-mobile/ios/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('canshift-mobile/ios/Podfile.lock') }}
-          restore-keys: |
-            pods-${{ runner.os }}-
-
-      - name: Pod install
-        if: steps.gate.outputs.run == 'true'
-        run: pod install
+      - name: xcodebuild
         working-directory: canshift-mobile/ios
-
-      - name: Cache Xcode DerivedData
-        if: steps.gate.outputs.run == 'true'
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ hashFiles('canshift-mobile/ios/Podfile.lock', 'canshift-mobile/package-lock.json') }}
-          restore-keys: |
-            deriveddata-${{ runner.os }}-
-
-      # Log noise strategy (#415): pipe xcodebuild through xcbeautify (or xcpretty
-      # fallback) to collapse upstream RN/Pods chatter, and rely on the
-      # withSilencePodsWarnings config plugin to silence noisy Clang categories
-      # on Pods targets only — our app code's warnings still surface.
-      - name: xcodebuild (iOS Simulator)
-        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
-          if command -v xcbeautify >/dev/null; then
-            FMT='xcbeautify --quieter'
-          else
-            FMT='xcpretty -c'
-          fi
+          WORKSPACE=$(ls | grep '\.xcworkspace$' | head -1)
+          SCHEME="${WORKSPACE%.xcworkspace}"
           xcodebuild \
-            -workspace "${{ steps.ios.outputs.workspace }}" \
-            -scheme "${{ steps.ios.outputs.scheme }}" \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build | $FMT
-        working-directory: canshift-mobile/ios
-
-  # ─── Firmware — clang-format ────────────────────────────────────────────────
-  firmware:
-    name: firmware — clang-format check
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.firmware == 'true'
-    defaults:
-      run:
-        working-directory: canshift-firmware
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install clang-format
-        run: sudo apt-get install -y clang-format
-
-      - name: Check formatting
-        run: |
-          FILES=$(find src include -name "*.cpp" -o -name "*.h" | grep -v "lv_conf\.h")
-          clang-format --dry-run --Werror --style=file $FILES
-
-  # ─── Firmware — PlatformIO compile ──────────────────────────────────────────
-  firmware-build:
-    name: firmware — PlatformIO build
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.firmware == 'true'
-    defaults:
-      run:
-        working-directory: canshift-firmware
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache PlatformIO packages + build objects
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio/.packages
-            ~/.platformio/.cache
-            canshift-firmware/.pio
-          key: pio-build-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}-${{ hashFiles('canshift-firmware/src/**', 'canshift-firmware/include/**') }}
-          restore-keys: |
-            pio-build-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}-
-            pio-build-${{ runner.os }}-
-
-      - name: Install PlatformIO CLI
-        run: pip install platformio
-
-      - name: Build sim environment
-        # Compiles all firmware code in simulation mode (no CAN hardware required).
-        # This is the primary compile check — same toolchain as the real target.
-        run: platformio run -e sim
-
-      # Write a secrets.ini so the production env compiles on PR CI. The
-      # auto-accept-placeholder fallback in `extra_targets.py` was removed in
-      # #910 — a maintainer tagging a release from a debug branch shouldn't
-      # ship the placeholder OTA secret. PR builds still need a real (or at
-      # least non-placeholder) secret; we use the repo secret when present
-      # and fall back to a fixed CI-only value for fork PRs. The artifact is
-      # never published, so a public CI secret is harmless.
-      - name: Write secrets.ini for production firmware (CI-only secret)
-        run: |
-          if [ -n "${OTA_HMAC_SECRET:-}" ]; then
-            echo "Using OTA_HMAC_SECRET from repo secrets"
-            SECRET="${OTA_HMAC_SECRET}"
-          else
-            echo "OTA_HMAC_SECRET not available (fork PR or unconfigured) — using CI-only fallback"
-            SECRET="${OTA_HMAC_CI_FALLBACK}"
-          fi
-          cat > secrets.ini <<EOF
-          [ota]
-          hmac_secret = ${SECRET}
-          EOF
-        env:
-          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
-
-      - name: Build production environment
-        # Compiles the production target to catch any #if branch divergence.
-        # Output is teed to build.log so the next step can parse the flash usage.
-        run: |
-          set -o pipefail
-          platformio run -e crowpanel_28 2>&1 | tee build.log
-
-      - name: Flash budget gate (fail >98%, warn >96%)
-        # Parses the PlatformIO size summary from the production build and
-        # enforces the flash budget. The original audit (#305) set the gate at
-        # >85% / >80% when crowpanel_28 didn't link the WiFi/WebServer/WS/Update
-        # stack. Post-#1077 (dash-hosted Studio on WiFi by default) the release
-        # env carries ~285 KB extra and the steady-state baseline is ~95.5%.
-        # Bumped to fail >98% / warn >96% so the gate still catches accidental
-        # multi-KB bloat without blocking every PR that touches a string. Track
-        # the long-term reduction (LVGL trim, -Os retry, etc.) in #158.
-        # Format emitted by PlatformIO:
-        #   Flash: [========  ]  82.8% (used 1303025 bytes from 1572864 bytes)
-        run: |
-          set -euo pipefail
-          if [ ! -f build.log ]; then
-            echo "::error::build.log not found — production build step did not run"
-            exit 1
-          fi
-          FLASH_PCT=$(grep -E '^(RAM|Flash):' build.log \
-            | grep -E '^Flash:' \
-            | grep -oE '[0-9]+\.[0-9]+%' \
-            | head -n 1 \
-            | tr -d '%')
-          if [ -z "${FLASH_PCT:-}" ]; then
-            echo "::error::Could not parse flash usage from build.log"
-            grep -E '^(RAM|Flash):' build.log || true
-            exit 1
-          fi
-          FAIL_THRESHOLD=98
-          WARN_THRESHOLD=96
-          echo "Parsed flash usage: ${FLASH_PCT}% (fail >${FAIL_THRESHOLD}%, warn >${WARN_THRESHOLD}%)"
-          # Use awk for float comparison (bc is not always installed on minimal runners).
-          OVER_FAIL=$(awk -v p="$FLASH_PCT" -v t="$FAIL_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
-          OVER_WARN=$(awk -v p="$FLASH_PCT" -v t="$WARN_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
-          if [ "$OVER_FAIL" = "1" ]; then
-            echo "::error::Flash usage ${FLASH_PCT}% exceeds budget (>${FAIL_THRESHOLD}%) — see audit #305"
-            exit 1
-          elif [ "$OVER_WARN" = "1" ]; then
-            echo "::warning::Flash usage ${FLASH_PCT}% above target (>${WARN_THRESHOLD}%) — approaching budget ceiling (#305)"
-          else
-            echo "Flash usage ${FLASH_PCT}% within budget"
-          fi
-
-      - name: DRAM budget gate (fail >70%, warn >65%)
-        # Static .data/.bss only — runtime heap (LVGL pool, NimBLE host heap,
-        # FreeRTOS task stacks + scheduler) consumes the rest of dram0_0_seg
-        # at runtime. Budget reserves ≈ 104 KB of the 320 KB DRAM region for
-        # those runtime allocations: 24 KB LVGL pool, 16 KB NimBLE floor,
-        # 64 KB tasks/scheduler. That leaves ~223 KB (≈ 68%) for static
-        # linker allocations. Thresholds set defensively below that ceiling
-        # so a BSS-adding PR gets a CI warning before the next change pushes
-        # past the link-time `region 'dram0_0_seg' overflowed` failure that
-        # only fired post-merge of PR #1028's first attempt (#1038).
-        run: |
-          set -euo pipefail
-          if [ ! -f build.log ]; then
-            echo "::error::build.log not found — production build step did not run"
-            exit 1
-          fi
-          RAM_PCT=$(grep -E '^(RAM|Flash):' build.log \
-            | grep -E '^RAM:' \
-            | grep -oE '[0-9]+\.[0-9]+%' \
-            | head -n 1 \
-            | tr -d '%')
-          if [ -z "${RAM_PCT:-}" ]; then
-            echo "::error::Could not parse RAM usage from build.log"
-            grep -E '^(RAM|Flash):' build.log || true
-            exit 1
-          fi
-          FAIL_THRESHOLD=70
-          WARN_THRESHOLD=65
-          echo "Parsed static DRAM usage: ${RAM_PCT}% (fail >${FAIL_THRESHOLD}%, warn >${WARN_THRESHOLD}%)"
-          OVER_FAIL=$(awk -v p="$RAM_PCT" -v t="$FAIL_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
-          OVER_WARN=$(awk -v p="$RAM_PCT" -v t="$WARN_THRESHOLD" 'BEGIN { print (p > t) ? 1 : 0 }')
-          if [ "$OVER_FAIL" = "1" ]; then
-            echo "::error::Static DRAM usage ${RAM_PCT}% exceeds budget (>${FAIL_THRESHOLD}%) — see audit #1038"
-            exit 1
-          elif [ "$OVER_WARN" = "1" ]; then
-            echo "::warning::Static DRAM usage ${RAM_PCT}% above target (>${WARN_THRESHOLD}%) — approaching runtime-heap headroom (#1038)"
-          else
-            echo "Static DRAM usage ${RAM_PCT}% within budget"
-          fi
-
-      - name: Emit ELF section sizes (visibility)
-        # `xtensa-esp32-elf-size --format=sysv` lists every section with byte
-        # counts. The output is too noisy for a budget gate but invaluable for
-        # reviewers diagnosing *why* a PR moved the RAM/Flash percentages —
-        # which sections grew, by how much. PlatformIO ships the toolchain
-        # under ~/.platformio/packages/toolchain-xtensa-esp32. The ELF lives
-        # at .pio/build/crowpanel_28/firmware.elf after the production build
-        # step.
-        if: always()
-        run: |
-          ELF=.pio/build/crowpanel_28/firmware.elf
-          if [ ! -f "$ELF" ]; then
-            echo "::warning::ELF not produced; size summary skipped"
-            exit 0
-          fi
-          SIZE_BIN=$(find ~/.platformio/packages/toolchain-xtensa-esp32 -name 'xtensa-esp32-elf-size' -type f -print -quit 2>/dev/null || true)
-          if [ -z "${SIZE_BIN:-}" ]; then
-            echo "::warning::xtensa-esp32-elf-size not found in PlatformIO packages"
-            exit 0
-          fi
-          echo "### ELF section sizes (firmware.elf)"
-          "$SIZE_BIN" --format=sysv "$ELF"
-
-  # ─── Firmware — native unit tests ───────────────────────────────────────────
-  # Compiles a subset of the firmware sources (config loader, JSON reader,
-  # signal store, MaxxECU parser, signal map) on the host via the [env:native]
-  # PlatformIO environment and runs the Unity test suite. No ESP32 toolchain
-  # required — purely host-side coverage of decode + storage logic. See
-  # canshift-firmware/test/README.md.
-  firmware-native-tests:
-    name: firmware — native tests
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.firmware == 'true'
-    defaults:
-      run:
-        working-directory: canshift-firmware
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache PlatformIO packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio/.packages
-            ~/.platformio/.cache
-          key: pio-native-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
-          restore-keys: |
-            pio-native-${{ runner.os }}-
-
-      - name: Install PlatformIO CLI
-        run: pip install platformio
-
-      - name: Run native unit tests
-        # ASAN_OPTIONS=detect_leaks=1 flips on LeakSanitizer at process exit
-        # for the native Unity binaries. ASan-on-Linux ships with LSan baked
-        # in, so this is the portable way to opt in without forcing macOS
-        # developers to install standalone LSan (#936 Phase 0).
-        env:
-          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: platformio test -e native
-
-  # ─── Firmware — secure-boot build (non-blocking, #531) ─────────────────────
-  # Compiles the opt-in [env:secure] PlatformIO environment (RSA-3072 signed,
-  # AES-XTS-256 flash-encrypted image — see docs/secure-boot-setup.md) on
-  # every firmware-touching PR. The build needs a signing key on disk at
-  # canshift-firmware/secrets/secure_boot_signing_key.pem; the production
-  # key never enters CI, so this job uses a SEPARATE test key provisioned
-  # via the SECURE_BOOT_SIGNING_KEY_TEST repository secret (PEM contents,
-  # whitespace preserved). When the secret is absent (fork PR, secret not
-  # yet provisioned), the gate step skips the remaining steps with a notice
-  # so the job remains green-as-skip rather than red-as-fail.
-  #
-  # NON-BLOCKING for now (`continue-on-error: true`). Promote to blocking
-  # once the key is provisioned and a clean run has been observed on a few
-  # firmware-touching PRs — at that point flip `continue-on-error` to false
-  # and add this job to branch-protection required checks.
-  #
-  # The test signing key is NOT the production key. The production key
-  # never lives in CI — it is generated once on a controlled workstation
-  # via scripts/generate_keys.sh and kept offline (HSM / YubiKey /
-  # encrypted offline backup). See docs/secure-boot-setup.md section 6.
-  firmware-secure-build:
-    name: firmware — secure-boot build (non-blocking)
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.firmware == 'true'
-    continue-on-error: true
-    defaults:
-      run:
-        working-directory: canshift-firmware
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Gate on signing key secret presence
-        id: gate
-        # GitHub Actions does not expose secrets inside top-level `if:`, so
-        # the gate runs as a step that emits `run=true|false`. Downstream
-        # steps key off the output. Fork PRs and unconfigured repos skip
-        # transparently (job stays green-as-skip).
-        env:
-          SECURE_BOOT_SIGNING_KEY_TEST: ${{ secrets.SECURE_BOOT_SIGNING_KEY_TEST }}
-        run: |
-          if [ -n "${SECURE_BOOT_SIGNING_KEY_TEST:-}" ]; then
-            echo "SECURE_BOOT_SIGNING_KEY_TEST present — running secure-boot build"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::SECURE_BOOT_SIGNING_KEY_TEST not configured — skipping secure-boot build (expected on fork PRs and pre-rollout repos). See docs/secure-boot-setup.md."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: actions/setup-python@v5
-        if: steps.gate.outputs.run == 'true'
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache PlatformIO packages + build objects
-        if: steps.gate.outputs.run == 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio/.packages
-            ~/.platformio/.cache
-            canshift-firmware/.pio
-          key: pio-secure-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini', 'canshift-firmware/sdkconfig.defaults.secure', 'canshift-firmware/ota_4mb_secure.csv') }}
-          restore-keys: |
-            pio-secure-${{ runner.os }}-
-
-      - name: Install PlatformIO CLI
-        if: steps.gate.outputs.run == 'true'
-        run: pip install platformio
-
-      - name: Materialize test signing key
-        if: steps.gate.outputs.run == 'true'
-        # The PEM is dropped at the path baked into sdkconfig.defaults.secure
-        # (CONFIG_SECURE_BOOT_SIGNING_KEY="secrets/secure_boot_signing_key.pem").
-        # 0600 mirrors how scripts/generate_keys.sh chmods the on-disk file
-        # so a future on-runner espsecure.py invocation behaves identically.
-        env:
-          SECURE_BOOT_SIGNING_KEY_TEST: ${{ secrets.SECURE_BOOT_SIGNING_KEY_TEST }}
-        run: |
-          mkdir -p secrets
-          chmod 700 secrets
-          printf '%s' "${SECURE_BOOT_SIGNING_KEY_TEST}" > secrets/secure_boot_signing_key.pem
-          chmod 600 secrets/secure_boot_signing_key.pem
-          echo "Test signing key written to secrets/secure_boot_signing_key.pem"
-
-      - name: Write secrets.ini (CI-only OTA secret)
-        if: steps.gate.outputs.run == 'true'
-        # [env:secure] extends [env:crowpanel_28], which refuses to build
-        # without a real OTA HMAC secret (#910). Reuse the same CI fallback
-        # pattern as firmware-build above — published artifact is never
-        # produced from this job, so a known CI-only secret is harmless.
-        env:
-          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
-        run: |
-          if [ -n "${OTA_HMAC_SECRET:-}" ]; then
-            SECRET="${OTA_HMAC_SECRET}"
-          else
-            SECRET="${OTA_HMAC_CI_FALLBACK}"
-          fi
-          cat > secrets.ini <<EOF
-          [ota]
-          hmac_secret = ${SECRET}
-          EOF
-
-      - name: Build [env:secure]
-        if: steps.gate.outputs.run == 'true'
-        # Signs the app image with the test key + builds the encryptable
-        # bootloader + partitions. Does NOT flash anything (no hardware in
-        # CI). Failure here means the secure-boot config or the partition
-        # table is out of sync with the rest of the firmware.
-        run: platformio run -e secure
-
-      - name: Scrub test signing key
-        if: always() && steps.gate.outputs.run == 'true'
-        # Defense in depth: the runner is ephemeral but we want the .pem to
-        # be unreadable if a later step somehow uploads artifacts.
-        run: |
-          rm -f secrets/secure_boot_signing_key.pem
-          echo "Test signing key scrubbed"
-
-  # ─── Firmware — clang-tidy (informational, ramping to blocking, #829) ───────
-  # clang-tidy runs on a compilation database emitted by PlatformIO. Until the
-  # baseline is clean (planned fix-up PRs) the job is non-blocking — it surfaces
-  # findings via the workflow log + GitHub annotations but does not gate merges.
-  # When the baseline reaches zero warnings, drop `continue-on-error: true` and
-  # add `WarningsAsErrors: '*'` to `.clang-tidy` to make this a required check.
-  firmware-clang-tidy:
-    name: firmware — clang-tidy (non-blocking)
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.firmware == 'true'
-    continue-on-error: true
-    defaults:
-      run:
-        working-directory: canshift-firmware
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install PlatformIO + clang-tidy
-        run: |
-          pip install platformio
-          sudo apt-get install -y clang-tidy
-
-      - name: Cache PlatformIO packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio/.packages
-            ~/.platformio/.cache
-          key: pio-clang-tidy-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
-          restore-keys: |
-            pio-clang-tidy-${{ runner.os }}-
-
-      # Same secrets.ini guard as firmware-build — the production env build
-      # needs a non-placeholder OTA secret since #910 removed the auto-accept.
-      - name: Write secrets.ini for production firmware (CI-only secret)
-        run: |
-          if [ -n "${OTA_HMAC_SECRET:-}" ]; then
-            SECRET="${OTA_HMAC_SECRET}"
-          else
-            SECRET="${OTA_HMAC_CI_FALLBACK}"
-          fi
-          cat > secrets.ini <<EOF
-          [ota]
-          hmac_secret = ${SECRET}
-          EOF
-        env:
-          OTA_HMAC_SECRET: ${{ secrets.OTA_HMAC_SECRET }}
-
-      - name: Emit compile_commands.json
-        # PlatformIO's `compiledb` target writes a clang-compatible compilation
-        # database covering every first-party translation unit for the target
-        # env. clang-tidy uses it to know exactly which flags each file was
-        # compiled with — without it the analyser can't resolve LVGL / Arduino
-        # headers and silently bails.
-        run: platformio run -e crowpanel_28 -t compiledb
-
-      - name: Locate + sanitise compile_commands.json
-        id: db
-        # PlatformIO emits `compile_commands.json` to the project root or to
-        # `.pio/build/<env>/`, depending on version. Search both, then patch
-        # the file in place so stock Ubuntu clang-tidy (system clang, no
-        # Xtensa target) can parse the TUs. Without this every file errors
-        # out at the target-triple check before clang-tidy runs a single rule.
-        run: |
-          echo "PlatformIO version: $(platformio --version)"
-          echo "Filesystem state under firmware project:"
-          ls -la
-          ls -la .pio/build/crowpanel_28/ 2>/dev/null || echo "(no .pio/build/crowpanel_28 dir)"
-          DB=""
-          for candidate in compile_commands.json .pio/build/crowpanel_28/compile_commands.json; do
-            if [ -f "$candidate" ]; then
-              DB="$candidate"
-              break
-            fi
-          done
-          if [ -z "$DB" ]; then
-            DB=$(find . -name compile_commands.json -type f 2>/dev/null | head -n 1)
-          fi
-          if [ -z "$DB" ]; then
-            echo "::error::compile_commands.json not produced by PlatformIO"
-            exit 1
-          fi
-          echo "Patching $DB for clang-tidy"
-          sed -i \
-            -e 's/-mlongcalls//g' \
-            -e 's/-mfix-esp32-psram-cache-issue//g' \
-            -e 's/-mfix-esp32-psram-cache-strategy=[a-z]*//g' \
-            -e 's/-fno-tree-switch-conversion//g' \
-            -e 's/-fstrict-volatile-bitfields//g' \
-            -e 's/-freorder-blocks//g' \
-            -e 's/-fno-shrink-wrap//g' \
-            -e 's/-fno-ipa-cp//g' \
-            -e 's|--target=xtensa-esp32-elf|--target=x86_64-linux-gnu|g' \
-            -e 's|xtensa-esp32-unknown-elf|x86_64-linux-gnu|g' \
-            "$DB"
-          DB_DIR=$(dirname "$DB")
-          echo "db-dir=$DB_DIR" >> "$GITHUB_OUTPUT"
-
-      - name: Run clang-tidy on src/ (informational)
-        # ESP32 toolchain compatibility footnote:
-        #   Stock Ubuntu clang-tidy cannot target Xtensa, so the compile DB is
-        #   patched to substitute `--target=x86_64-linux-gnu`. That gets clang
-        #   past the unknown-target gate but the host sysroot is missing
-        #   ESP32-newlib bits like `machine/endian.h`. Files that transitively
-        #   include Arduino / FreeRTOS / lwip headers will still raise a
-        #   `clang-diagnostic-error` on those missing includes.
-        #
-        #   Until ESP-IDF's Xtensa-aware clang is wired into CI (separate
-        #   issue) the runnable signal is whatever rules clang-tidy can emit
-        #   for the TUs that DO parse cleanly — pure-logic modules that don't
-        #   touch the toolchain sysroot. The step prints the full output and
-        #   always exits 0 so the rest of the firmware checks see this job as
-        #   passing. The complementary `firmware — clang-tidy (gating, native
-        #   subset)` job is the real required check — it runs against the
-        #   native env compile DB where every TU parses cleanly with system
-        #   clang and `WarningsAsErrors: '*'` in `.clang-tidy` turns any rule
-        #   emit into a build failure (#936 Phase 0).
-        run: |
-          FILES=$(find src -name '*.cpp')
-          if [ -z "$FILES" ]; then
-            echo "No firmware sources found — skipping clang-tidy"
-            exit 0
-          fi
-          set +e
-          clang-tidy -p "${{ steps.db.outputs.db-dir }}" \
-            --extra-arg='--target=x86_64-linux-gnu' \
-            --extra-arg=-Wno-unknown-warning-option \
-            --extra-arg=-Qunused-arguments \
-            $FILES
-          STATUS=$?
-          set -e
-          echo "clang-tidy exited with status $STATUS (non-blocking — see footnote)"
-          exit 0
-
-  # ─── Firmware — clang-tidy (gating, native subset, #936 Phase 0) ────────────
-  # Required check. Runs clang-tidy against the [env:native] compilation DB —
-  # the 11 first-party TUs that the native unit-test build compiles on the
-  # host (config loader, JSON reader, signal store, parsers, error store,
-  # logger, USB envelope, OTA HMAC, sensor color ramp/palette). These TUs
-  # parse cleanly with stock Ubuntu clang because the native env links
-  # against host headers, not the ESP32 newlib sysroot — so every rule in
-  # `.clang-tidy` (`bugprone-*`, `cert-*`, `clang-analyzer-core.*`,
-  # `clang-analyzer-cplusplus.*`, `concurrency-*`) can run end-to-end and
-  # `WarningsAsErrors: '*'` makes the job fail on the first violation.
-  #
-  # Sister job to the (still informational) `firmware — clang-tidy
-  # (non-blocking)` above, which runs against the Xtensa compile DB and is
-  # dominated by toolchain-induced clang-diagnostic-error noise until the
-  # ESP-IDF Xtensa-aware clang is wired into CI.
-  firmware-clang-tidy-gating:
-    name: firmware — clang-tidy (gating, native subset)
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.firmware == 'true'
-    defaults:
-      run:
-        working-directory: canshift-firmware
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install PlatformIO + clang-tidy
-        run: |
-          pip install platformio
-          sudo apt-get install -y clang-tidy
-
-      - name: Cache PlatformIO packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio/.packages
-            ~/.platformio/.cache
-          key: pio-clang-tidy-native-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
-          restore-keys: |
-            pio-clang-tidy-native-${{ runner.os }}-
-
-      - name: Emit native compile_commands.json
-        # `pio run -e native -t compiledb` writes a host-targeted compilation
-        # database to compile_commands.json. Every entry compiles with g++
-        # against host headers — no Xtensa toolchain patching required.
-        run: platformio run -e native -t compiledb
-
-      - name: Run clang-tidy (gating)
-        # Parse the DB ourselves so we run only on the first-party src/
-        # entries (skip the shim TU under test/native/shim/). Each file is
-        # invoked individually so a single failure surfaces the offending
-        # path in the GitHub Actions log without one giant interleaved blob.
-        run: |
-          set -euo pipefail
-          FILES=$(python3 -c "
-          import json
-          with open('compile_commands.json') as f:
-              db = json.load(f)
-          for e in db:
-              if e['file'].startswith('src/'):
-                  print(e['file'])
-          ")
-          if [ -z "$FILES" ]; then
-            echo "::error::No src/ entries in compile_commands.json — native compileDB regression?"
-            exit 1
-          fi
-          echo "Running clang-tidy on:"
-          echo "$FILES"
-          FAILED=0
-          for f in $FILES; do
-            echo "::group::clang-tidy $f"
-            if ! clang-tidy -p . --quiet "$f"; then
-              FAILED=1
-              echo "::error file=canshift-firmware/$f::clang-tidy rule violation in $f"
-            fi
-            echo "::endgroup::"
-          done
-          if [ "$FAILED" -ne 0 ]; then
-            echo "::error::clang-tidy gating job failed — see annotations above"
-            exit 1
-          fi
-          echo "clang-tidy gating job passed across all native-env TUs"
+            build | xcbeautify --quieter
