@@ -365,19 +365,6 @@ const WidgetBox = memo(function WidgetBox({
         displayH={layout.h * SCALE}
         revLimiting={revLimiting}
       />
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            bottom: 0,
-            width: 8,
-            height: 8,
-            background: '#FFFFFF',
-            cursor: 'se-resize',
-          }}
-        />
-      )}
     </div>
   )
 })
