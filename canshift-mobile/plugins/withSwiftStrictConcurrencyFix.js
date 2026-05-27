@@ -13,12 +13,32 @@ const PATCH_MARKER = '# canshift-swift-strict-concurrency-expo55'
 const PATCH = `
     ${PATCH_MARKER}
     # ExpoModulesCore 55.0.25 fails under Xcode 16's default complete
-    # concurrency checking. Pin every Pod to Swift 5 + minimal strict
-    # concurrency until Expo lands a Swift 6-ready release. See CANShift#1151.
+    # concurrency checking. Set every Pod target to minimal strict-
+    # concurrency so the legacy "warn, don't error" rules apply. An
+    # earlier revision also forced SWIFT_VERSION=5.0 but that disabled
+    # @MainActor recognition (introduced in Swift 5.5) — Expo uses
+    # @MainActor at every host-view declaration, so downgrading the
+    # language version broke compilation a different way ("unknown
+    # attribute 'MainActor'" × 12). Keep the Swift version at the project
+    # default and only relax the concurrency mode. See CANShift#1151 / #1155.
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
-        config.build_settings['SWIFT_VERSION'] = '5.0'
         config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
+      end
+    end
+    # Apply at xcconfig level too — target build_settings don't always
+    # override per-pod podspec swift_compiler flags on ExpoModulesCore.
+    # xcconfig is read by xcodebuild as the last word.
+    installer.target_installation_results.pod_target_installation_results.each do |pod_name, _result|
+      ['Debug', 'Release'].each do |cfg|
+        xcconfig_path = File.join(
+          installer.sandbox.root,
+          "Target Support Files/#{pod_name}/#{pod_name}.#{cfg.downcase}.xcconfig"
+        )
+        next unless File.exist?(xcconfig_path)
+        content = File.read(xcconfig_path)
+        next if content.include?('SWIFT_STRICT_CONCURRENCY')
+        File.write(xcconfig_path, content + "\\nSWIFT_STRICT_CONCURRENCY = minimal\\n")
       end
     end
 `
