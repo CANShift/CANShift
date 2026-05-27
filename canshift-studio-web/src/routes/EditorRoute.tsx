@@ -61,24 +61,31 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
 
       {/* Body — template-rendered pages show a fixed 2×2 glyph; otherwise the
           widget thumbnails. Mirrors the firmware contract: when `template` is
-          set, the widgets[] array is ignored on-device (#451). */}
+          set, the widgets[] array is ignored on-device (#451). The cruise
+          template thumbnail mirrors the live CruiseControlPreview: four
+          corner buttons around a central SET-speed readout. */}
       {isCruiseTemplate ? (
         <div
           style={{
             position: 'absolute',
-            top: barH + 4,
-            left: 4,
-            right: 4,
-            bottom: 4,
+            top: barH + 3,
+            left: 3,
+            right: 3,
+            bottom: 3,
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gridTemplateRows: '1fr 1fr',
-            gap: 3,
+            gap: 2,
           }}
         >
-          {['+', 'SET', '−', 'OFF'].map((glyph) => (
+          {[
+            { glyph: '−', corner: 'tl' },
+            { glyph: '+', corner: 'tr' },
+            { glyph: 'SET', corner: 'bl' },
+            { glyph: 'OFF', corner: 'br' },
+          ].map(({ glyph, corner }) => (
             <div
-              key={glyph}
+              key={corner}
               style={{
                 background: '#FFFFFF14',
                 border: '1px solid #FFFFFF28',
@@ -87,13 +94,35 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#FFFFFFAA',
-                fontSize: 10,
+                fontSize: glyph === '+' || glyph === '−' ? 11 : 8,
                 fontWeight: 700,
+                letterSpacing: '0.04em',
               }}
             >
               {glyph}
             </div>
           ))}
+          {/* Centred SET-speed readout — overlays the grid centre, matches the
+              transparent floating widget used in the live preview. */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 0,
+              color: '#FFFFFFCC',
+              fontFamily: 'Orbitron, sans-serif',
+              pointerEvents: 'none',
+            }}
+          >
+            <span style={{ fontSize: 5, color: '#FFFFFF77', letterSpacing: '0.08em' }}>SET</span>
+            <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1 }}>100</span>
+            <span style={{ fontSize: 5, color: '#FFFFFF77' }}>km/h</span>
+          </div>
         </div>
       ) : (
         page.widgets.map((widget) => (

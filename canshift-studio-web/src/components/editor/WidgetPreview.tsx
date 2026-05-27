@@ -292,8 +292,11 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
   const revFlash = cfg.revFlash === true
   const showRevFlash = revFlash && revLimiting
 
-  const valueFontSize = Math.max(9, Math.min(r * 0.38, h * 0.18, 28))
-  const unitFontSize = Math.max(6, r * 0.17)
+  // Bumped from r*0.38/h*0.18/28 — value text was reading subordinate to
+  // the arc trace at 80-px-tall dashboard cells. The new ceiling keeps the
+  // glyph inside the arc's inner radius (no clip) while letting it dominate.
+  const valueFontSize = Math.max(11, Math.min(r * 0.55, h * 0.3, 42))
+  const unitFontSize = Math.max(7, r * 0.2)
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
@@ -581,7 +584,9 @@ const GaugeBarPreview = memo(function GaugeBarPreview({
   const dangerY = padTop + trackH * (1 - dangerPct)
 
   const sigFontSize = Math.max(6, Math.min(sigLabelH * 0.82, w * 0.12))
-  const valFontSize = Math.max(10, Math.min(valLineH * 0.9, w * 0.46))
+  // Bumped value-line width factor from 0.46 → 0.6 so the digit fills more
+  // of the vertical bar's footprint and reads at a glance from the wheel.
+  const valFontSize = Math.max(12, Math.min(valLineH * 0.95, w * 0.6))
   const unitFontSize = Math.max(7, Math.min(unitLineH * 0.85, w * 0.3))
 
   // Value/unit text — white below danger, critical above (issue #965).
@@ -766,8 +771,9 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const sigHeaderH = showSignalHeader ? 14 : 0
   const availH = h - sigHeaderH
 
-  // Inline layout — value occupies the full available band.
-  const fontSize = Math.max(8, Math.min(availH * 0.72, w * 0.52))
+  // Inline layout — value occupies the full available band. Bumped from
+  // 0.72/0.52 → 0.85/0.65 so the digit dominates the widget cell at a glance.
+  const fontSize = Math.max(10, Math.min(availH * 0.85, w * 0.65))
 
   const isLabelTop = labelText !== null && labelPos.startsWith('top')
   const isLabelRight = labelPos.endsWith('right')
