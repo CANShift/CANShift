@@ -14,7 +14,7 @@ import { z } from 'zod'
 
 import { HexColorSchema, SemVerSchema } from './common.js'
 import { Obd2PollingSchema } from './obd2.js'
-import { MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
+import { FIRMWARE_CAPS, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
 
 /** CAN frame identifier — 11-bit standard hex literal, e.g. "0x123" or "0X7FF". */
 const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,3}$/
@@ -266,7 +266,15 @@ export const SignalConfigSchema = z
     version: SemVerSchema,
     protocol: z.string(),
     canSpeedKbps: CanSpeedKbpsSchema,
-    signals: z.array(SignalDefSchema),
+    // Firmware allocates a fixed-size signal array — over-limit catalogs would
+    // silently drop tail signals at load time. Mirrors the `actions` /
+    // `inputBindings` caps already enforced elsewhere (#1168).
+    signals: z
+      .array(SignalDefSchema)
+      .max(
+        FIRMWARE_CAPS.MAX_SIGNALS,
+        `signals cannot exceed ${String(FIRMWARE_CAPS.MAX_SIGNALS)} entries (firmware cap)`
+      ),
   })
   .strict()
 
