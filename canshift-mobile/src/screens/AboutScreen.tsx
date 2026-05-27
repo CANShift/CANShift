@@ -181,9 +181,15 @@ export default function AboutScreen({ navigation }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    void loadPreReleaseToggle().then((value) => {
-      if (!cancelled) setShowPreRelease(value)
-    })
+    void loadPreReleaseToggle()
+      .then((value) => {
+        if (!cancelled) setShowPreRelease(value)
+      })
+      .catch(() => {
+        // loadPreReleaseToggle swallows its own errors and returns true —
+        // this catch is a belt-and-suspenders guard against future changes.
+        if (!cancelled) setShowPreRelease(true)
+      })
     return () => {
       cancelled = true
     }
