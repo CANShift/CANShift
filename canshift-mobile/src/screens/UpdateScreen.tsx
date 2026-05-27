@@ -23,6 +23,7 @@ import { describeOtaErrorForUser, mapOtaError, OtaServiceError } from '../servic
 import { getStudioUrl, openStudioInBrowser } from '../services/open-studio'
 import { getWifiApPassword } from '../services/wifi-ap-password'
 import { useDeviceStore } from '../stores/device.store'
+import { log } from '../stores/log.store'
 import { loadOtaReleases, useOtaReleasesStore } from '../stores/ota-releases.store'
 import type { RootStackParamList } from '../navigation'
 import {
@@ -209,9 +210,19 @@ export default function UpdateScreen({ navigation }: Props) {
       return
     }
     let cancelled = false
-    void getWifiApPassword().then((pwd) => {
-      if (!cancelled) setWifiApPasswordState(pwd)
-    })
+    void getWifiApPassword()
+      .then((pwd) => {
+        if (!cancelled) setWifiApPasswordState(pwd)
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return
+        log(
+          'warn',
+          `Failed to read Wi-Fi AP password: ${e instanceof Error ? e.message : 'unknown'}`
+        )
+        setError('Could not read Wi-Fi credentials. Reopen the screen to retry.')
+        setStep('releases')
+      })
     return () => {
       cancelled = true
     }

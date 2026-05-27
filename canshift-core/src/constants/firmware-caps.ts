@@ -35,3 +35,35 @@ export const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
 // Empty string = zero-byte frame (legal). Must be even-length pure hex.
 export const CAN_RAW_DATA_MAX_HEX_CHARS = 16
 export const CAN_RAW_DATA_REGEX = /^([0-9a-fA-F]{2})*$/
+
+// CAN 2.0 frames carry at most 8 data bytes — a signal's `startByte` must fit
+// inside the frame, so the legal range is [0, CAN_FRAME_MAX_BYTES - 1].
+export const CAN_FRAME_MAX_BYTES = 8
+
+// Bounds for `WidgetStyle.fontSize` — keeps text legible on the 320×240 canvas
+// without blowing past LVGL's largest preloaded glyph (~48px in Orbitron).
+export const FONT_SIZE_MIN = 8
+export const FONT_SIZE_MAX = 48
+
+// `MapSwitchAction.mapIndex` is encoded as a 0-based byte the firmware sends
+// as `mapIndex + 1` on the wire (1..8). The schema accepts the domain form.
+export const MAP_INDEX_MAX = 7
+
+// Largest CAN 2.0B 29-bit extended identifier. Standard (11-bit) IDs fit in
+// the lower 0x7FF; the schema accepts both since `CanRawAction.extended`
+// picks the framing.
+export const CAN_29BIT_MAX = 0x1fffffff
+
+// Upper bounds on free-form string fields the firmware copies into fixed C
+// buffers. Over-limit values would truncate (or, worse, overflow) on-device,
+// so the schema rejects them at the boundary (#1170).
+export const STRING_CAPS = {
+  SIGNAL_NAME: 31,
+  SIGNAL_UNIT: 15,
+  WIDGET_LABEL: 64,
+  WIDGET_PREFIX_SUFFIX: 32,
+  ICON_PATH: 256,
+  IMAGE_PATH: 256,
+  PROTOCOL: 64,
+  BINDING_SIGNAL: 64,
+} as const
