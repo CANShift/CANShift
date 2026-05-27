@@ -1207,11 +1207,15 @@ describe('schema bounds hardening', () => {
 
   describe('WidgetStyle.fontSize bounds', () => {
     it('accepts fontSize at the lower boundary', () => {
-      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MIN })).success).toBe(true)
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MIN })).success).toBe(
+        true
+      )
     })
 
     it('accepts fontSize at the upper boundary', () => {
-      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MAX })).success).toBe(true)
+      expect(WidgetStyleSchema.safeParse(validStyle({ fontSize: FONT_SIZE_MAX })).success).toBe(
+        true
+      )
     })
 
     it('rejects fontSize below the lower boundary', () => {
@@ -1316,7 +1320,8 @@ describe('schema bounds hardening', () => {
   describe('SignalDef.name cap', () => {
     it('accepts a name at the cap', () => {
       expect(
-        SignalDefSchema.safeParse(validSignal({ name: 'a'.repeat(STRING_CAPS.SIGNAL_NAME) })).success
+        SignalDefSchema.safeParse(validSignal({ name: 'a'.repeat(STRING_CAPS.SIGNAL_NAME) }))
+          .success
       ).toBe(true)
     })
 
@@ -1331,7 +1336,8 @@ describe('schema bounds hardening', () => {
   describe('SignalDef.unit cap', () => {
     it('accepts a unit at the cap', () => {
       expect(
-        SignalDefSchema.safeParse(validSignal({ unit: 'u'.repeat(STRING_CAPS.SIGNAL_UNIT) })).success
+        SignalDefSchema.safeParse(validSignal({ unit: 'u'.repeat(STRING_CAPS.SIGNAL_UNIT) }))
+          .success
       ).toBe(true)
     })
 
