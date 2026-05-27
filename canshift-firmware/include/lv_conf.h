@@ -51,7 +51,9 @@
    Earlier note: 96 KB caused a black screen; 12 KB sim-only override
    panicked inside lvgl_load_font because the 20 KB font bitmap alloc
    returned NULL (issue #557). Sim/QEMU shares the same pool. */
+    #ifndef LV_MEM_SIZE
         #define LV_MEM_SIZE (64U * 1024U)
+    #endif
 
         /* Set an address for the memory pool instead of allocating it as a global array.
    Can be in external SRAM too. */
