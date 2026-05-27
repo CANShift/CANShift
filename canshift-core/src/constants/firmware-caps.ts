@@ -53,3 +53,17 @@ export const MAP_INDEX_MAX = 7
 // the lower 0x7FF; the schema accepts both since `CanRawAction.extended`
 // picks the framing.
 export const CAN_29BIT_MAX = 0x1fffffff
+
+// Upper bounds on free-form string fields the firmware copies into fixed C
+// buffers. Over-limit values would truncate (or, worse, overflow) on-device,
+// so the schema rejects them at the boundary (#1170).
+export const STRING_CAPS = {
+  SIGNAL_NAME: 31,
+  SIGNAL_UNIT: 15,
+  WIDGET_LABEL: 64,
+  WIDGET_PREFIX_SUFFIX: 32,
+  ICON_PATH: 256,
+  IMAGE_PATH: 256,
+  PROTOCOL: 64,
+  BINDING_SIGNAL: 64,
+} as const

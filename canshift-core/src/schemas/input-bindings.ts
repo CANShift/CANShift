@@ -21,6 +21,7 @@ import { z } from 'zod'
 
 import { ButtonActionSchema } from './dashboard.js'
 import { Esp32InputGpioSchema } from './device.js'
+import { STRING_CAPS } from '../constants/firmware-caps.js'
 
 // ---------------------------------------------------------------------------
 // Static caps — kept tight so the firmware can keep a fixed C array per
@@ -77,7 +78,7 @@ export const InputBindingWireSchema = z
     // dashboard button widget bound to the same signal — so a physical ALS
     // arm button keeps the on-screen ALS button in sync without waiting for
     // the ECU echo. Either side can also disarm (issue #833).
-    signal: z.string().optional(),
+    signal: z.string().max(STRING_CAPS.BINDING_SIGNAL).optional(),
   })
   .strict()
 
@@ -111,7 +112,7 @@ export const InputBindingSchema = z
     debounceMs: DebounceMsSchema,
     kind: InputPressKindSchema,
     action: ButtonActionSchema,
-    signal: z.string().optional(),
+    signal: z.string().max(STRING_CAPS.BINDING_SIGNAL).optional(),
   })
   .strict()
 

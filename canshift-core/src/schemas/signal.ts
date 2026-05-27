@@ -14,7 +14,12 @@ import { z } from 'zod'
 
 import { HexColorSchema, SemVerSchema } from './common.js'
 import { Obd2PollingSchema } from './obd2.js'
-import { CAN_FRAME_MAX_BYTES, FIRMWARE_CAPS, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
+import {
+  CAN_FRAME_MAX_BYTES,
+  FIRMWARE_CAPS,
+  MAX_RAMP_STOPS,
+  STRING_CAPS,
+} from '../constants/firmware-caps.js'
 
 /** CAN frame identifier — 11-bit standard hex literal, e.g. "0x123" or "0X7FF". */
 const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,3}$/
@@ -124,7 +129,7 @@ export const ColorRampSchema = z
  */
 export const SignalDefSchema = z
   .object({
-    name: z.string(),
+    name: z.string().max(STRING_CAPS.SIGNAL_NAME),
     canFrameId: z
       .string()
       .regex(CAN_FRAME_ID_REGEX, 'canFrameId must be hex like 0x123 (1-3 hex chars)'),
@@ -139,7 +144,7 @@ export const SignalDefSchema = z
     bitMask: z.string().regex(BIT_MASK_REGEX, 'bitMask must be a hex literal like 0xFF').optional(),
     scale: z.number().finite(),
     offset: z.number().finite(),
-    unit: z.string(),
+    unit: z.string().max(STRING_CAPS.SIGNAL_UNIT),
     min: z.number(),
     max: z.number(),
     warningLevel: z.number().optional(),
@@ -268,7 +273,7 @@ export const CAN_SPEED_OPTIONS: readonly CanSpeedKbps[] = CanSpeedKbpsSchema.opt
 export const SignalConfigSchema = z
   .object({
     version: SemVerSchema,
-    protocol: z.string(),
+    protocol: z.string().max(STRING_CAPS.PROTOCOL),
     canSpeedKbps: CanSpeedKbpsSchema,
     // Firmware allocates a fixed-size signal array — over-limit catalogs would
     // silently drop tail signals at load time. Mirrors the `actions` /
