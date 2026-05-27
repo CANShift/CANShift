@@ -29,14 +29,18 @@ static constexpr const char *kBakSuffix = ".bak";
 // CFG_MAX_PATH_LEN + ".bak" (4) + null terminator (1).
 static constexpr size_t kBakPathLen = CFG_MAX_PATH_LEN + 5;
 
-// Neither dashboard.json nor signals.json are embedded — both are now hosted
-// on canshift-flasher (canshift.tmbk.ch). The user picks an ECU profile and
-// a dashboard layout during the USB flash flow; the flasher merges them into
-// the SPIFFS image before write. First boot without a dashboard.json shows
-// an empty dash and the Studio web (canshift.local) can push one; same for
-// signals.json (loadSignals() logs an error and widgets fall back to "--").
-// Saves ~25 KB flash (dashboard 17 KB + signals 7 KB) on top of the build's
-// other optimisations.
+// dashboard.json stays embedded — its absence at first boot left PageManager
+// with zero pages and the UI build crashed (`Guru Meditation LoadProhibited`
+// post-lv_init in QEMU smoke). dashboard.json is small (~17 KB) and the
+// baseline layout is a useful first-flash experience even if the flasher
+// later overwrites it. signals.json IS dropped: loadSignals() handles the
+// empty case (widgets fall back to "--") and the flasher injects the right
+// ECU profile per the canshift-flasher#189 catalog.
+
+extern "C" {
+extern const uint8_t kDefaultDashboardStart[] asm("_binary_data_config_dashboard_json_start");
+extern const uint8_t kDefaultDashboardEnd[] asm("_binary_data_config_dashboard_json_end");
+}
 
 namespace {
 
@@ -47,10 +51,9 @@ struct EmbeddedBlob {
     const char *label;
 };
 
-// Empty — no embedded baseline configs. Provisioning happens entirely via
-// the SPIFFS image uploaded at flash time (carrier of the user's pick) or
-// at runtime via Studio web / mobile OTA push.
-const EmbeddedBlob kEmbedded[] = {};
+const EmbeddedBlob kEmbedded[] = {
+    {CONFIG_PATH_DASHBOARD, kDefaultDashboardStart, kDefaultDashboardEnd, "dashboard.json"},
+};
 
 bool buildBakPath(char *out, size_t outLen, const char *base) {
     if (!out || !base || outLen == 0)
