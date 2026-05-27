@@ -530,9 +530,9 @@ export const TopBarConfigSchema = z
 // otherwise pollute every downstream caller (audit C-ME-5).
 export const DEFAULT_TOP_BAR_LAYOUT = [
   { type: 'bleIcon', position: 'right' },
-  { type: 'statusDot', signal: 'any', position: 'right' },
-  { type: 'separator', position: 'right' },
   { type: 'themeToggle', position: 'right' },
+  { type: 'separator', position: 'right' },
+  { type: 'statusDot', signal: 'any', position: 'right' },
 ] as const satisfies readonly z.infer<typeof TopBarItemSchema>[]
 
 // ---------------------------------------------------------------------------

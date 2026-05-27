@@ -9,7 +9,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import TopBar from './components/shared/TopBar'
-import StatusBar from './components/shared/StatusBar'
 import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
 import { useConnectionStore } from './stores/connection.store'
@@ -155,7 +154,6 @@ export default function App() {
       ) : (
         <RouteLoading />
       )}
-      <StatusBar />
     </div>
   )
 }
