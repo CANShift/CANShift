@@ -265,13 +265,7 @@ jobs:
   # only changes under src/ are already covered by the ubuntu typecheck job.
   mobile-ios-build:
     name: mobile — iOS native build
-    # macos-latest currently resolves to macOS 15 with Xcode 16, which enables
-    # Swift 6 complete concurrency checking by default. ExpoModulesCore 55.0.25
-    # doesn't compile under that mode — see #1155 / #1156 for the Pod-level
-    # mitigation attempts. Until Expo lands a Swift 6 release, pin the runner
-    # to macOS 14 (Xcode 15.x default) so the build stays on Swift 5 implicit
-    # concurrency. Track via #1151.
-    runs-on: macos-14
+    runs-on: macos-latest
     needs: [changes]
     if: needs.changes.outputs.mobile == 'true'
     defaults:
