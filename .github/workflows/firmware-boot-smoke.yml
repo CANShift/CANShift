@@ -1,27 +1,3 @@
-# firmware-boot-smoke.yml — Boot smoke-test gate for the firmware.
-#
-# Why: catch boot-time crashes / hangs / boot-loops before they reach a real
-# device. Builds the simulation binary ([env:sim]), assembles a single 4 MB
-# flash image from bootloader + partitions + firmware + SPIFFS, runs it
-# under the Espressif fork of QEMU, and asserts that the firmware reaches
-# the `[BOOT] Ready` marker exactly once within 30 s with no panic strings.
-#
-# Why [env:sim] and not [env:crowpanel_28]:
-#   The production env hangs under QEMU inside TouchDriver::init() because
-#   on a fresh device with no NVS calibration the boot calls the interactive
-#   LovyanGFX calibrateTouch() routine, which waits forever for crosshair
-#   taps that QEMU never produces. The sim env replaces TouchDriver::init()
-#   with a non-blocking stub (always-released) and skips CAN/BLE init —
-#   leaving SPIFFS, default-config + font provisioning, ConfigLoader,
-#   SignalStore, AlertEngine, ThemeManager, PageManager, USB comm and the
-#   full LVGL bring-up exercised. That's the regression surface this gate
-#   is meant to protect (e.g. the LV_MEM 96 KB OOM from #453).
-#
-# Triggers on any PR that touches the firmware tree or this workflow file
-# (so changes to the gate itself are validated by the gate).
-#
-# Issues: #486, #515
-
 name: firmware-boot-smoke
 
 on:
@@ -43,14 +19,7 @@ jobs:
     defaults:
       run:
         working-directory: canshift-firmware
-
     env:
-      # Pinned toolchain versions — kept in sync with ci.yml's top-level env
-      # block so a bump touches one workflow at a time.
-      PYTHON_VERSION: '3.12'
-      # Pinned Espressif QEMU prebuilt — keeps the gate reproducible.
-      # Bump deliberately: a new tag means re-validating the assertion logic
-      # against the new fork's serial output.
       QEMU_TAG: esp-develop-9.2.2-20260417
       QEMU_ASSET: qemu-xtensa-softmmu-esp_develop_9.2.2_20260417-x86_64-linux-gnu.tar.xz
 
@@ -59,46 +28,36 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.12'
 
-      # ─── PlatformIO + simulation build ──────────────────────────────────────
-      - name: Cache PlatformIO packages
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.platformio/.packages
             ~/.platformio/.cache
           key: pio-boot-smoke-${{ runner.os }}-${{ hashFiles('canshift-firmware/platformio.ini') }}
-          restore-keys: |
-            pio-boot-smoke-${{ runner.os }}-
+          restore-keys: pio-boot-smoke-${{ runner.os }}-
 
-      - name: Install PlatformIO + esptool
-        run: pip install platformio esptool
+      - run: pip install platformio esptool
 
-      - name: Build simulation firmware
-        run: platformio run -e sim
+      - run: pio run -e sim
 
-      - name: Build SPIFFS image
-        run: platformio run -t buildfs -e sim
+      - run: pio run -t buildfs -e sim
 
-      # ─── Espressif QEMU prebuilt ────────────────────────────────────────────
-      - name: Cache Espressif QEMU
+      - uses: actions/cache@v4
         id: qemu-cache
-        uses: actions/cache@v4
         with:
           path: ~/qemu-esp
           key: qemu-esp-${{ env.QEMU_TAG }}
 
       - name: Install QEMU runtime deps
         run: |
-          set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 libslirp0
 
-      - name: Install Espressif QEMU
+      - name: Download Espressif QEMU
         if: steps.qemu-cache.outputs.cache-hit != 'true'
         run: |
-          set -euo pipefail
           mkdir -p ~/qemu-esp
           cd ~/qemu-esp
           curl -fL -o qemu.tar.xz \
@@ -106,150 +65,45 @@ jobs:
           tar -xJf qemu.tar.xz --strip-components=1
           rm qemu.tar.xz
 
-      - name: Verify QEMU binary
-        run: |
-          set -euo pipefail
-          export PATH="$HOME/qemu-esp/bin:$PATH"
-          which qemu-system-xtensa
-          qemu-system-xtensa --version
-
-      # ─── Assemble single 4 MB flash image ───────────────────────────────────
-      # Layout matches ota_4mb.csv:
-      #   bootloader  @ 0x1000
-      #   partitions  @ 0x8000
-      #   firmware    @ 0x10000  (ota_0)
-      #   spiffs      @ 0x370000  (per ota_4mb_wifi.csv — #1120)
-      # Pad to 4 MB so QEMU sees a valid full-flash image.
       - name: Merge flash binary
         run: |
-          set -euo pipefail
-          BUILD_DIR=.pio/build/sim
-          BOOT_BIN="$BUILD_DIR/bootloader.bin"
-          PART_BIN="$BUILD_DIR/partitions.bin"
-          APP_BIN="$BUILD_DIR/firmware.bin"
-          SPIFFS_BIN="$BUILD_DIR/spiffs.bin"
-
-          for f in "$BOOT_BIN" "$PART_BIN" "$APP_BIN" "$SPIFFS_BIN"; do
-            if [ ! -f "$f" ]; then
-              echo "::error::Missing build artifact: $f"
-              ls -la "$BUILD_DIR" || true
-              exit 1
-            fi
-          done
-
           esptool.py --chip esp32 merge_bin \
             --output flash.bin \
-            --flash_mode dio \
-            --flash_freq 40m \
-            --flash_size 4MB \
-            --fill-flash-size 4MB \
-            0x1000   "$BOOT_BIN" \
-            0x8000   "$PART_BIN" \
-            0x10000  "$APP_BIN" \
-            0x370000 "$SPIFFS_BIN"
+            --flash_mode dio --flash_freq 40m --flash_size 4MB --fill-flash-size 4MB \
+            0x1000   .pio/build/sim/bootloader.bin \
+            0x8000   .pio/build/sim/partitions.bin \
+            0x10000  .pio/build/sim/firmware.bin \
+            0x370000 .pio/build/sim/spiffs.bin
 
-          ls -la flash.bin
-
-      # ─── Run QEMU + capture serial ──────────────────────────────────────────
-      - name: Run QEMU boot smoke test
+      - name: Run QEMU + assert boot
         run: |
           set -euo pipefail
           export PATH="$HOME/qemu-esp/bin:$PATH"
-
-          # 60 s outer timeout (assertion D requires < 30 s to ready, but we
-          # give margin so the assertion script can read the full log on
-          # slower runners).
-          OUTER_TIMEOUT=60
-
-          qemu-system-xtensa \
-            -nographic \
-            -machine esp32 \
-            -cpu esp32 \
-            -drive file=flash.bin,if=mtd,format=raw \
-            -serial file:serial.log \
-            -no-reboot &
-          QEMU_PID=$!
-          echo "QEMU pid=$QEMU_PID"
-
-          # Poll for the [BOOT] Ready marker so we exit early on success.
-          DEADLINE=$(( $(date +%s) + OUTER_TIMEOUT ))
-          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-            if [ -f serial.log ] && grep -q '\[BOOT\] Ready' serial.log; then
-              echo "Detected [BOOT] Ready marker — stopping QEMU."
-              break
-            fi
+          qemu-system-xtensa -nographic -machine esp32 -cpu esp32 \
+            -drive file=flash.bin,if=mtd,format=raw -serial file:serial.log -no-reboot &
+          PID=$!
+          for i in $(seq 60); do
+            grep -q '\[BOOT\] Ready' serial.log 2>/dev/null && break
             sleep 1
           done
-
-          # Hard-kill QEMU regardless of outcome.
-          kill -9 "$QEMU_PID" 2>/dev/null || true
-          wait "$QEMU_PID" 2>/dev/null || true
-
-          if [ ! -f serial.log ]; then
-            echo "::error::serial.log was never created — QEMU failed to start"
-            exit 1
-          fi
-
-          echo "::group::serial.log (last 200 lines)"
-          tail -n 200 serial.log
-          echo "::endgroup::"
-
-      # ─── Assert markers + panic detection ───────────────────────────────────
-      - name: Assert boot markers
-        run: |
-          set -euo pipefail
-
-          if [ ! -f serial.log ]; then
-            echo "::error::serial.log missing"
-            exit 1
-          fi
+          kill -9 "$PID" 2>/dev/null || true
+          wait "$PID" 2>/dev/null || true
 
           fail=0
-
-          # A. Boot banner — exactly once. >1 = boot loop, 0 = never started.
-          BANNER_COUNT=$(grep -c 'CANShift v' serial.log || true)
-          echo "Banner 'CANShift v' count: $BANNER_COUNT"
-          if [ "$BANNER_COUNT" -ne 1 ]; then
-            echo "::error::Expected exactly 1 'CANShift v' banner, found $BANNER_COUNT"
-            fail=1
-          fi
-
-          # B. Ready marker — exactly once. >1 = loop, 0 = stalled.
-          READY_COUNT=$(grep -c '\[BOOT\] Ready' serial.log || true)
-          echo "Marker '[BOOT] Ready' count: $READY_COUNT"
-          if [ "$READY_COUNT" -ne 1 ]; then
-            echo "::error::Expected exactly 1 '[BOOT] Ready' marker, found $READY_COUNT"
-            fail=1
-          fi
-
-          # C. Panic detection — only check output UP TO the [BOOT] Ready marker.
-          # Panics that occur after the boot phase is complete are caught by the
-          # banner/RST-count checks (a post-boot crash that causes a reset loop
-          # shows up as BANNER_COUNT>1 or RST_COUNT>1). Scanning the full log
-          # would flag QEMU-specific post-boot emulation artefacts as boot failures.
-          PRE_READY=$(sed '/\[BOOT\] Ready/q' serial.log)
-          for pattern in 'Guru Meditation' 'abort()' 'assert failed' 'Backtrace:'; do
-            if echo "$PRE_READY" | grep -q "$pattern"; then
-              echo "::error::Panic indicator found before boot completed: $pattern"
-              fail=1
-            fi
+          BANNER=$(grep -c 'CANShift v' serial.log || true)
+          READY=$(grep -c '\[BOOT\] Ready' serial.log || true)
+          RST=$(grep -c 'rst:0x' serial.log || true)
+          [ "$BANNER" = 1 ] || { echo "::error::banner count=$BANNER (expected 1)"; fail=1; }
+          [ "$READY" = 1 ]  || { echo "::error::ready  count=$READY (expected 1)"; fail=1; }
+          [ "$RST" -le 1 ]  || { echo "::error::reset  count=$RST (boot loop)";  fail=1; }
+          PRE=$(sed '/\[BOOT\] Ready/q' serial.log)
+          for p in 'Guru Meditation' 'abort()' 'assert failed' 'Backtrace:'; do
+            echo "$PRE" | grep -q "$p" && { echo "::error::pre-ready panic: $p"; fail=1; } || true
           done
-          # Reset counter — exactly one rst:0x at boot is normal.
-          RST_COUNT=$(grep -c 'rst:0x' serial.log || true)
-          echo "Reset events (rst:0x) count: $RST_COUNT"
-          if [ "$RST_COUNT" -gt 1 ]; then
-            echo "::error::Multiple rst:0x events detected ($RST_COUNT) — likely boot loop"
-            fail=1
-          fi
-
           if [ "$fail" -ne 0 ]; then
-            echo "::group::Full serial.log on failure"
-            tail -n 200 serial.log
-            echo "::endgroup::"
+            echo "::group::serial.log tail"; tail -n 200 serial.log; echo "::endgroup::"
             exit 1
           fi
-
-          echo "Boot smoke test passed: 1 banner + 1 ready marker + no panic strings"
 
       - name: Upload serial log on failure
         if: failure()
@@ -257,4 +111,3 @@ jobs:
         with:
           name: boot-smoke-serial-log
           path: canshift-firmware/serial.log
-          retention-days: 7
