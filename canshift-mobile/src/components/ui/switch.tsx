@@ -9,7 +9,7 @@ export interface UISwitchProps extends Omit<SwitchProps, 'trackColor' | 'thumbCo
   onValueChange: SwitchValueChange
 }
 
-export const Switch = React.forwardRef<React.ElementRef<typeof RNSwitch>, UISwitchProps>(
+export const Switch = React.forwardRef<React.ComponentRef<typeof RNSwitch>, UISwitchProps>(
   ({ value, onValueChange, disabled, ...props }, ref) => (
     <RNSwitch
       ref={ref}

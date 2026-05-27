@@ -1,11 +1,19 @@
 // canshift-mobile/scripts/check-overrides.js
-// Blocks npm overrides known to break Expo SDK 52 internals.
+// Blocks npm overrides historically known to break Expo internals.
 // See issue #588 for context.
 //
-// NOTE: tar v7 cannot be overridden — neither globally nor scoped under
-// @expo/cli or cacache — because @expo/cli uses the tar v6 extract() API
-// internally and upgrading to v7 breaks `expo prebuild`. Track
-// https://github.com/expo/expo/issues/XXXXX for when @expo/cli drops tar@6.
+// History:
+//   - SDK 52 actively crashed with `tar@>=7` (extract() undefined) and
+//     `@xmldom/xmldom@>=0.9` (parseFromString mimeType undefined). The
+//     mobile package pinned `@xmldom/xmldom@0.8.13` to keep installs
+//     reproducible.
+//   - SDK 55 (PR #1149) no longer pulls `tar` as a direct dep and accepts
+//     the 0.8 line of `@xmldom/xmldom` internally (via @expo/plist). The
+//     mobile package now relaxes those pins.
+//
+// This guard stays in place as a paper trail: if a contributor adds an
+// override that reintroduces either incompatible major, preinstall fails
+// loud rather than producing a silently broken install.
 
 const pkg = require('../package.json');
 const overrides = pkg.overrides || {};
