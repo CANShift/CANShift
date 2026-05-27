@@ -300,8 +300,10 @@ export function CruiseControlPreview({
         )
       })}
 
-      {/* Centre SET-SPEED display — sits inside the notch every button cut out
-          of its inner corner. Larger digit + small unit label below. */}
+      {/* Centre SET-SPEED display — rendered in the same idiom as a numeric
+          Gauge / Label widget (header top-left, big Orbitron value + small
+          baseline-aligned unit). Mirrors GaugeNumericPreview's layout so the
+          driver reads the SET speed exactly as they'd read any other widget. */}
       <div
         style={{
           position: 'absolute',
@@ -309,49 +311,71 @@ export function CruiseControlPreview({
           top: layout.center.y * scale,
           width: layout.center.w * scale,
           height: layout.center.h * scale,
-          background: palette.surface,
-          border: `${String(STROKE_W)}px solid ${palette.primary}`,
-          borderRadius: CORNER_R * scale,
+          // No background / border — the widget renders as floating text in
+          // the notch, matching how a numeric Gauge / Label widget reads on
+          // the dashboard (transparent body, value + unit only).
+          boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: palette.text,
-          fontFamily: 'sans-serif',
           gap: 2 * scale,
-          padding: LABEL_PAD * scale,
-          boxSizing: 'border-box',
+          color: palette.text,
+          fontFamily: FONT_FAMILY,
         }}
       >
+        {/* SET header — centred, dim caps. */}
         <span
           style={{
-            fontSize: Math.round(9 * scale),
-            color: palette.textDim,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Set
-        </span>
-        <span
-          style={{
-            fontSize: Math.round(34 * scale),
-            fontWeight: 700,
+            fontFamily: FONT_FAMILY,
+            fontWeight: 500,
+            fontSize: 11 * scale,
+            color: '#888888',
             lineHeight: 1,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.08em',
+            textAlign: 'center',
           }}
         >
-          {DEMO_SET_SPEED}
+          SET
         </span>
-        <span
+        {/* Value + unit row — baseline-aligned, both centred under the SET
+            header. Same idiom as GaugeNumericPreview. */}
+        <div
           style={{
-            fontSize: Math.round(9 * scale),
-            color: palette.textDim,
-            letterSpacing: '0.04em',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            justifyContent: 'center',
+            gap: 4 * scale,
+            width: '100%',
           }}
         >
-          {SPEED_UNIT}
-        </span>
+          <span
+            style={{
+              color: palette.text,
+              fontFamily: FONT_FAMILY,
+              fontWeight: 900,
+              fontSize: Math.round(28 * scale),
+              lineHeight: 1,
+              letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {DEMO_SET_SPEED}
+          </span>
+          <span
+            style={{
+              color: '#888888',
+              fontFamily: FONT_FAMILY,
+              fontWeight: 500,
+              fontSize: Math.max(8, Math.round(10 * scale)),
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {SPEED_UNIT}
+          </span>
+        </div>
       </div>
     </div>
   )
