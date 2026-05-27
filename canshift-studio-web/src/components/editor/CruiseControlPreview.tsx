@@ -329,7 +329,7 @@ export function CruiseControlPreview({
           style={{
             fontFamily: FONT_FAMILY,
             fontWeight: 500,
-            fontSize: 11 * scale,
+            fontSize: 10 * scale,
             color: '#888888',
             lineHeight: 1,
             letterSpacing: '0.08em',
@@ -338,44 +338,35 @@ export function CruiseControlPreview({
         >
           SET
         </span>
-        {/* Value + unit row — baseline-aligned, both centred under the SET
-            header. Same idiom as GaugeNumericPreview. */}
-        <div
+        {/* Speed value — large, bold, dominant glyph. */}
+        <span
           style={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'baseline',
-            justifyContent: 'center',
-            gap: 4 * scale,
-            width: '100%',
+            color: palette.text,
+            fontFamily: FONT_FAMILY,
+            fontWeight: 900,
+            fontSize: Math.round(40 * scale),
+            lineHeight: 1,
+            letterSpacing: '0.02em',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
           }}
         >
-          <span
-            style={{
-              color: palette.text,
-              fontFamily: FONT_FAMILY,
-              fontWeight: 900,
-              fontSize: Math.round(28 * scale),
-              lineHeight: 1,
-              letterSpacing: '0.02em',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {DEMO_SET_SPEED}
-          </span>
-          <span
-            style={{
-              color: '#888888',
-              fontFamily: FONT_FAMILY,
-              fontWeight: 500,
-              fontSize: Math.max(8, Math.round(10 * scale)),
-              lineHeight: 1,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {SPEED_UNIT}
-          </span>
-        </div>
+          {DEMO_SET_SPEED}
+        </span>
+        {/* Unit row — small, dim, sits under the value. */}
+        <span
+          style={{
+            color: '#888888',
+            fontFamily: FONT_FAMILY,
+            fontWeight: 500,
+            fontSize: Math.max(8, Math.round(10 * scale)),
+            lineHeight: 1,
+            letterSpacing: '0.04em',
+            textAlign: 'center',
+          }}
+        >
+          {SPEED_UNIT}
+        </span>
       </div>
     </div>
   )
