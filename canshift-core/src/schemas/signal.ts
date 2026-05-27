@@ -14,7 +14,7 @@ import { z } from 'zod'
 
 import { HexColorSchema, SemVerSchema } from './common.js'
 import { Obd2PollingSchema } from './obd2.js'
-import { FIRMWARE_CAPS, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
+import { CAN_FRAME_MAX_BYTES, FIRMWARE_CAPS, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
 
 /** CAN frame identifier — 11-bit standard hex literal, e.g. "0x123" or "0X7FF". */
 const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,3}$/
@@ -128,13 +128,17 @@ export const SignalDefSchema = z
     canFrameId: z
       .string()
       .regex(CAN_FRAME_ID_REGEX, 'canFrameId must be hex like 0x123 (1-3 hex chars)'),
-    startByte: z.number(),
+    startByte: z
+      .number()
+      .int()
+      .min(0)
+      .max(CAN_FRAME_MAX_BYTES - 1),
     byteLength: z.union([z.literal(1), z.literal(2), z.literal(4)]),
     bigEndian: z.boolean(),
     signed: z.boolean(),
     bitMask: z.string().regex(BIT_MASK_REGEX, 'bitMask must be a hex literal like 0xFF').optional(),
-    scale: z.number(),
-    offset: z.number(),
+    scale: z.number().finite(),
+    offset: z.number().finite(),
     unit: z.string(),
     min: z.number(),
     max: z.number(),

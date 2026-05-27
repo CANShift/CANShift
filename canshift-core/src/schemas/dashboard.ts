@@ -7,10 +7,12 @@
 import { z } from 'zod'
 
 import {
+  CAN_29BIT_MAX,
   CAN_RAW_DATA_MAX_HEX_CHARS,
   CAN_RAW_DATA_REGEX,
   DECIMAL_PLACES,
   FIRMWARE_CAPS,
+  MAP_INDEX_MAX,
   REV_LIMIT_RPM,
   TOPBAR_HEIGHT,
 } from '../constants/firmware-caps.js'
@@ -127,7 +129,7 @@ const MapSwitchActionSchema = z
   .object({
     category: z.literal('ecu'),
     type: z.literal('map_switch'),
-    mapIndex: z.number(),
+    mapIndex: z.number().int().min(0).max(MAP_INDEX_MAX),
   })
   .strict()
 
@@ -142,7 +144,7 @@ const CanRawActionSchema = z
   .object({
     category: z.literal('ecu'),
     type: z.literal('can_raw'),
-    frameId: z.number(),
+    frameId: z.number().int().min(0).max(CAN_29BIT_MAX),
     data: CanRawDataSchema,
     dataOff: CanRawDataSchema.optional(),
     extended: z.boolean({ invalid_type_error: 'extended must be a boolean when set' }).optional(),

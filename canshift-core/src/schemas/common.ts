@@ -6,7 +6,7 @@
 import { z } from 'zod'
 
 import { HEX_REGEX } from '../colors/hex.js'
-import { CANVAS } from '../constants/firmware-caps.js'
+import { CANVAS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps.js'
 
 /**
  * Hex color string — e.g. "#FF4444" (6-digit, with leading `#`).
@@ -42,7 +42,7 @@ export const WidgetLayoutSchema = z
       .max(CANVAS.HEIGHT - 1),
     w: z.number().int().min(1).max(CANVAS.WIDTH),
     h: z.number().int().min(1).max(CANVAS.HEIGHT),
-    zOrder: z.number(),
+    zOrder: z.number().int(),
   })
   .strict()
   .refine((l) => l.x + l.w <= CANVAS.WIDTH, {
@@ -62,7 +62,7 @@ export const WidgetStyleSchema = z
     warningColor: HexColorSchema,
     criticalColor: HexColorSchema,
     textColor: HexColorSchema,
-    fontSize: z.number(),
+    fontSize: z.number().int().min(FONT_SIZE_MIN).max(FONT_SIZE_MAX),
     /** Optional border color — omit or set to null for no border */
     borderColor: HexColorSchema.nullable().optional(),
     /**
