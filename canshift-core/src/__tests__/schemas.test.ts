@@ -26,7 +26,7 @@ import {
   TrackTelemetrySchema,
 } from '../index.js'
 import type { DeviceConfig, InputBinding, InputBindingsConfig } from '../index.js'
-import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
+import { ButtonActionSchema, ButtonWidgetConfigSchema, WidgetSchema } from '../schemas/dashboard.js'
 import { DeviceConfigWireSchema, type DeviceConfigWire } from '../schemas/device.js'
 import {
   InputBindingSchema,
@@ -406,6 +406,85 @@ describe('SignalConfigSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  // Issue #1168 — signals array cap (firmware MAX_SIGNALS = 32)
+  it('rejects signals[] with 33 entries (over firmware cap)', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: Array.from({ length: 33 }, () => ({ ...validSignals.signals[0] })),
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('signals'))).toBe(true)
+    }
+  })
+
+  it('accepts signals[] with exactly 32 entries (at firmware cap)', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: Array.from({ length: 32 }, () => ({ ...validSignals.signals[0] })),
+    })
+    expect(result.success).toBe(true)
+  })
+
+  // Issue #1169 — startByte bounds [0, CAN_FRAME_MAX_BYTES - 1]
+  it('rejects startByte = -1', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], startByte: -1 }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects startByte = 8 (out of CAN frame)', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], startByte: 8 }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts startByte = 7 (last valid byte)', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], startByte: 7 }],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  // Issue #1169 — scale must be finite
+  it('rejects scale = NaN', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], scale: NaN }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects scale = Infinity', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], scale: Infinity }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts scale = 1.5', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], scale: 1.5 }],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  // Issue #1169 — offset must be finite
+  it('rejects offset = NaN', () => {
+    const result = SignalConfigSchema.safeParse({
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], offset: NaN }],
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('rejects a colorRamp whose stops are not strictly ascending', () => {
     const broken = {
       ...validSignals,
@@ -501,6 +580,65 @@ describe('ButtonActionSchema', () => {
       })),
     }
     const result = ButtonWidgetConfigSchema.safeParse(tooMany)
+    expect(result.success).toBe(false)
+  })
+
+  // Issue #1169 — frameId bounds [0, 0x1FFFFFFF] (29-bit CAN)
+  it('rejects frameId = -1', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'can_raw',
+      frameId: -1,
+      data: 'DEAD',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts frameId = 0x1FFFFFFF (max 29-bit)', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'can_raw',
+      frameId: 0x1fffffff,
+      data: 'DEAD',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects frameId = 0x20000000 (exceeds 29-bit)', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'can_raw',
+      frameId: 0x20000000,
+      data: 'DEAD',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  // Issue #1169 — mapIndex bounds [0, 7]
+  it('rejects mapIndex = -1', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'map_switch',
+      mapIndex: -1,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts mapIndex = 7 (max ECU map index)', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'map_switch',
+      mapIndex: 7,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects mapIndex = 8 (out of range)', () => {
+    const result = ButtonActionSchema.safeParse({
+      category: 'ecu',
+      type: 'map_switch',
+      mapIndex: 8,
+    })
     expect(result.success).toBe(false)
   })
 
@@ -1067,5 +1205,80 @@ describe('TrackTelemetrySchema', () => {
 
   it('rejects an unknown top-level key — .strict()', () => {
     expect(TrackTelemetrySchema.safeParse({ trackMode: true, sectorMs: 12345 }).success).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WidgetLayoutSchema.zOrder + WidgetStyleSchema.fontSize (issue #1169)
+// ---------------------------------------------------------------------------
+
+const VALID_WIDGET_BASE = {
+  id: 'w1',
+  type: 'gauge',
+  signal: 'rpm',
+  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  style: {
+    primaryColor: '#FF4444',
+    secondaryColor: '#2A2A2A',
+    warningColor: '#FF8800',
+    criticalColor: '#FF4444',
+    textColor: '#FFFFFF',
+    fontSize: 14,
+  },
+  config: {
+    type: 'gauge',
+    displayStyle: 'arc',
+    minValue: 0,
+    maxValue: 8000,
+    dangerLevel: 7500,
+    decimalPlaces: 0,
+  },
+} as const
+
+describe('WidgetLayoutSchema.zOrder (issue #1169)', () => {
+  it('accepts integer zOrder = 0', () => {
+    expect(WidgetSchema.safeParse(VALID_WIDGET_BASE).success).toBe(true)
+  })
+
+  it('rejects non-integer zOrder = 1.5', () => {
+    const result = WidgetSchema.safeParse({
+      ...VALID_WIDGET_BASE,
+      layout: { ...VALID_WIDGET_BASE.layout, zOrder: 1.5 },
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('WidgetStyleSchema.fontSize (issue #1169)', () => {
+  it('rejects fontSize = 4 (below min 8)', () => {
+    const result = WidgetSchema.safeParse({
+      ...VALID_WIDGET_BASE,
+      style: { ...VALID_WIDGET_BASE.style, fontSize: 4 },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts fontSize = 12', () => {
+    const result = WidgetSchema.safeParse({
+      ...VALID_WIDGET_BASE,
+      style: { ...VALID_WIDGET_BASE.style, fontSize: 12 },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects fontSize = 64 (above max 48)', () => {
+    const result = WidgetSchema.safeParse({
+      ...VALID_WIDGET_BASE,
+      style: { ...VALID_WIDGET_BASE.style, fontSize: 64 },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts fontSize = 48 (at max)', () => {
+    const result = WidgetSchema.safeParse({
+      ...VALID_WIDGET_BASE,
+      style: { ...VALID_WIDGET_BASE.style, fontSize: 48 },
+    })
+    expect(result.success).toBe(true)
   })
 })

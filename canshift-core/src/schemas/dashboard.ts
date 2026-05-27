@@ -127,7 +127,7 @@ const MapSwitchActionSchema = z
   .object({
     category: z.literal('ecu'),
     type: z.literal('map_switch'),
-    mapIndex: z.number(),
+    mapIndex: z.number().int().min(0).max(7),
   })
   .strict()
 
@@ -142,7 +142,7 @@ const CanRawActionSchema = z
   .object({
     category: z.literal('ecu'),
     type: z.literal('can_raw'),
-    frameId: z.number(),
+    frameId: z.number().int().min(0).max(0x1fffffff),
     data: CanRawDataSchema,
     dataOff: CanRawDataSchema.optional(),
     extended: z.boolean({ invalid_type_error: 'extended must be a boolean when set' }).optional(),

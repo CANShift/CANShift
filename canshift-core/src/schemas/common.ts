@@ -42,7 +42,7 @@ export const WidgetLayoutSchema = z
       .max(CANVAS.HEIGHT - 1),
     w: z.number().int().min(1).max(CANVAS.WIDTH),
     h: z.number().int().min(1).max(CANVAS.HEIGHT),
-    zOrder: z.number(),
+    zOrder: z.number().int(),
   })
   .strict()
   .refine((l) => l.x + l.w <= CANVAS.WIDTH, {
@@ -62,7 +62,7 @@ export const WidgetStyleSchema = z
     warningColor: HexColorSchema,
     criticalColor: HexColorSchema,
     textColor: HexColorSchema,
-    fontSize: z.number(),
+    fontSize: z.number().int().min(8).max(48),
     /** Optional border color — omit or set to null for no border */
     borderColor: HexColorSchema.nullable().optional(),
     /**
