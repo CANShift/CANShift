@@ -29,6 +29,7 @@ import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 import { setWifiApPassword, clearWifiApPassword } from './wifi-ap-password'
 import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
 import { mapBleError, describeBleError } from './ble.errors'
+import { withGattRetry } from './ble.retry'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -336,11 +337,13 @@ export class BleService {
     const device = this.connectedDevice
     if (!device) throw new Error('Not connected')
     const json = JSON.stringify(settings)
-    await this.runGatt(() =>
-      device.writeCharacteristicWithResponseForService(
-        BLE_SERVICE_UUID,
-        BLE_CHAR_SETTINGS,
-        encodeBase64(json)
+    await withGattRetry(() =>
+      this.runGatt(() =>
+        device.writeCharacteristicWithResponseForService(
+          BLE_SERVICE_UUID,
+          BLE_CHAR_SETTINGS,
+          encodeBase64(json)
+        )
       )
     )
   }
@@ -352,8 +355,8 @@ export class BleService {
   async readSettings(): Promise<{ brightness: number; sleep: number } | null> {
     const device = this.connectedDevice
     if (!device) throw new Error('Not connected')
-    const char = await this.runGatt(() =>
-      device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_SETTINGS)
+    const char = await withGattRetry(() =>
+      this.runGatt(() => device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_SETTINGS))
     )
     if (!char.value) return null
     try {
@@ -374,11 +377,13 @@ export class BleService {
     if (!device) throw new Error('Not connected')
     const body: Record<string, boolean | number | string> = { cmd, ...(payload ?? {}) }
     const json = JSON.stringify(body)
-    await this.runGatt(() =>
-      device.writeCharacteristicWithoutResponseForService(
-        BLE_SERVICE_UUID,
-        BLE_CHAR_CMD,
-        encodeBase64(json)
+    await withGattRetry(() =>
+      this.runGatt(() =>
+        device.writeCharacteristicWithoutResponseForService(
+          BLE_SERVICE_UUID,
+          BLE_CHAR_CMD,
+          encodeBase64(json)
+        )
       )
     )
   }
