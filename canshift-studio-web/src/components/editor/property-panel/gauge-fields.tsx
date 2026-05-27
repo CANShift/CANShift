@@ -107,81 +107,12 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </div>
       </Field>
 
-      {/* Unit / suffix */}
-      <Field label="Unit">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 }}>
-          {unitList.map((u) => {
-            const isActive = cfg.suffix === u
-            return (
-              <button
-                key={u}
-                onClick={() => {
-                  const next = { ...cfg }
-                  if (isActive) delete next.suffix
-                  else next.suffix = u
-                  onChange({ config: next })
-                }}
-                style={{
-                  padding: '2px 6px',
-                  fontSize: 10,
-                  background: isActive ? '#1A2A1A' : '#111111',
-                  border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
-                  borderRadius: 3,
-                  color: isActive ? '#66AA66' : '#AAAAAA',
-                  cursor: 'pointer',
-                }}
-              >
-                {u}
-              </button>
-            )
-          })}
-        </div>
-        <input
-          style={inputStyle}
-          placeholder="custom…"
-          value={cfg.suffix ?? ''}
-          onChange={(e) => {
-            const next = { ...cfg }
-            if (e.target.value) next.suffix = e.target.value
-            else delete next.suffix
-            onChange({ config: next })
-          }}
-        />
-      </Field>
+      {/* Unit, prefix, decimals — inherited from the bound signal definition
+          (signal.unit + signal-side scaling). Per-widget overrides were
+          dropped from the picker so the dashboard reads consistently with
+          the signal catalogue. */}
 
-      {/* Numeric-specific: prefix + decimals */}
-      {style === 'numeric' && (
-        <>
-          <Row>
-            <Field label="Prefix">
-              <input
-                style={inputStyle}
-                value={cfg.prefix ?? ''}
-                onChange={(e) => {
-                  const next = { ...cfg }
-                  if (e.target.value) next.prefix = e.target.value
-                  else delete next.prefix
-                  onChange({ config: next })
-                }}
-              />
-            </Field>
-            <Field label="Decimals">
-              <input
-                type="number"
-                min={0}
-                max={4}
-                style={numberInputStyle}
-                value={cfg.decimalPlaces}
-                onChange={(e) => {
-                  onChange({ config: { ...cfg, decimalPlaces: Number(e.target.value) } })
-                }}
-              />
-            </Field>
-          </Row>
-        </>
-      )}
-
-      {/* Arc range fields (legacy: bar style also used these — bar removed). */}
+      {/* Arc range fields. */}
       {style === 'arc' && (
         <>
           <Row>
