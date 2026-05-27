@@ -20,7 +20,7 @@ export interface InputProps extends Omit<TextInputProps, 'style'>, InputVariantP
   className?: string
 }
 
-export const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, InputProps>(
+export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputProps>(
   ({ className, variant, placeholderTextColor, ...props }, ref) => (
     <TextInput
       ref={ref}

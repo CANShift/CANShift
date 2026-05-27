@@ -61,7 +61,6 @@
         }
       ],
       "expo-secure-store",
-      "expo-web-browser",
       [
         "expo-location",
         {

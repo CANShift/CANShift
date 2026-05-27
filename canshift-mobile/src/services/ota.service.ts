@@ -18,12 +18,7 @@
 // trailer. `verifyFirmware` only does the size check pre-Wi-Fi-switch.
 
 import { Buffer } from 'buffer'
-// expo-file-system SDK 54 moved the document-/cache-directory + read/write/
-// download primitives to the `/legacy` subpath. We keep using them here: the
-// new class-based File/Directory API doesn't yet expose
-// `createDownloadResumable` with progress callbacks, which the OTA UX
-// depends on (downloadFirmware below). Issue/PR thread: expo/expo#30203.
-import * as FileSystem from 'expo-file-system/legacy'
+import * as FileSystem from 'expo-file-system'
 import {
   ESP32_OTA_URL,
   GITHUB_RELEASES_API,
