@@ -41,14 +41,18 @@ static TaskHandle_t s_taskHandle = nullptr;
 static volatile bool s_active = false;
 static char s_ssid[20] = {};
 
-// Per-device AP password — 32 hex chars + null terminator. Generated on first
-// boot via esp_fill_random() (128 bits entropy) and persisted in NVS. Issue
-// #910 raised this from the previous 64-bit (16-char) password: WPA2 4-way
-// handshake capture within the 5-minute AP window followed by offline brute
-// force at ~10^10 H/s is plausible against 64 bits; 128 bits keeps brute
-// force infeasible at any realistic hardware budget.
-static constexpr size_t AP_PASSWORD_LEN = 32;
-static constexpr size_t AP_PASSWORD_ENTROPY_BYTES = 16; // 128 bits, hex-encoded
+// AP password — fixed default "canshift" (8 chars, WPA2 minimum). Was
+// per-device 32-char random hex (#910 — 128 bits entropy) but ergonomically
+// hostile (manual entry on a phone keypad). Threat model trade-off: the AP
+// is only active when the user explicitly toggles WiFi auto-start, and the
+// dash is a passenger-cabin device — the attacker would need to be inside
+// the car or within ~5 m. If you redeploy in a more exposed environment,
+// flip `AP_PASSWORD_USE_RANDOM` to 1 to restore the per-device random
+// secret (and surface it via Studio so the user can read it).
+static constexpr bool AP_PASSWORD_USE_RANDOM = false;
+static constexpr char AP_PASSWORD_DEFAULT[] = "canshift";
+static constexpr size_t AP_PASSWORD_LEN = 32; // capacity — buffer holds either default or 32-hex random
+static constexpr size_t AP_PASSWORD_ENTROPY_BYTES = 16; // 128 bits, hex-encoded (random path only)
 static char s_password[AP_PASSWORD_LEN + 1] = {};
 
 static constexpr char NVS_NS_WIFI_AP[] = "wifi_ap";
@@ -441,6 +445,12 @@ void ensurePassword() {
     if (s_password[0] != '\0')
         return; // already loaded this boot
 
+    if (!AP_PASSWORD_USE_RANDOM) {
+        // Fixed default for ergonomics — see AP_PASSWORD_DEFAULT note above.
+        strlcpy(s_password, AP_PASSWORD_DEFAULT, sizeof(s_password));
+        return;
+    }
+
     Preferences p;
     if (p.begin(NVS_NS_WIFI_AP, /*readOnly=*/true)) {
         const size_t len = p.getString(NVS_KEY_PWD, s_password, sizeof(s_password));
@@ -486,7 +496,8 @@ void apTaskFn(void *) {
         #endif
 
     WiFi.softAP(s_ssid, s_password);
-    LOG_INFO("WiFi", "AP started — SSID: %s  IP: %s", s_ssid, WiFi.softAPIP().toString().c_str());
+    LOG_INFO("WiFi", "AP started — SSID: %s  IP: %s", s_ssid,
+             WiFi.softAPIP().toString().c_str());
 
     // mDNS responder — exposes the dash as `canshift.local` and advertises
     // the JSON-lines TCP server as `_canshift._tcp` so Studio can discover
