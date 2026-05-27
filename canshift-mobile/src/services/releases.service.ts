@@ -18,11 +18,7 @@
 // path. Network details (status codes, error messages) are kept in the
 // `message` field; secrets and stack traces are never embedded.
 
-// expo-file-system SDK 54 moved the document-directory + read/write
-// primitives to the `/legacy` subpath. The persistent release cache is a
-// best-effort JSON blob, so we stay on the legacy API (the new File API would
-// require rewriting hydration error handling without a behaviour win).
-import * as FileSystem from 'expo-file-system/legacy'
+import * as FileSystem from 'expo-file-system'
 import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 
 const GITHUB_OWNER = 'tburkhalterr'

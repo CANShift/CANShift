@@ -12,7 +12,7 @@ export interface SectionProps extends ViewProps {
   children?: React.ReactNode
 }
 
-export const Section = React.forwardRef<React.ComponentRef<typeof View>, SectionProps>(
+export const Section = React.forwardRef<React.ElementRef<typeof View>, SectionProps>(
   ({ title, className, children, ...props }, ref) => (
     <View ref={ref} className={cn('gap-2', className)} {...props}>
       {title !== undefined ? <Label>{title}</Label> : null}

@@ -11,7 +11,7 @@ export interface CheckboxProps extends Omit<PressableProps, 'onPress' | 'style' 
   className?: string
 }
 
-export const Checkbox = React.forwardRef<React.ComponentRef<typeof Pressable>, CheckboxProps>(
+export const Checkbox = React.forwardRef<React.ElementRef<typeof Pressable>, CheckboxProps>(
   ({ checked, onCheckedChange, disabled, className, ...props }, ref) => {
     return (
       <Pressable

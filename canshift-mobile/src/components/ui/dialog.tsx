@@ -69,7 +69,7 @@ export interface DialogTriggerProps extends Omit<PressableProps, 'onPress' | 'st
 }
 
 export const DialogTrigger = React.forwardRef<
-  React.ComponentRef<typeof Pressable>,
+  React.ElementRef<typeof Pressable>,
   DialogTriggerProps
 >(({ children, className, ...props }, ref) => {
   const { setOpen } = useDialogContext()
@@ -190,7 +190,7 @@ export interface DialogCloseProps extends Omit<PressableProps, 'onPress' | 'styl
   className?: string
 }
 
-export const DialogClose = React.forwardRef<React.ComponentRef<typeof Pressable>, DialogCloseProps>(
+export const DialogClose = React.forwardRef<React.ElementRef<typeof Pressable>, DialogCloseProps>(
   ({ children, className, ...props }, ref) => {
     const { setOpen } = useDialogContext()
     return (

@@ -86,25 +86,24 @@ export interface SheetTriggerProps extends Omit<PressableProps, 'onPress' | 'sty
   className?: string
 }
 
-export const SheetTrigger = React.forwardRef<
-  React.ComponentRef<typeof Pressable>,
-  SheetTriggerProps
->(({ children, className, ...props }, ref) => {
-  const { setOpen } = useSheetContext()
-  return (
-    <Pressable
-      ref={ref}
-      accessibilityRole="button"
-      onPress={() => {
-        setOpen(true)
-      }}
-      className={cn(className)}
-      {...props}
-    >
-      {children}
-    </Pressable>
-  )
-})
+export const SheetTrigger = React.forwardRef<React.ElementRef<typeof Pressable>, SheetTriggerProps>(
+  ({ children, className, ...props }, ref) => {
+    const { setOpen } = useSheetContext()
+    return (
+      <Pressable
+        ref={ref}
+        accessibilityRole="button"
+        onPress={() => {
+          setOpen(true)
+        }}
+        className={cn(className)}
+        {...props}
+      >
+        {children}
+      </Pressable>
+    )
+  }
+)
 SheetTrigger.displayName = 'SheetTrigger'
 
 function resolveAnimationType(side: SheetSide): NonNullable<ModalProps['animationType']> {
@@ -248,7 +247,7 @@ export interface SheetCloseProps extends Omit<PressableProps, 'onPress' | 'style
   className?: string
 }
 
-export const SheetClose = React.forwardRef<React.ComponentRef<typeof Pressable>, SheetCloseProps>(
+export const SheetClose = React.forwardRef<React.ElementRef<typeof Pressable>, SheetCloseProps>(
   ({ children, className, ...props }, ref) => {
     const { setOpen } = useSheetContext()
     return (

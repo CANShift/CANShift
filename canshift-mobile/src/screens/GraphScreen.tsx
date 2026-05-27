@@ -293,15 +293,7 @@ function ChartPanel({
               return (
                 <SvgText
                   key={line.key}
-                  // react-native-svg ships its x/y SVG positioning props with
-                  // a `@deprecated` JSDoc tag that actually targets the
-                  // (long-gone) transform `x`/`y` shorthand, not the SVG
-                  // positioning attributes. These attributes are the
-                  // documented SVG API and have no replacement — ignoring the
-                  // false positive here.
-                  // eslint-disable-next-line @typescript-eslint/no-deprecated
                   x={chartSize.width - 4}
-                  // eslint-disable-next-line @typescript-eslint/no-deprecated
                   y={y}
                   fill={line.color}
                   fontSize={9}

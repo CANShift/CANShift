@@ -86,7 +86,7 @@ export interface TabsTriggerProps extends Omit<PressableProps, 'onPress' | 'styl
   textClassName?: string
 }
 
-export const TabsTrigger = React.forwardRef<React.ComponentRef<typeof Pressable>, TabsTriggerProps>(
+export const TabsTrigger = React.forwardRef<React.ElementRef<typeof Pressable>, TabsTriggerProps>(
   ({ value, children, className, textClassName, disabled, ...props }, ref) => {
     const ctx = useTabsContext()
     const active = ctx.value === value
