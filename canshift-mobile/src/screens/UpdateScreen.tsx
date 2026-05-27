@@ -216,7 +216,10 @@ export default function UpdateScreen({ navigation }: Props) {
       })
       .catch((e: unknown) => {
         if (cancelled) return
-        log('warn', `Failed to read Wi-Fi AP password: ${e instanceof Error ? e.message : 'unknown'}`)
+        log(
+          'warn',
+          `Failed to read Wi-Fi AP password: ${e instanceof Error ? e.message : 'unknown'}`
+        )
         setError('Could not read Wi-Fi credentials. Reopen the screen to retry.')
         setStep('releases')
       })
