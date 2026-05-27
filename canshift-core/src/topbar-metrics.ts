@@ -1,6 +1,6 @@
 // topbar-metrics.ts — single source of truth for TopBar proportions
 //
-// Both renderers (Studio preview in canshift-studio/src/components/editor/Canvas.tsx
+// Both renderers (Studio preview in canshift-studio-web/src/components/editor/Canvas.tsx
 // and firmware top bar in canshift-firmware/src/ui/top_bar.cpp) derive every
 // pixel from the bar height using these ratios. Keep both renderers in sync
 // with this table — the firmware mirrors these constants in C++ at the top of

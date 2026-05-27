@@ -268,7 +268,6 @@ Dark-mode tokens are baked into the firmware (`DARK_TOKENS` in
 
 ```
 User edits layout in canshift-studio-web (dash-hosted, browser SPA)
-              ─OR─ canshift-studio (Electron, legacy until cutover)
     │
     ▼
 Studio validates config using canshift-core validators (+ migrations
@@ -278,8 +277,7 @@ Studio validates config using canshift-core validators (+ migrations
 Studio sends dashboard.json, signals.json (and device.json /
               input_bindings.json on demand) via the chosen transport:
     │
-    ├── USB serial (CMD_PUT_CONFIG = 0x02)            ← legacy Electron path
-    ├── WebSocket on port 81 (#1108, same dispatcher) ← dash-hosted path
+    ├── WebSocket on port 81 (#1108, same dispatcher as USB on firmware)
     └── Wire-format mapping (snake_case) via deviceConfigToWire /
         inputBindingsToWire from canshift-core for the device /
         input-bindings cmds (0x03 / 0x04 / 0x0B / 0x0C)

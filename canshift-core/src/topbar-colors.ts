@@ -1,6 +1,6 @@
 // topbar-colors.ts — single source of truth for TopBar status colours
 //
-// Both renderers (Studio preview in canshift-studio/src/components/editor/Canvas.tsx
+// Both renderers (Studio preview in canshift-studio-web/src/components/editor/Canvas.tsx
 // and firmware top bar in canshift-firmware/src/ui/top_bar.cpp) read the same
 // palette so the two stay pixel-faithful. The firmware mirrors these constants
 // as `static constexpr uint32_t COLOR_*` at the top of top_bar.cpp — a unit

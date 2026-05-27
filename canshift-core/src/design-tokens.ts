@@ -1,8 +1,8 @@
 // canshift-core/src/design-tokens.ts
 //
 // Single source of truth for CANShift visual design tokens (colors, radii,
-// spacing, typography). Consumed by canshift-studio (Phase 1) and
-// canshift-mobile (Phase 2) — keep this module pure TypeScript, no runtime
+// spacing, typography). Consumed by canshift-studio-web (dash-hosted Studio)
+// and canshift-mobile — keep this module pure TypeScript, no runtime
 // dependencies, no Node or browser APIs.
 //
 // Hex values are the wire format; the `tokensToCssVars` helper converts them
@@ -52,8 +52,8 @@ export interface DesignTokens {
 
 /**
  * Canonical dark palette — mirrors the values currently shipping in
- * canshift-studio (src/index.css + tailwind.config.ts). Mobile drift will be
- * reconciled against this table in Phase 2 (issue #526).
+ * canshift-studio-web (src/index.css + tailwind.config.ts). Mobile drift will
+ * be reconciled against this table in Phase 2 (issue #526).
  */
 export const DARK_TOKENS = {
   colors: {
@@ -152,10 +152,8 @@ export function hexToHslChannels(hex: string): string {
 }
 
 /**
- * Mapping from `DesignTokens.colors` keys to the CSS variable names already
- * defined in canshift-studio/src/index.css and tailwind.config.ts. Phase 0
- * does NOT introduce new variables — the studio migration in Phase 1 will
- * adopt this helper as the single source of truth without renaming anything.
+ * Mapping from `DesignTokens.colors` keys to the CSS variable names defined
+ * in canshift-studio-web/src/index.css and tailwind.config.ts.
  */
 /**
  * Map every token color key (e.g. `bg`, `primaryForeground`) to its

@@ -39,7 +39,12 @@ Everything below is live on `main` and exercised by the CI gates.
 - Defensive runtime — task watchdog on UI/CAN/USB, perf counters, alert
   engine (rev limiter flash, warning thresholds).
 
-### Studio (canshift-studio @ Electron + React)
+### Studio (canshift-studio-web @ dash-hosted React SPA, #1077)
+
+Originally shipped as `canshift-studio` (Electron + React); decommissioned
+post-cutover in favour of the dash-hosted Vite + React SPA served from the
+firmware over WiFi AP. Feature inventory below covers both incarnations —
+the dash-hosted Studio inherited the editor surface from the Electron app.
 
 - Visual dashboard editor — drag-drop canvas, widget selection, property
   panel split per widget type
