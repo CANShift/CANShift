@@ -26,6 +26,21 @@ const PATCH = `
         config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
       end
     end
+    # Apply at xcconfig level too — target build_settings don't always
+    # override per-pod podspec swift_compiler flags on ExpoModulesCore.
+    # xcconfig is read by xcodebuild as the last word.
+    installer.target_installation_results.pod_target_installation_results.each do |pod_name, _result|
+      ['Debug', 'Release'].each do |cfg|
+        xcconfig_path = File.join(
+          installer.sandbox.root,
+          "Target Support Files/#{pod_name}/#{pod_name}.#{cfg.downcase}.xcconfig"
+        )
+        next unless File.exist?(xcconfig_path)
+        content = File.read(xcconfig_path)
+        next if content.include?('SWIFT_STRICT_CONCURRENCY')
+        File.write(xcconfig_path, content + "\\nSWIFT_STRICT_CONCURRENCY = minimal\\n")
+      end
+    end
 `
 
 module.exports = function withSwiftStrictConcurrencyFix(config) {
