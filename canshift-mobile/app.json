@@ -48,7 +48,6 @@
     "plugins": [
       "./plugins/withGlogFmtFix",
       "./plugins/withSilencePodsWarnings",
-      "./plugins/withSwiftStrictConcurrencyFix",
       "./plugins/withBluetoothScanNeverForLocation",
       [
         "react-native-ble-plx",
