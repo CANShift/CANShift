@@ -23,12 +23,9 @@ function makeEntry(overrides: Partial<OtaFlowState> = {}): OtaFlowState {
     localPath: '/cache/fw.bin',
     verifiedSha: 'abc123',
     verifiedAt: Date.now(),
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    setDownloaded: () => {},
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    setVerified: () => {},
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    clear: () => {},
+    setDownloaded: jest.fn(),
+    setVerified: jest.fn(),
+    clear: jest.fn(),
     ...overrides,
   }
 }
@@ -48,7 +45,11 @@ describe('isStillValid', () => {
 
   it('returns false when stage is idle', async () => {
     mockGetInfoAsync.mockResolvedValue({ exists: true })
-    expect(await isStillValid(makeEntry({ stage: 'idle', release: null, localPath: null, verifiedAt: null }))).toBe(false)
+    expect(
+      await isStillValid(
+        makeEntry({ stage: 'idle', release: null, localPath: null, verifiedAt: null })
+      )
+    ).toBe(false)
   })
 
   it('returns false when the local file is missing', async () => {

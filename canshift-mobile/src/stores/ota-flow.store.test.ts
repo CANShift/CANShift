@@ -13,7 +13,9 @@ const mockRelease: FirmwareRelease = {
 }
 
 describe('ota-flow.store', () => {
-  beforeEach(() => useOtaFlowStore.getState().clear())
+  beforeEach(() => {
+    useOtaFlowStore.getState().clear()
+  })
 
   it('starts in idle state', () => {
     const s = useOtaFlowStore.getState()

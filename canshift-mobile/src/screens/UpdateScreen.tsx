@@ -37,7 +37,14 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Update'>
 }
 
-type Step = 'releases' | 'downloading' | 'verifying' | 'wifi_wait' | 'retry_wifi' | 'pushing' | 'done'
+type Step =
+  | 'releases'
+  | 'downloading'
+  | 'verifying'
+  | 'wifi_wait'
+  | 'retry_wifi'
+  | 'pushing'
+  | 'done'
 
 // ---------------------------------------------------------------------------
 // Step indicator
@@ -210,13 +217,11 @@ export default function UpdateScreen({ navigation }: Props) {
     const flowEntry = useOtaFlowStore.getState()
     if (flowEntry.stage === 'idle') return
     const TTL_MS = 24 * 60 * 60 * 1000
-    const expired =
-      flowEntry.verifiedAt != null && Date.now() - flowEntry.verifiedAt > TTL_MS
+    const expired = flowEntry.verifiedAt != null && Date.now() - flowEntry.verifiedAt > TTL_MS
     const missing =
-      flowEntry.release != null &&
-      !releases.some((r) => r.version === flowEntry.release?.version)
+      flowEntry.release != null && !releases.some((r) => r.version === flowEntry.release?.version)
     if (expired || missing) {
-      log('debug', 'OTA flow cache cleared (stale)')
+      log('info', 'OTA flow cache cleared (stale)')
       useOtaFlowStore.getState().clear()
     }
   }, [releases])
@@ -291,7 +296,10 @@ export default function UpdateScreen({ navigation }: Props) {
             setStep('releases')
             return
           }
-          log('warn', `start_wifi_ap failed (cached path): ${e instanceof Error ? e.message : 'unknown'}`)
+          log(
+            'warn',
+            `start_wifi_ap failed (cached path): ${e instanceof Error ? e.message : 'unknown'}`
+          )
           setStep('retry_wifi')
         }
         return
@@ -317,11 +325,11 @@ export default function UpdateScreen({ navigation }: Props) {
         }
         // If we already have a verified cache entry, preserve it and offer retry.
         const afterError = useOtaFlowStore.getState()
-        if (
-          afterError.stage === 'verified' &&
-          afterError.release?.version === release.version
-        ) {
-          log('warn', `start_wifi_ap failed, verified cache preserved: ${e instanceof Error ? e.message : 'unknown'}`)
+        if (afterError.stage === 'verified' && afterError.release?.version === release.version) {
+          log(
+            'warn',
+            `start_wifi_ap failed, verified cache preserved: ${e instanceof Error ? e.message : 'unknown'}`
+          )
           setStep('retry_wifi')
           return
         }

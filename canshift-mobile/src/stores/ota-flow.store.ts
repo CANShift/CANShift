@@ -32,9 +32,13 @@ const INITIAL_STATE = {
 
 export const useOtaFlowStore = create<OtaFlowState>((set) => ({
   ...INITIAL_STATE,
-  setDownloaded: (release, path) =>
-    set({ stage: 'downloaded', release, localPath: path, verifiedSha: null, verifiedAt: null }),
-  setVerified: (release, path, sha) =>
-    set({ stage: 'verified', release, localPath: path, verifiedSha: sha, verifiedAt: Date.now() }),
-  clear: () => set(INITIAL_STATE),
+  setDownloaded: (release, path) => {
+    set({ stage: 'downloaded', release, localPath: path, verifiedSha: null, verifiedAt: null })
+  },
+  setVerified: (release, path, sha) => {
+    set({ stage: 'verified', release, localPath: path, verifiedSha: sha, verifiedAt: Date.now() })
+  },
+  clear: () => {
+    set(INITIAL_STATE)
+  },
 }))
