@@ -4,26 +4,37 @@
 // The firmware draws the four touch-targets (+, −, SET, OFF) procedurally
 // from `PageManager::buildPage`; this component mirrors that layout in the
 // studio canvas. Layout: four L-shaped corner buttons that wrap around a
-// centred SET-SPEED display rectangle. The L-notch on each button is a
-// CSS clip-path polygon — keeps the corners crisp at every render scale
-// without needing SVG.
+// centred SET-SPEED display rectangle. Each L is an SVG path so the stroke
+// follows every edge — including the notch — and the inner padding sits
+// inside the L's body away from the cut corner.
 //
 // The layout numbers below MUST stay in lock-step with the firmware constants
 // in `canshift-firmware/src/ui/page_manager.cpp` (`CRUISE_*` block) — if you
 // tweak one, tweak both.
 
 import type { PagePalette } from '@tmbk/canshift-core'
+import { FONT_FAMILY } from './widgetPreview.styles'
 
 // All sizes in firmware pixels — the SCALE prop maps to display px.
 const OUTER_PAD = 6
 const CENTER_W = 100
 const CENTER_H = 76
 const NOTCH_MARGIN = 6
+// Outer corner radius for buttons + center rect; inner notch radius keeps the
+// concave/convex notch corners visibly rounded without overpowering the L.
+// LABEL_PAD is the breathing room reserved between the glyph and the button
+// edges (used to clamp the label font size).
+const CORNER_R = 8
+const INNER_R = 5
+const LABEL_PAD = 10
+const STROKE_W = 2
 
 // Placeholder set speed shown in preview only. Firmware feeds the live value
 // from the cruise control state machine.
 const DEMO_SET_SPEED = 100
 const SPEED_UNIT = 'km/h'
+
+type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 interface CruiseButton {
   label: string
@@ -32,7 +43,7 @@ interface CruiseButton {
   /** Cruise-control op this button will dispatch on-device. */
   op: 'increment' | 'decrement' | 'set' | 'off'
   /** Which quadrant the button occupies. Drives notch orientation + position. */
-  corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  corner: Corner
 }
 
 const BUTTONS: readonly CruiseButton[] = [
@@ -65,61 +76,147 @@ function computeLayout(fwCanvasW: number, fwContentH: number) {
   const centerY = Math.round((fwContentH - CENTER_H) / 2)
   const center: Box = { x: centerX, y: centerY, w: CENTER_W, h: CENTER_H }
 
-  // Each button fills its quadrant from the outer pad up to the canvas
-  // midline. The notch is cut from the corner facing the centre rectangle.
   const halfW = Math.round(fwCanvasW / 2)
   const halfH = Math.round(fwContentH / 2)
 
-  const topLeft: Box = {
-    x: OUTER_PAD,
-    y: OUTER_PAD,
-    w: halfW - OUTER_PAD - 2,
-    h: halfH - OUTER_PAD - 2,
+  return {
+    center,
+    'top-left': {
+      x: OUTER_PAD,
+      y: OUTER_PAD,
+      w: halfW - OUTER_PAD - 2,
+      h: halfH - OUTER_PAD - 2,
+    } as Box,
+    'top-right': {
+      x: halfW + 2,
+      y: OUTER_PAD,
+      w: fwCanvasW - halfW - OUTER_PAD - 2,
+      h: halfH - OUTER_PAD - 2,
+    } as Box,
+    'bottom-left': {
+      x: OUTER_PAD,
+      y: halfH + 2,
+      w: halfW - OUTER_PAD - 2,
+      h: fwContentH - halfH - OUTER_PAD - 2,
+    } as Box,
+    'bottom-right': {
+      x: halfW + 2,
+      y: halfH + 2,
+      w: fwCanvasW - halfW - OUTER_PAD - 2,
+      h: fwContentH - halfH - OUTER_PAD - 2,
+    } as Box,
   }
-  const topRight: Box = {
-    x: halfW + 2,
-    y: OUTER_PAD,
-    w: fwCanvasW - halfW - OUTER_PAD - 2,
-    h: halfH - OUTER_PAD - 2,
-  }
-  const bottomLeft: Box = {
-    x: OUTER_PAD,
-    y: halfH + 2,
-    w: halfW - OUTER_PAD - 2,
-    h: fwContentH - halfH - OUTER_PAD - 2,
-  }
-  const bottomRight: Box = {
-    x: halfW + 2,
-    y: halfH + 2,
-    w: fwCanvasW - halfW - OUTER_PAD - 2,
-    h: fwContentH - halfH - OUTER_PAD - 2,
-  }
-
-  return { center, topLeft, topRight, bottomLeft, bottomRight }
 }
 
-// CSS clip-path polygon points are percentages of the element bounding box.
-// Builds the L-shape by cutting the corner of `corner` that faces the centre
-// rectangle. `cutW` / `cutH` are the notch dimensions in fw-px, projected
-// onto the button bounding box.
-function buttonClipPath(box: Box, corner: CruiseButton['corner'], cutW: number, cutH: number): string {
-  const xPct = (cutW / box.w) * 100
-  const yPct = (cutH / box.h) * 100
-  // For each corner orientation, walk the polygon clockwise so the L-notch
-  // bites into the corner facing the centre. All other corners stay square.
+// Build the L-shape SVG path for one button. Path runs clockwise in the SVG
+// viewport (W × H). All six corners are rounded so the stroke flows around
+// the L without any sharp edges — outer convex corners use CORNER_R, inner
+// concave/convex corners that bracket the notch use INNER_R (smaller for a
+// subtle inward sweep).
+function buttonPathD(w: number, h: number, notchW: number, notchH: number, corner: Corner): string {
+  const r = CORNER_R
+  const ir = INNER_R
   switch (corner) {
     case 'top-left':
-      // Notch on bottom-right.
-      return `polygon(0% 0%, 100% 0%, 100% ${String(100 - yPct)}%, ${String(100 - xPct)}% ${String(100 - yPct)}%, ${String(100 - xPct)}% 100%, 0% 100%)`
+      // Notch on bottom-right. Walk: top → right → notch top → notch side → bottom → left.
+      return [
+        `M ${num(r)} 0`,
+        `L ${num(w - r)} 0`,
+        `Q ${num(w)} 0 ${num(w)} ${num(r)}`,
+        `L ${num(w)} ${num(h - notchH - ir)}`,
+        // Convex corner where the L juts toward the centre (outer side of notch top).
+        `Q ${num(w)} ${num(h - notchH)} ${num(w - ir)} ${num(h - notchH)}`,
+        `L ${num(w - notchW + ir)} ${num(h - notchH)}`,
+        // Concave inner corner — the rounded indent that hugs the centre rect.
+        `Q ${num(w - notchW)} ${num(h - notchH)} ${num(w - notchW)} ${num(h - notchH + ir)}`,
+        `L ${num(w - notchW)} ${num(h - ir)}`,
+        // Convex corner where the L juts toward the centre (outer side of notch side).
+        `Q ${num(w - notchW)} ${num(h)} ${num(w - notchW - ir)} ${num(h)}`,
+        `L ${num(r)} ${num(h)}`,
+        `Q 0 ${num(h)} 0 ${num(h - r)}`,
+        `L 0 ${num(r)}`,
+        `Q 0 0 ${num(r)} 0`,
+        'Z',
+      ].join(' ')
     case 'top-right':
       // Notch on bottom-left.
-      return `polygon(0% 0%, 100% 0%, 100% 100%, ${String(xPct)}% 100%, ${String(xPct)}% ${String(100 - yPct)}%, 0% ${String(100 - yPct)}%)`
+      return [
+        `M ${num(r)} 0`,
+        `L ${num(w - r)} 0`,
+        `Q ${num(w)} 0 ${num(w)} ${num(r)}`,
+        `L ${num(w)} ${num(h - r)}`,
+        `Q ${num(w)} ${num(h)} ${num(w - r)} ${num(h)}`,
+        `L ${num(notchW + ir)} ${num(h)}`,
+        `Q ${num(notchW)} ${num(h)} ${num(notchW)} ${num(h - ir)}`,
+        `L ${num(notchW)} ${num(h - notchH + ir)}`,
+        `Q ${num(notchW)} ${num(h - notchH)} ${num(notchW - ir)} ${num(h - notchH)}`,
+        `L ${num(ir)} ${num(h - notchH)}`,
+        `Q 0 ${num(h - notchH)} 0 ${num(h - notchH - ir)}`,
+        `L 0 ${num(r)}`,
+        `Q 0 0 ${num(r)} 0`,
+        'Z',
+      ].join(' ')
     case 'bottom-left':
       // Notch on top-right.
-      return `polygon(0% 0%, ${String(100 - xPct)}% 0%, ${String(100 - xPct)}% ${String(yPct)}%, 100% ${String(yPct)}%, 100% 100%, 0% 100%)`
+      return [
+        `M ${num(r)} 0`,
+        `L ${num(w - notchW - ir)} 0`,
+        `Q ${num(w - notchW)} 0 ${num(w - notchW)} ${num(ir)}`,
+        `L ${num(w - notchW)} ${num(notchH - ir)}`,
+        `Q ${num(w - notchW)} ${num(notchH)} ${num(w - notchW + ir)} ${num(notchH)}`,
+        `L ${num(w - ir)} ${num(notchH)}`,
+        `Q ${num(w)} ${num(notchH)} ${num(w)} ${num(notchH + ir)}`,
+        `L ${num(w)} ${num(h - r)}`,
+        `Q ${num(w)} ${num(h)} ${num(w - r)} ${num(h)}`,
+        `L ${num(r)} ${num(h)}`,
+        `Q 0 ${num(h)} 0 ${num(h - r)}`,
+        `L 0 ${num(r)}`,
+        `Q 0 0 ${num(r)} 0`,
+        'Z',
+      ].join(' ')
     case 'bottom-right':
       // Notch on top-left.
-      return `polygon(${String(xPct)}% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${String(yPct)}%, ${String(xPct)}% ${String(yPct)}%)`
+      return [
+        `M ${num(notchW + ir)} 0`,
+        `L ${num(w - r)} 0`,
+        `Q ${num(w)} 0 ${num(w)} ${num(r)}`,
+        `L ${num(w)} ${num(h - r)}`,
+        `Q ${num(w)} ${num(h)} ${num(w - r)} ${num(h)}`,
+        `L ${num(r)} ${num(h)}`,
+        `Q 0 ${num(h)} 0 ${num(h - r)}`,
+        `L 0 ${num(notchH + ir)}`,
+        `Q 0 ${num(notchH)} ${num(ir)} ${num(notchH)}`,
+        `L ${num(notchW - ir)} ${num(notchH)}`,
+        `Q ${num(notchW)} ${num(notchH)} ${num(notchW)} ${num(notchH - ir)}`,
+        `L ${num(notchW)} ${num(ir)}`,
+        `Q ${num(notchW)} 0 ${num(notchW + ir)} 0`,
+        'Z',
+      ].join(' ')
+  }
+}
+
+// Trim long decimals to keep the rendered SVG `d` string compact. Two-decimal
+// precision is plenty for screen rendering and avoids huge attribute strings
+// when the bounding box has a non-integer scale projection.
+function num(v: number): string {
+  return Number.isInteger(v) ? String(v) : v.toFixed(2)
+}
+
+// Returns the centroid of the L's larger body (away from the notch) so the
+// label sits in the visual mass centre rather than at the bounding-box
+// geometric centre, which would push the text into the notched corner.
+function labelCenter(w: number, h: number, notchW: number, notchH: number, corner: Corner) {
+  const offsetX = Math.round(notchW / 4)
+  const offsetY = Math.round(notchH / 4)
+  switch (corner) {
+    case 'top-left':
+      return { x: w / 2 - offsetX, y: h / 2 - offsetY }
+    case 'top-right':
+      return { x: w / 2 + offsetX, y: h / 2 - offsetY }
+    case 'bottom-left':
+      return { x: w / 2 - offsetX, y: h / 2 + offsetY }
+    case 'bottom-right':
+      return { x: w / 2 + offsetX, y: h / 2 + offsetY }
   }
 }
 
@@ -138,18 +235,10 @@ export function CruiseControlPreview({
   const fwContentH = contentH / scale
   const layout = computeLayout(fwCanvasW, fwContentH)
 
-  // Notch size in fw-px: half the centre rect + margin, so each button's
-  // notch lines up exactly with the centre's outer edge plus the breathing
-  // margin requested by the user (no button can crowd the rectangle).
+  // Notch size = half the centre rect + NOTCH_MARGIN so each button's L
+  // wraps the centre rectangle with breathing room.
   const notchW = Math.round(CENTER_W / 2 + NOTCH_MARGIN)
   const notchH = Math.round(CENTER_H / 2 + NOTCH_MARGIN)
-
-  const buttonBoxes: Record<CruiseButton['corner'], Box> = {
-    'top-left': layout.topLeft,
-    'top-right': layout.topRight,
-    'bottom-left': layout.bottomLeft,
-    'bottom-right': layout.bottomRight,
-  }
 
   return (
     <div
@@ -157,33 +246,57 @@ export function CruiseControlPreview({
       data-testid="cruise-control-preview"
     >
       {BUTTONS.map((btn) => {
-        const box = buttonBoxes[btn.corner]
+        const box = layout[btn.corner]
+        const w = box.w
+        const h = box.h
+        const path = buttonPathD(w, h, notchW, notchH, btn.corner)
+        const labelXY = labelCenter(w, h, notchW, notchH, btn.corner)
+        // Label font scaled vs the smaller of the L's two arm widths so a
+        // narrow button still keeps its glyph visible.
+        // +/− are single glyphs that read smaller than 3-char SET/OFF at the
+        // same em size; bump them so the action affordance dominates visually
+        // (the user can spot them from a glance at the wheel).
+        const isSymbol = btn.label === '+' || btn.label === '−'
+        const armBudget = Math.min(w - notchW - LABEL_PAD * 2, h - notchH - LABEL_PAD * 2)
+        const labelFontSize = isSymbol
+          ? Math.max(28, Math.min(56, armBudget))
+          : Math.max(14, Math.min(28, armBudget * 0.7))
         return (
-          <div
+          <svg
             key={btn.op}
-            title={`${btn.label} — ${btn.hint}`}
+            width={w * scale}
+            height={h * scale}
+            viewBox={`0 0 ${String(w)} ${String(h)}`}
             style={{
               position: 'absolute',
               left: box.x * scale,
               top: box.y * scale,
-              width: box.w * scale,
-              height: box.h * scale,
-              background: palette.surface,
-              border: `2px solid ${palette.primary}`,
-              borderRadius: 6 * scale,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: palette.text,
-              fontSize: Math.round(28 * scale),
-              fontWeight: 700,
-              fontFamily: 'sans-serif',
+              overflow: 'visible',
               opacity: 0.92,
-              clipPath: buttonClipPath(box, btn.corner, notchW, notchH),
             }}
+            aria-label={`${btn.label} — ${btn.hint}`}
           >
-            {btn.label}
-          </div>
+            <title>{`${btn.label} — ${btn.hint}`}</title>
+            <path
+              d={path}
+              fill={palette.surface}
+              stroke={palette.primary}
+              strokeWidth={STROKE_W}
+              strokeLinejoin="round"
+            />
+            <text
+              x={labelXY.x}
+              y={labelXY.y}
+              fill={palette.text}
+              fontFamily={FONT_FAMILY}
+              fontWeight={700}
+              fontSize={labelFontSize}
+              textAnchor="middle"
+              dominantBaseline="central"
+            >
+              {btn.label}
+            </text>
+          </svg>
         )
       })}
 
@@ -197,8 +310,8 @@ export function CruiseControlPreview({
           width: layout.center.w * scale,
           height: layout.center.h * scale,
           background: palette.surface,
-          border: `2px solid ${palette.primary}`,
-          borderRadius: 10 * scale,
+          border: `${String(STROKE_W)}px solid ${palette.primary}`,
+          borderRadius: CORNER_R * scale,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -206,6 +319,8 @@ export function CruiseControlPreview({
           color: palette.text,
           fontFamily: 'sans-serif',
           gap: 2 * scale,
+          padding: LABEL_PAD * scale,
+          boxSizing: 'border-box',
         }}
       >
         <span

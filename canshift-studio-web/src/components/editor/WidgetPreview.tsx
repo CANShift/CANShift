@@ -1087,9 +1087,14 @@ export function computeButtonPreviewMetrics(
   h: number,
   showIcon: boolean
 ): { iconSize: number; fontSize: number } {
-  const iconSize = Math.max(12, Math.min(h * 0.6, h - 6, 32))
-  const labelBudget = showIcon ? Math.max(20, w - iconSize - 16) : w - 12
-  const fontSize = Math.max(8, Math.min(h * 0.38, labelBudget * 0.28))
+  // Column layout (icon on top, label below): icon takes ~half the vertical
+  // budget, label gets the rest. Label can use the full width minus padding
+  // since it sits on its own row.
+  const iconSize = showIcon ? Math.max(10, Math.min(h * 0.5, h - 18, 30)) : 0
+  const labelBudget = w - 12
+  // When the icon is hidden the label can fill more vertical space.
+  const verticalBudget = showIcon ? h * 0.32 : h * 0.48
+  const fontSize = Math.max(8, Math.min(verticalBudget, labelBudget * 0.28))
   return { iconSize, fontSize }
 }
 
@@ -1118,13 +1123,11 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
         width: w,
         height: h,
         display: 'flex',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignContent: 'center',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        padding: '0 6px',
+        gap: 2,
+        padding: '4px 6px',
         boxSizing: 'border-box',
         background: bgColor,
         border: `1px solid ${borderColor}`,
@@ -1156,7 +1159,6 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
             overflow: 'visible',
             letterSpacing: '0.04em',
             minWidth: 0,
-            flex: '1 1 auto',
             textAlign: 'center',
             lineHeight: 1.1,
           }}
