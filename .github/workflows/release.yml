@@ -1,15 +1,16 @@
 # Release — triggered by every merge to main.
-# A release is only created when canshift-studio/package.json version is new.
+# A release is only created when canshift-firmware/package.json version is new.
 # If the version already has a GitHub Release, the workflow exits silently.
 #
-# To ship a release: bump the version in canshift-studio/package.json in your PR.
+# To ship a release: bump the version in canshift-firmware/package.json in your PR.
 # When that PR merges, this workflow fires and creates the GitHub Release automatically.
 #
 # Releases are firmware-only since the dash-hosted Studio refactor (#1077). The
-# Studio SPA ships embedded in the firmware OTA payload (board_build.embed_files
-# in canshift-firmware/platformio.ini per #1117). The Electron canshift-studio/
-# package is legacy and is not released — its installer (DMG / NSIS / AppImage)
-# is no longer published. canshift-flasher (separate repo, canshift.tmbk.ch)
+# Studio SPA ships in the SPIFFS data partition (mirrored at build time from
+# canshift-studio-web/dist/ by scripts/sync_studio_web.py per #1077 phase 4).
+# The Electron canshift-studio/ package was decommissioned post-cutover — its
+# installer (DMG / NSIS / AppImage) was already dropped per #1106 and the
+# package itself is gone. canshift-flasher (separate repo, canshift.tmbk.ch)
 # handles install / update over USB; mobile distributes through TestFlight /
 # Play Store on its own cadence.
 
@@ -35,20 +36,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Source of truth: canshift-studio/package.json `version`. This is also
+      # Source of truth: canshift-firmware/package.json `version`. This is also
       # read by canshift-firmware/scripts/extra_targets.py to inject
-      # APP_VERSION_STR into the firmware binary, so studio + firmware can
-      # never disagree as long as both pipelines point at the same file.
+      # APP_VERSION_STR into the firmware binary, so the release tag and the
+      # firmware splash can never disagree as long as both readers point here.
       #
-      # Future move: once canshift-studio/ is decommissioned (post phase-3
-      # cutover of #1077), shift the version source of truth to
-      # canshift-firmware/package.json (or a dedicated VERSION file at the
-      # repo root). Update this step and `extra_targets.py:read_studio_version`
-      # together — they are the only two readers.
-      - name: Read studio version
+      # History: source-of-truth was canshift-studio/package.json until the
+      # Electron Studio package was decommissioned post-#1077 cutover. The
+      # firmware is the only artifact in releases now, so the version
+      # naturally tracks the firmware.
+      - name: Read firmware version
         id: ver
         run: |
-          VERSION=$(node -p "require('./canshift-studio/package.json').version")
+          VERSION=$(node -p "require('./canshift-firmware/package.json').version")
           echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
