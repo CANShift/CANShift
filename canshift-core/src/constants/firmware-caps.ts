@@ -35,3 +35,6 @@ export const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
 // Empty string = zero-byte frame (legal). Must be even-length pure hex.
 export const CAN_RAW_DATA_MAX_HEX_CHARS = 16
 export const CAN_RAW_DATA_REGEX = /^([0-9a-fA-F]{2})*$/
+
+/** Number of data bytes in a CAN 2.0 frame — mirrors `kCanFrameMaxBytes` in firmware. */
+export const CAN_FRAME_MAX_BYTES = 8
