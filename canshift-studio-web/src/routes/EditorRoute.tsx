@@ -8,7 +8,6 @@ import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
 import PropertyPanel from '../components/editor/PropertyPanel'
 import ThemePanel from '../components/editor/ThemePanel'
-import TestValuesPanel from '../components/editor/TestValuesPanel'
 import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
 
@@ -561,9 +560,6 @@ export default function EditorRoute() {
           {currentPage && <WidgetPalette pageId={currentPage.id} />}
         </div>
 
-        {/* Test mode signal injector — sits below the palette so the canvas keeps
-            its full height while the panel is collapsed. */}
-        <TestValuesPanel />
       </aside>
 
       {/* ── Canvas centre ────────────────────────────────────────────────── */}
