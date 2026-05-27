@@ -245,10 +245,6 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
 
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
 
-  // Arc fill style — issue #175. Defaults to 'zones' (legacy behaviour).
-  const arcFillStyle = cfg.arcFillStyle ?? 'zones'
-  const isGradient = arcFillStyle === 'gradient'
-
   // Issue #954 — sensor palette wins when the widget pins a known iconName.
   // The opaque per-sensor colour fills below `dangerLevel` and the warning
   // colour above; the zone-tinted background sectors are dropped so the read
@@ -265,15 +261,11 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
       ? st.criticalColor
       : st.primaryColor
 
-  // Arc fill colour:
-  //   palette  — per-sensor opaque colour (issue #954).
-  //   zones    — same threshold-tinted colour as the text (legacy behaviour).
-  //   gradient — interpolated green→orange→red across the value range.
-  const arcValueColor = inPaletteMode
-    ? palette
-    : isGradient
-      ? interpolateGreenOrangeRed(valuePct)
-      : textValueColor
+  // Arc fill colour — gradient by default. Legacy 'zones' fill style was
+  // dropped from the picker so every arc gauge reads as a smooth
+  // green→orange→red interpolation across the value range. Palette mode
+  // still wins when iconName resolves a sensor entry.
+  const arcValueColor = inPaletteMode ? palette : interpolateGreenOrangeRed(valuePct)
 
   const cx = w / 2
   // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
@@ -317,17 +309,9 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
         strokeWidth={strokeW}
         strokeLinecap="butt"
       />
-      {/* Zones mode only: danger sector tinting (issue #965). Palette mode
-          (#954) skips this — the value arc is already opaque and semantic. */}
-      {!isGradient && !inPaletteMode && (
-        <path
-          d={gaugeArcD(cx, cy, r, dangerPct, 1)}
-          fill="none"
-          stroke={st.criticalColor + '55'}
-          strokeWidth={strokeW}
-        />
-      )}
-      {/* Value arc — gradient mode tints with interpolated colour */}
+      {/* Value arc — gradient interpolates green→orange→red across the
+          range. Legacy zones-mode tinting was dropped along with the picker
+          so every arc reads as a smooth fill. */}
       <path
         d={gaugeArcD(cx, cy, r, 0, valuePct)}
         fill="none"
