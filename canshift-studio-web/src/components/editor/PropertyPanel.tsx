@@ -81,7 +81,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
-  const updateTopBar = useDashboardStore((s) => s.updateTopBar)
   const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
   const setPageTemplate = useDashboardStore((s) => s.setPageTemplate)
   const signals = useSignalStore((s) => s.signals)
@@ -146,58 +145,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           </Select>
         </Field>
 
-        <div
-          style={{
-            fontSize: 10,
-            color: PANEL_LABEL,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: 6,
-            marginTop: 8,
-          }}
-        >
-          Top Bar
-        </div>
-        <Row>
-          <Field label="Bar color">
-            <input
-              type="color"
-              value={config.topBar.bgColor}
-              style={{
-                width: '100%',
-                height: 28,
-                padding: 2,
-                background: INPUT_BG,
-                border: `1px solid ${INPUT_BORDER}`,
-                borderRadius: 3,
-                cursor: 'pointer',
-                boxSizing: 'border-box',
-              }}
-              onChange={(e) => {
-                updateTopBar({ bgColor: e.target.value as `#${string}` })
-              }}
-            />
-          </Field>
-          <Field label="Text color">
-            <input
-              type="color"
-              value={config.topBar.textColor}
-              style={{
-                width: '100%',
-                height: 28,
-                padding: 2,
-                background: INPUT_BG,
-                border: `1px solid ${INPUT_BORDER}`,
-                borderRadius: 3,
-                cursor: 'pointer',
-                boxSizing: 'border-box',
-              }}
-              onChange={(e) => {
-                updateTopBar({ textColor: e.target.value as `#${string}` })
-              }}
-            />
-          </Field>
-        </Row>
         {/* Page template — picks how the firmware draws this page (#451).
             `custom` keeps the legacy free-form widget grid; built-in templates
             (e.g. `cruise_control`) render a procedural layout and ignore the

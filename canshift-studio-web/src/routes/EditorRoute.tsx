@@ -7,7 +7,6 @@ import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
 import PropertyPanel from '../components/editor/PropertyPanel'
-import ThemePanel from '../components/editor/ThemePanel'
 import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
 
@@ -247,14 +246,13 @@ function generateId(prefix: string): string {
 // to RIGHT_SIDEBAR_TABS.
 // ---------------------------------------------------------------------------
 
-type RightSidebarTab = 'properties' | 'theme' | 'signals'
+type RightSidebarTab = 'properties' | 'signals'
 
 const RIGHT_SIDEBAR_TABS: { id: RightSidebarTab; label: string }[] = [
   { id: 'properties', label: 'Properties' },
-  { id: 'theme', label: 'Theme' },
   // Signals tab — per-signal input-mode editor (broadcast vs OBD-II polling,
-  // issue #841). Lives alongside Properties/Theme so a user can switch a
-  // signal's source without leaving the editor.
+  // issue #841). Lets a user switch a signal's source without leaving the
+  // editor.
   { id: 'signals', label: 'Signals' },
 ]
 
@@ -629,7 +627,6 @@ export default function EditorRoute() {
           })}
         </div>
         {rightTab === 'properties' && currentPage && <PropertyPanel pageId={currentPage.id} />}
-        {rightTab === 'theme' && <ThemePanel />}
         {rightTab === 'signals' && <Obd2PollingPanel />}
       </aside>
 
