@@ -18,8 +18,8 @@ import {
 } from 'react-native'
 import Markdown from 'react-native-markdown-display'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import Constants from 'expo-constants'
 import * as SecureStore from 'expo-secure-store'
+import { readAppVersion } from '../lib/expo-version'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, HitSlop, Radius, Spacing, Typography } from '../theme'
 import { useLatestRelease } from '../hooks/use-latest-release'
@@ -105,20 +105,6 @@ export function formatDate(iso: string): string {
   return new Date(ms).toLocaleString()
 }
 
-function readAppVersion(): string | null {
-  const fromConfig = Constants.expoConfig?.version
-  if (typeof fromConfig === 'string' && fromConfig.length > 0) return fromConfig
-  // Older Expo manifest shapes expose `nativeAppVersion` / `version`. Fall
-  // back to those so dev builds without a resolved config still show a value.
-  const legacy = Constants as unknown as { nativeAppVersion?: unknown; version?: unknown }
-  if (typeof legacy.nativeAppVersion === 'string' && legacy.nativeAppVersion.length > 0) {
-    return legacy.nativeAppVersion
-  }
-  if (typeof legacy.version === 'string' && legacy.version.length > 0) {
-    return legacy.version
-  }
-  return null
-}
 
 async function loadPreReleaseToggle(): Promise<boolean> {
   // Pre-1.0 we publish every build as a pre-release, so the toggle defaults
