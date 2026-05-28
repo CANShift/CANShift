@@ -69,7 +69,7 @@ export const SensorIconNameSchema = z.enum([
 // Widget config variants (discriminated union on `type`)
 // ---------------------------------------------------------------------------
 
-export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc', 'bar'])
+export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc'])
 export const GaugeArcFillStyleSchema = z.enum(['zones', 'gradient'])
 const BarOrientationSchema = z.enum(['vertical', 'horizontal'])
 
@@ -529,11 +529,9 @@ export const TopBarConfigSchema = z
 // A stray `DEFAULT_TOP_BAR_LAYOUT.push(...)` somewhere in the renderer would
 // otherwise pollute every downstream caller (audit C-ME-5).
 export const DEFAULT_TOP_BAR_LAYOUT = [
-  { type: 'statusDot', signal: 'any', position: 'left' },
   { type: 'label', text: 'CAN', position: 'left' },
+  { type: 'statusDot', signal: 'any', position: 'left' },
   { type: 'bleIcon', position: 'right' },
-  { type: 'usbIcon', position: 'right' },
-  { type: 'separator', position: 'right' },
   { type: 'themeToggle', position: 'right' },
 ] as const satisfies readonly z.infer<typeof TopBarItemSchema>[]
 

@@ -204,25 +204,10 @@ interface GaugeArcRendererProps extends BaseRendererProps {
   signalUnit: string
 }
 
-interface GaugeBarRendererProps extends BaseRendererProps {
-  danger: boolean
-  testValue?: number | null
-  signalUnit: string
-}
-
 interface GaugeNumericRendererProps extends BaseRendererProps {
   danger: boolean
   testValue?: number | null
   signalUnit: string
-}
-
-interface BarRendererProps extends BaseRendererProps {
-  testValue?: number | null
-  signalUnit: string
-}
-
-interface WarningRendererProps extends BaseRendererProps {
-  noAnimate: boolean
 }
 
 interface ButtonRendererProps extends BaseRendererProps {
@@ -251,10 +236,6 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
 
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
 
-  // Arc fill style — issue #175. Defaults to 'zones' (legacy behaviour).
-  const arcFillStyle = cfg.arcFillStyle ?? 'zones'
-  const isGradient = arcFillStyle === 'gradient'
-
   // Issue #954 — sensor palette wins when the widget pins a known iconName.
   // The opaque per-sensor colour fills below `dangerLevel` and the warning
   // colour above; the zone-tinted background sectors are dropped so the read
@@ -271,15 +252,11 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
       ? st.criticalColor
       : st.primaryColor
 
-  // Arc fill colour:
-  //   palette  — per-sensor opaque colour (issue #954).
-  //   zones    — same threshold-tinted colour as the text (legacy behaviour).
-  //   gradient — interpolated green→orange→red across the value range.
-  const arcValueColor = inPaletteMode
-    ? palette
-    : isGradient
-      ? interpolateGreenOrangeRed(valuePct)
-      : textValueColor
+  // Arc fill colour — gradient by default. Legacy 'zones' fill style was
+  // dropped from the picker so every arc gauge reads as a smooth
+  // green→orange→red interpolation across the value range. Palette mode
+  // still wins when iconName resolves a sensor entry.
+  const arcValueColor = inPaletteMode ? palette : interpolateGreenOrangeRed(valuePct)
 
   const cx = w / 2
   // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
@@ -292,8 +269,11 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
   const revFlash = cfg.revFlash === true
   const showRevFlash = revFlash && revLimiting
 
-  const valueFontSize = Math.max(9, Math.min(r * 0.38, h * 0.18, 28))
-  const unitFontSize = Math.max(6, r * 0.17)
+  // Bumped from r*0.38/h*0.18/28 — value text was reading subordinate to
+  // the arc trace at 80-px-tall dashboard cells. The new ceiling keeps the
+  // glyph inside the arc's inner radius (no clip) while letting it dominate.
+  const valueFontSize = Math.max(11, Math.min(r * 0.55, h * 0.3, 42))
+  const unitFontSize = Math.max(7, r * 0.2)
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
@@ -320,17 +300,9 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
         strokeWidth={strokeW}
         strokeLinecap="butt"
       />
-      {/* Zones mode only: danger sector tinting (issue #965). Palette mode
-          (#954) skips this — the value arc is already opaque and semantic. */}
-      {!isGradient && !inPaletteMode && (
-        <path
-          d={gaugeArcD(cx, cy, r, dangerPct, 1)}
-          fill="none"
-          stroke={st.criticalColor + '55'}
-          strokeWidth={strokeW}
-        />
-      )}
-      {/* Value arc — gradient mode tints with interpolated colour */}
+      {/* Value arc — gradient interpolates green→orange→red across the
+          range. Legacy zones-mode tinting was dropped along with the picker
+          so every arc reads as a smooth fill. */}
       <path
         d={gaugeArcD(cx, cy, r, 0, valuePct)}
         fill="none"
@@ -385,343 +357,29 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
           {signalUnit}
         </text>
       )}
-      {/* Widget label (user-configured, shown at bottom when set) */}
-      {cfg.label &&
-        (() => {
-          const pos = cfg.labelPosition ?? 'top-left'
-          const lAttrs = svgLabelAttrs(pos, w, h)
-          return (
-            <text
-              x={lAttrs.x}
-              y={lAttrs.y}
-              textAnchor={lAttrs.textAnchor}
-              dominantBaseline={lAttrs.dominantBaseline}
-              fill={st.textColor + '77'}
-              fontSize={Math.max(6, Math.min(9, w * 0.1))}
-              fontFamily={FONT_FAMILY}
-              fontWeight="500"
-              letterSpacing="0.04em"
-            >
-              {cfg.label}
-            </text>
-          )
-        })()}
-    </svg>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Gauge — Vertical bar style (also renders horizontal when barOrientation='horizontal')
-// ---------------------------------------------------------------------------
-
-const GaugeBarPreview = memo(function GaugeBarPreview({
-  widget,
-  w,
-  h,
-  danger,
-  testValue,
-  signalUnit,
-}: GaugeBarRendererProps) {
-  if (widget.config.type !== 'gauge') return null
-  const cfg = widget.config
-  const st = widget.style
-
-  const isHorizontal = cfg.barOrientation === 'horizontal'
-
-  const dangerPct = thresholdPct(cfg.dangerLevel, cfg.minValue, cfg.maxValue)
-  const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
-
-  const valueStr = demoValue.toFixed(cfg.decimalPlaces)
-  const signalLabel = formatSignalLabel(widget.signal)
-
-  // Issue #954 — sensor palette overrides the legacy zone tinting when the
-  // gauge widget pins a known iconName. Issue #965 reduces the zone path to
-  // a single threshold so a missing palette falls back to green/red on
-  // dangerLevel alone.
-  const paletteColor = paletteFillColor(cfg.iconName, valuePct, dangerPct)
-  const inPaletteMode = paletteColor !== undefined
-  const dangerZoneColor = valuePct >= dangerPct ? ZONE_DANGER : ZONE_NORMAL
-
-  if (isHorizontal) {
-    const fillColor = paletteColor ?? dangerZoneColor
-
-    const labelPos = cfg.labelPosition ?? 'bottom-left'
-    // Label band sits below the bar by default (issue #137). Users can still
-    // pin it to the top via labelPosition, but the auto signal-name fallback
-    // no longer forces the band to the top when no custom label is set.
-    const labelIsTop = labelPos.startsWith('top')
-
-    // Reserve a label band on one side; track takes the rest. The 14-px floor
-    // matches the firmware's Orbitron Medium 12 line height — anything tighter
-    // clips the value and signal name. Cap at 24 so the bar stays dominant
-    // on tall widgets.
-    const labelBandH = Math.max(14, Math.min(24, h * 0.25))
-    const gap = 2
-    const barH = Math.max(4, h - labelBandH - gap)
-    const trackY = labelIsTop ? labelBandH + gap : 0
-    const bandY = labelIsTop ? 0 : barH + gap
-    const padX = 6
-    const trackW = w - padX * 2
-
-    const sigFontSize = Math.max(7, Math.min(11, labelBandH * 0.7))
-    // Centre the inline-baseline text inside the band
-    const bandTextY = bandY + labelBandH / 2
-
-    return (
-      <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-        {/* Track — square corners */}
-        <rect x={padX} y={trackY} width={trackW} height={barH} fill="#1C1C1C" />
-        {/* Palette mode (#954) drops the translucent zone band and tick — the
-            opaque palette fill carries the read on its own. Issue #965
-            collapses the legacy warn+danger bands to a single danger band. */}
-        {!inPaletteMode && (
-          <rect
-            x={padX + trackW * dangerPct}
-            y={trackY}
-            width={(1 - dangerPct) * trackW}
-            height={barH}
-            fill={ZONE_DANGER + '35'}
-          />
-        )}
-        {!inPaletteMode && (
-          <line
-            x1={padX + trackW * dangerPct}
-            y1={trackY - 2}
-            x2={padX + trackW * dangerPct}
-            y2={trackY + barH + 2}
-            stroke={ZONE_DANGER}
-            strokeWidth={1}
-            strokeDasharray="2 2"
-          />
-        )}
-        {/* Fill — zone-coloured, square corners */}
-        <rect
-          x={padX}
-          y={trackY}
-          width={trackW * valuePct}
-          height={barH}
-          fill={fillColor}
-          style={{ animation: danger ? BLINK_ANIM : undefined }}
-        />
-        {/* Signal label — only when no custom label is set */}
-        {!cfg.label && (
-          <text
-            x={4}
-            y={bandTextY}
-            textAnchor="start"
-            dominantBaseline="middle"
-            fill="#888888"
-            fontSize={sigFontSize}
-            fontFamily={FONT_FAMILY}
-            fontWeight="500"
-            letterSpacing="0.05em"
-          >
-            {signalLabel}
-          </text>
-        )}
-        {/* Value — white, centred ON the bar track (over the fill).
-            Label tier (Medium 500) — matches FontManager::label on the
-            firmware horizontal bar where the value sits in the 12–14 px band. */}
-        {barH >= 14 && (
-          <text
-            x={w / 2}
-            y={trackY + barH / 2}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#FFFFFF"
-            fontSize={Math.max(10, Math.min(barH * 0.55, 14))}
-            fontWeight="500"
-            fontFamily={FONT_FAMILY}
-            style={{ animation: danger ? BLINK_ANIM : undefined }}
-          >
-            {valueStr}
-            {signalUnit}
-          </text>
-        )}
-        {/* User label — sits in the band at the user-chosen horizontal corner */}
-        {cfg.label && (
-          <text
-            x={labelPos.endsWith('center') ? w / 2 : labelPos.endsWith('right') ? w - 4 : 4}
-            y={bandTextY}
-            textAnchor={
-              labelPos.endsWith('center') ? 'middle' : labelPos.endsWith('right') ? 'end' : 'start'
-            }
-            dominantBaseline="middle"
-            fill={st.textColor + '77'}
-            fontSize={sigFontSize}
-            fontFamily={FONT_FAMILY}
-            fontWeight="500"
-            letterSpacing="0.05em"
-          >
-            {cfg.label}
-          </text>
-        )}
-      </svg>
-    )
-  }
-
-  // Vertical bar — palette wins when iconName resolves; otherwise the
-  // single-threshold green/red zone tinting drives the fill (issue #965).
-  const valueColor = paletteColor ?? dangerZoneColor
-
-  // Bar track: 60 % of widget width, centered
-  const bw = Math.max(10, w * 0.6)
-  const padX = (w - bw) / 2
-  // Top: signal label; bottom: value + unit on two lines
-  const sigLabelH = Math.max(10, Math.min(h * 0.12, 14))
-  const padTop = sigLabelH + 3
-  const unitLineH = Math.max(8, Math.min(h * 0.09, 13))
-  const valLineH = Math.max(10, Math.min(h * 0.14, 22))
-  const padBot = valLineH + unitLineH + 6
-  const trackH = Math.max(4, h - padTop - padBot)
-
-  const fillY = padTop + trackH * (1 - valuePct)
-  const fillH = trackH * valuePct
-
-  const dangerY = padTop + trackH * (1 - dangerPct)
-
-  const sigFontSize = Math.max(6, Math.min(sigLabelH * 0.82, w * 0.12))
-  const valFontSize = Math.max(10, Math.min(valLineH * 0.9, w * 0.46))
-  const unitFontSize = Math.max(7, Math.min(unitLineH * 0.85, w * 0.3))
-
-  // Value/unit text — white below danger, critical above (issue #965).
-  const valTextColor = valuePct >= dangerPct ? st.criticalColor : '#FFFFFF'
-  const unitTextColor = valuePct >= dangerPct ? st.criticalColor + 'BB' : '#888888'
-
-  return (
-    <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      {/* Signal name — top centre, dropped when the user supplies a label */}
-      {!cfg.label && (
+      {/* Widget label — pinned bottom-left under the arc on arc gauges only.
+          Uppercase + dim weight so it reads as a caption without competing
+          with the value. */}
+      {cfg.label && (
         <text
-          x={w / 2}
-          y={2}
-          textAnchor="middle"
-          dominantBaseline="hanging"
-          fill="#888888"
-          fontSize={sigFontSize}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.04em"
-        >
-          {signalLabel}
-        </text>
-      )}
-      {/* Track background — square corners */}
-      <rect x={padX} y={padTop} width={bw} height={trackH} fill="#1C1C1C" />
-      {/* Palette mode (#954) drops the translucent zone overlay/tick — the
-          opaque palette fill carries the read on its own. Issue #965 keeps
-          only the danger band when no palette is pinned. */}
-      {!inPaletteMode && (
-        <rect
-          x={padX}
-          y={dangerY}
-          width={bw}
-          height={dangerPct * trackH}
-          fill={ZONE_DANGER + '35'}
-        />
-      )}
-      {!inPaletteMode && (
-        <line
-          x1={padX - 3}
-          y1={dangerY}
-          x2={padX + bw + 3}
-          y2={dangerY}
-          stroke={ZONE_DANGER}
-          strokeWidth={1}
-          strokeDasharray="2 2"
-        />
-      )}
-      {/* Value fill from bottom — square corners */}
-      <rect
-        x={padX}
-        y={fillY}
-        width={bw}
-        height={fillH}
-        fill={valueColor}
-        style={{ animation: danger ? BLINK_ANIM : undefined }}
-      />
-      {/* Scale ticks — min/max on sides when space allows */}
-      {padX >= 14 && (
-        <>
-          <text
-            x={padX - 4}
-            y={padTop + trackH}
-            textAnchor="end"
-            dominantBaseline="middle"
-            fill="#383838"
-            fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily={FONT_FAMILY}
-          >
-            {cfg.minValue}
-          </text>
-          <text
-            x={padX - 4}
-            y={padTop}
-            textAnchor="end"
-            dominantBaseline="middle"
-            fill="#383838"
-            fontSize={Math.max(6, Math.min(8, w * 0.12))}
-            fontFamily={FONT_FAMILY}
-          >
-            {cfg.maxValue}
-          </text>
-        </>
-      )}
-      {/* Value — white for max readability, warning/danger state changes color.
-          Label tier (Medium 500) — vertical bar values render at 14–16 px,
-          which is the FontManager::label band on the firmware. */}
-      <text
-        x={w / 2}
-        y={h - padBot + valLineH * 0.88}
-        textAnchor="middle"
-        dominantBaseline="auto"
-        fill={valTextColor}
-        fontSize={valFontSize}
-        fontWeight="500"
-        fontFamily={FONT_FAMILY}
-        style={{ animation: danger ? BLINK_ANIM : undefined }}
-      >
-        {valueStr}
-      </text>
-      {signalUnit !== '' && (
-        <text
-          x={w / 2}
-          y={h - 3}
-          textAnchor="middle"
+          x={4}
+          y={h - 4}
+          textAnchor="start"
           dominantBaseline="auto"
-          fill={unitTextColor}
-          fontSize={unitFontSize}
+          fill={st.textColor + '77'}
+          fontSize={Math.max(6, Math.min(9, w * 0.1))}
           fontFamily={FONT_FAMILY}
           fontWeight="500"
-          letterSpacing="0.03em"
-          style={{ animation: danger ? BLINK_ANIM : undefined }}
+          letterSpacing="0.06em"
+          style={{ textTransform: 'uppercase' }}
         >
-          {signalUnit}
+          {cfg.label.toUpperCase()}
         </text>
       )}
-      {/* Widget label */}
-      {cfg.label &&
-        (() => {
-          const pos = cfg.labelPosition ?? 'top-left'
-          const lAttrs = svgLabelAttrs(pos, w, h)
-          return (
-            <text
-              x={lAttrs.x}
-              y={lAttrs.y}
-              textAnchor={lAttrs.textAnchor}
-              dominantBaseline={lAttrs.dominantBaseline}
-              fill={st.textColor + '77'}
-              fontSize={Math.max(5, Math.min(8, w * 0.22))}
-              fontFamily={FONT_FAMILY}
-              fontWeight="500"
-            >
-              {cfg.label}
-            </text>
-          )
-        })()}
     </svg>
   )
 })
+
 
 // ---------------------------------------------------------------------------
 // Gauge — Numeric style
@@ -749,30 +407,38 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const valueColor = st.textColor
 
   const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  // Suffix dropped unconditionally — see the value span below. The label name
-  // already conveys the unit, and "195km/h" overflows 80-px-wide cells.
-  // Matches firmware label_widget.cpp behaviour.
-
   // Signal name shown top-left when no custom label — matches firmware
   // applySignalHeader() in canshift-firmware/src/ui/widget_label.cpp, which
-  // pins the auto-header to CfgLabelPos::TOP_LEFT (the previous bottom-left
-  // placement in studio drifted out of sync after PR #967, issue #957).
-  // The auto-header reserves a 14-px band at the TOP (Orbitron Medium 12 line
-  // height) and the value floats below it.
+  // pins the auto-header to CfgLabelPos::TOP_LEFT. The auto-header reserves
+  // a 14-px band at the TOP and the value floats below it.
   const showSignalHeader = labelText === null
   const signalLabel = formatSignalLabel(widget.signal)
   const sigHeaderH = showSignalHeader ? 14 : 0
   const availH = h - sigHeaderH
 
-  // Inline layout — value occupies the full available band.
-  const fontSize = Math.max(8, Math.min(availH * 0.72, w * 0.52))
+  // Headline value layout — wide ints (≥ 4 digits, no decimals) split last
+  // 3 digits onto a smaller font tier so "5200" reads as "5" big + "200"
+  // small in a narrow cell. The cap below sizes the run to fit `w` exactly,
+  // accounting for outer padding + the unit suffix at FRAC_FONT_SCALE * 0.45.
+  const valueStr = String(valueOnly)
+  const intLen = valueStr.includes('.') ? valueStr.split('.')[0]!.length : valueStr.length
+  const willSplit = !cfg.prefix && intLen > 3 && !valueStr.includes('.')
+  const headChars = willSplit ? intLen - 3 : intLen
+  const tailChars = willSplit ? 3 : valueStr.includes('.') ? valueStr.length - intLen : 0
+  const unitChars = signalUnit.length
+  // Effective char budget at the headline font size:
+  //   - head chars at full font
+  //   - tail (smaller integer trio + any fractional) at FRAC_FONT_SCALE
+  //   - unit suffix at ~0.45 (rendered around 0.32 of value but Orbitron
+  //     Medium 500 is narrower than Black 900, so the equivalent budget
+  //     ends up around 0.45 × FRAC_FONT_SCALE of head font).
+  const charBudget =
+    headChars + tailChars * FRAC_FONT_SCALE + unitChars * FRAC_FONT_SCALE * 0.45
+  // 0.68 = average Orbitron Black 900 advance width in em. 16-px outer
+  // padding/gap stays unallocated so the run sits inside the cell with
+  // breathing room even after the selection outline expands a few px.
+  const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 16) / (charBudget * 0.68)))
 
-  const isLabelTop = labelText !== null && labelPos.startsWith('top')
-  const isLabelRight = labelPos.endsWith('right')
-  const isLabelCenter = labelPos.endsWith('center')
-  const labelAlign = isLabelCenter ? 'center' : isLabelRight ? 'right' : 'left'
   const labelFontSize = Math.max(6, Math.min(9, w * 0.1))
 
   return (
@@ -812,33 +478,31 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
             textOverflow: 'ellipsis',
             maxWidth: `calc(100% - 8px)`,
             letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}
         >
-          {signalLabel}
+          {signalLabel.toUpperCase()}
         </span>
       )}
-      {/* Widget label overlay (user-configured) */}
+      {/* Widget label overlay — top-left, uppercase. Replaces the auto signal
+          header when a custom label is set. */}
       {labelText !== null && (
         <span
           style={{
             position: 'absolute',
-            ...(isLabelTop ? { top: 2 } : { bottom: 2 }),
-            ...(isLabelCenter
-              ? { left: '50%', transform: 'translateX(-50%)' }
-              : isLabelRight
-                ? { right: 3 }
-                : { left: 3 }),
+            top: 2,
+            left: 3,
             fontSize: labelFontSize,
             fontFamily: FONT_FAMILY,
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
-            letterSpacing: '0.04em',
-            textAlign: labelAlign,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}
         >
-          {labelText}
+          {labelText.toUpperCase()}
         </span>
       )}
       {/* Value + unit row — value on the left, unit to its right at a smaller
@@ -859,6 +523,14 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
       >
         {(() => {
           const { int, frac } = splitDecimal(valueOnly)
+          // 4+ digit integers (RPM, mileage, oil-temp at high range, …) split
+          // last 3 digits onto a smaller font tier so the headline reads as
+          // "5.200" — "5" dominant, "200" subordinate — instead of a single
+          // run that overflows narrow cells. Mirrors how telemetry HUDs
+          // present thousands.
+          const isWideInt = !prefix && int.length > 3 && frac === ''
+          const intHead = isWideInt ? int.slice(0, -3) : int
+          const intTail = isWideInt ? int.slice(-3) : ''
           return (
             <span
               style={{
@@ -874,11 +546,14 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
               }}
             >
               {/* Orbitron matches firmware FontManager::primary at the
-                  integer-part size. The fractional part (".3", ".09", …) is
-                  rendered at FRAC_FONT_SCALE of the integer size so AFR /
-                  voltage / lambda / pressure readouts emphasise the headline
-                  number while the decimal sits visibly subordinate. */}
-              <span style={{ fontSize }}>{prefix + int}</span>
+                  integer-part size. Fractional part renders at
+                  FRAC_FONT_SCALE so AFR / voltage / lambda readouts
+                  emphasise the headline number. Wide-int split (5.200)
+                  reuses the same small tier for the trailing trio. */}
+              <span style={{ fontSize }}>{prefix + intHead}</span>
+              {intTail !== '' && (
+                <span style={{ fontSize: fontSize * FRAC_FONT_SCALE }}>{intTail}</span>
+              )}
               {frac !== '' && <span style={{ fontSize: fontSize * FRAC_FONT_SCALE }}>{frac}</span>}
             </span>
           )
@@ -904,177 +579,6 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
 })
 
 // ---------------------------------------------------------------------------
-// Bar widget — horizontal progress bar
-// ---------------------------------------------------------------------------
-
-const BarWidgetPreview = memo(function BarWidgetPreview({
-  widget,
-  w,
-  h,
-  testValue,
-  signalUnit,
-}: BarRendererProps) {
-  if (widget.config.type !== 'bar') return null
-  const cfg = widget.config
-  const st = widget.style
-
-  // Standalone bar widgets default to a 0..100 percent range when min/max are
-  // unset — keep the legacy display-as-percent behaviour in that case.
-  const min = cfg.minValue ?? 0
-  const max = cfg.maxValue ?? 100
-  const { pct: valuePct, raw: rawValue } = effectiveValue(testValue, min, max)
-  const fillW = w * valuePct
-  const barH = Math.max(4, h * 0.35)
-  const textY = (h - barH) / 2
-  const valueStr =
-    (cfg.prefix ?? '') +
-    String(Math.round(testValue == null ? valuePct * 100 : rawValue)) +
-    signalUnit
-  const labelPos = cfg.labelPosition ?? 'bottom-center'
-  const labelIsTop = labelPos === 'top-center'
-  const signalLabel = formatSignalLabel(widget.signal)
-
-  // Issue #954 — palette wins over the per-widget primaryColor when a known
-  // sensor is pinned on the widget. dangerLevel is optional on standalone
-  // bars (#965); fall back to the top of the range so the OK colour fills
-  // the entire bar until a real threshold is configured.
-  const dangerPct = cfg.dangerLevel !== undefined ? thresholdPct(cfg.dangerLevel, min, max) : 1.1
-  const barFillColor = paletteFillColor(cfg.iconName, valuePct, dangerPct) ?? st.primaryColor
-
-  return (
-    <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      {/* Track */}
-      <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" />
-      {/* Fill */}
-      <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={barFillColor} />
-      {/* Signal name — only when no custom label is set (avoid stacked text) */}
-      {!cfg.label && (
-        <text
-          x={4}
-          y={labelIsTop ? h - 3 : 3}
-          textAnchor="start"
-          dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
-          fill="#888888"
-          fontSize={Math.max(5, Math.min(7, h * 0.22))}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.05em"
-        >
-          {signalLabel}
-        </text>
-      )}
-      {/* Value readout */}
-      {h > 18 && (
-        <text
-          x={w / 2}
-          y={textY > 10 ? textY - 2 : h - textY + 2}
-          textAnchor="middle"
-          dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
-          fill={st.textColor + 'BB'}
-          fontSize={Math.max(7, Math.min(10, h * 0.28))}
-          fontFamily={FONT_FAMILY}
-        >
-          {valueStr}
-        </text>
-      )}
-      {/* Widget label */}
-      {cfg.label && (
-        <text
-          x={w / 2}
-          y={labelIsTop ? 8 : h - 3}
-          textAnchor="middle"
-          dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
-          fill={st.textColor + '77'}
-          fontSize={Math.max(6, Math.min(9, h * 0.22))}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.04em"
-        >
-          {cfg.label}
-        </text>
-      )}
-    </svg>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Warning widget
-// ---------------------------------------------------------------------------
-
-const WarningPreview = memo(function WarningPreview({
-  widget,
-  w,
-  h,
-  noAnimate,
-}: WarningRendererProps) {
-  if (widget.config.type !== 'warning') return null
-  const cfg = widget.config
-  const st = widget.style
-  const iconName = cfg.iconName ?? 'warning'
-  const signalLabel = formatSignalLabel(widget.signal)
-  const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
-  const labelH = sigFontSize + 4
-  const iconSize = Math.min(w * 0.55, h - labelH - 8, 64)
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  return (
-    <div
-      style={{
-        width: w,
-        height: h,
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-        background: st.criticalColor + '22',
-        borderRadius: 0,
-        // Side-page thumbnails pass noAnimate to suppress the alert flash so
-        // they show layout, not live state (issue #144).
-        animation: noAnimate ? undefined : BLINK_ANIM,
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-      }}
-    >
-      <SensorIcon name={iconName} size={iconSize} color={st.criticalColor} />
-      {labelText === null && (
-        <span
-          style={{
-            fontSize: sigFontSize,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.criticalColor + '99',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {signalLabel}
-        </span>
-      )}
-      {labelText !== null && (
-        <span
-          style={{
-            ...htmlLabelStyle(labelPos),
-            fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.textColor + '77',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {labelText}
-        </span>
-      )}
-    </div>
-  )
-})
-
-// ---------------------------------------------------------------------------
 // Button widget
 // ---------------------------------------------------------------------------
 
@@ -1087,9 +591,15 @@ export function computeButtonPreviewMetrics(
   h: number,
   showIcon: boolean
 ): { iconSize: number; fontSize: number } {
-  const iconSize = Math.max(12, Math.min(h * 0.6, h - 6, 32))
-  const labelBudget = showIcon ? Math.max(20, w - iconSize - 16) : w - 12
-  const fontSize = Math.max(8, Math.min(h * 0.38, labelBudget * 0.28))
+  // Column layout (icon on top, label below). Icon dominates the cell —
+  // sized at ~0.75h so it visually anchors the button. Width is also a
+  // ceiling so a tall narrow cell doesn't blow out an icon wider than the
+  // cell itself. Label sits below, capped at ~0.35 of the icon so the
+  // hierarchy stays icon-first.
+  const iconSize = showIcon ? Math.max(18, Math.min(h * 0.75, h - 14, w * 0.7, 56)) : 0
+  const labelBudget = w - 12
+  const verticalBudget = showIcon ? Math.min(h * 0.2, iconSize * 0.4) : h * 0.48
+  const fontSize = Math.max(8, Math.min(verticalBudget, labelBudget * 0.22))
   return { iconSize, fontSize }
 }
 
@@ -1118,16 +628,20 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
         width: w,
         height: h,
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        padding: '0 6px',
+        gap: 2,
+        padding: '4px 6px',
         boxSizing: 'border-box',
         background: bgColor,
         border: `1px solid ${borderColor}`,
         borderRadius: 0,
-        overflow: 'hidden',
+        // `overflow: visible` so a long label that wraps under the icon stays
+        // readable — issue request: "au pire le texte passe dessous, jamais
+        // crop". The button container still clips at the widget bounds via
+        // its parent WidgetBox (which keeps `overflow: hidden`).
+        overflow: 'visible',
         transition: 'background 0.1s, border-color 0.1s',
       }}
     >
@@ -1142,13 +656,16 @@ const ButtonPreview = memo(function ButtonPreview({ widget, w, h, active }: Butt
             color: textColor,
             fontSize,
             fontWeight: 500,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            // Allow wrap to a second line if the label doesn't fit on one
+            // line at the computed font size. Word-break handles tokens that
+            // are individually longer than the available width.
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            overflow: 'visible',
             letterSpacing: '0.04em',
             minWidth: 0,
-            flex: '1 1 auto',
             textAlign: 'center',
+            lineHeight: 1.1,
           }}
         >
           {cfg.label}
@@ -1204,10 +721,11 @@ const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProp
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
-            letterSpacing: '0.05em',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}
         >
-          {signalLabel}
+          {signalLabel.toUpperCase()}
         </span>
       )}
       {/* Centering wrapper — Orbitron Black single-digit side bearings are
@@ -1250,152 +768,15 @@ const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProp
             fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
-            letterSpacing: '0.04em',
+            letterSpacing: '0.06em',
             whiteSpace: 'nowrap',
+            textTransform: 'uppercase',
           }}
         >
-          {labelText}
+          {labelText.toUpperCase()}
         </span>
       )}
     </div>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Timer widget
-// ---------------------------------------------------------------------------
-
-const TimerPreview = memo(function TimerPreview({ widget, w, h }: BaseRendererProps) {
-  if (widget.config.type !== 'timer') return null
-  const cfg = widget.config
-  const st = widget.style
-  const timeStr = cfg.format === 'ss.mmm' ? '12.847' : '01:23'
-  const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
-  const sigFontSize = Math.max(5, Math.min(7, w * 0.07))
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  return (
-    <div
-      style={{
-        width: w,
-        height: h,
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      <span
-        style={{
-          color: st.textColor,
-          fontSize,
-          // Secondary tier (Bold 700) — matches FontManager::secondary on the
-          // device; firmware switches to primary (Black 900) at ≥110 px height.
-          // Orbitron's tabular digits keep the read aligned without `monospace`.
-          fontWeight: fontSize >= 32 ? 900 : 700,
-          fontFamily: FONT_FAMILY,
-          letterSpacing: '0.06em',
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        {timeStr}
-      </span>
-      {labelText === null && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 2,
-            left: 3,
-            fontSize: sigFontSize,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: '#888888',
-            lineHeight: 1,
-            letterSpacing: '0.05em',
-          }}
-        >
-          TIMER
-        </span>
-      )}
-      {labelText !== null && (
-        <span
-          style={{
-            ...htmlLabelStyle(labelPos),
-            fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.textColor + '77',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {labelText}
-        </span>
-      )}
-    </div>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Image widget
-// ---------------------------------------------------------------------------
-
-const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRendererProps) {
-  if (widget.config.type !== 'image') return null
-  const cfg = widget.config
-  const st = widget.style
-  const pts = [
-    `${String(w * 0.2)},${String(h * 0.72)}`,
-    `${String(w * 0.42)},${String(h * 0.38)}`,
-    `${String(w * 0.58)},${String(h * 0.55)}`,
-    `${String(w * 0.7)},${String(h * 0.42)}`,
-    `${String(w * 0.82)},${String(h * 0.72)}`,
-  ].join(' ')
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  return (
-    <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      <rect x={4} y={4} width={w - 8} height={h - 8} fill="#1A1A1A" rx={3} stroke="#2A2A2A" />
-      {/* Mountain / photo icon */}
-      <polyline points={pts} fill="none" stroke="#333333" strokeWidth={1.5} />
-      <circle cx={w * 0.3} cy={h * 0.35} r={Math.min(w, h) * 0.06} fill="#333333" />
-      <text
-        x={w / 2}
-        y={h - 6}
-        textAnchor="middle"
-        dominantBaseline="auto"
-        fill="#2A2A2A"
-        fontSize={Math.max(5, Math.min(7, w * 0.07))}
-        fontFamily={FONT_FAMILY}
-        fontWeight="500"
-        letterSpacing="0.05em"
-      >
-        IMAGE
-      </text>
-      {labelText !== null &&
-        (() => {
-          const a = svgLabelAttrs(labelPos, w, h)
-          return (
-            <text
-              x={a.x}
-              y={a.y}
-              textAnchor={a.textAnchor}
-              dominantBaseline={a.dominantBaseline}
-              fill={st.textColor + '77'}
-              fontSize={Math.max(6, Math.min(9, w * 0.12))}
-              fontFamily={FONT_FAMILY}
-              fontWeight="500"
-              letterSpacing="0.04em"
-            >
-              {labelText}
-            </text>
-          )
-        })()}
-    </svg>
   )
 })
 
@@ -1432,24 +813,23 @@ type RendererDispatch = Record<
 
 // Gauge has three sub-styles; pick the matching memoized renderer.
 const gaugeRendererByDisplay: Record<
-  'arc' | 'bar' | 'numeric',
-  ComponentType<GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps>
+  'arc' | 'numeric',
+  ComponentType<GaugeArcRendererProps | GaugeNumericRendererProps>
 > = {
-  arc: GaugeArcPreview as ComponentType<
-    GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps
-  >,
-  bar: GaugeBarPreview as ComponentType<
-    GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps
-  >,
+  arc: GaugeArcPreview as ComponentType<GaugeArcRendererProps | GaugeNumericRendererProps>,
   numeric: GaugeNumericPreview as ComponentType<
-    GaugeArcRendererProps | GaugeBarRendererProps | GaugeNumericRendererProps
+    GaugeArcRendererProps | GaugeNumericRendererProps
   >,
 }
 
 const RENDERERS: RendererDispatch = {
   gauge: (widget, ctx) => {
     if (widget.config.type !== 'gauge') return null
-    const Renderer = gaugeRendererByDisplay[widget.config.displayStyle]
+    // Legacy configs with displayStyle='bar' (now removed) fall back to the
+    // numeric renderer so old dashboards still mount on a freshly-cleaned
+    // Studio. The schema enum already rejects new bar configs.
+    const style = widget.config.displayStyle === 'arc' ? 'arc' : 'numeric'
+    const Renderer = gaugeRendererByDisplay[style]
     return (
       <Renderer
         widget={widget}
@@ -1462,24 +842,18 @@ const RENDERERS: RendererDispatch = {
       />
     )
   },
-  bar: (widget, ctx) => (
-    <BarWidgetPreview
-      widget={widget}
-      w={ctx.w}
-      h={ctx.h}
-      testValue={ctx.testValue}
-      signalUnit={ctx.signalUnit}
-    />
-  ),
-  warning: (widget, ctx) => (
-    <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
-  ),
+  // Legacy widget types (bar / warning / timer / image) — renderers were
+  // dropped because no shipped config instantiates them. Existing configs
+  // that reference these types render as nothing; the picker no longer
+  // surfaces them either.
+  bar: () => null,
+  warning: () => null,
   button: (widget, ctx) => (
     <ButtonPreview widget={widget} w={ctx.w} h={ctx.h} active={ctx.buttonActive} />
   ),
   gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} />,
-  timer: (widget, ctx) => <TimerPreview widget={widget} w={ctx.w} h={ctx.h} />,
-  image: (widget, ctx) => <ImagePreview widget={widget} w={ctx.w} h={ctx.h} />,
+  timer: () => null,
+  image: () => null,
 }
 
 // ---------------------------------------------------------------------------

@@ -18,7 +18,9 @@ const TILE_HOVER_BG = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface 
 const TILE_HOVER_BORDER = '#3A3A3A' // MIRROR: dim variant of --border (#333333)
 
 // 'bar' is not in the palette — it is a display style inside gauge
-type PaletteWidgetType = Exclude<WidgetType, 'bar'>
+// Palette only surfaces widget types still backed by a renderer + property
+// panel. bar / warning / timer / image were dropped along with their UIs.
+type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear'>
 
 interface PaletteItem {
   type: PaletteWidgetType
@@ -40,14 +42,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
     defaultH: SIZE_TOKENS.XL.h,
   },
   {
-    type: 'warning',
-    label: 'Warning',
-    icon: 'warning',
-    defaultSignal: 'mil',
-    defaultW: SIZE_TOKENS.L.w,
-    defaultH: SIZE_TOKENS.L.h,
-  },
-  {
     type: 'button',
     label: 'Button',
     icon: 'cog',
@@ -60,22 +54,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
     label: 'Gear',
     icon: 'gear',
     defaultSignal: 'gear',
-    defaultW: SIZE_TOKENS.L.w,
-    defaultH: SIZE_TOKENS.L.h,
-  },
-  {
-    type: 'timer',
-    label: 'Timer',
-    icon: 'timer',
-    defaultSignal: '',
-    defaultW: SIZE_TOKENS.L.w,
-    defaultH: SIZE_TOKENS.L.h,
-  },
-  {
-    type: 'image',
-    label: 'Image',
-    icon: 'warning',
-    defaultSignal: '',
     defaultW: SIZE_TOKENS.L.w,
     defaultH: SIZE_TOKENS.L.h,
   },
@@ -115,13 +93,6 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
             decimalPlaces: 0,
             iconName: item.icon,
           }
-        case 'warning':
-          return {
-            type: 'warning' as const,
-            threshold: 0,
-            invertLogic: false,
-            iconName: item.icon,
-          }
         case 'button':
           return {
             type: 'button' as const,
@@ -133,10 +104,6 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
           }
         case 'gear':
           return { type: 'gear' as const, decimalPlaces: 0 as const }
-        case 'timer':
-          return { type: 'timer' as const, autoStart: false, format: 'mm:ss' as const }
-        case 'image':
-          return { type: 'image' as const, imagePath: '' }
       }
     })()
 

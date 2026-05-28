@@ -14,6 +14,7 @@ import { z } from 'zod'
 
 import { HexColorSchema, SemVerSchema } from './common.js'
 import { Obd2PollingSchema } from './obd2.js'
+import { SignalTypeSchema } from './signal-type.js'
 import {
   CAN_FRAME_MAX_BYTES,
   FIRMWARE_CAPS,
@@ -152,6 +153,12 @@ export const SignalDefSchema = z
     highWarningLevel: z.number().optional(),
     highDangerLevel: z.number().optional(),
     timeoutMs: z.number(),
+    // Semantic kind of value this signal carries. Drives the palette every
+    // widget bound to it uses for zone fills, value tinting and danger
+    // flash. Optional for backward compatibility — pre-`type` configs
+    // resolve to `DEFAULT_SIGNAL_TYPE` ("generic") and widgets fall back
+    // to their hand-picked `style.primaryColor`.
+    type: SignalTypeSchema.optional(),
     colorRamp: ColorRampSchema.optional(),
     // Issue #841 — when present, switches this signal from passive broadcast
     // decoding (`canFrameId` is the frame the ECU sends unsolicited) to

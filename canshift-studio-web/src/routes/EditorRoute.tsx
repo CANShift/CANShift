@@ -7,10 +7,9 @@ import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
 import PropertyPanel from '../components/editor/PropertyPanel'
-import ThemePanel from '../components/editor/ThemePanel'
-import TestValuesPanel from '../components/editor/TestValuesPanel'
 import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
+import { CruiseControlPreview } from '../components/editor/CruiseControlPreview'
 
 // Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
 // Click toggles the default. Replaces the prior diamond marker per #142.
@@ -31,9 +30,15 @@ interface PageThumbnailProps {
 }
 
 function PageThumbnail({ page, topBar }: PageThumbnailProps) {
-  const barH = page.showTopBar ? topBar.height * THUMB_SCALE : 0
+  const fullBarH = page.showTopBar ? topBar.height : 0
   const isCruiseTemplate = page.template === 'cruise_control'
 
+  // Render the page at full firmware resolution (320×240) into an absolutely-
+  // sized container, then apply a single CSS `transform: scale()` to shrink
+  // it to thumbnail size. Avoids the broken-proportions problem where each
+  // widget's font-size formula has `Math.max(N, ...)` floors that don't
+  // scale down — the full-render-then-scale approach keeps every typographic
+  // ratio identical to the live canvas.
   return (
     <div
       style={{
@@ -46,79 +51,68 @@ function PageThumbnail({ page, topBar }: PageThumbnailProps) {
         flexShrink: 0,
       }}
     >
-      {/* Top bar stripe */}
-      {page.showTopBar && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: barH,
-            background: topBar.bgColor,
-            borderBottom: '1px solid #1E1E1E',
-          }}
-        />
-      )}
-
-      {/* Body — template-rendered pages show a fixed 2×2 glyph; otherwise the
-          widget thumbnails. Mirrors the firmware contract: when `template` is
-          set, the widgets[] array is ignored on-device (#451). */}
-      {isCruiseTemplate ? (
-        <div
-          style={{
-            position: 'absolute',
-            top: barH + 4,
-            left: 4,
-            right: 4,
-            bottom: 4,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gridTemplateRows: '1fr 1fr',
-            gap: 3,
-          }}
-        >
-          {['+', 'SET', '−', 'OFF'].map((glyph) => (
-            <div
-              key={glyph}
-              style={{
-                background: '#FFFFFF14',
-                border: '1px solid #FFFFFF28',
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFFAA',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
-              {glyph}
-            </div>
-          ))}
-        </div>
-      ) : (
-        page.widgets.map((widget) => (
+      <div
+        style={{
+          width: 320,
+          height: 240,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          background: page.backgroundColor,
+          transform: `scale(${String(THUMB_SCALE)})`,
+          transformOrigin: 'top left',
+        }}
+      >
+        {/* Top bar stripe */}
+        {page.showTopBar && (
           <div
-            key={widget.id}
             style={{
               position: 'absolute',
-              left: widget.layout.x * THUMB_SCALE,
-              top: barH + widget.layout.y * THUMB_SCALE,
-              width: widget.layout.w * THUMB_SCALE,
-              height: widget.layout.h * THUMB_SCALE,
-              overflow: 'hidden',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: fullBarH,
+              background: topBar.bgColor,
+              borderBottom: '1px solid #1E1E1E',
             }}
-          >
-            <WidgetPreview
-              widget={widget}
-              displayW={widget.layout.w * THUMB_SCALE}
-              displayH={widget.layout.h * THUMB_SCALE}
-              noAnimate
-            />
-          </div>
-        ))
-      )}
+          />
+        )}
+
+        {/* Body — template-rendered pages render via CruiseControlPreview
+            (same component the live canvas uses); custom pages render each
+            widget at its native firmware-px dimensions. Both paths share the
+            outer scale transform so the thumbnail mirrors the canvas
+            pixel-for-pixel. */}
+        {isCruiseTemplate ? (
+          <CruiseControlPreview
+            scale={1}
+            canvasW={320}
+            contentH={240 - fullBarH}
+            palette={page.palette ?? DEFAULT_PAGE_PALETTE}
+          />
+        ) : (
+          page.widgets.map((widget) => (
+            <div
+              key={widget.id}
+              style={{
+                position: 'absolute',
+                left: widget.layout.x,
+                top: fullBarH + widget.layout.y,
+                width: widget.layout.w,
+                height: widget.layout.h,
+                overflow: 'hidden',
+              }}
+            >
+              <WidgetPreview
+                widget={widget}
+                displayW={widget.layout.w}
+                displayH={widget.layout.h}
+                noAnimate
+              />
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }
@@ -248,14 +242,13 @@ function generateId(prefix: string): string {
 // to RIGHT_SIDEBAR_TABS.
 // ---------------------------------------------------------------------------
 
-type RightSidebarTab = 'properties' | 'theme' | 'signals'
+type RightSidebarTab = 'properties' | 'signals'
 
 const RIGHT_SIDEBAR_TABS: { id: RightSidebarTab; label: string }[] = [
   { id: 'properties', label: 'Properties' },
-  { id: 'theme', label: 'Theme' },
   // Signals tab — per-signal input-mode editor (broadcast vs OBD-II polling,
-  // issue #841). Lives alongside Properties/Theme so a user can switch a
-  // signal's source without leaving the editor.
+  // issue #841). Lets a user switch a signal's source without leaving the
+  // editor.
   { id: 'signals', label: 'Signals' },
 ]
 
@@ -561,9 +554,6 @@ export default function EditorRoute() {
           {currentPage && <WidgetPalette pageId={currentPage.id} />}
         </div>
 
-        {/* Test mode signal injector — sits below the palette so the canvas keeps
-            its full height while the panel is collapsed. */}
-        <TestValuesPanel />
       </aside>
 
       {/* ── Canvas centre ────────────────────────────────────────────────── */}
@@ -633,7 +623,6 @@ export default function EditorRoute() {
           })}
         </div>
         {rightTab === 'properties' && currentPage && <PropertyPanel pageId={currentPage.id} />}
-        {rightTab === 'theme' && <ThemePanel />}
         {rightTab === 'signals' && <Obd2PollingPanel />}
       </aside>
 

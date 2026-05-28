@@ -9,14 +9,15 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import TopBar from './components/shared/TopBar'
-import SideRail from './components/shared/SideRail'
-import StatusBar from './components/shared/StatusBar'
-import ConnectScreen from './components/shared/ConnectScreen'
 import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
+import { useConnectionStore } from './stores/connection.store'
 import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
 import { deviceIpc } from './transport'
+
+// Connection target when served from the dash itself: same host, fixed port.
+const DEVICE_WS_PORT = 81
 
 // Lazy editor — keep Canvas/WidgetPalette/PropertyPanel out of the initial paint.
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
@@ -36,6 +37,33 @@ function RouteLoading() {
       Loading…
     </div>
   )
+}
+
+/**
+ * Auto-route on first paint: dev builds (`vite dev`) enter simulation so the
+ * editor mounts against the demo config; production builds (served from the
+ * dash over WiFi) auto-connect to the same host on the device WS port. Drops
+ * the prior ConnectScreen empty-state — the choice is determined by where
+ * the SPA is being served from, not by a user prompt.
+ */
+function useAutoBootstrap(): void {
+  const connected = useDeviceStore((s) => s.connected)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const enterSimulation = useDeviceStore((s) => s.enterSimulation)
+  const connect = useConnectionStore((s) => s.connect)
+
+  useEffect(() => {
+    if (connected || simulationMode) return
+    if (import.meta.env.DEV) {
+      enterSimulation()
+    } else {
+      void connect(window.location.hostname, DEVICE_WS_PORT).catch(() => {
+        // Connection failures surface via TopBar status — no auto-fallback to
+        // sim because masking a real connection issue would be worse UX than
+        // leaving the loading state visible while the user investigates.
+      })
+    }
+  }, [connected, simulationMode, enterSimulation, connect])
 }
 
 /**
@@ -87,6 +115,7 @@ function useDeviceConfigBootstrap(): void {
 }
 
 export default function App() {
+  useAutoBootstrap()
   useSimulationBootstrap()
   useDeviceConfigBootstrap()
 
@@ -108,7 +137,6 @@ export default function App() {
       <TopBar />
       {ready ? (
         <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-          <SideRail />
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
             <Routes>
               <Route path="/" element={<Navigate to="/editor" replace />} />
@@ -124,9 +152,8 @@ export default function App() {
           </div>
         </main>
       ) : (
-        <ConnectScreen />
+        <RouteLoading />
       )}
-      <StatusBar />
     </div>
   )
 }

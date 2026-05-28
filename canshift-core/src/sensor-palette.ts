@@ -17,6 +17,7 @@
 
 import type { HexColor } from './schemas/common.js'
 import type { SensorIconName } from './schemas/dashboard.js'
+import type { SignalType } from './schemas/signal-type.js'
 
 export interface SensorPaletteEntry {
   /** Colour used when value < warningLevel. Always defined. */
@@ -89,4 +90,29 @@ export function sensorOkColor(iconName: SensorIconName | undefined): HexColor | 
 export function sensorWarningColor(iconName: SensorIconName | undefined): HexColor | undefined {
   if (!iconName) return undefined
   return SENSOR_PALETTE[iconName].warning
+}
+
+/**
+ * Resolve the OK-zone colour from a signal type. The signal-type names are a
+ * subset of {@link SensorIconName} (the icon enum carries extra glyphs like
+ * `gear` / `timer` that aren't signal categories) so the lookup defers to
+ * the sensor palette. `undefined` is returned for missing or `generic`
+ * types — callers fall back to the widget's hand-picked colour.
+ */
+export function signalTypeOkColor(type: SignalType | undefined): HexColor | undefined {
+  if (!type || type === 'generic') return undefined
+  // `SignalType` minus `generic` is a subset of `SensorIconName`, so the
+  // cast lookup is always defined — the lint rule confirms the chain is
+  // unnecessary on a non-nullish value.
+  return SENSOR_PALETTE[type as SensorIconName].ok
+}
+
+/**
+ * Resolve the warning-zone colour from a signal type. Mirrors
+ * {@link sensorWarningColor} but keyed off the signal-type enum so widgets
+ * don't need a per-widget `iconName` to get danger flashing.
+ */
+export function signalTypeWarningColor(type: SignalType | undefined): HexColor | undefined {
+  if (!type || type === 'generic') return undefined
+  return SENSOR_PALETTE[type as SensorIconName].warning
 }

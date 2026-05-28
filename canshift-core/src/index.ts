@@ -131,7 +131,13 @@ export type { SensorKind } from './sensor-defaults.js'
 
 // Sensor semantic two-zone palette (issue #954)
 export { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from './sensor-palette.js'
+export { signalTypeOkColor, signalTypeWarningColor } from './sensor-palette.js'
 export type { SensorPaletteEntry } from './sensor-palette.js'
+
+// Signal semantic type — drives the palette every widget bound to a signal
+// uses for its zone fills and danger flash. Decoupled from per-widget icon.
+export { SIGNAL_TYPES, SignalTypeSchema, DEFAULT_SIGNAL_TYPE } from './schemas/signal-type.js'
+export type { SignalType } from './schemas/signal-type.js'
 
 // GitHub release info (shared by studio + mobile — issue #571)
 export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/releases.js'
