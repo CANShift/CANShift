@@ -101,7 +101,10 @@ export function sensorWarningColor(iconName: SensorIconName | undefined): HexCol
  */
 export function signalTypeOkColor(type: SignalType | undefined): HexColor | undefined {
   if (!type || type === 'generic') return undefined
-  return SENSOR_PALETTE[type as SensorIconName]?.ok
+  // `SignalType` minus `generic` is a subset of `SensorIconName`, so the
+  // cast lookup is always defined — the lint rule confirms the chain is
+  // unnecessary on a non-nullish value.
+  return SENSOR_PALETTE[type as SensorIconName].ok
 }
 
 /**
@@ -111,5 +114,5 @@ export function signalTypeOkColor(type: SignalType | undefined): HexColor | unde
  */
 export function signalTypeWarningColor(type: SignalType | undefined): HexColor | undefined {
   if (!type || type === 'generic') return undefined
-  return SENSOR_PALETTE[type as SensorIconName]?.warning
+  return SENSOR_PALETTE[type as SensorIconName].warning
 }
