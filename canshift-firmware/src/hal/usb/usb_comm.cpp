@@ -1206,6 +1206,13 @@ void UsbComm::tick() {
     if (s_canStatsPending) {
         s_canStatsPending = false;
         // Format: {"can_stat":1,"fps":12.5,"errors":0}\n
+        // Worst-case with all UINT32_MAX operands:
+        //   prefix 20 + fpsX10/10 (9) + '.' (1) + fpsX10%10 (1)
+        //   + "," "errors":"  (10) + errors (10) + "}\n" (2) + '\0' (1) = 54
+        // 72 bytes gives headroom for future protocol additions (#1161).
+        static constexpr size_t CAN_STAT_BUF_WORST_CASE = 54;
+        static_assert(72 >= CAN_STAT_BUF_WORST_CASE,
+                      "statBuf too small for worst-case can_stat payload");
         char statBuf[72];
         CanHealthStats stats;
         portENTER_CRITICAL(&s_canStatsMux);
@@ -1219,11 +1226,9 @@ void UsbComm::tick() {
         if (n > 0 && static_cast<size_t>(n) < sizeof(statBuf)) {
             UsbComm::sendLine(statBuf);
         } else {
-            // 72-byte cap fits the worst-case max-uint values today, but if a
-            // future protocol bump grows the payload we want to know rather
-            // than ship malformed JSON to the host (#936).
             LOG_WARN("USB", "can_stat payload truncated (n=%d, cap=%u)", n,
                      static_cast<unsigned>(sizeof(statBuf)));
+            ErrorStore::push(ERROR_SRC_SYSTEM, "USB_TRUNC", "can_stat payload truncated");
         }
     }
 
