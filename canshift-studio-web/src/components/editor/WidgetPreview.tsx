@@ -416,18 +416,28 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const sigHeaderH = showSignalHeader ? 14 : 0
   const availH = h - sigHeaderH
 
-  // Cap the value font on width by visual character budget. Wide ints
-  // (≥ 4 digits, no decimals) get split into a big "head" + small "tail"
-  // (`5.200`) so the headline budget is just the head chars at full font
-  // plus the tail at FRAC_FONT_SCALE — keeps the value readable in narrow
-  // cells where a single 4-digit run would overflow.
+  // Headline value layout — wide ints (≥ 4 digits, no decimals) split last
+  // 3 digits onto a smaller font tier so "5200" reads as "5" big + "200"
+  // small in a narrow cell. The cap below sizes the run to fit `w` exactly,
+  // accounting for outer padding + the unit suffix at FRAC_FONT_SCALE * 0.45.
   const valueStr = String(valueOnly)
   const intLen = valueStr.includes('.') ? valueStr.split('.')[0]!.length : valueStr.length
   const willSplit = !cfg.prefix && intLen > 3 && !valueStr.includes('.')
   const headChars = willSplit ? intLen - 3 : intLen
-  const tailChars = willSplit ? 4 : valueStr.includes('.') ? valueStr.length - intLen : 0
-  const charBudget = Math.max(2, headChars + tailChars * FRAC_FONT_SCALE + 1)
-  const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 12) / (charBudget * 0.65)))
+  const tailChars = willSplit ? 3 : valueStr.includes('.') ? valueStr.length - intLen : 0
+  const unitChars = signalUnit.length
+  // Effective char budget at the headline font size:
+  //   - head chars at full font
+  //   - tail (smaller integer trio + any fractional) at FRAC_FONT_SCALE
+  //   - unit suffix at ~0.45 (rendered around 0.32 of value but Orbitron
+  //     Medium 500 is narrower than Black 900, so the equivalent budget
+  //     ends up around 0.45 × FRAC_FONT_SCALE of head font).
+  const charBudget =
+    headChars + tailChars * FRAC_FONT_SCALE + unitChars * FRAC_FONT_SCALE * 0.45
+  // 0.68 = average Orbitron Black 900 advance width in em. 16-px outer
+  // padding/gap stays unallocated so the run sits inside the cell with
+  // breathing room even after the selection outline expands a few px.
+  const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 16) / (charBudget * 0.68)))
 
   const labelFontSize = Math.max(6, Math.min(9, w * 0.1))
 
@@ -581,14 +591,15 @@ export function computeButtonPreviewMetrics(
   h: number,
   showIcon: boolean
 ): { iconSize: number; fontSize: number } {
-  // Column layout (icon on top, label below): icon takes ~half the vertical
-  // budget, label gets the rest. Label can use the full width minus padding
-  // since it sits on its own row.
-  const iconSize = showIcon ? Math.max(10, Math.min(h * 0.5, h - 18, 30)) : 0
+  // Column layout (icon on top, label below). The icon dominates — sized at
+  // ~0.6h with a 38-px ceiling so a glyph stays visually larger than the
+  // label even on the tallest cells. The label gets the remainder of the
+  // vertical budget, clamped so it never competes with the icon's size.
+  const iconSize = showIcon ? Math.max(14, Math.min(h * 0.6, h - 16, 38)) : 0
   const labelBudget = w - 12
-  // When the icon is hidden the label can fill more vertical space.
-  const verticalBudget = showIcon ? h * 0.32 : h * 0.48
-  const fontSize = Math.max(8, Math.min(verticalBudget, labelBudget * 0.28))
+  // Label tier: capped at ~0.55 of the icon so the icon stays dominant.
+  const verticalBudget = showIcon ? Math.min(h * 0.22, iconSize * 0.55) : h * 0.48
+  const fontSize = Math.max(8, Math.min(verticalBudget, labelBudget * 0.24))
   return { iconSize, fontSize }
 }
 
