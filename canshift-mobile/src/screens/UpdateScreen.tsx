@@ -25,6 +25,8 @@ import { getWifiApPassword } from '../services/wifi-ap-password'
 import { useDeviceStore } from '../stores/device.store'
 import { log } from '../stores/log.store'
 import { loadOtaReleases, useOtaReleasesStore } from '../stores/ota-releases.store'
+import { useOtaFlowStore } from '../stores/ota-flow.store'
+import { isStillValid } from '../lib/ota-cache'
 import type { RootStackParamList } from '../navigation'
 import {
   BlePermissionDialog,
@@ -35,7 +37,14 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Update'>
 }
 
-type Step = 'releases' | 'downloading' | 'verifying' | 'wifi_wait' | 'pushing' | 'done'
+type Step =
+  | 'releases'
+  | 'downloading'
+  | 'verifying'
+  | 'wifi_wait'
+  | 'retry_wifi'
+  | 'pushing'
+  | 'done'
 
 // ---------------------------------------------------------------------------
 // Step indicator
@@ -200,6 +209,23 @@ export default function UpdateScreen({ navigation }: Props) {
     if (loadCount === 0) void loadOtaReleases()
   }, [loadCount])
 
+  // Clear stale OTA flow cache on mount once releases are loaded:
+  //   - TTL expired (>24 h), OR
+  //   - Cached release version no longer appears in the fetched release list.
+  useEffect(() => {
+    if (releases.length === 0) return
+    const flowEntry = useOtaFlowStore.getState()
+    if (flowEntry.stage === 'idle') return
+    const TTL_MS = 24 * 60 * 60 * 1000
+    const expired = flowEntry.verifiedAt != null && Date.now() - flowEntry.verifiedAt > TTL_MS
+    const missing =
+      flowEntry.release != null && !releases.some((r) => r.version === flowEntry.release?.version)
+    if (expired || missing) {
+      log('info', 'OTA flow cache cleared (stale)')
+      useOtaFlowStore.getState().clear()
+    }
+  }, [releases])
+
   // Displayed error banner: store fetch failure OR a mid-flow OTA failure
   // (download/verify/push) stored locally — whichever is set takes priority.
   const displayedError = fetchError ?? error
@@ -233,6 +259,7 @@ export default function UpdateScreen({ navigation }: Props) {
     downloading: 1,
     verifying: 1,
     wifi_wait: 2,
+    retry_wifi: 2,
     pushing: 3,
     done: 3,
   }
@@ -250,14 +277,44 @@ export default function UpdateScreen({ navigation }: Props) {
   const handleSelectRelease = useCallback(
     async (release: OtaService.FirmwareRelease) => {
       setSelectedRelease(release)
+      setError(null)
+
+      // Cache hit: skip download + verify and jump straight to Wi-Fi step.
+      const flowEntry = useOtaFlowStore.getState()
+      if (
+        flowEntry.stage === 'verified' &&
+        flowEntry.release?.version === release.version &&
+        (await isStillValid(flowEntry))
+      ) {
+        log('info', `OTA cache hit for v${release.version} — skipping download/verify`)
+        setLocalPath(flowEntry.localPath)
+        try {
+          await BleService.sendCmd('start_wifi_ap')
+          setStep('wifi_wait')
+        } catch (e) {
+          if (handleBleFailure(e)) {
+            setStep('releases')
+            return
+          }
+          log(
+            'warn',
+            `start_wifi_ap failed (cached path): ${e instanceof Error ? e.message : 'unknown'}`
+          )
+          setStep('retry_wifi')
+        }
+        return
+      }
+
+      // Normal pipeline.
       setStep('downloading')
       setProgress(0)
-      setError(null)
       try {
         const path = await OtaService.downloadFirmware(release, setProgress)
+        useOtaFlowStore.getState().setDownloaded(release, path)
         setStep('verifying')
         setProgress(0)
         await OtaService.verifyFirmware(path, release)
+        useOtaFlowStore.getState().setVerified(release, path, release.sha256 ?? '')
         setLocalPath(path)
         await BleService.sendCmd('start_wifi_ap')
         setStep('wifi_wait')
@@ -266,12 +323,37 @@ export default function UpdateScreen({ navigation }: Props) {
           setStep('releases')
           return
         }
+        // If we already have a verified cache entry, preserve it and offer retry.
+        const afterError = useOtaFlowStore.getState()
+        if (afterError.stage === 'verified' && afterError.release?.version === release.version) {
+          log(
+            'warn',
+            `start_wifi_ap failed, verified cache preserved: ${e instanceof Error ? e.message : 'unknown'}`
+          )
+          setStep('retry_wifi')
+          return
+        }
         setError(describeFlowError(e))
         setStep('releases')
       }
     },
     [handleBleFailure, describeFlowError]
   )
+
+  const handleRetryWifi = useCallback(async () => {
+    setError(null)
+    try {
+      await BleService.sendCmd('start_wifi_ap')
+      setStep('wifi_wait')
+    } catch (e) {
+      if (handleBleFailure(e)) {
+        setStep('releases')
+        return
+      }
+      log('warn', `start_wifi_ap retry failed: ${e instanceof Error ? e.message : 'unknown'}`)
+      setStep('retry_wifi')
+    }
+  }, [handleBleFailure])
 
   const handleOpenStudio = useCallback(async () => {
     try {
@@ -431,6 +513,24 @@ export default function UpdateScreen({ navigation }: Props) {
               <Text style={styles.hint}>Starting Wi-Fi AP on dashboard…</Text>
             </>
           )}
+        </View>
+      )}
+
+      {/* ── Retry Wi-Fi ── */}
+      {step === 'retry_wifi' && (
+        <View style={styles.center}>
+          <Text style={styles.stepTitle}>Wi-Fi AP failed</Text>
+          <Text style={styles.hint}>
+            Firmware is verified and cached. Tap retry to start the Wi-Fi AP on the dashboard again.
+          </Text>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => {
+              void handleRetryWifi()
+            }}
+          >
+            <Text style={styles.primaryBtnText}>Retry Wi-Fi step</Text>
+          </TouchableOpacity>
         </View>
       )}
 
