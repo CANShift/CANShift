@@ -768,11 +768,12 @@ const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProp
             fontWeight: 500,
             color: st.textColor + '77',
             lineHeight: 1,
-            letterSpacing: '0.04em',
+            letterSpacing: '0.06em',
             whiteSpace: 'nowrap',
+            textTransform: 'uppercase',
           }}
         >
-          {labelText}
+          {labelText.toUpperCase()}
         </span>
       )}
     </div>
