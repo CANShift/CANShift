@@ -105,7 +105,6 @@ export function formatDate(iso: string): string {
   return new Date(ms).toLocaleString()
 }
 
-
 async function loadPreReleaseToggle(): Promise<boolean> {
   // Pre-1.0 we publish every build as a pre-release, so the toggle defaults
   // to `true`. Flip the default to `false` once the app ships v1.0.
