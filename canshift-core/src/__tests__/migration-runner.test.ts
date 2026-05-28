@@ -1097,6 +1097,33 @@ describe('migrateConfig — 1.16.0 → 1.17.0', () => {
     expect(cfg.dangerLevel).toBe(80)
   })
 
+  it('promotes sole warningLevel to dangerLevel when dangerLevel is absent', () => {
+    const config = {
+      version: '1.16.0',
+      pages: wrapInPages([
+        {
+          id: 'g1',
+          type: 'gauge',
+          config: {
+            type: 'gauge',
+            displayStyle: 'arc',
+            minValue: 0,
+            maxValue: 100,
+            warningLevel: 90,
+            decimalPlaces: 0,
+          },
+        },
+      ]),
+    }
+    const { config: out, applied } = migrateConfig(config, '1.17.0')
+    expect(applied).toEqual(['1.16.0 → 1.17.0'])
+    const cfg = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.config as Record<string, unknown>
+    expect('warningLevel' in cfg).toBe(false)
+    expect(cfg.dangerLevel).toBe(90)
+  })
+
   it('leaves widgets without warningLevel untouched', () => {
     const config = {
       version: '1.16.0',

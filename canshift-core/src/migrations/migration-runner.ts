@@ -99,9 +99,9 @@ const MIGRATIONS: Migration[] = [
   {
     // 1.16.0 → 1.17.0: collapse gauge / bar thresholds to a single field
     // (issue #965). The two-zone palette (#954) only needs one cut-off, so
-    // `warningLevel` is dropped and `dangerLevel` becomes the sole threshold
-    // above which a gauge turns red. Per-widget `dangerLevel` is preserved
-    // as-is — the legacy `warningLevel` is simply discarded.
+    // `warningLevel` is dropped and `dangerLevel` becomes the sole threshold.
+    // When only `warningLevel` was set (no `dangerLevel`), it is promoted to
+    // `dangerLevel` so the threshold is not silently lost (#1171).
     fromVersion: '1.16.0',
     toVersion: '1.17.0',
     migrate: (config) => {
@@ -114,9 +114,14 @@ const MIGRATIONS: Migration[] = [
           const cfg = widget.config as Record<string, unknown> | undefined
           if (!cfg) return widget
           if (!('warningLevel' in cfg)) return widget
-          const { warningLevel: _drop, ...rest } = cfg
-          void _drop
-          return { ...widget, config: rest }
+          const { warningLevel: wl, ...rest } = cfg
+          // Promote sole warningLevel to dangerLevel so a gauge configured with
+          // only a yellow zone doesn't silently lose its threshold (#1171).
+          const newCfg =
+            rest.dangerLevel === undefined && typeof wl === 'number'
+              ? { ...rest, dangerLevel: wl }
+              : rest
+          return { ...widget, config: newCfg }
         })
         return { ...page, widgets: migratedWidgets }
       })
