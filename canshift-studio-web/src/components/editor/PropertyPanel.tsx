@@ -6,12 +6,8 @@
 // signal binding, button colors), and the dispatch to the right widget
 // editor (#697).
 
-import type { ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
-import {
-  DEFAULT_PAGE_PALETTE,
-  DEFAULT_SCREEN_PROFILE_ID,
-  SCREEN_PROFILES,
-} from '@tmbk/canshift-core'
+import type { Widget, WidgetType } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { IconTrash } from '../icons/Icon'
@@ -23,7 +19,6 @@ import { BarFields } from './property-panel/bar-fields'
 import { WarningFields } from './property-panel/warning-fields'
 import { TimerFields } from './property-panel/timer-fields'
 import { GearFields } from './property-panel/gear-fields'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { ImageFields } from './property-panel/image-fields'
 
 // Chrome shades that do not yet map to a core design token. Kept as named
@@ -64,7 +59,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const updateWidget = useDashboardStore((s) => s.updateWidget)
   const removeWidget = useDashboardStore((s) => s.removeWidget)
-  const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
   const addPage = useDashboardStore((s) => s.addPage)
   const removePage = useDashboardStore((s) => s.removePage)
   const signals = useSignalStore((s) => s.signals)
@@ -101,40 +95,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     }
     return (
       <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-        {/* Target screen profile — picks the LCD dimensions the canvas previews
-            at (issue #548). v1 ships a single entry; the dropdown is the seat
-            we extend when new boards (#17) or larger panels (#18) land. */}
-        <div
-          style={{
-            fontSize: 10,
-            color: PANEL_LABEL,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: 6,
-          }}
-        >
-          Target screen
-        </div>
-        <Field label="Profile">
-          <Select
-            value={config.targetProfile ?? DEFAULT_SCREEN_PROFILE_ID}
-            onValueChange={(raw) => {
-              setTargetProfile(raw as ScreenProfileId)
-            }}
-          >
-            <SelectTrigger style={inputStyle}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SCREEN_PROFILES.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} — {p.width}×{p.height}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
         {/* Cruise control — opt-in checkbox that ensures a `cruise_control`
             templated page exists at the end of the dashboard. The firmware
             draws this page procedurally (ignores widgets[]); studio just
@@ -290,15 +250,15 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           search; the dropdown stays scrollable in browsers that support it. */}
       {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
         <Field label="Signal">
-          {/* Proper Radix Select dropdown listing every loaded signal with its
-              unit next to the name, so the user always sees what they're
-              picking and unit defaults flow through automatically. Replaces
-              the previous `<input list>` + `<datalist>` autocomplete that
-              required typing the name from memory. */}
-          <Select
-            value={widget.signal || '__none__'}
-            onValueChange={(raw) => {
-              const newSignal = raw === '__none__' ? '' : raw
+          {/* Native <select> — dropped the Radix Select wrapper to shave
+              ~25 KB gzip off the bundle. The widget→signal binding is the
+              only complex picker left, and native HTML handles the search /
+              keyboard / accessibility story without a dependency. */}
+          <select
+            style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
+            value={widget.signal || ''}
+            onChange={(e) => {
+              const newSignal = e.target.value
               const signalDef = signals.find((s) => s.name === newSignal)
               const p: Partial<Widget> = { signal: newSignal }
               if (signalDef && widget.config.type === 'gauge') {
@@ -325,19 +285,14 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
               patch(p)
             }}
           >
-            <SelectTrigger style={inputStyle}>
-              <SelectValue placeholder="— pick a signal —" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">— none —</SelectItem>
-              {signals.map((s) => (
-                <SelectItem key={s.name} value={s.name}>
-                  {s.name}
-                  {s.unit ? ` — ${s.unit}` : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">— none —</option>
+            {signals.map((s) => (
+              <option key={s.name} value={s.name}>
+                {s.name}
+                {s.unit ? ` — ${s.unit}` : ''}
+              </option>
+            ))}
+          </select>
         </Field>
       )}
 
