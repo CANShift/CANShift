@@ -204,12 +204,14 @@ static uint32_t s_scanDrops = 0;
 // ---------------------------------------------------------------------------
 
 // Written by CAN task (core 0), read by USB task (core 1).
-// Volatile struct + pending flag — worst case: one stale display value.
+// A portMUX spinlock guards both writes and the snapshot read so the
+// two-word struct is never torn across a core boundary (#1160).
 struct CanHealthStats {
     uint32_t fpsX10;
     uint32_t errors;
 };
-static volatile CanHealthStats s_canStats = {0, 0};
+static CanHealthStats s_canStats = {0, 0};
+static portMUX_TYPE s_canStatsMux = portMUX_INITIALIZER_UNLOCKED;
 static volatile bool s_canStatsPending = false;
 
 // ---------------------------------------------------------------------------
@@ -1127,8 +1129,10 @@ bool UsbComm::isHostActive() {
 }
 
 void UsbComm::updateCanStats(uint32_t fpsX10, uint32_t errors) {
+    portENTER_CRITICAL(&s_canStatsMux);
     s_canStats.fpsX10 = fpsX10;
     s_canStats.errors = errors;
+    portEXIT_CRITICAL(&s_canStatsMux);
     s_canStatsPending = true;
 }
 
@@ -1203,7 +1207,10 @@ void UsbComm::tick() {
         s_canStatsPending = false;
         // Format: {"can_stat":1,"fps":12.5,"errors":0}\n
         char statBuf[72];
-        const CanHealthStats stats = {s_canStats.fpsX10, s_canStats.errors};
+        CanHealthStats stats;
+        portENTER_CRITICAL(&s_canStatsMux);
+        stats = s_canStats;
+        portEXIT_CRITICAL(&s_canStatsMux);
         const int n =
             snprintf(statBuf, sizeof(statBuf), "{\"can_stat\":1,\"fps\":%lu.%lu,\"errors\":%lu}\n",
                      static_cast<unsigned long>(stats.fpsX10 / 10),
