@@ -8,7 +8,7 @@ import { readAppVersion } from './expo-version'
 // Helper to override the Constants module shape for each test.
 function setConstants(shape: Record<string, unknown>): void {
   Object.keys(Constants).forEach((k) => {
-    delete (Constants as Record<string, unknown>)[k]
+    Reflect.deleteProperty(Constants, k)
   })
   Object.assign(Constants, shape)
 }
