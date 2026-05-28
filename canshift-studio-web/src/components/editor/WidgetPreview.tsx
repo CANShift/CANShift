@@ -357,21 +357,23 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
           {signalUnit}
         </text>
       )}
-      {/* Widget label — always pinned top-left now that the label-position
-          picker is gone. Legacy `cfg.labelPosition` values are ignored. */}
+      {/* Widget label — pinned bottom-left under the arc on arc gauges only.
+          Uppercase + dim weight so it reads as a caption without competing
+          with the value. */}
       {cfg.label && (
         <text
           x={4}
-          y={10}
+          y={h - 4}
           textAnchor="start"
-          dominantBaseline="hanging"
+          dominantBaseline="auto"
           fill={st.textColor + '77'}
           fontSize={Math.max(6, Math.min(9, w * 0.1))}
           fontFamily={FONT_FAMILY}
           fontWeight="500"
-          letterSpacing="0.04em"
+          letterSpacing="0.06em"
+          style={{ textTransform: 'uppercase' }}
         >
-          {cfg.label}
+          {cfg.label.toUpperCase()}
         </text>
       )}
     </svg>
@@ -414,12 +416,17 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const sigHeaderH = showSignalHeader ? 14 : 0
   const availH = h - sigHeaderH
 
-  // Cap the value font on width by character count so wide values (e.g. RPM
-  // "5200") don't overflow the cell. Orbitron 900 advance is ~0.6em per
-  // digit; budgeting ~0.65em with the unit suffix accounts for the small
-  // trailing "rpm"/"%" etc. that hugs the baseline.
+  // Cap the value font on width by visual character budget. Wide ints
+  // (≥ 4 digits, no decimals) get split into a big "head" + small "tail"
+  // (`5.200`) so the headline budget is just the head chars at full font
+  // plus the tail at FRAC_FONT_SCALE — keeps the value readable in narrow
+  // cells where a single 4-digit run would overflow.
   const valueStr = String(valueOnly)
-  const charBudget = Math.max(2, valueStr.length + 1)
+  const intLen = valueStr.includes('.') ? valueStr.split('.')[0]!.length : valueStr.length
+  const willSplit = !cfg.prefix && intLen > 3 && !valueStr.includes('.')
+  const headChars = willSplit ? intLen - 3 : intLen
+  const tailChars = willSplit ? 4 : valueStr.includes('.') ? valueStr.length - intLen : 0
+  const charBudget = Math.max(2, headChars + tailChars * FRAC_FONT_SCALE + 1)
   const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 12) / (charBudget * 0.65)))
 
   const labelFontSize = Math.max(6, Math.min(9, w * 0.1))
@@ -461,13 +468,14 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
             textOverflow: 'ellipsis',
             maxWidth: `calc(100% - 8px)`,
             letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}
         >
-          {signalLabel}
+          {signalLabel.toUpperCase()}
         </span>
       )}
-      {/* Widget label overlay — always top-left (the label-position picker
-          was dropped). Legacy `cfg.labelPosition` values are ignored. */}
+      {/* Widget label overlay — top-left, uppercase. Replaces the auto signal
+          header when a custom label is set. */}
       {labelText !== null && (
         <span
           style={{
@@ -480,10 +488,11 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
             color: '#888888',
             lineHeight: 1,
             whiteSpace: 'nowrap',
-            letterSpacing: '0.04em',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}
         >
-          {labelText}
+          {labelText.toUpperCase()}
         </span>
       )}
       {/* Value + unit row — value on the left, unit to its right at a smaller
@@ -504,6 +513,14 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
       >
         {(() => {
           const { int, frac } = splitDecimal(valueOnly)
+          // 4+ digit integers (RPM, mileage, oil-temp at high range, …) split
+          // last 3 digits onto a smaller font tier so the headline reads as
+          // "5.200" — "5" dominant, "200" subordinate — instead of a single
+          // run that overflows narrow cells. Mirrors how telemetry HUDs
+          // present thousands.
+          const isWideInt = !prefix && int.length > 3 && frac === ''
+          const intHead = isWideInt ? int.slice(0, -3) : int
+          const intTail = isWideInt ? int.slice(-3) : ''
           return (
             <span
               style={{
@@ -519,11 +536,14 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
               }}
             >
               {/* Orbitron matches firmware FontManager::primary at the
-                  integer-part size. The fractional part (".3", ".09", …) is
-                  rendered at FRAC_FONT_SCALE of the integer size so AFR /
-                  voltage / lambda / pressure readouts emphasise the headline
-                  number while the decimal sits visibly subordinate. */}
-              <span style={{ fontSize }}>{prefix + int}</span>
+                  integer-part size. Fractional part renders at
+                  FRAC_FONT_SCALE so AFR / voltage / lambda readouts
+                  emphasise the headline number. Wide-int split (5.200)
+                  reuses the same small tier for the trailing trio. */}
+              <span style={{ fontSize }}>{prefix + intHead}</span>
+              {intTail !== '' && (
+                <span style={{ fontSize: fontSize * FRAC_FONT_SCALE }}>{intTail}</span>
+              )}
               {frac !== '' && <span style={{ fontSize: fontSize * FRAC_FONT_SCALE }}>{frac}</span>}
             </span>
           )
@@ -690,10 +710,11 @@ const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProp
             fontWeight: 500,
             color: '#888888',
             lineHeight: 1,
-            letterSpacing: '0.05em',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}
         >
-          {signalLabel}
+          {signalLabel.toUpperCase()}
         </span>
       )}
       {/* Centering wrapper — Orbitron Black single-digit side bearings are
