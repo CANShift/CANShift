@@ -35,13 +35,20 @@ CRATES = (
         "flag": "USE_RUST_OTA_HMAC=1",
         "manifest": os.path.join(RUST_DIR, "ota-hmac", "Cargo.toml"),
         "libfile": "libota_hmac.a",
+        # ota-hmac keeps its header next to the crate; the script adds the
+        # path to CPPPATH below. Newer crates ship the header under
+        # canshift-firmware/include/ (always on -I) instead, so they leave
+        # this key out — see signal-map for the pattern.
         "include": os.path.join(RUST_DIR, "ota-hmac", "include"),
     },
     {
         "flag": "USE_RUST_SIGNAL_MAP=1",
         "manifest": os.path.join(RUST_DIR, "signal-map", "Cargo.toml"),
         "libfile": "libsignal_map.a",
-        "include": os.path.join(RUST_DIR, "signal-map", "include"),
+        # Header lives in canshift-firmware/include/signal_map_rs.h per
+        # #1177 spec — it's already on the firmware -I path, so no
+        # CPPPATH append needed.
+        "include": None,
     },
 )
 
@@ -136,7 +143,8 @@ def build_one(crate):
     print(f"[rust] {crate['libfile']} OK ({lib_size_kb} KB), mem symbols localized")
 
     env.Append(LIBS=[File(lib_path)])  # noqa: F821
-    env.Append(CPPPATH=[crate["include"]])  # noqa: F821
+    if crate.get("include") is not None:
+        env.Append(CPPPATH=[crate["include"]])  # noqa: F821
 
 
 for crate in enabled_crates:
