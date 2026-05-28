@@ -7,10 +7,21 @@
 
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+
+// Inject the Studio package version as a build-time constant so TopBar can
+// surface it alongside the firmware version reported over WS. Read once at
+// config load — same package.json that npm publishes from.
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as {
+  version: string
+}
 
 export default defineConfig({
   root: resolve(__dirname, '.'),
+  define: {
+    __STUDIO_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [react()],
   resolve: {
     alias: {

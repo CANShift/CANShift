@@ -27,13 +27,6 @@ import {
   obd2PidLookup,
 } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select'
 
 // Chrome — mirrors PropertyPanel / ThemePanel so the sidebar reads as one
 // surface. Promotion to design tokens is the umbrella's S-H-5 follow-up.
@@ -206,41 +199,43 @@ function SignalRow({ signal, index }: RowProps) {
       </div>
 
       <label style={{ fontSize: 10, color: PANEL_HINT }}>Input mode</label>
-      <Select value={mode} onValueChange={onModeChange}>
-        <SelectTrigger style={inputStyle}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {INPUT_MODE_OPTIONS.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <select
+        style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
+        value={mode}
+        onChange={(e) => {
+          onModeChange(e.target.value)
+        }}
+      >
+        {INPUT_MODE_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
 
       {mode === 'obd2' && polling && (
         <>
           <label style={{ fontSize: 10, color: PANEL_HINT }}>
             PID {isRawPid && <span style={{ color: RAW_PID_FG }}>(raw)</span>}
           </label>
-          <Select value={polling.pid.toString(10)} onValueChange={onPidChange}>
-            <SelectTrigger style={inputStyle}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {OBD2_MODE01_PIDS.map((entry) => (
-                <SelectItem key={entry.pid} value={entry.pid.toString(10)}>
-                  {formatPid(entry.pid)} — {entry.label} ({entry.unit})
-                </SelectItem>
-              ))}
-              {isRawPid && (
-                <SelectItem value={polling.pid.toString(10)}>
-                  {formatPid(polling.pid)} — custom
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <select
+            style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
+            value={polling.pid.toString(10)}
+            onChange={(e) => {
+              onPidChange(e.target.value)
+            }}
+          >
+            {OBD2_MODE01_PIDS.map((entry) => (
+              <option key={entry.pid} value={entry.pid.toString(10)}>
+                {formatPid(entry.pid)} — {entry.label} ({entry.unit})
+              </option>
+            ))}
+            {isRawPid && (
+              <option value={polling.pid.toString(10)}>
+                {formatPid(polling.pid)} — custom
+              </option>
+            )}
+          </select>
 
           <label
             style={{

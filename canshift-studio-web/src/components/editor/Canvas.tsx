@@ -8,7 +8,6 @@ import { DEFAULT_TOP_BAR_LAYOUT, TopBarMetrics, resolveScreenProfile } from '@tm
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
-import { useTestModeStore } from '../../stores/testMode.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { CruiseControlPreview } from './CruiseControlPreview'
@@ -17,8 +16,6 @@ import { rectsOverlap } from '../../utils/layout'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
-import { usbService } from '../../transport'
-import { decideDayNightAction } from './dayNightToggle'
 
 // ---------------------------------------------------------------------------
 // Canvas layout constants
@@ -281,94 +278,6 @@ function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarProps) {
 void ALIGN_BUTTONS
 
 // ---------------------------------------------------------------------------
-// "Preview as" day/night toggle — small segmented control rendered in the
-// canvas chrome (#21 v2). Independent from the ThemePanel editor mode so the
-// user can edit one theme while previewing the other. When a device is
-// connected its reported `isDayMode` is authoritative and the toggle is
-// disabled to keep the canvas in sync with the live screen.
-// ---------------------------------------------------------------------------
-
-interface PreviewAsToggleProps {
-  previewDayMode: boolean
-  disabled: boolean
-  onSelect: (next: boolean) => void
-}
-
-function PreviewAsToggle({ previewDayMode, disabled, onSelect }: PreviewAsToggleProps) {
-  const segBase: React.CSSProperties = {
-    padding: '2px 8px',
-    fontSize: 10,
-    background: '#1A1A1A',
-    border: '1px solid #2A2A2A',
-    color: '#888888',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    fontWeight: 500,
-    opacity: disabled ? 0.5 : 1,
-  }
-  const activeSeg: React.CSSProperties = {
-    ...segBase,
-    background: '#2A2A2A',
-    color: '#DDDDDD',
-    borderColor: '#555555',
-  }
-
-  return (
-    <div
-      role="group"
-      aria-label="Preview as day or night theme"
-      style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-      title={
-        disabled
-          ? 'Device controls preview mode while connected'
-          : 'Preview canvas as day or night theme'
-      }
-    >
-      <span
-        style={{
-          fontSize: 9,
-          color: '#555555',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-        }}
-      >
-        Preview as
-      </span>
-      <button
-        type="button"
-        disabled={disabled}
-        aria-pressed={previewDayMode}
-        onClick={() => {
-          onSelect(true)
-        }}
-        style={{
-          ...(previewDayMode ? activeSeg : segBase),
-          borderRadius: '3px 0 0 3px',
-        }}
-      >
-        Day
-      </button>
-      <button
-        type="button"
-        disabled={disabled}
-        aria-pressed={!previewDayMode}
-        onClick={() => {
-          onSelect(false)
-        }}
-        style={{
-          ...(!previewDayMode ? activeSeg : segBase),
-          borderRadius: '0 3px 3px 0',
-          marginLeft: -1,
-        }}
-      >
-        Night
-      </button>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Single widget renderer
 // ---------------------------------------------------------------------------
 
@@ -379,7 +288,6 @@ interface WidgetBoxProps {
   isInMultiSelection: boolean
   isOverlapping: boolean
   revLimiting: boolean
-  testValue: number | null
   onSelect: (id: string) => void
   onShiftSelect: (id: string) => void
   onDragStart: (e: React.MouseEvent, widget: Widget) => void
@@ -396,26 +304,23 @@ const WidgetBox = memo(function WidgetBox({
   isInMultiSelection,
   isOverlapping,
   revLimiting,
-  testValue,
   onSelect,
   onShiftSelect,
   onDragStart,
 }: WidgetBoxProps) {
-  const { layout, type } = widget
-  const typeColor = getBorderColor(type)
-  const configuredBorder = widget.style.borderColor
-  const borderColor = isOverlapping
-    ? '#FF2222'
-    : isSelected
-      ? '#FFFFFF'
-      : isInMultiSelection
-        ? '#AAAAFF'
-        : (configuredBorder ?? typeColor)
-  const borderWidth = isSelected || isOverlapping || isInMultiSelection ? 2 : 1
+  const { layout } = widget
   // Default to black so the widget container blends with the (black) page
   // background — firmware widgets render directly on the page bg with no
-  // per-widget surface tint (issue #143).
-  const bgColor = isOverlapping ? '#2A0000' : isInMultiSelection ? '#0A0A1E' : '#000000'
+  // per-widget surface tint (issue #143). Selection / overlap states tint the
+  // bg so the highlight is visible even when the underlying widget chrome is
+  // dark; the outline ring below adds an unmistakable selection edge.
+  const bgColor = isOverlapping
+    ? '#2A0000'
+    : isSelected
+      ? '#1B2030'
+      : isInMultiSelection
+        ? '#0A0A1E'
+        : '#000000'
 
   return (
     <div
@@ -436,19 +341,21 @@ const WidgetBox = memo(function WidgetBox({
         width: layout.w * SCALE,
         height: layout.h * SCALE,
         background: bgColor,
-        border: `${String(borderWidth)}px solid ${borderColor}`,
         borderRadius: 3,
         boxSizing: 'border-box',
         cursor: 'move',
         overflow: 'hidden',
         userSelect: 'none',
+        // No solid border (matches the borderless firmware render). Selection
+        // pops via outline (doesn't shift layout) + bgColor tint. Overlap and
+        // multi-select keep their boxShadow rings for affordance contrast.
+        outline: isSelected ? '2px solid #6CB6FF' : undefined,
+        outlineOffset: isSelected ? -2 : undefined,
         boxShadow: isOverlapping
           ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'
-          : isSelected
-            ? `0 0 0 1px #FFFFFF22, 0 0 6px ${typeColor}88`
-            : isInMultiSelection
-              ? '0 0 0 1px #AAAAFF22, 0 0 4px #AAAAFF44'
-              : `0 0 0 1px ${typeColor}22`,
+          : isInMultiSelection
+            ? '0 0 0 1px #AAAAFF22, 0 0 4px #AAAAFF44'
+            : undefined,
       }}
     >
       <WidgetPreview
@@ -457,21 +364,7 @@ const WidgetBox = memo(function WidgetBox({
         displayW={layout.w * SCALE}
         displayH={layout.h * SCALE}
         revLimiting={revLimiting}
-        testValue={testValue}
       />
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            bottom: 0,
-            width: 8,
-            height: 8,
-            background: '#FFFFFF',
-            cursor: 'se-resize',
-          }}
-        />
-      )}
     </div>
   )
 })
@@ -485,7 +378,6 @@ interface DashTopBarProps {
   settingsOpen: boolean
   isDayMode: boolean
   onOpenSettings: () => void
-  onToggleTheme: () => void
 }
 
 // Swipe-down threshold in px (in SCALE coordinates) to trigger settings open
@@ -520,9 +412,7 @@ function DashTopBar({
   settingsOpen,
   isDayMode,
   onOpenSettings,
-  onToggleTheme,
 }: DashTopBarProps) {
-  const status = useDeviceStore((s) => s.status)
   const swipeStartY = useRef<number | null>(null)
 
   // Proportions come from canshift-core/src/topbar-metrics.ts — same table the
@@ -533,8 +423,6 @@ function DashTopBar({
   const sep = Math.round(h * TopBarMetrics.separatorRatio)
   const gap = Math.round(h * TopBarMetrics.gapRatio)
   const px = Math.round(h * TopBarMetrics.paddingRatio)
-
-  const usbColor = status === 'connected' ? '#44CC44' : status === 'error' ? '#CC3333' : '#AAAAAA'
 
   const handlePointerDown = (e: React.PointerEvent) => {
     swipeStartY.current = e.clientY
@@ -607,14 +495,11 @@ function DashTopBar({
           </span>
         )
       case 'usbIcon':
-        return (
-          <span
-            key={key}
-            style={{ fontSize: fs, color: usbColor, lineHeight: 1, letterSpacing: '0.04em' }}
-          >
-            USB
-          </span>
-        )
+        // Hidden in Studio preview — firmware mirrors this in top_bar.cpp by
+        // returning early on USB_ICON. Kept in the schema discriminator union
+        // so existing user configs that still reference it parse cleanly; we
+        // just don't render anything.
+        return null
       case 'themeToggle':
         // Firmware top_bar.cpp shows the CURRENT mode (icon_day.bin in day,
         // icon_night.bin in night) — see `THEME_TOGGLE` branch + `reapplyTheme`.
@@ -622,24 +507,9 @@ function DashTopBar({
         // The tooltip still describes the action (the OTHER mode you'd switch to)
         // so users don't lose the affordance hint. Issue #957.
         return (
-          <button
+          <span
             key={key}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-            }}
-            onPointerUp={(e) => {
-              e.stopPropagation()
-            }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleTheme()
-            }}
-            title={isDayMode ? 'Switch to night mode' : 'Switch to day mode'}
             style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
               fontSize: fs + 1,
               lineHeight: 1,
               color: topBar.textColor,
@@ -647,7 +517,7 @@ function DashTopBar({
             }}
           >
             {isDayMode ? '☀' : '☾'}
-          </button>
+          </span>
         )
       case 'modeFlag':
         return (
@@ -759,10 +629,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const nudgeWidgets = useDashboardStore((s) => s.nudgeWidgets)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
   const commitDrag = useDashboardStore((s) => s.commitDrag)
-  const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
-  const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
-  const setDeviceIsDayMode = useDeviceStore((s) => s.setIsDayMode)
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const nightTheme = useDashboardStore((s) => s.config?.nightTheme)
   const pages = useDashboardStore((s) => s.config?.pages ?? [])
@@ -805,9 +672,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const kbdRef = useRef({ pageId: page.id, pageWidgets: page.widgets })
   kbdRef.current = { pageId: page.id, pageWidgets: page.widgets }
 
-  // When a device is connected it reports its own isDayMode; use that as the
-  // source of truth. Fall back to the local preview toggle when disconnected.
-  const activeDayMode = deviceIsDayMode ?? isPreviewDayMode
+  // When a device is connected it reports its own isDayMode; otherwise default
+  // to night (dark) — the day/night toggle was removed from the editor chrome
+  // because the theme picker / day theme editor are no longer surfaced.
+  const activeDayMode = deviceIsDayMode ?? false
 
   // Effective palette and background — follow the active day/night mode.
   // Day picks `dayTheme`, night picks `nightTheme` when set, otherwise falls
@@ -826,39 +694,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     ? (dayTheme?.bgColor ?? DAY_BG_DEFAULT)
     : (nightTheme?.bgColor ?? page.backgroundColor)
 
-  // When a device is connected, the device's reported `isDayMode` takes
-  // precedence over the local preview flag (the live device is the source
-  // of truth). Toggling the local flag alone wouldn't repaint anything in
-  // that case — issue #957. Round-trip the toggle over USB so the firmware
-  // flips, and optimistically mirror the new mode into the device store so
-  // the preview repaints in the same tick (there is no unsolicited
-  // status-echo channel for isDayMode — `useUsbEvents` only listens for
-  // connection / log / CAN-health events, so without this optimistic write
-  // the preview would stay frozen until the next manual reconnect probe).
-  // If the USB call fails we roll the mirror back to the previous value.
-  // Offline (or in simulation mode) fall back to the studio-only preview
-  // flag so the canvas still toggles for design work.
-  const handleToggleTheme = useCallback(() => {
-    const action = decideDayNightAction(deviceIsDayMode)
-    if (action.kind === 'connected') {
-      setDeviceIsDayMode(action.next)
-      void usbService.setDayNight(action.next).then((result) => {
-        if (!result.success) setDeviceIsDayMode(!action.next)
-      })
-      return
-    }
-    togglePreviewTheme()
-  }, [deviceIsDayMode, setDeviceIsDayMode, togglePreviewTheme])
-
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [diagOpen, setDiagOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
-
-  // Test-mode signal injection — when enabled, widgets read from `testValues`
-  // keyed by signal name instead of the static demo percentage. See #114.
-  const testModeEnabled = useTestModeStore((s) => s.enabled)
-  const testValues = useTestModeStore((s) => s.values)
 
   // Rev limit flash: alternates red overlay every 80ms, auto-stops after 5s
   useEffect(() => {
@@ -1228,18 +1067,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           </span>
         )}
 
-        {/* "Preview as" day/night toggle — independent from the panel editor
-            mode so the user can edit one theme while previewing the other.
-            Disabled when a device is connected because its reported isDayMode
-            is the single source of truth in that case (#21 v2). */}
-        <PreviewAsToggle
-          previewDayMode={isPreviewDayMode}
-          disabled={deviceIsDayMode !== null}
-          onSelect={(next) => {
-            if (next !== isPreviewDayMode) togglePreviewTheme()
-          }}
-        />
-
         <button
           onClick={() => {
             setRevLimiting(true)
@@ -1309,7 +1136,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   onOpenSettings={() => {
                     setSettingsOpen((o) => !o)
                   }}
-                  onToggleTheme={handleToggleTheme}
                 />
               )}
 
@@ -1401,11 +1227,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                       }
                       isOverlapping={overlappingIds.has(widget.id)}
                       revLimiting={revLimiting}
-                      testValue={
-                        testModeEnabled && widget.signal in testValues
-                          ? (testValues[widget.signal] ?? null)
-                          : null
-                      }
                       onSelect={selectWidget}
                       onShiftSelect={toggleWidgetSelection}
                       onDragStart={handleDragStart}

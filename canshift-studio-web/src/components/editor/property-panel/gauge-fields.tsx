@@ -12,14 +12,10 @@ import {
   tokenFromDimensions,
 } from '../../../utils/sizeTokens'
 import {
-  ALL_UNITS,
   ConfigFieldsProps,
   Field,
   GAUGE_STYLES,
-  IconPicker,
-  LabelFields,
   Row,
-  SIGNAL_UNITS,
   inputStyle,
   numberInputStyle,
 } from './shared'
@@ -32,15 +28,10 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
   // TypeScript can't follow signalDef?.X through the chained ternaries inside
   // the JSX, so we hoist the value once.
   const defaultDanger = signalDef?.dangerLevel
-  const barOrientation = cfg.barOrientation ?? 'vertical'
-  const allowedTokenIds = gaugeTokenIds(style, barOrientation)
+  const allowedTokenIds = gaugeTokenIds(style)
   // If current dimensions don't match any token, fall back to the first available
   const activeTokenId =
     tokenFromDimensions(widget.layout.w, widget.layout.h) ?? allowedTokenIds[0] ?? null
-
-  // Units filtered to what makes sense for the bound signal
-  const signalUnits = widget.signal ? SIGNAL_UNITS[widget.signal] : undefined
-  const unitList = signalUnits ?? ALL_UNITS
 
   return (
     <>
@@ -108,125 +99,13 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </div>
       </Field>
 
-      {/* Unit / suffix */}
-      <Field label="Unit">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 }}>
-          {unitList.map((u) => {
-            const isActive = cfg.suffix === u
-            return (
-              <button
-                key={u}
-                onClick={() => {
-                  const next = { ...cfg }
-                  if (isActive) delete next.suffix
-                  else next.suffix = u
-                  onChange({ config: next })
-                }}
-                style={{
-                  padding: '2px 6px',
-                  fontSize: 10,
-                  background: isActive ? '#1A2A1A' : '#111111',
-                  border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
-                  borderRadius: 3,
-                  color: isActive ? '#66AA66' : '#AAAAAA',
-                  cursor: 'pointer',
-                }}
-              >
-                {u}
-              </button>
-            )
-          })}
-        </div>
-        <input
-          style={inputStyle}
-          placeholder="custom…"
-          value={cfg.suffix ?? ''}
-          onChange={(e) => {
-            const next = { ...cfg }
-            if (e.target.value) next.suffix = e.target.value
-            else delete next.suffix
-            onChange({ config: next })
-          }}
-        />
-      </Field>
+      {/* Unit, prefix, decimals — inherited from the bound signal definition
+          (signal.unit + signal-side scaling). Per-widget overrides were
+          dropped from the picker so the dashboard reads consistently with
+          the signal catalogue. */}
 
-      {/* Numeric-specific: prefix + decimals */}
-      {style === 'numeric' && (
-        <>
-          <Row>
-            <Field label="Prefix">
-              <input
-                style={inputStyle}
-                value={cfg.prefix ?? ''}
-                onChange={(e) => {
-                  const next = { ...cfg }
-                  if (e.target.value) next.prefix = e.target.value
-                  else delete next.prefix
-                  onChange({ config: next })
-                }}
-              />
-            </Field>
-            <Field label="Decimals">
-              <input
-                type="number"
-                min={0}
-                max={4}
-                style={numberInputStyle}
-                value={cfg.decimalPlaces}
-                onChange={(e) => {
-                  onChange({ config: { ...cfg, decimalPlaces: Number(e.target.value) } })
-                }}
-              />
-            </Field>
-          </Row>
-        </>
-      )}
-
-      {/* Bar orientation — horizontal removed per user feedback (the horizontal
-          bar gauge layout didn't read well in the dashboard); only the vertical
-          orientation is offered now. Existing horizontal bar gauges still
-          render but the picker won't surface 'horizontal' as a new choice. */}
-      {style === 'bar' && (
-        <Field label="Orientation">
-          <div style={{ display: 'flex', gap: 4 }}>
-            {(['vertical'] as const).map((dir) => {
-              const isActive = barOrientation === dir
-              return (
-                <button
-                  key={dir}
-                  onClick={() => {
-                    const newTokenId = 'V-M'
-                    const newToken = SIZE_TOKENS[newTokenId]
-                    onChange({
-                      config: { ...cfg, barOrientation: dir },
-                      layout: { ...widget.layout, w: newToken.w, h: newToken.h },
-                    })
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '3px 0',
-                    background: isActive ? '#2A2A3A' : '#111111',
-                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
-                    borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#AAAAAA',
-                    cursor: 'pointer',
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {/* Always vertical now — the conditional below is preserved as
-                      a no-op so reintroducing 'horizontal' later only requires
-                      adding it back to the picker array, not rewriting this row. */}
-                  ↕ V
-                </button>
-              )
-            })}
-          </div>
-        </Field>
-      )}
-
-      {/* Arc / bar shared range fields */}
-      {(style === 'arc' || style === 'bar') && (
+      {/* Arc range fields. */}
+      {style === 'arc' && (
         <>
           <Row>
             <Field
@@ -310,42 +189,6 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
           </Row>
           {style === 'arc' && (
             <>
-              <Field label="Fill style">
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {(['zones', 'gradient'] as const).map((fill) => {
-                    const activeFill = cfg.arcFillStyle ?? 'zones'
-                    const isActive = activeFill === fill
-                    return (
-                      <button
-                        key={fill}
-                        onClick={() => {
-                          const next = { ...cfg }
-                          if (fill === 'zones') {
-                            // Drop the field so legacy configs stay clean.
-                            delete next.arcFillStyle
-                          } else {
-                            next.arcFillStyle = fill
-                          }
-                          onChange({ config: next })
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '3px 0',
-                          background: isActive ? '#2A2A3A' : '#111111',
-                          border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
-                          borderRadius: 3,
-                          color: isActive ? '#7788CC' : '#AAAAAA',
-                          cursor: 'pointer',
-                          fontSize: 10,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {fill === 'zones' ? 'Zones' : 'Gradient'}
-                      </button>
-                    )
-                  })}
-                </div>
-              </Field>
               <Field label="Needle">
                 <Checkbox
                   checked={cfg.showNeedle ?? false}
@@ -400,25 +243,11 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </>
       )}
 
-      {/* Sensor — drives the two-zone palette (issue #954). */}
-      <Field label="Sensor">
-        <IconPicker
-          value={cfg.iconName}
-          onChange={(name) => {
-            onChange({
-              config: name ? { ...cfg, iconName: name } : (({ iconName: _, ...r }) => r)(cfg),
-            })
-          }}
-        />
-      </Field>
-
-      {/* Widget label */}
-      <LabelFields
-        cfg={cfg}
-        onChange={(next) => {
-          onChange({ config: next })
-        }}
-      />
+      {/* Sensor + Label blocks were dropped from the gauge editor. The
+          two-zone palette now resolves through the bound signal's `type`
+          (see SignalType / signalTypeOkColor in canshift-core), and the
+          widget renders the signal name as an auto-header — no per-widget
+          icon or custom label fields needed here. */}
     </>
   )
 }

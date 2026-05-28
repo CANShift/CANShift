@@ -169,7 +169,6 @@ export interface ConfigFieldsProps {
 
 export const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
   { value: 'arc', label: 'Arc' },
-  { value: 'bar', label: 'Bar' },
   { value: 'numeric', label: 'Numeric' },
 ]
 
