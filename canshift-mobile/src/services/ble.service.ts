@@ -586,6 +586,8 @@ export class BleService {
       BLE_CHAR_TELE,
       (error: Error | null, char: Characteristic | null) => {
         if (error || !char?.value) return
+        // Guard against in-flight notifications arriving after disconnect.
+        if (!this.connectedDevice) return
         const payload = parseTelemetry(decodeBase64(char.value))
         if (!payload) {
           log('warn', 'BLE: rejected malformed telemetry payload')
@@ -600,6 +602,8 @@ export class BleService {
       BLE_CHAR_STATUS,
       (error: Error | null, char: Characteristic | null) => {
         if (error || !char?.value) return
+        // Guard against in-flight notifications arriving after disconnect.
+        if (!this.connectedDevice) return
         const result = parseBleStatus(decodeBase64(char.value))
         if (result.kind !== 'ok') {
           log('warn', `BLE: rejected malformed status payload (${result.kind})`)
@@ -615,9 +619,11 @@ export class BleService {
     )
 
     this.disconnectSub = device.onDisconnected(() => {
+      // Null connectedDevice first so any in-flight TELE/STATUS callbacks
+      // short-circuit before removeSubscriptions() returns (#1166).
+      this.connectedDevice = null
       this.removeSubscriptions()
       this.stopStalenessTimer()
-      this.connectedDevice = null
       useDeviceStore.getState().disconnect()
       log('warn', `Device ${device.id} disconnected unexpectedly`)
       void this.runReconnectLoop(device.id)
