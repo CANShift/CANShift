@@ -591,15 +591,15 @@ export function computeButtonPreviewMetrics(
   h: number,
   showIcon: boolean
 ): { iconSize: number; fontSize: number } {
-  // Column layout (icon on top, label below). The icon dominates — sized at
-  // ~0.6h with a 38-px ceiling so a glyph stays visually larger than the
-  // label even on the tallest cells. The label gets the remainder of the
-  // vertical budget, clamped so it never competes with the icon's size.
-  const iconSize = showIcon ? Math.max(14, Math.min(h * 0.6, h - 16, 38)) : 0
+  // Column layout (icon on top, label below). Icon dominates the cell —
+  // sized at ~0.75h so it visually anchors the button. Width is also a
+  // ceiling so a tall narrow cell doesn't blow out an icon wider than the
+  // cell itself. Label sits below, capped at ~0.35 of the icon so the
+  // hierarchy stays icon-first.
+  const iconSize = showIcon ? Math.max(18, Math.min(h * 0.75, h - 14, w * 0.7, 56)) : 0
   const labelBudget = w - 12
-  // Label tier: capped at ~0.55 of the icon so the icon stays dominant.
-  const verticalBudget = showIcon ? Math.min(h * 0.22, iconSize * 0.55) : h * 0.48
-  const fontSize = Math.max(8, Math.min(verticalBudget, labelBudget * 0.24))
+  const verticalBudget = showIcon ? Math.min(h * 0.2, iconSize * 0.4) : h * 0.48
+  const fontSize = Math.max(8, Math.min(verticalBudget, labelBudget * 0.22))
   return { iconSize, fontSize }
 }
 
