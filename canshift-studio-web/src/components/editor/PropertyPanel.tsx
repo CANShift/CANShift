@@ -15,11 +15,7 @@ import { SIZE_TOKENS, STANDARD_TOKEN_IDS, tokenFromDimensions } from '../../util
 import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shared'
 import { GaugeFields } from './property-panel/gauge-fields'
 import { ButtonFields } from './property-panel/button-fields'
-import { BarFields } from './property-panel/bar-fields'
-import { WarningFields } from './property-panel/warning-fields'
-import { TimerFields } from './property-panel/timer-fields'
 import { GearFields } from './property-panel/gear-fields'
-import { ImageFields } from './property-panel/image-fields'
 
 // Chrome shades that do not yet map to a core design token. Kept as named
 // constants so the planned token promotion (audit S-H-5, umbrella #1015) only
@@ -41,11 +37,10 @@ const CONFIG_FIELDS: Partial<
 > = {
   gauge: GaugeFields,
   button: ButtonFields,
-  bar: BarFields,
-  warning: WarningFields,
-  timer: TimerFields,
   gear: GearFields,
-  image: ImageFields,
+  // bar / warning / timer / image widget renderers were dropped (no config
+  // instantiates them today). Their schema entries still parse so legacy
+  // configs round-trip, but no property panel is offered.
 }
 
 interface PropertyPanelProps {

@@ -210,15 +210,6 @@ interface GaugeNumericRendererProps extends BaseRendererProps {
   signalUnit: string
 }
 
-interface BarRendererProps extends BaseRendererProps {
-  testValue?: number | null
-  signalUnit: string
-}
-
-interface WarningRendererProps extends BaseRendererProps {
-  noAnimate: boolean
-}
-
 interface ButtonRendererProps extends BaseRendererProps {
   active: boolean
 }
@@ -366,27 +357,23 @@ const GaugeArcPreview = memo(function GaugeArcPreview({
           {signalUnit}
         </text>
       )}
-      {/* Widget label (user-configured, shown at bottom when set) */}
-      {cfg.label &&
-        (() => {
-          const pos = cfg.labelPosition ?? 'top-left'
-          const lAttrs = svgLabelAttrs(pos, w, h)
-          return (
-            <text
-              x={lAttrs.x}
-              y={lAttrs.y}
-              textAnchor={lAttrs.textAnchor}
-              dominantBaseline={lAttrs.dominantBaseline}
-              fill={st.textColor + '77'}
-              fontSize={Math.max(6, Math.min(9, w * 0.1))}
-              fontFamily={FONT_FAMILY}
-              fontWeight="500"
-              letterSpacing="0.04em"
-            >
-              {cfg.label}
-            </text>
-          )
-        })()}
+      {/* Widget label — always pinned top-left now that the label-position
+          picker is gone. Legacy `cfg.labelPosition` values are ignored. */}
+      {cfg.label && (
+        <text
+          x={4}
+          y={10}
+          textAnchor="start"
+          dominantBaseline="hanging"
+          fill={st.textColor + '77'}
+          fontSize={Math.max(6, Math.min(9, w * 0.1))}
+          fontFamily={FONT_FAMILY}
+          fontWeight="500"
+          letterSpacing="0.04em"
+        >
+          {cfg.label}
+        </text>
+      )}
     </svg>
   )
 })
@@ -418,31 +405,23 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const valueColor = st.textColor
 
   const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  // Suffix dropped unconditionally — see the value span below. The label name
-  // already conveys the unit, and "195km/h" overflows 80-px-wide cells.
-  // Matches firmware label_widget.cpp behaviour.
-
   // Signal name shown top-left when no custom label — matches firmware
   // applySignalHeader() in canshift-firmware/src/ui/widget_label.cpp, which
-  // pins the auto-header to CfgLabelPos::TOP_LEFT (the previous bottom-left
-  // placement in studio drifted out of sync after PR #967, issue #957).
-  // The auto-header reserves a 14-px band at the TOP (Orbitron Medium 12 line
-  // height) and the value floats below it.
+  // pins the auto-header to CfgLabelPos::TOP_LEFT. The auto-header reserves
+  // a 14-px band at the TOP and the value floats below it.
   const showSignalHeader = labelText === null
   const signalLabel = formatSignalLabel(widget.signal)
   const sigHeaderH = showSignalHeader ? 14 : 0
   const availH = h - sigHeaderH
 
-  // Inline layout — value occupies the full available band. Bumped from
-  // 0.72/0.52 → 0.85/0.65 so the digit dominates the widget cell at a glance.
-  const fontSize = Math.max(10, Math.min(availH * 0.85, w * 0.65))
+  // Cap the value font on width by character count so wide values (e.g. RPM
+  // "5200") don't overflow the cell. Orbitron 900 advance is ~0.6em per
+  // digit; budgeting ~0.65em with the unit suffix accounts for the small
+  // trailing "rpm"/"%" etc. that hugs the baseline.
+  const valueStr = String(valueOnly)
+  const charBudget = Math.max(2, valueStr.length + 1)
+  const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 12) / (charBudget * 0.65)))
 
-  const isLabelTop = labelText !== null && labelPos.startsWith('top')
-  const isLabelRight = labelPos.endsWith('right')
-  const isLabelCenter = labelPos.endsWith('center')
-  const labelAlign = isLabelCenter ? 'center' : isLabelRight ? 'right' : 'left'
   const labelFontSize = Math.max(6, Math.min(9, w * 0.1))
 
   return (
@@ -487,17 +466,14 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
           {signalLabel}
         </span>
       )}
-      {/* Widget label overlay (user-configured) */}
+      {/* Widget label overlay — always top-left (the label-position picker
+          was dropped). Legacy `cfg.labelPosition` values are ignored. */}
       {labelText !== null && (
         <span
           style={{
             position: 'absolute',
-            ...(isLabelTop ? { top: 2 } : { bottom: 2 }),
-            ...(isLabelCenter
-              ? { left: '50%', transform: 'translateX(-50%)' }
-              : isLabelRight
-                ? { right: 3 }
-                : { left: 3 }),
+            top: 2,
+            left: 3,
             fontSize: labelFontSize,
             fontFamily: FONT_FAMILY,
             fontWeight: 500,
@@ -505,7 +481,6 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
             lineHeight: 1,
             whiteSpace: 'nowrap',
             letterSpacing: '0.04em',
-            textAlign: labelAlign,
           }}
         >
           {labelText}
@@ -569,177 +544,6 @@ const GaugeNumericPreview = memo(function GaugeNumericPreview({
           </span>
         )}
       </div>
-    </div>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Bar widget — horizontal progress bar
-// ---------------------------------------------------------------------------
-
-const BarWidgetPreview = memo(function BarWidgetPreview({
-  widget,
-  w,
-  h,
-  testValue,
-  signalUnit,
-}: BarRendererProps) {
-  if (widget.config.type !== 'bar') return null
-  const cfg = widget.config
-  const st = widget.style
-
-  // Standalone bar widgets default to a 0..100 percent range when min/max are
-  // unset — keep the legacy display-as-percent behaviour in that case.
-  const min = cfg.minValue ?? 0
-  const max = cfg.maxValue ?? 100
-  const { pct: valuePct, raw: rawValue } = effectiveValue(testValue, min, max)
-  const fillW = w * valuePct
-  const barH = Math.max(4, h * 0.35)
-  const textY = (h - barH) / 2
-  const valueStr =
-    (cfg.prefix ?? '') +
-    String(Math.round(testValue == null ? valuePct * 100 : rawValue)) +
-    signalUnit
-  const labelPos = cfg.labelPosition ?? 'bottom-center'
-  const labelIsTop = labelPos === 'top-center'
-  const signalLabel = formatSignalLabel(widget.signal)
-
-  // Issue #954 — palette wins over the per-widget primaryColor when a known
-  // sensor is pinned on the widget. dangerLevel is optional on standalone
-  // bars (#965); fall back to the top of the range so the OK colour fills
-  // the entire bar until a real threshold is configured.
-  const dangerPct = cfg.dangerLevel !== undefined ? thresholdPct(cfg.dangerLevel, min, max) : 1.1
-  const barFillColor = paletteFillColor(cfg.iconName, valuePct, dangerPct) ?? st.primaryColor
-
-  return (
-    <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      {/* Track */}
-      <rect x={0} y={(h - barH) / 2} width={w} height={barH} fill="#1C1C1C" />
-      {/* Fill */}
-      <rect x={0} y={(h - barH) / 2} width={fillW} height={barH} fill={barFillColor} />
-      {/* Signal name — only when no custom label is set (avoid stacked text) */}
-      {!cfg.label && (
-        <text
-          x={4}
-          y={labelIsTop ? h - 3 : 3}
-          textAnchor="start"
-          dominantBaseline={labelIsTop ? 'auto' : 'hanging'}
-          fill="#888888"
-          fontSize={Math.max(5, Math.min(7, h * 0.22))}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.05em"
-        >
-          {signalLabel}
-        </text>
-      )}
-      {/* Value readout */}
-      {h > 18 && (
-        <text
-          x={w / 2}
-          y={textY > 10 ? textY - 2 : h - textY + 2}
-          textAnchor="middle"
-          dominantBaseline={textY > 10 ? 'auto' : 'hanging'}
-          fill={st.textColor + 'BB'}
-          fontSize={Math.max(7, Math.min(10, h * 0.28))}
-          fontFamily={FONT_FAMILY}
-        >
-          {valueStr}
-        </text>
-      )}
-      {/* Widget label */}
-      {cfg.label && (
-        <text
-          x={w / 2}
-          y={labelIsTop ? 8 : h - 3}
-          textAnchor="middle"
-          dominantBaseline={labelIsTop ? 'hanging' : 'auto'}
-          fill={st.textColor + '77'}
-          fontSize={Math.max(6, Math.min(9, h * 0.22))}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.04em"
-        >
-          {cfg.label}
-        </text>
-      )}
-    </svg>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Warning widget
-// ---------------------------------------------------------------------------
-
-const WarningPreview = memo(function WarningPreview({
-  widget,
-  w,
-  h,
-  noAnimate,
-}: WarningRendererProps) {
-  if (widget.config.type !== 'warning') return null
-  const cfg = widget.config
-  const st = widget.style
-  const iconName = cfg.iconName ?? 'warning'
-  const signalLabel = formatSignalLabel(widget.signal)
-  const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
-  const labelH = sigFontSize + 4
-  const iconSize = Math.min(w * 0.55, h - labelH - 8, 64)
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  return (
-    <div
-      style={{
-        width: w,
-        height: h,
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-        background: st.criticalColor + '22',
-        borderRadius: 0,
-        // Side-page thumbnails pass noAnimate to suppress the alert flash so
-        // they show layout, not live state (issue #144).
-        animation: noAnimate ? undefined : BLINK_ANIM,
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-      }}
-    >
-      <SensorIcon name={iconName} size={iconSize} color={st.criticalColor} />
-      {labelText === null && (
-        <span
-          style={{
-            fontSize: sigFontSize,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.criticalColor + '99',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {signalLabel}
-        </span>
-      )}
-      {labelText !== null && (
-        <span
-          style={{
-            ...htmlLabelStyle(labelPos),
-            fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.textColor + '77',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {labelText}
-        </span>
-      )}
     </div>
   )
 })
@@ -944,144 +748,6 @@ const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProp
 })
 
 // ---------------------------------------------------------------------------
-// Timer widget
-// ---------------------------------------------------------------------------
-
-const TimerPreview = memo(function TimerPreview({ widget, w, h }: BaseRendererProps) {
-  if (widget.config.type !== 'timer') return null
-  const cfg = widget.config
-  const st = widget.style
-  const timeStr = cfg.format === 'ss.mmm' ? '12.847' : '01:23'
-  const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
-  const sigFontSize = Math.max(5, Math.min(7, w * 0.07))
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  return (
-    <div
-      style={{
-        width: w,
-        height: h,
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      <span
-        style={{
-          color: st.textColor,
-          fontSize,
-          // Secondary tier (Bold 700) — matches FontManager::secondary on the
-          // device; firmware switches to primary (Black 900) at ≥110 px height.
-          // Orbitron's tabular digits keep the read aligned without `monospace`.
-          fontWeight: fontSize >= 32 ? 900 : 700,
-          fontFamily: FONT_FAMILY,
-          letterSpacing: '0.06em',
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        {timeStr}
-      </span>
-      {labelText === null && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 2,
-            left: 3,
-            fontSize: sigFontSize,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: '#888888',
-            lineHeight: 1,
-            letterSpacing: '0.05em',
-          }}
-        >
-          TIMER
-        </span>
-      )}
-      {labelText !== null && (
-        <span
-          style={{
-            ...htmlLabelStyle(labelPos),
-            fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.textColor + '77',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {labelText}
-        </span>
-      )}
-    </div>
-  )
-})
-
-// ---------------------------------------------------------------------------
-// Image widget
-// ---------------------------------------------------------------------------
-
-const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRendererProps) {
-  if (widget.config.type !== 'image') return null
-  const cfg = widget.config
-  const st = widget.style
-  const pts = [
-    `${String(w * 0.2)},${String(h * 0.72)}`,
-    `${String(w * 0.42)},${String(h * 0.38)}`,
-    `${String(w * 0.58)},${String(h * 0.55)}`,
-    `${String(w * 0.7)},${String(h * 0.42)}`,
-    `${String(w * 0.82)},${String(h * 0.72)}`,
-  ].join(' ')
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-
-  return (
-    <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      <rect x={4} y={4} width={w - 8} height={h - 8} fill="#1A1A1A" rx={3} stroke="#2A2A2A" />
-      {/* Mountain / photo icon */}
-      <polyline points={pts} fill="none" stroke="#333333" strokeWidth={1.5} />
-      <circle cx={w * 0.3} cy={h * 0.35} r={Math.min(w, h) * 0.06} fill="#333333" />
-      <text
-        x={w / 2}
-        y={h - 6}
-        textAnchor="middle"
-        dominantBaseline="auto"
-        fill="#2A2A2A"
-        fontSize={Math.max(5, Math.min(7, w * 0.07))}
-        fontFamily={FONT_FAMILY}
-        fontWeight="500"
-        letterSpacing="0.05em"
-      >
-        IMAGE
-      </text>
-      {labelText !== null &&
-        (() => {
-          const a = svgLabelAttrs(labelPos, w, h)
-          return (
-            <text
-              x={a.x}
-              y={a.y}
-              textAnchor={a.textAnchor}
-              dominantBaseline={a.dominantBaseline}
-              fill={st.textColor + '77'}
-              fontSize={Math.max(6, Math.min(9, w * 0.12))}
-              fontFamily={FONT_FAMILY}
-              fontWeight="500"
-              letterSpacing="0.04em"
-            >
-              {labelText}
-            </text>
-          )
-        })()}
-    </svg>
-  )
-})
-
-// ---------------------------------------------------------------------------
 // Renderer dispatch — keyed by WidgetConfig['type']. Each entry receives the
 // fully-resolved widget plus the variant flags it cares about. The map shape
 // gives O(1) lookup, exhaustiveness via discriminated-union narrowing, and
@@ -1143,24 +809,18 @@ const RENDERERS: RendererDispatch = {
       />
     )
   },
-  bar: (widget, ctx) => (
-    <BarWidgetPreview
-      widget={widget}
-      w={ctx.w}
-      h={ctx.h}
-      testValue={ctx.testValue}
-      signalUnit={ctx.signalUnit}
-    />
-  ),
-  warning: (widget, ctx) => (
-    <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
-  ),
+  // Legacy widget types (bar / warning / timer / image) — renderers were
+  // dropped because no shipped config instantiates them. Existing configs
+  // that reference these types render as nothing; the picker no longer
+  // surfaces them either.
+  bar: () => null,
+  warning: () => null,
   button: (widget, ctx) => (
     <ButtonPreview widget={widget} w={ctx.w} h={ctx.h} active={ctx.buttonActive} />
   ),
   gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} />,
-  timer: (widget, ctx) => <TimerPreview widget={widget} w={ctx.w} h={ctx.h} />,
-  image: (widget, ctx) => <ImagePreview widget={widget} w={ctx.w} h={ctx.h} />,
+  timer: () => null,
+  image: () => null,
 }
 
 // ---------------------------------------------------------------------------
