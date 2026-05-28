@@ -1026,10 +1026,11 @@ bool loadSignals() {
             const char *rawName = sig["name"] | "";
             const size_t nameLen = strlcpy(s.name, rawName, CFG_MAX_SIGNAL_LEN);
             if (nameLen >= CFG_MAX_SIGNAL_LEN) {
-                LOG_WARN("CFG",
-                         "signals.json: dropping signal — name too long (%u chars, max %u): '%s...'",
-                         static_cast<unsigned>(nameLen),
-                         static_cast<unsigned>(CFG_MAX_SIGNAL_LEN - 1), s.name);
+                LOG_WARN(
+                    "CFG",
+                    "signals.json: dropping signal — name too long (%u chars, max %u): '%s...'",
+                    static_cast<unsigned>(nameLen), static_cast<unsigned>(CFG_MAX_SIGNAL_LEN - 1),
+                    s.name);
                 --s_signals.signalCount;
                 continue;
             }
