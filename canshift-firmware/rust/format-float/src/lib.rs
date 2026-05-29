@@ -31,6 +31,18 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+// Panic handler — required for `no_std + staticlib`. Halts forever (same
+// strategy as the other ports). All three public functions return well-
+// defined fallback values on bad input rather than panicking; reaching the
+// handler means an internal invariant break (e.g. scratch-buffer overrun).
+#[cfg(all(feature = "ffi", not(any(test, feature = "std"))))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {
+        core::hint::spin_loop();
+    }
+}
+
 const MAX_DECIMALS: i32 = 9;
 const MAX_SIG_DIGITS: i32 = 9;
 
