@@ -189,22 +189,6 @@ export {
 } from './schemas/screen-profile.js'
 export type { ScreenProfile, ScreenProfileId } from './schemas/screen-profile.js'
 
-// Dashboard font family (#971, #500) — catalog + schema for the typeface
-// bundle the firmware loads from SPIFFS. v1 ships a single family
-// (`orbitron`); the field on DashboardConfig is optional and defaults to
-// this family for backward compatibility with every existing dashboard.
-// Firmware-side font swap lands in a follow-up PR — v1 is the schema +
-// studio picker scaffold so future bundles slot in without another
-// schema bump.
-export {
-  FONT_FAMILIES,
-  DEFAULT_FONT_FAMILY_ID,
-  FontFamilyIdSchema,
-  getFontFamily,
-  resolveFontFamily,
-} from './schemas/font-family.js'
-export type { FontFamilyId, FontFamilyEntry } from './schemas/font-family.js'
-
 // ---------------------------------------------------------------------------
 // Firmware caps & limits
 // ---------------------------------------------------------------------------

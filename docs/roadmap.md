@@ -117,15 +117,6 @@ Tracked by individual issues, ranked by current priority:
 - [#436](https://github.com/tburkhalterr/CANShift/issues/436) — Expo SDK
   52 → 53 upgrade. Unblocks the remaining 4 `tar` Dependabot alerts and
   the rest of the mobile feature backlog.
-- [#971](https://github.com/tburkhalterr/CANShift/issues/971) /
-  [#500](https://github.com/tburkhalterr/CANShift/issues/500) —
-  user-selectable dashboard font (multi-package). Foundation landed:
-  `FontFamilyIdSchema` + `FONT_FAMILIES` catalog in core, optional
-  `fontFamily` field on `DashboardConfig`, and the studio-web picker scaffold
-  (single entry, `orbitron`). Remaining: bundle additional `.bin` files
-  under `data/fonts/<family>/`, extend `FontManager::init` to route off
-  `fontFamily`, and provision only the active family's files to keep the
-  flash footprint under `LV_MEM_SIZE`.
 - [#191](https://github.com/tburkhalterr/CANShift/issues/191) — optional
   bespoke per-widget text colours in day mode.
 
