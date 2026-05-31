@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/report-bundle-size.mjs — Walk dist/assets/*.js, compute gzip sizes,
+// scripts/report-bundle-size.ts — Walk dist/assets/*.js, compute gzip sizes,
 // print a sorted table. Used to compare against the 500 KB initial-chunk
 // ceiling defined by phase-1 (#1104).
 
