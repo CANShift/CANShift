@@ -144,6 +144,17 @@ export class BleService {
   private reconnectController: AbortController | null = null
 
   /**
+   * Set true by `disconnect()` before any cleanup. The SDK may fire the
+   * `onDisconnected` callback after `cancelConnection()` resolves; the
+   * handler at construction time can't tell whether a disconnect was
+   * user-initiated (intentional) or driver-initiated (link drop) without
+   * this flag. Without it, the reconnect loop re-arms even when the user
+   * explicitly chose to disconnect. Cleared when a fresh `connect()` runs
+   * (#1017 M-LO-2).
+   */
+  private userInitiatedDisconnect = false
+
+  /**
    * FIFO serializer for GATT request/response operations (read + write).
    * Concurrent reads/writes against the same `Device` race in the underlying
    * stack and silently drop or reorder; chaining them through this single
@@ -274,6 +285,11 @@ export class BleService {
     setConnectionState('connecting')
     log('info', `Connecting to device ${deviceId}`)
 
+    // Reset the user-initiated-disconnect flag so a fresh connect after a
+    // previous user-initiated disconnect can re-arm auto-reconnect on the
+    // next link drop (#1017 M-LO-2).
+    this.userInitiatedDisconnect = false
+
     // Defensive: clear any leftover subscriptions from a prior connect attempt.
     this.removeSubscriptions()
 
@@ -311,6 +327,12 @@ export class BleService {
   /** Disconnect from the current device. Forgets the device and cancels any
    *  in-flight auto-reconnect — explicit user intent overrides persistence. */
   async disconnect(): Promise<void> {
+    // Flag the disconnect as user-initiated BEFORE doing any cleanup so the
+    // onDisconnected callback at line ~621 (if it still fires after we
+    // remove subscriptions — the SDK doesn't guarantee a synchronous
+    // teardown) can short-circuit instead of re-arming the reconnect loop.
+    // Cleared when a fresh connect() runs (#1017 M-LO-2).
+    this.userInitiatedDisconnect = true
     this.cancelReconnect()
     this.stopStalenessTimer()
     // Remove subscriptions BEFORE cancelConnection so the SDK's disconnect
@@ -625,6 +647,13 @@ export class BleService {
       this.removeSubscriptions()
       this.stopStalenessTimer()
       useDeviceStore.getState().disconnect()
+      // If the user (or anything inside `disconnect()`) initiated this
+      // teardown, do NOT re-arm the reconnect loop — explicit intent wins
+      // (#1017 M-LO-2). The flag is reset by the next successful connect().
+      if (this.userInitiatedDisconnect) {
+        log('info', `Disconnected from ${device.id} (user-initiated)`)
+        return
+      }
       log('warn', `Device ${device.id} disconnected unexpectedly`)
       void this.runReconnectLoop(device.id)
     })
