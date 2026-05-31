@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/gzip-dist.mjs — Post-build: emit a .gz sibling for every text
+// scripts/gzip-dist.ts — Post-build: emit a .gz sibling for every text
 // asset in dist/. The firmware embeds these .gz files via
 // `board_build.embed_files` and serves them with `Content-Encoding: gzip`
 // (issue #1077 phase 4), so the source-of-truth gzipped artifacts must

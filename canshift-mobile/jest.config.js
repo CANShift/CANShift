@@ -14,7 +14,7 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^.+\\.css$': '<rootDir>/__mocks__/styleMock.js',
+    '^.+\\.css$': '<rootDir>/__mocks__/styleMock.ts',
     // canshift-core publishes ESM-only "exports" (import/types only) and the
     // dist files use ESM syntax that jest's CJS resolver can't load directly.
     // Map to a small re-export shim that hand-picks the symbols mobile unit
