@@ -6,10 +6,9 @@ import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import Canvas from '../components/editor/Canvas'
 import WidgetPalette from '../components/editor/WidgetPalette'
-import PropertyPanel from '../components/editor/PropertyPanel'
-import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
 import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
+import { RightSidebar } from './RightSidebar'
 
 // Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
 // Click toggles the default. Replaces the prior diamond marker per #142.
@@ -25,28 +24,6 @@ const NON_DEFAULT_PAGE_GLYPH = '☆'
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}`
 }
-
-// ---------------------------------------------------------------------------
-// Right-sidebar tab strip — Properties vs Theme (issue #21).
-// Mirrors the chrome of the page-list pills above so the right sidebar reads
-// like one continuous surface. Extending with extra tabs is a one-row change
-// to RIGHT_SIDEBAR_TABS.
-// ---------------------------------------------------------------------------
-
-type RightSidebarTab = 'properties' | 'signals'
-
-const RIGHT_SIDEBAR_TABS: { id: RightSidebarTab; label: string }[] = [
-  { id: 'properties', label: 'Properties' },
-  // Signals tab — per-signal input-mode editor (broadcast vs OBD-II polling,
-  // issue #841). Lets a user switch a signal's source without leaving the
-  // editor.
-  { id: 'signals', label: 'Signals' },
-]
-
-const TAB_ACTIVE_BG = '#1F1F1F'
-const TAB_ACTIVE_FG = '#FFFFFF'
-const TAB_IDLE_FG = '#777777'
-const TAB_BORDER = '#222222'
 
 // ---------------------------------------------------------------------------
 // Route
@@ -69,8 +46,6 @@ export default function EditorRoute() {
     x: number
     y: number
   } | null>(null)
-
-  const [rightTab, setRightTab] = useState<RightSidebarTab>('properties')
 
   const dragFromIndex = useRef<number | null>(null)
 
@@ -364,58 +339,8 @@ export default function EditorRoute() {
         </div>
       )}
 
-      {/* ── Right sidebar: property panel + theme panel (#21) ─────────────── */}
-      <aside
-        style={{
-          width: 220,
-          background: '#161616',
-          borderLeft: '1px solid #222222',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          role="tablist"
-          aria-label="Editor sidebar tabs"
-          style={{
-            display: 'flex',
-            borderBottom: `1px solid ${TAB_BORDER}`,
-            flexShrink: 0,
-          }}
-        >
-          {RIGHT_SIDEBAR_TABS.map((tab) => {
-            const isActive = rightTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => {
-                  setRightTab(tab.id)
-                }}
-                style={{
-                  flex: 1,
-                  padding: '8px 0',
-                  background: isActive ? TAB_ACTIVE_BG : 'transparent',
-                  border: 'none',
-                  borderBottom: isActive ? `1px solid ${TAB_ACTIVE_FG}` : '1px solid transparent',
-                  color: isActive ? TAB_ACTIVE_FG : TAB_IDLE_FG,
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  fontWeight: isActive ? 600 : 400,
-                }}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-        {rightTab === 'properties' && currentPage && <PropertyPanel pageId={currentPage.id} />}
-        {rightTab === 'signals' && <Obd2PollingPanel />}
-      </aside>
+      {/* ── Right sidebar: property panel + signals panel (#21) ─────────────── */}
+      <RightSidebar pageId={currentPage?.id} />
 
       {/* ── Context menu ─────────────────────────────────────────────────── */}
       {contextMenu && (
