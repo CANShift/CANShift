@@ -48,7 +48,8 @@ extern const CfgColorRamp kSensorDefaultRamps[kSensorKindCount];
 // Resolve the active ramp for a widget. Prefers the per-signal ramp parsed
 // from JSON; falls back to the sensor-name heuristic. Returns nullptr when
 // neither resolves — caller keeps the legacy static color path.
-[[nodiscard]] const CfgColorRamp *resolveRamp(const CfgColorRamp &perSignal, const char *signalName);
+[[nodiscard]] const CfgColorRamp *resolveRamp(const CfgColorRamp &perSignal,
+                                              const char *signalName);
 
 // Sample the ramp at `value`. Returns 0x00RRGGBB. O(count), no allocation.
 // Below the first stop returns the first color; above the last returns the
