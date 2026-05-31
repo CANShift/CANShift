@@ -2,21 +2,17 @@
 //
 // Plays the role that `services/ipc.service.ts` plays in Electron Studio: a
 // single typed surface every store/component reaches for when it needs to
-// talk to the device. The bodies are now backed by `WsClient` against the
-// firmware's `/ws` port-81 endpoint (#1108) — the function signatures stay
-// identical to the phase-1 stub so call sites in Canvas / ScreenSettingsPanel
-// / useLiveSignals didn't need restructuring.
+// talk to the device. The bodies are backed by `WsClient` against the
+// firmware's `/ws` port-81 endpoint (#1108).
 //
 // Anything that used to be Electron-host-only (file dialogs, native menus,
-// release feed, esptool) stays stubbed — those surfaces are out of scope for
-// the dash-hosted renderer per the architectural freeze in #1077.
+// release feed, esptool) is intentionally not surfaced here — those flows
+// land in a dash-side endpoint when phase 3 reintroduces them.
 
 import type {
   DashboardConfig,
-  SignalConfig,
   DeviceConfig,
   InputBindingsConfig,
-  LatestReleaseResult,
   ScreenSettings,
 } from '@tmbk/canshift-core'
 import {
@@ -76,20 +72,7 @@ export interface UsbResult {
   error?: string
 }
 
-export interface OpenResult {
-  success: boolean
-  cancelled?: boolean
-  config?: DashboardConfig
-  filePath?: string
-  error?: string
-}
 
-export interface SaveResult {
-  success: boolean
-  cancelled?: boolean
-  filePath?: string
-  error?: string
-}
 
 export interface ConnectionStatus {
   connected: boolean
@@ -99,18 +82,7 @@ export interface ConnectionStatus {
 
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
 
-export interface DiscoveredDevice {
-  name: string
-  host: string
-  port: number
-  hostname?: string
-}
 
-export interface WifiStatus {
-  connected: boolean
-  host?: string
-  port?: number
-}
 
 export type DeviceConfigResult =
   | { kind: 'ok'; config: DashboardConfig }
@@ -124,38 +96,7 @@ function toUsbResult(result: { ok: boolean; error?: string }): UsbResult {
   return { success: false, error: result.error ?? 'unknown_error' }
 }
 
-// ---------------------------------------------------------------------------
-// Config file operations — stubbed. The dash-hosted renderer doesn't own a
-// native file system; import/export will land later as a dash-side endpoint
-// (open question logged in README).
-// ---------------------------------------------------------------------------
 
-export const configService = {
-  open: (): Promise<OpenResult> => Promise.resolve({ success: false, cancelled: true }),
-  openPath: (_filePath: string): Promise<OpenResult> =>
-    Promise.resolve({ success: false, cancelled: true }),
-  save: (_config: DashboardConfig): Promise<SaveResult> =>
-    Promise.resolve({ success: false, cancelled: true }),
-  saveAs: (_config: DashboardConfig): Promise<SaveResult> =>
-    Promise.resolve({ success: false, cancelled: true }),
-  import: (): Promise<OpenResult> => Promise.resolve({ success: false, cancelled: true }),
-  export: (_config: DashboardConfig): Promise<SaveResult> =>
-    Promise.resolve({ success: false, cancelled: true }),
-}
-
-// ---------------------------------------------------------------------------
-// Session persistence — dash owns it (no browser localStorage for config per
-// the #1077 architectural freeze). The host/port pair the user picks lives in
-// `connection.store.ts` instead (UI preference, not device config).
-// ---------------------------------------------------------------------------
-
-export const sessionIpc = {
-  getLastFilePath: (): Promise<string | null> => Promise.resolve(null),
-  getLastPortPath: (): Promise<string | null> => Promise.resolve(null),
-  getFirstRunCompleted: (): Promise<boolean> => Promise.resolve(true),
-  markFirstRunCompleted: (): Promise<void> => Promise.resolve(),
-  resetFirstRun: (): Promise<void> => Promise.resolve(),
-}
 
 // ---------------------------------------------------------------------------
 // Device commands — the public surface call sites depend on. Backed by the
@@ -214,22 +155,6 @@ export const usbService = {
   },
 }
 
-// WiFi discovery via mDNS isn't available from the browser — the user
-// types/selects the host manually in the connection screen. Kept as a noop
-// surface so any phase-1 caller still mounts.
-export const wifiService = {
-  discover: (): Promise<DiscoveredDevice[]> => Promise.resolve([]),
-  connect: (_host: string, _port?: number): Promise<UsbResult> => Promise.resolve(OK),
-  disconnect: (): Promise<UsbResult> => Promise.resolve(OK),
-  getStatus: (): Promise<WifiStatus> => {
-    const client = getWsClient()
-    return Promise.resolve({
-      connected: client.getStatus() === 'connected',
-      host: client.getHost(),
-      port: client.getPort(),
-    })
-  },
-}
 
 export const deviceIpc = {
   getConfig: async (): Promise<DeviceConfigResult> => {
@@ -347,28 +272,8 @@ export const inputBindingsIpc = {
   },
 }
 
-export const appIpc = {
-  version: (): Promise<string> => Promise.resolve('0.0.0-web'),
-}
 
-export const releasesIpc = {
-  // Dash-hosted release feed lands in a later sub-issue under #1077.
-  getLatest: (_force = false): Promise<LatestReleaseResult> =>
-    Promise.resolve({
-      ok: false,
-      reason: 'offline',
-      message: 'web: release feed not yet wired',
-      fetchedAt: new Date(0).toISOString(),
-      cached: null,
-    }),
-}
 
-export const signalIpc = {
-  export: (
-    _config: SignalConfig
-  ): Promise<{ success: boolean; filePath?: string; error?: string }> =>
-    Promise.resolve({ success: false }),
-}
 
 // ---------------------------------------------------------------------------
 // Event subscriptions — backed by `WsClient.subscribe()` discriminator routing.
