@@ -17,7 +17,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/fix-esm-extensions.mjs",
+    "build": "tsc -p tsconfig.build.json",
     "watch": "tsc -p tsconfig.build.json --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
