@@ -13,6 +13,7 @@
 import { Linking } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import { ESP32_AP_IP } from '../constants/ota'
+import { isAllowedExternalUrl } from '../lib/safe-url'
 import { log } from '../stores/log.store'
 
 /** mDNS hostname the firmware advertises while the AP is up. */
@@ -53,6 +54,12 @@ export function getStudioUrl(): string {
  * stale dev build might lack the native side).
  */
 export async function openStudioInBrowser(url: string): Promise<void> {
+  // Defence in depth (#1013). `getStudioUrl()` returns a fixed http(s) URL
+  // today, but a future caller could route a user-controlled string here.
+  // Block anything that isn't HTTPS / HTTP / mailto before either branch.
+  if (!isAllowedExternalUrl(url)) {
+    throw new Error(`openStudioInBrowser: blocked URL scheme — ${url}`)
+  }
   try {
     await WebBrowser.openBrowserAsync(url)
   } catch (err) {
