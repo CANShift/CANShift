@@ -1,4 +1,4 @@
-// scripts/mock-ws.mjs — Local WS server that impersonates the firmware so the
+// scripts/mock-ws.ts — Local WS server that impersonates the firmware so the
 // renderer can be exercised end-to-end without flashing hardware.
 //
 // Mirrors the wire-protocol surface of `canshift-firmware/src/hal/wifi/wifi_ws.cpp`:
