@@ -20,6 +20,7 @@ import Markdown from 'react-native-markdown-display'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as SecureStore from 'expo-secure-store'
 import { readAppVersion } from '../lib/expo-version'
+import { isAllowedExternalUrl } from '../lib/safe-url'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, HitSlop, Radius, Spacing, Typography } from '../theme'
 import { useLatestRelease } from '../hooks/use-latest-release'
@@ -211,6 +212,14 @@ export default function AboutScreen({ navigation }: Props) {
   }, [currentVersion, displayedRelease, result])
 
   const openUrl = useCallback((url: string) => {
+    // Allowlist guard (#1013) — release notes are rendered Markdown so the
+    // URL can carry any scheme (tel:, sms:, itms-services:, intent://, …).
+    // Block anything that isn't HTTPS / HTTP / mailto before handing off to
+    // the OS resolver.
+    if (!isAllowedExternalUrl(url)) {
+      Alert.alert("Couldn't open link", `Blocked link (scheme not allowed): ${url}`)
+      return
+    }
     void Linking.openURL(url).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
       Alert.alert("Couldn't open link", message)
