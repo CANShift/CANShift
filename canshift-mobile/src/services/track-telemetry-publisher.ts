@@ -12,6 +12,7 @@
 //   - the active interval handle, so it can be cleanly stopped.
 
 import type { TrackTelemetry } from '@tmbk/canshift-core'
+import { log } from '../stores/log.store'
 import { useTrackSessionStore } from '../stores/track-session.store'
 import { buildTrackTelemetry } from './track-telemetry'
 
@@ -25,7 +26,9 @@ export interface TrackTelemetryPublisherDeps {
   intervalMs?: number
   /** Wall clock — overridable for deterministic tests. Default Date.now. */
   now?: () => number
-  /** Best-effort failure sink. Default: console.warn. */
+  /** Best-effort failure sink. Default: pushes a `warn` entry into the
+   * app log store so the failure shows up in the in-app log viewer rather
+   * than the (invisible-in-production) console (#1017 M-MD-4). */
   onError?: (err: unknown) => void
 }
 
@@ -52,7 +55,8 @@ export function createTrackTelemetryPublisher(
   const onError =
     deps.onError ??
     ((err) => {
-      console.warn('TrackTelemetry publish failed', err)
+      const detail = err instanceof Error ? err.message : String(err)
+      log('warn', `TrackTelemetry publish failed: ${detail}`)
     })
 
   let handle: ReturnType<typeof setInterval> | null = null
