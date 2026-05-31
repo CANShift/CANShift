@@ -14,6 +14,7 @@ import { WidgetBox } from './WidgetBox'
 import { AlignToolbar } from './AlignToolbar'
 import { DashTopBar } from './DashTopBar'
 import { rectsOverlap } from '../../utils/layout'
+import { useDragState } from '../../hooks/useDragState'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
@@ -30,37 +31,8 @@ import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 // (#17 / #18) will reshape the preview automatically.
 const SCALE = 1.5
 
-// Snap grid in firmware pixels — match the firmware's minimum token dimensions.
-// X_SNAP = 40 px wide (narrowest visible column), Y_SNAP = 28 px tall (narrowest row).
-const X_SNAP = 40
-const Y_SNAP = 28
-
 // Minimum rubber-band drag distance (firmware px) before activating selection
 const RB_THRESHOLD = 4
-
-// ---------------------------------------------------------------------------
-// Drag state (module-level — avoids re-renders during drag)
-// ---------------------------------------------------------------------------
-
-interface DraggingWidget {
-  id: string
-  startX: number
-  startY: number
-  w: number
-  h: number
-}
-
-interface DragState {
-  primaryId: string
-  pageId: string
-  startMouseX: number
-  startMouseY: number
-  widgets: DraggingWidget[]
-  isMulti: boolean
-}
-
-let drag: DragState | null = null
-
 
 // ---------------------------------------------------------------------------
 // Canvas
@@ -84,14 +56,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const selectWidget = useDashboardStore((s) => s.selectWidget)
   const selectWidgets = useDashboardStore((s) => s.selectWidgets)
   const toggleWidgetSelection = useDashboardStore((s) => s.toggleWidgetSelection)
-  const moveWidget = useDashboardStore((s) => s.moveWidget)
-  const moveWidgets = useDashboardStore((s) => s.moveWidgets)
   const removeWidgets = useDashboardStore((s) => s.removeWidgets)
   const copyWidgets = useDashboardStore((s) => s.copyWidgets)
   const pasteWidgets = useDashboardStore((s) => s.pasteWidgets)
   const nudgeWidgets = useDashboardStore((s) => s.nudgeWidgets)
-  const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
-  const commitDrag = useDashboardStore((s) => s.commitDrag)
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const nightTheme = useDashboardStore((s) => s.config?.nightTheme)
@@ -316,101 +284,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
   }, [copyWidgets, removeWidgets, pasteWidgets])
 
-  const handleDragStart = useCallback(
-    (e: React.MouseEvent, widget: Widget) => {
-      // Read snapshot values via ref so this callback can stay ref-stable
-      // across renders (the per-widget WidgetBox React.memo otherwise breaks
-      // every drag tick when page.widgets gets a fresh reference).
-      const {
-        pageId,
-        pageWidgets,
-        selectedWidgetIds: selIds,
-        widgetAreaH: areaH,
-      } = dragInputsRef.current
-
-      // Gather all widgets to drag: if the widget is part of multi-selection, drag all.
-      // Otherwise drag only this widget (and set it as sole selection).
-      const isMulti = selIds.length > 1 && selIds.includes(widget.id)
-
-      const dragging: DraggingWidget[] = isMulti
-        ? pageWidgets
-            .filter((w) => selIds.includes(w.id))
-            .map((w) => ({
-              id: w.id,
-              startX: w.layout.x,
-              startY: w.layout.y,
-              w: w.layout.w,
-              h: w.layout.h,
-            }))
-        : [
-            {
-              id: widget.id,
-              startX: widget.layout.x,
-              startY: widget.layout.y,
-              w: widget.layout.w,
-              h: widget.layout.h,
-            },
-          ]
-
-      drag = {
-        primaryId: widget.id,
-        pageId,
-        startMouseX: e.clientX,
-        startMouseY: e.clientY,
-        widgets: dragging,
-        isMulti,
-      }
-
-      const handleMouseMove = (ev: MouseEvent) => {
-        if (!drag) return
-        const effectiveScale = SCALE * zoomRef.current
-        const dx = Math.round((ev.clientX - drag.startMouseX) / effectiveScale)
-        const dy = Math.round((ev.clientY - drag.startMouseY) / effectiveScale)
-
-        if (drag.isMulti) {
-          const moves = drag.widgets.map((dw) => {
-            const rawX = dw.startX + dx
-            const rawY = dw.startY + dy
-            const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
-            const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
-            return {
-              id: dw.id,
-              x: Math.max(0, Math.min(320 - dw.w, snappedX)),
-              y: Math.max(0, Math.min(areaH - dw.h, snappedY)),
-            }
-          })
-          moveWidgets(drag.pageId, moves)
-        } else {
-          const dw = drag.widgets[0]
-          if (!dw) return
-          const rawX = dw.startX + dx
-          const rawY = dw.startY + dy
-          const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
-          const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
-          const newX = Math.max(0, Math.min(320 - dw.w, snappedX))
-          const newY = Math.max(0, Math.min(areaH - dw.h, snappedY))
-          moveWidget(drag.pageId, drag.primaryId, { x: newX, y: newY })
-        }
-      }
-
-      const handleMouseUp = () => {
-        if (drag) {
-          if (drag.isMulti) {
-            commitDrag()
-          } else {
-            resolveWidgetCollisions(drag.pageId, drag.primaryId)
-          }
-        }
-        drag = null
-        window.removeEventListener('mousemove', handleMouseMove)
-        window.removeEventListener('mouseup', handleMouseUp)
-      }
-
-      window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp)
-    },
-    [moveWidget, moveWidgets, resolveWidgetCollisions, commitDrag]
-  )
+  const handleDragStart = useDragState({ dragInputsRef, zoomRef, scale: SCALE })
 
   // Rubber-band: starts on background mousedown, selects widgets on mouseup
   const startRubberBand = useCallback(
