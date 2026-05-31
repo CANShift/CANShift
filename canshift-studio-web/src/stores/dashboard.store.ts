@@ -5,7 +5,6 @@ import { immer } from 'zustand/middleware/immer'
 import { current } from 'immer'
 import type {
   DashboardConfig,
-  FontFamilyId,
   PageConfig,
   PageTemplate,
   ScreenProfileId,
@@ -96,14 +95,6 @@ interface DashboardState {
    * so the user can revert a misclick like any other dashboard edit.
    */
   setTargetProfile: (id: ScreenProfileId) => void
-  /**
-   * Pick the font family the firmware should load for this dashboard
-   * (issues #971 + #500). Mirrors {@link setTargetProfile} — travels with
-   * the config through push/save cycles and goes through undo history so a
-   * misclick is recoverable. v1 ships a single family (`orbitron`); the
-   * firmware-side font swap lands in a follow-up PR.
-   */
-  setFontFamily: (id: FontFamilyId) => void
   /**
    * Replace the current config from an imported source (Import menu, shared
    * dashboard) — clears `filePath`, marks dirty so the user is prompted to
@@ -269,20 +260,6 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
         s.config.targetProfile = id
-        s.isDirty = true
-      })
-    },
-
-    setFontFamily: (id) => {
-      set((s) => {
-        if (!s.config) return
-        // No-op when the value isn't actually changing — keeps the undo
-        // stack uncluttered when the user re-selects the current family.
-        if (s.config.fontFamily === id) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
-        s.config.fontFamily = id
         s.isDirty = true
       })
     },
