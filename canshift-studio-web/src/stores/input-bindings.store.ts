@@ -1,4 +1,4 @@
-// inputBindings.store.ts — Physical GPIO button bindings.
+// input-bindings.store.ts — Physical GPIO button bindings.
 //
 // Mirrors the Electron Studio's `useInputBindingsStore` so the editor surface
 // can be ported with no shape changes. Owns the editable draft plus the

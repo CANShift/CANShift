@@ -1,4 +1,4 @@
-// deviceConfig.store.ts — ESP32 hardware config (CAN speed, TWAI pins).
+// device-config.store.ts — ESP32 hardware config (CAN speed, TWAI pins).
 //
 // Mirrors the Electron Studio's `useDeviceConfigStore` pattern: owns the
 // editable draft + the load/save lifecycle so the route surface stays a thin
