@@ -3,7 +3,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseRealDashXML } from '../realdash/parse-realdash-xml'
+import { parseRealDashXML } from '../realdash/parse-realdash-xml.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
