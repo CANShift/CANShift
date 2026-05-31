@@ -6,7 +6,6 @@ import { memo, useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, TopBarItem, Widget } from '@tmbk/canshift-core'
 import { DEFAULT_TOP_BAR_LAYOUT, TopBarMetrics, resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
-import type { AlignDirection } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
@@ -87,15 +86,6 @@ interface AlignToolbarProps {
   widgetIds: string[]
   canDistribute: boolean
 }
-
-const ALIGN_BUTTONS: { dir: AlignDirection; label: string; title: string }[] = [
-  { dir: 'left', label: '⬤⬜⬜', title: 'Align left edges' },
-  { dir: 'center-h', label: '⬜⬤⬜', title: 'Center horizontally' },
-  { dir: 'right', label: '⬜⬜⬤', title: 'Align right edges' },
-  { dir: 'top', label: '⬤⬜⬜', title: 'Align top edges' },
-  { dir: 'center-v', label: '⬜⬤⬜', title: 'Center vertically' },
-  { dir: 'bottom', label: '⬜⬜⬤', title: 'Align bottom edges' },
-]
 
 function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarProps) {
   const alignWidgets = useDashboardStore((s) => s.alignWidgets)
@@ -273,9 +263,6 @@ function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarProps) {
     </div>
   )
 }
-
-// Suppress unused-import warning for ALIGN_BUTTONS
-void ALIGN_BUTTONS
 
 // ---------------------------------------------------------------------------
 // Single widget renderer
