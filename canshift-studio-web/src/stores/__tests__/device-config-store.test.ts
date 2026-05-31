@@ -109,10 +109,10 @@ beforeEach(() => {
   vi.resetModules()
 })
 
-describe('deviceConfig.store — load lifecycle', () => {
+describe('device-config.store — load lifecycle', () => {
   it('seeds the draft from a successful IPC read', async () => {
     fakeDevice.readResult = { success: true, config: STUB_DEVICE }
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     await useDeviceConfigStore.getState().load()
     expect(useDeviceConfigStore.getState().config).toEqual(STUB_DEVICE)
     expect(useDeviceConfigStore.getState().loaded).toBe(true)
@@ -120,7 +120,7 @@ describe('deviceConfig.store — load lifecycle', () => {
 
   it('keeps the default draft when the device has no config', async () => {
     fakeDevice.readResult = { success: true, config: null }
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     const beforeDraft = useDeviceConfigStore.getState().config
     await useDeviceConfigStore.getState().load()
     expect(useDeviceConfigStore.getState().config).toEqual(beforeDraft)
@@ -129,13 +129,13 @@ describe('deviceConfig.store — load lifecycle', () => {
 
   it('marks loaded=true even when IPC throws (best-effort fallback)', async () => {
     fakeDevice.readResult = () => Promise.reject(new Error('boom'))
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     await useDeviceConfigStore.getState().load()
     expect(useDeviceConfigStore.getState().loaded).toBe(true)
   })
 
   it('load() is idempotent across the session', async () => {
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     await useDeviceConfigStore.getState().load()
     await useDeviceConfigStore.getState().load()
     await useDeviceConfigStore.getState().load()
@@ -143,9 +143,9 @@ describe('deviceConfig.store — load lifecycle', () => {
   })
 })
 
-describe('deviceConfig.store — save lifecycle', () => {
+describe('device-config.store — save lifecycle', () => {
   it('transitions saving → saved on a happy ack', async () => {
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     useDeviceConfigStore.getState().setConfig(STUB_DEVICE)
 
     const pending = useDeviceConfigStore.getState().save()
@@ -158,7 +158,7 @@ describe('deviceConfig.store — save lifecycle', () => {
 
   it('transitions saving → error and surfaces the message on a firmware refusal', async () => {
     fakeDevice.writeResult = { success: false, error: 'pin_conflict' }
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     await useDeviceConfigStore.getState().save()
     expect(useDeviceConfigStore.getState().saveStatus).toBe('error')
     expect(useDeviceConfigStore.getState().saveError).toBe('pin_conflict')
@@ -166,7 +166,7 @@ describe('deviceConfig.store — save lifecycle', () => {
 
   it('catches a thrown IPC error and surfaces its message', async () => {
     fakeDevice.writeResult = () => Promise.reject(new Error('socket gone'))
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     await useDeviceConfigStore.getState().save()
     expect(useDeviceConfigStore.getState().saveStatus).toBe('error')
     expect(useDeviceConfigStore.getState().saveError).toBe('socket gone')
@@ -174,7 +174,7 @@ describe('deviceConfig.store — save lifecycle', () => {
 
   it('clearSaveStatus drops the transient state back to idle', async () => {
     fakeDevice.writeResult = { success: false, error: 'whatever' }
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     await useDeviceConfigStore.getState().save()
     useDeviceConfigStore.getState().clearSaveStatus()
     expect(useDeviceConfigStore.getState().saveStatus).toBe('idle')
@@ -182,7 +182,7 @@ describe('deviceConfig.store — save lifecycle', () => {
   })
 
   it('updateConfig merges a patch into the draft without IPC', async () => {
-    const { useDeviceConfigStore } = await import('../deviceConfig.store')
+    const { useDeviceConfigStore } = await import('../device-config.store')
     useDeviceConfigStore.getState().setConfig(STUB_DEVICE)
     useDeviceConfigStore.getState().updateConfig({ canSpeedKbps: 250 })
     expect(useDeviceConfigStore.getState().config.canSpeedKbps).toBe(250)
@@ -191,13 +191,13 @@ describe('deviceConfig.store — save lifecycle', () => {
   })
 })
 
-describe('inputBindings.store — load lifecycle', () => {
+describe('input-bindings.store — load lifecycle', () => {
   it('seeds the draft from a successful IPC read', async () => {
     fakeBindings.readResult = {
       success: true,
       config: { inputBindings: [STUB_BINDING] },
     }
-    const { useInputBindingsStore } = await import('../inputBindings.store')
+    const { useInputBindingsStore } = await import('../input-bindings.store')
     await useInputBindingsStore.getState().load()
     expect(useInputBindingsStore.getState().bindings).toEqual([STUB_BINDING])
     expect(useInputBindingsStore.getState().loaded).toBe(true)
@@ -205,23 +205,23 @@ describe('inputBindings.store — load lifecycle', () => {
 
   it('falls back to an empty draft when IPC throws', async () => {
     fakeBindings.readResult = () => Promise.reject(new Error('lost'))
-    const { useInputBindingsStore } = await import('../inputBindings.store')
+    const { useInputBindingsStore } = await import('../input-bindings.store')
     await useInputBindingsStore.getState().load()
     expect(useInputBindingsStore.getState().loaded).toBe(true)
     expect(useInputBindingsStore.getState().bindings).toEqual([])
   })
 
   it('load() is idempotent across the session', async () => {
-    const { useInputBindingsStore } = await import('../inputBindings.store')
+    const { useInputBindingsStore } = await import('../input-bindings.store')
     await useInputBindingsStore.getState().load()
     await useInputBindingsStore.getState().load()
     expect(fakeBindings.readCalls).toBe(1)
   })
 })
 
-describe('inputBindings.store — draft mutations', () => {
+describe('input-bindings.store — draft mutations', () => {
   it('addBinding / updateBinding / removeBinding all manipulate the local draft only', async () => {
-    const { useInputBindingsStore } = await import('../inputBindings.store')
+    const { useInputBindingsStore } = await import('../input-bindings.store')
     useInputBindingsStore.getState().addBinding(STUB_BINDING)
     expect(useInputBindingsStore.getState().bindings.length).toBe(1)
 
@@ -235,7 +235,7 @@ describe('inputBindings.store — draft mutations', () => {
   })
 
   it('save() sends the wrapped { inputBindings } shape and transitions to saved', async () => {
-    const { useInputBindingsStore } = await import('../inputBindings.store')
+    const { useInputBindingsStore } = await import('../input-bindings.store')
     useInputBindingsStore.getState().setBindings([STUB_BINDING])
     await useInputBindingsStore.getState().save()
     expect(fakeBindings.writeCalls[0]).toEqual({ inputBindings: [STUB_BINDING] })
@@ -244,7 +244,7 @@ describe('inputBindings.store — draft mutations', () => {
 
   it('save() surfaces the IPC error string', async () => {
     fakeBindings.writeResult = { success: false, error: 'pin_conflict' }
-    const { useInputBindingsStore } = await import('../inputBindings.store')
+    const { useInputBindingsStore } = await import('../input-bindings.store')
     await useInputBindingsStore.getState().save()
     expect(useInputBindingsStore.getState().saveStatus).toBe('error')
     expect(useInputBindingsStore.getState().saveError).toBe('pin_conflict')
