@@ -5,9 +5,9 @@ import { isAllowedExternalUrl } from './safe-url'
 
 describe('isAllowedExternalUrl — allowed schemes', () => {
   it('accepts https URLs', () => {
-    expect(isAllowedExternalUrl('https://github.com/tburkhalterr/CANShift/releases/tag/v1.0.0')).toBe(
-      true,
-    )
+    expect(
+      isAllowedExternalUrl('https://github.com/tburkhalterr/CANShift/releases/tag/v1.0.0')
+    ).toBe(true)
   })
 
   it('accepts http URLs', () => {
@@ -34,7 +34,9 @@ describe('isAllowedExternalUrl — blocked schemes', () => {
 
   it('rejects itms-services: (iOS enterprise MDM install prompt)', () => {
     expect(
-      isAllowedExternalUrl('itms-services://?action=download-manifest&url=https://evil.example/m.plist'),
+      isAllowedExternalUrl(
+        'itms-services://?action=download-manifest&url=https://evil.example/m.plist'
+      )
     ).toBe(false)
   })
 
