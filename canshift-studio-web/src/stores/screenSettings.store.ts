@@ -12,7 +12,6 @@ export interface ScreenSettings {
 
 interface ScreenSettingsState extends ScreenSettings {
   set: (patch: Partial<ScreenSettings>) => void
-  reset: () => void
 }
 
 const DEFAULTS: ScreenSettings = {
@@ -26,9 +25,5 @@ export const useScreenSettingsStore = create<ScreenSettingsState>()((set) => ({
 
   set: (patch) => {
     set((s) => ({ ...s, ...patch }))
-  },
-
-  reset: () => {
-    set(DEFAULTS)
   },
 }))
