@@ -2,7 +2,7 @@
 // Supports click/Shift+click selection, rubber-band multi-select, drag-to-move,
 // alignment tools, and swipe gestures for page navigation.
 
-import { memo, useRef, useCallback, useEffect, useMemo, useState } from 'react'
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -10,7 +10,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { CruiseControlPreview } from './CruiseControlPreview'
-import { WidgetPreview } from './WidgetPreview'
+import { WidgetBox } from './WidgetBox'
 import { AlignToolbar } from './AlignToolbar'
 import { DashTopBar } from './DashTopBar'
 import { rectsOverlap } from '../../utils/layout'
@@ -39,24 +39,6 @@ const Y_SNAP = 28
 const RB_THRESHOLD = 4
 
 // ---------------------------------------------------------------------------
-// Widget type → border color (used only for selection/type indication)
-// ---------------------------------------------------------------------------
-
-const TYPE_BORDER: Record<string, string> = {
-  gauge: '#CC3333',
-  warning: '#CC7700',
-  button: '#336633',
-  bar: '#336666',
-  gear: '#993399',
-  timer: '#226644',
-  image: '#AAAAAA',
-}
-
-function getBorderColor(type: string) {
-  return TYPE_BORDER[type] ?? '#AAAAAA'
-}
-
-// ---------------------------------------------------------------------------
 // Drag state (module-level — avoids re-renders during drag)
 // ---------------------------------------------------------------------------
 
@@ -79,97 +61,6 @@ interface DragState {
 
 let drag: DragState | null = null
 
-// ---------------------------------------------------------------------------
-// Single widget renderer
-// ---------------------------------------------------------------------------
-
-interface WidgetBoxProps {
-  widget: Widget
-  palette: PagePalette
-  isSelected: boolean
-  isInMultiSelection: boolean
-  isOverlapping: boolean
-  revLimiting: boolean
-  onSelect: (id: string) => void
-  onShiftSelect: (id: string) => void
-  onDragStart: (e: React.MouseEvent, widget: Widget) => void
-}
-
-// Memoized so dragging one widget doesn't re-render every other widget on the
-// page. Since the parent passes stable handler refs (useCallback) and immer
-// keeps unchanged widget refs identical across store updates, default shallow
-// comparison is correct here — only the moved widget's `widget` prop changes.
-const WidgetBox = memo(function WidgetBox({
-  widget,
-  palette,
-  isSelected,
-  isInMultiSelection,
-  isOverlapping,
-  revLimiting,
-  onSelect,
-  onShiftSelect,
-  onDragStart,
-}: WidgetBoxProps) {
-  const { layout } = widget
-  // Default to black so the widget container blends with the (black) page
-  // background — firmware widgets render directly on the page bg with no
-  // per-widget surface tint (issue #143). Selection / overlap states tint the
-  // bg so the highlight is visible even when the underlying widget chrome is
-  // dark; the outline ring below adds an unmistakable selection edge.
-  const bgColor = isOverlapping
-    ? '#2A0000'
-    : isSelected
-      ? '#1B2030'
-      : isInMultiSelection
-        ? '#0A0A1E'
-        : '#000000'
-
-  return (
-    <div
-      data-widget="true"
-      onMouseDown={(e) => {
-        e.stopPropagation()
-        if (e.shiftKey) {
-          onShiftSelect(widget.id)
-        } else {
-          onSelect(widget.id)
-          onDragStart(e, widget)
-        }
-      }}
-      style={{
-        position: 'absolute',
-        left: layout.x * SCALE,
-        top: layout.y * SCALE,
-        width: layout.w * SCALE,
-        height: layout.h * SCALE,
-        background: bgColor,
-        borderRadius: 3,
-        boxSizing: 'border-box',
-        cursor: 'move',
-        overflow: 'hidden',
-        userSelect: 'none',
-        // No solid border (matches the borderless firmware render). Selection
-        // pops via outline (doesn't shift layout) + bgColor tint. Overlap and
-        // multi-select keep their boxShadow rings for affordance contrast.
-        outline: isSelected ? '2px solid #6CB6FF' : undefined,
-        outlineOffset: isSelected ? -2 : undefined,
-        boxShadow: isOverlapping
-          ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'
-          : isInMultiSelection
-            ? '0 0 0 1px #AAAAFF22, 0 0 4px #AAAAFF44'
-            : undefined,
-      }}
-    >
-      <WidgetPreview
-        widget={widget}
-        palette={palette}
-        displayW={layout.w * SCALE}
-        displayH={layout.h * SCALE}
-        revLimiting={revLimiting}
-      />
-    </div>
-  )
-})
 
 // ---------------------------------------------------------------------------
 // Canvas
@@ -794,6 +685,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                       key={widget.id}
                       widget={widget}
                       palette={effectivePalette}
+                      scale={SCALE}
                       isSelected={widget.id === selectedWidgetId}
                       isInMultiSelection={
                         selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
