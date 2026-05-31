@@ -39,8 +39,6 @@ const ACCENT_RED_BG = '#1A0A0A' // MIRROR: device-page selected red wash
 const ACCENT_GREEN = '#55AA55' // MIRROR: dimmer than --success (#00CC2A), device firmware-ready
 const ACCENT_GREEN_BG = '#111B11' // MIRROR: device-page ready-state green wash
 const ACCENT_GREEN_BORDER = '#2A4A2A' // MIRROR: device-page ready-state green border
-const SAVE_GREEN_BG = '#1A3A1A' // MIRROR: device-save-button active bg
-const SAVE_GREEN_BORDER = '#336633' // MIRROR: device-save-button active border
 const DIVIDER = '#1E1E1E' // MIRROR: device-page divider line
 
 interface ScreenSettingsPanelProps {
@@ -52,7 +50,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const brightness = useScreenSettingsStore((s) => s.brightness)
   const rotation = useScreenSettingsStore((s) => s.rotation)
   const set = useScreenSettingsStore((s) => s.set)
-  const reset = useScreenSettingsStore((s) => s.reset)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
@@ -69,11 +66,15 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const fsLg = Math.round(scale * 7)
   const gap = Math.round(scale * 6)
 
-  const pushScreenSettings = async () => {
+  // Push the current local state to the device. No-op when we're offline
+  // or in simulation — the local store still tracks the value so the next
+  // connection picks it up via the existing setup flow.
+  const pushScreenSettings = async (nextRotation = rotation) => {
+    if (simulationMode || !connected) return
     const result = await usbService.pushScreenSettings({
       brightness,
       sleep: 0,
-      rotation,
+      rotation: nextRotation,
     })
     if (result.success) {
       log('success', `Screen settings pushed — brightness ${String(brightness)}%`)
@@ -82,31 +83,30 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     }
   }
 
-  const handleSave = async () => {
-    if (simulationMode) {
-      log('info', `Screen settings saved (sim) — brightness ${String(brightness)}%`)
-      return
-    }
-    if (!connected) {
-      log('warn', 'Screen settings: no device connected')
-      return
-    }
-    // Rotation is always sent. Firmware only reboots when the new value
-    // differs from the persisted one, so studio doesn't need to know the
-    // device's current orientation — a no-op rotation is free.
-    if (rotation === 180) {
+  // Brightness commits on slider release (mouseup / touchend / keyup) so a
+  // drag doesn't spam the USB pipe. The local store is updated continuously
+  // via onChange so the preview tracks the cursor.
+  const handleBrightnessCommit = () => {
+    void pushScreenSettings()
+  }
+
+  // Rotation commits immediately on click. 180° still goes through the
+  // confirmation dialog because it reboots the device.
+  const handleRotationSelect = (deg: 0 | 180) => {
+    if (rotation === deg) return
+    set({ rotation: deg })
+    if (deg === 180) {
       setPendingRotation180(true)
       return
     }
-    await pushScreenSettings()
+    void pushScreenSettings(deg)
   }
 
   const handleConfirmRotation180 = () => {
     setPendingRotation180(false)
-    void pushScreenSettings()
+    void pushScreenSettings(180)
   }
 
-  const canSave = connected || simulationMode
   const canDeviceAction = connected && !simulationMode
 
   // Active day mode: device value when connected, local preview otherwise.
@@ -191,7 +191,9 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           SCREEN SETTINGS
         </span>
 
-        {/* Brightness */}
+        {/* Brightness — autosave on slider release (#1182). onChange keeps the
+            local preview tracking the cursor, the release events fire the
+            single USB push so a drag doesn't flood the wire. */}
         <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
           <input
             type="range"
@@ -201,6 +203,9 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             onChange={(e) => {
               set({ brightness: Number(e.target.value) })
             }}
+            onMouseUp={handleBrightnessCommit}
+            onTouchEnd={handleBrightnessCommit}
+            onKeyUp={handleBrightnessCommit}
             style={{
               width: '100%',
               accentColor: ACCENT_RED,
@@ -241,7 +246,8 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-        {/* Mounting orientation — applied on save, reboots the device */}
+        {/* Mounting orientation — autosave on click. 180° goes through the
+            confirmation dialog because it reboots the device (#1182). */}
         <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {([0, 180] as const).map((deg) => {
@@ -250,7 +256,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
                 <button
                   key={deg}
                   onClick={() => {
-                    set({ rotation: deg })
+                    handleRotationSelect(deg)
                   }}
                   style={{
                     flex: 1,
@@ -271,43 +277,26 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-        {/* Touch calibration + reset — same row, same style as theme buttons */}
+        {/* Touch calibration — full-width row (#1182 dropped the sibling
+            local-reset button alongside the SAVE workflow). */}
         <SettingRow label="TOUCH" value="" scale={scale}>
-          <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
-            <button
-              onClick={handleCalibrate}
-              disabled={!canDeviceAction || calibrating}
-              style={{
-                flex: 1,
-                padding: `${String(Math.round(scale * 2))}px 0`,
-                background: BTN_BG,
-                border: `1px solid ${canDeviceAction ? BTN_BORDER : BTN_BORDER_DIM}`,
-                borderRadius: 3,
-                color: canDeviceAction ? SCREEN_LABEL : BTN_FG_DISABLED,
-                fontSize: fs,
-                cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
-                lineHeight: 1,
-              }}
-            >
-              {calibrating ? '...' : 'CALIBRATE'}
-            </button>
-            <button
-              onClick={reset}
-              style={{
-                flex: 1,
-                padding: `${String(Math.round(scale * 2))}px 0`,
-                background: BTN_BG,
-                border: `1px solid ${BTN_BORDER}`,
-                borderRadius: 3,
-                color: SCREEN_LABEL,
-                fontSize: fs,
-                cursor: 'pointer',
-                lineHeight: 1,
-              }}
-            >
-              RESET
-            </button>
-          </div>
+          <button
+            onClick={handleCalibrate}
+            disabled={!canDeviceAction || calibrating}
+            style={{
+              width: '100%',
+              padding: `${String(Math.round(scale * 2))}px 0`,
+              background: BTN_BG,
+              border: `1px solid ${canDeviceAction ? BTN_BORDER : BTN_BORDER_DIM}`,
+              borderRadius: 3,
+              color: canDeviceAction ? SCREEN_LABEL : BTN_FG_DISABLED,
+              fontSize: fs,
+              cursor: canDeviceAction && !calibrating ? 'pointer' : 'default',
+              lineHeight: 1,
+            }}
+          >
+            {calibrating ? '...' : 'CALIBRATE'}
+          </button>
         </SettingRow>
 
         {/* Firmware update */}
@@ -339,27 +328,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             }}
           >
             {otaState === 'pending' ? '...' : 'USB'}
-          </button>
-        </div>
-
-        {/* Actions */}
-        <div style={{ marginTop: 'auto' }}>
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
-            style={{
-              width: '100%',
-              padding: `${String(Math.round(scale * 3))}px 0`,
-              background: canSave ? SAVE_GREEN_BG : BTN_BG,
-              border: `1px solid ${canSave ? SAVE_GREEN_BORDER : BTN_BORDER}`,
-              borderRadius: 4,
-              color: canSave ? ACCENT_GREEN : BTN_FG_DISABLED2,
-              fontSize: fs,
-              fontWeight: 600,
-              cursor: canSave ? 'pointer' : 'default',
-            }}
-          >
-            SAVE
           </button>
         </div>
       </div>
