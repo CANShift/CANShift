@@ -15,9 +15,6 @@ import { useDashboardStore } from '../stores/dashboard.store'
 // X_SNAP = 40 px wide (narrowest visible column), Y_SNAP = 28 px tall.
 const X_SNAP = 40
 const Y_SNAP = 28
-// Firmware canvas width — kept as a literal here so the hook stays
-// self-contained; matches the only studio target profile today (320×240).
-const CANVAS_WIDTH = 320
 
 interface DraggingWidget {
   id: string
@@ -40,6 +37,9 @@ export interface DragInputs {
   pageId: string
   pageWidgets: readonly Widget[]
   selectedWidgetIds: readonly string[]
+  /** Widget-area width in firmware pixels (target screen profile width). */
+  canvasW: number
+  /** Widget-area height in firmware pixels (target screen profile height minus top bar). */
   widgetAreaH: number
 }
 
@@ -77,7 +77,7 @@ export function useDragState({
     (e: ReactMouseEvent, widget: Widget) => {
       const inputs = dragInputsRef.current
       if (!inputs) return
-      const { pageId, pageWidgets, selectedWidgetIds, widgetAreaH } = inputs
+      const { pageId, pageWidgets, selectedWidgetIds, canvasW, widgetAreaH } = inputs
 
       // Gather all widgets to drag: if the widget is part of multi-selection, drag all.
       // Otherwise drag only this widget (and set it as sole selection).
@@ -127,7 +127,7 @@ export function useDragState({
             const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
             return {
               id: dw.id,
-              x: Math.max(0, Math.min(CANVAS_WIDTH - dw.w, snappedX)),
+              x: Math.max(0, Math.min(canvasW - dw.w, snappedX)),
               y: Math.max(0, Math.min(widgetAreaH - dw.h, snappedY)),
             }
           })
@@ -139,7 +139,7 @@ export function useDragState({
           const rawY = dw.startY + dy
           const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
           const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
-          const newX = Math.max(0, Math.min(CANVAS_WIDTH - dw.w, snappedX))
+          const newX = Math.max(0, Math.min(canvasW - dw.w, snappedX))
           const newY = Math.max(0, Math.min(widgetAreaH - dw.h, snappedY))
           moveWidget(drag.pageId, drag.primaryId, { x: newX, y: newY })
         }

@@ -173,4 +173,38 @@ describe('dashboard.store — history invariants', () => {
     useDashboardStore.getState().setTargetProfile('crowpanel-28')
     expect(useDashboardStore.getState().past.length).toBe(pastAfterSeed)
   })
+
+  it('setTargetProfile is undo-able and toggles isDirty', () => {
+    const before = useDashboardStore.getState().config?.targetProfile
+    useDashboardStore.getState().setTargetProfile('crowpanel-28')
+    expect(useDashboardStore.getState().config?.targetProfile).toBe('crowpanel-28')
+    expect(useDashboardStore.getState().isDirty).toBe(true)
+
+    useDashboardStore.getState().undo()
+    expect(useDashboardStore.getState().config?.targetProfile).toBe(before)
+  })
+
+  it('updateWidget clamps layout to the active target-screen profile bounds', () => {
+    // Default profile is 320×240 → widget area is 320 × (240 - topBar.height).
+    // Push a widget's origin past the right edge — store must clamp it back to
+    // the canvas, not silently keep an off-canvas value. Issue #548.
+    const pageId = useDashboardStore.getState().config?.defaultPageId ?? ''
+    const targetWidget = useDashboardStore
+      .getState()
+      .config?.pages.find((p) => p.id === pageId)?.widgets[0]
+    expect(targetWidget).toBeDefined()
+    if (!targetWidget) return
+
+    useDashboardStore.getState().updateWidget(pageId, targetWidget.id, {
+      layout: { ...targetWidget.layout, x: 1000, y: 1000 },
+    })
+    const after = useDashboardStore
+      .getState()
+      .config?.pages.find((p) => p.id === pageId)
+      ?.widgets.find((w) => w.id === targetWidget.id)
+    expect(after).toBeDefined()
+    if (!after) return
+    expect(after.layout.x).toBeLessThanOrEqual(320 - after.layout.w)
+    expect(after.layout.x).toBeGreaterThanOrEqual(0)
+  })
 })
