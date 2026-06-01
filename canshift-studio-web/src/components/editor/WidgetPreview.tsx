@@ -9,6 +9,7 @@ import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { MAXXECU_SIGNAL_UNITS } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
 import { ensureBlinkStyle } from './widgetPreview.styles'
+import { BarPreview } from './widget-previews/Bar'
 import { ButtonPreview } from './widget-previews/Button'
 import { GearPreview } from './widget-previews/Gear'
 import { GaugeArcPreview, type GaugeArcRendererProps } from './widget-previews/GaugeArc'
@@ -16,6 +17,9 @@ import {
   GaugeNumericPreview,
   type GaugeNumericRendererProps,
 } from './widget-previews/GaugeNumeric'
+import { ImagePreview } from './widget-previews/Image'
+import { TimerPreview } from './widget-previews/Timer'
+import { WarningPreview } from './widget-previews/Warning'
 import { isDangerState } from './widget-previews/gauge-math'
 
 // Built-in name → unit fallback table imported as a lean constant rather
@@ -109,18 +113,25 @@ const RENDERERS: RendererDispatch = {
       />
     )
   },
-  // Legacy widget types (bar / warning / timer / image) — renderers were
-  // dropped because no shipped config instantiates them. Existing configs
-  // that reference these types render as nothing; the picker no longer
-  // surfaces them either.
-  bar: () => null,
-  warning: () => null,
+  bar: (widget, ctx) => (
+    <BarPreview
+      widget={widget}
+      w={ctx.w}
+      h={ctx.h}
+      danger={ctx.danger}
+      testValue={ctx.testValue}
+      signalUnit={ctx.signalUnit}
+    />
+  ),
+  warning: (widget, ctx) => (
+    <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
+  ),
   button: (widget, ctx) => (
     <ButtonPreview widget={widget} w={ctx.w} h={ctx.h} active={ctx.buttonActive} />
   ),
   gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} />,
-  timer: () => null,
-  image: () => null,
+  timer: (widget, ctx) => <TimerPreview widget={widget} w={ctx.w} h={ctx.h} />,
+  image: (widget, ctx) => <ImagePreview widget={widget} w={ctx.w} h={ctx.h} />,
 }
 
 // ---------------------------------------------------------------------------
