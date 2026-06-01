@@ -46,16 +46,23 @@ export default defineConfig({
         // (which needs deterministic paths). Hash-free names let the embed
         // list live in `platformio.ini` and the HTTP route table in
         // `wifi_ap.cpp` stay 1:1 with what Vite emits.
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
+        //
+        // Output dir is `a/` (not `assets/`) so the on-device SPIFFS path
+        // `/w/a/<name>.<ext>` fits inside SPIFFS_OBJ_NAME_LEN (31 chars,
+        // including the leading slash + NUL). The previous `/web/assets/`
+        // prefix pushed `Orbitron-Black.woff2` and `Orbitron-Medium.woff2`
+        // past the limit and mkspiffs silently dropped every chunk after
+        // the first overflow (#1240).
+        entryFileNames: 'a/[name].js',
+        chunkFileNames: 'a/[name].js',
         assetFileNames: (assetInfo) => {
           // Fonts keep a stable name so the CSS @font-face URL matches the
           // embedded file path verbatim. Same applies to the index CSS.
           const name = assetInfo.name ?? 'asset'
           if (/\.(woff2?|ttf|otf|eot)$/i.test(name)) {
-            return 'assets/[name][extname]'
+            return 'a/[name][extname]'
           }
-          return 'assets/[name][extname]'
+          return 'a/[name][extname]'
         },
         manualChunks(id) {
           // React + router stay in a single vendor chunk: they're needed at
