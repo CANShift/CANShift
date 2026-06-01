@@ -9,7 +9,7 @@
 //   - The runner applies all migrations between the file version and current version
 //
 // Append new migrations to the `BUILTIN_MIGRATIONS` array below as the
-// schema evolves; the chain currently spans 1.0.0 → 1.19.0.
+// schema evolves; the chain currently spans 1.0.0 → 1.20.0.
 
 import { HEX_REGEX } from '../colors/hex.js'
 
@@ -96,6 +96,33 @@ function brightenHex(hex: string, delta = 0x33): string {
 // All migrations receive a deep clone of the input — they can mutate freely;
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.19.0 → 1.20.0: drop `hideWhenInvalid` from gauge and gear widget configs
+    // (issue #1243). The hide-when-invalid path made label-style widgets vanish
+    // when no CAN source supplied a value, which users mistook for a bug. The
+    // firmware always renders `0` for invalid signals instead, matching the
+    // Studio preview which never blanks. Migration strips the field if set;
+    // configs that already omitted it round-trip unchanged.
+    fromVersion: '1.19.0',
+    toVersion: '1.20.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.20.0' }
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+        const migratedWidgets = widgets.map((widget) => {
+          const cfg = widget.config as Record<string, unknown> | undefined
+          if (!cfg || !('hideWhenInvalid' in cfg)) return widget
+          const rest = { ...cfg }
+          delete rest.hideWhenInvalid
+          return { ...widget, config: rest }
+        })
+        return { ...page, widgets: migratedWidgets }
+      })
+      return { ...config, version: '1.20.0', pages: migratedPages }
+    },
+  },
   {
     // 1.18.0 → 1.19.0: BarWidgetConfig gains an optional `barOrientation` field
     // (#1232 flag from #1207 audit). Firmware (bar_widget.cpp) already
