@@ -1276,6 +1276,115 @@ describe('migrateConfig — 1.18.0 → 1.19.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.19.0 → 1.20.0: drop hideWhenInvalid from gauge / gear configs (issue #1243)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.19.0 → 1.20.0', () => {
+  it('strips hideWhenInvalid from a gauge widget when present', () => {
+    const config = {
+      version: '1.19.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'w1',
+              type: 'gauge',
+              signal: 'battery_volts',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FBC02D', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'numeric',
+                minValue: 10,
+                maxValue: 15,
+                dangerLevel: 11,
+                decimalPlaces: 1,
+                hideWhenInvalid: true,
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.20.0')
+    expect(applied).toEqual(['1.19.0 → 1.20.0'])
+    expect(out.version).toBe('1.20.0')
+    const widget = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!
+      .widgets[0]!
+    expect('hideWhenInvalid' in widget.config).toBe(false)
+    // Every other gauge field round-trips unchanged.
+    expect(widget.config.displayStyle).toBe('numeric')
+    expect(widget.config.minValue).toBe(10)
+    expect(widget.config.maxValue).toBe(15)
+    expect(widget.config.decimalPlaces).toBe(1)
+  })
+
+  it('strips hideWhenInvalid from a gear widget when present', () => {
+    const config = {
+      version: '1.19.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'g1',
+              type: 'gear',
+              signal: 'gear',
+              layout: { x: 0, y: 0, w: 112, h: 112 },
+              style: { primaryColor: '#FFFFFF', textColor: '#FFFFFF' },
+              config: { type: 'gear', decimalPlaces: 0, hideWhenInvalid: true },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.20.0')
+    const widget = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!
+      .widgets[0]!
+    expect('hideWhenInvalid' in widget.config).toBe(false)
+    expect(widget.config.type).toBe('gear')
+  })
+
+  it('is a no-op when no widget has hideWhenInvalid set', () => {
+    const config = {
+      version: '1.19.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'w1',
+              type: 'gauge',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'arc',
+                minValue: 0,
+                maxValue: 8000,
+                dangerLevel: 7000,
+                decimalPlaces: 0,
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.20.0')
+    expect(out.version).toBe('1.20.0')
+    expect((out.pages as unknown[])[0]).toEqual(config.pages[0])
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 
