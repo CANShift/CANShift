@@ -1,19 +1,18 @@
 // PageThumbnail.tsx — Mini read-only render of one dashboard page.
-// The page is rendered at full firmware resolution (320×240) into an
+// The page is rendered at its full target-profile resolution into an
 // absolutely-sized container, then a single CSS `transform: scale()` shrinks
 // it to thumbnail size. Avoids the broken-proportions problem where each
 // widget's font-size formula has `Math.max(N, ...)` floors that don't scale
 // down — the full-render-then-scale approach keeps every typographic ratio
 // identical to the live canvas.
 
-import type { PageConfig, TopBarConfig } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
+import type { PageConfig, ScreenProfile, TopBarConfig } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE, resolveScreenProfile } from '@tmbk/canshift-core'
+import { useDashboardStore } from '../stores/dashboard.store'
 import { CruiseControlPreview } from '../components/editor/CruiseControlPreview'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
 
 export const THUMB_W = 128 // px
-export const THUMB_H = Math.round((THUMB_W * 240) / 320) // 96 px
-const THUMB_SCALE = THUMB_W / 320
 
 export interface PageThumbnailProps {
   page: PageConfig
@@ -21,6 +20,13 @@ export interface PageThumbnailProps {
 }
 
 export function PageThumbnail({ page, topBar }: PageThumbnailProps) {
+  const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
+  // The active target screen profile drives the thumbnail aspect ratio so
+  // every thumbnail matches what the live canvas would render (issue #548).
+  // Undefined falls back to the default catalog entry (`crowpanel-28`).
+  const profile: ScreenProfile = resolveScreenProfile(targetProfileId)
+  const thumbH = Math.round((THUMB_W * profile.height) / profile.width)
+  const thumbScale = THUMB_W / profile.width
   const fullBarH = page.showTopBar ? topBar.height : 0
   const isCruiseTemplate = page.template === 'cruise_control'
 
@@ -28,7 +34,7 @@ export function PageThumbnail({ page, topBar }: PageThumbnailProps) {
     <div
       style={{
         width: THUMB_W,
-        height: THUMB_H,
+        height: thumbH,
         background: page.backgroundColor,
         overflow: 'hidden',
         position: 'relative',
@@ -38,13 +44,13 @@ export function PageThumbnail({ page, topBar }: PageThumbnailProps) {
     >
       <div
         style={{
-          width: 320,
-          height: 240,
+          width: profile.width,
+          height: profile.height,
           position: 'absolute',
           top: 0,
           left: 0,
           background: page.backgroundColor,
-          transform: `scale(${String(THUMB_SCALE)})`,
+          transform: `scale(${String(thumbScale)})`,
           transformOrigin: 'top left',
         }}
       >
@@ -71,8 +77,8 @@ export function PageThumbnail({ page, topBar }: PageThumbnailProps) {
         {isCruiseTemplate ? (
           <CruiseControlPreview
             scale={1}
-            canvasW={320}
-            contentH={240 - fullBarH}
+            canvasW={profile.width}
+            contentH={profile.height - fullBarH}
             palette={page.palette ?? DEFAULT_PAGE_PALETTE}
           />
         ) : (

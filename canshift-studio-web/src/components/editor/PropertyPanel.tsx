@@ -6,8 +6,12 @@
 // signal binding, button colors), and the dispatch to the right widget
 // editor (#697).
 
-import type { Widget, WidgetType } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
+import type { ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
+import {
+  DEFAULT_PAGE_PALETTE,
+  DEFAULT_SCREEN_PROFILE_ID,
+  SCREEN_PROFILES,
+} from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { IconTrash } from '../icons/Icon'
@@ -56,6 +60,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const removeWidget = useDashboardStore((s) => s.removeWidget)
   const addPage = useDashboardStore((s) => s.addPage)
   const removePage = useDashboardStore((s) => s.removePage)
+  const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
   const signals = useSignalStore((s) => s.signals)
 
   const toggleCruiseControlPage = (enabled: boolean) => {
@@ -88,8 +93,53 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       )
     }
+    // Active target screen profile — falls back to the default catalog entry
+    // (320×240) for legacy dashboards that predate `targetProfile`. Issue #548.
+    const activeProfileId: ScreenProfileId = config.targetProfile ?? DEFAULT_SCREEN_PROFILE_ID
     return (
       <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
+        {/* Target screen profile picker — drives the editor canvas dimensions
+            and travels with the dashboard config (issue #548). The catalog
+            ships a single entry today; new boards (#17 / #18) extend
+            SCREEN_PROFILES and surface here automatically. */}
+        <div
+          style={{
+            fontSize: 10,
+            color: PANEL_LABEL,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: 6,
+          }}
+        >
+          Target screen
+        </div>
+        <select
+          aria-label="Target screen profile"
+          value={activeProfileId}
+          onChange={(e) => {
+            setTargetProfile(e.target.value as ScreenProfileId)
+          }}
+          style={{
+            width: '100%',
+            background: '#111111',
+            border: '1px solid #333333',
+            borderRadius: 3,
+            color: 'hsl(var(--text))',
+            fontSize: 11,
+            padding: '4px 6px',
+          }}
+        >
+          {SCREEN_PROFILES.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.name} — {String(profile.width)}×{String(profile.height)}
+            </option>
+          ))}
+        </select>
+        <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 4, marginBottom: 4 }}>
+          Drives the editor canvas size. Widgets are not auto-scaled — out-of-bounds
+          widgets are flagged on the canvas so you can adjust manually.
+        </div>
+
         {/* Cruise control — opt-in checkbox that ensures a `cruise_control`
             templated page exists at the end of the dashboard. The firmware
             draws this page procedurally (ignores widgets[]); studio just

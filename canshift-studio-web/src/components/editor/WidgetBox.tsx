@@ -15,6 +15,12 @@ export interface WidgetBoxProps {
   isSelected: boolean
   isInMultiSelection: boolean
   isOverlapping: boolean
+  /**
+   * Widget extends past the active target-screen profile bounds (issue #548).
+   * Surfaces a distinct orange chrome (vs. red overlap) so users see the
+   * out-of-bounds state and fix it manually — studio never auto-clamps.
+   */
+  isOverflowing: boolean
   revLimiting: boolean
   onSelect: (id: string) => void
   onShiftSelect: (id: string) => void
@@ -32,6 +38,7 @@ export const WidgetBox = memo(function WidgetBox({
   isSelected,
   isInMultiSelection,
   isOverlapping,
+  isOverflowing,
   revLimiting,
   onSelect,
   onShiftSelect,
@@ -40,20 +47,26 @@ export const WidgetBox = memo(function WidgetBox({
   const { layout } = widget
   // Default to black so the widget container blends with the (black) page
   // background — firmware widgets render directly on the page bg with no
-  // per-widget surface tint (issue #143). Selection / overlap states tint the
-  // bg so the highlight is visible even when the underlying widget chrome is
-  // dark; the outline ring below adds an unmistakable selection edge.
+  // per-widget surface tint (issue #143). Selection / overlap / overflow states
+  // tint the bg so the highlight is visible even when the underlying widget
+  // chrome is dark; the outline ring below adds an unmistakable selection edge.
+  // Overlap (red) takes precedence over overflow (orange) — both are problems,
+  // but two widgets stacked is harder to spot at a glance than a single widget
+  // bleeding off the canvas edge.
   const bgColor = isOverlapping
     ? '#2A0000'
-    : isSelected
-      ? '#1B2030'
-      : isInMultiSelection
-        ? '#0A0A1E'
-        : '#000000'
+    : isOverflowing
+      ? '#2A1A00'
+      : isSelected
+        ? '#1B2030'
+        : isInMultiSelection
+          ? '#0A0A1E'
+          : '#000000'
 
   return (
     <div
       data-widget="true"
+      title={isOverflowing ? 'Widget extends past the target screen bounds' : undefined}
       onMouseDown={(e) => {
         e.stopPropagation()
         if (e.shiftKey) {
@@ -82,9 +95,11 @@ export const WidgetBox = memo(function WidgetBox({
         outlineOffset: isSelected ? -2 : undefined,
         boxShadow: isOverlapping
           ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'
-          : isInMultiSelection
-            ? '0 0 0 1px #AAAAFF22, 0 0 4px #AAAAFF44'
-            : undefined,
+          : isOverflowing
+            ? '0 0 0 1px #FF880044, 0 0 8px #FF880088'
+            : isInMultiSelection
+              ? '0 0 0 1px #AAAAFF22, 0 0 4px #AAAAFF44'
+              : undefined,
       }}
     >
       <WidgetPreview

@@ -13,6 +13,7 @@ import type {
   Widget,
   WidgetLayout,
 } from '@tmbk/canshift-core'
+import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
 import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
 import { DAY_THEME_PRESET } from '../constants/theme'
@@ -31,8 +32,20 @@ const HISTORY_LIMIT = 50
 
 export type AlignDirection = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v'
 
-function widgetAreaHeight(page: PageConfig, topBarHeight: number): number {
-  return page.showTopBar ? 240 - topBarHeight : 240
+// Canvas dimensions are driven by the dashboard's `targetProfile` (issue #548).
+// `undefined` falls back to the default profile (`crowpanel-28`, 320×240) via
+// `resolveScreenProfile`, so legacy configs keep their previous canvas bounds.
+function canvasDims(config: DashboardConfig): { w: number; h: number } {
+  const profile = resolveScreenProfile(config.targetProfile)
+  return { w: profile.width, h: profile.height }
+}
+
+function widgetAreaHeight(
+  page: PageConfig,
+  topBarHeight: number,
+  canvasH: number
+): number {
+  return page.showTopBar ? canvasH - topBarHeight : canvasH
 }
 
 function toLayoutRect(w: Widget): { id: string; x: number; y: number; w: number; h: number } {
@@ -577,7 +590,8 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
 
-        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         const others = page.widgets.map(toLayoutRect)
         const nw = widget.layout.w
         const nh = widget.layout.h
@@ -600,7 +614,7 @@ export const useDashboardStore = create<DashboardState>()(
           for (const cand of adjacent) {
             const sx = snapToGrid(cand.x)
             const sy = snapToGrid(cand.y)
-            if (sx < 0 || sy < 0 || sx + nw > 320 || sy + nh > canvasH) continue
+            if (sx < 0 || sy < 0 || sx + nw > canvasW || sy + nh > canvasH) continue
             const rect = { id: '__new__', x: sx, y: sy, w: nw, h: nh }
             if (!others.some((o) => rectsOverlap(rect, o))) {
               pos = { x: sx, y: sy }
@@ -610,7 +624,7 @@ export const useDashboardStore = create<DashboardState>()(
         }
 
         // Fallback: scan for first free position
-        pos ??= autoPlace({ w: nw, h: nh }, others, 320, canvasH)
+        pos ??= autoPlace({ w: nw, h: nh }, others, canvasW, canvasH)
 
         if (pos) {
           widget.layout.x = pos.x
@@ -639,7 +653,8 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
 
-        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         const others = page.widgets.map(toLayoutRect)
         const newIds: string[] = []
 
@@ -656,14 +671,14 @@ export const useDashboardStore = create<DashboardState>()(
             const sx = snapToGrid(cand.x)
             const sy = snapToGrid(cand.y)
             if (sx < 0 || sy < 0) continue
-            if (sx + src.layout.w > 320 || sy + src.layout.h > canvasH) continue
+            if (sx + src.layout.w > canvasW || sy + src.layout.h > canvasH) continue
             const rect = { id: '__new__', x: sx, y: sy, w: src.layout.w, h: src.layout.h }
             if (!others.some((o) => rectsOverlap(rect, o))) {
               pos = { x: sx, y: sy }
               break
             }
           }
-          pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, 320, canvasH)
+          pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, canvasW, canvasH)
           if (!pos) continue
 
           const clone: Widget = {
@@ -718,10 +733,11 @@ export const useDashboardStore = create<DashboardState>()(
         if (!existing) return
         const merged = { ...existing, ...patch }
         // Clamp position so the widget never overflows the canvas after resize.
-        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         merged.layout = {
           ...merged.layout,
-          x: Math.max(0, Math.min(merged.layout.x, 320 - merged.layout.w)),
+          x: Math.max(0, Math.min(merged.layout.x, canvasW - merged.layout.w)),
           y: Math.max(0, Math.min(merged.layout.y, canvasH - merged.layout.h)),
         }
         page.widgets[widgetIdx] = merged
@@ -792,7 +808,8 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
 
-        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         const others = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)
         const moved = toLayoutRect(widget)
 
@@ -801,7 +818,7 @@ export const useDashboardStore = create<DashboardState>()(
           widget.layout.x,
           widget.layout.y,
           others,
-          320,
+          canvasW,
           canvasH
         )
 
@@ -822,7 +839,7 @@ export const useDashboardStore = create<DashboardState>()(
           const fallback = autoPlace(
             { w: widget.layout.w, h: widget.layout.h },
             finalOthers,
-            320,
+            canvasW,
             canvasH
           )
           if (fallback) {
@@ -953,7 +970,8 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
 
-        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         const others = page.widgets.map(toLayoutRect)
         const newIds: string[] = []
 
@@ -968,14 +986,15 @@ export const useDashboardStore = create<DashboardState>()(
           for (const cand of candidates) {
             const sx = Math.round(cand.x)
             const sy = Math.round(cand.y)
-            if (sx < 0 || sy < 0 || sx + src.layout.w > 320 || sy + src.layout.h > canvasH) continue
+            if (sx < 0 || sy < 0 || sx + src.layout.w > canvasW || sy + src.layout.h > canvasH)
+              continue
             const rect = { id: '__new__', x: sx, y: sy, w: src.layout.w, h: src.layout.h }
             if (!others.some((o) => rectsOverlap(rect, o))) {
               pos = { x: sx, y: sy }
               break
             }
           }
-          pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, 320, canvasH)
+          pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, canvasW, canvasH)
           if (!pos) continue
 
           const clone: Widget = {
@@ -1026,9 +1045,10 @@ export const useDashboardStore = create<DashboardState>()(
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
-        const canvasH = widgetAreaHeight(page, s.config.topBar.height)
+        const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
+        const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         for (const w of targets) {
-          w.layout.x = Math.max(0, Math.min(w.layout.x + dx, 320 - w.layout.w))
+          w.layout.x = Math.max(0, Math.min(w.layout.x + dx, canvasW - w.layout.w))
           w.layout.y = Math.max(0, Math.min(w.layout.y + dy, canvasH - w.layout.h))
         }
         s.isDirty = true

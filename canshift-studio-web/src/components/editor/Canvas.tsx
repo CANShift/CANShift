@@ -78,7 +78,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     h: number
   } | null>(null)
 
-  const widgetAreaH = 240 - topBar.height
+  // Widget area height is the canvas height minus the top bar. The canvas
+  // height comes from the active target screen profile (issue #548) so the
+  // bounds shrink/expand as the user picks a different panel.
+  const widgetAreaH = screenProfile.height - topBar.height
 
   // Ref-based snapshot of values consumed inside drag callbacks. Keeps the
   // memoized handlers (handleDragStart, selection helpers) ref-stable across
@@ -88,12 +91,14 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     pageId: page.id,
     pageWidgets: page.widgets,
     selectedWidgetIds,
+    canvasW: screenProfile.width,
     widgetAreaH,
   })
   dragInputsRef.current = {
     pageId: page.id,
     pageWidgets: page.widgets,
     selectedWidgetIds,
+    canvasW: screenProfile.width,
     widgetAreaH,
   }
 
@@ -174,6 +179,22 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
     return ids
   })()
+
+  // Compute which widget ids extend past the active screen profile bounds —
+  // warn, do NOT auto-clamp (issue #548). A dashboard authored on a 320×240
+  // profile and re-opened against a smaller catalog entry will surface every
+  // off-canvas widget so the author can fix the layout manually.
+  const overflowingIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const w of page.widgets) {
+      const right = w.layout.x + w.layout.w
+      const bottom = w.layout.y + w.layout.h
+      if (right > screenProfile.width || bottom > widgetAreaH) {
+        ids.add(w.id)
+      }
+    }
+    return ids
+  }, [page.widgets, screenProfile.width, widgetAreaH])
 
   // Keyboard handler — registered in the CAPTURE phase so it fires before the
   // EditorRoute bubble handler (which deletes pages on Delete/Backspace without
@@ -395,6 +416,27 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           </span>
         )}
 
+        {/* Overflow indicator — surfaces target-profile bounds violations
+            (issue #548) without auto-clamping the layout. Hidden when no widget
+            extends past the canvas. */}
+        {overflowingIds.size > 0 && (
+          <span
+            title="One or more widgets extend past the target screen bounds. Resize or move them to fit."
+            style={{
+              padding: '2px 6px',
+              fontSize: 9,
+              fontWeight: 600,
+              background: '#2A1A00',
+              border: '1px solid #663300',
+              borderRadius: 3,
+              color: '#FFAA44',
+              letterSpacing: '0.05em',
+            }}
+          >
+            ⚠ {String(overflowingIds.size)} OFF-CANVAS
+          </span>
+        )}
+
         <div style={{ flex: 1 }} />
 
         {/* Multi-selection badge */}
@@ -565,6 +607,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                         selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
                       }
                       isOverlapping={overlappingIds.has(widget.id)}
+                      isOverflowing={overflowingIds.has(widget.id)}
                       revLimiting={revLimiting}
                       onSelect={selectWidget}
                       onShiftSelect={toggleWidgetSelection}

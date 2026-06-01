@@ -9,7 +9,7 @@
 //   - The runner applies all migrations between the file version and current version
 //
 // Append new migrations to the `BUILTIN_MIGRATIONS` array below as the
-// schema evolves; the chain currently spans 1.0.0 → 1.15.0 (issue #850).
+// schema evolves; the chain currently spans 1.0.0 → 1.18.0.
 
 import { HEX_REGEX } from '../colors/hex.js'
 
@@ -96,6 +96,17 @@ function brightenHex(hex: string, delta = 0x33): string {
 // All migrations receive a deep clone of the input — they can mutate freely;
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.17.0 → 1.18.0: DashboardConfig gains an optional `targetProfile` field
+    // (issue #548). No data transformation needed — existing configs leave the
+    // field undefined and the read side (`resolveScreenProfile`) resolves
+    // `undefined` to `DEFAULT_SCREEN_PROFILE_ID` ("crowpanel-28", 320×240).
+    // This preserves byte-for-byte rendering of every pre-1.18 dashboard while
+    // letting newly authored configs declare the panel they target.
+    fromVersion: '1.17.0',
+    toVersion: '1.18.0',
+    migrate: (config) => ({ ...config, version: '1.18.0' }),
+  },
   {
     // 1.16.0 → 1.17.0: collapse gauge / bar thresholds to a single field
     // (issue #965). The two-zone palette (#954) only needs one cut-off, so

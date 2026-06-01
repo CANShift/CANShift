@@ -1158,6 +1158,46 @@ describe('migrateConfig — 1.16.0 → 1.17.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.17.0 → 1.18.0: add optional targetProfile (issue #548) — no-op transform
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.17.0 → 1.18.0', () => {
+  it('bumps the version without touching existing fields', () => {
+    const config = {
+      version: '1.17.0',
+      name: 'Demo',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 16, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+      pages: [{ id: 'p1', backgroundColor: '#000000', showTopBar: true, widgets: [] }],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.18.0')
+    expect(applied).toEqual(['1.17.0 → 1.18.0'])
+    expect(out.version).toBe('1.18.0')
+    // Every other top-level field round-trips byte-for-byte.
+    expect(out.name).toBe('Demo')
+    expect(out.defaultPageId).toBe('p1')
+    expect(out.revLimitRpm).toBe(7000)
+    expect(out.topBar).toEqual(config.topBar)
+    expect(out.pages).toEqual(config.pages)
+    // The new optional field is intentionally NOT seeded — `resolveScreenProfile`
+    // turns `undefined` into the default profile at the read side so old configs
+    // re-serialize without growing an explicit field.
+    expect('targetProfile' in out).toBe(false)
+  })
+
+  it('preserves an explicitly set targetProfile', () => {
+    const config = {
+      version: '1.17.0',
+      pages: [],
+      targetProfile: 'crowpanel-28',
+    }
+    const { config: out } = migrateConfig(config, '1.18.0')
+    expect(out.targetProfile).toBe('crowpanel-28')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 
