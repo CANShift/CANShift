@@ -180,7 +180,7 @@ lv_obj_t *LabelWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     }
 
     if (hasUserLabel) {
-        WidgetLabelOverlay::apply(cont, cfg.label.label, cfg.label.labelPosition, textRgb);
+        WidgetLabelOverlay::apply(cont, cfg.label.label, CfgLabelPos::TOP_LEFT, textRgb);
     }
 
     // Unit label — small grey, sits to the right of the value (frac) in the
