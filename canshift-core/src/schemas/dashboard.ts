@@ -86,7 +86,6 @@ export const GaugeWidgetConfigSchema = z
     decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
     prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
     suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
-    hideWhenInvalid: z.boolean().optional(),
     showNeedle: z.boolean().optional(),
     arcFillStyle: GaugeArcFillStyleSchema.optional(),
     revFlash: z.boolean().optional(),
@@ -282,7 +281,6 @@ export const GearWidgetConfigSchema = z
     decimalPlaces: z.literal(0),
     prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
     suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
-    hideWhenInvalid: z.boolean().optional(),
     label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
   })
