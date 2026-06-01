@@ -64,6 +64,13 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
   // Arc centered in widget; r chosen so arc never overflows (cy ± r stays inside h)
   const r = Math.min(w * 0.45, h * 0.46)
   const cy = h * 0.5 // true vertical center
+  // Issue #1241: value text and unit sit above/below the geometric centre so
+  // the bottom-anchored widget label doesn't collide with the numeric readout
+  // on dense 160×112 dashboards. Mirrors the constants in
+  // canshift-firmware/src/ui/widgets/gauge_widget.cpp (kValueRowYOffset = -8,
+  // kUnitLabelYOffset = +16). Firmware is canonical for widget visuals.
+  const valueYOffset = -8
+  const unitYOffset = 16
   // Thicker stroke than the original 16 % — matches firmware kBgWidth=14 on
   // the smaller h=80 dashboard arcs so the trace stays readable.
   const strokeW = Math.max(5, r * 0.24)
@@ -123,7 +130,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
           subordinate to the headline number. */}
       <text
         x={cx}
-        y={cy}
+        y={cy + valueYOffset}
         textAnchor="middle"
         dominantBaseline="middle"
         fill={textValueColor}
@@ -149,7 +156,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       {signalUnit !== '' && (
         <text
           x={cx}
-          y={cy + r * 0.32}
+          y={cy + unitYOffset}
           textAnchor="middle"
           dominantBaseline="middle"
           fill={st.textColor + '77'}
