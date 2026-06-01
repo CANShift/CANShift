@@ -505,8 +505,7 @@ static void autoStartWifiApIfPersisted() {
     const size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
     if (largest < WIFI_AP_MIN_HEAP_BYTES) {
         LOG_WARN("BOOT", "WiFi AP auto-start skipped — largest=%u below %u",
-                 static_cast<unsigned>(largest),
-                 static_cast<unsigned>(WIFI_AP_MIN_HEAP_BYTES));
+                 static_cast<unsigned>(largest), static_cast<unsigned>(WIFI_AP_MIN_HEAP_BYTES));
         return;
     }
     if (WifiAp::isAutoStartEnabled()) {

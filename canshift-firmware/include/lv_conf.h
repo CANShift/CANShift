@@ -28,7 +28,11 @@
         #define LV_COLOR_16_SWAP 0
 
         /* Enable features to use with LV_COLOR_DEPTH = 32 */
-        #define LV_COLOR_SCREEN_TRANSP 0
+        // Enabled so lv_img_set_zoom (#1247 icon scaling) and any future
+        // transform_zoom on labels can render correctly. With this flag 0,
+        // LVGL refuses to create the alpha layer required by transformed
+        // objects → icons silently invisible.
+        #define LV_COLOR_SCREEN_TRANSP 1
 
         /* Images pixels with this color will not be drawn. */
         #define LV_COLOR_CHROMA_KEY lv_color_hex(0x00ff00)
