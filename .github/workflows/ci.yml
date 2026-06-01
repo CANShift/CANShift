@@ -99,6 +99,43 @@ jobs:
           awk -v p="$PCT" 'BEGIN { exit (p > 98) ? 1 : 0 }' \
             || (echo "::error::flash ${PCT}% > 98% (#305 / #158)" && exit 1)
 
+      # SPIFFS round-trip gate (#1240). mkspiffs silently drops files whose
+      # on-device path exceeds SPIFFS_OBJ_NAME_LEN (31 chars including NUL);
+      # when that happened in production the WiFi AP shipped a half-empty
+      # bundle and every browser request 404'd. This step extracts the
+      # produced image and fails the build if the file count diverges from
+      # the source manifest in data/.
+      - name: buildfs (crowpanel_28)
+        run: pio run -e crowpanel_28 -t buildfs
+
+      - name: verify spiffs round-trip
+        run: |
+          MKSPIFFS=$(find ~/.platformio/packages/tool-mkspiffs -name 'mkspiffs_espressif32_arduino' | head -1)
+          if [ -z "$MKSPIFFS" ]; then
+            echo "::error::mkspiffs binary not found"
+            exit 1
+          fi
+          IMG=.pio/build/crowpanel_28/spiffs.bin
+          if [ ! -f "$IMG" ]; then
+            echo "::error::spiffs.bin not produced by buildfs"
+            exit 1
+          fi
+          EXTRACT=$(mktemp -d)
+          "$MKSPIFFS" -u "$EXTRACT" "$IMG" > /dev/null
+          SRC_COUNT=$(find data -type f | wc -l | tr -d ' ')
+          IMG_COUNT=$(find "$EXTRACT" -type f | wc -l | tr -d ' ')
+          echo "spiffs source files: $SRC_COUNT"
+          echo "spiffs image files:  $IMG_COUNT"
+          if [ "$SRC_COUNT" != "$IMG_COUNT" ]; then
+            echo "::error::spiffs round-trip mismatch — $SRC_COUNT source / $IMG_COUNT in image (#1240)"
+            echo "::group::diff"
+            (cd data && find . -type f | sort) > /tmp/src.list
+            (cd "$EXTRACT" && find . -type f | sort) > /tmp/img.list
+            diff /tmp/src.list /tmp/img.list || true
+            echo "::endgroup::"
+            exit 1
+          fi
+
   mobile-ios:
     name: mobile — iOS native build
     runs-on: macos-latest
