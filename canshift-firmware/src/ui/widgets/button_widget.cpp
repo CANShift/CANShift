@@ -190,10 +190,11 @@ void applyButtonVisual(lv_obj_t *btn, const ButtonTag &tag, const ButtonVisual &
     lv_obj_set_style_bg_opa(btn, v.bgOpa, LV_PART_MAIN);
     lv_obj_set_style_border_color(btn, lv_color_hex(v.borderColor), LV_PART_MAIN);
     lv_obj_set_style_border_width(btn, BUTTON_BORDER_WIDTH, LV_PART_MAIN);
-    if (tag.iconImg) {
-        lv_obj_set_style_img_recolor(tag.iconImg, lv_color_hex(v.textColor), 0);
-        lv_obj_set_style_img_recolor_opa(tag.iconImg, BUTTON_ICON_OPA, 0);
-    }
+    // Don't re-apply icon recolor on state change — the redraw triggers an
+    // lv_img reload that falls back to the LVGL "No data" placeholder when
+    // it can't allocate the recolor layer (a known pressed-state regression
+    // surfaced after #1247 / #1252). Initial recolor is set once at create.
+    (void)tag;
     if (tag.labelObj) {
         lv_obj_set_style_text_color(tag.labelObj, lv_color_hex(v.textColor), 0);
     }
@@ -362,6 +363,14 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
     {
         const ButtonVisual idle = computeButtonVisual(cfg, p, false);
         applyButtonVisual(btn, *tag, idle);
+        // Apply the icon recolor ONCE here, at create time. Re-applying on
+        // every state change (in applyButtonVisual) triggered an lv_img
+        // redecode that fell back to the LVGL "No data" placeholder when
+        // memory was tight (2026-06-02). Single static recolor avoids it.
+        if (tag->iconImg) {
+            lv_obj_set_style_img_recolor(tag->iconImg, lv_color_hex(idle.textColor), 0);
+            lv_obj_set_style_img_recolor_opa(tag->iconImg, BUTTON_ICON_OPA, 0);
+        }
         if (!p.isToggle) {
             // Momentary buttons still flash via LVGL's PRESSED state so the
             // user gets immediate feedback on tap. Toggle buttons drive the

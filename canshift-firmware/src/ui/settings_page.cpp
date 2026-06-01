@@ -454,16 +454,12 @@ void buildResetTouchCalRow(int16_t &y, int16_t rowW) {
     y += BTN_H;
 }
 
-// Actions row — Reset (1/3) + Save (2/3) laid out side-by-side at the
-// end of the scrollable content.
+// Actions row — both SAVE and RESET removed per user request
+// (2026-06-02). Writes are immediate via per-control change handlers, and the
+// destructive RESET path is no longer needed in the settings UI surface.
 void buildActionsRow(int16_t y, int16_t rowW) {
-    // Settings writes are immediate (nvsSave runs inside each toggle/value
-    // change handler), so the SAVE button is redundant. RESET stays as the
-    // explicit "wipe to defaults" action — user-confirmed 2026-06-01.
-    lv_obj_t *resetBtn =
-        makeFullButton(s_panel, "RESET", CLR_BTN_BG, CLR_BTN_BDR, CLR_MUTED, onReset);
-    lv_obj_set_pos(resetBtn, PAD_H, y);
-    lv_obj_set_size(resetBtn, rowW, BTN_H);
+    (void)y;
+    (void)rowW;
 }
 
 } // namespace

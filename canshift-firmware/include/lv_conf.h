@@ -28,11 +28,11 @@
         #define LV_COLOR_16_SWAP 0
 
         /* Enable features to use with LV_COLOR_DEPTH = 32 */
-        // Enabled so lv_img_set_zoom (#1247 icon scaling) and any future
-        // transform_zoom on labels can render correctly. With this flag 0,
-        // LVGL refuses to create the alpha layer required by transformed
-        // objects → icons silently invisible.
-        #define LV_COLOR_SCREEN_TRANSP 1
+        // Was 1 to support lv_img_set_zoom, but we dropped the zoom path
+        // entirely — let icons render at native size. Reverting to 0
+        // recovers the heap headroom that newlib fopen needs during
+        // FontManager::init (otherwise _fopen_r aborts during boot).
+        #define LV_COLOR_SCREEN_TRANSP 0
 
         /* Images pixels with this color will not be drawn. */
         #define LV_COLOR_CHROMA_KEY lv_color_hex(0x00ff00)
@@ -61,12 +61,11 @@
        is provisioned so failed-load pool churn is minimal. If the page build
        OOMs return, the next lever is disabling APP_BLE_ENABLED on WROOM. */
     #ifndef LV_MEM_SIZE
-        // Bumped 72→88 KB to absorb the orbitron_medium_8/10 SPIFFS loads
-        // added in #1250. The two extra .bin fonts allocate ~12 KB from the
-        // LVGL pool at boot; without the bump,
-        // lv_obj_allocate_spec_attr trips OOM during widget creation
-        // (2026-06-01 boot-loop incident).
-        #define LV_MEM_SIZE (88U * 1024U)
+        // 88 KB was needed when both new SPIFFS fonts (orbitron_medium_8 + 10)
+        // loaded — too tight on system heap, newlib fopen aborted during
+        // FontManager::init. With medium_8 load skipped (font_manager.cpp),
+        // 80 KB now fits both LVGL widget allocs and the fopen heap headroom.
+        #define LV_MEM_SIZE (80U * 1024U)
     #endif
 
         /* Set an address for the memory pool instead of allocating it as a global array.
