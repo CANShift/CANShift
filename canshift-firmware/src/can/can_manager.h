@@ -23,8 +23,20 @@ namespace CanManager {
 
 /**
      * Initialize TWAI hardware driver. Pinned to core 0 via a dedicated task.
+     * Callers MUST inspect the return value: when init fails the manager
+     * stays in a "TWAI not installed" state and `tick()` / `sendFrame()`
+     * no-op (issue #1224).
      */
-esp_err_t initHardware();
+[[nodiscard]] esp_err_t initHardware();
+
+/**
+     * True once `initHardware()` (or one of its background retries) has
+     * successfully installed and started the TWAI driver. Callers that
+     * speak CAN — broadcast handlers, polling schedulers — should check
+     * this and short-circuit when the bus is unavailable so the boot can
+     * proceed in degraded mode (issue #1224).
+     */
+bool isAvailable();
 
 /**
      * Main CAN receive and dispatch loop.

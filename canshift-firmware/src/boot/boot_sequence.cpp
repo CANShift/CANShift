@@ -449,8 +449,22 @@ static void initRuntimeServices() {
 
 static void initCanHardwarePhase() {
     LOG_INFO("BOOT", "Initializing CAN/TWAI...");
-    CanManager::initHardware();
-    updateSplash("CAN ready", 78);
+    // Issue #1224 — capture the result. On failure the boot proceeds in
+    // degraded mode (UI + USB stay up for config edits); CanManager keeps
+    // s_twaiInstalled=false and gates tick()/sendFrame() so OBD-II poller
+    // and CAN broadcast handlers stay disarmed until a background retry
+    // succeeds.
+    const esp_err_t err = CanManager::initHardware();
+    if (err == ESP_OK) {
+        updateSplash("CAN ready", 78);
+    } else {
+        LOG_ERROR("BOOT", "CAN/TWAI init failed: %s — continuing in degraded mode",
+                  esp_err_to_name(err));
+        char msg[52];
+        snprintf(msg, sizeof(msg), "CAN unavailable: %s", esp_err_to_name(err));
+        ErrorStore::push(ERROR_SRC_CAN, "BOOT_INIT", msg);
+        updateSplash("CAN unavailable", 78);
+    }
 }
 
 static void initUsbCommPhase() {

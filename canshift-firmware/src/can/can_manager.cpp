@@ -285,7 +285,19 @@ void CanManager::tick() {
     Obd2Poller::tick(nowMs);
 }
 
+bool CanManager::isAvailable() {
+    return s_twaiInstalled;
+}
+
 bool CanManager::sendFrame(uint32_t id, const uint8_t *data, uint8_t len, bool extended) {
+    // Degraded-boot guard (issue #1224). When the TWAI driver never came up
+    // (or is mid-retry) twai_transmit would return ESP_ERR_INVALID_STATE on
+    // every call — short-circuit so click handlers do not light up the
+    // error bar on each button press.
+    if (!s_twaiInstalled) {
+        return false;
+    }
+
     // CAN classic frames carry at most 8 payload bytes — silently clamp to
     // protect callers from transmitting garbage past the end of `data`.
     // kCanFrameMaxBytes lives in app_config.h (F-LO-3).
