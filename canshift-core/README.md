@@ -127,7 +127,7 @@ lands.
 
 **Version**
 
-- `CURRENT_SCHEMA_VERSION` — currently `1.17.0`
+- `CURRENT_SCHEMA_VERSION` — currently `1.18.0`
 - `PRODUCT_NAME` — `'CANShift'`
 
 ---
@@ -137,7 +137,7 @@ lands.
 Every config file carries a `"version"` field at the root:
 
 ```json
-{ "version": "1.17.0", ... }
+{ "version": "1.18.0", ... }
 ```
 
 `CURRENT_SCHEMA_VERSION` (`src/index.ts`) is the version this code reads and writes. It follows semver:
