@@ -57,7 +57,12 @@
        is provisioned so failed-load pool churn is minimal. If the page build
        OOMs return, the next lever is disabling APP_BLE_ENABLED on WROOM. */
     #ifndef LV_MEM_SIZE
-        #define LV_MEM_SIZE (72U * 1024U)
+        // Bumped 72→88 KB to absorb the orbitron_medium_8/10 SPIFFS loads
+        // added in #1250. The two extra .bin fonts allocate ~12 KB from the
+        // LVGL pool at boot; without the bump,
+        // lv_obj_allocate_spec_attr trips OOM during widget creation
+        // (2026-06-01 boot-loop incident).
+        #define LV_MEM_SIZE (88U * 1024U)
     #endif
 
         /* Set an address for the memory pool instead of allocating it as a global array.
