@@ -127,7 +127,7 @@ lands.
 
 **Version**
 
-- `CURRENT_SCHEMA_VERSION` — currently `1.18.0`
+- `CURRENT_SCHEMA_VERSION` — currently `1.19.0`
 - `PRODUCT_NAME` — `'CANShift'`
 
 ---
@@ -137,7 +137,7 @@ lands.
 Every config file carries a `"version"` field at the root:
 
 ```json
-{ "version": "1.18.0", ... }
+{ "version": "1.19.0", ... }
 ```
 
 `CURRENT_SCHEMA_VERSION` (`src/index.ts`) is the version this code reads and writes. It follows semver:
@@ -176,6 +176,8 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 | 1.14.0 → 1.15.0 | `WidgetStyle` gains optional `respectDayMode` field (#191); undefined treated as `true` to preserve the v0.7.0 day/night text-colour contract — no data transform |
 | 1.15.0 → 1.16.0 | `GaugeWidgetConfig` and `BarWidgetConfig` gain optional `iconName` field (#954); existing configs leave the field undefined and keep the legacy `style.primaryColor` path — no data transform |
 | 1.16.0 → 1.17.0 | Gauge / bar `warningLevel` dropped (#965); `dangerLevel` becomes the sole threshold above which a gauge turns red — `warningLevel` is discarded, `dangerLevel` preserved as-is |
+| 1.17.0 → 1.18.0 | `DashboardConfig` gains optional `targetProfile` (#548); undefined resolves to `DEFAULT_SCREEN_PROFILE_ID` ("crowpanel-28") — no data transform |
+| 1.18.0 → 1.19.0 | `BarWidgetConfig` gains optional `barOrientation` (#1232 flag); undefined keeps the legacy horizontal layout — no data transform |
 
 `migrateConfig` deep-clones the input before any migration runs (#282) so individual migrations can mutate freely without aliasing the caller's object.
 

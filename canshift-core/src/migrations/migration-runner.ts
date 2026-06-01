@@ -9,7 +9,7 @@
 //   - The runner applies all migrations between the file version and current version
 //
 // Append new migrations to the `BUILTIN_MIGRATIONS` array below as the
-// schema evolves; the chain currently spans 1.0.0 → 1.18.0.
+// schema evolves; the chain currently spans 1.0.0 → 1.19.0.
 
 import { HEX_REGEX } from '../colors/hex.js'
 
@@ -96,6 +96,17 @@ function brightenHex(hex: string, delta = 0x33): string {
 // All migrations receive a deep clone of the input — they can mutate freely;
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
+  {
+    // 1.18.0 → 1.19.0: BarWidgetConfig gains an optional `barOrientation` field
+    // (#1232 flag from #1207 audit). Firmware (bar_widget.cpp) already
+    // implements both horizontal and vertical render branches; the direct
+    // `type:"bar"` schema previously locked the field out, forcing Studio's
+    // bar preview to be horizontal-only. Existing configs leave the field
+    // undefined and continue to render horizontally.
+    fromVersion: '1.18.0',
+    toVersion: '1.19.0',
+    migrate: (config) => ({ ...config, version: '1.19.0' }),
+  },
   {
     // 1.17.0 → 1.18.0: DashboardConfig gains an optional `targetProfile` field
     // (issue #548). No data transformation needed — existing configs leave the
