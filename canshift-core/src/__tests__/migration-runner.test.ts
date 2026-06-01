@@ -1198,6 +1198,84 @@ describe('migrateConfig — 1.17.0 → 1.18.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.18.0 → 1.19.0: add optional bar.barOrientation (#1232 flag) — no-op transform
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.18.0 → 1.19.0', () => {
+  it('bumps the version without touching existing fields', () => {
+    const config = {
+      version: '1.18.0',
+      name: 'Demo',
+      defaultPageId: 'p1',
+      revLimitRpm: 7000,
+      topBar: { height: 16, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'w1',
+              type: 'bar',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: { type: 'bar', decimalPlaces: 0, minValue: 0, maxValue: 100 },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.19.0')
+    expect(applied).toEqual(['1.18.0 → 1.19.0'])
+    expect(out.version).toBe('1.19.0')
+    // Every other top-level field round-trips byte-for-byte.
+    expect(out.name).toBe('Demo')
+    expect(out.defaultPageId).toBe('p1')
+    expect(out.pages).toEqual(config.pages)
+    // The new optional field is intentionally NOT seeded — undefined means
+    // horizontal (the only orientation pre-1.19 configs could express).
+    const firstWidget = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!
+      .widgets[0]!
+    expect('barOrientation' in firstWidget.config).toBe(false)
+  })
+
+  it('preserves an explicitly set barOrientation', () => {
+    const config = {
+      version: '1.18.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'w1',
+              type: 'bar',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 56, h: 160 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'bar',
+                decimalPlaces: 0,
+                minValue: 0,
+                maxValue: 100,
+                barOrientation: 'vertical',
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.19.0')
+    const firstWidget = (out.pages as { widgets: { config: { barOrientation?: string } }[] }[])[0]!
+      .widgets[0]!
+    expect(firstWidget.config.barOrientation).toBe('vertical')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 

@@ -266,6 +266,10 @@ export const BarWidgetConfigSchema = z
     // Single threshold (issue #965) — see GaugeWidgetConfigSchema.
     dangerLevel: z.number().optional(),
     alertThreshold: z.number().optional(),
+    // Orientation — firmware (bar_widget.cpp) already implements both branches,
+    // but the schema previously locked the direct `type:"bar"` path to
+    // horizontal (#1232 flag). Undefined defaults to horizontal on both ends.
+    barOrientation: BarOrientationSchema.optional(),
     // Sensor identifier — drives the semantic two-zone palette (issue #954).
     // Same semantics as on `GaugeWidgetConfig`.
     iconName: SensorIconNameSchema.optional(),

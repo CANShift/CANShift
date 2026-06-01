@@ -20,6 +20,7 @@ import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shar
 import { GaugeFields } from './property-panel/gauge-fields'
 import { ButtonFields } from './property-panel/button-fields'
 import { GearFields } from './property-panel/gear-fields'
+import { BarFields } from './property-panel/bar-fields'
 
 // Chrome shades that do not yet map to a core design token. Kept as named
 // constants so the planned token promotion (audit S-H-5, umbrella #1015) only
@@ -42,8 +43,9 @@ const CONFIG_FIELDS: Partial<
   gauge: GaugeFields,
   button: ButtonFields,
   gear: GearFields,
-  // bar / warning / timer / image widget renderers were dropped (no config
-  // instantiates them today). Their schema entries still parse so legacy
+  bar: BarFields,
+  // warning / timer / image widget renderers stay schema-only — no config
+  // instantiates them today. Their schema entries still parse so legacy
   // configs round-trip, but no property panel is offered.
 }
 
