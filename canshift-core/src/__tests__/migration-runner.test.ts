@@ -1169,9 +1169,7 @@ describe('migrateConfig — 1.17.0 → 1.18.0', () => {
       defaultPageId: 'p1',
       revLimitRpm: 7000,
       topBar: { height: 16, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
-      pages: [
-        { id: 'p1', backgroundColor: '#000000', showTopBar: true, widgets: [] },
-      ],
+      pages: [{ id: 'p1', backgroundColor: '#000000', showTopBar: true, widgets: [] }],
     }
     const { config: out, applied } = migrateConfig(config, '1.18.0')
     expect(applied).toEqual(['1.17.0 → 1.18.0'])
