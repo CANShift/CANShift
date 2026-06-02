@@ -14,6 +14,7 @@ jest.mock('../services/releases.service', () => ({
   },
 }))
 
+// eslint-disable-next-line @typescript-eslint/unbound-method
 const mockedGetAll = releasesService.getAllReleases as jest.MockedFunction<
   typeof releasesService.getAllReleases
 >
