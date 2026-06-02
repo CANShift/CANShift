@@ -148,8 +148,9 @@ describe('ota-releases.store', () => {
     })
 
     it('coalesces concurrent calls — second caller awaits the first', async () => {
-      let resolveFirst: (v: Awaited<ReturnType<typeof releasesService.getAllReleases>>) => void =
-        () => undefined
+      let resolveFirst: (
+        v: Awaited<ReturnType<typeof releasesService.getAllReleases>>
+      ) => void = () => undefined
       mockedGetAll.mockReturnValueOnce(
         new Promise((r) => {
           resolveFirst = r
