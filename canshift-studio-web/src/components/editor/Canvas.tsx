@@ -153,8 +153,14 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
   }, [revLimiting])
 
-  // Compute which widget ids currently overlap — shown with red border as feedback
-  const overlappingIds = (() => {
+  // Compute which widget ids currently overlap — shown with red border as
+  // feedback. Memoized on `page.widgets` so the O(n²) pair scan doesn't rerun
+  // on every render (Canvas rerenders at 60 fps during multi-widget drag —
+  // see `moveWidgets` in dashboard.store.ts which intentionally bypasses
+  // history for the drag path). Immer keeps `page.widgets` referentially
+  // stable across unrelated store updates, so unrelated rerenders are
+  // deduped too. Mirrors the `overflowingIds` block below.
+  const overlappingIds = useMemo(() => {
     const ids = new Set<string>()
     const rects = page.widgets.map((w) => ({
       id: w.id,
@@ -178,7 +184,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       }
     }
     return ids
-  })()
+  }, [page.widgets])
 
   // Compute which widget ids extend past the active screen profile bounds —
   // warn, do NOT auto-clamp (issue #548). A dashboard authored on a 320×240
