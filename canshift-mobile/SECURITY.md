@@ -3,8 +3,11 @@
 This document tracks the npm audit findings for `canshift-mobile` and their
 classification. Re-triage quarterly or after every Expo SDK upgrade.
 
-Last audit: 2026-05-08 (Expo SDK 52, jest-expo 52).
-Findings: 17 (4 low, 13 high). All transitive dev-tooling.
+Last audit: 2026-06-02 (Expo SDK 52, jest-expo 52).
+Findings: 16 (3 low, 13 high). All transitive dev-tooling. The previously
+moderate `ws` finding from the 2026-05-08 sweep was cleared by a non-breaking
+`npm audit fix` that lifted `ws` past the affected window; the table below is
+the residual after that pass.
 
 ## Classification key
 
@@ -18,7 +21,7 @@ Findings: 17 (4 low, 13 high). All transitive dev-tooling.
 
 | # | Source package | Advisory | Severity | Class | Rationale |
 |---|----------------|----------|----------|-------|-----------|
-| 1 | `tar` (<6.2.2) | [GHSA-r35j-x4hp-vfh3](https://github.com/advisories/GHSA-r35j-x4hp-vfh3) and 5 sibling tar advisories — hardlink/symlink path traversal during archive extraction | high | build-tooling | Pulled in by `@expo/cli` and `cacache` during `expo prebuild` / `npm install`. Never bundled into the iOS/Android app. Trigger requires extracting an attacker-crafted tarball, which only happens against npm registry traffic on a dev machine. Fix path is Expo SDK 55 (semver-major) — deferred to the planned SDK upgrade. The `preinstall` guard in `package.json` already blocks the breaking tar v7 fork. |
+| 1 | `tar` (<=7.5.10 — we are on 6.x) | [GHSA-34x7-hfp2-rc4v](https://github.com/advisories/GHSA-34x7-hfp2-rc4v), [GHSA-8qq5-rm4j-mr97](https://github.com/advisories/GHSA-8qq5-rm4j-mr97), [GHSA-83g3-92jg-28cx](https://github.com/advisories/GHSA-83g3-92jg-28cx), [GHSA-qffp-2rhf-9h96](https://github.com/advisories/GHSA-qffp-2rhf-9h96), [GHSA-9ppj-qmqm-q256](https://github.com/advisories/GHSA-9ppj-qmqm-q256), [GHSA-r6q2-hw4h-h46w](https://github.com/advisories/GHSA-r6q2-hw4h-h46w) — hardlink/symlink path traversal + APFS Unicode race during archive extraction | high | build-tooling | Pulled in by `@expo/cli` and `cacache` during `expo prebuild` / `npm install`. Never bundled into the iOS/Android app. Trigger requires extracting an attacker-crafted tarball, which only happens against npm registry traffic on a dev machine or CI runner. Fix path is Expo SDK 55+ (semver-major) — deferred to the planned SDK upgrade (#436). The `preinstall` guard in `package.json` already blocks the breaking tar v7 fork. Re-triaged 2026-06-02 against the open `#882` audit. |
 | 2 | `@xmldom/xmldom` (<0.8.12) | [GHSA-wh4c-j3r5-mjhp](https://github.com/advisories/GHSA-wh4c-j3r5-mjhp), [GHSA-2v35-w6hq-6mfw](https://github.com/advisories/GHSA-2v35-w6hq-6mfw), and 3 siblings — XML injection / uncontrolled recursion during XML serialization | high | build-tooling | Pulled in by `@expo/plist` to read/write iOS plist files during `expo prebuild`. We control the input plists (our own `app.json` projection). Trigger requires the build to parse attacker-crafted XML. Fix path is Expo SDK 55 (semver-major). The `preinstall` guard blocks the breaking xmldom v0.9 fork. |
 | 3 | `cacache` | inherits `tar` | high | build-tooling | Same as #1 — used by `@expo/cli` only at install/build time. |
 | 4 | `@expo/cli` | inherits #1 + #2 + #3 | high | build-tooling | Build-time CLI. Not in the app bundle. |
