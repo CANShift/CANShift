@@ -8,14 +8,19 @@
 // Keep in sync with the firmware copy in
 // `canshift-firmware/src/ui/widget_label.h` (`displayLabelForSignal`).
 
+// The unit drops the metric type for us — `OIL` + `80°C` reads as oil temp,
+// `OIL` + `3.5 bar` as oil pressure. Same with `FUEL` / `MAP`. Keeping the
+// label short makes the value the focal point of every widget.
 const CURATED_LABELS: Record<string, string> = {
   rpm: 'RPM',
   speed_kph: 'SPEED',
   coolant_temp_c: 'COOLANT',
-  oil_temp_c: 'OIL TEMP',
-  oil_press_bar: 'OIL PRESS',
+  oil_temp_c: 'OIL',
+  oil_press_bar: 'OIL',
+  fuel_press_bar: 'FUEL',
+  map_kpa: 'MAP',
   boost_bar: 'BOOST',
-  throttle_pos: 'THROTTLE',
+  throttle_pos: 'TPS',
   gear: 'GEAR',
   afr_1: 'AFR',
   lambda_1: 'LAMBDA',

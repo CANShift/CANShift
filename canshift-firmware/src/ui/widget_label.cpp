@@ -49,6 +49,10 @@ void drawHeader(lv_obj_t *cont, const char *text, HeaderPos pos) {
 
 } // namespace
 
+// Curated short labels — must mirror the Studio dictionary in
+// canshift-studio-web/src/utils/signalLabels.ts. The unit shown alongside
+// the value disambiguates metric type (OIL + 80°C = temp, OIL + 3.5 bar =
+// press), so labels stay short and the value remains the focal point.
 const char *displayLabelForSignal(const char *signalId) {
     if (!signalId || signalId[0] == '\0')
         return nullptr;
@@ -59,13 +63,17 @@ const char *displayLabelForSignal(const char *signalId) {
     if (strcmp(signalId, "coolant_temp_c") == 0)
         return "COOLANT";
     if (strcmp(signalId, "oil_temp_c") == 0)
-        return "OIL TEMP";
+        return "OIL";
     if (strcmp(signalId, "oil_press_bar") == 0)
-        return "OIL PRESS";
+        return "OIL";
+    if (strcmp(signalId, "fuel_press_bar") == 0)
+        return "FUEL";
+    if (strcmp(signalId, "map_kpa") == 0)
+        return "MAP";
     if (strcmp(signalId, "boost_bar") == 0)
         return "BOOST";
     if (strcmp(signalId, "throttle_pos") == 0)
-        return "THROTTLE";
+        return "TPS";
     if (strcmp(signalId, "gear") == 0)
         return "GEAR";
     if (strcmp(signalId, "afr_1") == 0)
