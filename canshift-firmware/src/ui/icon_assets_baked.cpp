@@ -47,14 +47,13 @@ static const uint8_t icon_day_data[] = {
 };
 
 const lv_img_dsc_t icon_day_dsc = {
-    .header =
-        {
-            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-            .always_zero = 0,
-            .reserved = 0,
-            .w = 12,
-            .h = 12,
-        },
+    .header = {
+        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+        .always_zero = 0,
+        .reserved = 0,
+        .w = 12,
+        .h = 12,
+    },
     .data_size = sizeof(icon_day_data),
     .data = icon_day_data,
 };
@@ -90,19 +89,18 @@ static const uint8_t icon_night_data[] = {
 };
 
 const lv_img_dsc_t icon_night_dsc = {
-    .header =
-        {
-            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-            .always_zero = 0,
-            .reserved = 0,
-            .w = 12,
-            .h = 12,
-        },
+    .header = {
+        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+        .always_zero = 0,
+        .reserved = 0,
+        .w = 12,
+        .h = 12,
+    },
     .data_size = sizeof(icon_night_data),
     .data = icon_night_data,
 };
 // sensor_map_icon.bin — 32x32 TRUE_COLOR_ALPHA, 3072 bytes
-static const uint8_t sensor_map_icon_data[] = {
+static const uint8_t map_icon_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -297,20 +295,19 @@ static const uint8_t sensor_map_icon_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-const lv_img_dsc_t sensor_map_icon_dsc = {
-    .header =
-        {
-            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-            .always_zero = 0,
-            .reserved = 0,
-            .w = 32,
-            .h = 32,
-        },
-    .data_size = sizeof(sensor_map_icon_data),
-    .data = sensor_map_icon_data,
+const lv_img_dsc_t map_icon_dsc = {
+    .header = {
+        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+        .always_zero = 0,
+        .reserved = 0,
+        .w = 32,
+        .h = 32,
+    },
+    .data_size = sizeof(map_icon_data),
+    .data = map_icon_data,
 };
 // sensor_launch.bin — 32x32 TRUE_COLOR_ALPHA, 3072 bytes
-static const uint8_t sensor_launch_data[] = {
+static const uint8_t launch_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -505,20 +502,19 @@ static const uint8_t sensor_launch_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-const lv_img_dsc_t sensor_launch_dsc = {
-    .header =
-        {
-            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-            .always_zero = 0,
-            .reserved = 0,
-            .w = 32,
-            .h = 32,
-        },
-    .data_size = sizeof(sensor_launch_data),
-    .data = sensor_launch_data,
+const lv_img_dsc_t launch_dsc = {
+    .header = {
+        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+        .always_zero = 0,
+        .reserved = 0,
+        .w = 32,
+        .h = 32,
+    },
+    .data_size = sizeof(launch_data),
+    .data = launch_data,
 };
 // sensor_flame.bin — 32x32 TRUE_COLOR_ALPHA, 3072 bytes
-static const uint8_t sensor_flame_data[] = {
+static const uint8_t flame_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -713,17 +709,16 @@ static const uint8_t sensor_flame_data[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-const lv_img_dsc_t sensor_flame_dsc = {
-    .header =
-        {
-            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-            .always_zero = 0,
-            .reserved = 0,
-            .w = 32,
-            .h = 32,
-        },
-    .data_size = sizeof(sensor_flame_data),
-    .data = sensor_flame_data,
+const lv_img_dsc_t flame_dsc = {
+    .header = {
+        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+        .always_zero = 0,
+        .reserved = 0,
+        .w = 32,
+        .h = 32,
+    },
+    .data_size = sizeof(flame_data),
+    .data = flame_data,
 };
 
 namespace {
@@ -735,9 +730,9 @@ struct Entry {
 constexpr Entry kBakedIcons[] = {
     {"icon_day", &icon_day_dsc},
     {"icon_night", &icon_night_dsc},
-    {"sensor_map_icon", &sensor_map_icon_dsc},
-    {"sensor_launch", &sensor_launch_dsc},
-    {"sensor_flame", &sensor_flame_dsc},
+    {"map_icon", &map_icon_dsc},
+    {"launch", &launch_dsc},
+    {"flame", &flame_dsc},
 };
 } // namespace
 

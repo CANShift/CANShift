@@ -23,13 +23,17 @@ from pathlib import Path
 
 LV_IMG_CF_TRUE_COLOR_ALPHA = 5
 
-# (output symbol stem, source .bin path under data/assets)
+# (lookup key passed by consumers, source .bin path under data/assets)
+#   - Theme icons use the `icon_day` / `icon_night` names directly from top_bar.cpp.
+#   - Button icons use the `SensorIconName` key from canshift-core
+#     (`map_icon`, `launch`, `flame`, ...). The C symbol stem mirrors the
+#     lookup key so the registry entry stays grep-friendly.
 BAKED_ICONS = [
     ("icon_day", "icon_day.bin"),
     ("icon_night", "icon_night.bin"),
-    ("sensor_map_icon", "sensor_map_icon.bin"),
-    ("sensor_launch", "sensor_launch.bin"),
-    ("sensor_flame", "sensor_flame.bin"),
+    ("map_icon", "sensor_map_icon.bin"),
+    ("launch", "sensor_launch.bin"),
+    ("flame", "sensor_flame.bin"),
 ]
 
 ROOT = Path(__file__).resolve().parent.parent
