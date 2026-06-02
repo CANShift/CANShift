@@ -1385,6 +1385,97 @@ describe('migrateConfig — 1.19.0 → 1.20.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.20.0 → 1.21.0: drop standalone bar widget (issue #1245)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.20.0 → 1.21.0', () => {
+  it('removes type:"bar" widgets from each page', () => {
+    const config = {
+      version: '1.20.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'b1',
+              type: 'bar',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: { type: 'bar', decimalPlaces: 0, minValue: 0, maxValue: 100 },
+            },
+            {
+              id: 'g1',
+              type: 'gauge',
+              signal: 'rpm',
+              layout: { x: 0, y: 60, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'arc',
+                minValue: 0,
+                maxValue: 8000,
+                dangerLevel: 7000,
+                decimalPlaces: 0,
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.21.0')
+    expect(applied).toEqual(['1.20.0 → 1.21.0'])
+    expect(out.version).toBe('1.21.0')
+    const widgets = (out.pages as { widgets: { id: string; type: string }[] }[])[0]!.widgets
+    expect(widgets).toHaveLength(1)
+    expect(widgets[0]!.id).toBe('g1')
+    expect(widgets[0]!.type).toBe('gauge')
+  })
+
+  it('is a no-op when no bar widget is present', () => {
+    const config = {
+      version: '1.20.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'g1',
+              type: 'gauge',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'arc',
+                minValue: 0,
+                maxValue: 8000,
+                dangerLevel: 7000,
+                decimalPlaces: 0,
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.21.0')
+    expect(out.version).toBe('1.21.0')
+    expect((out.pages as unknown[])[0]).toEqual(config.pages[0])
+  })
+
+  it('handles a config without pages', () => {
+    const config = { version: '1.20.0', name: 'no-pages' }
+    const { config: out, applied } = migrateConfig(config, '1.21.0')
+    expect(applied).toEqual(['1.20.0 → 1.21.0'])
+    expect(out.version).toBe('1.21.0')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 

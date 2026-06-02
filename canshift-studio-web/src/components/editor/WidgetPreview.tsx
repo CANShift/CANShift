@@ -9,7 +9,6 @@ import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { MAXXECU_SIGNAL_UNITS } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
 import { ensureBlinkStyle } from './widgetPreview.styles'
-import { BarPreview } from './widget-previews/Bar'
 import { ButtonPreview } from './widget-previews/Button'
 import { GearPreview } from './widget-previews/Gear'
 import { GaugeArcPreview, type GaugeArcRendererProps } from './widget-previews/GaugeArc'
@@ -96,11 +95,7 @@ const gaugeRendererByDisplay: Record<
 const RENDERERS: RendererDispatch = {
   gauge: (widget, ctx) => {
     if (widget.config.type !== 'gauge') return null
-    // Legacy configs with displayStyle='bar' (now removed) fall back to the
-    // numeric renderer so old dashboards still mount on a freshly-cleaned
-    // Studio. The schema enum already rejects new bar configs.
-    const style = widget.config.displayStyle === 'arc' ? 'arc' : 'numeric'
-    const Renderer = gaugeRendererByDisplay[style]
+    const Renderer = gaugeRendererByDisplay[widget.config.displayStyle]
     return (
       <Renderer
         widget={widget}
@@ -113,16 +108,6 @@ const RENDERERS: RendererDispatch = {
       />
     )
   },
-  bar: (widget, ctx) => (
-    <BarPreview
-      widget={widget}
-      w={ctx.w}
-      h={ctx.h}
-      danger={ctx.danger}
-      testValue={ctx.testValue}
-      signalUnit={ctx.signalUnit}
-    />
-  ),
   warning: (widget, ctx) => (
     <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
   ),
@@ -170,7 +155,7 @@ function useResolvedSignalUnit(widget: Widget): string {
   const signals = useSignalStore((s) => s.signals)
   const cfg = widget.config
   const configSuffix =
-    cfg.type === 'gauge' || cfg.type === 'bar' || cfg.type === 'timer'
+    cfg.type === 'gauge' || cfg.type === 'timer'
       ? ((cfg as { suffix?: string }).suffix ?? '')
       : ''
   if (configSuffix !== '') return configSuffix
