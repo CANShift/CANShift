@@ -47,13 +47,14 @@ static const uint8_t icon_day_data[] = {
 };
 
 const lv_img_dsc_t icon_day_dsc = {
-    .header = {
-        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-        .always_zero = 0,
-        .reserved = 0,
-        .w = 12,
-        .h = 12,
-    },
+    .header =
+        {
+            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+            .always_zero = 0,
+            .reserved = 0,
+            .w = 12,
+            .h = 12,
+        },
     .data_size = sizeof(icon_day_data),
     .data = icon_day_data,
 };
@@ -89,13 +90,14 @@ static const uint8_t icon_night_data[] = {
 };
 
 const lv_img_dsc_t icon_night_dsc = {
-    .header = {
-        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-        .always_zero = 0,
-        .reserved = 0,
-        .w = 12,
-        .h = 12,
-    },
+    .header =
+        {
+            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+            .always_zero = 0,
+            .reserved = 0,
+            .w = 12,
+            .h = 12,
+        },
     .data_size = sizeof(icon_night_data),
     .data = icon_night_data,
 };
@@ -296,13 +298,14 @@ static const uint8_t map_icon_data[] = {
 };
 
 const lv_img_dsc_t map_icon_dsc = {
-    .header = {
-        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-        .always_zero = 0,
-        .reserved = 0,
-        .w = 32,
-        .h = 32,
-    },
+    .header =
+        {
+            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+            .always_zero = 0,
+            .reserved = 0,
+            .w = 32,
+            .h = 32,
+        },
     .data_size = sizeof(map_icon_data),
     .data = map_icon_data,
 };
@@ -503,13 +506,14 @@ static const uint8_t launch_data[] = {
 };
 
 const lv_img_dsc_t launch_dsc = {
-    .header = {
-        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-        .always_zero = 0,
-        .reserved = 0,
-        .w = 32,
-        .h = 32,
-    },
+    .header =
+        {
+            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+            .always_zero = 0,
+            .reserved = 0,
+            .w = 32,
+            .h = 32,
+        },
     .data_size = sizeof(launch_data),
     .data = launch_data,
 };
@@ -710,13 +714,14 @@ static const uint8_t flame_data[] = {
 };
 
 const lv_img_dsc_t flame_dsc = {
-    .header = {
-        .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
-        .always_zero = 0,
-        .reserved = 0,
-        .w = 32,
-        .h = 32,
-    },
+    .header =
+        {
+            .cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
+            .always_zero = 0,
+            .reserved = 0,
+            .w = 32,
+            .h = 32,
+        },
     .data_size = sizeof(flame_data),
     .data = flame_data,
 };
@@ -728,11 +733,8 @@ struct Entry {
 };
 
 constexpr Entry kBakedIcons[] = {
-    {"icon_day", &icon_day_dsc},
-    {"icon_night", &icon_night_dsc},
-    {"map_icon", &map_icon_dsc},
-    {"launch", &launch_dsc},
-    {"flame", &flame_dsc},
+    {"icon_day", &icon_day_dsc}, {"icon_night", &icon_night_dsc}, {"map_icon", &map_icon_dsc},
+    {"launch", &launch_dsc},     {"flame", &flame_dsc},
 };
 } // namespace
 

@@ -17,7 +17,9 @@
 
 from __future__ import annotations
 
+import shutil
 import struct
+import subprocess
 import sys
 from pathlib import Path
 
@@ -141,6 +143,16 @@ def main() -> int:
     out.append("")
 
     OUT_FILE.write_text("\n".join(out))
+
+    # Run the project clang-format over the generated output so the CI
+    # `clang-format --dry-run -Werror` gate stays clean without anyone having
+    # to remember to re-format after regen. clang-format is a build-time
+    # tool on every contributor machine via brew/apt; only warn if missing.
+    if shutil.which("clang-format") is not None:
+        subprocess.run(["clang-format", "-i", str(OUT_FILE)], check=True)
+    else:
+        print("warning: clang-format not found on PATH — generated file left unformatted")
+
     total = sum((ASSETS_DIR / f).stat().st_size for _, f in BAKED_ICONS)
     print(f"wrote {OUT_FILE} ({len(BAKED_ICONS)} icons, {total} bytes of pixel payload)")
     return 0
