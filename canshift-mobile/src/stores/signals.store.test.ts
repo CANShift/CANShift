@@ -49,10 +49,20 @@ describe('useSignalsStore', () => {
     expect(state.values).toEqual({ r: 1500 })
   })
 
-  it('successive updates replace the cached payload entirely', () => {
+  it('successive updates MERGE into the cached payload (issue #1017 M-LO-3)', () => {
+    // Firmware ble_server.cpp filters out invalid signals per tick, so the
+    // payload mobile receives is partial. Replacing the entire cache on
+    // every tick would blank every reading that happens to be quiet for one
+    // sample. Merging keeps the last-known value alongside the live update.
     useSignalsStore.getState().update({ r: 1500, tps: 10 })
     useSignalsStore.getState().update({ r: 2000 })
-    expect(useSignalsStore.getState().values).toEqual({ r: 2000 })
+    expect(useSignalsStore.getState().values).toEqual({ r: 2000, tps: 10 })
+  })
+
+  it('update() lets a fresh value overwrite the previous reading for the same key', () => {
+    useSignalsStore.getState().update({ r: 1500 })
+    useSignalsStore.getState().update({ r: 2200 })
+    expect(useSignalsStore.getState().values).toEqual({ r: 2200 })
   })
 
   it('update() strips undefined entries before pushing to the ring buffer', () => {
