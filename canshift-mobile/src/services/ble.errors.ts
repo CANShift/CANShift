@@ -9,7 +9,8 @@
 // the `mapBleError` helper.
 
 import { BleErrorCode } from 'react-native-ble-plx'
-import { Platform } from 'react-native'
+
+import { currentPlatform } from '../lib/platform'
 
 // ---------------------------------------------------------------------------
 // Discriminated union
@@ -62,10 +63,6 @@ function writeFailureReason(err: unknown): string | undefined {
     return (err as { reason: string }).reason
   }
   return undefined
-}
-
-function currentPlatform(): 'ios' | 'android' {
-  return Platform.OS === 'android' ? 'android' : 'ios'
 }
 
 // ---------------------------------------------------------------------------

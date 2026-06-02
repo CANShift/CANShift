@@ -8,7 +8,7 @@ import {
   Subscription,
   type BleRestoredState,
 } from 'react-native-ble-plx'
-import { Platform } from 'react-native'
+import { currentPlatform } from '../lib/platform'
 import {
   BLE_SERVICE_UUID,
   BLE_CHAR_TELE,
@@ -116,9 +116,6 @@ function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
   })
 }
 
-function currentPlatform(): 'ios' | 'android' {
-  return Platform.OS === 'android' ? 'android' : 'ios'
-}
 
 // ---------------------------------------------------------------------------
 // BleService — owner-controlled lifecycle, dependency-injectable for tests.
