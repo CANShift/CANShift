@@ -21,13 +21,9 @@ import { Buffer } from 'buffer'
 import * as FileSystem from 'expo-file-system'
 import {
   ESP32_OTA_URL,
-  GITHUB_RELEASES_API,
-  GITHUB_RELEASES_PER_PAGE,
   OTA_UPLOAD_FIELD_NAME,
   OTA_UPLOAD_FILE_NAME,
   OTA_UPLOAD_MIME_TYPE,
-  RELEASE_MERGED_ASSET_SUFFIX,
-  RELEASE_OTA_ASSET_SUFFIX,
 } from '../constants/ota'
 import { OtaServiceError, type OtaError } from './ota.errors'
 import { appendHmacTrailer } from './ota-hmac'
@@ -68,22 +64,6 @@ export interface FirmwareRelease {
   sha256?: string | null
 }
 
-interface GitHubAsset {
-  name: string
-  browser_download_url: string
-  size: number
-  digest?: string | null
-}
-
-interface GitHubRelease {
-  tag_name: string
-  published_at: string
-  body: string
-  assets: GitHubAsset[]
-  draft: boolean
-  prerelease: boolean
-}
-
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -92,73 +72,13 @@ interface GitHubRelease {
  *  to fail loud rather than spinning forever on a dead connection. */
 const OTA_UPLOAD_TIMEOUT_MS = 5 * 60 * 1000
 
-/** SHA-256 expressed as `sha256:<64 lowercase hex chars>`. */
-const SHA256_DIGEST_RE = /^sha256:([a-f0-9]{64})$/
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Parse a GitHub asset `digest` field. Returns the lowercase hex digest if
- *  it's a SHA-256 we recognise, otherwise null. */
-function parseSha256Digest(digest: string | null | undefined): string | null {
-  if (digest == null) return null
-  const m = SHA256_DIGEST_RE.exec(digest)
-  return m ? (m[1] ?? null) : null
-}
-
 /** Throw a typed OTA error wrapped in `OtaServiceError`. */
 function fail(cause: OtaError): never {
   throw new OtaServiceError(cause)
-}
-
-/**
- * Pick the firmware-partition asset (`*-firmware.bin`) from a release. Skips
- * the merged factory image (`*-merged.bin`) and the SPIFFS image — those are
- * NOT valid OTA payloads and pushing them through `Update.write` would brick
- * the device. Returns `null` if no suitable asset is published.
- */
-function pickOtaAsset(assets: GitHubAsset[]): GitHubAsset | null {
-  return (
-    assets.find(
-      (a) =>
-        a.name.endsWith(RELEASE_OTA_ASSET_SUFFIX) && !a.name.endsWith(RELEASE_MERGED_ASSET_SUFFIX)
-    ) ?? null
-  )
-}
-
-// ---------------------------------------------------------------------------
-// GitHub release fetch
-// ---------------------------------------------------------------------------
-
-export async function fetchReleases(): Promise<FirmwareRelease[]> {
-  let response: Response
-  try {
-    response = await fetch(`${GITHUB_RELEASES_API}?per_page=${String(GITHUB_RELEASES_PER_PAGE)}`)
-  } catch {
-    fail({ kind: 'releases-fetch-failed' })
-  }
-  if (!response.ok) {
-    fail({ kind: 'releases-fetch-failed', status: response.status })
-  }
-
-  const data = (await response.json()) as GitHubRelease[]
-
-  return data
-    .filter((r) => !r.draft && !r.prerelease)
-    .map((r): FirmwareRelease | null => {
-      const asset = pickOtaAsset(r.assets)
-      if (!asset) return null
-      return {
-        version: r.tag_name.replace(/^v/, ''),
-        publishedAt: r.published_at,
-        notes: r.body,
-        downloadUrl: asset.browser_download_url,
-        sizeBytes: asset.size,
-        sha256: parseSha256Digest(asset.digest),
-      }
-    })
-    .filter((r): r is FirmwareRelease => r !== null)
 }
 
 // ---------------------------------------------------------------------------

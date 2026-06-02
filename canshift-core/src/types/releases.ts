@@ -18,6 +18,11 @@ export interface ReleaseAsset {
   sizeBytes: number
   /** Asset MIME type as reported by GitHub, when present. */
   contentType?: string
+  /** Raw asset digest from the GitHub API (e.g. `sha256:<64hex>`). Threaded
+   *  through so OTA flows can verify the binary without re-fetching the asset
+   *  metadata. Older releases that pre-date GitHub's asset-digest rollout
+   *  surface this as `null`. */
+  digest?: string | null
 }
 
 /** Lean view of a GitHub release surfaced to the studio/mobile UI. */

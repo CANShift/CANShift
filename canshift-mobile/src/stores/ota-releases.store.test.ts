@@ -1,28 +1,69 @@
 // ota-releases.store.test.ts — Coverage for the firmware-release store
-// from #905. Underlying OtaService is mocked so this is pure-logic.
+// from #905. The underlying ReleasesService.getAllReleases is mocked so
+// this stays pure-logic. Issue #1012 swapped the fetcher from
+// `OtaService.fetchReleases` to the shared service.
 
+import type { ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 import type { FirmwareRelease } from '../services/ota.service'
-import * as OtaService from '../services/ota.service'
+import { releasesService } from '../services/releases.service'
 import { loadOtaReleases, resetOtaReleasesStore, useOtaReleasesStore } from './ota-releases.store'
 
-jest.mock('../services/ota.service', () => ({
-  fetchReleases: jest.fn(),
+jest.mock('../services/releases.service', () => ({
+  releasesService: {
+    getAllReleases: jest.fn(),
+  },
 }))
 
-const mockedFetch = OtaService.fetchReleases as jest.MockedFunction<typeof OtaService.fetchReleases>
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const mockedGetAll = releasesService.getAllReleases as jest.MockedFunction<
+  typeof releasesService.getAllReleases
+>
 
-const release = (version: string): FirmwareRelease => ({
-  version,
-  publishedAt: '2026-01-01T00:00:00Z',
-  notes: '',
-  downloadUrl: 'https://x',
-  sizeBytes: 1,
-})
+function asset(name: string): ReleaseAsset {
+  return {
+    name,
+    downloadUrl: 'https://x',
+    sizeBytes: 1,
+  }
+}
+
+function releaseInfo(version: string, opts?: { assets?: ReleaseAsset[] }): ReleaseInfo {
+  return {
+    version,
+    tag: `v${version}`,
+    name: `Release v${version}`,
+    notes: '',
+    publishedAt: '2026-01-01T00:00:00Z',
+    prerelease: false,
+    htmlUrl: `https://github.com/x/y/releases/tag/v${version}`,
+    assets: opts?.assets ?? [asset(`canshift-${version}-firmware.bin`)],
+  }
+}
+
+function expectedFirmware(version: string): FirmwareRelease {
+  return {
+    version,
+    publishedAt: '2026-01-01T00:00:00Z',
+    notes: '',
+    downloadUrl: 'https://x',
+    sizeBytes: 1,
+    sha256: null,
+  }
+}
+
+function okResult(releases: ReleaseInfo[]) {
+  return {
+    ok: true as const,
+    releases,
+    fetchedAt: '2026-06-02T00:00:00Z',
+    fromCache: false,
+  }
+}
 
 describe('ota-releases.store', () => {
   beforeEach(() => {
     resetOtaReleasesStore()
-    mockedFetch.mockReset()
+    mockedGetAll.mockReset()
   })
 
   it('starts empty, not loading, no error', () => {
@@ -34,9 +75,8 @@ describe('ota-releases.store', () => {
   })
 
   describe('loadOtaReleases', () => {
-    it('flips loading during the call and lands the releases on success', async () => {
-      const list = [release('0.8.0'), release('0.8.1')]
-      mockedFetch.mockResolvedValueOnce(list)
+    it('flips loading during the call and lands the mapped releases on success', async () => {
+      mockedGetAll.mockResolvedValueOnce(okResult([releaseInfo('0.8.0'), releaseInfo('0.8.1')]))
 
       const promise = loadOtaReleases()
       expect(useOtaReleasesStore.getState().loading).toBe(true)
@@ -44,27 +84,75 @@ describe('ota-releases.store', () => {
       await promise
       const state = useOtaReleasesStore.getState()
       expect(state.loading).toBe(false)
-      expect(state.releases).toEqual(list)
+      expect(state.releases).toEqual([expectedFirmware('0.8.0'), expectedFirmware('0.8.1')])
       expect(state.error).toBeNull()
       expect(state.loadCount).toBe(1)
     })
 
+    it('drops releases that have no OTA-flashable asset', async () => {
+      mockedGetAll.mockResolvedValueOnce(
+        okResult([
+          releaseInfo('1.0.0', { assets: [asset('canshift-1.0.0-merged.bin')] }),
+          releaseInfo('1.0.1'),
+        ])
+      )
+      await loadOtaReleases()
+      const state = useOtaReleasesStore.getState()
+      expect(state.releases).toEqual([expectedFirmware('1.0.1')])
+    })
+
+    it('threads the SHA-256 digest from the asset when present', async () => {
+      const digest = 'a'.repeat(64)
+      mockedGetAll.mockResolvedValueOnce(
+        okResult([
+          releaseInfo('1.0.0', {
+            assets: [{ ...asset('canshift-1.0.0-firmware.bin'), digest: `sha256:${digest}` }],
+          }),
+        ])
+      )
+      await loadOtaReleases()
+      expect(useOtaReleasesStore.getState().releases[0]?.sha256).toBe(digest)
+    })
+
+    it('surfaces the failure message when the service returns ok=false', async () => {
+      mockedGetAll.mockResolvedValueOnce({
+        ok: false,
+        reason: 'offline',
+        message: 'network down',
+        fetchedAt: '2026-06-02T00:00:00Z',
+        cachedReleases: null,
+      })
+      await loadOtaReleases()
+      const state = useOtaReleasesStore.getState()
+      expect(state.loading).toBe(false)
+      expect(state.error).toBe('network down')
+      expect(state.releases).toEqual([])
+    })
+
     it('clears a previous error on a fresh load attempt', async () => {
-      mockedFetch.mockRejectedValueOnce(new Error('boom'))
+      mockedGetAll.mockResolvedValueOnce({
+        ok: false,
+        reason: 'offline',
+        message: 'boom',
+        fetchedAt: '2026-06-02T00:00:00Z',
+        cachedReleases: null,
+      })
       await loadOtaReleases()
       expect(useOtaReleasesStore.getState().error).toBe('boom')
 
-      mockedFetch.mockResolvedValueOnce([release('1.0.0')])
+      mockedGetAll.mockResolvedValueOnce(okResult([releaseInfo('1.0.0')]))
       await loadOtaReleases()
       const state = useOtaReleasesStore.getState()
       expect(state.error).toBeNull()
-      expect(state.releases).toEqual([release('1.0.0')])
+      expect(state.releases).toEqual([expectedFirmware('1.0.0')])
     })
 
     it('coalesces concurrent calls — second caller awaits the first', async () => {
-      let resolveFirst: (v: FirmwareRelease[]) => void = () => undefined
-      mockedFetch.mockReturnValueOnce(
-        new Promise<FirmwareRelease[]>((r) => {
+      let resolveFirst: (
+        v: Awaited<ReturnType<typeof releasesService.getAllReleases>>
+      ) => void = () => undefined
+      mockedGetAll.mockReturnValueOnce(
+        new Promise((r) => {
           resolveFirst = r
         })
       )
@@ -72,15 +160,15 @@ describe('ota-releases.store', () => {
       const first = loadOtaReleases()
       const second = loadOtaReleases()
       expect(useOtaReleasesStore.getState().loadCount).toBe(1)
-      expect(mockedFetch).toHaveBeenCalledTimes(1)
+      expect(mockedGetAll).toHaveBeenCalledTimes(1)
 
-      resolveFirst([release('1.0.0')])
+      resolveFirst(okResult([releaseInfo('1.0.0')]))
       await Promise.all([first, second])
-      expect(mockedFetch).toHaveBeenCalledTimes(1)
+      expect(mockedGetAll).toHaveBeenCalledTimes(1)
     })
 
-    it('captures the error message on failure', async () => {
-      mockedFetch.mockRejectedValueOnce(new Error('network down'))
+    it('captures the thrown error when the service rejects unexpectedly', async () => {
+      mockedGetAll.mockRejectedValueOnce(new Error('network down'))
       await loadOtaReleases()
       const state = useOtaReleasesStore.getState()
       expect(state.loading).toBe(false)
@@ -89,7 +177,7 @@ describe('ota-releases.store', () => {
     })
 
     it('falls back to a generic message when the rejection is not an Error', async () => {
-      mockedFetch.mockRejectedValueOnce('weird thing')
+      mockedGetAll.mockRejectedValueOnce('weird thing')
       await loadOtaReleases()
       expect(useOtaReleasesStore.getState().error).toBe('Failed to load releases')
     })
