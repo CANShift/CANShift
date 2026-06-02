@@ -97,6 +97,41 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.20.0 → 1.21.0: drop the standalone `bar` widget variant (issue #1245).
+    // Studio no longer exposes the bar widget in the palette and the design
+    // direction collapses the use case into `gauge`. Two effects:
+    //   - Any widget with `type:'bar'` is silently removed from the page —
+    //     there is no clean equivalent to auto-convert into, and keeping
+    //     orphaned variants would fail schema validation after the
+    //     BarWidgetConfig branch is dropped.
+    //   - The dead `barOrientation` field is stripped from gauge configs —
+    //     it only ever applied to the now-removed `displayStyle:'bar'` gauge
+    //     path. Configs that still carry the key would fail strict()
+    //     validation now that the field is dropped from GaugeWidgetConfig.
+    fromVersion: '1.20.0',
+    toVersion: '1.21.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.21.0' }
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+        const filtered = widgets
+          .filter((w) => w.type !== 'bar')
+          .map((widget) => {
+            if (widget.type !== 'gauge') return widget
+            const cfg = widget.config as Record<string, unknown> | undefined
+            if (!cfg || !('barOrientation' in cfg)) return widget
+            const rest = { ...cfg }
+            delete rest.barOrientation
+            return { ...widget, config: rest }
+          })
+        return { ...page, widgets: filtered }
+      })
+      return { ...config, version: '1.21.0', pages: migratedPages }
+    },
+  },
+  {
     // 1.19.0 → 1.20.0: drop `hideWhenInvalid` from gauge and gear widget configs
     // (issue #1243). The hide-when-invalid path made label-style widgets vanish
     // when no CAN source supplied a value, which users mistook for a bug. The

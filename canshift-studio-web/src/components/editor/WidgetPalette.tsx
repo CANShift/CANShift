@@ -17,9 +17,8 @@ const TILE_LABEL = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-
 const TILE_HOVER_BG = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
 const TILE_HOVER_BORDER = '#3A3A3A' // MIRROR: dim variant of --border (#333333)
 
-// 'bar' is not in the palette — it is a display style inside gauge
 // Palette only surfaces widget types still backed by a renderer + property
-// panel. bar / warning / timer / image were dropped along with their UIs.
+// panel. warning / timer / image were dropped along with their UIs.
 type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear'>
 
 interface PaletteItem {

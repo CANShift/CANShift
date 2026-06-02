@@ -80,23 +80,15 @@ export function effectiveValue(
 
 /**
  * True when the resolved value sits at or above the widget's `dangerLevel`.
- * Gauges always have a threshold; bars carry it optionally. Other widget
- * types never enter the danger-blink state — `WidgetPreviewImpl` reads this
- * to decide whether the value text / fill blinks.
+ * Only gauges carry a threshold today. Other widget types never enter the
+ * danger-blink state — `WidgetPreviewImpl` reads this to decide whether the
+ * value text / fill blinks.
  */
 export function isDangerState(widget: Widget, testValue: number | null | undefined): boolean {
   const cfg = widget.config
   if (cfg.type === 'gauge') {
     const { pct } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
     const dangerPct = thresholdPct(cfg.dangerLevel, cfg.minValue, cfg.maxValue)
-    return pct >= dangerPct
-  }
-  if (cfg.type === 'bar') {
-    if (cfg.dangerLevel === undefined) return false
-    const min = cfg.minValue ?? 0
-    const max = cfg.maxValue ?? 100
-    const { pct } = effectiveValue(testValue, min, max)
-    const dangerPct = thresholdPct(cfg.dangerLevel, min, max)
     return pct >= dangerPct
   }
   return false

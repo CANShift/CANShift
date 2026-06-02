@@ -22,7 +22,7 @@ import { HexColorSchema, SemVerSchema, WidgetLayoutSchema, WidgetStyleSchema } f
 import { ScreenProfileIdSchema } from './screen-profile.js'
 
 // ---------------------------------------------------------------------------
-// Label position — used by gauge and bar widgets
+// Label position — used by gauge widgets
 // ---------------------------------------------------------------------------
 
 export const WidgetLabelPositionSchema = z.enum([
@@ -70,7 +70,6 @@ export const SensorIconNameSchema = z.enum([
 
 export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc'])
 export const GaugeArcFillStyleSchema = z.enum(['zones', 'gradient'])
-const BarOrientationSchema = z.enum(['vertical', 'horizontal'])
 
 export const GaugeWidgetConfigSchema = z
   .object({
@@ -90,7 +89,6 @@ export const GaugeWidgetConfigSchema = z
     arcFillStyle: GaugeArcFillStyleSchema.optional(),
     revFlash: z.boolean().optional(),
     alertThreshold: z.number().optional(),
-    barOrientation: BarOrientationSchema.optional(),
     label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
     labelPosition: WidgetLabelPositionSchema.optional(),
     // Sensor identifier — drives the semantic two-zone palette (issue #954).
@@ -252,29 +250,6 @@ export const TimerWidgetConfigSchema = z
   })
   .strict()
 
-export const BarWidgetConfigSchema = z
-  .object({
-    type: z.literal('bar'),
-    decimalPlaces: z.number().int().min(DECIMAL_PLACES.MIN).max(DECIMAL_PLACES.MAX),
-    prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
-    suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
-    labelPosition: z.enum(['top-center', 'bottom-center']).optional(),
-    minValue: z.number().optional(),
-    maxValue: z.number().optional(),
-    // Single threshold (issue #965) — see GaugeWidgetConfigSchema.
-    dangerLevel: z.number().optional(),
-    alertThreshold: z.number().optional(),
-    // Orientation — firmware (bar_widget.cpp) already implements both branches,
-    // but the schema previously locked the direct `type:"bar"` path to
-    // horizontal (#1232 flag). Undefined defaults to horizontal on both ends.
-    barOrientation: BarOrientationSchema.optional(),
-    // Sensor identifier — drives the semantic two-zone palette (issue #954).
-    // Same semantics as on `GaugeWidgetConfig`.
-    iconName: SensorIconNameSchema.optional(),
-  })
-  .strict()
-
 export const GearWidgetConfigSchema = z
   .object({
     type: z.literal('gear'),
@@ -300,7 +275,6 @@ export const WidgetConfigSchema = z.discriminatedUnion('type', [
   WarningWidgetConfigSchema,
   ButtonWidgetConfigSchema,
   TimerWidgetConfigSchema,
-  BarWidgetConfigSchema,
   GearWidgetConfigSchema,
   ImageWidgetConfigSchema,
 ])
@@ -350,30 +324,6 @@ export const WidgetSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'gauge: dangerLevel must be in [minValue, maxValue]',
-          path: ['config', 'dangerLevel'],
-        })
-      }
-    } else if (cfg.type === 'bar') {
-      if (
-        cfg.minValue !== undefined &&
-        cfg.maxValue !== undefined &&
-        cfg.minValue >= cfg.maxValue
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'bar: minValue must be less than maxValue',
-          path: ['config', 'maxValue'],
-        })
-      }
-      if (
-        cfg.dangerLevel !== undefined &&
-        cfg.minValue !== undefined &&
-        cfg.maxValue !== undefined &&
-        (cfg.dangerLevel < cfg.minValue || cfg.dangerLevel > cfg.maxValue)
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'bar: dangerLevel must be in [minValue, maxValue]',
           path: ['config', 'dangerLevel'],
         })
       }
@@ -614,7 +564,6 @@ export type GaugeWidgetConfig = ExactOptional<z.infer<typeof GaugeWidgetConfigSc
 export type WarningWidgetConfig = ExactOptional<z.infer<typeof WarningWidgetConfigSchema>>
 export type ButtonWidgetConfig = ExactOptional<z.infer<typeof ButtonWidgetConfigSchema>>
 export type TimerWidgetConfig = ExactOptional<z.infer<typeof TimerWidgetConfigSchema>>
-export type BarWidgetConfig = ExactOptional<z.infer<typeof BarWidgetConfigSchema>>
 export type GearWidgetConfig = ExactOptional<z.infer<typeof GearWidgetConfigSchema>>
 export type ImageWidgetConfig = ExactOptional<z.infer<typeof ImageWidgetConfigSchema>>
 export type WidgetConfig =
@@ -622,7 +571,6 @@ export type WidgetConfig =
   | WarningWidgetConfig
   | ButtonWidgetConfig
   | TimerWidgetConfig
-  | BarWidgetConfig
   | GearWidgetConfig
   | ImageWidgetConfig
 // `Widget.config` MUST surface the public `WidgetConfig` union (with

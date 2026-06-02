@@ -20,7 +20,6 @@ import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shar
 import { GaugeFields } from './property-panel/gauge-fields'
 import { ButtonFields } from './property-panel/button-fields'
 import { GearFields } from './property-panel/gear-fields'
-import { BarFields } from './property-panel/bar-fields'
 
 // Chrome shades that do not yet map to a core design token. Kept as named
 // constants so the planned token promotion (audit S-H-5, umbrella #1015) only
@@ -43,7 +42,6 @@ const CONFIG_FIELDS: Partial<
   gauge: GaugeFields,
   button: ButtonFields,
   gear: GearFields,
-  bar: BarFields,
   // warning / timer / image widget renderers stay schema-only — no config
   // instantiates them today. Their schema entries still parse so legacy
   // configs round-trip, but no property panel is offered.
@@ -309,16 +307,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
               const signalDef = signals.find((s) => s.name === newSignal)
               const p: Partial<Widget> = { signal: newSignal }
               if (signalDef && widget.config.type === 'gauge') {
-                p.config = {
-                  ...widget.config,
-                  suffix: signalDef.unit,
-                  minValue: signalDef.min,
-                  maxValue: signalDef.max,
-                  ...(signalDef.dangerLevel !== undefined && {
-                    dangerLevel: signalDef.dangerLevel,
-                  }),
-                }
-              } else if (signalDef && widget.config.type === 'bar') {
                 p.config = {
                   ...widget.config,
                   suffix: signalDef.unit,
