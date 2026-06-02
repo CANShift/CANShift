@@ -55,6 +55,7 @@ interface GitHubAsset {
   browser_download_url: string
   size: number
   content_type?: string
+  digest?: string | null
 }
 
 interface GitHubRelease {
@@ -74,6 +75,7 @@ function isAsset(value: unknown): value is GitHubAsset {
   if (typeof a.browser_download_url !== 'string') return false
   if (typeof a.size !== 'number' || !Number.isFinite(a.size)) return false
   if (a.content_type !== undefined && typeof a.content_type !== 'string') return false
+  if (a.digest !== undefined && a.digest !== null && typeof a.digest !== 'string') return false
   return true
 }
 
@@ -95,20 +97,18 @@ function isRelease(value: unknown): value is GitHubRelease {
 // ---------------------------------------------------------------------------
 
 function toReleaseInfo(raw: GitHubRelease): ReleaseInfo {
-  const assets: ReleaseAsset[] = raw.assets.filter(isAsset).map((a) =>
-    a.content_type !== undefined
-      ? {
-          name: a.name,
-          downloadUrl: a.browser_download_url,
-          sizeBytes: a.size,
-          contentType: a.content_type,
-        }
-      : {
-          name: a.name,
-          downloadUrl: a.browser_download_url,
-          sizeBytes: a.size,
-        }
-  )
+  const assets: ReleaseAsset[] = raw.assets.filter(isAsset).map((a) => {
+    const base = {
+      name: a.name,
+      downloadUrl: a.browser_download_url,
+      sizeBytes: a.size,
+    }
+    return {
+      ...base,
+      ...(a.content_type !== undefined ? { contentType: a.content_type } : {}),
+      ...(a.digest !== undefined ? { digest: a.digest } : {}),
+    }
+  })
   return {
     version: raw.tag_name.replace(/^v/, ''),
     tag: raw.tag_name,
@@ -320,12 +320,40 @@ function pickLatest(releases: readonly GitHubRelease[]): {
 // Public service
 // ---------------------------------------------------------------------------
 
+/**
+ * Outcome of `ReleasesService.getAllReleases()` — consumed by the OTA picker
+ * (`ota-releases.store`) which needs every published release, not just the
+ * latest stable + prerelease pair. Same discriminated shape as
+ * `LatestReleaseResult` so the UI can keep one error-handling path; kept
+ * mobile-local because no studio screen consumes it.
+ */
+export type AllReleasesResult =
+  | { ok: true; releases: ReleaseInfo[]; fetchedAt: string; fromCache: boolean }
+  | {
+      ok: false
+      reason: 'offline' | 'rate-limited' | 'http-error' | 'invalid-response'
+      message: string
+      fetchedAt: string
+      /** Last cached list, when present, so the UI can degrade gracefully. */
+      cachedReleases: ReleaseInfo[] | null
+    }
+
+interface CachedAllReleases {
+  releases: ReleaseInfo[]
+  fetchedAt: number
+}
+
 export class ReleasesService {
   private cache: CachedPayload | null = null
+  /** Separate slot for the full release list — kept short-lived (same TTL)
+   *  so the OTA picker doesn't show stale entries after a new release lands. */
+  private allCache: CachedAllReleases | null = null
   /** Earliest wall-clock time (ms) at which a new request may be sent. */
   private rateLimitedUntil = 0
   /** Concurrent callers share the same in-flight promise to avoid duplicate fetches. */
   private inFlight: Promise<LatestReleaseResult> | null = null
+  /** Same dedup as `inFlight` but for the `getAllReleases()` pathway. */
+  private inFlightAll: Promise<AllReleasesResult> | null = null
   /** Resolved once the persistent-cache hydration attempt has finished. */
   private hydrationPromise: Promise<void> | null = null
 
@@ -381,6 +409,101 @@ export class ReleasesService {
       return await promise
     } finally {
       this.inFlight = null
+    }
+  }
+
+  /**
+   * Returns every published release surfaced by GitHub, honouring the same
+   * 5-minute in-memory cache, in-flight dedup, and rate-limit cooldown as
+   * `getLatest()`. Consumed by the OTA picker (`ota-releases.store`) so the
+   * user can pick an older version for downgrades. Issue #1012 — replaces
+   * `OtaService.fetchReleases`, which had no timeout, no retry, no rate-limit
+   * handling, and double-billed GitHub's 60 req/h unauth limit alongside the
+   * About-screen fetch.
+   */
+  async getAllReleases(force = false): Promise<AllReleasesResult> {
+    await this.hydrate()
+
+    const cached = this.allCache
+    const nowMs = this.now()
+
+    if (!force && cached && nowMs - cached.fetchedAt < CACHE_TTL_MS) {
+      return {
+        ok: true,
+        releases: cached.releases,
+        fetchedAt: new Date(cached.fetchedAt).toISOString(),
+        fromCache: true,
+      }
+    }
+
+    if (this.inFlightAll) return this.inFlightAll
+
+    if (nowMs < this.rateLimitedUntil) {
+      return this.makeAllFailure(
+        'rate-limited',
+        'GitHub rate limit cooling down — try again shortly'
+      )
+    }
+
+    const promise = this.runFetchAll()
+    this.inFlightAll = promise
+    try {
+      return await promise
+    } finally {
+      this.inFlightAll = null
+    }
+  }
+
+  private async runFetchAll(): Promise<AllReleasesResult> {
+    const outcome = await fetchReleasesWithRetry()
+    const nowMs = this.now()
+
+    switch (outcome.kind) {
+      case 'ok': {
+        // Same shape the OTA picker has always shown: stable releases first.
+        // Pre-releases stay out by default to match the previous
+        // `OtaService.fetchReleases` behaviour — a release flagged "rc1"
+        // historically never appeared in the picker. Callers that need the
+        // pre-release row in the future can read `outcome.releases` from a
+        // future `getAllReleasesIncludingPrereleases` variant.
+        const releases = outcome.releases.filter((r) => !r.prerelease).map(toReleaseInfo)
+        const payload: CachedAllReleases = { releases, fetchedAt: nowMs }
+        this.allCache = payload
+        return {
+          ok: true,
+          releases,
+          fetchedAt: new Date(nowMs).toISOString(),
+          fromCache: false,
+        }
+      }
+      case 'rate-limited': {
+        this.rateLimitedUntil = nowMs + outcome.retryAfterMs
+        return this.makeAllFailure('rate-limited', outcome.message)
+      }
+      case 'http-error':
+        return this.makeAllFailure('http-error', outcome.message)
+      case 'offline':
+        return this.makeAllFailure('offline', outcome.message)
+      case 'invalid':
+        return this.makeAllFailure('invalid-response', outcome.message)
+      default: {
+        const exhaustive: never = outcome
+        return exhaustive
+      }
+    }
+  }
+
+  private makeAllFailure(
+    reason: 'offline' | 'rate-limited' | 'http-error' | 'invalid-response',
+    message: string
+  ): AllReleasesResult {
+    const nowMs = this.now()
+    return {
+      ok: false,
+      reason,
+      message,
+      fetchedAt: new Date(nowMs).toISOString(),
+      cachedReleases: this.allCache?.releases ?? null,
     }
   }
 
