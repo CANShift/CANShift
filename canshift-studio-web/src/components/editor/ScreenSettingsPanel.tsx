@@ -4,7 +4,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useScreenSettingsStore } from '../../stores/screenSettings.store'
+import { useScreenSettingsStore } from '../../stores/screen-settings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
