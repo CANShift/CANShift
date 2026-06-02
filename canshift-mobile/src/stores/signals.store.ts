@@ -30,7 +30,12 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
       if (typeof v === 'number') defined[k] = v
     }
     pushSample(defined)
-    set({ values: payload, lastUpdateMs: Date.now(), isLive: true })
+    // Merge instead of replace — firmware skips invalid signals in the BLE
+    // TELE payload (`ble_server.cpp` filters by `SignalStore::isValid`), so a
+    // single-signal dropout would otherwise blank every other live reading
+    // for one tick. Last-known values are retained across the gap; staleness
+    // is signalled separately by `isLive` (#1017 M-LO-3).
+    set((s) => ({ values: { ...s.values, ...payload }, lastUpdateMs: Date.now(), isLive: true }))
   },
 
   markStale: () => {
