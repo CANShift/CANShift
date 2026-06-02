@@ -14,6 +14,8 @@ import { HEX_REGEX } from './colors/hex.js'
 export interface DesignTokens {
   colors: {
     bg: string
+    /** Deeper than `bg` — chart canvas / graph backdrops on mobile (#1017 M-MD-1). */
+    bgInset: string
     surface: string
     surface2: string
     border: string
@@ -23,12 +25,18 @@ export interface DesignTokens {
     secondaryForeground: string
     accent: string
     accentForeground: string
+    /** Dimmed accent tint — active button states, segmented-control selected backgrounds. */
+    accentDim: string
     destructive: string
     destructiveForeground: string
     text: string
     textDim: string
     textMuted: string
     success: string
+    /** Success-surface backdrop (e.g. "OTA staged" / connection-good chips). */
+    successBg: string
+    /** Success-surface border (paired with `successBg`). */
+    successBorder: string
     warning: string
     danger: string
     statusDanger: string
@@ -58,6 +66,7 @@ export interface DesignTokens {
 export const DARK_TOKENS = {
   colors: {
     bg: '#121212',
+    bgInset: '#080808',
     surface: '#1F1F1F',
     surface2: '#292929',
     border: '#333333',
@@ -67,12 +76,15 @@ export const DARK_TOKENS = {
     secondaryForeground: '#FFFFFF',
     accent: '#FF8800',
     accentForeground: '#FFFFFF',
+    accentDim: '#1A0808',
     destructive: '#FF0000',
     destructiveForeground: '#FFFFFF',
     text: '#FFFFFF',
     textDim: '#BABABA',
     textMuted: '#8F8F8F',
     success: '#00CC2A',
+    successBg: '#1A3A1A',
+    successBorder: '#336633',
     warning: '#FF8800',
     danger: '#FF0000',
     statusDanger: '#E03030',
@@ -163,6 +175,7 @@ export function hexToHslChannels(hex: string): string {
  */
 export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> = {
   bg: '--bg',
+  bgInset: '--bg-inset',
   surface: '--surface',
   surface2: '--surface-2',
   border: '--border',
@@ -172,12 +185,15 @@ export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> 
   secondaryForeground: '--secondary-foreground',
   accent: '--accent',
   accentForeground: '--accent-foreground',
+  accentDim: '--accent-dim',
   destructive: '--destructive',
   destructiveForeground: '--destructive-foreground',
   text: '--text',
   textDim: '--text-dim',
   textMuted: '--text-muted',
   success: '--success',
+  successBg: '--success-bg',
+  successBorder: '--success-border',
   warning: '--warning',
   danger: '--danger',
   statusDanger: '--status-danger',

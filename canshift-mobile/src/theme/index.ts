@@ -8,23 +8,20 @@
 import { DARK_TOKENS } from '@tmbk/canshift-core'
 
 /**
- * Mobile-only color aliases not (yet) part of the shared SoT. They cover
- * legacy mobile screens (success surface backgrounds, dimmed accent fills,
- * a "white" alias used by switches). Keeping them here avoids a sweep of
- * component files in this PR — Phase 3 will fold them into the SoT or
- * replace them at the call sites.
+ * Mobile-only aliases for SoT keys that keep older call sites compiling
+ * without a sweep. `accentDim` / `successBg` / `successBorder` / `bgInset`
+ * graduated into `canshift-core/DARK_TOKENS.colors` in #1017 M-MD-1 — the
+ * aliases below preserve the old names so screens don't have to update
+ * yet. Future cleanup can rename call sites to the SoT keys directly.
  */
-const LEGACY_MOBILE_COLORS = {
+const MOBILE_ALIASES = {
   surfaceHigh: DARK_TOKENS.colors.surface2,
-  accentDim: '#1A0808',
-  successBg: '#1A3A1A',
-  successBorder: '#336633',
-  white: '#FFFFFF',
+  white: DARK_TOKENS.colors.primaryForeground,
 } as const
 
 export const Colors = {
   ...DARK_TOKENS.colors,
-  ...LEGACY_MOBILE_COLORS,
+  ...MOBILE_ALIASES,
 } as const
 
 export const Spacing = DARK_TOKENS.spacing
