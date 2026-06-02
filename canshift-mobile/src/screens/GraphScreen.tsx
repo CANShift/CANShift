@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
 
   chartContainer: {
     flex: 1,
-    backgroundColor: '#080808',
+    backgroundColor: Colors.bgInset,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
