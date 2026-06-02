@@ -115,8 +115,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 300,
             dangerLevel: 280,
             decimalPlaces: 0,
-            label: 'Speed',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -133,8 +131,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 120,
             dangerLevel: 110,
             decimalPlaces: 0,
-            label: 'Coolant',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -151,8 +147,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 80,
             dangerLevel: 60,
             decimalPlaces: 0,
-            label: 'IAT',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -169,8 +163,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 6,
             dangerLevel: 0.5,
             decimalPlaces: 1,
-            label: 'Oil',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -187,8 +179,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 15,
             dangerLevel: 10.5,
             decimalPlaces: 1,
-            label: 'Battery',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -205,8 +195,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 1.3,
             dangerLevel: 1.2,
             decimalPlaces: 2,
-            label: 'Lambda',
-            labelPosition: 'bottom-left',
           },
         },
       ],
@@ -236,8 +224,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 300,
             dangerLevel: 270,
             decimalPlaces: 0,
-            label: 'Boost',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -246,7 +232,7 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
           signal: 'gear',
           layout: { x: 160, y: 0, w: 160, h: 112, zOrder: 0 },
           style: { ...DEMO_STYLE_RED, fontSize: 48 },
-          config: { type: 'gear', decimalPlaces: 0, label: 'Gear', labelPosition: 'bottom-left' },
+          config: { type: 'gear', decimalPlaces: 0 },
         },
         {
           id: 'lambda_l',
@@ -262,8 +248,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 1.3,
             dangerLevel: 1.2,
             decimalPlaces: 2,
-            label: 'Lambda',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -280,8 +264,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 8000,
             dangerLevel: 7000,
             decimalPlaces: 0,
-            label: 'RPM',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -298,8 +280,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 100,
             dangerLevel: 95,
             decimalPlaces: 0,
-            label: 'TPS',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -316,8 +296,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 15,
             dangerLevel: 11,
             decimalPlaces: 1,
-            label: 'Battery',
-            labelPosition: 'bottom-left',
           },
         },
       ],
@@ -347,8 +325,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 120,
             dangerLevel: 110,
             decimalPlaces: 0,
-            label: 'Coolant',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -365,8 +341,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 6,
             dangerLevel: 0.5,
             decimalPlaces: 1,
-            label: 'Oil pressure',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -383,8 +357,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 150,
             dangerLevel: 140,
             decimalPlaces: 0,
-            label: 'Oil temp',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -401,8 +373,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 6,
             dangerLevel: 5.5,
             decimalPlaces: 1,
-            label: 'Fuel press',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -419,8 +389,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 15,
             dangerLevel: 10.5,
             decimalPlaces: 1,
-            label: 'Battery',
-            labelPosition: 'bottom-left',
           },
         },
         {
@@ -437,8 +405,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
             maxValue: 80,
             dangerLevel: 60,
             decimalPlaces: 0,
-            label: 'Intake °C',
-            labelPosition: 'bottom-left',
           },
         },
       ],

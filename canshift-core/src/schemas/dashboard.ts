@@ -22,19 +22,6 @@ import { HexColorSchema, SemVerSchema, WidgetLayoutSchema, WidgetStyleSchema } f
 import { ScreenProfileIdSchema } from './screen-profile.js'
 
 // ---------------------------------------------------------------------------
-// Label position — used by gauge widgets
-// ---------------------------------------------------------------------------
-
-export const WidgetLabelPositionSchema = z.enum([
-  'top-left',
-  'top-center',
-  'top-right',
-  'bottom-left',
-  'bottom-center',
-  'bottom-right',
-])
-
-// ---------------------------------------------------------------------------
 // Sensor icon identifiers
 // ---------------------------------------------------------------------------
 
@@ -89,8 +76,6 @@ export const GaugeWidgetConfigSchema = z
     arcFillStyle: GaugeArcFillStyleSchema.optional(),
     revFlash: z.boolean().optional(),
     alertThreshold: z.number().optional(),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
-    labelPosition: WidgetLabelPositionSchema.optional(),
     // Sensor identifier — drives the semantic two-zone palette (issue #954).
     // When set to a known name, gauge fills opaquely in the per-sensor OK
     // colour below `dangerLevel` and the warning colour above. Unset or
@@ -105,8 +90,6 @@ export const WarningWidgetConfigSchema = z
     invertLogic: z.boolean().optional(),
     threshold: z.number(),
     iconName: SensorIconNameSchema.optional(),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
-    labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
 
@@ -245,8 +228,6 @@ export const TimerWidgetConfigSchema = z
     type: z.literal('timer'),
     autoStart: z.boolean().optional(),
     format: z.enum(['mm:ss', 'ss.mmm']).optional(),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
-    labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
 
@@ -256,8 +237,6 @@ export const GearWidgetConfigSchema = z
     decimalPlaces: z.literal(0),
     prefix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
     suffix: z.string().max(STRING_CAPS.WIDGET_PREFIX_SUFFIX).optional(),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
-    labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
 
@@ -265,8 +244,6 @@ export const ImageWidgetConfigSchema = z
   .object({
     type: z.literal('image'),
     imagePath: z.string().max(STRING_CAPS.IMAGE_PATH),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL).optional(),
-    labelPosition: WidgetLabelPositionSchema.optional(),
   })
   .strict()
 
@@ -554,7 +531,6 @@ type ExactOptional<T> = {
   [K in OptionalKeys<T>]?: Exclude<T[K], undefined>
 }
 
-export type WidgetLabelPosition = z.infer<typeof WidgetLabelPositionSchema>
 export type SensorIconName = z.infer<typeof SensorIconNameSchema>
 /** Widget type discriminant — derived from `WidgetConfigSchema`. */
 export type WidgetType = z.infer<typeof WidgetTypeSchema>

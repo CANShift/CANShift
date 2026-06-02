@@ -35,14 +35,13 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
   // here so studio is a 1:1 preview of the device.
   const valueColor = st.textColor
 
-  const labelText = cfg.label ?? null
-  // Signal name shown top-left when no custom label — matches firmware
-  // applySignalHeader() in canshift-firmware/src/ui/widget_label.cpp, which
-  // pins the auto-header to CfgLabelPos::TOP_LEFT. The auto-header reserves
-  // a 14-px band at the TOP and the value floats below it.
-  const showSignalHeader = labelText === null
+  // Auto signal-name header — pinned top-left, matches firmware
+  // applySignalHeader() in canshift-firmware/src/ui/widget_label.cpp. The
+  // header reserves a 14-px band at the TOP and the value floats below it.
+  // Custom widget labels were dropped (issue #1244) — the auto-header is
+  // the only label path now.
   const signalLabel = formatSignalLabel(widget.signal)
-  const sigHeaderH = showSignalHeader ? 14 : 0
+  const sigHeaderH = 14
   const availH = h - sigHeaderH
 
   // Headline value layout — wide ints (≥ 4 digits, no decimals) split last
@@ -68,8 +67,6 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
   // breathing room even after the selection outline expands a few px.
   const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 16) / (charBudget * 0.68)))
 
-  const labelFontSize = Math.max(6, Math.min(9, w * 0.1))
-
   return (
     <div
       style={{
@@ -91,49 +88,26 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
       {/* Signal name auto-header — top-left, dim caps. Matches firmware
           applySignalHeader() position and padding (kEdgeInsetX=4, Y=1) in
           canshift-firmware/src/ui/widget_label.cpp. */}
-      {showSignalHeader && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 1,
-            left: 4,
-            fontSize: 11,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: '#888888',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: `calc(100% - 8px)`,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {signalLabel.toUpperCase()}
-        </span>
-      )}
-      {/* Widget label overlay — top-left, uppercase. Replaces the auto signal
-          header when a custom label is set. */}
-      {labelText !== null && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 2,
-            left: 3,
-            fontSize: labelFontSize,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: '#888888',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {labelText.toUpperCase()}
-        </span>
-      )}
+      <span
+        style={{
+          position: 'absolute',
+          top: 1,
+          left: 4,
+          fontSize: 11,
+          fontFamily: FONT_FAMILY,
+          fontWeight: 500,
+          color: '#888888',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: `calc(100% - 8px)`,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {signalLabel.toUpperCase()}
+      </span>
       {/* Value + unit row — value on the left, unit to its right at a smaller
           font, separated by a small gap. Mirrors firmware label_widget.cpp
           where the unit hugs the value baseline-aligned. The unit font is

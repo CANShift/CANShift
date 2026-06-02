@@ -3,10 +3,10 @@
 // from SPIFFS at runtime, but Studio has no access to that asset, so the
 // preview draws a neutral "picture" placeholder (frame + mountain glyph +
 // caption) at the widget bounds so authors see the slot occupied and can
-// position it precisely. User label renders at the configured corner.
+// position it precisely. Custom labels were dropped (issue #1244).
 
 import { memo } from 'react'
-import { FONT_FAMILY, svgLabelAttrs } from '../widgetPreview.styles'
+import { FONT_FAMILY } from '../widgetPreview.styles'
 import type { BaseRendererProps } from './shared'
 
 const FRAME_BG = '#1A1A1A'
@@ -16,8 +16,6 @@ const CAPTION_RGB = '#2A2A2A'
 
 export const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRendererProps) {
   if (widget.config.type !== 'image') return null
-  const cfg = widget.config
-  const st = widget.style
 
   // Mountain silhouette polyline — proportional to widget bounds.
   const points = [
@@ -27,10 +25,6 @@ export const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRen
     `${String(w * 0.7)},${String(h * 0.42)}`,
     `${String(w * 0.82)},${String(h * 0.72)}`,
   ].join(' ')
-
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-  const labelAttrs = labelText !== null ? svgLabelAttrs(labelPos, w, h) : null
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
@@ -58,22 +52,6 @@ export const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRen
       >
         IMAGE
       </text>
-      {labelAttrs !== null && labelText !== null && (
-        <text
-          x={labelAttrs.x}
-          y={labelAttrs.y}
-          textAnchor={labelAttrs.textAnchor}
-          dominantBaseline={labelAttrs.dominantBaseline}
-          fill={st.textColor + '77'}
-          fontSize={Math.max(6, Math.min(9, w * 0.12))}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.04em"
-          style={{ textTransform: 'uppercase' }}
-        >
-          {labelText.toUpperCase()}
-        </text>
-      )}
     </svg>
   )
 })

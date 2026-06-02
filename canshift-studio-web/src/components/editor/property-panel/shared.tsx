@@ -8,7 +8,6 @@ import type {
   SensorIconName,
   SignalDef,
   Widget,
-  WidgetLabelPosition,
 } from '@tmbk/canshift-core'
 import { SENSOR_ICON_LABELS, SENSOR_ICON_NAMES, SensorIcon } from '../../icons/SensorIcons'
 
@@ -204,72 +203,3 @@ export const SIGNAL_UNITS: Record<string, string[]> = {
   battery_volts: ['V'],
 }
 
-/** Label position options shared by every widget that exposes a corner label. */
-export const GAUGE_LABEL_POSITIONS: { value: WidgetLabelPosition; label: string }[] = [
-  { value: 'top-left', label: '↖ TL' },
-  { value: 'top-right', label: '↗ TR' },
-  { value: 'bottom-left', label: '↙ BL' },
-  { value: 'bottom-right', label: '↘ BR' },
-]
-
-// Reusable label / labelPosition editor block — used by every widget editor
-// that supports a corner label (gauge, bar, warning, timer, gear, image).
-export interface LabelEditableConfig {
-  label?: string
-  labelPosition?: WidgetLabelPosition
-}
-
-export function LabelFields<T extends LabelEditableConfig>({
-  cfg,
-  onChange,
-}: {
-  cfg: T
-  onChange: (next: T) => void
-}) {
-  return (
-    <>
-      <Field label="Label">
-        <input
-          style={inputStyle}
-          placeholder="e.g. RPM, Coolant…"
-          value={cfg.label ?? ''}
-          onChange={(e) => {
-            const next = { ...cfg }
-            if (e.target.value) next.label = e.target.value
-            else delete next.label
-            onChange(next)
-          }}
-        />
-      </Field>
-      {cfg.label && (
-        <Field label="Label pos.">
-          <div style={{ display: 'flex', gap: 3 }}>
-            {GAUGE_LABEL_POSITIONS.map(({ value, label }) => {
-              const isActive = (cfg.labelPosition ?? 'top-left') === value
-              return (
-                <button
-                  key={value}
-                  onClick={() => {
-                    onChange({ ...cfg, labelPosition: value })
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '3px 0',
-                    fontSize: 9,
-                    background: isActive ? '#2A2A3A' : '#111111',
-                    border: `1px solid ${isActive ? '#5566AA' : '#2A2A2A'}`,
-                    borderRadius: 3,
-                    color: isActive ? '#7788CC' : '#AAAAAA',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </Field>
-      )}
-    </>
-  )
-}

@@ -1,11 +1,11 @@
 // widget-previews/Warning.tsx — Threshold-driven alert preview.
 // Mirrors firmware warning_widget.cpp: translucent critical background that
-// blinks while the alert is active, an icon centred above the signal name,
-// and an optional user-configured corner label.
+// blinks while the alert is active, an icon centred above the auto signal
+// name. Custom labels were dropped (issue #1244).
 
 import { memo } from 'react'
 import { SensorIcon } from '../../icons/SensorIcons'
-import { BLINK_ANIM, FONT_FAMILY, htmlLabelStyle } from '../widgetPreview.styles'
+import { BLINK_ANIM, FONT_FAMILY } from '../widgetPreview.styles'
 import { type BaseRendererProps, formatSignalLabel } from './shared'
 
 export interface WarningRendererProps extends BaseRendererProps {
@@ -30,9 +30,7 @@ export const WarningPreview = memo(function WarningPreview({
   const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
   const labelH = sigFontSize + 4
   const iconSize = Math.max(0, Math.min(w * 0.55, h - labelH - 8, 64))
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
-  const showSignalLabel = labelText === null && h >= 28
+  const showSignalLabel = h >= 28
 
   return (
     <div
@@ -69,23 +67,6 @@ export const WarningPreview = memo(function WarningPreview({
           }}
         >
           {formatSignalLabel(widget.signal).toUpperCase()}
-        </span>
-      )}
-      {labelText !== null && (
-        <span
-          style={{
-            ...htmlLabelStyle(labelPos),
-            fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.textColor + '77',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-            textTransform: 'uppercase',
-          }}
-        >
-          {labelText.toUpperCase()}
         </span>
       )}
     </div>

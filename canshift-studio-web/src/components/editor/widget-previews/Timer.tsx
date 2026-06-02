@@ -1,11 +1,11 @@
 // widget-previews/Timer.tsx — Lap/session timer preview.
 // Mirrors firmware timer_widget.cpp: tabular Orbitron digits centred in the
-// widget, an auto "TIMER" header in the top-left corner when no user label
-// is set, and a six-corner user label otherwise. Static demo value matches
-// the format ('mm:ss' default, or 'ss.mmm' when configured).
+// widget with an auto "TIMER" header pinned top-left. Static demo value
+// matches the format ('mm:ss' default, or 'ss.mmm' when configured).
+// Custom labels were dropped (issue #1244).
 
 import { memo } from 'react'
-import { FONT_FAMILY, htmlLabelStyle } from '../widgetPreview.styles'
+import { FONT_FAMILY } from '../widgetPreview.styles'
 import type { BaseRendererProps } from './shared'
 
 // Demo values — chosen so each format reads as a plausible lap time.
@@ -21,8 +21,6 @@ export const TimerPreview = memo(function TimerPreview({ widget, w, h }: BaseRen
   // firmware timer_widget.cpp. Below 80 px we render at secondary 20.
   const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
   const sigFontSize = Math.max(5, Math.min(7, w * 0.07))
-  const labelText = cfg.label ?? null
-  const labelPos = cfg.labelPosition ?? 'top-left'
 
   return (
     <div
@@ -51,40 +49,21 @@ export const TimerPreview = memo(function TimerPreview({ widget, w, h }: BaseRen
       >
         {timeStr}
       </span>
-      {labelText === null && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 2,
-            left: 3,
-            fontSize: sigFontSize,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: '#888888',
-            lineHeight: 1,
-            letterSpacing: '0.05em',
-          }}
-        >
-          TIMER
-        </span>
-      )}
-      {labelText !== null && (
-        <span
-          style={{
-            ...htmlLabelStyle(labelPos),
-            fontSize: Math.max(6, Math.min(9, w * 0.12)),
-            fontFamily: FONT_FAMILY,
-            fontWeight: 500,
-            color: st.textColor + '77',
-            lineHeight: 1,
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap',
-            textTransform: 'uppercase',
-          }}
-        >
-          {labelText.toUpperCase()}
-        </span>
-      )}
+      <span
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 3,
+          fontSize: sigFontSize,
+          fontFamily: FONT_FAMILY,
+          fontWeight: 500,
+          color: '#888888',
+          lineHeight: 1,
+          letterSpacing: '0.05em',
+        }}
+      >
+        TIMER
+      </span>
     </div>
   )
 })
