@@ -11,7 +11,7 @@
 //     `bestLapPulse` flag exactly once per new personal-best,
 //   - the active interval handle, so it can be cleanly stopped.
 
-import type { TrackTelemetry } from '@tmbk/canshift-core'
+import { TrackTelemetrySchema, type TrackTelemetry } from '@tmbk/canshift-core'
 import { log } from '../stores/log.store'
 import { useTrackSessionStore } from '../stores/track-session.store'
 import { buildTrackTelemetry } from './track-telemetry'
@@ -95,8 +95,26 @@ export function createTrackTelemetryPublisher(
     // re-fire it on the next tick (the firmware already missed it).
     pendingPulse = false
 
+    // Wire-boundary validation (#887 part 4). The pure builder is statically
+    // typed against `TrackTelemetry` but a future refactor / bad merge could
+    // produce a payload that fails the canonical schema. Catch it here once
+    // per tick (~1 Hz cost) and surface the drift through the same logger
+    // path BLE write failures use, rather than silently shipping garbage to
+    // the firmware where the TRACK characteristic will mis-decode it.
+    const parsed = TrackTelemetrySchema.safeParse(payload)
+    if (!parsed.success) {
+      onError(
+        new Error(
+          `TrackTelemetry payload failed schema validation: ${parsed.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; ')}`
+        )
+      )
+      return
+    }
+
     try {
-      await deps.write(payload)
+      await deps.write(parsed.data)
     } catch (err) {
       onError(err)
     }
