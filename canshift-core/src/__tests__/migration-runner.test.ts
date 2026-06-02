@@ -1476,6 +1476,140 @@ describe('migrateConfig — 1.20.0 → 1.21.0', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 1.21.0 → 1.22.0: drop custom widget labels (issue #1244)
+// ---------------------------------------------------------------------------
+
+describe('migrateConfig — 1.21.0 → 1.22.0', () => {
+  it('strips label + labelPosition from gauge / gear / timer / warning / image widgets', () => {
+    const config = {
+      version: '1.21.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'g1',
+              type: 'gauge',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'arc',
+                minValue: 0,
+                maxValue: 8000,
+                dangerLevel: 7000,
+                decimalPlaces: 0,
+                label: 'RPM',
+                labelPosition: 'top-left',
+              },
+            },
+            {
+              id: 'gr1',
+              type: 'gear',
+              signal: 'gear',
+              layout: { x: 0, y: 60, w: 56, h: 56 },
+              style: { primaryColor: '#FFFFFF', textColor: '#FFFFFF' },
+              config: { type: 'gear', decimalPlaces: 0, label: 'GEAR' },
+            },
+            {
+              id: 'w1',
+              type: 'warning',
+              signal: 'flag_mil',
+              layout: { x: 0, y: 120, w: 56, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: { type: 'warning', threshold: 1, label: 'MIL', labelPosition: 'top-left' },
+            },
+            {
+              id: 'im1',
+              type: 'image',
+              signal: '',
+              layout: { x: 0, y: 180, w: 56, h: 56 },
+              style: { primaryColor: '#FFFFFF', textColor: '#FFFFFF' },
+              config: { type: 'image', imagePath: '/img.bmp', label: 'logo' },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out, applied } = migrateConfig(config, '1.22.0')
+    expect(applied).toEqual(['1.21.0 → 1.22.0'])
+    expect(out.version).toBe('1.22.0')
+    const widgets = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!.widgets
+    widgets.forEach((w) => {
+      expect('label' in w.config).toBe(false)
+      expect('labelPosition' in w.config).toBe(false)
+    })
+  })
+
+  it('keeps the label field on button widgets — there it is the button text', () => {
+    const config = {
+      version: '1.21.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'b1',
+              type: 'button',
+              signal: '',
+              layout: { x: 0, y: 0, w: 80, h: 40 },
+              style: { primaryColor: '#CC3333', textColor: '#FFFFFF' },
+              config: {
+                type: 'button',
+                label: 'Engine',
+                actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p2' }],
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.22.0')
+    const widget = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!
+      .widgets[0]!
+    expect(widget.config.label).toBe('Engine')
+  })
+
+  it('is a no-op when no widget carries label / labelPosition', () => {
+    const config = {
+      version: '1.21.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'g1',
+              type: 'gauge',
+              signal: 'rpm',
+              layout: { x: 0, y: 0, w: 160, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'arc',
+                minValue: 0,
+                maxValue: 8000,
+                dangerLevel: 7000,
+                decimalPlaces: 0,
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.22.0')
+    expect(out.version).toBe('1.22.0')
+    expect((out.pages as unknown[])[0]).toEqual(config.pages[0])
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Error cases
 // ---------------------------------------------------------------------------
 

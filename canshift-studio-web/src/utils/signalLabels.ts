@@ -1,8 +1,9 @@
 // signalLabels.ts — Curated short display labels for known signals.
 //
-// Used by the widget previews to label widgets that don't have a custom
-// `cfg.label` set. Keeps the 80-px-wide small numeric cells from clipping
-// (auto-formatted "COOLANT TEMP C" overflows; the curated "COOLANT" fits).
+// Used by every widget preview as the auto signal-name header (issue #1244 —
+// custom widget labels were dropped, this catalog is the only label path).
+// Keeps the 80-px-wide small numeric cells from clipping (auto-formatted
+// "COOLANT TEMP C" overflows; the curated "COOLANT" fits).
 //
 // Keep in sync with the firmware copy in
 // `canshift-firmware/src/ui/widget_label.h` (`displayLabelForSignal`).

@@ -3,13 +3,7 @@
 // individual renderers focused on their own SVG/HTML structure and to give
 // the studio a single place to tweak the cross-widget look.
 
-import type { CSSProperties } from 'react'
-import {
-  sensorOkColor,
-  sensorWarningColor,
-  type SensorIconName,
-  type WidgetLabelPosition,
-} from '@tmbk/canshift-core'
+import { sensorOkColor, sensorWarningColor, type SensorIconName } from '@tmbk/canshift-core'
 
 // ---------------------------------------------------------------------------
 // Font + animation tokens
@@ -83,55 +77,3 @@ export function thresholdPct(level: number, min: number, max: number): number {
   return Math.max(0, Math.min(1, (level - min) / range))
 }
 
-// ---------------------------------------------------------------------------
-// Label overlay attribute helpers — shared by every renderer that draws a
-// user-configured label inside a fixed corner.
-// ---------------------------------------------------------------------------
-
-interface SvgLabelAttrs {
-  x: number
-  y: number
-  textAnchor: 'start' | 'middle' | 'end'
-  dominantBaseline: 'hanging' | 'auto'
-}
-
-/**
- * SVG attributes for a label positioned at one of the six fixed corners.
- * pad mirrors firmware's `kEdgeInsetX` (4 px horizontal inset).
- */
-export function svgLabelAttrs(
-  pos: WidgetLabelPosition,
-  w: number,
-  h: number,
-  pad = 4
-): SvgLabelAttrs {
-  const isTop = pos.startsWith('top')
-  const isCenter = pos.endsWith('center')
-  const isRight = pos.endsWith('right')
-  return {
-    x: isCenter ? w / 2 : isRight ? w - pad : pad,
-    y: isTop ? pad + 6 : h - pad - 1,
-    textAnchor: isCenter ? 'middle' : isRight ? 'end' : 'start',
-    dominantBaseline: isTop ? 'hanging' : 'auto',
-  }
-}
-
-/**
- * HTML-side equivalent of svgLabelAttrs — absolute-positioned span style for
- * any of the six corners. Used by HTML-rendered previews (warning, gear, timer).
- */
-export function htmlLabelStyle(pos: WidgetLabelPosition, pad = 3): CSSProperties {
-  const isTop = pos.startsWith('top')
-  const isCenter = pos.endsWith('center')
-  const isRight = pos.endsWith('right')
-  return {
-    position: 'absolute',
-    ...(isTop ? { top: pad } : { bottom: pad }),
-    ...(isCenter
-      ? { left: '50%', transform: 'translateX(-50%)' }
-      : isRight
-        ? { right: pad }
-        : { left: pad }),
-    pointerEvents: 'none',
-  }
-}

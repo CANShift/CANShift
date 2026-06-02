@@ -97,6 +97,36 @@ function brightenHex(hex: string, delta = 0x33): string {
 // the caller's original object is never touched. See `migrateConfig` below.
 const MIGRATIONS: Migration[] = [
   {
+    // 1.21.0 → 1.22.0: drop custom widget labels (issue #1244). The auto
+    // signal-name header (uppercased signal id) is now the only label path.
+    // Strips `label` and `labelPosition` from every non-button widget config
+    // — Studio no longer surfaces a label editor for these types and the
+    // firmware overlay path is gone. Button widgets keep `label` because
+    // there it is the button's primary text content, not a corner header.
+    fromVersion: '1.21.0',
+    toVersion: '1.22.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.22.0' }
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+        const migratedWidgets = widgets.map((widget) => {
+          if (widget.type === 'button') return widget
+          const cfg = widget.config as Record<string, unknown> | undefined
+          if (!cfg) return widget
+          if (!('label' in cfg) && !('labelPosition' in cfg)) return widget
+          const rest = { ...cfg }
+          delete rest.label
+          delete rest.labelPosition
+          return { ...widget, config: rest }
+        })
+        return { ...page, widgets: migratedWidgets }
+      })
+      return { ...config, version: '1.22.0', pages: migratedPages }
+    },
+  },
+  {
     // 1.20.0 → 1.21.0: drop the standalone `bar` widget variant (issue #1245).
     // Studio no longer exposes the bar widget in the palette and the design
     // direction collapses the use case into `gauge`. Two effects:

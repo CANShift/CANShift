@@ -11,7 +11,7 @@ import {
   interpolateGreenOrangeRed,
   splitDecimal,
 } from './gauge-math'
-import type { BaseRendererProps } from './shared'
+import { type BaseRendererProps, formatSignalLabel } from './shared'
 
 export interface GaugeArcRendererProps extends BaseRendererProps {
   revLimiting: boolean
@@ -166,25 +166,23 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
           {signalUnit}
         </text>
       )}
-      {/* Widget label — pinned bottom-left under the arc on arc gauges only.
-          Uppercase + dim weight so it reads as a caption without competing
-          with the value. */}
-      {cfg.label && (
-        <text
-          x={4}
-          y={h - 4}
-          textAnchor="start"
-          dominantBaseline="auto"
-          fill={st.textColor + '77'}
-          fontSize={Math.max(6, Math.min(9, w * 0.1))}
-          fontFamily={FONT_FAMILY}
-          fontWeight="500"
-          letterSpacing="0.06em"
-          style={{ textTransform: 'uppercase' }}
-        >
-          {cfg.label.toUpperCase()}
-        </text>
-      )}
+      {/* Auto signal-name header — pinned bottom-left under the arc. Issue
+          #1244: custom widget labels were removed; the signal name in dim
+          uppercase is the only label path now. */}
+      <text
+        x={4}
+        y={h - 4}
+        textAnchor="start"
+        dominantBaseline="auto"
+        fill="#888888"
+        fontSize={Math.max(6, Math.min(9, w * 0.1))}
+        fontFamily={FONT_FAMILY}
+        fontWeight="500"
+        letterSpacing="0.06em"
+        style={{ textTransform: 'uppercase' }}
+      >
+        {formatSignalLabel(widget.signal).toUpperCase()}
+      </text>
     </svg>
   )
 })

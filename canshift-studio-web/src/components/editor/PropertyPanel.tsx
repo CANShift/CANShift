@@ -19,7 +19,6 @@ import { SIZE_TOKENS, STANDARD_TOKEN_IDS, tokenFromDimensions } from '../../util
 import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shared'
 import { GaugeFields } from './property-panel/gauge-fields'
 import { ButtonFields } from './property-panel/button-fields'
-import { GearFields } from './property-panel/gear-fields'
 
 // Chrome shades that do not yet map to a core design token. Kept as named
 // constants so the planned token promotion (audit S-H-5, umbrella #1015) only
@@ -41,10 +40,8 @@ const CONFIG_FIELDS: Partial<
 > = {
   gauge: GaugeFields,
   button: ButtonFields,
-  gear: GearFields,
-  // warning / timer / image widget renderers stay schema-only — no config
-  // instantiates them today. Their schema entries still parse so legacy
-  // configs round-trip, but no property panel is offered.
+  // gear / warning / timer / image have no editable config beyond layout +
+  // signal binding now that custom labels were dropped (issue #1244).
 }
 
 interface PropertyPanelProps {
