@@ -37,7 +37,12 @@ import {
 import { SignalDefSchema } from '../schemas/signal.js'
 import { WidgetLayoutSchema, WidgetStyleSchema } from '../schemas/common.js'
 import type { DeviceConfig, InputBinding, InputBindingsConfig } from '../index.js'
-import { ButtonActionSchema, ButtonWidgetConfigSchema } from '../schemas/dashboard.js'
+import {
+  ButtonActionSchema,
+  ButtonWidgetConfigSchema,
+  TopBarItemSchema,
+  WidgetSchema,
+} from '../schemas/dashboard.js'
 import { DeviceConfigWireSchema, type DeviceConfigWire } from '../schemas/device.js'
 import {
   InputBindingSchema,
@@ -1236,13 +1241,14 @@ describe('schema bounds hardening', () => {
   })
 
   describe('CanRawAction.frameId bounds', () => {
-    it('accepts frameId at the 29-bit boundary', () => {
+    it('accepts frameId at the 29-bit boundary when extended=true', () => {
       expect(
         ButtonActionSchema.safeParse({
           category: 'ecu',
           type: 'can_raw',
           frameId: CAN_29BIT_MAX,
           data: 'DEAD',
+          extended: true,
         }).success
       ).toBe(true)
     })
@@ -1254,6 +1260,7 @@ describe('schema bounds hardening', () => {
           type: 'can_raw',
           frameId: CAN_29BIT_MAX + 1,
           data: 'DEAD',
+          extended: true,
         }).success
       ).toBe(false)
     })
@@ -1404,6 +1411,146 @@ describe('schema bounds hardening', () => {
         signal: 's'.repeat(STRING_CAPS.BINDING_SIGNAL + 1),
       }
       expect(InputBindingSchema.safeParse(domainShape).success).toBe(false)
+    })
+  })
+
+  // -- #1289: Widget.signal / TopBarItem.signal bounds -----------------------
+
+  describe('Widget.signal bounds (#1289)', () => {
+    function validGaugeWidget(signal: string): Record<string, unknown> {
+      return {
+        id: 'w1',
+        type: 'gauge',
+        signal,
+        layout: validLayout(),
+        style: validStyle(),
+        config: {
+          type: 'gauge',
+          displayStyle: 'numeric',
+          minValue: 0,
+          maxValue: 100,
+          dangerLevel: 80,
+          decimalPlaces: 0,
+        },
+      }
+    }
+
+    function validButtonWidget(signal: string): Record<string, unknown> {
+      return {
+        id: 'b1',
+        type: 'button',
+        signal,
+        layout: validLayout(),
+        style: validStyle(),
+        config: {
+          type: 'button',
+          label: 'Map 1',
+          actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p1' }],
+        },
+      }
+    }
+
+    it('accepts a gauge signal at the SIGNAL_NAME cap', () => {
+      expect(
+        WidgetSchema.safeParse(validGaugeWidget('s'.repeat(STRING_CAPS.SIGNAL_NAME))).success
+      ).toBe(true)
+    })
+
+    it('rejects an empty signal on a gauge widget', () => {
+      const result = WidgetSchema.safeParse(validGaugeWidget(''))
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes('signal'))).toBe(true)
+      }
+    })
+
+    it('accepts an empty signal on a button widget (firmware demo convention)', () => {
+      expect(WidgetSchema.safeParse(validButtonWidget('')).success).toBe(true)
+    })
+
+    it('rejects a gauge signal one over the SIGNAL_NAME cap', () => {
+      expect(
+        WidgetSchema.safeParse(validGaugeWidget('s'.repeat(STRING_CAPS.SIGNAL_NAME + 1))).success
+      ).toBe(false)
+    })
+
+    it('rejects a button signal one over the SIGNAL_NAME cap', () => {
+      expect(
+        WidgetSchema.safeParse(validButtonWidget('s'.repeat(STRING_CAPS.SIGNAL_NAME + 1))).success
+      ).toBe(false)
+    })
+  })
+
+  describe('TopBarItem.signal bounds (#1289)', () => {
+    function validStatusDot(signal: string): Record<string, unknown> {
+      return { type: 'statusDot', signal, position: 'left' }
+    }
+
+    it('accepts a signal at the SIGNAL_NAME cap', () => {
+      expect(
+        TopBarItemSchema.safeParse(validStatusDot('s'.repeat(STRING_CAPS.SIGNAL_NAME))).success
+      ).toBe(true)
+    })
+
+    it('rejects an empty signal', () => {
+      expect(TopBarItemSchema.safeParse(validStatusDot('')).success).toBe(false)
+    })
+
+    it('rejects a signal one over the SIGNAL_NAME cap', () => {
+      expect(
+        TopBarItemSchema.safeParse(validStatusDot('s'.repeat(STRING_CAPS.SIGNAL_NAME + 1))).success
+      ).toBe(false)
+    })
+  })
+
+  // -- #1289: CanRawAction 11-bit guard --------------------------------------
+
+  describe('CanRawAction 11-bit guard (#1289)', () => {
+    it('rejects frameId 0x800 with extended=false', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: 0x800,
+          data: 'DEAD',
+          extended: false,
+        }).success
+      ).toBe(false)
+    })
+
+    it('rejects frameId 0x800 with extended omitted', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: 0x800,
+          data: 'DEAD',
+        }).success
+      ).toBe(false)
+    })
+
+    it('accepts frameId 0x800 with extended=true', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: 0x800,
+          data: 'DEAD',
+          extended: true,
+        }).success
+      ).toBe(true)
+    })
+
+    it('accepts frameId 0x7FF with extended=false', () => {
+      expect(
+        ButtonActionSchema.safeParse({
+          category: 'ecu',
+          type: 'can_raw',
+          frameId: 0x7ff,
+          data: 'DEAD',
+          extended: false,
+        }).success
+      ).toBe(true)
     })
   })
 })

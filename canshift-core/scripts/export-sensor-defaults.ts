@@ -5,7 +5,7 @@
 // C++ tables, issue #430). The JSON is sorted by SensorKind name so a diff
 // line up cleanly.
 
-import { SENSOR_DEFAULT_RAMPS } from '../dist/sensorDefaults.js'
+import { SENSOR_DEFAULT_RAMPS } from '../dist/sensor-defaults.js'
 
 const sorted = Object.fromEntries(
   Object.entries(SENSOR_DEFAULT_RAMPS).sort(([a], [b]) => a.localeCompare(b))

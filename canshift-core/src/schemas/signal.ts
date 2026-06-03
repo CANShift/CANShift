@@ -130,6 +130,10 @@ export const ColorRampSchema = z
  */
 export const SignalDefSchema = z
   .object({
+    // Optional per-signal JSON-side documentation field — the firmware demo
+    // sprinkles `_comment` lines through `signals[]` to mark frame boundaries
+    // (#1289). Matches the same field allowed at the root of `SignalConfig`.
+    _comment: z.string().optional(),
     name: z.string().max(STRING_CAPS.SIGNAL_NAME),
     canFrameId: z
       .string()
@@ -279,6 +283,13 @@ export const CAN_SPEED_OPTIONS: readonly CanSpeedKbps[] = CanSpeedKbpsSchema.opt
  */
 export const SignalConfigSchema = z
   .object({
+    // Optional JSON-side documentation fields the firmware demo ships with
+    // (`_comment`, `_warning`, `_outboundWarning`). Mirrors the `_comment`
+    // already accepted on `DashboardConfigSchema` so `validateSignalConfig`
+    // doesn't reject the firmware's own `signals.json` (#1289).
+    _comment: z.string().optional(),
+    _warning: z.string().optional(),
+    _outboundWarning: z.string().optional(),
     version: SemVerSchema,
     protocol: z.string().max(STRING_CAPS.PROTOCOL),
     canSpeedKbps: CanSpeedKbpsSchema,

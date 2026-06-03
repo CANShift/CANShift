@@ -200,3 +200,36 @@ describe('validateSignalConfig — canSpeedKbps', () => {
     expect(result.valid).toBe(false)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Underscore-comment fields — issue #1289
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — underscore comments (#1289)', () => {
+  it('accepts the firmware signals.json top-level underscore documentation fields', () => {
+    const result = validateSignalConfig(
+      validConfig({
+        _comment: 'CANShift CAN signal mapping — example profile.',
+        _warning: 'Frame IDs and byte positions are EXAMPLES.',
+        _outboundWarning: 'Outbound frame IDs in `out` are UNVERIFIED placeholders.',
+      })
+    )
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('rejects a non-string _comment', () => {
+    const result = validateSignalConfig(validConfig({ _comment: 42 }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('_comment'))).toBe(true)
+  })
+
+  it('accepts a per-signal _comment (firmware demo marks frame boundaries this way)', () => {
+    const result = validateSignalConfig(
+      validConfig({
+        signals: [validSignal({ _comment: '=== FRAME 0x370 — Primary engine data ===' })],
+      })
+    )
+    expect(result.valid).toBe(true)
+  })
+})
