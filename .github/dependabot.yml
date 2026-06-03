@@ -1,0 +1,19 @@
+# Dependabot — GitHub Actions ecosystem only for now (#1291).
+# release.yml is SHA-pinned; let Dependabot propose pins for ci.yml and
+# codeql.yml on its first run, then keep all three workflows current with
+# weekly SHA bumps.
+
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(ci)'
+    labels:
+      - 'ci'
+      - 'dependencies'
