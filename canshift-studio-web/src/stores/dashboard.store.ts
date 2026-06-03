@@ -313,7 +313,10 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.config === null) {
           s.past = []
           s.future = []
-          s.config = DEFAULT_SIM_CONFIG
+          // Clone so Immer drafting can't mutate the module-level constant —
+          // mirrors App.tsx:80 and prevents leaked edits between successive
+          // demo-fallback loads (#1287).
+          s.config = structuredClone(DEFAULT_SIM_CONFIG)
           s.filePath = null
           s.isDirty = false
           s.selectedPageId = DEFAULT_SIM_CONFIG.defaultPageId
