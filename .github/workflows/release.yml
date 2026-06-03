@@ -16,9 +16,19 @@
 
 name: Release
 
+# Only the secret-supplied OTA HMAC (`OTA_HMAC_SECRET`) produces a flashable
+# artifact. The CI workflow uses a per-run `github.run_id` fallback so any
+# CI-built image is intentionally non-flashable on production devices.
+
 on:
   push:
     branches: [main]
+
+# `cancel-in-progress: false` — never interrupt a partially-completed release
+# (signing, asset uploads, draft creation must all reach a consistent state).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -34,7 +44,7 @@ jobs:
       should_release: ${{ steps.check.outputs.should_release }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       # Source of truth: canshift-firmware/package.json `version`. This is also
       # read by canshift-firmware/scripts/extra_targets.py to inject
@@ -78,14 +88,14 @@ jobs:
         working-directory: canshift-firmware
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
           python-version: '3.12'
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
           path: |
             ~/.platformio/.packages
@@ -222,6 +232,7 @@ jobs:
           done
           for i in 1 2 3 4 5; do
             gh release upload "${TAG}" "${MERGED}" "${OTA}" "${FS}" "${SIGS[@]}" --clobber && break
+            if [ $i -eq 5 ]; then exit 1; fi
             echo "Attempt ${i}: release not ready, retrying in 30s..."
             sleep 30
           done

@@ -11,7 +11,12 @@ concurrency:
 env:
   NODE_VERSION: '24'
   PYTHON_VERSION: '3.12'
-  OTA_HMAC_CI_FALLBACK: 'ci_fallback_not_for_production_use_change_for_release_workflow'
+  # CI artifacts are not meant to be HMAC-flashable. A stable cleartext fallback
+  # would let any CI build be flashed under a known key if a regression ever
+  # shipped one; using `github.run_id` gives each CI build a unique non-flashable
+  # HMAC. The real secret lives in `release.yml` and is the only path to a
+  # flashable artifact (#1291).
+  OTA_HMAC_CI_FALLBACK: ${{ github.run_id }}
 
 jobs:
   js:
