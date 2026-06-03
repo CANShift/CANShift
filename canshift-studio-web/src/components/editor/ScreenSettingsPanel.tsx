@@ -3,7 +3,6 @@
 // Closed exclusively via swipe-down gesture in the top bar.
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useScreenSettingsStore } from '../../stores/screen-settings.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
@@ -33,20 +32,14 @@ const BTN_BG = '#111111' // MIRROR: device-button idle bg
 const BTN_BORDER = '#2A2A2A' // MIRROR: device-button idle border
 const BTN_BORDER_DIM = '#1E1E1E' // MIRROR: device-button disabled border
 const BTN_FG_DISABLED = '#444444' // MIRROR: device-button disabled fg
-const BTN_FG_DISABLED2 = '#333333' // MIRROR: device-button disabled fg (firmware variant)
 const ACCENT_RED = '#CC3333' // MIRROR: dimmer than --primary (#FF4747), device accent red
 const ACCENT_RED_BG = '#1A0A0A' // MIRROR: device-page selected red wash
-const ACCENT_GREEN = '#55AA55' // MIRROR: dimmer than --success (#00CC2A), device firmware-ready
-const ACCENT_GREEN_BG = '#111B11' // MIRROR: device-page ready-state green wash
-const ACCENT_GREEN_BORDER = '#2A4A2A' // MIRROR: device-page ready-state green border
-const DIVIDER = '#1E1E1E' // MIRROR: device-page divider line
 
 interface ScreenSettingsPanelProps {
   scale: number
 }
 
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
-  const navigate = useNavigate()
   const brightness = useScreenSettingsStore((s) => s.brightness)
   const rotation = useScreenSettingsStore((s) => s.rotation)
   const set = useScreenSettingsStore((s) => s.set)
@@ -57,7 +50,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
   const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
   const log = useLogStore((s) => s.push)
-  const [otaState, setOtaState] = useState<'idle' | 'pending'>('idle')
   const [calibrating, setCalibrating] = useState(false)
   const [pendingRotation180, setPendingRotation180] = useState(false)
   const [pendingCalibration, setPendingCalibration] = useState(false)
@@ -144,19 +136,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     } else {
       log('error', `Calibration failed: ${result.error ?? 'unknown error'}`)
     }
-  }
-
-  const handleOtaUsb = () => {
-    if (!connected) {
-      log('warn', 'Firmware update: no device connected')
-      return
-    }
-    setOtaState('pending')
-    // Navigate to the Firmware Update tab — the full flash UI lives there
-    setTimeout(() => {
-      setOtaState('idle')
-      navigate('/update')
-    }, 200)
   }
 
   return (
@@ -298,38 +277,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             {calibrating ? '...' : 'CALIBRATE'}
           </button>
         </SettingRow>
-
-        {/* Firmware update */}
-        <div style={{ borderTop: `1px solid ${DIVIDER}`, paddingTop: gap }}>
-          <span
-            style={{
-              fontSize: Math.round(scale * 5.5),
-              color: SCREEN_LABEL,
-              letterSpacing: '0.06em',
-              display: 'block',
-              marginBottom: Math.round(scale * 3),
-            }}
-          >
-            FIRMWARE
-          </span>
-          <button
-            onClick={handleOtaUsb}
-            disabled={!connected || otaState === 'pending'}
-            style={{
-              width: '100%',
-              padding: `${String(Math.round(scale * 2.5))}px 0`,
-              background: connected ? ACCENT_GREEN_BG : BTN_BG,
-              border: `1px solid ${connected ? ACCENT_GREEN_BORDER : BTN_BORDER_DIM}`,
-              borderRadius: 3,
-              color: connected ? ACCENT_GREEN : BTN_FG_DISABLED2,
-              fontSize: fs,
-              cursor: connected && otaState === 'idle' ? 'pointer' : 'default',
-              lineHeight: 1,
-            }}
-          >
-            {otaState === 'pending' ? '...' : 'USB'}
-          </button>
-        </div>
       </div>
       <AlertDialog open={pendingRotation180} onOpenChange={setPendingRotation180}>
         <AlertDialogContent>
