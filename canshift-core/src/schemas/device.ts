@@ -83,7 +83,8 @@ export const Esp32InputGpioSchema = z
   .number()
   .int()
   .refine((n) => ESP32_SAFE_INPUT_PINS.has(n), {
-    message: 'GPIO must be a valid ESP32 IO pin. Excludes 6-11 (SPI flash) and unbonded pins.',
+    message:
+      'GPIO must be a valid ESP32 IO pin. Excludes 6-11 (SPI flash — would brick the device) and unbonded pins (20, 24, 28-31). Input-only pins 34-39 are allowed.',
   })
 
 /**
@@ -124,6 +125,11 @@ export const DeviceConfigSchema = z
 export type DeviceConfig = z.infer<typeof DeviceConfigSchema>
 
 /** Default device config — sane pins for the CrowPanel 2.8" reference board. */
+// TODO(#1301) — pins 22/21 are the documented I2C SDA/SCL on hardware-profile.ts;
+// the CrowPanel-28 TWAI expansion header documents 25/32. Either these pins
+// really drive TWAI on the reference board (verify against silkscreen) or the
+// default is wrong. Pending hardware-verified decision tracked in #1301
+// (follow-up to #1289).
 export const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   canSpeedKbps: 500,
   twaiTxPin: 22,

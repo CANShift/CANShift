@@ -27,6 +27,11 @@ import { z } from 'zod'
  * (`settings_page.cpp:88`); the schema accepts the full 0–100 range so the
  * studio UI can model "off" cleanly and let firmware apply its own floor.
  * Anything outside this is either a renderer bug or a hostile payload.
+ *
+ * TODO(#1299) — contract drift: firmware does NOT honour 0 today; values
+ * <10 are silently replaced with DEFAULT_BRIGHTNESS (50%). Either firmware
+ * implements true backlight off OR this schema gains `.min(10)`. Pending
+ * product decision tracked in #1299 (follow-up to #1289).
  */
 const BRIGHTNESS_MIN_PCT = 0
 const BRIGHTNESS_MAX_PCT = 100

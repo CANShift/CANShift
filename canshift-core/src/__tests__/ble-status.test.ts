@@ -1,6 +1,11 @@
 // ble-status.test.ts — Schema + wire mapper coverage for #887.
 
-import { BleStatusWireSchema, bleStatusFromWire, parseBleStatus } from '../schemas/ble-status.js'
+import {
+  BleStatusWireSchema,
+  bleStatusFromWire,
+  parseBleStatus,
+} from '../schemas/ble-status.js'
+import type { BleStatusWire } from '../schemas/ble-status.js'
 
 describe('BleStatusWireSchema', () => {
   it('accepts an empty object (firmware before any STATUS field landed)', () => {
@@ -30,11 +35,27 @@ describe('BleStatusWireSchema', () => {
     expect(() => BleStatusWireSchema.parse({ can: Number.NaN })).toThrow()
     expect(() => BleStatusWireSchema.parse({ is_day: Number.POSITIVE_INFINITY })).toThrow()
   })
+
+  // Follow-up to audit #1289 — wire contract is strict 0/1; arbitrary floats
+  // and out-of-band integers must be rejected so `bleStatusFromWire` doesn't
+  // map `can: 0.5` to `canHealthy: true` via the `!== 0` predicate.
+  it('rejects can/is_day values other than 0 or 1', () => {
+    expect(BleStatusWireSchema.safeParse({ can: 0 }).success).toBe(true)
+    expect(BleStatusWireSchema.safeParse({ can: 1 }).success).toBe(true)
+    expect(BleStatusWireSchema.safeParse({ is_day: 0 }).success).toBe(true)
+    expect(BleStatusWireSchema.safeParse({ is_day: 1 }).success).toBe(true)
+
+    expect(BleStatusWireSchema.safeParse({ can: 0.5 }).success).toBe(false)
+    expect(BleStatusWireSchema.safeParse({ can: 2 }).success).toBe(false)
+    expect(BleStatusWireSchema.safeParse({ can: -1 }).success).toBe(false)
+    expect(BleStatusWireSchema.safeParse({ is_day: 0.5 }).success).toBe(false)
+    expect(BleStatusWireSchema.safeParse({ is_day: 2 }).success).toBe(false)
+  })
 })
 
 describe('bleStatusFromWire', () => {
   it('renames snake_case keys to camelCase and translates numeric flags to booleans', () => {
-    const wire = {
+    const wire: BleStatusWire = {
       ver: '0.8.3',
       can: 1,
       ap_ssid: 'CANShift-AP',
@@ -50,10 +71,9 @@ describe('bleStatusFromWire', () => {
     })
   })
 
-  it('treats can=0 / is_day=0 as false and any non-zero as true', () => {
+  it('translates can=0 / is_day=0 to false and 1 to true', () => {
     expect(bleStatusFromWire({ can: 0 })).toEqual({ canHealthy: false })
     expect(bleStatusFromWire({ can: 1 })).toEqual({ canHealthy: true })
-    expect(bleStatusFromWire({ can: 2 })).toEqual({ canHealthy: true })
     expect(bleStatusFromWire({ is_day: 0 })).toEqual({ isDay: false })
     expect(bleStatusFromWire({ is_day: 1 })).toEqual({ isDay: true })
   })

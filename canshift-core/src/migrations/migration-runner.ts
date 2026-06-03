@@ -621,12 +621,28 @@ export const BUILTIN_MIGRATIONS: readonly Migration[] = MIGRATIONS
  * Validates that a complete migration chain exists from fromVersion to toVersion.
  * Returns an array of missing step strings (e.g. ["1.2.0→1.3.0"]).
  * An empty array means the chain is complete.
+ *
+ * Throws if `fromVersion` is strictly newer than `toVersion`. The chain
+ * registry is forward-only; walking it with a newer-than-target source
+ * would silently return a missing-step gap which masks the real cause
+ * (the config came from a newer build than the runtime supports). The
+ * explicit error distinguishes downgrade from a true chain gap and is
+ * NOT prefixed with "Migration chain incomplete" so callers can branch
+ * on the message. Follow-up to audit #1289.
  */
 export function validateMigrationChain(
   fromVersion: string,
   toVersion: string,
   registry: MigrationRegistry
 ): string[] {
+  if (
+    SEMVER_PATTERN.test(fromVersion) &&
+    SEMVER_PATTERN.test(toVersion) &&
+    isSemverGreater(fromVersion, toVersion)
+  ) {
+    throw new Error(`downgrade not supported: ${fromVersion} → ${toVersion}`)
+  }
+
   const missing: string[] = []
   let current = fromVersion
 
@@ -655,6 +671,29 @@ export function validateMigrationChain(
 // migration runner stays free of cross-module coupling on a hot path. A change
 // to either site should keep the two in sync (issue #1016, audit C-HI-2).
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/
+
+// Parse a `MAJOR.MINOR.PATCH` triple into a numeric tuple for ordering. The
+// caller is responsible for validating the input against `SEMVER_PATTERN`
+// first; this helper assumes the format is well-formed. Used only for
+// downgrade detection — the migration chain itself walks edges by exact
+// string match, so we never need a full semver comparator.
+function parseSemverTuple(version: string): [number, number, number] {
+  const parts = version.split('.').map((p) => Number.parseInt(p, 10))
+  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0]
+}
+
+// Returns true when `a` is strictly greater than `b` under semver triple
+// ordering (major > minor > patch). Used to detect downgrade attempts at
+// the entry of `migrateConfig` and `validateMigrationChain` so callers get
+// a clear "config newer than target" error instead of a confusing
+// "missing steps" chain-gap message (audit follow-up to #1289).
+function isSemverGreater(a: string, b: string): boolean {
+  const [aMajor, aMinor, aPatch] = parseSemverTuple(a)
+  const [bMajor, bMinor, bPatch] = parseSemverTuple(b)
+  if (aMajor !== bMajor) return aMajor > bMajor
+  if (aMinor !== bMinor) return aMinor > bMinor
+  return aPatch > bPatch
+}
 
 /**
  * Apply all migrations to bring config from its current version to targetVersion.
@@ -711,6 +750,19 @@ export function migrateConfig(
 
   if (currentVersion === targetVersion) {
     return { config: current, applied }
+  }
+
+  // Downgrade detection — a config emitted by a newer Studio build can land
+  // in front of an older firmware/Studio runtime. The migration chain is
+  // forward-only; walking it would silently return a missing-step gap that
+  // masks the real cause. Raise an explicit downgrade error so the caller
+  // can surface "config is from a newer build" instead of a confusing
+  // "missing steps [1.22.0→1.18.0]" message. Audit follow-up to #1289.
+  if (
+    SEMVER_PATTERN.test(targetVersion) &&
+    isSemverGreater(currentVersion, targetVersion)
+  ) {
+    throw new Error(`downgrade not supported: ${currentVersion} → ${targetVersion}`)
   }
 
   // Validate the chain is complete before applying any migration

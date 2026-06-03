@@ -1626,6 +1626,53 @@ describe('migrateConfig — error cases', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Downgrade detection (audit follow-up to #1289)
+// ---------------------------------------------------------------------------
+//
+// A config emitted by a newer Studio build can land in front of an older
+// firmware/Studio runtime. The forward-only migration chain would walk past
+// the target and report a confusing "missing steps [1.22.0→1.18.0]" gap.
+// `migrateConfig` and `validateMigrationChain` now raise an explicit
+// "downgrade not supported" error at entry so the caller can surface the
+// real cause.
+
+describe('migrateConfig — downgrade detection', () => {
+  it('throws "downgrade not supported" when currentVersion > targetVersion', () => {
+    const config = { version: '1.22.0' }
+    expect(() => migrateConfig(config, '1.18.0')).toThrow(/downgrade not supported/)
+    expect(() => migrateConfig(config, '1.18.0')).toThrow(/1\.22\.0 → 1\.18\.0/)
+  })
+
+  it('downgrade error is NOT a chain-gap error', () => {
+    const config = { version: '1.22.0' }
+    expect(() => migrateConfig(config, '1.18.0')).not.toThrow(/Migration chain incomplete/)
+    expect(() => migrateConfig(config, '1.18.0')).not.toThrow(/missing steps/)
+  })
+
+  it('detects minor-version downgrade (1.20.0 → 1.18.0)', () => {
+    expect(() => migrateConfig({ version: '1.20.0' }, '1.18.0')).toThrow(
+      /downgrade not supported/
+    )
+  })
+
+  it('detects patch-version downgrade (1.18.1 → 1.18.0)', () => {
+    expect(() => migrateConfig({ version: '1.18.1' }, '1.18.0')).toThrow(
+      /downgrade not supported/
+    )
+  })
+
+  it('detects major-version downgrade (2.0.0 → 1.18.0)', () => {
+    expect(() => migrateConfig({ version: '2.0.0' }, '1.18.0')).toThrow(
+      /downgrade not supported/
+    )
+  })
+
+  it('does not flag same-version as a downgrade', () => {
+    expect(() => migrateConfig({ version: '1.18.0' }, '1.18.0')).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // validateMigrationChain
 // ---------------------------------------------------------------------------
 
@@ -1666,6 +1713,21 @@ describe('validateMigrationChain', () => {
       { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
     ]
     expect(validateMigrationChain('1.0.0', '1.1.0', registry)).toEqual([])
+  })
+
+  // Audit follow-up to #1289 — downgrade attempt must raise a distinct
+  // error rather than silently return a missing-step gap.
+  it('throws "downgrade not supported" when fromVersion > toVersion', () => {
+    const registry: MigrationRegistry = [
+      { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
+      { fromVersion: '1.1.0', toVersion: '1.2.0', migrate: identity },
+    ]
+    expect(() => validateMigrationChain('1.2.0', '1.0.0', registry)).toThrow(
+      /downgrade not supported/
+    )
+    expect(() => validateMigrationChain('1.2.0', '1.0.0', registry)).not.toThrow(
+      /Migration chain incomplete/
+    )
   })
 })
 
