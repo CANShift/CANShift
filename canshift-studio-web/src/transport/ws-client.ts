@@ -33,6 +33,22 @@ const RECONNECT_INITIAL_MS = 500
 const RECONNECT_MAX_MS = 30_000
 const RECONNECT_FACTOR = 2
 
+/**
+ * Minimum uptime since OPEN before we credit the connection as "stable"
+ * enough to reset the reconnect backoff. Without this, a firmware that flaps
+ * every few seconds (CAN-flood TWDT reset, etc.) keeps studio retrying at the
+ * 500 ms floor forever (#1288 WS-2).
+ */
+const STABLE_UPTIME_MS = 10_000
+
+/**
+ * Maximum number of pending `send()` requests we hold while an ack is in
+ * flight. Drained one-at-a-time as acks land (#1288 WS-3). Above this, new
+ * sends resolve with `queue_full` so callers can surface a real-pressure
+ * signal instead of silently dropping autosave bursts.
+ */
+const SEND_QUEUE_CAPACITY = 8
+
 const REFUSAL_FRAME = 'single-client only'
 
 export type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
@@ -78,6 +94,13 @@ interface PendingAck {
   timer: ReturnType<typeof setTimeout>
 }
 
+interface QueuedSend {
+  cmd: number
+  fields: Record<string, unknown>
+  opts: SendOptions
+  resolve: (result: AckResult) => void
+}
+
 interface Subscription {
   discriminator: string
   handler: Handler<unknown>
@@ -90,7 +113,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function safeJsonParse(line: string): unknown {
   try {
     return JSON.parse(line) as unknown
-  } catch {
+  } catch (err) {
+    // #1288 WS-6 — silent drops mask firmware-side protocol regressions.
+    // Surface them as a one-line warning so they're visible in the browser
+    // console during diagnosis without crashing the dispatch loop.
+    const reason = err instanceof Error ? err.message : 'unknown'
+    const preview = line.length > 80 ? `${line.slice(0, 80)}…` : line
+    console.warn(`[ws] dropped malformed frame (${reason}): ${preview}`)
     return null
   }
 }
@@ -109,10 +138,18 @@ export class WsClient {
   private status: WsStatus = 'disconnected'
   private intentionalDisconnect = false
   private pendingAck: PendingAck | null = null
+  private pendingSends: QueuedSend[] = []
   private subscriptions: Subscription[] = []
   private statusListeners: StatusListener[] = []
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private reconnectDelay = RECONNECT_INITIAL_MS
+  /**
+   * Timestamp of the most recent successful OPEN. Used by `scheduleReconnect`
+   * (#1288 WS-2) to decide whether the connection lived long enough to credit
+   * a backoff reset. `null` when we've never been connected since the last
+   * reset.
+   */
+  private successUptimeStartedAt: number | null = null
   private lastError: string | undefined
   private readonly factory: (url: string) => WebSocket
   private readonly autoReconnect: boolean
@@ -169,9 +206,12 @@ export class WsClient {
     if (host !== undefined) this.host = host
     if (port !== undefined) this.port = port
 
+    // Explicit `connect()` re-arms reconnect even after a refusal-frame
+    // disable (#1288 WS-1) — operator intent overrides the sticky flag.
     this.intentionalDisconnect = false
     this.cancelReconnect()
     this.reconnectDelay = RECONNECT_INITIAL_MS
+    this.successUptimeStartedAt = null
 
     return this.openSocket()
   }
@@ -181,6 +221,7 @@ export class WsClient {
     this.intentionalDisconnect = true
     this.cancelReconnect()
     this.failPendingAck('disconnected')
+    this.drainQueueWithError('disconnected')
     if (this.ws) {
       try {
         this.ws.close()
@@ -194,15 +235,38 @@ export class WsClient {
   /**
    * Send a command frame and await the firmware's `status:"ok"` ack.
    * Resolves with `{ ok: true, data }` or `{ ok: false, error }`.
+   *
+   * When an ack is already in flight, the send is enqueued and dispatched
+   * once the previous ack resolves (#1288 WS-3). The queue is bounded;
+   * sends beyond `SEND_QUEUE_CAPACITY` resolve with `queue_full` so callers
+   * can surface real backpressure instead of silently dropping rapid edits.
    */
   send(cmd: number, fields: Record<string, unknown> = {}, opts: SendOptions = {}): Promise<AckResult> {
     if (!this.ws || this.status !== 'connected') {
       return Promise.resolve({ ok: false, error: 'not_connected' })
     }
     if (this.pendingAck) {
-      return Promise.resolve({ ok: false, error: 'ack_in_flight' })
+      if (this.pendingSends.length >= SEND_QUEUE_CAPACITY) {
+        return Promise.resolve({ ok: false, error: 'queue_full' })
+      }
+      return new Promise<AckResult>((resolve) => {
+        this.pendingSends.push({ cmd, fields, opts, resolve })
+      })
     }
 
+    return this.dispatchSend(cmd, fields, opts)
+  }
+
+  /**
+   * Push the actual frame onto the socket and stash the pending ack. Split
+   * out of `send()` so `drainPendingSends()` can replay queued entries
+   * without duplicating the timeout/error wiring.
+   */
+  private dispatchSend(
+    cmd: number,
+    fields: Record<string, unknown>,
+    opts: SendOptions
+  ): Promise<AckResult> {
     const payload = JSON.stringify({ cmd, ...fields })
     const timeoutMs = opts.scaleWithPayload
       ? putConfigTimeoutMs(payload.length)
@@ -212,6 +276,7 @@ export class WsClient {
       const timer = setTimeout(() => {
         this.pendingAck = null
         resolve({ ok: false, error: 'ack_timeout' })
+        this.drainPendingSends()
       }, timeoutMs)
 
       this.pendingAck = { resolve, timer }
@@ -222,8 +287,31 @@ export class WsClient {
         clearTimeout(timer)
         this.pendingAck = null
         resolve({ ok: false, error: err instanceof Error ? err.message : 'send_failed' })
+        this.drainPendingSends()
       }
     })
+  }
+
+  /**
+   * Pop the head of the queue and dispatch it. Called whenever a pending ack
+   * resolves (success, error, or timeout). No-op on an empty queue.
+   */
+  private drainPendingSends(): void {
+    if (this.pendingAck) return
+    const next = this.pendingSends.shift()
+    if (!next) return
+    if (!this.ws || this.status !== 'connected') {
+      next.resolve({ ok: false, error: 'not_connected' })
+      this.drainPendingSends()
+      return
+    }
+    void this.dispatchSend(next.cmd, next.fields, next.opts).then(next.resolve)
+  }
+
+  private drainQueueWithError(reason: string): void {
+    const pending = this.pendingSends
+    this.pendingSends = []
+    for (const entry of pending) entry.resolve({ ok: false, error: reason })
   }
 
   // ---------------------------------------------------------------------------
@@ -256,7 +344,11 @@ export class WsClient {
       this.ws = ws
 
       ws.addEventListener('open', () => {
-        this.reconnectDelay = RECONNECT_INITIAL_MS
+        // Track open timestamp so `scheduleReconnect` can decide later
+        // whether the link lived long enough to credit a backoff reset
+        // (#1288 WS-2). We do NOT zero `reconnectDelay` here anymore — the
+        // decision moves to the next close.
+        this.successUptimeStartedAt = Date.now()
         this.lastError = undefined
         this.setStatus('connected')
         settle()
@@ -275,7 +367,10 @@ export class WsClient {
 
       ws.addEventListener('close', (ev: CloseEvent) => {
         this.failPendingAck('connection_closed')
+        this.drainQueueWithError('connection_closed')
         const wasConnected = this.status === 'connected'
+        const openedAt = this.successUptimeStartedAt
+        this.successUptimeStartedAt = null
         this.ws = null
         if (this.intentionalDisconnect) {
           this.setStatus('disconnected')
@@ -286,6 +381,12 @@ export class WsClient {
         this.setStatus('disconnected', reason)
         settle(reason)
         if (wasConnected || this.reconnectDelay > RECONNECT_INITIAL_MS) {
+          // #1288 WS-2 — only credit a backoff reset if the link survived
+          // STABLE_UPTIME_MS. A flapping firmware that drops every few
+          // seconds keeps its doubled delay so we stop pounding the AP.
+          if (openedAt !== null && Date.now() - openedAt >= STABLE_UPTIME_MS) {
+            this.reconnectDelay = RECONNECT_INITIAL_MS
+          }
           this.scheduleReconnect()
         }
       })
@@ -295,28 +396,26 @@ export class WsClient {
   private onFrame(raw: string): void {
     if (!raw) return
 
-    // The firmware refuses extra clients with a single text frame of literal
-    // "single-client only" before disconnecting. Surface it as the close
-    // reason so the connection store can show a meaningful error.
+    // #1288 WS-1 — The firmware refuses extra clients with a single text
+    // frame "single-client only" then closes. The previous behaviour only
+    // recorded the close reason; the auto-reconnect loop still re-armed and
+    // pounded the AP. Mark the disconnect as intentional so reconnect stays
+    // off until the next explicit `connect()` call.
     if (raw === REFUSAL_FRAME) {
       this.lastError = 'single_client'
+      this.intentionalDisconnect = true
+      this.cancelReconnect()
       return
     }
 
     const parsed = safeJsonParse(raw)
     if (!isRecord(parsed)) return
 
-    // Discriminator dispatch — tele / can_stat / can / log live alongside
-    // command acks, so we route them first. Any frame matching a known
-    // subscription is consumed and never falls through to the ack handler.
-    for (const sub of this.subscriptions) {
-      if (sub.discriminator in parsed) {
-        sub.handler(parsed)
-        return
-      }
-    }
-
-    if (this.pendingAck) {
+    // #1288 WS-4 — Check for the ack path first so a malformed ack like
+    // `{status:"ok", log:"saved"}` isn't swallowed by the `log` discriminator
+    // route. Only frames WITHOUT a `status` field fall through to the
+    // unsolicited subscription dispatch.
+    if ('status' in parsed && this.pendingAck) {
       const ack = this.pendingAck
       this.pendingAck = null
       clearTimeout(ack.timer)
@@ -326,6 +425,18 @@ export class WsClient {
       } else {
         const msg = typeof parsed.message === 'string' ? parsed.message : 'device_error'
         ack.resolve({ ok: false, error: msg, data: parsed })
+      }
+      this.drainPendingSends()
+      return
+    }
+
+    // Discriminator dispatch — tele / can_stat / can / log live alongside
+    // command acks, so we route them next. Any frame matching a known
+    // subscription is consumed and never falls through to the ack handler.
+    for (const sub of this.subscriptions) {
+      if (sub.discriminator in parsed) {
+        sub.handler(parsed)
+        return
       }
     }
   }

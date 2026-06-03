@@ -184,15 +184,41 @@ describe('WsClient — send / ack lifecycle', () => {
     expect(result).toEqual({ ok: false, error: 'not_connected' })
   })
 
-  it('returns ack_in_flight while a previous send is pending', async () => {
+  it('queues a follow-up send while a previous ack is in flight (#1288 WS-3)', async () => {
     const client = await connect()
-    const first = client.send(0x01)
-    const second = await client.send(0x02)
+    const ws = latestSocket()
+    const first = client.send(0x01, { a: 1 })
+    const second = client.send(0x02, { b: 2 })
 
-    expect(second).toEqual({ ok: false, error: 'ack_in_flight' })
-    // Drain the first so the test doesn't leave a dangling timer.
-    latestSocket().emit('message', { data: '{"status":"ok"}' })
+    // Only the first frame is on the wire; the second waits for the ack drain.
+    expect(ws.sent).toEqual(['{"cmd":1,"a":1}'])
+
+    ws.emit('message', { data: '{"status":"ok","seq":1}' })
+    await expect(first).resolves.toMatchObject({ ok: true, data: { seq: 1 } })
+
+    // After the first ack lands the queued send is dispatched.
+    expect(ws.sent).toEqual(['{"cmd":1,"a":1}', '{"cmd":2,"b":2}'])
+    ws.emit('message', { data: '{"status":"ok","seq":2}' })
+    await expect(second).resolves.toMatchObject({ ok: true, data: { seq: 2 } })
+  })
+
+  it('rejects sends with queue_full once the queue is at capacity (#1288 WS-3)', async () => {
+    const client = await connect()
+    const ws = latestSocket()
+    const first = client.send(0x01)
+
+    // Fill the 8-deep queue.
+    const queued: Promise<unknown>[] = []
+    for (let i = 0; i < 8; i++) queued.push(client.send(0x02))
+
+    const overflow = await client.send(0x03)
+    expect(overflow).toEqual({ ok: false, error: 'queue_full' })
+
+    // Drain everything so timers don't leak.
+    ws.emit('message', { data: '{"status":"ok"}' })
     await first
+    for (let i = 0; i < 8; i++) ws.emit('message', { data: '{"status":"ok"}' })
+    await Promise.all(queued)
   })
 
   it('resolves with ack_timeout when no ack lands before the deadline', async () => {
@@ -315,5 +341,104 @@ describe('WsClient — subscriptions', () => {
     const last = statuses[statuses.length - 1]
     expect(last?.status).toBe('disconnected')
     expect(last?.error).toBe('single_client')
+  })
+
+  it('refusal frame disables auto-reconnect until next explicit connect (#1288 WS-1)', async () => {
+    const client = new WsClient({ webSocketFactory: makeFactory() })
+
+    const pending = client.connect()
+    latestSocket().emit('open')
+    await pending
+
+    latestSocket().emit('message', { data: 'single-client only' })
+    latestSocket().emit('close', { reason: '' })
+
+    const before = FakeWebSocket.instances.length
+    vi.advanceTimersByTime(60_000)
+    expect(FakeWebSocket.instances.length).toBe(before)
+
+    // An explicit reconnect attempt must re-arm the loop.
+    const next = client.connect()
+    latestSocket().emit('open')
+    await next
+    expect(FakeWebSocket.instances.length).toBe(before + 1)
+  })
+
+  it('routes ack frames to the pending ack even when a discriminator key is present (#1288 WS-4)', async () => {
+    const client = new WsClient({ webSocketFactory: makeFactory() })
+    const pending = client.connect()
+    latestSocket().emit('open')
+    await pending
+
+    const ws = latestSocket()
+    const onLog = vi.fn()
+    client.subscribe('log', onLog)
+
+    const acked = client.send(0x99, {}, { timeoutMs: 1_000 })
+
+    // Future firmware could ship an ack like `{status:"ok", log:"saved"}` — the
+    // ack handler MUST win the dispatch.
+    ws.emit('message', { data: '{"status":"ok","log":"saved"}' })
+
+    await expect(acked).resolves.toMatchObject({ ok: true, data: { log: 'saved' } })
+    expect(onLog).not.toHaveBeenCalled()
+  })
+})
+
+describe('WsClient — reconnect backoff stability gate (#1288 WS-2)', () => {
+  it('keeps the doubled backoff when the link drops before STABLE_UPTIME_MS', async () => {
+    const client = new WsClient({ webSocketFactory: makeFactory() })
+
+    // First attempt — open then drop instantly. Scheduled at 500 ms; timer
+    // doubles backoff to 1000 ms before opening instance 2.
+    const first = client.connect()
+    latestSocket().emit('open')
+    await first
+    latestSocket().emit('close', { reason: 'drop' })
+    vi.advanceTimersByTime(500)
+    expect(FakeWebSocket.instances.length).toBe(2)
+
+    // Second attempt — open and drop after only 1 s of uptime. Without the
+    // stability gate this would reset the backoff to 500 ms. With the gate,
+    // it stays at 1000 ms; the next timer doubles it to 2000 ms.
+    latestSocket().emit('open')
+    vi.advanceTimersByTime(1_000)
+    latestSocket().emit('close', { reason: 'drop' })
+
+    // Reconnect is scheduled at the unchanged 1000 ms. After it fires the
+    // backoff doubles to 2000 ms — well above the pre-fix 500 ms floor.
+    vi.advanceTimersByTime(1_000)
+    expect(FakeWebSocket.instances.length).toBe(3)
+
+    // Now the next close + reconnect cycle uses the 2000 ms backoff. 1000 ms
+    // is NOT enough; 2000 ms total fires the timer and opens instance 4.
+    latestSocket().emit('close', { reason: 'drop' })
+    const before = FakeWebSocket.instances.length
+    vi.advanceTimersByTime(1_000)
+    expect(FakeWebSocket.instances.length).toBe(before)
+    vi.advanceTimersByTime(1_000)
+    expect(FakeWebSocket.instances.length).toBe(before + 1)
+  })
+
+  it('resets the backoff once the link survives STABLE_UPTIME_MS', async () => {
+    const client = new WsClient({ webSocketFactory: makeFactory() })
+
+    const first = client.connect()
+    latestSocket().emit('open')
+    await first
+    latestSocket().emit('close', { reason: 'drop' })
+    vi.advanceTimersByTime(500)
+    expect(FakeWebSocket.instances.length).toBe(2)
+
+    // Sustained uptime — well past STABLE_UPTIME_MS (10 s).
+    latestSocket().emit('open')
+    vi.advanceTimersByTime(15_000)
+    latestSocket().emit('close', { reason: 'drop' })
+
+    // Backoff was reset to 500 ms on close. The reconnect timer fires at
+    // 500 ms and opens instance 3 — restoring the fresh-floor behaviour.
+    const before = FakeWebSocket.instances.length
+    vi.advanceTimersByTime(500)
+    expect(FakeWebSocket.instances.length).toBe(before + 1)
   })
 })

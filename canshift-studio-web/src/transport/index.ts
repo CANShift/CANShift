@@ -16,10 +16,13 @@ import type {
   ScreenSettings,
 } from '@tmbk/canshift-core'
 import {
+  CanFrameSchema,
   DeviceConfigSchema,
   DeviceConfigWireSchema,
   InputBindingsConfigSchema,
   InputBindingsConfigWireSchema,
+  LogFrameSchema,
+  TeleFrameSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
   inputBindingsFromWire,
@@ -288,15 +291,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+// ---------------------------------------------------------------------------
+// Schema-validation diagnostics (#1288 WS-5).
+//
+// The Zod parse on inbound frames acts as defense-in-depth in front of the
+// existing hand-narrowing. When a frame drops we warn ONCE per (discriminator,
+// Zod error code) pair so a sustained drift surfaces a single line in the
+// console instead of multi-kHz spam. The hand-narrowing below the parse stays
+// in place — if a future firmware ships a field type Zod accepts but the
+// narrowing rejects, we still bail safely.
+// ---------------------------------------------------------------------------
+
+const seenSchemaErrors = new Set<string>()
+
+function warnFrameDrop(discriminator: string, code: string, sample: string): void {
+  const key = `${discriminator}:${code}`
+  if (seenSchemaErrors.has(key)) return
+  seenSchemaErrors.add(key)
+  console.warn(`[ws] dropping ${discriminator} frame — ${code} (${sample})`)
+}
+
 export const deviceEvents = {
   /** Device log lines. Frame shape: `{ log: 1, lvl, tag, msg }`. */
   onLogLine: (handler: Handler<{ level: string; tag: string; message: string }>): Unsubscribe => {
     return getWsClient().subscribe('log', (frame) => {
-      if (!isRecord(frame)) return
+      const parsed = LogFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop('log', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
+        return
+      }
       handler({
-        level: typeof frame.lvl === 'string' ? frame.lvl : 'I',
-        tag: typeof frame.tag === 'string' ? frame.tag : '',
-        message: typeof frame.msg === 'string' ? frame.msg : '',
+        level: parsed.data.lvl,
+        tag: parsed.data.tag,
+        message: parsed.data.msg,
       })
     })
   },
@@ -304,6 +331,14 @@ export const deviceEvents = {
   /** Raw CAN frames captured by the scanner. Shape: `{ can: 1, id, len, d }`. */
   onCanFrame: (handler: Handler<{ id: number; len: number; data: number[] }>): Unsubscribe => {
     return getWsClient().subscribe('can', (frame) => {
+      const parsed = CanFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop('can', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
+        return
+      }
+      // Hand-narrowing layer kept as defense in depth — schema already
+      // guarantees the shape, but the narrowing protects downstream code if
+      // either the schema or the dispatch boundary regresses.
       if (!isRecord(frame)) return
       const id = typeof frame.id === 'number' ? frame.id : null
       const len = typeof frame.len === 'number' ? frame.len : null
@@ -317,11 +352,16 @@ export const deviceEvents = {
   /** Live signal values. Shape: `{ tele: 1, v: { signalName: number } }`. */
   onSignal: (handler: Handler<Record<string, number>>): Unsubscribe => {
     return getWsClient().subscribe('tele', (frame) => {
-      if (!isRecord(frame)) return
-      const values = frame.v
-      if (!isRecord(values)) return
+      const parsed = TeleFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop('tele', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
+        return
+      }
+      // Defense-in-depth narrowing — schema already filtered non-finite values
+      // out of `v`; the explicit `typeof` keeps the contract obvious at the
+      // hand-off to downstream code.
       const flat: Record<string, number> = {}
-      for (const [k, v] of Object.entries(values)) {
+      for (const [k, v] of Object.entries(parsed.data.v)) {
         if (typeof v === 'number') flat[k] = v
       }
       handler(flat)
