@@ -758,10 +758,7 @@ export function migrateConfig(
   // masks the real cause. Raise an explicit downgrade error so the caller
   // can surface "config is from a newer build" instead of a confusing
   // "missing steps [1.22.0→1.18.0]" message. Audit follow-up to #1289.
-  if (
-    SEMVER_PATTERN.test(targetVersion) &&
-    isSemverGreater(currentVersion, targetVersion)
-  ) {
+  if (SEMVER_PATTERN.test(targetVersion) && isSemverGreater(currentVersion, targetVersion)) {
     throw new Error(`downgrade not supported: ${currentVersion} → ${targetVersion}`)
   }
 

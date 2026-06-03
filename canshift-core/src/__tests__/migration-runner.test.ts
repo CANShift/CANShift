@@ -1650,21 +1650,15 @@ describe('migrateConfig — downgrade detection', () => {
   })
 
   it('detects minor-version downgrade (1.20.0 → 1.18.0)', () => {
-    expect(() => migrateConfig({ version: '1.20.0' }, '1.18.0')).toThrow(
-      /downgrade not supported/
-    )
+    expect(() => migrateConfig({ version: '1.20.0' }, '1.18.0')).toThrow(/downgrade not supported/)
   })
 
   it('detects patch-version downgrade (1.18.1 → 1.18.0)', () => {
-    expect(() => migrateConfig({ version: '1.18.1' }, '1.18.0')).toThrow(
-      /downgrade not supported/
-    )
+    expect(() => migrateConfig({ version: '1.18.1' }, '1.18.0')).toThrow(/downgrade not supported/)
   })
 
   it('detects major-version downgrade (2.0.0 → 1.18.0)', () => {
-    expect(() => migrateConfig({ version: '2.0.0' }, '1.18.0')).toThrow(
-      /downgrade not supported/
-    )
+    expect(() => migrateConfig({ version: '2.0.0' }, '1.18.0')).toThrow(/downgrade not supported/)
   })
 
   it('does not flag same-version as a downgrade', () => {
