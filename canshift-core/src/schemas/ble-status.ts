@@ -16,11 +16,16 @@ import { z } from 'zod'
 /** Max length for free-form STATUS strings. Firmware caps at ~32; we cap higher. */
 export const BLE_STATUS_MAX_STRING_LEN = 32
 
-const FiniteNumberSchema = z.number().refine(Number.isFinite, {
-  message: 'must be a finite number',
-})
-
 const CappedStringSchema = z.string().max(BLE_STATUS_MAX_STRING_LEN)
+
+/**
+ * Wire contract for STATUS boolean flags. Firmware emits these as raw 0/1
+ * integers; any other value (0.5, 2, NaN, negative numbers) is a contract
+ * violation. Previously typed as `FiniteNumber` which silently accepted
+ * arbitrary floats — `can: 0.5` would map to `canHealthy: true` via the
+ * `!== 0` predicate in `bleStatusFromWire`. Audit follow-up to #1289.
+ */
+const ZeroOrOneSchema = z.union([z.literal(0), z.literal(1)])
 
 /**
  * Wire format — exactly what the firmware sends. snake_case keys, all
@@ -30,10 +35,10 @@ const CappedStringSchema = z.string().max(BLE_STATUS_MAX_STRING_LEN)
 export const BleStatusWireSchema = z
   .object({
     ver: CappedStringSchema.optional(),
-    can: FiniteNumberSchema.optional(),
+    can: ZeroOrOneSchema.optional(),
     ap_ssid: CappedStringSchema.optional(),
     ap_password: CappedStringSchema.optional(),
-    is_day: FiniteNumberSchema.optional(),
+    is_day: ZeroOrOneSchema.optional(),
   })
   .strict()
 
@@ -53,10 +58,8 @@ export interface BleStatus {
 
 /**
  * Wire → domain. Pure; assumes input already passed `BleStatusWireSchema`.
- * Numeric `can` and `is_day` are 0/1 flags on the wire — translated to
- * `boolean` on the domain side. Any non-zero value is treated as true so
- * older firmware that ships 2/3/etc. for `can` health still narrows
- * predictably.
+ * Numeric `can` and `is_day` are strict 0/1 flags on the wire — translated to
+ * `boolean` on the domain side.
  */
 export function bleStatusFromWire(wire: BleStatusWire): BleStatus {
   const out: BleStatus = {}

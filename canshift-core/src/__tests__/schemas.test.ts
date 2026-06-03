@@ -665,6 +665,27 @@ describe('Esp32InputGpioSchema', () => {
   it.each([6, 7, 8, 9, 10, 11])('still rejects SPI-flash pin %i', (pin) => {
     expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(false)
   })
+
+  it.each([20, 24, 28, 29, 30, 31])('rejects unbonded pin %i', (pin) => {
+    expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(false)
+  })
+
+  // Follow-up to audit #1289 — error message must spell out the full excluded
+  // set (SPI flash 6-11, unbonded 20/24/28-31) so Studio surfaces an actionable
+  // diagnostic instead of the old wording that only mentioned SPI flash.
+  it('rejection message names SPI flash, unbonded pins, and the input-only exception', () => {
+    const result = Esp32InputGpioSchema.safeParse(6)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const message = result.error.issues[0]?.message ?? ''
+      expect(message).toMatch(/6-11/)
+      expect(message).toMatch(/SPI flash/)
+      expect(message).toMatch(/20/)
+      expect(message).toMatch(/24/)
+      expect(message).toMatch(/28-31/)
+      expect(message).toMatch(/34-39/)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
