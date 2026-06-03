@@ -96,18 +96,29 @@ function useDeviceConfigBootstrap(): void {
   useEffect(() => {
     if (!connected || transport !== 'wifi') return
     let cancelled = false
-    void deviceIpc.getConfig().then((result) => {
-      if (cancelled) return
-      if (result.kind === 'ok') {
-        const outcome = loadFromDeviceOrDemo(result.config)
-        if (outcome === 'device') log('success', 'Loaded config from dash')
-      } else if (result.kind === 'none') {
-        const outcome = loadFromDeviceOrDemo(null)
-        if (outcome === 'demo') log('info', 'Dash has no config — loaded demo')
-      } else {
-        log('error', `Failed to read dash config: ${result.error}`)
-      }
-    })
+    void deviceIpc
+      .getConfig()
+      .then((result) => {
+        if (cancelled) return
+        if (result.kind === 'ok') {
+          const outcome = loadFromDeviceOrDemo(result.config)
+          if (outcome === 'device') log('success', 'Loaded config from dash')
+        } else if (result.kind === 'none') {
+          const outcome = loadFromDeviceOrDemo(null)
+          if (outcome === 'demo') log('info', 'Dash has no config — loaded demo')
+        } else {
+          log('error', `Failed to read dash config: ${result.error}`)
+        }
+      })
+      .catch((err: unknown) => {
+        // #1288 WS-7 — a transient WS failure between connect and the first
+        // `getConfig` ack used to fall through unhandled. Surface it via the
+        // log store so the user sees something instead of a silent loading
+        // spinner with a stack trace in the console.
+        if (cancelled) return
+        const message = err instanceof Error ? err.message : String(err)
+        log('error', `Failed to read dash config: ${message}`)
+      })
     return () => {
       cancelled = true
     }

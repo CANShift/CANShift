@@ -118,6 +118,12 @@ export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-s
 export type { BleStatus, BleStatusResult } from './schemas/ble-status.js'
 export { BLE_STATUS_MAX_STRING_LEN, parseBleStatus } from './schemas/ble-status.js'
 
+// Unsolicited WS frame schemas — defense-in-depth validation for the studio-web
+// transport (issue #1288, WS-5). Lets the dispatcher drop malformed frames with
+// a single warning instead of silently corrupting downstream stores.
+export type { LogFrame, CanFrame, TeleFrame } from './schemas/ws-frames.js'
+export { LogFrameSchema, CanFrameSchema, TeleFrameSchema } from './schemas/ws-frames.js'
+
 // Sensor color-ramp defaults (issue #430)
 export {
   SENSOR_DEFAULT_RAMPS,
