@@ -65,9 +65,7 @@ describe('TeleFrameSchema', () => {
 
   it('rejects non-finite values', () => {
     expect(() => TeleFrameSchema.parse({ tele: 1, v: { rpm: Number.NaN } })).toThrow()
-    expect(() =>
-      TeleFrameSchema.parse({ tele: 1, v: { rpm: Number.POSITIVE_INFINITY } })
-    ).toThrow()
+    expect(() => TeleFrameSchema.parse({ tele: 1, v: { rpm: Number.POSITIVE_INFINITY } })).toThrow()
   })
 
   it('rejects non-numeric values', () => {
