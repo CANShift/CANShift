@@ -116,7 +116,6 @@ function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
   })
 }
 
-
 // ---------------------------------------------------------------------------
 // BleService — owner-controlled lifecycle, dependency-injectable for tests.
 // ---------------------------------------------------------------------------
