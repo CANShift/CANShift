@@ -22,8 +22,8 @@ the single source of truth for config),
 [`canshift-firmware`](../canshift-firmware/) (C++17 / Arduino / PlatformIO
 ESP32 application), and [`canshift-studio-web`](../canshift-studio-web/) (a
 dash-hosted React SPA that ships in the firmware SPIFFS data partition —
-the canonical Studio since the Electron `canshift-studio/` package was
-decommissioned post-cutover). [`canshift-mobile`](../canshift-mobile/)
+the canonical Studio, served over WebSocket by the firmware on port 81).
+[`canshift-mobile`](../canshift-mobile/)
 (React Native, deferred from the active workstream) handles in-car BLE
 telemetry and Wi-Fi OTA, and the standalone
 [`canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) repo
@@ -504,7 +504,7 @@ build-time macros:
   endpoint all read this. The release pipeline asserts the literal
   appears in the linked ELF before publishing. Source-of-truth moved here
   from `canshift-studio/package.json` once the Electron Studio package was
-  decommissioned post-cutover — firmware is now the only artifact in
+  decommissioned (see #1077) — firmware is now the only artifact in
   releases, so the version naturally tracks the firmware.
 - `CONFIG_SCHEMA_VERSION` — mirrored from
   [`canshift-core/src/index.ts`](../canshift-core/src/index.ts)
