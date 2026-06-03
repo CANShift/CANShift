@@ -1,10 +1,6 @@
 // ble-status.test.ts — Schema + wire mapper coverage for #887.
 
-import {
-  BleStatusWireSchema,
-  bleStatusFromWire,
-  parseBleStatus,
-} from '../schemas/ble-status.js'
+import { BleStatusWireSchema, bleStatusFromWire, parseBleStatus } from '../schemas/ble-status.js'
 import type { BleStatusWire } from '../schemas/ble-status.js'
 
 describe('BleStatusWireSchema', () => {
