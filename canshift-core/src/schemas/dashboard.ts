@@ -120,6 +120,13 @@ const CanRawDataSchema = z
   })
   .regex(CAN_RAW_DATA_REGEX, 'data must be even-length hex (e.g. "DEADBEEF")')
 
+// Standard 11-bit CAN identifier upper bound. `extended=true` selects 29-bit
+// framing (up to `CAN_29BIT_MAX`); when omitted or `false`, `frameId` must fit
+// in 11 bits or firmware silently truncates the upper bits / emits a malformed
+// frame (#1289). The cross-field guard runs on `ButtonActionSchema` below so
+// the variant stays a `ZodObject` (required by `z.discriminatedUnion`).
+const CAN_11BIT_MAX = 0x7ff
+
 const CanRawActionSchema = z
   .object({
     category: z.literal('ecu'),
@@ -172,12 +179,26 @@ const CruiseControlActionSchema = z
  * removed during the 1.0→1.1 migration, issue #672) is NOT part of any action
  * variant. Adding it to an action will fail validation, by design.
  */
-export const ButtonActionSchema = z.discriminatedUnion('type', [
-  NavigateActionSchema,
-  MapSwitchActionSchema,
-  CanRawActionSchema,
-  CruiseControlActionSchema,
-])
+export const ButtonActionSchema = z
+  .discriminatedUnion('type', [
+    NavigateActionSchema,
+    MapSwitchActionSchema,
+    CanRawActionSchema,
+    CruiseControlActionSchema,
+  ])
+  // `can_raw` with `extended` omitted or `false` must fit in the 11-bit range;
+  // firmware silently truncates upper bits or emits a malformed frame otherwise
+  // (#1289). Runs at the union level so the inner variant stays a `ZodObject`
+  // (required by `z.discriminatedUnion`).
+  .superRefine((a, ctx) => {
+    if (a.type === 'can_raw' && !a.extended && a.frameId > CAN_11BIT_MAX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['frameId'],
+        message: '11-bit frameId must be <= 0x7FF unless extended=true',
+      })
+    }
+  })
 
 // Individual variants are re-exported as types for downstream consumers
 // (mobile, studio) that hold references to them.
@@ -277,17 +298,35 @@ export const WidgetTypeSchema = z.enum(
 // Widget
 // ---------------------------------------------------------------------------
 
+// Widget variants that consume a signal value on-device. Button widgets emit
+// actions and image widgets render a static asset — they ship with `signal: ""`
+// in the firmware demo and studio defaults, so empty signals are legal on those
+// variants. The rest produce a catalog-lookup miss when bound to an empty
+// string, so we reject that at the boundary (#1289).
+const SIGNAL_CONSUMING_WIDGET_TYPES = new Set(['gauge', 'warning', 'gear', 'timer'])
+
 export const WidgetSchema = z
   .object({
     id: z.string().min(1, 'widget id must be a non-empty string'),
     type: WidgetTypeSchema,
-    signal: z.string(),
+    // Capped to mirror `SignalDef.name` — an over-cap name overflows firmware's
+    // fixed-buffer copy. The non-empty guard is enforced per-variant below
+    // because button/image widgets legitimately ship without a signal binding
+    // (#1289).
+    signal: z.string().max(STRING_CAPS.SIGNAL_NAME),
     layout: WidgetLayoutSchema,
     style: WidgetStyleSchema,
     config: WidgetConfigSchema,
   })
   .strict()
   .superRefine((w, ctx) => {
+    if (SIGNAL_CONSUMING_WIDGET_TYPES.has(w.type) && w.signal.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `signal must be a non-empty string for ${w.type} widgets`,
+        path: ['signal'],
+      })
+    }
     const cfg = w.config
     if (cfg.type === 'gauge') {
       if (cfg.minValue >= cfg.maxValue) {
@@ -416,7 +455,9 @@ const iconOnlyTopBarItemShape = z.object({ position: TopBarItemPositionSchema })
  * adds `text`).
  */
 const signalBoundTopBarItemShape = z.object({
-  signal: z.string(),
+  // Bounded to mirror `SignalDef.name`'s cap — same rationale as
+  // `WidgetSchema.signal` (#1289).
+  signal: z.string().min(1, 'signal must be a non-empty string').max(STRING_CAPS.SIGNAL_NAME),
   position: TopBarItemPositionSchema,
 })
 
