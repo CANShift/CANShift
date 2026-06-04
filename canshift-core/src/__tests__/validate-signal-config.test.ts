@@ -233,3 +233,108 @@ describe('validateSignalConfig — underscore comments (#1289)', () => {
     expect(result.valid).toBe(true)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Outbound `out` block — issue #1303 / refs #317
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — out block (#1303)', () => {
+  it('accepts the firmware demo out.map_switch shape', () => {
+    const result = validateSignalConfig(
+      validConfig({
+        out: {
+          map_switch: {
+            id: '0x600',
+            extended: false,
+            encoding: 'byte0 = mapIndex (1-based, 1..8)',
+          },
+        },
+      })
+    )
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('accepts an out entry with id only (extended defaults at the firmware boundary)', () => {
+    const result = validateSignalConfig(validConfig({ out: { map_switch: { id: '0x600' } } }))
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts the empty out block', () => {
+    const result = validateSignalConfig(validConfig({ out: {} }))
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts extended-range hex ids up to 0x1FFFFFFF', () => {
+    const result = validateSignalConfig(
+      validConfig({ out: { map_switch: { id: '0x1FFFFFFF', extended: true } } })
+    )
+    expect(result.valid).toBe(true)
+  })
+
+  it.each(['600', '#600', '0x', '0xGGG', '0xZZZZ', ''])('rejects non-hex id %s', (id) => {
+    const result = validateSignalConfig(validConfig({ out: { map_switch: { id } } }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('out.map_switch.id'))).toBe(true)
+  })
+
+  it('rejects an id past the 29-bit boundary', () => {
+    const result = validateSignalConfig(validConfig({ out: { map_switch: { id: '0x20000000' } } }))
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('out.map_switch.id'))).toBe(true)
+  })
+
+  it('rejects a non-string id', () => {
+    const result = validateSignalConfig(validConfig({ out: { map_switch: { id: 0x600 } } }))
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects a non-boolean extended', () => {
+    const result = validateSignalConfig(
+      validConfig({ out: { map_switch: { id: '0x600', extended: 'yes' } } })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('out.map_switch.extended'))).toBe(true)
+  })
+
+  it('rejects unknown fields on an out entry (strict)', () => {
+    const result = validateSignalConfig(
+      validConfig({
+        out: { map_switch: { id: '0x600', mystery: 'nope' } },
+      })
+    )
+    expect(result.valid).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Per-signal `_batteryThresholds` — issue #1303
+// ---------------------------------------------------------------------------
+
+describe('validateSignalConfig — _batteryThresholds (#1303)', () => {
+  it('accepts a descriptive _batteryThresholds string (matches firmware demo)', () => {
+    const result = validateSignalConfig(
+      validConfig({
+        signals: [
+          validSignal({
+            name: 'battery_volts',
+            _batteryThresholds:
+              'Battery uses BOTH low-side and high-side thresholds. Tune per chemistry.',
+          }),
+        ],
+      })
+    )
+    expect(result.valid).toBe(true)
+  })
+
+  it.each([42, -1, true, null, { low: 12 }, [12, 11]])(
+    'rejects non-string _batteryThresholds (%s)',
+    (value) => {
+      const result = validateSignalConfig(
+        validConfig({ signals: [validSignal({ _batteryThresholds: value })] })
+      )
+      expect(result.valid).toBe(false)
+      expect(result.errors.some((e) => e.includes('_batteryThresholds'))).toBe(true)
+    }
+  )
+})
