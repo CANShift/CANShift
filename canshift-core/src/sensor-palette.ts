@@ -15,6 +15,7 @@
 //     `style.primaryColor` (legacy override) — never silently overrides a
 //     hand-picked colour.
 
+import { HexColorSchema } from './schemas/common.js'
 import type { HexColor } from './schemas/common.js'
 import type { SensorIconName } from './schemas/dashboard.js'
 import type { SignalType } from './schemas/signal-type.js'
@@ -30,8 +31,14 @@ export interface SensorPaletteEntry {
   warning?: HexColor
 }
 
-const RED: HexColor = '#CC3333'
-const AMBER: HexColor = '#FFA000'
+// Branded `HexColor` is nominal — plain hex literals must flow through the
+// schema once at module load (#1207 brand follow-up to #1316). Cheap one-shot
+// cost; a typo in the canonical palette trips Zod here rather than producing
+// confusing runtime drift downstream.
+const hex = (value: string): HexColor => HexColorSchema.parse(value)
+
+const RED = hex('#CC3333')
+const AMBER = hex('#FFA000')
 
 /**
  * Per-sensor colour palette. Keys MUST stay in lockstep with
@@ -41,36 +48,36 @@ const AMBER: HexColor = '#FFA000'
  */
 export const SENSOR_PALETTE: Record<SensorIconName, SensorPaletteEntry> = {
   // Engine fluids & pressures
-  coolant: { ok: '#1E88E5', warning: RED },
-  oil_temp: { ok: '#F5A623', warning: RED },
-  oil_pressure: { ok: '#4CAF50', warning: RED },
+  coolant: { ok: hex('#1E88E5'), warning: RED },
+  oil_temp: { ok: hex('#F5A623'), warning: RED },
+  oil_pressure: { ok: hex('#4CAF50'), warning: RED },
   // Forced induction
-  boost: { ok: '#8E24AA', warning: RED },
-  turbo: { ok: '#8E24AA', warning: RED },
+  boost: { ok: hex('#8E24AA'), warning: RED },
+  turbo: { ok: hex('#8E24AA'), warning: RED },
   // Electrical
-  battery: { ok: '#FBC02D', warning: RED },
+  battery: { ok: hex('#FBC02D'), warning: RED },
   // Fuel — warns AMBER for low fuel, not red (low fuel ≠ engine danger).
-  fuel: { ok: '#4CAF50', warning: AMBER },
-  afr: { ok: '#C2185B', warning: RED },
+  fuel: { ok: hex('#4CAF50'), warning: AMBER },
+  afr: { ok: hex('#C2185B'), warning: RED },
   // Engine speed
-  rpm: { ok: '#00ACC1', warning: RED },
+  rpm: { ok: hex('#00ACC1'), warning: RED },
   // Throttle & speed — no semantic upper warning.
-  throttle: { ok: '#FB8C00' },
-  speed: { ok: '#ECEFF1' },
+  throttle: { ok: hex('#FB8C00') },
+  speed: { ok: hex('#ECEFF1') },
   // Intake / exhaust temps
-  iat: { ok: '#4FC3F7', warning: RED },
-  exhaust: { ok: '#FB8C00', warning: RED },
+  iat: { ok: hex('#4FC3F7'), warning: RED },
+  exhaust: { ok: hex('#FB8C00'), warning: RED },
   // Indicators / status — neutral OK colour; warning glyph stays red.
-  gear: { ok: '#ECEFF1' },
-  timer: { ok: '#ECEFF1' },
+  gear: { ok: hex('#ECEFF1') },
+  timer: { ok: hex('#ECEFF1') },
   warning: { ok: RED },
-  flame: { ok: '#FF6F00', warning: RED },
-  engine: { ok: '#4CAF50', warning: RED },
+  flame: { ok: hex('#FF6F00'), warning: RED },
+  engine: { ok: hex('#4CAF50'), warning: RED },
   brake: { ok: RED },
-  launch: { ok: '#43A047' },
-  traction: { ok: '#43A047' },
-  map_icon: { ok: '#42A5F5' },
-  cog: { ok: '#9E9E9E' },
+  launch: { ok: hex('#43A047') },
+  traction: { ok: hex('#43A047') },
+  map_icon: { ok: hex('#42A5F5') },
+  cog: { ok: hex('#9E9E9E') },
 }
 
 /**

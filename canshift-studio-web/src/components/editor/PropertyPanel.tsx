@@ -97,7 +97,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         addPage({
           id: CRUISE_CONTROL_PAGE_ID,
           backgroundImage: null,
-          backgroundColor: '#000000',
+          backgroundColor: HexColorSchema.parse('#000000'),
           palette: DEFAULT_PAGE_PALETTE,
           showTopBar: true,
           template: 'cruise_control',

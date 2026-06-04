@@ -1,10 +1,21 @@
 // WidgetPalette.tsx — Widget type picker.
 // Click a tile to add a new widget of that type to the current page.
 
+import { HexColorSchema } from '@tmbk/canshift-core'
 import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/sizeTokens'
+
+// Default widget style colours — branded `HexColor` literals validated once
+// at module load (#1207 brand follow-up to #1316).
+const DEFAULT_WIDGET_STYLE = {
+  primaryColor: HexColorSchema.parse('#FF4444'),
+  secondaryColor: HexColorSchema.parse('#333333'),
+  warningColor: HexColorSchema.parse('#FF8800'),
+  criticalColor: HexColorSchema.parse('#FF0000'),
+  textColor: HexColorSchema.parse('#FFFFFF'),
+}
 
 // Chrome shades that do not yet map to a core design token. Kept as named
 // constants so the planned token promotion (audit S-H-5, umbrella #1015) only
@@ -68,9 +79,7 @@ interface WidgetPaletteProps {
 
 export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
   const addWidget = useDashboardStore((s) => s.addWidget)
-  const page = useDashboardStore((s) =>
-    s.config?.pages.find((p) => p.id === pageId)
-  )
+  const page = useDashboardStore((s) => s.config?.pages.find((p) => p.id === pageId))
   // Pages running a built-in template (#451) render a procedural layout — the
   // free-form widget grid is ignored on-device, so adding widgets here would
   // be a silent dead end. Surface the lock-out + a hint instead.
@@ -112,11 +121,7 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
       signal: item.defaultSignal,
       layout: { x: 10, y: 10, w: item.defaultW, h: item.defaultH, zOrder: 0 },
       style: {
-        primaryColor: '#FF4444',
-        secondaryColor: '#333333',
-        warningColor: '#FF8800',
-        criticalColor: '#FF0000',
-        textColor: '#FFFFFF',
+        ...DEFAULT_WIDGET_STYLE,
         fontSize: 16,
       },
       config: baseConfig,
@@ -146,8 +151,8 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
             lineHeight: 1.4,
           }}
         >
-          This page uses a built-in template — widget edits are ignored. Switch
-          the page template back to <em>Custom layout</em> to add widgets.
+          This page uses a built-in template — widget edits are ignored. Switch the page template
+          back to <em>Custom layout</em> to add widgets.
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

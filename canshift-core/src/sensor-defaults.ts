@@ -7,8 +7,14 @@
 // emitted by `npm run export:sensor-defaults`.
 
 import { HEX_REGEX } from './colors/hex.js'
+import { HexColorSchema } from './schemas/common.js'
 import type { HexColor } from './schemas/common.js'
 import type { ColorRamp } from './schemas/signal.js'
+
+// Branded `HexColor` is nominal — plain hex literals must flow through the
+// schema once at module load (#1207 brand follow-up to #1316). The runtime
+// validation cost is amortised across the entire shipping ramp catalog.
+const hex = (value: string): HexColor => HexColorSchema.parse(value)
 
 /**
  * Discriminated kinds for the standard sensor catalog. The string values are
@@ -44,82 +50,82 @@ export const SENSOR_DEFAULT_RAMPS: Record<SensorKind, ColorRamp> = {
   coolant_temp: {
     interpolate: 'linear',
     stops: [
-      { value: 60, color: '#4A90E2' },
-      { value: 90, color: '#44CC66' },
-      { value: 100, color: '#CC8800' },
-      { value: 110, color: '#CC3333' },
+      { value: 60, color: hex('#4A90E2') },
+      { value: 90, color: hex('#44CC66') },
+      { value: 100, color: hex('#CC8800') },
+      { value: 110, color: hex('#CC3333') },
     ],
   },
   oil_temp: {
     interpolate: 'linear',
     stops: [
-      { value: 70, color: '#4A90E2' },
-      { value: 95, color: '#44CC66' },
-      { value: 120, color: '#CC8800' },
-      { value: 135, color: '#CC3333' },
+      { value: 70, color: hex('#4A90E2') },
+      { value: 95, color: hex('#44CC66') },
+      { value: 120, color: hex('#CC8800') },
+      { value: 135, color: hex('#CC3333') },
     ],
   },
   oil_press: {
     interpolate: 'linear',
     stops: [
-      { value: 1.0, color: '#CC3333' },
-      { value: 1.8, color: '#CC8800' },
-      { value: 2.5, color: '#44CC66' },
-      { value: 6.0, color: '#44CC66' },
+      { value: 1.0, color: hex('#CC3333') },
+      { value: 1.8, color: hex('#CC8800') },
+      { value: 2.5, color: hex('#44CC66') },
+      { value: 6.0, color: hex('#44CC66') },
     ],
   },
   battery_volts: {
     interpolate: 'linear',
     stops: [
-      { value: 11.5, color: '#CC3333' },
-      { value: 12.5, color: '#CC8800' },
-      { value: 13.5, color: '#44CC66' },
-      { value: 14.8, color: '#CC8800' },
-      { value: 15.5, color: '#CC3333' },
+      { value: 11.5, color: hex('#CC3333') },
+      { value: 12.5, color: hex('#CC8800') },
+      { value: 13.5, color: hex('#44CC66') },
+      { value: 14.8, color: hex('#CC8800') },
+      { value: 15.5, color: hex('#CC3333') },
     ],
   },
   rpm: {
     interpolate: 'linear',
     stops: [
-      { value: 1500, color: '#44CC66' },
-      { value: 5500, color: '#44CC66' },
-      { value: 6500, color: '#CC8800' },
-      { value: 7000, color: '#CC3333' },
+      { value: 1500, color: hex('#44CC66') },
+      { value: 5500, color: hex('#44CC66') },
+      { value: 6500, color: hex('#CC8800') },
+      { value: 7000, color: hex('#CC3333') },
     ],
   },
   afr: {
     interpolate: 'linear',
     stops: [
-      { value: 10.5, color: '#CC3333' },
-      { value: 11.8, color: '#CC8800' },
-      { value: 13.0, color: '#44CC66' },
-      { value: 14.7, color: '#44CC66' },
-      { value: 16.0, color: '#CC8800' },
+      { value: 10.5, color: hex('#CC3333') },
+      { value: 11.8, color: hex('#CC8800') },
+      { value: 13.0, color: hex('#44CC66') },
+      { value: 14.7, color: hex('#44CC66') },
+      { value: 16.0, color: hex('#CC8800') },
     ],
   },
   boost: {
     interpolate: 'linear',
     stops: [
-      { value: 0.0, color: '#44CC66' },
-      { value: 1.0, color: '#44CC66' },
-      { value: 1.4, color: '#CC8800' },
-      { value: 1.7, color: '#CC3333' },
+      { value: 0.0, color: hex('#44CC66') },
+      { value: 1.0, color: hex('#44CC66') },
+      { value: 1.4, color: hex('#CC8800') },
+      { value: 1.7, color: hex('#CC3333') },
     ],
   },
   intake_temp: {
     interpolate: 'linear',
     stops: [
-      { value: 20, color: '#44CC66' },
-      { value: 50, color: '#CC8800' },
-      { value: 65, color: '#CC3333' },
+      { value: 20, color: hex('#44CC66') },
+      { value: 50, color: hex('#CC8800') },
+      { value: 65, color: hex('#CC3333') },
     ],
   },
   egt: {
     interpolate: 'linear',
     stops: [
-      { value: 600, color: '#44CC66' },
-      { value: 850, color: '#CC8800' },
-      { value: 950, color: '#CC3333' },
+      { value: 600, color: hex('#44CC66') },
+      { value: 850, color: hex('#CC8800') },
+      { value: 950, color: hex('#CC3333') },
     ],
   },
 }
@@ -193,10 +199,12 @@ function parseHex(color: HexColor): RgbChannels {
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
 }
 
+const BLACK = hex('#000000')
+
 function toHex(channels: RgbChannels): HexColor {
   const clamp = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : Math.round(v))
-  const hex = (v: number): string => clamp(v).toString(16).padStart(2, '0').toUpperCase()
-  return `#${hex(channels.r)}${hex(channels.g)}${hex(channels.b)}`
+  const byte = (v: number): string => clamp(v).toString(16).padStart(2, '0').toUpperCase()
+  return hex(`#${byte(channels.r)}${byte(channels.g)}${byte(channels.b)}`)
 }
 
 /**
@@ -207,10 +215,10 @@ function toHex(channels: RgbChannels): HexColor {
  */
 export function colorAtValue(ramp: ColorRamp, value: number): HexColor {
   const stops = ramp.stops
-  if (stops.length === 0) return '#000000'
+  if (stops.length === 0) return BLACK
   const first = stops[0]
   const last = stops[stops.length - 1]
-  if (!first || !last) return '#000000'
+  if (!first || !last) return BLACK
   if (stops.length === 1 || value <= first.value) return first.color
   if (value >= last.value) return last.color
 

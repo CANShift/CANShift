@@ -7,6 +7,7 @@
 // just additional entries in `THEME_PRESETS`; downstream consumers iterate
 // the array and never hard-code an id.
 
+import { ThemePresetSchema } from './schemas/dashboard.js'
 import type { ThemePreset } from './schemas/dashboard.js'
 
 /** Stable identifier used by the studio picker — kebab-case, no spaces. */
@@ -21,12 +22,18 @@ export interface ThemePresetEntry {
   theme: ThemePreset
 }
 
+// Branded `HexColor` is nominal — each catalog theme flows through the schema
+// once at module load (#1207 brand follow-up to #1316). Cheap one-shot cost;
+// a typo in any preset trips Zod here rather than producing a confusing
+// firmware ack downstream.
+const themeFromLiterals = (theme: unknown): ThemePreset => ThemePresetSchema.parse(theme)
+
 // "Default Dark" — current night-mode defaults frozen as a preset. Picking it
 // is equivalent to the "Reset to default" button on the night-theme editor.
 const DEFAULT_DARK: ThemePresetEntry = {
   id: 'default-dark',
   label: 'Default Dark',
-  theme: {
+  theme: themeFromLiterals({
     bgColor: '#000000',
     palette: {
       surface: '#1E1E1E',
@@ -38,7 +45,7 @@ const DEFAULT_DARK: ThemePresetEntry = {
       danger: '#FF4444',
       success: '#00CC44',
     },
-  },
+  }),
 }
 
 // "High Contrast" — boosted reds + brighter text for visibility under direct
@@ -47,7 +54,7 @@ const DEFAULT_DARK: ThemePresetEntry = {
 const HIGH_CONTRAST: ThemePresetEntry = {
   id: 'high-contrast',
   label: 'High Contrast',
-  theme: {
+  theme: themeFromLiterals({
     bgColor: '#000000',
     palette: {
       surface: '#1A1A1A',
@@ -59,7 +66,7 @@ const HIGH_CONTRAST: ThemePresetEntry = {
       danger: '#FF0000',
       success: '#00FF44',
     },
-  },
+  }),
 }
 
 // "Subtle" — lower-saturation palette that takes the edge off a long night
@@ -68,7 +75,7 @@ const HIGH_CONTRAST: ThemePresetEntry = {
 const SUBTLE: ThemePresetEntry = {
   id: 'subtle',
   label: 'Subtle',
-  theme: {
+  theme: themeFromLiterals({
     bgColor: '#0E0E0E',
     palette: {
       surface: '#222222',
@@ -80,7 +87,7 @@ const SUBTLE: ThemePresetEntry = {
       danger: '#CC5555',
       success: '#55AA55',
     },
-  },
+  }),
 }
 
 /**

@@ -11,20 +11,15 @@ import { CANVAS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps
 /**
  * Hex color string — e.g. "#FF4444" (6-digit, with leading `#`).
  *
- * Uses `z.custom` rather than `z.string().regex(...) as z.ZodType<...>` so the
- * template-literal type is enforced by a real runtime check instead of an
- * unchecked `as` cast (audit C-ME-1, umbrella #1016).
- *
- * The audit follow-up to migrate this to a `z.string().regex(...).brand<'HexColor'>()`
- * nominal type (#1207) was deferred: brand-on-string drops the
- * `\`#${string}\`` template-literal shape, which cascades into ~115 TS
- * errors across `sensor-palette.ts`, `theme-presets.ts`, `day/night-theme-defaults.ts`,
- * the migration runner, and studio-web call sites. Tracked separately.
+ * `.brand<'HexColor'>()` gives nominal typing: a plain `string` is no longer
+ * implicitly assignable to a `HexColor` (issue #1207 audit follow-up to #1316).
+ * Call sites that author literal hex colours go through `HexColorSchema.parse`
+ * once at module load — runtime-validated, statically typed.
  */
-export const HexColorSchema = z.custom<`#${string}`>(
-  (v) => typeof v === 'string' && HEX_REGEX.test(v),
-  { message: 'must be a 6-digit hex color (e.g. "#FF4444")' }
-)
+export const HexColorSchema = z
+  .string()
+  .regex(HEX_REGEX, { message: 'must be a 6-digit hex color (e.g. "#FF4444")' })
+  .brand<'HexColor'>()
 
 /**
  * Widget position and size in pixels on the 320×240 canvas.
@@ -83,18 +78,16 @@ export const WidgetStyleSchema = z
 /**
  * Semantic version string — "MAJOR.MINOR.PATCH".
  *
- * `z.custom` enforces the template-literal type at runtime instead of via an
- * unchecked `as` cast (audit C-ME-1, umbrella #1016).
- *
- * `.brand<'SemVer'>()` migration deferred alongside `HexColorSchema` (see
- * audit follow-up note above) — the template-literal shape is consumed by
- * the migration runner's literal `'1.22.0'` writes.
+ * `.brand<'SemVer'>()` gives nominal typing: plain `string` is no longer
+ * assignable to a `SemVer`. Literal versions used as constants (e.g. the
+ * migration chain's `'1.22.0'` writes and `CURRENT_SCHEMA_VERSION`) flow
+ * through `SemVerSchema.parse` once at module load.
  */
 const SEMVER_REGEX = /^\d+\.\d+\.\d+$/
-export const SemVerSchema = z.custom<`${number}.${number}.${number}`>(
-  (v) => typeof v === 'string' && SEMVER_REGEX.test(v),
-  { message: 'must be a semver string "MAJOR.MINOR.PATCH"' }
-)
+export const SemVerSchema = z
+  .string()
+  .regex(SEMVER_REGEX, { message: 'must be a semver string "MAJOR.MINOR.PATCH"' })
+  .brand<'SemVer'>()
 
 /** Hex color string — e.g. "#FF4444". */
 export type HexColor = z.infer<typeof HexColorSchema>
