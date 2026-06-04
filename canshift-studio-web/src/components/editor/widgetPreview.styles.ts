@@ -18,15 +18,14 @@ export const FONT_WEIGHT_VALUE = 900
 /** Danger-state blink animation (matches firmware's red pulse cadence). */
 export const BLINK_ANIM = 'canshift-blink 0.7s step-end infinite'
 
-let _blinkStyleInjected = false
-/** Lazily inject the @keyframes rule for BLINK_ANIM. Idempotent. */
-export function ensureBlinkStyle(): void {
-  if (_blinkStyleInjected) return
-  _blinkStyleInjected = true
-  const el = document.createElement('style')
-  el.textContent = '@keyframes canshift-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }'
-  document.head.appendChild(el)
-}
+/**
+ * Raw @keyframes CSS for {@link BLINK_ANIM}. Consumed by the one-shot
+ * `useBlinkKeyframes` hook in `App.tsx` so the rule is injected once at
+ * mount instead of on every `WidgetPreview` mount (audit follow-up to
+ * #1207 — DOM-mutation hygiene).
+ */
+export const BLINK_KEYFRAMES_CSS =
+  '@keyframes canshift-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }'
 
 // ---------------------------------------------------------------------------
 // Zone colours — automotive green/orange/red, used by bar and gauge previews.
@@ -76,4 +75,3 @@ export function thresholdPct(level: number, min: number, max: number): number {
   const range = max - min || 1
   return Math.max(0, Math.min(1, (level - min) / range))
 }
-

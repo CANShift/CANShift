@@ -4,9 +4,9 @@
 
 import { useState } from 'react'
 import { useScreenSettingsStore } from '../../stores/screen-settings.store'
-import { useDeviceStore } from '../../stores/device.store'
 import { useLogStore } from '../../stores/log.store'
-import { useDashboardStore } from '../../stores/dashboard.store'
+import { useDeviceState } from '../../hooks/useDeviceState'
+import { usePreviewTheme } from '../../hooks/useDashboardConfig'
 import { usbService } from '../../transport'
 import {
   AlertDialog,
@@ -43,12 +43,8 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const brightness = useScreenSettingsStore((s) => s.brightness)
   const rotation = useScreenSettingsStore((s) => s.rotation)
   const updateScreenSettings = useScreenSettingsStore((s) => s.update)
-  const connected = useDeviceStore((s) => s.connected)
-  const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const isDayMode = useDeviceStore((s) => s.isDayMode)
-  const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
-  const isPreviewDayMode = useDashboardStore((s) => s.isPreviewDayMode)
-  const togglePreviewTheme = useDashboardStore((s) => s.togglePreviewTheme)
+  const { connected, simulationMode, isDayMode, setIsDayMode } = useDeviceState()
+  const { isPreviewDayMode, togglePreviewTheme } = usePreviewTheme()
   const log = useLogStore((s) => s.push)
   const [calibrating, setCalibrating] = useState(false)
   const [pendingRotation180, setPendingRotation180] = useState(false)

@@ -298,12 +298,16 @@ export const WidgetConfigSchema = z.discriminatedUnion('type', [
  */
 type WidgetConfigValueType =
   (typeof WidgetConfigSchema)['options'][number]['shape']['type']['value']
-export const WidgetTypeSchema = z.enum(
-  WidgetConfigSchema.options.map((o) => o.shape.type.value) as [
-    WidgetConfigValueType,
-    ...WidgetConfigValueType[],
-  ]
-)
+// `satisfies readonly [WidgetConfigValueType, ...]` (audit follow-up to
+// #1207) makes the cast type-checked instead of unchecked: if
+// `WidgetConfigSchema.options` ever shrinks to zero entries the tuple
+// literal would no longer satisfy the non-empty shape and TS would flag
+// the empty-tuple case at compile time.
+const WIDGET_TYPE_VALUES = WidgetConfigSchema.options.map((o) => o.shape.type.value) as [
+  WidgetConfigValueType,
+  ...WidgetConfigValueType[],
+] satisfies readonly [WidgetConfigValueType, ...WidgetConfigValueType[]]
+export const WidgetTypeSchema = z.enum(WIDGET_TYPE_VALUES)
 
 // ---------------------------------------------------------------------------
 // Widget

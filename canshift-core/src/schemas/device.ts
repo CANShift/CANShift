@@ -25,6 +25,22 @@
 import { z } from 'zod'
 
 import { CanSpeedKbpsSchema } from './signal.js'
+import { mapObjectKeys } from '../wire/keymap.js'
+
+// Single source of truth for the snake↔camel rename at the device boundary.
+// Each direction is a thin wrapper over `mapObjectKeys` (audit follow-up to
+// #1207) so the rename rules can't drift between mappers.
+const DEVICE_WIRE_TO_DOMAIN = {
+  can_speed_kbps: 'canSpeedKbps',
+  twai_tx_pin: 'twaiTxPin',
+  twai_rx_pin: 'twaiRxPin',
+} as const
+
+const DEVICE_DOMAIN_TO_WIRE = {
+  canSpeedKbps: 'can_speed_kbps',
+  twaiTxPin: 'twai_tx_pin',
+  twaiRxPin: 'twai_rx_pin',
+} as const
 
 /**
  * ESP32-WROOM-32 pins safe to use as OUTPUTS. Excludes:
@@ -138,18 +154,10 @@ export const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
 
 /** Wire → domain. Pure; assumes input already passed `DeviceConfigWireSchema`. */
 export function deviceConfigFromWire(wire: DeviceConfigWire): DeviceConfig {
-  return {
-    canSpeedKbps: wire.can_speed_kbps,
-    twaiTxPin: wire.twai_tx_pin,
-    twaiRxPin: wire.twai_rx_pin,
-  }
+  return mapObjectKeys(wire, DEVICE_WIRE_TO_DOMAIN) as DeviceConfig
 }
 
 /** Domain → wire. Pure; assumes input already passed `DeviceConfigSchema`. */
 export function deviceConfigToWire(cfg: DeviceConfig): DeviceConfigWire {
-  return {
-    can_speed_kbps: cfg.canSpeedKbps,
-    twai_tx_pin: cfg.twaiTxPin,
-    twai_rx_pin: cfg.twaiRxPin,
-  }
+  return mapObjectKeys(cfg, DEVICE_DOMAIN_TO_WIRE) as DeviceConfigWire
 }

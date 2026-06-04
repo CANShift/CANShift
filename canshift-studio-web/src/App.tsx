@@ -15,6 +15,7 @@ import { useConnectionStore } from './stores/connection.store'
 import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
 import { deviceIpc } from './transport'
+import { BLINK_KEYFRAMES_CSS } from './components/editor/widgetPreview.styles'
 
 // Connection target when served from the dash itself: same host, fixed port.
 const DEVICE_WS_PORT = 81
@@ -125,10 +126,29 @@ function useDeviceConfigBootstrap(): void {
   }, [connected, transport, loadFromDeviceOrDemo, log])
 }
 
+/**
+ * Inject the `@keyframes canshift-blink` rule once at App mount instead
+ * of on every `WidgetPreview` instantiation. Previously the keyframe was
+ * lazily appended to `document.head` from `widgetPreview.styles.ts` via a
+ * module-scoped flag, which mutated the DOM outside React on every
+ * preview mount (audit follow-up to #1207 — DOM-mutation hygiene).
+ */
+function useBlinkKeyframes(): void {
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = BLINK_KEYFRAMES_CSS
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
+}
+
 export default function App() {
   useAutoBootstrap()
   useSimulationBootstrap()
   useDeviceConfigBootstrap()
+  useBlinkKeyframes()
 
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)

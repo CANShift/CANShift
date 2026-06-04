@@ -122,7 +122,12 @@ export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-s
 
 // BLE STATUS characteristic — firmware → mobile health/config payload (issue #887)
 export type { BleStatus, BleStatusResult } from './schemas/ble-status.js'
-export { BLE_STATUS_MAX_STRING_LEN, parseBleStatus } from './schemas/ble-status.js'
+export {
+  BLE_STATUS_MAX_STRING_LEN,
+  BleStatusSchema,
+  BleStatusResultSchema,
+  parseBleStatus,
+} from './schemas/ble-status.js'
 
 // Unsolicited WS frame schemas — defense-in-depth validation for the studio-web
 // transport (issue #1288, WS-5). Lets the dispatcher drop malformed frames with

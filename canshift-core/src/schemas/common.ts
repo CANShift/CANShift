@@ -14,6 +14,12 @@ import { CANVAS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps
  * Uses `z.custom` rather than `z.string().regex(...) as z.ZodType<...>` so the
  * template-literal type is enforced by a real runtime check instead of an
  * unchecked `as` cast (audit C-ME-1, umbrella #1016).
+ *
+ * The audit follow-up to migrate this to a `z.string().regex(...).brand<'HexColor'>()`
+ * nominal type (#1207) was deferred: brand-on-string drops the
+ * `\`#${string}\`` template-literal shape, which cascades into ~115 TS
+ * errors across `sensor-palette.ts`, `theme-presets.ts`, `day/night-theme-defaults.ts`,
+ * the migration runner, and studio-web call sites. Tracked separately.
  */
 export const HexColorSchema = z.custom<`#${string}`>(
   (v) => typeof v === 'string' && HEX_REGEX.test(v),
@@ -79,6 +85,10 @@ export const WidgetStyleSchema = z
  *
  * `z.custom` enforces the template-literal type at runtime instead of via an
  * unchecked `as` cast (audit C-ME-1, umbrella #1016).
+ *
+ * `.brand<'SemVer'>()` migration deferred alongside `HexColorSchema` (see
+ * audit follow-up note above) — the template-literal shape is consumed by
+ * the migration runner's literal `'1.22.0'` writes.
  */
 const SEMVER_REGEX = /^\d+\.\d+\.\d+$/
 export const SemVerSchema = z.custom<`${number}.${number}.${number}`>(

@@ -13,6 +13,18 @@
 
 import { z } from 'zod'
 
+import { mapObjectKeys } from '../wire/keymap.js'
+
+// snake→camel rename map shared with `bleStatusFromWire`. Only the
+// string-shaped fields run through the helper; the numeric 0/1 ↔ boolean
+// fields stay explicit because `mapObjectKeys` is a pure rename (audit
+// follow-up to #1207).
+const STATUS_STRING_WIRE_TO_DOMAIN = {
+  ver: 'firmwareVersion',
+  ap_ssid: 'apSsid',
+  ap_password: 'apPassword',
+} as const
+
 /** Max length for free-form STATUS strings. Firmware caps at ~32; we cap higher. */
 export const BLE_STATUS_MAX_STRING_LEN = 32
 
@@ -46,15 +58,21 @@ export type BleStatusWire = z.infer<typeof BleStatusWireSchema>
 
 /**
  * Domain shape — camelCase, used by every TS consumer. Field optionality
- * mirrors the wire shape one-to-one.
+ * mirrors the wire shape one-to-one. Built as a Zod schema so the
+ * discriminated `BleStatusResult` below can reuse it as a variant payload
+ * without falling back to `z.custom` (audit follow-up to #1207).
  */
-export interface BleStatus {
-  firmwareVersion?: string
-  canHealthy?: boolean
-  apSsid?: string
-  apPassword?: string
-  isDay?: boolean
-}
+export const BleStatusSchema = z
+  .object({
+    firmwareVersion: z.string().optional(),
+    canHealthy: z.boolean().optional(),
+    apSsid: z.string().optional(),
+    apPassword: z.string().optional(),
+    isDay: z.boolean().optional(),
+  })
+  .strict()
+
+export type BleStatus = z.infer<typeof BleStatusSchema>
 
 /**
  * Wire → domain. Pure; assumes input already passed `BleStatusWireSchema`.
@@ -62,12 +80,10 @@ export interface BleStatus {
  * `boolean` on the domain side.
  */
 export function bleStatusFromWire(wire: BleStatusWire): BleStatus {
-  const out: BleStatus = {}
-  if (wire.ver !== undefined) out.firmwareVersion = wire.ver
-  if (wire.can !== undefined) out.canHealthy = wire.can !== 0
-  if (wire.ap_ssid !== undefined) out.apSsid = wire.ap_ssid
-  if (wire.ap_password !== undefined) out.apPassword = wire.ap_password
-  if (wire.is_day !== undefined) out.isDay = wire.is_day !== 0
+  const { can, is_day, ...stringFields } = wire
+  const out = mapObjectKeys(stringFields, STATUS_STRING_WIRE_TO_DOMAIN) as BleStatus
+  if (can !== undefined) out.canHealthy = can !== 0
+  if (is_day !== undefined) out.isDay = is_day !== 0
   return out
 }
 
@@ -76,17 +92,33 @@ export function bleStatusFromWire(wire: BleStatusWire): BleStatus {
  * function collapsed three failure cases into `null` which made it
  * impossible for callers to surface a specific diagnostic. Audit finding
  * C-HI-3 (umbrella issue #1016) — mirrors the `LatestReleaseResult`
- * pattern from `types/releases.ts`. Discriminator is `kind` because each
- * variant carries different payload shapes and the consumer narrows on it.
+ * pattern from `types/releases.ts`.
+ *
+ * Built as a `z.discriminatedUnion` so the runtime schema is the single
+ * source of truth and the type is derived via `z.infer`, matching the
+ * `ButtonAction` / `WidgetConfig` / `TopBarItem` convention elsewhere in
+ * this package (audit follow-up to #1207). Discriminator stays `kind` so
+ * existing callers (mobile BLE service, tests) don't need to migrate.
  */
-export type BleStatusResult =
-  | { kind: 'ok'; status: BleStatus }
+export const BleStatusResultSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('ok'), status: BleStatusSchema }).strict(),
   /** `JSON.parse` threw — raw text preserved for the log line. */
-  | { kind: 'invalid_json'; raw: string }
+  z.object({ kind: z.literal('invalid_json'), raw: z.string() }).strict(),
   /** Parsed JSON was a primitive or array — schema can't even run on it. */
-  | { kind: 'not_an_object'; payload: unknown }
-  /** Parsed JSON was an object but failed strict schema validation. */
-  | { kind: 'wrong_shape'; issues: z.ZodIssue[] }
+  z.object({ kind: z.literal('not_an_object'), payload: z.unknown() }).strict(),
+  /** Parsed JSON was an object but failed strict schema validation. ZodIssue
+   *  is a third-party union (no Zod schema exported by the library), so the
+   *  array element falls back to `z.custom` — runtime validation here is
+   *  pointless because the result is constructed in `parseBleStatus`. */
+  z
+    .object({
+      kind: z.literal('wrong_shape'),
+      issues: z.array(z.custom<z.ZodIssue>()),
+    })
+    .strict(),
+])
+
+export type BleStatusResult = z.infer<typeof BleStatusResultSchema>
 
 /**
  * Parse + validate a raw STATUS JSON string straight from the BLE

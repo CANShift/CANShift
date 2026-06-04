@@ -8,14 +8,10 @@ import type { ComponentType } from 'react'
 import type { Widget, WidgetConfig, PagePalette } from '@tmbk/canshift-core'
 import { MAXXECU_SIGNAL_UNITS } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
-import { ensureBlinkStyle } from './widgetPreview.styles'
 import { ButtonPreview } from './widget-previews/Button'
 import { GearPreview } from './widget-previews/Gear'
 import { GaugeArcPreview, type GaugeArcRendererProps } from './widget-previews/GaugeArc'
-import {
-  GaugeNumericPreview,
-  type GaugeNumericRendererProps,
-} from './widget-previews/GaugeNumeric'
+import { GaugeNumericPreview, type GaugeNumericRendererProps } from './widget-previews/GaugeNumeric'
 import { ImagePreview } from './widget-previews/Image'
 import { TimerPreview } from './widget-previews/Timer'
 import { WarningPreview } from './widget-previews/Warning'
@@ -87,9 +83,7 @@ const gaugeRendererByDisplay: Record<
   ComponentType<GaugeArcRendererProps | GaugeNumericRendererProps>
 > = {
   arc: GaugeArcPreview as ComponentType<GaugeArcRendererProps | GaugeNumericRendererProps>,
-  numeric: GaugeNumericPreview as ComponentType<
-    GaugeArcRendererProps | GaugeNumericRendererProps
-  >,
+  numeric: GaugeNumericPreview as ComponentType<GaugeArcRendererProps | GaugeNumericRendererProps>,
 }
 
 const RENDERERS: RendererDispatch = {
@@ -155,9 +149,7 @@ function useResolvedSignalUnit(widget: Widget): string {
   const signals = useSignalStore((s) => s.signals)
   const cfg = widget.config
   const configSuffix =
-    cfg.type === 'gauge' || cfg.type === 'timer'
-      ? ((cfg as { suffix?: string }).suffix ?? '')
-      : ''
+    cfg.type === 'gauge' || cfg.type === 'timer' ? ((cfg as { suffix?: string }).suffix ?? '') : ''
   if (configSuffix !== '') return configSuffix
   if (!widget.signal) return ''
   const def = signals.find((s) => s.name === widget.signal)
@@ -185,7 +177,8 @@ function WidgetPreviewImpl({
   // transiently when the parent container hasn't laid out yet or scale is < 1.
   const w = Math.max(0, rawW)
   const h = Math.max(0, rawH)
-  if (!noAnimate) ensureBlinkStyle()
+  // `@keyframes canshift-blink` is injected once at App mount (see
+  // `useBlinkKeyframes` in `App.tsx`) instead of on every preview mount.
 
   const resolved = palette ? applyPalette(widget, palette) : widget
   const danger = noAnimate ? false : isDangerState(resolved, testValue)
