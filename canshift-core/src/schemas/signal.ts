@@ -40,6 +40,11 @@ const OUTBOUND_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 /** Single stop on a color ramp — value in the signal's native unit, color in #RRGGBB. */
 export const ColorRampStopSchema = z
   .object({
+    // Optional stable id — used by Studio's ColorRampEditor to key reorderable
+    // rows so DOM state (focused input, IME) doesn't shift when a stop is
+    // removed (R-5, issue #1288). Editors generate one at creation; absent on
+    // configs authored before this field existed.
+    id: z.string().min(1).optional(),
     value: z.number(),
     color: HexColorSchema,
   })

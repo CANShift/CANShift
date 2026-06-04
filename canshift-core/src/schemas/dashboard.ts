@@ -97,8 +97,16 @@ export const WarningWidgetConfigSchema = z
 // Button action types — discriminated union on `category` + `type` (issue #673)
 // ---------------------------------------------------------------------------
 
+// Optional stable id per action — used by editors (Studio button-fields panel)
+// to key reorderable rows so DOM state (Radix focus, IME) doesn't shift when
+// an action is removed (R-5, issue #1288). Persisted when present; absent on
+// configs authored before this field existed. Editors generate one at
+// creation time or migrate at read time via a WeakMap fallback.
+const ActionIdSchema = z.string().min(1).optional()
+
 const NavigateActionSchema = z
   .object({
+    id: ActionIdSchema,
     category: z.literal('dashboard'),
     type: z.literal('navigate'),
     pageId: z.string(),
@@ -107,6 +115,7 @@ const NavigateActionSchema = z
 
 const MapSwitchActionSchema = z
   .object({
+    id: ActionIdSchema,
     category: z.literal('ecu'),
     type: z.literal('map_switch'),
     mapIndex: z.number().int().min(0).max(MAP_INDEX_MAX),
@@ -129,6 +138,7 @@ const CAN_11BIT_MAX = 0x7ff
 
 const CanRawActionSchema = z
   .object({
+    id: ActionIdSchema,
     category: z.literal('ecu'),
     type: z.literal('can_raw'),
     frameId: z.number().int().min(0).max(CAN_29BIT_MAX),
@@ -156,6 +166,7 @@ export const CruiseControlOpSchema = z.enum(CRUISE_CONTROL_OPS)
 
 const CruiseControlActionSchema = z
   .object({
+    id: ActionIdSchema,
     category: z.literal('ecu'),
     type: z.literal('cruise_control'),
     op: CruiseControlOpSchema,

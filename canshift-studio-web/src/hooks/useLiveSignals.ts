@@ -43,7 +43,10 @@ export function useLiveSignals(): Record<string, number> {
   }, [signals, simulationMode, connected])
 
   useEffect(() => {
-    if (!connected) return
+    // Simulation flips `connected: true` alongside `simulationMode: true` — bail
+    // here so the live-signal subscriber doesn't overwrite the simulated values
+    // with `setValues({})` (R-3).
+    if (!connected || simulationMode) return
     setValues({})
     const unsubscribe = deviceEvents.onSignal((payload: unknown) => {
       if (typeof payload === 'object' && payload !== null) {
@@ -55,7 +58,7 @@ export function useLiveSignals(): Record<string, number> {
       }
     })
     return unsubscribe
-  }, [connected])
+  }, [connected, simulationMode])
 
   return values
 }

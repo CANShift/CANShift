@@ -6,14 +6,17 @@
 // signal binding, button colors), and the dispatch to the right widget
 // editor (#697).
 
-import type { ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
+import { useState } from 'react'
+import type { HexColor, ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
 import {
   DEFAULT_PAGE_PALETTE,
   DEFAULT_SCREEN_PROFILE_ID,
+  HexColorSchema,
   SCREEN_PROFILES,
 } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useSignalStore } from '../../stores/signal.store'
+import { useLogStore } from '../../stores/log.store'
 import { IconTrash } from '../icons/Icon'
 import { SIZE_TOKENS, STANDARD_TOKEN_IDS, tokenFromDimensions } from '../../utils/sizeTokens'
 import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shared'
@@ -59,6 +62,26 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const removePage = useDashboardStore((s) => s.removePage)
   const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
   const signals = useSignalStore((s) => s.signals)
+  const pushLog = useLogStore((s) => s.push)
+  // Per-field inline error surfaced when a color-picker commit produces a value
+  // that fails `HexColorSchema.parse` (R-7). Cleared on the next valid commit.
+  const [colorError, setColorError] = useState<string | null>(null)
+
+  // Parse the raw color-picker value through HexColorSchema before persisting.
+  // Returns the validated `#RRGGBB` literal, or `null` on failure (and routes
+  // the failure through the log store so debugging surfaces it). Replaces the
+  // previous `as `#${string}`` cast that bypassed the schema entirely (R-7).
+  const safeParseHex = (raw: string): HexColor | null => {
+    const result = HexColorSchema.safeParse(raw)
+    if (result.success) {
+      setColorError(null)
+      return result.data
+    }
+    const message = `Invalid color value "${raw}" — expected #RRGGBB hex literal.`
+    setColorError(message)
+    pushLog('warn', message)
+    return null
+  }
 
   const toggleCruiseControlPage = (enabled: boolean) => {
     if (!config) return
@@ -133,8 +156,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           ))}
         </select>
         <div style={{ fontSize: 10, color: PANEL_HINT, marginTop: 4, marginBottom: 4 }}>
-          Drives the editor canvas size. Widgets are not auto-scaled — out-of-bounds
-          widgets are flagged on the canvas so you can adjust manually.
+          Drives the editor canvas size. Widgets are not auto-scaled — out-of-bounds widgets are
+          flagged on the canvas so you can adjust manually.
         </div>
 
         {/* Cruise control — opt-in checkbox that ensures a `cruise_control`
@@ -397,9 +420,11 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                       cursor: 'pointer',
                     }}
                     onChange={(e) => {
+                      const parsed = safeParseHex(e.target.value)
+                      if (parsed === null) return
                       const next = {
-                        normal: e.target.value as `#${string}`,
-                        active: cfg.colors?.active ?? (e.target.value as `#${string}`),
+                        normal: parsed,
+                        active: cfg.colors?.active ?? parsed,
                       }
                       patch({ config: { ...cfg, colors: next } })
                     }}
@@ -419,9 +444,11 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
                       cursor: 'pointer',
                     }}
                     onChange={(e) => {
+                      const parsed = safeParseHex(e.target.value)
+                      if (parsed === null) return
                       const next = {
-                        normal: cfg.colors?.normal ?? (e.target.value as `#${string}`),
-                        active: e.target.value as `#${string}`,
+                        normal: cfg.colors?.normal ?? parsed,
+                        active: parsed,
                       }
                       patch({ config: { ...cfg, colors: next } })
                     }}
@@ -430,6 +457,19 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
               </Row>
             )
           })()}
+          {colorError !== null && (
+            <div
+              role="alert"
+              style={{
+                fontSize: 10,
+                color: TYPE_BADGE,
+                marginTop: 4,
+                marginBottom: 4,
+              }}
+            >
+              {colorError}
+            </div>
+          )}
         </>
       )}
 
