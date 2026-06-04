@@ -1,7 +1,7 @@
 // AlignToolbar.tsx — Alignment + distribution controls for the Canvas
 // multi-select. Pure presentation: dispatches store actions, no local state.
 
-import type { CSSProperties, MouseEvent } from 'react'
+import { useCallback, type CSSProperties, type MouseEvent } from 'react'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
 
@@ -99,6 +99,22 @@ export function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarP
   const alignWidgets = useDashboardStore((s) => s.alignWidgets)
   const distributeWidgets = useDashboardStore((s) => s.distributeWidgets)
 
+  // Memoised dispatchers so `ToolbarButton` (props-only memo target via
+  // stable handlers) doesn't see a fresh closure on every parent render
+  // (audit follow-up to #1207).
+  const handleAlign = useCallback(
+    (dir: AlignDirection) => {
+      alignWidgets(pageId, widgetIds, dir)
+    },
+    [alignWidgets, pageId, widgetIds]
+  )
+  const handleDistribute = useCallback(
+    (axis: 'h' | 'v') => {
+      distributeWidgets(pageId, widgetIds, axis)
+    },
+    [distributeWidgets, pageId, widgetIds]
+  )
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       <span style={LABEL_STYLE}>Align</span>
@@ -108,7 +124,7 @@ export function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarP
           glyph={spec.glyph}
           title={spec.title}
           onClick={() => {
-            alignWidgets(pageId, widgetIds, spec.dir)
+            handleAlign(spec.dir)
           }}
         />
       ))}
@@ -122,7 +138,7 @@ export function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarP
               glyph={spec.glyph}
               title={spec.title}
               onClick={() => {
-                distributeWidgets(pageId, widgetIds, spec.axis)
+                handleDistribute(spec.axis)
               }}
             />
           ))}

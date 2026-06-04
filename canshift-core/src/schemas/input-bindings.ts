@@ -22,6 +22,14 @@ import { z } from 'zod'
 import { ButtonActionSchema } from './dashboard.js'
 import { Esp32InputGpioSchema } from './device.js'
 import { STRING_CAPS } from '../constants/firmware-caps.js'
+import { mapObjectKeys } from '../wire/keymap.js'
+
+// snake↔camel rename map shared by both per-binding mappers below. Only
+// `debounce_ms`/`debounceMs` actually differs — every other field is
+// already a camel-friendly identifier on both sides. Audit follow-up to
+// #1207.
+const BINDING_WIRE_TO_DOMAIN = { debounce_ms: 'debounceMs' } as const
+const BINDING_DOMAIN_TO_WIRE = { debounceMs: 'debounce_ms' } as const
 
 // ---------------------------------------------------------------------------
 // Static caps — kept tight so the firmware can keep a fixed C array per
@@ -136,31 +144,11 @@ export type InputBindingsConfig = z.infer<typeof InputBindingsConfigSchema>
 // ---------------------------------------------------------------------------
 
 function inputBindingFromWire(wire: InputBindingWire): InputBinding {
-  const out: InputBinding = {
-    id: wire.id,
-    pin: wire.pin,
-    active: wire.active,
-    pullup: wire.pullup,
-    debounceMs: wire.debounce_ms,
-    kind: wire.kind,
-    action: wire.action,
-  }
-  if (wire.signal !== undefined) out.signal = wire.signal
-  return out
+  return mapObjectKeys(wire, BINDING_WIRE_TO_DOMAIN) as InputBinding
 }
 
 function inputBindingToWire(binding: InputBinding): InputBindingWire {
-  const out: InputBindingWire = {
-    id: binding.id,
-    pin: binding.pin,
-    active: binding.active,
-    pullup: binding.pullup,
-    debounce_ms: binding.debounceMs,
-    kind: binding.kind,
-    action: binding.action,
-  }
-  if (binding.signal !== undefined) out.signal = binding.signal
-  return out
+  return mapObjectKeys(binding, BINDING_DOMAIN_TO_WIRE) as InputBindingWire
 }
 
 /** Wire → domain at the file/IPC boundary. */

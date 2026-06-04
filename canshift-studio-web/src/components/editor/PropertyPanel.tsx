@@ -14,7 +14,8 @@ import {
   HexColorSchema,
   SCREEN_PROFILES,
 } from '@tmbk/canshift-core'
-import { useDashboardStore } from '../../stores/dashboard.store'
+import { useCallback } from 'react'
+import { useDashboardConfig } from '../../hooks/useDashboardConfig'
 import { useSignalStore } from '../../stores/signal.store'
 import { useLogStore } from '../../stores/log.store'
 import { IconTrash } from '../icons/Icon'
@@ -54,13 +55,15 @@ interface PropertyPanelProps {
 const CRUISE_CONTROL_PAGE_ID = 'cruise_control'
 
 export default function PropertyPanel({ pageId }: PropertyPanelProps) {
-  const config = useDashboardStore((s) => s.config)
-  const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
-  const updateWidget = useDashboardStore((s) => s.updateWidget)
-  const removeWidget = useDashboardStore((s) => s.removeWidget)
-  const addPage = useDashboardStore((s) => s.addPage)
-  const removePage = useDashboardStore((s) => s.removePage)
-  const setTargetProfile = useDashboardStore((s) => s.setTargetProfile)
+  const {
+    config,
+    selectedWidgetId,
+    updateWidget,
+    removeWidget,
+    addPage,
+    removePage,
+    setTargetProfile,
+  } = useDashboardConfig()
   const signals = useSignalStore((s) => s.signals)
   const pushLog = useLogStore((s) => s.push)
   // Per-field inline error surfaced when a color-picker commit produces a value
@@ -83,26 +86,46 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     return null
   }
 
-  const toggleCruiseControlPage = (enabled: boolean) => {
-    if (!config) return
-    const existing = config.pages.find((p) => p.template === 'cruise_control')
-    if (enabled && !existing) {
-      addPage({
-        id: CRUISE_CONTROL_PAGE_ID,
-        backgroundImage: null,
-        backgroundColor: '#000000',
-        palette: DEFAULT_PAGE_PALETTE,
-        showTopBar: true,
-        template: 'cruise_control',
-        widgets: [],
-      })
-    } else if (!enabled && existing) {
-      removePage(existing.id)
-    }
-  }
+  // Memoised so checkbox `onChange` doesn't see a fresh closure every render
+  // and the panel's child editor components keep their referential identity
+  // (audit follow-up to #1207).
+  const toggleCruiseControlPage = useCallback(
+    (enabled: boolean) => {
+      if (!config) return
+      const existing = config.pages.find((p) => p.template === 'cruise_control')
+      if (enabled && !existing) {
+        addPage({
+          id: CRUISE_CONTROL_PAGE_ID,
+          backgroundImage: null,
+          backgroundColor: '#000000',
+          palette: DEFAULT_PAGE_PALETTE,
+          showTopBar: true,
+          template: 'cruise_control',
+          widgets: [],
+        })
+      } else if (!enabled && existing) {
+        removePage(existing.id)
+      }
+    },
+    [config, addPage, removePage]
+  )
 
   const page = config?.pages.find((p) => p.id === pageId)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
+  const widgetId = widget?.id
+
+  // Memoised so the child config-field components (GaugeFields,
+  // ButtonFields, …) keep their `onChange` reference stable across renders
+  // (audit follow-up to #1207). Hoisted above the early-return so the hook
+  // call order stays stable when no widget is selected; the wrapped
+  // dispatcher is a no-op until `widgetId` resolves.
+  const patch = useCallback(
+    (p: Partial<Widget>) => {
+      if (!widgetId) return
+      updateWidget(pageId, widgetId, p)
+    },
+    [updateWidget, pageId, widgetId]
+  )
 
   // No widget selected → show page/theme settings
   if (!widget) {
@@ -205,10 +228,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       </div>
     )
-  }
-
-  const patch = (p: Partial<Widget>) => {
-    updateWidget(pageId, widget.id, p)
   }
 
   const ConfigFields = CONFIG_FIELDS[widget.type]
