@@ -16,6 +16,7 @@ import { HexColorSchema, SemVerSchema } from './common.js'
 import { Obd2PollingSchema } from './obd2.js'
 import { SignalTypeSchema } from './signal-type.js'
 import {
+  CAN_29BIT_MAX,
   CAN_FRAME_MAX_BYTES,
   FIRMWARE_CAPS,
   MAX_RAMP_STOPS,
@@ -27,6 +28,14 @@ const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,3}$/
 
 /** Optional bit mask — any-length hex literal, e.g. "0x01", "0xFF00". */
 const BIT_MASK_REGEX = /^0[xX][0-9a-fA-F]+$/
+
+/**
+ * Outbound CAN frame identifier — hex literal up to 8 hex chars to span both
+ * the 11-bit standard (≤ 0x7FF) and the 29-bit extended (≤ 0x1FFFFFFF) ranges.
+ * The exact 29-bit bound is enforced numerically below; this regex only gates
+ * the wire form (`"0x600"`, `"0X1FFFFFFF"`).
+ */
+const OUTBOUND_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 
 /** Single stop on a color ramp — value in the signal's native unit, color in #RRGGBB. */
 export const ColorRampStopSchema = z
@@ -134,6 +143,13 @@ export const SignalDefSchema = z
     // sprinkles `_comment` lines through `signals[]` to mark frame boundaries
     // (#1289). Matches the same field allowed at the root of `SignalConfig`.
     _comment: z.string().optional(),
+    // Optional per-signal JSON-side documentation field — the firmware demo
+    // attaches a `_batteryThresholds` note to the `battery_volts` signal to
+    // explain the low/high-side threshold tuning (#1303). The firmware reader
+    // (`config_loader.cpp`) ignores it; only the typed `warningLevel` /
+    // `dangerLevel` / `highWarningLevel` / `highDangerLevel` fields drive the
+    // ramp. Modeled as a string to match the actual demo payload.
+    _batteryThresholds: z.string().optional(),
     name: z.string().max(STRING_CAPS.SIGNAL_NAME),
     canFrameId: z
       .string()
@@ -278,6 +294,36 @@ export const CAN_SPEED_OPTIONS: readonly CanSpeedKbps[] = CanSpeedKbpsSchema.opt
 )
 
 /**
+ * Outbound CAN frame override (#317, #1303). The firmware ships a baked
+ * default frame ID for each outbound frame (e.g. `CAN_OUT_MAP_SWITCH_ID =
+ * 0x600` in `include/can_signals_out.h`); the `out` block of `signals.json`
+ * lets the user override it at runtime. `config_loader.cpp` parses each entry
+ * via:
+ *   - `id`        — hex string (`"0x600"`); numeric IDs are also accepted by
+ *                   firmware but the wire form is the hex literal.
+ *   - `extended`  — optional boolean; auto-set when `id > 0x7FF`.
+ *   - `encoding`  — free-form documentation string the firmware ignores.
+ *
+ * Keys are snake_case on the wire (e.g. `map_switch`) per the cross-package
+ * convention.
+ */
+export const OutboundCanSignalSchema = z
+  .object({
+    id: z
+      .string()
+      .regex(OUTBOUND_FRAME_ID_REGEX, 'id must be a hex literal like 0x600 (up to 8 hex chars)')
+      .refine(
+        (s) => Number.parseInt(s, 16) <= CAN_29BIT_MAX,
+        `id must fit in 29 bits (≤ 0x${CAN_29BIT_MAX.toString(16).toUpperCase()})`
+      ),
+    extended: z.boolean().optional(),
+    // Free-form documentation the firmware reader ignores. Kept typed so the
+    // demo `signals.json` validates clean without `.passthrough()`.
+    encoding: z.string().optional(),
+  })
+  .strict()
+
+/**
  * Root signal configuration (signals.json). `protocol` is informational only —
  * never used in parsing decisions. Current default is `"custom_v1.0"`.
  */
@@ -293,6 +339,11 @@ export const SignalConfigSchema = z
     version: SemVerSchema,
     protocol: z.string().max(STRING_CAPS.PROTOCOL),
     canSpeedKbps: CanSpeedKbpsSchema,
+    // Outbound CAN frame ID overrides (#317, #1303). Keys are snake_case
+    // frame names the firmware recognises (`map_switch` today); values are
+    // `OutboundCanSignal` shapes. Optional — missing keys leave the
+    // compiled-in default in `include/can_signals_out.h` untouched.
+    out: z.record(z.string(), OutboundCanSignalSchema).optional(),
     // Firmware allocates a fixed-size signal array — over-limit catalogs would
     // silently drop tail signals at load time. Mirrors the `actions` /
     // `inputBindings` caps already enforced elsewhere (#1168).
@@ -309,4 +360,5 @@ export type ColorRampStop = z.infer<typeof ColorRampStopSchema>
 export type RampInterpolation = z.infer<typeof RampInterpolationSchema>
 export type ColorRamp = z.infer<typeof ColorRampSchema>
 export type SignalDef = z.infer<typeof SignalDefSchema>
+export type OutboundCanSignal = z.infer<typeof OutboundCanSignalSchema>
 export type SignalConfig = z.infer<typeof SignalConfigSchema>

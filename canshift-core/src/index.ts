@@ -60,6 +60,7 @@ export type {
   ColorRamp,
   ColorRampStop,
   RampInterpolation,
+  OutboundCanSignal,
 } from './schemas/signal.js'
 
 // OBD-II polling configuration (issue #841 — phase 3 of #556). Optional
