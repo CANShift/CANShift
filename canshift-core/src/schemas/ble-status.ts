@@ -13,18 +13,6 @@
 
 import { z } from 'zod'
 
-import { mapObjectKeys } from '../wire/keymap.js'
-
-// snake→camel rename map shared with `bleStatusFromWire`. Only the
-// string-shaped fields run through the helper; the numeric 0/1 ↔ boolean
-// fields stay explicit because `mapObjectKeys` is a pure rename (audit
-// follow-up to #1207).
-const STATUS_STRING_WIRE_TO_DOMAIN = {
-  ver: 'firmwareVersion',
-  ap_ssid: 'apSsid',
-  ap_password: 'apPassword',
-} as const
-
 /** Max length for free-form STATUS strings. Firmware caps at ~32; we cap higher. */
 export const BLE_STATUS_MAX_STRING_LEN = 32
 
@@ -80,10 +68,12 @@ export type BleStatus = z.infer<typeof BleStatusSchema>
  * `boolean` on the domain side.
  */
 export function bleStatusFromWire(wire: BleStatusWire): BleStatus {
-  const { can, is_day, ...stringFields } = wire
-  const out = mapObjectKeys(stringFields, STATUS_STRING_WIRE_TO_DOMAIN) as BleStatus
-  if (can !== undefined) out.canHealthy = can !== 0
-  if (is_day !== undefined) out.isDay = is_day !== 0
+  const out: BleStatus = {}
+  if (wire.ver !== undefined) out.firmwareVersion = wire.ver
+  if (wire.can !== undefined) out.canHealthy = wire.can !== 0
+  if (wire.ap_ssid !== undefined) out.apSsid = wire.ap_ssid
+  if (wire.ap_password !== undefined) out.apPassword = wire.ap_password
+  if (wire.is_day !== undefined) out.isDay = wire.is_day !== 0
   return out
 }
 
