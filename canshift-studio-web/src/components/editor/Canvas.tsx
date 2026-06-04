@@ -34,6 +34,11 @@ const SCALE = 1.5
 // Minimum rubber-band drag distance (firmware px) before activating selection
 const RB_THRESHOLD = 4
 
+// Module-level empty fallback for the `pages` selector — keeps the selector
+// reference-stable while `config === null` (loading), so unrelated store
+// updates don't re-render every Canvas consumer (R-4).
+const EMPTY_PAGES: readonly PageConfig[] = []
+
 // ---------------------------------------------------------------------------
 // Canvas
 // ---------------------------------------------------------------------------
@@ -63,7 +68,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const nightTheme = useDashboardStore((s) => s.config?.nightTheme)
-  const pages = useDashboardStore((s) => s.config?.pages ?? [])
+  const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
   const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<number>(1)
@@ -212,14 +217,19 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   // document 'copy'/'cut'/'paste' events below, which DO fire even with roles.
   //
   // Cmd+D is handled by the Electron menu → IPC → useMenuEvents (already works).
+  //
+  // Reads selection from `useDashboardStore.getState()` inside the listener so
+  // the effect depends only on stable zustand action setters. Re-registering
+  // on every selection change opened a microtask window where a queued keydown
+  // hit the EditorRoute bubble handler instead — which deleted the current
+  // page (R-6).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
         return
 
-      const isMod = e.metaKey || e.ctrlKey
-      const activeIds = selectedWidgetIds.length > 0 ? selectedWidgetIds : []
+      const { selectedWidgetIds: activeIds } = useDashboardStore.getState()
 
       if (e.key === 'Escape') {
         e.preventDefault()
@@ -228,6 +238,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         return
       }
 
+      const isMod = e.metaKey || e.ctrlKey
       if (isMod && e.key === 'a') {
         e.preventDefault()
         e.stopPropagation()
@@ -265,7 +276,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown, { capture: true })
     }
-  }, [selectedWidgetIds, selectWidget, selectWidgets, removeWidgets, nudgeWidgets])
+  }, [selectWidget, selectWidgets, removeWidgets, nudgeWidgets])
 
   // Clipboard: copy/cut/paste events fire even when the Electron menu role
   // intercepts the accelerator. Read fresh state via getState() so these
@@ -313,7 +324,10 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const handleDragStart = useDragState({ dragInputsRef, zoomRef, scale: SCALE })
 
-  // Rubber-band: starts on background mousedown, selects widgets on mouseup
+  // Rubber-band: starts on background mousedown, selects widgets on mouseup.
+  // Snapshot `pageId` at pointerDown and resolve widgets fresh on mouseup from
+  // the store — surviving a mid-drag page swipe without selecting ids that
+  // belong to the previous page (R-2).
   const startRubberBand = useCallback(
     (e: React.PointerEvent) => {
       if (!containerRef.current) return
@@ -336,8 +350,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         })
       }
 
-      // Capture page.widgets at drag-start time (closure)
-      const widgets = page.widgets
+      // Snapshot the active page id at drag-start. On mouseup we look it up
+      // again on the live store so the widget list reflects any deletions /
+      // edits that happened mid-drag, while still binding to the page the
+      // gesture started on.
+      const capturedPageId = page.id
 
       const handleUp = (ev: MouseEvent) => {
         document.removeEventListener('mousemove', handleMove)
@@ -362,6 +379,9 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         setRubberBand(null)
 
         if (rbW > RB_THRESHOLD || rbH > RB_THRESHOLD) {
+          const widgets =
+            useDashboardStore.getState().config?.pages.find((p) => p.id === capturedPageId)
+              ?.widgets ?? []
           // Select all widgets that intersect the rubber-band rect
           const rb = { id: '', x: rbX, y: rbY, w: rbW, h: rbH }
           const ids = widgets
@@ -384,7 +404,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       document.addEventListener('mousemove', handleMove)
       document.addEventListener('mouseup', handleUp)
     },
-    [page.widgets, selectWidgets]
+    [page.id, selectWidgets]
   )
 
   return (

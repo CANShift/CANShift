@@ -11,6 +11,7 @@ import type { ColorRamp, ColorRampStop, SensorKind } from '@tmbk/canshift-core'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { newId, rampStopKey } from '../../utils/listKeys'
 
 const PREVIEW_SAMPLES = 80
 const ROW_LABEL_CLASS =
@@ -81,7 +82,10 @@ export default function ColorRampEditor({
     const second = effective.stops[effective.stops.length - 2]
     const span = last && second ? last.value - second.value : 1
     const insertValue = (last?.value ?? 0) + (span > 0 ? span : 1)
+    // Stable id at creation so the React key in the stops list survives
+    // reorders / removals (R-5).
     const next: ColorRampStop = {
+      id: newId(),
       value: insertValue,
       color: last?.color ?? '#44CC66',
     }
@@ -193,7 +197,7 @@ export default function ColorRampEditor({
       <div className="flex flex-col gap-1">
         {effective.stops.map((stop, idx) => (
           <div
-            key={idx}
+            key={rampStopKey(stop)}
             className="flex items-center gap-2"
             data-testid={`ramp-stop-${idx.toString()}`}
           >

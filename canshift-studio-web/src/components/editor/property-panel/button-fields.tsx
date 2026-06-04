@@ -6,16 +6,27 @@
 // component.
 
 import { useState } from 'react'
-import { CRUISE_CONTROL_OPS, type ButtonAction, type CruiseControlOp } from '@tmbk/canshift-core'
+import {
+  CRUISE_CONTROL_OPS,
+  type ButtonAction,
+  type CruiseControlOp,
+  type PageConfig,
+} from '@tmbk/canshift-core'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { IconTrash } from '../../icons/Icon'
 import { WidgetPreview } from '../WidgetPreview'
 import { useDashboardStore } from '../../../stores/dashboard.store'
+import { actionKey, newId } from '../../../utils/listKeys'
 import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } from './shared'
 
 // Ops that accept an optional `stepKmh` adjustment.
 const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])
+
+// Module-level empty fallback for the `pages` selector — keeps the selector
+// reference-stable while `config === null` so unrelated store updates don't
+// re-render the property panel every tick (R-4).
+const EMPTY_PAGES: readonly PageConfig[] = []
 
 interface ActionRowProps {
   action: ButtonAction
@@ -257,7 +268,7 @@ function AddActionMenu({
 
 export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
   const cfg = widget.config.type === 'button' ? widget.config : null
-  const pages = useDashboardStore((s) => s.config?.pages ?? [])
+  const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
   const pageIds = pages.map((p) => p.id)
   const [previewActive, setPreviewActive] = useState(false)
 
@@ -273,7 +284,10 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
   }
 
   const addAction = (action: ButtonAction) => {
-    onChange({ config: { ...cfg, actions: [...cfg.actions, action] } })
+    // Assign a stable id at creation so the React key in the action list
+    // survives reorders / removals (R-5).
+    const withId: ButtonAction = action.id !== undefined ? action : { ...action, id: newId() }
+    onChange({ config: { ...cfg, actions: [...cfg.actions, withId] } })
   }
 
   const { w, h } = widget.layout
@@ -404,7 +418,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
 
       {cfg.actions.map((action, idx) => (
         <ActionRow
-          key={idx}
+          key={actionKey(action)}
           action={action}
           pageIds={pageIds}
           onUpdate={(updated) => {

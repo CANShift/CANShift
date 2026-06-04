@@ -8,6 +8,11 @@
 // is exactly one home for every contract now.
 // ---------------------------------------------------------------------------
 export type { HexColor, WidgetLayout, WidgetStyle, SemVer } from './schemas/common.js'
+// HexColorSchema — exported so Studio editors can validate color-picker output
+// before persisting it to the dashboard config (issue #1288, R-7). Avoids the
+// previous unsafe `e.target.value as `#${string}`` cast that bypassed the
+// schema and surfaced as a misleading firmware `crc_failed` ack downstream.
+export { HexColorSchema } from './schemas/common.js'
 
 export type {
   // Dashboard

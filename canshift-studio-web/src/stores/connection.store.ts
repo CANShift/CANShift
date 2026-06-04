@@ -64,17 +64,43 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => {
   // Mirror the WS client's status into the store + the device store. The
   // device store is what the editor surfaces read (`connected` flag), so we
   // promote `connected` and `disconnected` transitions into it here.
-  client.onStatus((status, error) => {
+  //
+  // The `onStatus` subscription is captured in `import.meta.hot?.dispose()`
+  // below so Vite HMR doesn't accumulate listeners on every save (R-1).
+  const unsubscribeStatus = client.onStatus((status, error) => {
     set({ status, lastError: error ?? null })
-    const device = useDeviceStore.getState()
     if (status === 'connected') {
       const host = get().host
-      device.setConnectedWifi(host)
+      useDeviceStore.getState().setConnectedWifi(host)
     } else if (status === 'disconnected') {
-      if (device.connected) device.setDisconnected()
-      if (error) device.setError(error)
+      // Collapse the previous two-call sequence (`setDisconnected()` +
+      // `setError()`) into a single `setState` so subscribers keying off
+      // `status === 'disconnected'` see that exact transition instead of an
+      // intermediate `'error'` snapshot (R-1).
+      const device = useDeviceStore.getState()
+      if (device.connected || error) {
+        useDeviceStore.setState({
+          status: error ? 'error' : 'disconnected',
+          portPath: null,
+          transport: null,
+          wifiHost: null,
+          connected: false,
+          syncing: false,
+          isDayMode: null,
+          firmwareCheck: { kind: 'idle' },
+          firmwareCheckTick: 0,
+          lastPushedConfig: null,
+          errorMessage: error ?? null,
+        })
+      }
     }
   })
+
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      unsubscribeStatus()
+    })
+  }
 
   return {
     host: readStoredHost(),

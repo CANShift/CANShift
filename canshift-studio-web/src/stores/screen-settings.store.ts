@@ -11,7 +11,11 @@ export interface ScreenSettings {
 }
 
 interface ScreenSettingsState extends ScreenSettings {
-  set: (patch: Partial<ScreenSettings>) => void
+  // Renamed from `set` so it no longer shadows zustand's built-in `set`
+  // method on the store, which made the action's name a footgun in store
+  // initializers and in any code that imported `set` from outside the store
+  // (R-8, issue #1288).
+  update: (patch: Partial<ScreenSettings>) => void
 }
 
 const DEFAULTS: ScreenSettings = {
@@ -23,7 +27,7 @@ const DEFAULTS: ScreenSettings = {
 export const useScreenSettingsStore = create<ScreenSettingsState>()((set) => ({
   ...DEFAULTS,
 
-  set: (patch) => {
+  update: (patch) => {
     set((s) => ({ ...s, ...patch }))
   },
 }))

@@ -42,7 +42,7 @@ interface ScreenSettingsPanelProps {
 export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
   const brightness = useScreenSettingsStore((s) => s.brightness)
   const rotation = useScreenSettingsStore((s) => s.rotation)
-  const set = useScreenSettingsStore((s) => s.set)
+  const updateScreenSettings = useScreenSettingsStore((s) => s.update)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
@@ -86,7 +86,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   // confirmation dialog because it reboots the device.
   const handleRotationSelect = (deg: 0 | 180) => {
     if (rotation === deg) return
-    set({ rotation: deg })
+    updateScreenSettings({ rotation: deg })
     if (deg === 180) {
       setPendingRotation180(true)
       return
@@ -180,7 +180,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
             max={100}
             value={brightness}
             onChange={(e) => {
-              set({ brightness: Number(e.target.value) })
+              updateScreenSettings({ brightness: Number(e.target.value) })
             }}
             onMouseUp={handleBrightnessCommit}
             onTouchEnd={handleBrightnessCommit}
