@@ -5,59 +5,63 @@
 // studio preview and the device default ship identical content.
 
 import type { DashboardConfig } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE, CURRENT_SCHEMA_VERSION } from '@tmbk/canshift-core'
+import {
+  DEFAULT_PAGE_PALETTE,
+  CURRENT_SCHEMA_VERSION,
+  DashboardConfigSchema,
+} from '@tmbk/canshift-core'
 
 const DEMO_STYLE_NEUTRAL = {
-  primaryColor: '#FFFFFF' as const,
-  secondaryColor: '#2A2A2A' as const,
-  warningColor: '#FF8800' as const,
-  criticalColor: '#FF4444' as const,
-  textColor: '#FFFFFF' as const,
+  primaryColor: '#FFFFFF',
+  secondaryColor: '#2A2A2A',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
   fontSize: 28,
 }
 
 const DEMO_STYLE_RED = {
-  primaryColor: '#FF4444' as const,
-  secondaryColor: '#2A2A2A' as const,
-  warningColor: '#FF8800' as const,
-  criticalColor: '#FF4444' as const,
-  textColor: '#FFFFFF' as const,
+  primaryColor: '#FF4444',
+  secondaryColor: '#2A2A2A',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
   fontSize: 28,
 }
 
 const DEMO_STYLE_BLUE = {
-  primaryColor: '#44AAFF' as const,
-  secondaryColor: '#2A2A2A' as const,
-  warningColor: '#FF8800' as const,
-  criticalColor: '#FF4444' as const,
-  textColor: '#FFFFFF' as const,
+  primaryColor: '#44AAFF',
+  secondaryColor: '#2A2A2A',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
   fontSize: 22,
 }
 
 const DEMO_STYLE_ORANGE = {
-  primaryColor: '#FF8800' as const,
-  secondaryColor: '#2A2A2A' as const,
-  warningColor: '#FF8800' as const,
-  criticalColor: '#FF4444' as const,
-  textColor: '#FFFFFF' as const,
+  primaryColor: '#FF8800',
+  secondaryColor: '#2A2A2A',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
   fontSize: 22,
 }
 
 const DEMO_STYLE_GREEN = {
-  primaryColor: '#44CC88' as const,
-  secondaryColor: '#2A2A2A' as const,
-  warningColor: '#FF8800' as const,
-  criticalColor: '#FF4444' as const,
-  textColor: '#FFFFFF' as const,
+  primaryColor: '#44CC88',
+  secondaryColor: '#2A2A2A',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
   fontSize: 22,
 }
 
 const DEMO_STYLE_BUTTON = {
-  primaryColor: '#FF4444' as const,
-  secondaryColor: '#1A1A1A' as const,
-  warningColor: '#FF8800' as const,
-  criticalColor: '#FF4444' as const,
-  textColor: '#FFFFFF' as const,
+  primaryColor: '#FF4444',
+  secondaryColor: '#1A1A1A',
+  warningColor: '#FF8800',
+  criticalColor: '#FF4444',
+  textColor: '#FFFFFF',
   fontSize: 16,
 }
 
@@ -65,21 +69,29 @@ const DEMO_STYLE_BUTTON = {
 // a glance whether a button is engaged. Mirrors the firmware demo dashboard
 // (canshift-firmware/data/config/dashboard.json) after #966.
 const DEMO_BUTTON_COLORS_MAP = {
-  normal: '#3A1212' as const, // deep dark red — resting
-  active: '#FF4444' as const, // bright red — pressed flash
+  normal: '#3A1212', // deep dark red — resting
+  active: '#FF4444', // bright red — pressed flash
 }
 
 const DEMO_BUTTON_COLORS_LAUNCH = {
-  normal: '#1F1F1F' as const, // near-black resting
-  active: '#43A047' as const, // palette launch green when engaged
+  normal: '#1F1F1F', // near-black resting
+  active: '#43A047', // palette launch green when engaged
 }
 
 const DEMO_BUTTON_COLORS_ANTILAG = {
-  normal: '#1F1F1F' as const, // near-black resting
-  active: '#FF6F00' as const, // palette flame amber when engaged
+  normal: '#1F1F1F', // near-black resting
+  active: '#FF6F00', // palette flame amber when engaged
 }
 
-export const DEFAULT_SIM_CONFIG: DashboardConfig = {
+// The branded `HexColor` and `SemVer` types are nominal — literal strings in
+// this fixture don't carry the brand statically. Validating the whole demo
+// dashboard through `DashboardConfigSchema.parse` once at module load both
+// acquires the brand and traps any drift against the schema before the
+// simulator renders a single widget (#1207 brand follow-up to #1316).
+// Cast to DashboardConfig — `parse()` returns a structurally-equivalent type
+// but tsconfig's `exactOptionalPropertyTypes` distinguishes `prop?: T` from
+// `prop?: T | undefined`, so we re-narrow to the canonical alias.
+const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
   version: CURRENT_SCHEMA_VERSION,
   name: 'CANShift Demo',
   description: 'Coherent 4-page demo dashboard — overview, engine, fluids, controls',
@@ -495,4 +507,6 @@ export const DEFAULT_SIM_CONFIG: DashboardConfig = {
       ],
     },
   ],
-}
+})
+
+export const DEFAULT_SIM_CONFIG: DashboardConfig = PARSED_SIM_CONFIG as DashboardConfig

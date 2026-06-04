@@ -5,6 +5,7 @@
 // here protects every call site at once.
 
 import { HEX_REGEX, isHexColor } from '../colors/hex.js'
+import type { HexColor } from '../schemas/common.js'
 
 describe('HEX_REGEX', () => {
   it.each(['#000000', '#FFFFFF', '#ff4444', '#aBcDeF'])('accepts %s', (input) => {
@@ -37,7 +38,7 @@ describe('isHexColor', () => {
     // block stops typechecking. Runtime assertion just keeps Jest happy.
     const candidate: unknown = '#FF4444'
     if (typeof candidate === 'string' && isHexColor(candidate)) {
-      const accepts = (_: `#${string}`): void => {
+      const accepts = (_: HexColor): void => {
         void _
       }
       accepts(candidate)

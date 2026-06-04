@@ -11,6 +11,7 @@ import {
   DAY_BG_DEFAULT,
   DAY_PALETTE_DEFAULT,
   DAY_THEME_PRESET,
+  HexColorSchema,
   NIGHT_BG_DEFAULT,
   NIGHT_PALETTE_DEFAULT,
   NIGHT_THEME_PRESET,
@@ -20,6 +21,9 @@ import {
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../dashboard.store'
 import { DEFAULT_SIM_CONFIG } from '../../config/defaultSimConfig'
+
+// Branded `HexColor` literals in test fixtures flow through the schema once.
+const hex = (value: string): ReturnType<typeof HexColorSchema.parse> => HexColorSchema.parse(value)
 
 function freshConfig(): DashboardConfig {
   // Deep clone so a mutation in one test never leaks into the next.
@@ -42,8 +46,8 @@ describe('dashboard.store — dayTheme actions', () => {
 
   it('setDayTheme replaces both bgColor and palette atomically', () => {
     const customTheme = {
-      bgColor: '#101010' as const,
-      palette: { ...DAY_PALETTE_DEFAULT, primary: '#FF00AA' as const },
+      bgColor: hex('#101010'),
+      palette: { ...DAY_PALETTE_DEFAULT, primary: hex('#FF00AA') },
     }
     useDashboardStore.getState().setDayTheme(customTheme)
 
@@ -59,8 +63,8 @@ describe('dashboard.store — dayTheme actions', () => {
     const initialPast = before.past.length
 
     useDashboardStore.getState().setDayTheme({
-      bgColor: '#222222',
-      palette: { ...DAY_PALETTE_DEFAULT, accent: '#00FF00' },
+      bgColor: hex('#222222'),
+      palette: { ...DAY_PALETTE_DEFAULT, accent: hex('#00FF00') },
     })
 
     const after = useDashboardStore.getState()
@@ -79,8 +83,8 @@ describe('dashboard.store — dayTheme actions', () => {
     expect(original).toBeDefined()
 
     useDashboardStore.getState().setDayTheme({
-      bgColor: '#ABCDEF',
-      palette: { ...DAY_PALETTE_DEFAULT, primary: '#123456' },
+      bgColor: hex('#ABCDEF'),
+      palette: { ...DAY_PALETTE_DEFAULT, primary: hex('#123456') },
     })
     expect(useDashboardStore.getState().config?.dayTheme?.bgColor).toBe('#ABCDEF')
 
@@ -90,8 +94,8 @@ describe('dashboard.store — dayTheme actions', () => {
 
   it('reset-to-default flow restores DAY_THEME_PRESET after an edit', () => {
     useDashboardStore.getState().setDayTheme({
-      bgColor: '#000000',
-      palette: { ...DAY_PALETTE_DEFAULT, primary: '#FF0000' },
+      bgColor: hex('#000000'),
+      palette: { ...DAY_PALETTE_DEFAULT, primary: hex('#FF0000') },
     })
     expect(useDashboardStore.getState().config?.dayTheme?.bgColor).toBe('#000000')
 
@@ -113,8 +117,8 @@ describe('dashboard.store — nightTheme actions (#21 v2)', () => {
 
   it('setNightTheme writes the value through to the config', () => {
     const custom = {
-      bgColor: '#020202' as const,
-      palette: { ...NIGHT_PALETTE_DEFAULT, primary: '#FF00AA' as const },
+      bgColor: hex('#020202'),
+      palette: { ...NIGHT_PALETTE_DEFAULT, primary: hex('#FF00AA') },
     }
     useDashboardStore.getState().setNightTheme(custom)
 
@@ -149,8 +153,8 @@ describe('dashboard.store — nightTheme actions (#21 v2)', () => {
     const original = useDashboardStore.getState().config?.nightTheme
 
     useDashboardStore.getState().setNightTheme({
-      bgColor: '#ABCDEF',
-      palette: { ...NIGHT_PALETTE_DEFAULT, primary: '#123456' },
+      bgColor: hex('#ABCDEF'),
+      palette: { ...NIGHT_PALETTE_DEFAULT, primary: hex('#123456') },
     })
     expect(useDashboardStore.getState().config?.nightTheme?.bgColor).toBe('#ABCDEF')
 
@@ -204,8 +208,8 @@ describe('dashboard.store — preset application (#21 v2)', () => {
 
   it('copy day → night replicates the current day theme into nightTheme', () => {
     const customDay = {
-      bgColor: '#EEDDCC' as const,
-      palette: { ...DAY_PALETTE_DEFAULT, primary: '#112233' as const },
+      bgColor: hex('#EEDDCC'),
+      palette: { ...DAY_PALETTE_DEFAULT, primary: hex('#112233') },
     }
     useDashboardStore.getState().setDayTheme(customDay)
     // Simulate the ThemePanel's "Copy day → night" button

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import type { PageConfig } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE, HexColorSchema } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
@@ -14,6 +14,10 @@ import { RightSidebar } from './RightSidebar'
 // per-widget renderers; WidgetPalette drags in the palette catalogue.
 const Canvas = lazy(() => import('../components/editor/Canvas'))
 const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
+
+// Default background for a freshly added page — branded `HexColor` literal
+// parsed once at module load (#1207).
+const NEW_PAGE_BG = HexColorSchema.parse('#000000')
 
 // Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
 // Click toggles the default. Replaces the prior diamond marker per #142.
@@ -311,7 +315,7 @@ export default function EditorRoute() {
                 backgroundImage: null,
                 // New pages default to pure black so the studio preview
                 // matches the firmware background (issue #143).
-                backgroundColor: '#000000',
+                backgroundColor: NEW_PAGE_BG,
                 palette: { ...DEFAULT_PAGE_PALETTE },
                 showTopBar: true,
                 visible: true,

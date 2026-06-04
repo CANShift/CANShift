@@ -6,8 +6,13 @@
 // defaults" action restores the catalog ramp when a SensorKind is detected.
 
 import { useCallback, useMemo } from 'react'
-import { MAX_RAMP_STOPS, SENSOR_DEFAULT_RAMPS, colorAtValue } from '@tmbk/canshift-core'
-import type { ColorRamp, ColorRampStop, SensorKind } from '@tmbk/canshift-core'
+import {
+  HexColorSchema,
+  MAX_RAMP_STOPS,
+  SENSOR_DEFAULT_RAMPS,
+  colorAtValue,
+} from '@tmbk/canshift-core'
+import type { ColorRamp, ColorRampStop, HexColor, SensorKind } from '@tmbk/canshift-core'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,21 +30,28 @@ export interface ColorRampEditorProps {
   onChange: (next: ColorRamp | undefined) => void
 }
 
+// Branded `HexColor` requires schema-validated literals. The fallback ramp's
+// two endpoint colours are validated once at module load — a typo here trips
+// Zod before any signal-less page can render (#1207).
+const RAMP_FALLBACK_OK = HexColorSchema.parse('#44CC66')
+const RAMP_FALLBACK_DANGER = HexColorSchema.parse('#CC3333')
+const RAMP_FALLBACK_BLACK = HexColorSchema.parse('#000000')
+
 function fallbackRamp(min: number, max: number): ColorRamp {
   const lo = Number.isFinite(min) ? min : 0
   const hi = Number.isFinite(max) && max > lo ? max : lo + 1
   return {
     interpolate: 'linear',
     stops: [
-      { value: lo, color: '#44CC66' },
-      { value: hi, color: '#CC3333' },
+      { value: lo, color: RAMP_FALLBACK_OK },
+      { value: hi, color: RAMP_FALLBACK_DANGER },
     ],
   }
 }
 
-function clampHex(value: string): `#${string}` {
-  if (/^#[0-9A-Fa-f]{6}$/.test(value)) return value as `#${string}`
-  return '#000000'
+function clampHex(value: string): HexColor {
+  const parsed = HexColorSchema.safeParse(value)
+  return parsed.success ? parsed.data : RAMP_FALLBACK_BLACK
 }
 
 export default function ColorRampEditor({
@@ -87,7 +99,7 @@ export default function ColorRampEditor({
     const next: ColorRampStop = {
       id: newId(),
       value: insertValue,
-      color: last?.color ?? '#44CC66',
+      color: last?.color ?? RAMP_FALLBACK_OK,
     }
     update({ ...effective, stops: [...effective.stops, next] })
   }, [effective, update])

@@ -8,10 +8,19 @@
 //
 // Issue #21 v2.
 
+import { HexColorSchema } from './schemas/common.js'
+import { PagePaletteSchema } from './schemas/dashboard.js'
 import type { PagePalette, ThemePreset } from './schemas/dashboard.js'
 
-/** Default palette for night (dark) mode. Used when config.nightTheme is absent. */
-export const NIGHT_PALETTE_DEFAULT: PagePalette = {
+/**
+ * Default palette for night (dark) mode. Used when config.nightTheme is absent.
+ *
+ * `.parse()` runs once at module load — the branded `HexColor` is nominal, so
+ * literal hex strings need a runtime validator to acquire the brand. A typo
+ * here trips Zod up front instead of producing a misleading firmware ack
+ * downstream (#1207 brand follow-up to #1316).
+ */
+export const NIGHT_PALETTE_DEFAULT: PagePalette = PagePaletteSchema.parse({
   surface: '#1E1E1E',
   primary: '#FF4444',
   accent: '#FF8800',
@@ -20,10 +29,10 @@ export const NIGHT_PALETTE_DEFAULT: PagePalette = {
   warning: '#FF8800',
   danger: '#FF4444',
   success: '#00CC44',
-}
+})
 
 /** Default background color for night mode. */
-export const NIGHT_BG_DEFAULT = '#000000' as const
+export const NIGHT_BG_DEFAULT = HexColorSchema.parse('#000000')
 
 /**
  * Full night-theme preset used as the initial value when the user clicks

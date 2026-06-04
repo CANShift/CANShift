@@ -7,8 +7,12 @@
 // and signal-catalog pass-through.
 
 import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
+import { HexColorSchema, SemVerSchema } from '../schemas/common.js'
 import type { SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
+
+const hex = (value: string): ReturnType<typeof HexColorSchema.parse> => HexColorSchema.parse(value)
+const semver = (value: string): ReturnType<typeof SemVerSchema.parse> => SemVerSchema.parse(value)
 
 // ---------------------------------------------------------------------------
 // Fixtures — full Zod-valid shapes; tests apply targeted mutations.
@@ -73,7 +77,7 @@ function validConfig(overrides: Record<string, unknown> = {}): Record<string, un
 
 function signalCatalog(names: string[]): SignalConfig {
   return {
-    version: '1.15.0',
+    version: semver('1.15.0'),
     protocol: 'custom_v1.0',
     canSpeedKbps: 500,
     signals: names.map((name) => ({
@@ -367,7 +371,7 @@ describe('validateDashboard — signal cross-reference', () => {
 describe('validateDashboard — signalCatalog option pass-through', () => {
   it('surfaces signal-catalog errors via validateDashboard', () => {
     const bogusCatalog: SignalConfig = {
-      version: '1.15.0',
+      version: semver('1.15.0'),
       protocol: 'custom_v1.0',
       canSpeedKbps: 500,
       signals: [
@@ -384,7 +388,7 @@ describe('validateDashboard — signalCatalog option pass-through', () => {
           min: 0,
           max: 100,
           timeoutMs: 1000,
-          colorRamp: { stops: [{ value: 0, color: '#00FF00' }], interpolate: 'linear' },
+          colorRamp: { stops: [{ value: 0, color: hex('#00FF00') }], interpolate: 'linear' },
         },
       ],
     }

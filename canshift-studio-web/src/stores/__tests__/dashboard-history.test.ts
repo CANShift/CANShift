@@ -27,7 +27,7 @@ function newPage(id: string): PageConfig {
     backgroundColor: '#000000',
     showTopBar: true,
     widgets: [],
-  } as PageConfig
+  } as unknown as PageConfig
 }
 
 function newWidget(id: string): Widget {
@@ -189,9 +189,8 @@ describe('dashboard.store — history invariants', () => {
     // Push a widget's origin past the right edge — store must clamp it back to
     // the canvas, not silently keep an off-canvas value. Issue #548.
     const pageId = useDashboardStore.getState().config?.defaultPageId ?? ''
-    const targetWidget = useDashboardStore
-      .getState()
-      .config?.pages.find((p) => p.id === pageId)?.widgets[0]
+    const targetWidget = useDashboardStore.getState().config?.pages.find((p) => p.id === pageId)
+      ?.widgets[0]
     expect(targetWidget).toBeDefined()
     if (!targetWidget) return
 

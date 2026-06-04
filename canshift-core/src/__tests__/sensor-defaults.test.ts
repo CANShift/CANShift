@@ -11,7 +11,10 @@ import {
 } from '../sensor-defaults.js'
 import type { SensorKind } from '../sensor-defaults.js'
 import { HEX_COLOR_REGEX, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
+import { HexColorSchema } from '../schemas/common.js'
 import type { ColorRamp } from '../schemas/signal.js'
+
+const hex = (value: string): ReturnType<typeof HexColorSchema.parse> => HexColorSchema.parse(value)
 
 describe('SENSOR_DEFAULT_RAMPS', () => {
   const entries = Object.entries(SENSOR_DEFAULT_RAMPS) as [
@@ -95,9 +98,9 @@ describe('colorAtValue', () => {
     const stepRamp: ColorRamp = {
       interpolate: 'step',
       stops: [
-        { value: 0, color: '#44CC66' },
-        { value: 50, color: '#CC8800' },
-        { value: 100, color: '#CC3333' },
+        { value: 0, color: hex('#44CC66') },
+        { value: 50, color: hex('#CC8800') },
+        { value: 100, color: hex('#CC3333') },
       ],
     }
     expect(colorAtValue(stepRamp, 25)).toBe('#44CC66')

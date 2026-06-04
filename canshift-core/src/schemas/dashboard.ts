@@ -378,7 +378,10 @@ export const PagePaletteSchema = z
   })
   .strict()
 
-export const DEFAULT_PAGE_PALETTE: z.infer<typeof PagePaletteSchema> = {
+// Runtime-validated at module load — `.parse()` traps a typo in the canonical
+// default palette before any consumer can hit a confusing branded-type error
+// downstream. Cheap one-shot cost (#1207 brand follow-up to #1316).
+export const DEFAULT_PAGE_PALETTE: z.infer<typeof PagePaletteSchema> = PagePaletteSchema.parse({
   surface: '#1E1E1E',
   primary: '#FF4444',
   accent: '#FF8800',
@@ -387,7 +390,7 @@ export const DEFAULT_PAGE_PALETTE: z.infer<typeof PagePaletteSchema> = {
   warning: '#FF8800',
   danger: '#FF4444',
   success: '#00CC44',
-}
+})
 
 export const ThemePresetSchema = z
   .object({
