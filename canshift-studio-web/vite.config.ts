@@ -7,8 +7,13 @@
 
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+
+// Opt-in bundle analyzer — enabled via `npm run build:analyze`. Kept off the
+// default build so production artifacts stay deterministic and SPIFFS-bound.
+const analyze = process.env.ANALYZE === '1'
 
 // Inject the Studio package version as a build-time constant so TopBar can
 // surface it alongside the firmware version reported over WS. Read once at
@@ -22,7 +27,19 @@ export default defineConfig({
   define: {
     __STUDIO_VERSION__: JSON.stringify(pkg.version),
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    ...(analyze
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            template: 'treemap',
+            gzipSize: true,
+            brotliSize: true,
+          }),
+        ]
+      : []),
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

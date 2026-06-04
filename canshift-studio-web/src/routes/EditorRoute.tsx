@@ -1,14 +1,19 @@
 // EditorRoute.tsx — Dashboard layout editor
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import type { PageConfig } from '@tmbk/canshift-core'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
-import Canvas from '../components/editor/Canvas'
-import WidgetPalette from '../components/editor/WidgetPalette'
 import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
+
+// Lazy editor sub-trees (#1207 — Bundle / Vite). Each split into its own
+// rollup chunk so the EditorRoute entry payload stays focused on layout,
+// page navigation and orchestration. Canvas drags in WidgetPreview's
+// per-widget renderers; WidgetPalette drags in the palette catalogue.
+const Canvas = lazy(() => import('../components/editor/Canvas'))
+const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
 
 // Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
 // Click toggles the default. Replaces the prior diamond marker per #142.
@@ -23,6 +28,31 @@ const NON_DEFAULT_PAGE_GLYPH = '☆'
 
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}`
+}
+
+// ---------------------------------------------------------------------------
+// Lazy-boundary fallbacks
+// ---------------------------------------------------------------------------
+
+function CanvasFallback() {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#3A3A3A',
+        fontSize: 12,
+      }}
+    >
+      Loading editor…
+    </div>
+  )
+}
+
+function PaletteFallback() {
+  return <div style={{ minHeight: 40 }} />
 }
 
 // ---------------------------------------------------------------------------
@@ -317,14 +347,19 @@ export default function EditorRoute() {
 
         {/* Widget palette */}
         <div style={{ padding: '4px 0' }}>
-          {currentPage && <WidgetPalette pageId={currentPage.id} />}
+          {currentPage && (
+            <Suspense fallback={<PaletteFallback />}>
+              <WidgetPalette pageId={currentPage.id} />
+            </Suspense>
+          )}
         </div>
-
       </aside>
 
       {/* ── Canvas centre ────────────────────────────────────────────────── */}
       {currentPage ? (
-        <Canvas page={currentPage} topBar={config.topBar} />
+        <Suspense fallback={<CanvasFallback />}>
+          <Canvas page={currentPage} topBar={config.topBar} />
+        </Suspense>
       ) : (
         <div
           style={{
