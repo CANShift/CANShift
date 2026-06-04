@@ -7,9 +7,14 @@
 // Mirrors the chrome of the page-list pills above so the right sidebar reads
 // like one continuous surface (issue #21).
 
-import { useState } from 'react'
-import PropertyPanel from '../components/editor/PropertyPanel'
+import { lazy, Suspense, useState } from 'react'
 import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
+
+// Lazy PropertyPanel (#1207 — Bundle / Vite). Splits the property editor
+// (selectors, sliders, color pickers) out of the EditorRoute chunk so the
+// initial paint stays light. Tab state lives in this component so the
+// Suspense boundary is mounted only when the Properties tab is active.
+const PropertyPanel = lazy(() => import('../components/editor/PropertyPanel'))
 
 type Tab = 'properties' | 'signals'
 
@@ -29,6 +34,23 @@ const TAB_BORDER = '#222222'
 export interface RightSidebarProps {
   /** Currently selected page — `undefined` when no page is selected. */
   pageId: string | undefined
+}
+
+function PropertyPanelFallback() {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#3A3A3A',
+        fontSize: 11,
+      }}
+    >
+      Loading…
+    </div>
+  )
 }
 
 export function RightSidebar({ pageId }: RightSidebarProps) {
@@ -83,7 +105,11 @@ export function RightSidebar({ pageId }: RightSidebarProps) {
           )
         })}
       </div>
-      {tab === 'properties' && pageId !== undefined && <PropertyPanel pageId={pageId} />}
+      {tab === 'properties' && pageId !== undefined && (
+        <Suspense fallback={<PropertyPanelFallback />}>
+          <PropertyPanel pageId={pageId} />
+        </Suspense>
+      )}
       {tab === 'signals' && <Obd2PollingPanel />}
     </aside>
   )
