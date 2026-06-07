@@ -33,12 +33,10 @@ export const OBD2_DEFAULT_INTERVAL_MS = 1000
 // Schemas
 // ---------------------------------------------------------------------------
 
-/** OBD-II mode byte. v1 ships Mode 01 (current data) only. Future modes
- *  (02 freeze frame, 09 vehicle info, ...) land as a union extension. */
-// TODO(#1302) — the strict literal contradicts the "future modes" comment
-// above. Either widen to z.number().int().min(0).max(0xFF) with a runtime
-// warning for unsupported modes (#841), or drop the comment and lock the
-// schema at Mode 01. Pending decision tracked in #1302 (follow-up to #1289).
+/** OBD-II mode byte. Locked to Mode 01 (current data). New modes must
+ *  extend the schema explicitly as a `z.union([z.literal(0x01), ...])` once
+ *  the corresponding firmware-side handler ships — keeping the schema
+ *  closed prevents garbage modes reaching the OBD2 poller. */
 export const Obd2ModeSchema = z.literal(0x01)
 
 /** OBD-II PID byte — 0x00..0xFF. Mode 01 uses the J1979 PID catalog
