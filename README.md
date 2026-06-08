@@ -164,19 +164,23 @@ iOS-first React Native + Expo SDK 52 app. Setup commands and the `expo prebuild`
 ```
 canshift-firmware/    ESP32 firmware — C++, PlatformIO, LVGL 8.3 + embedded Studio SPA
 canshift-studio-web/  Dash-hosted Studio — Vite + React + TS + Zustand + Tailwind + Radix
+canshift-tuner/       Vercel-hosted Tuner — Betaflight-style configurator, WebSerial transport (#1351)
 canshift-mobile/      iPhone app — React Native, Expo SDK 52
 canshift-core/        Shared config types — pure TypeScript
 docs/                 Architecture documentation
 ```
 
+> ⚠️ **In-flight architecture refactor (#1351)** — `canshift-tuner/` is the successor to `canshift-studio-web/`. The latter stays intact until the firmware-side WiFi + USB CDC removal lands, at which point studio-web is archived. See the umbrella issue for the migration plan.
+
 | Sub-project | README |
 |-------------|--------|
 | Firmware | [canshift-firmware/README.md](canshift-firmware/README.md) — build, flash, pin assignments, FreeRTOS layout, USB + WebSocket protocols, embedded SPA |
-| Studio (dash-hosted) | [canshift-studio-web/README.md](canshift-studio-web/README.md) — dev loop, mock WS server, deployment via firmware OTA, connection flow |
+| Studio (dash-hosted, legacy) | [canshift-studio-web/README.md](canshift-studio-web/README.md) — superseded by canshift-tuner (#1351) |
+| Tuner (Vercel-hosted) | [canshift-tuner/README.md](canshift-tuner/README.md) — Betaflight-style configurator, WebSerial transport |
 | Mobile | [canshift-mobile/README.md](canshift-mobile/README.md) — Expo setup, BLE service, WiFi OTA flow |
 | Core | [canshift-core/README.md](canshift-core/README.md) — config schema, validation, migrations, design tokens |
 | Docs | [docs/README.md](docs/README.md) — architecture documentation index |
-| Flasher (separate repo) | [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — browser-based esptool, hosted at [canshift.tmbk.ch](https://canshift.tmbk.ch) (#1081) |
+| Flasher (separate repo, being absorbed) | [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — browser-based esptool, hosted at [canshift.tmbk.ch](https://canshift.tmbk.ch) (#1081) — being absorbed into canshift-tuner per #1351 |
 
 ---
 

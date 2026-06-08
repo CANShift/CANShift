@@ -1,18 +1,57 @@
-// WelcomeRoute.tsx — Connect screen + WebSerial browser-support check.
+// WelcomeRoute.tsx — Connect screen, browser-support check, support contact.
 //
-// Entry point when no device is paired. The connect button drives the
-// connection store, which internally prompts the user via
-// `navigator.serial.requestPort()` and opens the chosen port. Once the store
-// reports `connected` the user is bounced to the dashboard.
+// First impression matters: this is where people land before they touch
+// hardware. The page leans warm/onboarding-first rather than minimal so a
+// first-time user sees "what is this, what do I do" before "where is the
+// button". Once the device is connected the route bounces to /dashboard.
 
 import type { CSSProperties } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useConnectionStore } from '../stores/connection.store'
 
 const SUPPORTED_BROWSERS = ['Chrome 89+', 'Edge 89+', 'Brave', 'Opera']
+const SUPPORT_EMAIL = 'support@canshift.tmbk.ch'
+
+const STEPS: Array<{ title: string; body: string }> = [
+  {
+    title: 'Plug your dash',
+    body: 'USB-C cable, directly into your computer. No hub.',
+  },
+  {
+    title: 'Pick the port',
+    body: 'Click Connect device. Your browser asks which USB port to use.',
+  },
+  {
+    title: 'Start tuning',
+    body: 'Edit your dashboard live — your changes preview as you type.',
+  },
+]
 
 function isWebSerialAvailable(): boolean {
   return typeof navigator !== 'undefined' && 'serial' in navigator
+}
+
+function buildSupportMailto(lastError: string | null): string {
+  const subject = encodeURIComponent('CANShift Tuner — issue report')
+  const lines = [
+    'Hi,',
+    '',
+    "I'm running into an issue with CANShift Tuner. Here are the details:",
+    '',
+    `- Browser: ${navigator.userAgent}`,
+    `- Status when reporting: ${lastError ?? '—'}`,
+    `- Tuner version: ${typeof __TUNER_VERSION__ !== 'undefined' ? __TUNER_VERSION__ : 'unknown'}`,
+    '',
+    'What happened:',
+    '',
+    '',
+    'What I expected:',
+    '',
+    '',
+    'Thanks!',
+  ]
+  const body = encodeURIComponent(lines.join('\n'))
+  return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`
 }
 
 export default function WelcomeRoute() {
@@ -29,40 +68,78 @@ export default function WelcomeRoute() {
 
   return (
     <div style={containerStyle}>
-      <div style={cardStyle}>
-        <div style={titleStyle}>Welcome to CANShift Tuner</div>
-        <div style={subtitleStyle}>
-          Connect your dash via USB to start configuring. Make sure Chrome,
-          Edge or Brave is running over HTTPS (or localhost in dev).
-        </div>
+      <div style={contentStyle}>
+        <header style={heroStyle}>
+          <div style={badgeStyle}>CANShift Tuner</div>
+          <h1 style={titleStyle}>Configure your dash, live.</h1>
+          <p style={taglineStyle}>
+            Edit pages, bind CAN signals, tune OBD-II polling — all in your browser,
+            with the dash connected over USB. No install, nothing to deploy.
+          </p>
+        </header>
 
         {!supported ? (
           <UnsupportedBrowserCard />
         ) : (
           <>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                void connect()
-              }}
-              style={{
-                ...connectButtonStyle,
-                cursor: busy ? 'wait' : 'pointer',
-                opacity: busy ? 0.7 : 1,
-              }}
-            >
-              {busy ? (
-                <>
-                  <Spinner /> {status === 'reconnecting' ? 'Reconnecting…' : 'Connecting…'}
-                </>
-              ) : (
-                'Connect device'
-              )}
-            </button>
+            <ol style={stepsStyle}>
+              {STEPS.map((step, idx) => (
+                <li key={step.title} style={stepStyle}>
+                  <div style={stepNumberStyle}>{idx + 1}</div>
+                  <div>
+                    <div style={stepTitleStyle}>{step.title}</div>
+                    <div style={stepBodyStyle}>{step.body}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <div style={ctaRowStyle}>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  void connect()
+                }}
+                style={{
+                  ...connectButtonStyle,
+                  cursor: busy ? 'wait' : 'pointer',
+                  opacity: busy ? 0.7 : 1,
+                }}
+              >
+                {busy ? (
+                  <>
+                    <Spinner />{' '}
+                    {status === 'reconnecting' ? 'Reconnecting…' : 'Connecting…'}
+                  </>
+                ) : (
+                  'Connect device'
+                )}
+              </button>
+            </div>
+
             {lastError && <div style={errorPillStyle}>{lastError}</div>}
           </>
         )}
+
+        <footer style={footerStyle}>
+          <Link to="/about" style={linkStyle}>
+            About
+          </Link>
+          <span style={dotSeparatorStyle}>·</span>
+          <a
+            href="https://github.com/tburkhalterr/CANShift/blob/main/canshift-tuner/docs/user/troubleshooting.md"
+            target="_blank"
+            rel="noreferrer"
+            style={linkStyle}
+          >
+            Troubleshooting
+          </a>
+          <span style={dotSeparatorStyle}>·</span>
+          <a href={buildSupportMailto(lastError)} style={linkStyle}>
+            Report a problem
+          </a>
+        </footer>
       </div>
     </div>
   )
@@ -74,11 +151,12 @@ function UnsupportedBrowserCard() {
       <div style={{ fontWeight: 600, color: 'hsl(var(--text))', marginBottom: 6 }}>
         WebSerial isn't available in this browser
       </div>
-      <div style={{ fontSize: 12, marginBottom: 10 }}>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>
         CANShift Tuner needs the WebSerial API to talk to the dash over USB.
-        Open this page in one of the supported browsers:
+        Open this page in one of the supported browsers — or copy the URL and
+        paste it into the new one:
       </div>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 12 }}>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13 }}>
         {SUPPORTED_BROWSERS.map((b) => (
           <li key={b} style={{ padding: '2px 0' }}>
             · {b}
@@ -114,52 +192,123 @@ const containerStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   background: 'hsl(var(--bg))',
-  padding: 32,
+  padding: '48px 32px',
   overflowY: 'auto',
 }
 
-const cardStyle: CSSProperties = {
+const contentStyle: CSSProperties = {
   width: '100%',
-  maxWidth: 460,
-  background: 'hsl(var(--surface))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
-  padding: '32px 28px',
+  maxWidth: 540,
   display: 'flex',
   flexDirection: 'column',
-  gap: 16,
-  alignItems: 'stretch',
+  gap: 28,
+}
+
+const heroStyle: CSSProperties = {
   textAlign: 'center',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 12,
+}
+
+const badgeStyle: CSSProperties = {
+  display: 'inline-block',
+  padding: '4px 10px',
+  borderRadius: 999,
+  background: 'hsl(var(--surface))',
+  border: '1px solid hsl(var(--border))',
+  color: 'hsl(var(--text-dim))',
+  fontFamily: "'Orbitron', system-ui, sans-serif",
+  fontSize: 11,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
 }
 
 const titleStyle: CSSProperties = {
-  fontSize: 22,
+  fontSize: 30,
   fontWeight: 700,
   color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
+  letterSpacing: '-0.02em',
+  margin: 0,
+  lineHeight: 1.15,
 }
 
-const subtitleStyle: CSSProperties = {
+const taglineStyle: CSSProperties = {
+  fontSize: 14,
+  color: 'hsl(var(--text-dim))',
+  lineHeight: 1.6,
+  margin: 0,
+  maxWidth: 440,
+}
+
+const stepsStyle: CSSProperties = {
+  listStyle: 'none',
+  padding: 0,
+  margin: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+}
+
+const stepStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 14,
+  padding: '14px 16px',
+  background: 'hsl(var(--surface))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 8,
+}
+
+const stepNumberStyle: CSSProperties = {
+  width: 28,
+  height: 28,
+  flexShrink: 0,
+  borderRadius: '50%',
+  background: 'hsl(var(--primary) / 0.15)',
+  color: 'hsl(var(--primary))',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 700,
+  fontSize: 13,
+  marginTop: 2,
+}
+
+const stepTitleStyle: CSSProperties = {
+  fontWeight: 600,
+  color: 'hsl(var(--text))',
+  fontSize: 14,
+  marginBottom: 2,
+}
+
+const stepBodyStyle: CSSProperties = {
   fontSize: 13,
   color: 'hsl(var(--text-dim))',
-  lineHeight: 1.55,
+  lineHeight: 1.5,
+}
+
+const ctaRowStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  marginTop: 4,
 }
 
 const connectButtonStyle: CSSProperties = {
   background: 'hsl(var(--primary))',
   color: 'hsl(var(--primary-foreground))',
   border: 'none',
-  borderRadius: 6,
-  padding: '12px 20px',
+  borderRadius: 8,
+  padding: '14px 28px',
   fontSize: 13,
   fontWeight: 600,
-  letterSpacing: '0.04em',
+  letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  marginTop: 8,
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
+  boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)',
 }
 
 const errorPillStyle: CSSProperties = {
@@ -167,18 +316,38 @@ const errorPillStyle: CSSProperties = {
   border: '1px solid hsl(var(--destructive))',
   color: 'hsl(var(--destructive))',
   borderRadius: 4,
-  padding: '8px 12px',
-  fontSize: 12,
-  marginTop: 4,
-  textAlign: 'left',
+  padding: '10px 14px',
+  fontSize: 13,
+  textAlign: 'center',
 }
 
 const unsupportedCardStyle: CSSProperties = {
   background: 'hsl(var(--bg-inset))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
-  padding: '14px 16px',
+  borderRadius: 8,
+  padding: '18px 20px',
   color: 'hsl(var(--text-dim))',
   textAlign: 'left',
   fontSize: 13,
+}
+
+const footerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  paddingTop: 8,
+  borderTop: '1px solid hsl(var(--border))',
+  marginTop: 8,
+}
+
+const linkStyle: CSSProperties = {
+  color: 'hsl(var(--text-dim))',
+  fontSize: 12,
+  textDecoration: 'none',
+}
+
+const dotSeparatorStyle: CSSProperties = {
+  color: 'hsl(var(--text-muted))',
+  fontSize: 12,
 }
