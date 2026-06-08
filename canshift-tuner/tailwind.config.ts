@@ -1,5 +1,5 @@
-// tailwind.config.ts — Mirrors canshift-studio-web. Tokens flow from
-// canshift-core (single source of truth, #906).
+// tailwind.config.ts — Tokens flow from canshift-core (single source of
+// truth, #906).
 
 import type { Config } from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate'
