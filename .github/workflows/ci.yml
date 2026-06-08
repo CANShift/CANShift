@@ -68,6 +68,20 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      # Node + studio-web npm ci so `scripts/sync_studio_web.py` (run from
+      # `pio run` via extra_scripts) can build the SPA and mirror it into
+      # `data/w/` before `buildfs`. Without this the script logs
+      # "node_modules absent — skipping SPA build" and the SPIFFS round-trip
+      # gate below ran against an SPA-less image while the firmware ELF was
+      # built expecting `/w/...` at runtime (#1340).
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: npm ci (studio-web — needed to build the SPA into data/w/)
+        working-directory: canshift-studio-web
+        run: npm ci
+
       - uses: actions/cache@v5
         with:
           path: |
@@ -127,19 +141,56 @@ jobs:
           fi
           EXTRACT=$(mktemp -d)
           "$MKSPIFFS" -u "$EXTRACT" "$IMG" > /dev/null
-          SRC_COUNT=$(find data -type f | wc -l | tr -d ' ')
-          IMG_COUNT=$(find "$EXTRACT" -type f | wc -l | tr -d ' ')
+
+          # Sanity gate: the SPA must be present in data/w/. Without this check
+          # the firmware job used to ship an SPA-less SPIFFS image when
+          # sync_studio_web.py couldn't reach node_modules — both sides counted
+          # the same (committed-only) files and the gate passed silently (#1340).
+          SPA_COUNT=$(find data/w -type f 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$SPA_COUNT" -eq 0 ]; then
+            echo "::error::data/w/ is empty — sync_studio_web.py skipped the SPA build (#1340)"
+            exit 1
+          fi
+          echo "data/w/ files: $SPA_COUNT"
+
+          # File-list parity. Catches a path that mkspiffs silently dropped
+          # because the on-device path exceeded SPIFFS_OBJ_NAME_LEN (#1240).
+          (cd data && find . -type f | sort) > /tmp/src.list
+          (cd "$EXTRACT" && find . -type f | sort) > /tmp/img.list
+          SRC_COUNT=$(wc -l < /tmp/src.list | tr -d ' ')
+          IMG_COUNT=$(wc -l < /tmp/img.list | tr -d ' ')
           echo "spiffs source files: $SRC_COUNT"
           echo "spiffs image files:  $IMG_COUNT"
-          if [ "$SRC_COUNT" != "$IMG_COUNT" ]; then
-            echo "::error::spiffs round-trip mismatch — $SRC_COUNT source / $IMG_COUNT in image (#1240)"
-            echo "::group::diff"
-            (cd data && find . -type f | sort) > /tmp/src.list
-            (cd "$EXTRACT" && find . -type f | sort) > /tmp/img.list
-            diff /tmp/src.list /tmp/img.list || true
+          if ! diff /tmp/src.list /tmp/img.list > /tmp/list.diff; then
+            echo "::error::spiffs file list mismatch — $SRC_COUNT source / $IMG_COUNT in image (#1240)"
+            echo "::group::list diff"
+            cat /tmp/list.diff
             echo "::endgroup::"
             exit 1
           fi
+
+          # Content parity. A file-count match isn't enough: a truncated or
+          # corrupted mirror would have the right name but the wrong bytes,
+          # and the device would serve a half-payload over WiFi. Hash both
+          # trees and fail on the first diverging file (#1340).
+          (cd data && find . -type f | sort | xargs -I{} sha256sum {}) > /tmp/src.sha
+          (cd "$EXTRACT" && find . -type f | sort | xargs -I{} sha256sum {}) > /tmp/img.sha
+          if ! diff /tmp/src.sha /tmp/img.sha > /tmp/sha.diff; then
+            echo "::error::spiffs content mismatch — bytes differ between data/ and extracted image (#1340)"
+            echo "::group::sha diff"
+            cat /tmp/sha.diff
+            echo "::endgroup::"
+            exit 1
+          fi
+
+      - name: build (secure)
+        # Exercise the secure-boot partition layout and SDK defaults on every PR
+        # so changes to `ota_4mb_secure.csv` or `APP_SECURE_BOOT_BUILD=1`-gated
+        # code paths can't break only at hand-build / release time (#1340).
+        # No flash-budget gate here — the secure layout has different partition
+        # sizing than `crowpanel_28`, so the existing 98 % rule wouldn't apply
+        # cleanly. The build itself succeeding is the contract.
+        run: pio run -e secure
 
   mobile-ios:
     name: mobile — iOS native build
