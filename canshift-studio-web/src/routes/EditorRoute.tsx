@@ -7,6 +7,7 @@ import { useDashboardStore } from '../stores/dashboard.store'
 import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 
 // Lazy editor sub-trees (#1207 — Bundle / Vite). Each split into its own
 // rollup chunk so the EditorRoute entry payload stays focused on layout,
@@ -361,9 +362,11 @@ export default function EditorRoute() {
 
       {/* ── Canvas centre ────────────────────────────────────────────────── */}
       {currentPage ? (
-        <Suspense fallback={<CanvasFallback />}>
-          <Canvas page={currentPage} topBar={config.topBar} />
-        </Suspense>
+        <ErrorBoundary scope="canvas">
+          <Suspense fallback={<CanvasFallback />}>
+            <Canvas page={currentPage} topBar={config.topBar} />
+          </Suspense>
+        </ErrorBoundary>
       ) : (
         <div
           style={{

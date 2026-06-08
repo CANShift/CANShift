@@ -9,6 +9,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import TopBar from './components/shared/TopBar'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
 import { useConnectionStore } from './stores/connection.store'
@@ -174,9 +175,11 @@ export default function App() {
               <Route
                 path="/editor"
                 element={
-                  <Suspense fallback={<RouteLoading />}>
-                    <EditorRoute />
-                  </Suspense>
+                  <ErrorBoundary scope="editor">
+                    <Suspense fallback={<RouteLoading />}>
+                      <EditorRoute />
+                    </Suspense>
+                  </ErrorBoundary>
                 }
               />
             </Routes>
