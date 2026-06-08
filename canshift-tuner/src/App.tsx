@@ -14,6 +14,9 @@ import PlaceholderRoute from './components/Shell/PlaceholderRoute'
 import WelcomeRoute from './routes/WelcomeRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
+import { useDeviceStore } from './stores/device.store'
+import { useDashboardStore } from './stores/dashboard.store'
+import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 
@@ -46,14 +49,41 @@ function useAutoReconnect(): void {
 }
 
 /**
- * Redirect every non-Welcome path back to `/` while disconnected. The Sidebar
- * already blocks the UI path, but a direct URL hit (or a reload mid-session)
- * still needs to be intercepted.
+ * In `vite dev`, drop straight into simulation mode if nothing is connected —
+ * lets us hack on widgets / Editor UI without a physical board on the desk
+ * (mirrors canshift-studio-web's dev-mode bootstrap). Skipped in production
+ * builds: the user goes through Welcome → Connect on the real Vercel deploy.
+ */
+function useSimulationBootstrap(): void {
+  const connected = useDeviceStore((s) => s.connected)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const enterSimulation = useDeviceStore((s) => s.enterSimulation)
+  const hasConfig = useDashboardStore((s) => s.config !== null)
+  const setConfig = useDashboardStore((s) => s.setConfig)
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    if (connected || simulationMode) return
+    enterSimulation()
+  }, [connected, simulationMode, enterSimulation])
+
+  useEffect(() => {
+    if (simulationMode && !hasConfig) {
+      setConfig(structuredClone(DEFAULT_SIM_CONFIG))
+    }
+  }, [simulationMode, hasConfig, setConfig])
+}
+
+/**
+ * Redirect every non-Welcome path back to `/` while disconnected AND not in
+ * simulation. The Sidebar already blocks the UI path, but a direct URL hit (or
+ * a reload mid-session) still needs to be intercepted.
  */
 function DisconnectedGuard({ children }: { children: ReactNode }) {
   const status = useConnectionStore((s) => s.status)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
   const location = useLocation()
-  if (status !== 'connected' && location.pathname !== '/') {
+  if (status !== 'connected' && !simulationMode && location.pathname !== '/') {
     return <Navigate to="/" replace />
   }
   return <>{children}</>
@@ -61,6 +91,7 @@ function DisconnectedGuard({ children }: { children: ReactNode }) {
 
 export default function App() {
   useAutoReconnect()
+  useSimulationBootstrap()
 
   return (
     <div style={shellStyle}>

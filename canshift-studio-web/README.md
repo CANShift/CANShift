@@ -1,5 +1,9 @@
 # canshift-studio-web
 
+> 🚨 **Successor**: this package is being superseded by [`canshift-tuner/`](../canshift-tuner/) — a Vercel-hosted Betaflight-style configurator that talks over WebSerial instead of WebSocket-over-WiFi. See **#1351** for the umbrella issue and migration plan. `canshift-studio-web` stays operational until the firmware-side WiFi + USB CDC removal lands.
+
+---
+
 Dash-hosted Studio renderer for the architectural shift described in #1077.
 The browser SPA that the firmware serves from its WiFi AP on port 80; live
 data flows over the firmware's WebSocket endpoint on port 81 (#1108).

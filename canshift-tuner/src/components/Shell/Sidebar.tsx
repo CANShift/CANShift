@@ -8,6 +8,7 @@
 import type { CSSProperties } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useConnectionStore } from '../../stores/connection.store'
+import { useDeviceStore } from '../../stores/device.store'
 
 const SIDEBAR_WIDTH = 200
 
@@ -43,8 +44,11 @@ const ENTRIES: Entry[] = [
 
 export default function Sidebar() {
   const status = useConnectionStore((s) => s.status)
+  // Treat dev-mode simulation as a "live device" for navigation gating —
+  // mirrors App.tsx's DisconnectedGuard so the two stay aligned.
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
   const location = useLocation()
-  const offline = status !== 'connected'
+  const offline = status !== 'connected' && !simulationMode
 
   return (
     <nav

@@ -7,6 +7,7 @@
 
 import type { CSSProperties } from 'react'
 import { useConnectionStore } from '../../stores/connection.store'
+import { useDeviceStore } from '../../stores/device.store'
 
 const HEADER_HEIGHT = 40
 
@@ -56,8 +57,14 @@ function readPortLabel(port: PortLike | null): string | null {
 export default function Header() {
   const status = useConnectionStore((s) => s.status)
   const port = useConnectionStore((s) => s.port)
-  const visual = statusVisual(status)
-  const portLabel = status === 'connected' ? readPortLabel(port) : null
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  // Simulation has no real link, but show it in the status slot so the user
+  // never wonders whether the editor they're hacking on is wired to a device
+  // or just running off the demo config.
+  const visual: StatusVisual = simulationMode
+    ? { dot: 'hsl(var(--accent))', label: 'Simulation' }
+    : statusVisual(status)
+  const portLabel = !simulationMode && status === 'connected' ? readPortLabel(port) : null
 
   return (
     <header

@@ -6,6 +6,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Orbitron — self-hosted, matches the firmware's gauge typeface. `swap`
+   keeps the system-ui fallback rendering immediately so FCP isn't blocked
+   on a font fetch (#1343 / PR #1349). */
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./assets/fonts/Orbitron-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('./assets/fonts/Orbitron-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('./assets/fonts/Orbitron-Black.woff2') format('woff2');
+}
+
 *,
 *::before,
 *::after {

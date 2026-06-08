@@ -46,6 +46,14 @@ jobs:
           npm test
           npm run build
 
+      - name: tuner
+        working-directory: canshift-tuner
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
       - name: mobile
         working-directory: canshift-mobile
         run: |
