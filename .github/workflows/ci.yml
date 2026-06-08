@@ -38,14 +38,6 @@ jobs:
           npm test
           npm run build
 
-      - name: studio-web
-        working-directory: canshift-studio-web
-        run: |
-          npm ci
-          npm run typecheck
-          npm test
-          npm run build
-
       - name: tuner
         working-directory: canshift-tuner
         run: |

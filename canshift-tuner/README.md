@@ -4,24 +4,21 @@ Betaflight-style web configurator for CANShift dashes. Hosted on Vercel, talks
 to the firmware via **WebSerial** over the CH340 UART that already serves as
 the upload / serial port.
 
-## Why a new package
+## Why this package
 
-`canshift-studio-web` was an SPA embedded in the firmware (served from SPIFFS
-over a WiFi AP the device brought up). That coupled every Studio change to a
-firmware reflash + tied the studio's CI to the firmware partition layout. On
-WROOM boards without PSRAM the WiFi stack also fought USB CDC for ~80 KB of
-DRAM that just isn't there at boot.
-
-`canshift-tuner` decouples the two:
+The previous in-browser configurator (`canshift-studio-web`) was an SPA
+embedded in the firmware and served from SPIFFS over a WiFi AP the device
+brought up. That coupled every Studio change to a firmware reflash, tied the
+studio's CI to the firmware partition layout, and on WROOM boards without
+PSRAM the WiFi stack fought the USB receive buffer for the ~80 KB of contiguous
+DRAM that just isn't there at boot. Both packages have been retired (#1351);
+`canshift-tuner` is the single configurator surface going forward.
 
 - Hosted on Vercel — Studio updates ship without touching the device.
 - WebSerial transport — works on any Chromium browser, talks to the
-  Arduino `Serial` (UART) that the firmware already speaks. No WiFi stack,
-  no native USB CDC, no SPA-on-SPIFFS.
+  Arduino `Serial` (UART) the firmware speaks. No WiFi stack, no SPA-on-SPIFFS.
 - Betaflight-style sidebar UX — sections for Welcome, Dashboard editor,
   CAN bus, OBD-II, Themes, Live data, Logs, CLI, Firmware (flasher), About.
-- `canshift-studio-web/` stays intact during the transition and is archived
-  once the firmware refactor that removes WiFi+CDC lands.
 
 ## Dev
 

@@ -10,7 +10,7 @@
 
 ## Status
 
-- **Active development** across firmware, studio-web, mobile, and core
+- **Active development** across firmware, tuner, mobile, and core
 - **Main branch is protected** — every change ships through a pull request
 - **Releases are firmware-only** since the dash-hosted-Studio cutover (#1077) — the workflow tags + builds the merged firmware binary + SPIFFS image. Studio installer artifacts and mobile artifacts are no longer published.
 - Latest release: [github.com/tburkhalterr/CANShift/releases](https://github.com/tburkhalterr/CANShift/releases)
@@ -38,7 +38,7 @@ First release after the firmware-only pipeline cutover (#1077). The Electron Stu
 
 **Pipeline change** — `release.yml` now contains only `check-version` + `firmware-release`. The `studio-release` matrix job (electron-builder for DMG / NSIS / AppImage) is gone. Release artifacts are limited to the merged firmware binary, the OTA partition image, and the SPIFFS image.
 
-**Mobile** — tracks separately and is deferred while firmware + studio-web stabilise; `canshift-mobile/package.json` is intentionally not bumped with this release.
+**Mobile** — tracks separately and is deferred while firmware + tuner stabilise; `canshift-mobile/package.json` is intentionally not bumped with this release.
 
 ---
 
@@ -46,9 +46,9 @@ First release after the firmware-only pipeline cutover (#1077). The Electron Stu
 
 CANShift is a custom instrument cluster you design yourself. The ESP32 reads CAN frames from your ECU and renders live gauges, bars, and warnings on a small touchscreen. Three companion surfaces let you configure, update, and inspect the dash without recompiling firmware:
 
-- **Dash-hosted Studio** (`canshift-studio-web/`) — the canonical config editor since #1077. The Vite + React SPA ships in the firmware's SPIFFS data partition; the dash serves it from its own WiFi AP on port 80, with live data on WebSocket port 81. Open `http://canshift.local` in any browser on the laptop joined to the AP, no install required.
-- **USB flasher** ([canshift.tmbk.ch](https://canshift.tmbk.ch), separate repo [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — see #1081) — browser-based esptool that flashes the merged firmware image over Web Serial. Used for first-flash, recovery, and pre-#1117 partition-layout migration.
-- **Mobile app** (`canshift-mobile/`) — iPhone-first, BLE telemetry + WiFi OTA. Independent of the dash-hosted Studio and the USB flasher; mobile retains its own `POST /update` upload path against the dash AP.
+- **Tuner** (`canshift-tuner/`) — Vercel-hosted Betaflight-style configurator. Talks to the dash over **WebSerial** via the CH340 UART. Open the Vercel URL in Chrome / Edge / Brave / Opera, click `Connect device`, edit pages and bind signals live. No install, no on-device WiFi (#1351).
+- **USB flasher** ([canshift.tmbk.ch](https://canshift.tmbk.ch), separate repo [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — see #1081) — browser-based esptool that flashes the merged firmware image over Web Serial. Used for first-flash, recovery, and partition-layout migration. Being absorbed into the Tuner per #1351.
+- **Mobile app** (`canshift-mobile/`) — iPhone-first, BLE telemetry + settings. Independent of the Tuner; pairs directly with the dash over BLE.
 
 ```
                        ECU ──CAN──► ESP32 (CrowPanel 2.8") ──► 320×240 display
@@ -142,15 +142,15 @@ pio run -e sim --target upload  # Simulation mode (no hardware required)
 
 Verify pin assignments in `include/board_config.h` before first flash. See [`docs/FIRST_FLASH.md`](docs/FIRST_FLASH.md) for the full pre-flight checklist.
 
-### Studio (dash-hosted — `canshift-studio-web/`)
+### Tuner (`canshift-tuner/`)
 
 ```bash
-# canshift-core must be built before the studio can resolve it
+# canshift-core must be built before the tuner can resolve it
 cd canshift-core && npm install && npm run build
 
-cd ../canshift-studio-web && npm install && npm run dev
-# http://localhost:5173 — connects to canshift.local:81 by default, or
-# `npm run dev:mock` in another shell + point at 127.0.0.1:8181
+cd ../canshift-tuner && npm install && npm run dev
+# http://localhost:5173 — `vite dev` drops into simulation mode when no device
+# is connected; plug in a CrowPanel and click `Connect device` for live WebSerial.
 ```
 
 ### Mobile
@@ -162,25 +162,21 @@ iOS-first React Native + Expo SDK 52 app. Setup commands and the `expo prebuild`
 ## Workspace Structure
 
 ```
-canshift-firmware/    ESP32 firmware — C++, PlatformIO, LVGL 8.3 + embedded Studio SPA
-canshift-studio-web/  Dash-hosted Studio — Vite + React + TS + Zustand + Tailwind + Radix
+canshift-firmware/    ESP32 firmware — C++, PlatformIO, LVGL 8.3
 canshift-tuner/       Vercel-hosted Tuner — Betaflight-style configurator, WebSerial transport (#1351)
 canshift-mobile/      iPhone app — React Native, Expo SDK 52
 canshift-core/        Shared config types — pure TypeScript
 docs/                 Architecture documentation
 ```
 
-> ⚠️ **In-flight architecture refactor (#1351)** — `canshift-tuner/` is the successor to `canshift-studio-web/`. The latter stays intact until the firmware-side WiFi + USB CDC removal lands, at which point studio-web is archived. See the umbrella issue for the migration plan.
-
 | Sub-project | README |
 |-------------|--------|
-| Firmware | [canshift-firmware/README.md](canshift-firmware/README.md) — build, flash, pin assignments, FreeRTOS layout, USB + WebSocket protocols, embedded SPA |
-| Studio (dash-hosted, legacy) | [canshift-studio-web/README.md](canshift-studio-web/README.md) — superseded by canshift-tuner (#1351) |
-| Tuner (Vercel-hosted) | [canshift-tuner/README.md](canshift-tuner/README.md) — Betaflight-style configurator, WebSerial transport |
-| Mobile | [canshift-mobile/README.md](canshift-mobile/README.md) — Expo setup, BLE service, WiFi OTA flow |
+| Firmware | [canshift-firmware/README.md](canshift-firmware/README.md) — build, flash, pin assignments, FreeRTOS layout, USB protocol |
+| Tuner | [canshift-tuner/README.md](canshift-tuner/README.md) — Betaflight-style configurator, WebSerial transport |
+| Mobile | [canshift-mobile/README.md](canshift-mobile/README.md) — Expo setup, BLE service |
 | Core | [canshift-core/README.md](canshift-core/README.md) — config schema, validation, migrations, design tokens |
 | Docs | [docs/README.md](docs/README.md) — architecture documentation index |
-| Flasher (separate repo, being absorbed) | [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — browser-based esptool, hosted at [canshift.tmbk.ch](https://canshift.tmbk.ch) (#1081) — being absorbed into canshift-tuner per #1351 |
+| Flasher (being absorbed into Tuner) | [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — browser-based esptool, hosted at [canshift.tmbk.ch](https://canshift.tmbk.ch) (#1081) — being absorbed into canshift-tuner per #1351 |
 
 ---
 

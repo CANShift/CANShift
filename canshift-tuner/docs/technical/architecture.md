@@ -21,17 +21,18 @@ firmware has always spoken, and surfaces the device state back to the user.
 
 ## Repo location
 
-`canshift-tuner/` is a sibling package of `canshift-studio-web/` (the legacy
-WiFi-served Studio) and `canshift-firmware/` (the ESP32 firmware). It depends
-on `@tmbk/canshift-core` for the shared Zod schemas + design tokens. See
-the top-level [README](../../../README.md) for the full monorepo layout.
+`canshift-tuner/` is a sibling package of `canshift-firmware/` (the ESP32
+firmware). It depends on `@tmbk/canshift-core` for the shared Zod schemas +
+design tokens. The previous WiFi-served Studio (`canshift-studio-web/`) was
+retired alongside the WiFi+SPA removal (#1351). See the top-level
+[README](../../../README.md) for the full monorepo layout.
 
 ## Section / route map
 
 | Route | Component | Status |
 |---|---|---|
 | `/` | `WelcomeRoute` | Wired |
-| `/dashboard` | `EditorRoute` (lazy) | Wired (ported from `canshift-studio-web`) |
+| `/dashboard` | `EditorRoute` (lazy) | Wired (ported from the retired studio-web in #1352) |
 | `/can`, `/obd2`, `/themes`, `/live`, `/logs`, `/cli`, `/firmware`, `/about` | `PlaceholderRoute` | Stubs, filled by follow-up PRs |
 
 ## State management
@@ -59,8 +60,8 @@ inbound `\n`-terminated JSON. The first non-discriminated frame after a
 
 `src/transport/index.ts` re-exports a stable surface (`usbService`,
 `deviceIpc`, `deviceEvents`, `canScannerIpc`, `deviceConfigIpc`,
-`inputBindingsIpc`) — **the same shape `canshift-studio-web` exported**,
-so the ported Editor compiles unchanged.
+`inputBindingsIpc`) — kept stable so the Editor (ported in #1352) compiles
+unchanged on top.
 
 See [webserial-protocol.md](webserial-protocol.md) for the wire details.
 
