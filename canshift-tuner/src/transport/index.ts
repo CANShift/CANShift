@@ -1,0 +1,343 @@
+// transport/index.ts — Tuner transport surface (WebSerial).
+//
+// Mirrors `canshift-studio-web/src/transport/index.ts` exactly so the editor
+// surfaces lift over unchanged. Bodies delegate to `getSerialClient()` instead
+// of `getWsClient()`; the wire envelope (`{cmd, payload, ...}` out, `{status,
+// message?, ...}` in) and opcodes are identical.
+
+import type {
+  DashboardConfig,
+  DeviceConfig,
+  InputBindingsConfig,
+  ScreenSettings,
+} from '@tmbk/canshift-core'
+import {
+  CanFrameSchema,
+  DeviceConfigSchema,
+  DeviceConfigWireSchema,
+  InputBindingsConfigSchema,
+  InputBindingsConfigWireSchema,
+  LogFrameSchema,
+  TeleFrameSchema,
+  deviceConfigFromWire,
+  deviceConfigToWire,
+  inputBindingsFromWire,
+  inputBindingsToWire,
+} from '@tmbk/canshift-core'
+import { getSerialClient } from './webserial-client'
+
+// ---------------------------------------------------------------------------
+// Firmware command opcodes — kept in lock-step with
+// `canshift-studio-web/src/transport/index.ts`. Sourced from
+// `canshift-firmware/src/hal/usb/usb_comm.h`.
+// ---------------------------------------------------------------------------
+
+const CMD_GET_CONFIG = 0x01
+const CMD_PUSH_CONFIG = 0x02
+const CMD_GET_DEVICE_CONFIG = 0x03
+const CMD_PUT_DEVICE_CONFIG = 0x04
+const CMD_SCREEN_SETTINGS = 0x05
+const CMD_TOGGLE_DAY_NIGHT = 0x07
+const CMD_CALIBRATE_TOUCH = 0x08
+const CMD_SET_DAY_NIGHT = 0x09
+const CMD_GET_INPUT_BINDINGS = 0x0b
+const CMD_PUT_INPUT_BINDINGS = 0x0c
+const CMD_QUERY_VERSION = 0x10
+const CMD_CAN_SCAN_START = 0x20
+const CMD_CAN_SCAN_STOP = 0x21
+const CMD_REBOOT = 0xf0
+
+// ---------------------------------------------------------------------------
+// Shared result shapes — structurally identical to studio-web's surface.
+// ---------------------------------------------------------------------------
+
+export interface PortInfo {
+  path: string
+  manufacturer?: string
+  serialNumber?: string
+  productId?: string
+  vendorId?: string
+  description?: string
+}
+
+export interface UsbResult {
+  success: boolean
+  error?: string
+}
+
+export interface ConnectionStatus {
+  connected: boolean
+  portPath: string | null
+  firmwareVersion?: string | null
+}
+
+export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
+
+export type DeviceConfigResult =
+  | { kind: 'ok'; config: DashboardConfig }
+  | { kind: 'none' }
+  | { kind: 'error'; error: string }
+
+const OK: UsbResult = { success: true }
+
+function toUsbResult(result: { ok: boolean; error?: string }): UsbResult {
+  if (result.ok) return OK
+  return { success: false, error: result.error ?? 'unknown_error' }
+}
+
+// ---------------------------------------------------------------------------
+// Device commands — backed by the shared `SerialClient` singleton. The export
+// name `usbService` is preserved so studio-web imports lift over unchanged.
+// ---------------------------------------------------------------------------
+
+export const usbService = {
+  /** WebSerial doesn't expose a port listing surface — return empty. */
+  listPorts: (): Promise<PortInfo[]> => Promise.resolve([]),
+  connect: (_portPath: string): Promise<UsbResult> => Promise.resolve(OK),
+  disconnect: (): Promise<UsbResult> => Promise.resolve(OK),
+
+  pushConfig: async (config: DashboardConfig): Promise<UsbResult> => {
+    const result = await getSerialClient().send(
+      CMD_PUSH_CONFIG,
+      { payload: config },
+      { scaleWithPayload: true }
+    )
+    return toUsbResult(result)
+  },
+
+  pushScreenSettings: async (settings: ScreenSettings): Promise<UsbResult> => {
+    const result = await getSerialClient().send(CMD_SCREEN_SETTINGS, { ...settings })
+    return toUsbResult(result)
+  },
+
+  getStatus: (): Promise<ConnectionStatus> => {
+    const client = getSerialClient()
+    return Promise.resolve({
+      connected: client.getStatus() === 'connected',
+      portPath: null,
+      firmwareVersion: null,
+    })
+  },
+
+  reboot: async (): Promise<UsbResult> => {
+    // Reboot drops the link before any ack lands — treat a missing ack as
+    // success so the UI doesn't surface a spurious timeout.
+    const result = await getSerialClient().send(CMD_REBOOT, {}, { timeoutMs: 1_000 })
+    if (result.ok) return OK
+    if (result.error === 'ack_timeout' || result.error === 'connection_closed') return OK
+    return toUsbResult(result)
+  },
+
+  toggleDayNight: async (): Promise<UsbResult> => {
+    return toUsbResult(await getSerialClient().send(CMD_TOGGLE_DAY_NIGHT))
+  },
+
+  setDayNight: async (day: boolean): Promise<UsbResult> => {
+    return toUsbResult(await getSerialClient().send(CMD_SET_DAY_NIGHT, { day }))
+  },
+
+  calibrateTouch: async (): Promise<UsbResult> => {
+    return toUsbResult(await getSerialClient().send(CMD_CALIBRATE_TOUCH))
+  },
+}
+
+export const deviceIpc = {
+  getConfig: async (): Promise<DeviceConfigResult> => {
+    const result = await getSerialClient().send(CMD_GET_CONFIG, {}, { timeoutMs: 8_000 })
+    if (result.ok) {
+      const cfg = result.data?.config
+      if (cfg && typeof cfg === 'object') {
+        return { kind: 'ok', config: cfg as DashboardConfig }
+      }
+      return { kind: 'none' }
+    }
+    if (result.error === 'config_not_found') return { kind: 'none' }
+    return { kind: 'error', error: result.error ?? 'unknown_error' }
+  },
+}
+
+export const canScannerIpc = {
+  start: async (): Promise<{ success: boolean; error?: string }> => {
+    return toUsbResult(await getSerialClient().send(CMD_CAN_SCAN_START))
+  },
+  stop: async (): Promise<{ success: boolean; error?: string }> => {
+    return toUsbResult(await getSerialClient().send(CMD_CAN_SCAN_STOP))
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Device hardware config — same wire ↔ domain mapping as studio-web.
+// ---------------------------------------------------------------------------
+
+export const deviceConfigIpc = {
+  read: async (): Promise<{ success: boolean; config: DeviceConfig | null; error?: string }> => {
+    const result = await getSerialClient().send(CMD_GET_DEVICE_CONFIG)
+    if (!result.ok) {
+      if (result.error === 'config_not_found') return { success: true, config: null }
+      return { success: false, config: null, error: result.error ?? 'unknown_error' }
+    }
+    const raw = result.data?.device_config
+    if (!raw || typeof raw !== 'object') return { success: true, config: null }
+    const parsed = DeviceConfigWireSchema.safeParse(raw)
+    if (!parsed.success) {
+      return { success: false, config: null, error: 'invalid_device_config' }
+    }
+    return { success: true, config: deviceConfigFromWire(parsed.data) }
+  },
+
+  write: async (config: DeviceConfig): Promise<{ success: boolean; error?: string }> => {
+    const parsed = DeviceConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return { success: false, error: 'invalid_device_config' }
+    }
+    const wire = deviceConfigToWire(parsed.data)
+    const result = await getSerialClient().send(CMD_PUT_DEVICE_CONFIG, { device_config: wire })
+    if (result.ok) return { success: true }
+    return { success: false, error: result.error ?? 'unknown_error' }
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Input bindings — same wire ↔ domain mapping as studio-web.
+// ---------------------------------------------------------------------------
+
+export const inputBindingsIpc = {
+  read: async (): Promise<{
+    success: boolean
+    config: InputBindingsConfig | null
+    error?: string
+  }> => {
+    const result = await getSerialClient().send(CMD_GET_INPUT_BINDINGS)
+    if (!result.ok) {
+      if (result.error === 'config_not_found') {
+        return { success: true, config: { inputBindings: [] } }
+      }
+      return { success: false, config: null, error: result.error ?? 'unknown_error' }
+    }
+    const raw = result.data?.input_bindings
+    if (raw === undefined) {
+      return { success: true, config: { inputBindings: [] } }
+    }
+    const wireDoc = Array.isArray(raw) ? { input_bindings: raw } : raw
+    const parsed = InputBindingsConfigWireSchema.safeParse(wireDoc)
+    if (!parsed.success) {
+      return { success: false, config: null, error: 'invalid_input_bindings' }
+    }
+    return { success: true, config: inputBindingsFromWire(parsed.data) }
+  },
+
+  write: async (config: InputBindingsConfig): Promise<{ success: boolean; error?: string }> => {
+    const parsed = InputBindingsConfigSchema.safeParse(config)
+    if (!parsed.success) {
+      return { success: false, error: 'invalid_input_bindings' }
+    }
+    const wire = inputBindingsToWire(parsed.data)
+    const result = await getSerialClient().send(CMD_PUT_INPUT_BINDINGS, wire)
+    if (result.ok) return { success: true }
+    return { success: false, error: result.error ?? 'unknown_error' }
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Event subscriptions — discriminator routing via the serial client.
+// ---------------------------------------------------------------------------
+
+export type Unsubscribe = () => void
+type Handler<T> = (event: T) => void
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+// Bounded dedup set — same shape as studio-web's #1288 WS-5 / #1343 logic.
+const SEEN_SCHEMA_ERRORS_CAP = 100
+const seenSchemaErrors = new Set<string>()
+
+function warnFrameDrop(discriminator: string, code: string, sample: string): void {
+  const key = `${discriminator}:${code}`
+  if (seenSchemaErrors.has(key)) return
+  if (seenSchemaErrors.size >= SEEN_SCHEMA_ERRORS_CAP) {
+    const oldest = seenSchemaErrors.values().next().value
+    if (oldest !== undefined) seenSchemaErrors.delete(oldest)
+  }
+  seenSchemaErrors.add(key)
+  console.warn(`[serial] dropping ${discriminator} frame — ${code} (${sample})`)
+}
+
+export const deviceEvents = {
+  /** Device log lines. Shape: `{ log: 1, lvl, tag, msg }`. */
+  onLogLine: (handler: Handler<{ level: string; tag: string; message: string }>): Unsubscribe => {
+    return getSerialClient().subscribe('log', (frame) => {
+      const parsed = LogFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop('log', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
+        return
+      }
+      handler({
+        level: parsed.data.lvl,
+        tag: parsed.data.tag,
+        message: parsed.data.msg,
+      })
+    })
+  },
+
+  /** Raw CAN frames captured by the scanner. Shape: `{ can: 1, id, len, d }`. */
+  onCanFrame: (handler: Handler<{ id: number; len: number; data: number[] }>): Unsubscribe => {
+    return getSerialClient().subscribe('can', (frame) => {
+      const parsed = CanFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop('can', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
+        return
+      }
+      if (!isRecord(frame)) return
+      const id = typeof frame.id === 'number' ? frame.id : null
+      const len = typeof frame.len === 'number' ? frame.len : null
+      const raw = Array.isArray(frame.d) ? frame.d : null
+      if (id === null || len === null || raw === null) return
+      const data = raw.filter((b): b is number => typeof b === 'number')
+      handler({ id, len, data })
+    })
+  },
+
+  /** Live signal values. Shape: `{ tele: 1, v: { signalName: number } }`. */
+  onSignal: (handler: Handler<Record<string, number>>): Unsubscribe => {
+    return getSerialClient().subscribe('tele', (frame) => {
+      const parsed = TeleFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop('tele', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
+        return
+      }
+      const flat: Record<string, number> = {}
+      for (const [k, v] of Object.entries(parsed.data.v)) {
+        if (typeof v === 'number') flat[k] = v
+      }
+      handler(flat)
+    })
+  },
+
+  /** CAN health snapshot. Shape: `{ can_stat: 1, fps, errors }`. */
+  onCanHealth: (handler: Handler<{ fps: number; errors: number }>): Unsubscribe => {
+    return getSerialClient().subscribe('can_stat', (frame) => {
+      if (!isRecord(frame)) return
+      handler({
+        fps: typeof frame.fps === 'number' ? frame.fps : 0,
+        errors: typeof frame.errors === 'number' ? frame.errors : 0,
+      })
+    })
+  },
+
+  /** Connection state changes — wired off the serial client's status stream. */
+  onConnectionChange: (
+    handler: Handler<{ connected: boolean; reason?: string }>
+  ): Unsubscribe => {
+    return getSerialClient().onStatus((status, error) => {
+      if (status === 'connected') {
+        handler({ connected: true })
+      } else if (error !== undefined) {
+        handler({ connected: false, reason: error })
+      } else {
+        handler({ connected: false })
+      }
+    })
+  },
+}
