@@ -76,20 +76,6 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Node + studio-web npm ci so `scripts/sync_studio_web.py` (run from
-      # `pio run` via extra_scripts) can build the SPA and mirror it into
-      # `data/w/` before `buildfs`. Without this the script logs
-      # "node_modules absent — skipping SPA build" and the SPIFFS round-trip
-      # gate below ran against an SPA-less image while the firmware ELF was
-      # built expecting `/w/...` at runtime (#1340).
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: npm ci (studio-web — needed to build the SPA into data/w/)
-        working-directory: canshift-studio-web
-        run: npm ci
-
       - uses: actions/cache@v5
         with:
           path: |
@@ -127,11 +113,10 @@ jobs:
             || (echo "::error::flash ${PCT}% > 98% (#305 / #158)" && exit 1)
 
       # SPIFFS round-trip gate (#1240). mkspiffs silently drops files whose
-      # on-device path exceeds SPIFFS_OBJ_NAME_LEN (31 chars including NUL);
-      # when that happened in production the WiFi AP shipped a half-empty
-      # bundle and every browser request 404'd. This step extracts the
-      # produced image and fails the build if the file count diverges from
-      # the source manifest in data/.
+      # on-device path exceeds SPIFFS_OBJ_NAME_LEN (31 chars including NUL).
+      # Post-#1351 the SPA is no longer in SPIFFS — only fonts + config JSON
+      # remain, all committed under data/. The check still guards against a
+      # mkspiffs regression that drops one of those files silently.
       - name: buildfs (crowpanel_28)
         run: pio run -e crowpanel_28 -t buildfs
 
@@ -150,19 +135,9 @@ jobs:
           EXTRACT=$(mktemp -d)
           "$MKSPIFFS" -u "$EXTRACT" "$IMG" > /dev/null
 
-          # Sanity gate: the SPA must be present in data/w/. Without this check
-          # the firmware job used to ship an SPA-less SPIFFS image when
-          # sync_studio_web.py couldn't reach node_modules — both sides counted
-          # the same (committed-only) files and the gate passed silently (#1340).
-          SPA_COUNT=$(find data/w -type f 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$SPA_COUNT" -eq 0 ]; then
-            echo "::error::data/w/ is empty — sync_studio_web.py skipped the SPA build (#1340)"
-            exit 1
-          fi
-          echo "data/w/ files: $SPA_COUNT"
-
-          # File-list parity. Catches a path that mkspiffs silently dropped
-          # because the on-device path exceeded SPIFFS_OBJ_NAME_LEN (#1240).
+          # File-list + content hash parity between source data/ and the
+          # extracted image. Catches a path mkspiffs silently dropped (#1240)
+          # and a truncated/corrupted mirror.
           (cd data && find . -type f | sort) > /tmp/src.list
           (cd "$EXTRACT" && find . -type f | sort) > /tmp/img.list
           SRC_COUNT=$(wc -l < /tmp/src.list | tr -d ' ')
@@ -176,15 +151,10 @@ jobs:
             echo "::endgroup::"
             exit 1
           fi
-
-          # Content parity. A file-count match isn't enough: a truncated or
-          # corrupted mirror would have the right name but the wrong bytes,
-          # and the device would serve a half-payload over WiFi. Hash both
-          # trees and fail on the first diverging file (#1340).
           (cd data && find . -type f | sort | xargs -I{} sha256sum {}) > /tmp/src.sha
           (cd "$EXTRACT" && find . -type f | sort | xargs -I{} sha256sum {}) > /tmp/img.sha
           if ! diff /tmp/src.sha /tmp/img.sha > /tmp/sha.diff; then
-            echo "::error::spiffs content mismatch — bytes differ between data/ and extracted image (#1340)"
+            echo "::error::spiffs content mismatch — bytes differ between data/ and extracted image"
             echo "::group::sha diff"
             cat /tmp/sha.diff
             echo "::endgroup::"
