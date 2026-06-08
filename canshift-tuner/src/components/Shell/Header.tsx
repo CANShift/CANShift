@@ -1,0 +1,153 @@
+// Header.tsx — Top header of the Tuner shell.
+//
+// Surfaces the brand, build version, live connection status (with a coloured
+// dot + optional vendor/product info pulled off the SerialPort), a firmware
+// version slot (placeholder until a follow-up wires the device handshake) and
+// a disabled Save button slot for future dashboard persistence.
+
+import type { CSSProperties } from 'react'
+import { useConnectionStore } from '../../stores/connection.store'
+
+const HEADER_HEIGHT = 40
+
+type Status = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
+
+interface StatusVisual {
+  dot: string
+  label: string
+}
+
+function statusVisual(status: Status): StatusVisual {
+  switch (status) {
+    case 'connected':
+      return { dot: 'hsl(var(--success))', label: 'Connected' }
+    case 'connecting':
+      return { dot: 'hsl(var(--accent))', label: 'Connecting…' }
+    case 'reconnecting':
+      return { dot: 'hsl(var(--accent))', label: 'Reconnecting…' }
+    case 'disconnected':
+    default:
+      return { dot: 'hsl(var(--destructive))', label: 'Disconnected' }
+  }
+}
+
+// Minimal structural shape of the WebSerial `SerialPort.getInfo()` return.
+// Kept local so Header doesn't depend on a particular `@types/w3c-web-serial`
+// pull — anything assignable to this works.
+interface PortLike {
+  getInfo(): { usbVendorId?: number; usbProductId?: number }
+}
+
+function readPortLabel(port: PortLike | null): string | null {
+  if (!port) return null
+  try {
+    const info = port.getInfo()
+    const vendor = info.usbVendorId
+    const product = info.usbProductId
+    if (vendor === undefined && product === undefined) return null
+    const vendorHex = vendor !== undefined ? vendor.toString(16).padStart(4, '0') : '????'
+    const productHex = product !== undefined ? product.toString(16).padStart(4, '0') : '????'
+    return `${vendorHex}:${productHex}`
+  } catch {
+    return null
+  }
+}
+
+export default function Header() {
+  const status = useConnectionStore((s) => s.status)
+  const port = useConnectionStore((s) => s.port)
+  const visual = statusVisual(status)
+  const portLabel = status === 'connected' ? readPortLabel(port) : null
+
+  return (
+    <header
+      style={{
+        height: HEADER_HEIGHT,
+        flexShrink: 0,
+        background: 'hsl(var(--surface))',
+        borderBottom: '1px solid hsl(var(--border))',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 14px',
+        gap: 14,
+      }}
+    >
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'hsl(var(--text))' }}>
+        CANShift Tuner
+      </div>
+      <div style={versionStyle}>v{__TUNER_VERSION__}</div>
+
+      <div style={{ flex: 1 }} />
+
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 12,
+          color: 'hsl(var(--text-dim))',
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: visual.dot,
+            boxShadow: `0 0 6px ${visual.dot}`,
+          }}
+        />
+        <span style={{ color: 'hsl(var(--text))' }}>{visual.label}</span>
+        {portLabel && (
+          <span style={{ fontFamily: 'monospace', color: 'hsl(var(--text-muted))' }}>
+            {portLabel}
+          </span>
+        )}
+      </div>
+
+      <div style={firmwareStyle} title="Firmware version (wired in a follow-up PR)">
+        fw —
+      </div>
+
+      <button
+        type="button"
+        disabled
+        title="Save dashboard (coming soon)"
+        style={saveButtonStyle}
+      >
+        Save
+      </button>
+    </header>
+  )
+}
+
+const versionStyle: CSSProperties = {
+  fontSize: 11,
+  color: 'hsl(var(--text-dim))',
+  fontFamily: 'monospace',
+  letterSpacing: '0.04em',
+}
+
+const firmwareStyle: CSSProperties = {
+  fontSize: 11,
+  color: 'hsl(var(--text-muted))',
+  fontFamily: 'monospace',
+  letterSpacing: '0.04em',
+}
+
+const saveButtonStyle: CSSProperties = {
+  background: 'hsl(var(--surface-2))',
+  color: 'hsl(var(--text-dim))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 4,
+  padding: '5px 14px',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  cursor: 'not-allowed',
+  opacity: 0.5,
+}

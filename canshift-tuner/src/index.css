@@ -32,3 +32,7 @@ body {
 ::-webkit-scrollbar-track { background: hsl(var(--bg)); }
 ::-webkit-scrollbar-thumb { background: hsl(var(--surface-2)); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--border)); }
+
+@keyframes canshift-tuner-spin {
+  to { transform: rotate(360deg); }
+}
