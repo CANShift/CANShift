@@ -11,21 +11,21 @@
   font-family: 'Orbitron';
   font-weight: 500;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   src: url('./assets/fonts/Orbitron-Medium.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Orbitron';
   font-weight: 700;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   src: url('./assets/fonts/Orbitron-Bold.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Orbitron';
   font-weight: 900;
   font-style: normal;
-  font-display: block;
+  font-display: swap;
   src: url('./assets/fonts/Orbitron-Black.woff2') format('woff2');
 }
 

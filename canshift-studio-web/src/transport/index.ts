@@ -302,11 +302,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // narrowing rejects, we still bail safely.
 // ---------------------------------------------------------------------------
 
+// Bound the dedup set so a long-running session that hits a sustained schema
+// drift can't grow it without limit. Insertion order on `Set` matches `Map`'s,
+// so `values().next()` yields the oldest key — a tiny LRU good enough for a
+// surface where ~hundred unique `(discriminator, code)` pairs already covers
+// every realistic drift class. Hitting the cap is benign: the dropped entry
+// gets re-warned next time it recurs (#1343).
+const SEEN_SCHEMA_ERRORS_CAP = 100
 const seenSchemaErrors = new Set<string>()
 
 function warnFrameDrop(discriminator: string, code: string, sample: string): void {
   const key = `${discriminator}:${code}`
   if (seenSchemaErrors.has(key)) return
+  if (seenSchemaErrors.size >= SEEN_SCHEMA_ERRORS_CAP) {
+    const oldest = seenSchemaErrors.values().next().value
+    if (oldest !== undefined) seenSchemaErrors.delete(oldest)
+  }
   seenSchemaErrors.add(key)
   console.warn(`[ws] dropping ${discriminator} frame — ${code} (${sample})`)
 }
