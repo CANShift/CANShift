@@ -1,0 +1,34 @@
+/* Design tokens — generated from canshift-core. Must precede @tailwind
+   directives so :root vars are available everywhere. */
+@import './styles/tokens.generated.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: hsl(var(--bg));
+  color: hsl(var(--text));
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--bg)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--surface-2)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--border)); }
