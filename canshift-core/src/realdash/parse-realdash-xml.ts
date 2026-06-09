@@ -91,51 +91,81 @@ interface Conversion {
   bitShift: number | null
 }
 
-function parseConversion(expr: string | undefined): Conversion | 'complex' {
+const wrappedByOuterPair = (s: string): boolean => {
+  let depth = 0
+  for (let i = 0; i < s.length - 1; i++) {
+    depth += s[i] === '(' ? 1 : s[i] === ')' ? -1 : 0
+    if (depth === 0) return false
+  }
+  return true
+}
+
+const stripOuterParens = (s: string): string => {
+  let current = s.trim()
+  while (current.startsWith('(') && current.endsWith(')') && wrappedByOuterPair(current)) {
+    current = current.slice(1, -1).trim()
+  }
+  return current
+}
+
+const unwrapVChain = (s: string): string =>
+  s.replace(/\(V((?:\s*[*/]\s*-?\d+\.?\d*)+)\)/g, (_, chain: string) => `V${chain}`)
+
+const foldChain = (chain: string): number | null => {
+  const tokens = chain.match(/[*/]\s*-?\d+\.?\d*/g)
+  if (!tokens) return null
+  let scale = 1
+  for (const tok of tokens) {
+    const isDiv = tok.startsWith('/')
+    const num = parseFloat(tok.slice(1))
+    if (!Number.isFinite(num) || (isDiv && num === 0)) return null
+    scale = isDiv ? scale / num : scale * num
+  }
+  return scale
+}
+
+const tryMatch = (
+  s: string,
+  re: RegExp,
+  build: (m: RegExpExecArray) => Conversion | 'complex'
+): Conversion | 'complex' | null => {
+  const m = re.exec(s)
+  return m ? build(m) : null
+}
+
+const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
   if (!expr || expr.trim() === '') return { scale: 1, offset: 0, bitShift: null }
-  const s = expr.trim()
+  const s = unwrapVChain(stripOuterParens(expr.trim()))
 
-  // V>>N — right-shift = extract single bit
-  const shiftMatch = /^V\s*>>\s*(\d+)$/.exec(s)
-  if (shiftMatch) {
-    return { scale: 1, offset: 0, bitShift: parseInt(shiftMatch[1] ?? '0', 10) }
-  }
+  if (/^V$/i.test(s)) return { scale: 1, offset: 0, bitShift: null }
 
-  // V*N/M  (e.g. V*10/100 = scale 0.1)
-  const mulDivMatch = /^V\s*\*\s*(-?\d+\.?\d*)\s*\/\s*(-?\d+\.?\d*)$/.exec(s)
-  if (mulDivMatch) {
-    const divisor = parseFloat(mulDivMatch[2] ?? '0')
-    if (divisor === 0) return 'complex'
-    return { scale: parseFloat(mulDivMatch[1] ?? '1') / divisor, offset: 0, bitShift: null }
-  }
-
-  // V/N
-  const divMatch = /^V\s*\/\s*(-?\d+\.?\d*)$/.exec(s)
-  if (divMatch) {
-    const divisor = parseFloat(divMatch[1] ?? '0')
-    if (divisor === 0) return 'complex'
-    return { scale: 1 / divisor, offset: 0, bitShift: null }
-  }
-
-  // V*N  /  V*N+C  /  V*N-C  (spaces tolerated around the +/- operator)
-  const mulMatch = /^V\s*\*\s*(-?\d+\.?\d*)\s*([+-]\s*\d+\.?\d*)?$/.exec(s)
-  if (mulMatch) {
-    const scale = parseFloat(mulMatch[1] ?? '1')
-    const offset = mulMatch[2] ? parseFloat(mulMatch[2].replace(/\s+/g, '')) : 0
-    return { scale, offset, bitShift: null }
-  }
-
-  // V+C  /  V-C
-  const addMatch = /^V\s*([+-]\s*\d+\.?\d*)$/.exec(s)
-  if (addMatch) {
-    return {
+  return (
+    tryMatch(s, /^V\s*>>\s*(\d+)$/, (m) => ({
       scale: 1,
-      offset: parseFloat((addMatch[1] ?? '0').replace(/\s+/g, '')),
+      offset: 0,
+      bitShift: parseInt(m[1] ?? '0', 10),
+    })) ??
+    tryMatch(s, /^(-?\d+\.?\d*)\s*-\s*V$/, (m) => ({
+      scale: -1,
+      offset: parseFloat(m[1] ?? '0'),
       bitShift: null,
-    }
-  }
-
-  return 'complex'
+    })) ??
+    tryMatch(s, /^V((?:\s*[*/]\s*-?\d+\.?\d*)+)$/, (m) => {
+      const result = foldChain(m[1] ?? '')
+      return result === null ? 'complex' : { scale: result, offset: 0, bitShift: null }
+    }) ??
+    tryMatch(s, /^V\s*\*\s*(-?\d+\.?\d*)\s*([+-]\s*\d+\.?\d*)?$/, (m) => ({
+      scale: parseFloat(m[1] ?? '1'),
+      offset: m[2] ? parseFloat(m[2].replace(/\s+/g, '')) : 0,
+      bitShift: null,
+    })) ??
+    tryMatch(s, /^V\s*([+-]\s*\d+\.?\d*)$/, (m) => ({
+      scale: 1,
+      offset: parseFloat((m[1] ?? '0').replace(/\s+/g, '')),
+      bitShift: null,
+    })) ??
+    'complex'
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +206,14 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
   const framesTagMatch = /<frames\b([^>]*)>/.exec(safe)
   if (framesTagMatch) {
     const fa = getAttrs(framesTagMatch[1] ?? '')
-    if (fa.baseId) baseId = parseHexOrDec(fa.baseId)
+    if (fa.baseId) {
+      const parsedBase = parseHexOrDec(fa.baseId)
+      if (Number.isFinite(parsedBase)) {
+        baseId = parsedBase
+      } else {
+        warnings.push(`Ignored unparseable baseId "${fa.baseId}" (using 0)`)
+      }
+    }
   }
 
   const frameRe = /<frame\b([^>]*)>([\s\S]*?)<\/frame>/g
