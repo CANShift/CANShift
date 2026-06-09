@@ -109,7 +109,7 @@ const stripOuterParens = (s: string): string => {
 }
 
 const unwrapVChain = (s: string): string =>
-  s.replace(/\(V((?:\s*[*/]\s*-?\d+\.?\d*)+)\)/g, (_, chain: string) => `V${chain}`)
+  s.replace(/\(V((?:\s*[*/]\s*-?(?:\d+\.\d+|\d+|\.\d+))+)\)/g, (_, chain: string) => `V${chain}`)
 
 const foldChain = (chain: string): number | null => {
   const tokens = chain.match(/[*/]\s*-?\d+\.?\d*/g)
