@@ -179,11 +179,11 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
     lv_obj_set_pos(setHeader, centerX, centerY + 4);
 
     lv_obj_t *setValue = lv_label_create(screen);
-    // Placeholder — mirrors CruiseControlPreview.tsx's DEMO_SET_SPEED so the
-    // on-device page is visually consistent with the studio preview. Replace
-    // with the live cruise-state-machine value when #451 wires the dispatcher
-    // to a real setpoint.
-    lv_label_set_text(setValue, "100");
+    // Zero is the "no signal" placeholder — no cruise state machine yet, so
+    // nothing feeds a real setpoint. Mirrors CruiseControlPreview.tsx's
+    // DEMO_SET_SPEED. Replace with the live setpoint when #451 wires the
+    // dispatcher to a real cruise controller.
+    lv_label_set_text(setValue, "0");
     lv_obj_set_style_text_color(setValue, lv_color_hex(CRUISE_CENTER_VALUE_RGB), 0);
     lv_obj_set_style_text_font(setValue, FontManager::primary(32), 0);
     lv_obj_set_width(setValue, CRUISE_CENTER_W);
