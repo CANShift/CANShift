@@ -11,14 +11,18 @@ const GT_PUA_RE = //g
 const escapeAttribGT = (xml: string): string =>
   xml.replace(/"[^"]*"/g, (match) => match.replace(/>/g, GT_PUA))
 
+const XML_ENTITY_MAP: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+}
+
 const decodeAttrValue = (s: string): string =>
   s
     .replace(GT_PUA_RE, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
+    .replace(/&(amp|lt|gt|quot|apos);/g, (match, name: string) => XML_ENTITY_MAP[name] ?? match)
 
 const getAttrs = (tag: string): Record<string, string> => {
   const attrs: Record<string, string> = {}
