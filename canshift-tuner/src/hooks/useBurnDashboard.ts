@@ -24,20 +24,20 @@ export function useBurnDashboard(): UseBurnDashboard {
   const markPushed = useDashboardStore((s) => s.markPushed)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const connectionStatus = useConnectionStore((s) => s.status)
   const log = useLogStore((s) => s.push)
 
   const [isBurning, setIsBurning] = useState(false)
 
-  // Live link + something to write. Simulation mode is excluded — the demo
-  // config isn't something the user wants pushed to a real device by reflex.
   const canBurn =
     !isBurning &&
     connected &&
     !simulationMode &&
     connectionStatus === 'connected' &&
     isDirty &&
-    config !== null
+    config !== null &&
+    firmwareCompat.kind !== 'mismatch'
 
   const burn = useCallback(async () => {
     if (!canBurn || !config) return

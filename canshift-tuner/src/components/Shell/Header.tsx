@@ -12,6 +12,7 @@ import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
+import { FirmwareSlot } from './FirmwareSlot'
 
 const PULSE_HOLD_MS = 220
 const PULSE_THROTTLE_MS = 60
@@ -106,6 +107,8 @@ export default function Header() {
   const status = useConnectionStore((s) => s.status)
   const port = useConnectionStore((s) => s.port)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
+  const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
   // Simulation has no real link, but show it in the status slot so the user
   // never wonders whether the editor they're hacking on is wired to a device
@@ -166,9 +169,7 @@ export default function Header() {
         )}
       </div>
 
-      <div style={firmwareStyle} title="Firmware version (wired in a follow-up PR)">
-        fw —
-      </div>
+      <FirmwareSlot version={firmwareVersion} compat={firmwareCompat} />
 
       <BurnButton />
     </header>
@@ -182,12 +183,6 @@ const versionStyle: CSSProperties = {
   letterSpacing: '0.04em',
 }
 
-const firmwareStyle: CSSProperties = {
-  fontSize: 11,
-  color: 'hsl(var(--text-muted))',
-  fontFamily: 'monospace',
-  letterSpacing: '0.04em',
-}
 
 function BurnButton() {
   const { canBurn, isBurning, burn } = useBurnDashboard()

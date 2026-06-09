@@ -14,10 +14,16 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
   version: string
 }
 
+const firmwarePkg = JSON.parse(
+  readFileSync(resolve(__dirname, '../canshift-firmware/package.json'), 'utf8'),
+) as { version: string }
+const firmwareMajor = Number(firmwarePkg.version.split('.')[0] ?? 0)
+
 export default defineConfig({
   root: resolve(__dirname, '.'),
   define: {
     __TUNER_VERSION__: JSON.stringify(pkg.version),
+    __EXPECTED_FIRMWARE_MAJOR__: JSON.stringify(firmwareMajor),
   },
   plugins: [react()],
   resolve: {

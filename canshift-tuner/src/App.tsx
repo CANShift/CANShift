@@ -11,6 +11,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/Shell/Header'
 import Sidebar from './components/Shell/Sidebar'
 import PlaceholderRoute from './components/Shell/PlaceholderRoute'
+import { VersionMismatchBanner } from './components/Shell/VersionMismatchBanner'
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
@@ -21,7 +22,7 @@ import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
 import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
-import { deviceIpc } from './transport'
+import { deviceIpc, usbService } from './transport'
 import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
@@ -121,6 +122,49 @@ function useDeviceConfigBootstrap(): void {
   }, [connected, transport, loadFromDeviceOrDemo, log])
 }
 
+function useVersionHandshake(): void {
+  const connected = useDeviceStore((s) => s.connected)
+  const transport = useDeviceStore((s) => s.transport)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const setFirmwareVersion = useDeviceStore((s) => s.setFirmwareVersion)
+  const setFirmwareCompat = useDeviceStore((s) => s.setFirmwareCompat)
+  const log = useLogStore((s) => s.push)
+
+  useEffect(() => {
+    if (!connected || simulationMode || transport !== 'usb') return
+    let cancelled = false
+    void usbService.queryVersion().then((result) => {
+      if (cancelled) return
+      if (result.kind === 'error') {
+        log('warn', `Version handshake failed: ${result.error}`)
+        setFirmwareCompat({ kind: 'unknown' })
+        return
+      }
+      const { version, protocol } = result.identity
+      setFirmwareVersion(version)
+      const reportedMajor = Number(version.split('.')[0] ?? 0)
+      if (reportedMajor !== __EXPECTED_FIRMWARE_MAJOR__) {
+        log(
+          'error',
+          `Firmware major mismatch — tuner expects ${String(__EXPECTED_FIRMWARE_MAJOR__)}.x, device reports ${version}. Burn disabled.`,
+        )
+        setFirmwareCompat({
+          kind: 'mismatch',
+          expected: __EXPECTED_FIRMWARE_MAJOR__,
+          got: reportedMajor,
+          version,
+        })
+        return
+      }
+      setFirmwareCompat({ kind: 'compatible', protocol })
+      log('success', `Connected to firmware v${version} (proto ${String(protocol)})`)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [connected, simulationMode, transport, setFirmwareVersion, setFirmwareCompat, log])
+}
+
 /**
  * Cmd/Ctrl+S → Burn. Global accelerator so it fires regardless of which
  * section is open. Delegates to the same `useBurnDashboard` hook the Header's
@@ -165,12 +209,14 @@ function DisconnectedGuard({ children }: { children: ReactNode }) {
 export default function App() {
   useAutoReconnect()
   useSimulationBootstrap()
+  useVersionHandshake()
   useDeviceConfigBootstrap()
   useBurnShortcut()
 
   return (
     <div style={shellStyle}>
       <Header />
+      <VersionMismatchBanner />
       <div style={bodyStyle}>
         <Sidebar />
         <main style={mainStyle}>
@@ -234,3 +280,4 @@ const mainStyle: CSSProperties = {
   flexDirection: 'column',
   overflow: 'hidden',
 }
+

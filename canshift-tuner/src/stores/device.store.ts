@@ -49,6 +49,11 @@ export type FirmwareCheck =
   | { kind: 'update_available'; version: string; latestVersion: string; checkedAt: number }
   | { kind: 'check_failed'; version: string; checkedAt: number }
 
+export type FirmwareCompat =
+  | { kind: 'unknown' }
+  | { kind: 'compatible'; protocol: number }
+  | { kind: 'mismatch'; expected: number; got: number; version: string }
+
 interface DeviceState {
   status: ConnectionStatus
   portPath: string | null
@@ -74,6 +79,8 @@ interface DeviceState {
   /** Result of the firmware check pipeline (probe + release comparison). */
   firmwareCheck: FirmwareCheck
 
+  firmwareCompat: FirmwareCompat
+
   /**
    * Bump-counter consumed by useFirmwareCheck to force a re-probe on demand
    * (e.g. the user clicked "Check now" in UpdateRoute). Storing the trigger
@@ -98,6 +105,7 @@ interface DeviceState {
   clearError: () => void
   setFirmwareVersion: (version: string | null) => void
   setFirmwareCheck: (check: FirmwareCheck) => void
+  setFirmwareCompat: (compat: FirmwareCompat) => void
   /** Trigger a re-probe — useFirmwareCheck listens on `firmwareCheckTick`. */
   requestFirmwareRecheck: () => void
   setIsDayMode: (isDay: boolean | null) => void
@@ -169,6 +177,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   simulationMode: false,
   firmwareCheck: { kind: 'idle' },
   firmwareCheckTick: 0,
+  firmwareCompat: { kind: 'unknown' },
   isDayMode: null,
   lastPushedConfig: null,
   burnPhase: 'idle',
@@ -216,6 +225,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       isDayMode: null,
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
+      firmwareCompat: { kind: 'unknown' },
       // Clear `lastPushedConfig` too — it represents the config running on the
       // device we were connected to. Keeping it after disconnect makes the
       // diff dialog show "Modified" against the *previous* device on the next
@@ -253,6 +263,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFirmwareCheck: (check) => {
     set({ firmwareCheck: check })
+  },
+
+  setFirmwareCompat: (compat) => {
+    set({ firmwareCompat: compat })
   },
 
   requestFirmwareRecheck: () => {

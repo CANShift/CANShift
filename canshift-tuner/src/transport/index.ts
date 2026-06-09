@@ -71,6 +71,16 @@ export interface ConnectionStatus {
   firmwareVersion?: string | null
 }
 
+export interface FirmwareIdentity {
+  version: string
+  protocol: number
+  isDay: boolean
+}
+
+export type FirmwareIdentityResult =
+  | { kind: 'ok'; identity: FirmwareIdentity }
+  | { kind: 'error'; error: string }
+
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
 
 export type DeviceConfigResult =
@@ -117,6 +127,25 @@ export const usbService = {
       portPath: null,
       firmwareVersion: null,
     })
+  },
+
+  queryVersion: async (): Promise<FirmwareIdentityResult> => {
+    const result = await getSerialClient().send(CMD_QUERY_VERSION, {}, { timeoutMs: 2_000 })
+    if (!result.ok) {
+      return { kind: 'error', error: result.error ?? 'unknown_error' }
+    }
+    const d = result.data
+    if (!d || typeof d.version !== 'string' || typeof d.protocol !== 'number') {
+      return { kind: 'error', error: 'invalid_response' }
+    }
+    return {
+      kind: 'ok',
+      identity: {
+        version: d.version,
+        protocol: d.protocol,
+        isDay: d.is_day === 1,
+      },
+    }
   },
 
   reboot: async (): Promise<UsbResult> => {
