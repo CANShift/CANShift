@@ -49,6 +49,58 @@ const CMD_CAN_SCAN_START = 0x20
 const CMD_CAN_SCAN_STOP = 0x21
 const CMD_REBOOT = 0xf0
 
+export interface KnownOpcode {
+  id: number
+  name: string
+  description: string
+}
+
+export const KNOWN_OPCODES: readonly KnownOpcode[] = [
+  { id: CMD_GET_CONFIG, name: 'CMD_GET_CONFIG', description: 'Read dashboard JSON from device' },
+  { id: CMD_PUSH_CONFIG, name: 'CMD_PUSH_CONFIG', description: 'Write dashboard JSON (reboots)' },
+  {
+    id: CMD_GET_DEVICE_CONFIG,
+    name: 'CMD_GET_DEVICE_CONFIG',
+    description: 'Read hardware device config',
+  },
+  {
+    id: CMD_PUT_DEVICE_CONFIG,
+    name: 'CMD_PUT_DEVICE_CONFIG',
+    description: 'Write hardware device config',
+  },
+  { id: CMD_SCREEN_SETTINGS, name: 'CMD_SCREEN_SETTINGS', description: 'Brightness, rotation' },
+  {
+    id: CMD_TOGGLE_DAY_NIGHT,
+    name: 'CMD_TOGGLE_DAY_NIGHT',
+    description: 'Flip day/night theme',
+  },
+  { id: CMD_CALIBRATE_TOUCH, name: 'CMD_CALIBRATE_TOUCH', description: 'Enter touch calibration' },
+  {
+    id: CMD_SET_DAY_NIGHT,
+    name: 'CMD_SET_DAY_NIGHT',
+    description: 'Set day/night theme — payload { day: boolean }',
+  },
+  {
+    id: CMD_GET_INPUT_BINDINGS,
+    name: 'CMD_GET_INPUT_BINDINGS',
+    description: 'Read input bindings',
+  },
+  {
+    id: CMD_PUT_INPUT_BINDINGS,
+    name: 'CMD_PUT_INPUT_BINDINGS',
+    description: 'Write input bindings',
+  },
+  {
+    id: CMD_QUERY_VERSION,
+    name: 'CMD_QUERY_VERSION',
+    description: 'Firmware version handshake',
+  },
+  { id: CMD_PING, name: 'CMD_PING', description: 'Liveness probe — replies with uptime_ms' },
+  { id: CMD_CAN_SCAN_START, name: 'CMD_CAN_SCAN_START', description: 'Start CAN scan' },
+  { id: CMD_CAN_SCAN_STOP, name: 'CMD_CAN_SCAN_STOP', description: 'Stop CAN scan' },
+  { id: CMD_REBOOT, name: 'CMD_REBOOT', description: 'Reboot the dash' },
+]
+
 // ---------------------------------------------------------------------------
 // Shared result shapes — structurally identical to studio-web's surface.
 // ---------------------------------------------------------------------------
@@ -86,6 +138,10 @@ export type FirmwareIdentityResult =
 export type PingResult =
   | { kind: 'ok'; uptimeMs: number | null }
   | { kind: 'error'; error: string }
+
+export type RawAck =
+  | { kind: 'ok'; data: Record<string, unknown> }
+  | { kind: 'error'; error: string; data: Record<string, unknown> | null }
 
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
 
@@ -182,6 +238,18 @@ export const usbService = {
 
   calibrateTouch: async (): Promise<UsbResult> => {
     return toUsbResult(await getSerialClient().send(CMD_CALIBRATE_TOUCH))
+  },
+
+  sendRaw: async (
+    cmd: number,
+    fields: Record<string, unknown> = {},
+    timeoutMs = 3_000,
+  ): Promise<RawAck> => {
+    const result = await getSerialClient().send(cmd, fields, { timeoutMs })
+    if (result.ok) {
+      return { kind: 'ok', data: result.data ?? {} }
+    }
+    return { kind: 'error', error: result.error ?? 'unknown_error', data: result.data ?? null }
   },
 }
 
