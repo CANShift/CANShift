@@ -140,7 +140,8 @@ inline void cruiseEmitBezier(lv_point_t *out, uint8_t &n, int16_t x0, int16_t y0
                              int16_t yc, int16_t x2, int16_t y2) {
     // Skip i=0 — the previous polyline endpoint already sits there.
     for (uint8_t i = 1; i <= CRUISE_BEZIER_SEGS; ++i) {
-        out[n++] = cruiseBezierAt(x0, y0, xc, yc, x2, y2, static_cast<float>(i) / CRUISE_BEZIER_SEGS);
+        out[n++] =
+            cruiseBezierAt(x0, y0, xc, yc, x2, y2, static_cast<float>(i) / CRUISE_BEZIER_SEGS);
     }
 }
 
@@ -199,8 +200,7 @@ uint8_t buildCruiseLPath(lv_point_t *pts, const lv_area_t &area, CruiseCorner co
             // Notch at top-right.
             pts[n++] = {static_cast<lv_coord_t>(x + r), y};
             pts[n++] = {static_cast<lv_coord_t>(x + w - nW - ir), y};
-            cruiseEmitBezier(pts, n, x + w - nW - ir, y, x + w - nW, y, x + w - nW,
-                             y + ir);
+            cruiseEmitBezier(pts, n, x + w - nW - ir, y, x + w - nW, y, x + w - nW, y + ir);
             pts[n++] = {static_cast<lv_coord_t>(x + w - nW), static_cast<lv_coord_t>(y + nH - ir)};
             cruiseEmitBezier(pts, n, x + w - nW, y + nH - ir, x + w - nW, y + nH, x + w - nW + ir,
                              y + nH);
@@ -283,8 +283,8 @@ void cruiseLDrawCb(lv_event_t *e) {
     lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
     if (!draw_ctx)
         return;
-    const auto corner = static_cast<CruiseCorner>(
-        reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
+    const auto corner =
+        static_cast<CruiseCorner>(reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
 
     lv_area_t area;
     lv_obj_get_coords(btn, &area);
@@ -296,8 +296,7 @@ void cruiseLDrawCb(lv_event_t *e) {
     const bool active = (state & (LV_STATE_PRESSED | LV_STATE_CHECKED)) != 0;
     lv_draw_rect_dsc_t fill;
     lv_draw_rect_dsc_init(&fill);
-    fill.bg_color = lv_color_hex(active ? CRUISE_BUTTON_FILL_PRESSED_RGB
-                                        : CRUISE_BUTTON_FILL_RGB);
+    fill.bg_color = lv_color_hex(active ? CRUISE_BUTTON_FILL_PRESSED_RGB : CRUISE_BUTTON_FILL_RGB);
     fill.bg_opa = LV_OPA_COVER;
     fill.border_width = 0;
     fill.radius = 0;
@@ -354,8 +353,8 @@ void cruiseLHitTestCb(lv_event_t *e) {
     if (!info || !info->point)
         return;
     lv_obj_t *btn = static_cast<lv_obj_t *>(lv_event_get_target(e));
-    const auto corner = static_cast<CruiseCorner>(
-        reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
+    const auto corner =
+        static_cast<CruiseCorner>(reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
     lv_area_t area;
     lv_obj_get_coords(btn, &area);
     const int16_t px = info->point->x - area.x1;
@@ -465,17 +464,52 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         if (!btn)
             continue;
 
-        // Suppress the default rectangle rendering — the L is painted by the
-        // DRAW_MAIN_END callback below. We keep the button widget itself
-        // (gives us free click dispatch through the existing tag system) but
-        // make its default visual invisible.
-        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN);
-        lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN);
+        // Wipe every default + state style the button widget installed so the
+        // ONLY visual is the L painted by the DRAW_MAIN_END callback. Per-
+        // state opacity overrides weren't enough: the factory's PRESSED-state
+        // rectangle still bled through on certain buttons. Removing all
+        // styles also kills the theme's default border / shadow / pressed
+        // tint without us having to enumerate every state combination.
+        // Click dispatch lives in the event-callback chain (not in styles)
+        // so it survives the wipe untouched.
+        lv_obj_remove_style_all(btn);
+        // Geometry is style-backed in LVGL 8 so the wipe above zeros size +
+        // position. Re-apply both so the button keeps its quadrant slot.
+        lv_obj_set_pos(btn, x, y);
+        lv_obj_set_size(btn, CRUISE_BUTTON_W, CRUISE_BUTTON_H);
+        // Suppress the theme's focus outline / pressed tint that pops on tap.
+        // The cruise buttons drive their own pressed/checked visual through
+        // the DRAW_MAIN_END callback — they don't need (or want) focus rings
+        // or an internal scroll area.
+        lv_obj_clear_flag(btn, LV_OBJ_FLAG_CLICK_FOCUSABLE);
+        lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+        // Belt-and-suspenders: zero every drawing primitive across every
+        // state lv_btn's theme might reach for. remove_style_all should
+        // already cover this but the LVGL default theme re-applies state
+        // styles on transitions — explicit per-state zeros lock it out.
+        for (lv_state_t st : {lv_state_t(LV_STATE_DEFAULT), lv_state_t(LV_STATE_PRESSED),
+                              lv_state_t(LV_STATE_FOCUSED), lv_state_t(LV_STATE_FOCUS_KEY),
+                              lv_state_t(LV_STATE_CHECKED), lv_state_t(LV_STATE_EDITED),
+                              lv_state_t(LV_STATE_HOVERED), lv_state_t(LV_STATE_DISABLED)}) {
+            lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
+            lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
+            lv_obj_set_style_outline_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
+            lv_obj_set_style_outline_width(btn, 0, LV_PART_MAIN | st);
+            lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
+        }
 
         // Encode the corner orientation as the event user_data so a single
         // pair of callbacks handles all four buttons.
         void *cornerData = reinterpret_cast<void *>(static_cast<uintptr_t>(i));
         lv_obj_add_event_cb(btn, cruiseLDrawCb, LV_EVENT_DRAW_MAIN_END, cornerData);
+        // Force a redraw on press / release so the L fill swaps between
+        // idle and pressed states. After remove_style_all there's no style
+        // delta on STATE_PRESSED for LVGL to detect, so the automatic
+        // invalidation on state change doesn't fire — drive it manually.
+        auto pressInvalidateCb = [](lv_event_t *ev) { lv_obj_invalidate(lv_event_get_target(ev)); };
+        lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESSED, nullptr);
+        lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_RELEASED, nullptr);
+        lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESS_LOST, nullptr);
         // Hit-test reject points inside the notch so taps in the centre area
         // fall through to the next sibling rather than registering on the
         // wrong corner button. Requires ADV_HITTEST flag.
@@ -501,6 +535,28 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
             if (label) {
                 lv_obj_add_flag(label, LV_OBJ_FLAG_IGNORE_LAYOUT);
                 lv_obj_align(label, LV_ALIGN_CENTER, shiftX, shiftY);
+                // Mirror CruiseControlPreview.tsx's symbol bump: + and − are
+                // single glyphs that read much smaller than 3-char SET/OFF at
+                // the same em size, so Studio renders them at ~28 px while
+                // SET/OFF sit at ~15 px. ButtonWidget locks every label to
+                // label(16) via computeLabelFontSize, so override here for
+                // the top row to bring the glyph visual mass into parity.
+                // secondary(24) (Bold) is the closest baked tier — primary(32)
+                // would overflow the L's narrow body arm (h=85, notchH=44).
+                if (i == static_cast<uint8_t>(CruiseCorner::kTL) ||
+                    i == static_cast<uint8_t>(CruiseCorner::kTR)) {
+                    lv_obj_set_style_text_font(label, FontManager::secondary(24), 0);
+                }
+                // Pin the label colour to white across every state so the
+                // LVGL default theme can't grey-out / black-out the glyph on
+                // CHECKED or DISABLED transitions. Without this the OFF/ON
+                // toggle's "ON" label vanishes against the dark page bg.
+                for (lv_state_t st : {lv_state_t(LV_STATE_DEFAULT), lv_state_t(LV_STATE_PRESSED),
+                                      lv_state_t(LV_STATE_CHECKED), lv_state_t(LV_STATE_FOCUSED),
+                                      lv_state_t(LV_STATE_DISABLED)}) {
+                    lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFFu),
+                                                LV_PART_MAIN | st);
+                }
             }
         }
 
