@@ -291,7 +291,17 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
   }
 
   const { w, h } = widget.layout
-  const PREVIEW_SCALE = 2
+  // Sidebar is 220 px wide; the Field eats its own padding and the toggle
+  // button + gap sit alongside, so the preview gets ~140 px of real estate.
+  // Fixed 2× scaled big buttons (e.g. cruise 140×85 → 280×170) overflowed and
+  // pushed the toggle off-screen. Compute a per-render scale that fits the
+  // budget on both axes; cap at 4× so tiny widgets don't pixelate.
+  const PREVIEW_BUDGET_W = 140
+  const PREVIEW_BUDGET_H = 180
+  const PREVIEW_MAX_SCALE = 4
+  const previewScale = Math.min(PREVIEW_MAX_SCALE, PREVIEW_BUDGET_W / w, PREVIEW_BUDGET_H / h)
+  const previewW = Math.round(w * previewScale)
+  const previewH = Math.round(h * previewScale)
 
   return (
     <>
@@ -304,12 +314,13 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
               borderRadius: 3,
               overflow: 'hidden',
               display: 'inline-block',
+              flexShrink: 0,
             }}
           >
             <WidgetPreview
               widget={widget}
-              displayW={w * PREVIEW_SCALE}
-              displayH={h * PREVIEW_SCALE}
+              displayW={previewW}
+              displayH={previewH}
               buttonActive={previewActive}
             />
           </div>
@@ -325,6 +336,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
               borderRadius: 3,
               color: previewActive ? '#FF4444' : '#AAAAAA',
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             {previewActive ? 'Active' : 'Idle'}
