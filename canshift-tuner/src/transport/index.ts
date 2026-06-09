@@ -71,6 +71,19 @@ export interface ConnectionStatus {
   firmwareVersion?: string | null
 }
 
+export interface FirmwareIdentity {
+  /** Semver string reported by the firmware (e.g. `0.12.0`). */
+  version: string
+  /** Wire-format protocol number — independent of the firmware version. */
+  protocol: number
+  /** Mirrors the dash's day/night theme flag. */
+  isDay: boolean
+}
+
+export type FirmwareIdentityResult =
+  | { kind: 'ok'; identity: FirmwareIdentity }
+  | { kind: 'error'; error: string }
+
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
 
 export type DeviceConfigResult =
@@ -117,6 +130,30 @@ export const usbService = {
       portPath: null,
       firmwareVersion: null,
     })
+  },
+
+  /**
+   * Issue `CMD_QUERY_VERSION` and parse the firmware's identity blob. Wired
+   * by `useVersionHandshake` on each successful connect. Short timeout —
+   * the firmware answers within one main-loop tick (#1365).
+   */
+  queryVersion: async (): Promise<FirmwareIdentityResult> => {
+    const result = await getSerialClient().send(CMD_QUERY_VERSION, {}, { timeoutMs: 2_000 })
+    if (!result.ok) {
+      return { kind: 'error', error: result.error ?? 'unknown_error' }
+    }
+    const d = result.data
+    if (!d || typeof d.version !== 'string' || typeof d.protocol !== 'number') {
+      return { kind: 'error', error: 'invalid_response' }
+    }
+    return {
+      kind: 'ok',
+      identity: {
+        version: d.version,
+        protocol: d.protocol,
+        isDay: d.is_day === 1,
+      },
+    }
   },
 
   reboot: async (): Promise<UsbResult> => {

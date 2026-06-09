@@ -24,6 +24,7 @@ export function useBurnDashboard(): UseBurnDashboard {
   const markPushed = useDashboardStore((s) => s.markPushed)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const connectionStatus = useConnectionStore((s) => s.status)
   const log = useLogStore((s) => s.push)
 
@@ -31,13 +32,18 @@ export function useBurnDashboard(): UseBurnDashboard {
 
   // Live link + something to write. Simulation mode is excluded — the demo
   // config isn't something the user wants pushed to a real device by reflex.
+  // A `mismatch` verdict from the version handshake (#1365) also gates here:
+  // pushing against a wrong-major firmware can silently corrupt the typed
+  // envelope, so the safer default is to refuse until the user flashes a
+  // matching build.
   const canBurn =
     !isBurning &&
     connected &&
     !simulationMode &&
     connectionStatus === 'connected' &&
     isDirty &&
-    config !== null
+    config !== null &&
+    firmwareCompat.kind !== 'mismatch'
 
   const burn = useCallback(async () => {
     if (!canBurn || !config) return

@@ -14,10 +14,20 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
   version: string
 }
 
+// Track the firmware major against which this tuner build was compiled — the
+// handshake fails loudly when a connected device reports a different major
+// (issue #1365). Sourced from the firmware package so version bumps in either
+// package propagate without a separate constant edit.
+const firmwarePkg = JSON.parse(
+  readFileSync(resolve(__dirname, '../canshift-firmware/package.json'), 'utf8'),
+) as { version: string }
+const firmwareMajor = Number(firmwarePkg.version.split('.')[0] ?? 0)
+
 export default defineConfig({
   root: resolve(__dirname, '.'),
   define: {
     __TUNER_VERSION__: JSON.stringify(pkg.version),
+    __EXPECTED_FIRMWARE_MAJOR__: JSON.stringify(firmwareMajor),
   },
   plugins: [react()],
   resolve: {
