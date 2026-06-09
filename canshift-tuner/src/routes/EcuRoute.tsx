@@ -231,6 +231,7 @@ const leftColumnStyle: CSSProperties = {
   padding: '16px 20px',
   borderRight: '1px solid hsl(var(--border))',
   minHeight: 0,
+  overflow: 'hidden',
 }
 
 const rightColumnStyle: CSSProperties = {
@@ -239,6 +240,7 @@ const rightColumnStyle: CSSProperties = {
   gap: 10,
   padding: '16px 24px',
   minHeight: 0,
+  overflow: 'hidden',
 }
 
 const previewHeaderStyle: CSSProperties = {
