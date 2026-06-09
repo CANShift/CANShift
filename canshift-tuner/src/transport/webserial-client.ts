@@ -66,6 +66,10 @@ type StatusListener = (status: SerialStatus, error?: string) => void
 type Handler<T> = (event: T) => void
 type Unsubscribe = () => void
 
+/** Direction tag forwarded to `onActivity` listeners. */
+export type SerialActivityDirection = 'rx' | 'tx'
+type ActivityListener = (direction: SerialActivityDirection) => void
+
 interface PendingAck {
   resolve: (result: AckResult) => void
   timer: ReturnType<typeof setTimeout>
@@ -150,6 +154,7 @@ export class SerialClient {
   private pendingSends: QueuedSend[] = []
   private subscriptions: Subscription[] = []
   private statusListeners: StatusListener[] = []
+  private activityListeners: ActivityListener[] = []
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private reconnectDelay = RECONNECT_INITIAL_MS
   private successUptimeStartedAt: number | null = null
@@ -174,6 +179,23 @@ export class SerialClient {
     return () => {
       this.statusListeners = this.statusListeners.filter((l) => l !== listener)
     }
+  }
+
+  /**
+   * Subscribe to per-frame TX/RX ticks — fires once per successful write
+   * and once per inbound frame that survives the JSON parse gate. Header
+   * uses this to pulse the status dot like a hardware activity LED so the
+   * user has an at-a-glance signal that bytes are still flowing.
+   */
+  onActivity(listener: ActivityListener): Unsubscribe {
+    this.activityListeners.push(listener)
+    return () => {
+      this.activityListeners = this.activityListeners.filter((l) => l !== listener)
+    }
+  }
+
+  private emitActivity(direction: SerialActivityDirection): void {
+    for (const listener of this.activityListeners) listener(direction)
   }
 
   subscribe<T = unknown>(discriminator: string, handler: Handler<T>): Unsubscribe {
@@ -340,6 +362,7 @@ export class SerialClient {
   private onFrame(raw: string): void {
     const parsed = safeJsonParse(raw)
     if (!isRecord(parsed)) return
+    this.emitActivity('rx')
 
     // Ack path first — a `{status, log}` ack must not be swallowed by `log`
     // subscribers (matches studio-web's #1288 WS-4 fix).
@@ -394,13 +417,18 @@ export class SerialClient {
         return
       }
 
-      writer.write(this.encoder.encode(payload)).catch((err: unknown) => {
-        clearTimeout(timer)
-        this.pendingAck = null
-        const msg = err instanceof Error ? err.message : 'send_failed'
-        resolve({ ok: false, error: msg })
-        this.drainPendingSends()
-      })
+      writer
+        .write(this.encoder.encode(payload))
+        .then(() => {
+          this.emitActivity('tx')
+        })
+        .catch((err: unknown) => {
+          clearTimeout(timer)
+          this.pendingAck = null
+          const msg = err instanceof Error ? err.message : 'send_failed'
+          resolve({ ok: false, error: msg })
+          this.drainPendingSends()
+        })
     })
   }
 

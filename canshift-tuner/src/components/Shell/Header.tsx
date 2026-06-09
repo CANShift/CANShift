@@ -6,10 +6,15 @@
 // a Burn button that lights up when the editor has unsaved changes against a
 // live device.
 
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
+import { deviceEvents } from '../../transport'
+
+const PULSE_HOLD_MS = 220
+const PULSE_THROTTLE_MS = 60
 
 const HEADER_HEIGHT = 40
 
@@ -56,10 +61,52 @@ function readPortLabel(port: PortLike | null): string | null {
   }
 }
 
+/**
+ * Drive the status-dot blink off the serial client's TX/RX activity ticks.
+ * Throttles to one render per `PULSE_THROTTLE_MS` window — telemetry comes
+ * in at ~5 Hz, so unthrottled it would re-render the header on every frame
+ * and waste cycles. Returns `true` while a pulse is on-screen so the dot can
+ * brighten / glow without an explicit `key={}` animation reset.
+ */
+function useSerialActivityPulse(active: boolean): boolean {
+  const [pulsing, setPulsing] = useState(false)
+  const lastTickRef = useRef(0)
+  const offTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!active) {
+      setPulsing(false)
+      return
+    }
+    const unsubscribe = deviceEvents.onActivity(() => {
+      const now = performance.now()
+      if (now - lastTickRef.current < PULSE_THROTTLE_MS) return
+      lastTickRef.current = now
+      setPulsing(true)
+      if (offTimerRef.current !== null) clearTimeout(offTimerRef.current)
+      offTimerRef.current = setTimeout(() => {
+        setPulsing(false)
+        offTimerRef.current = null
+      }, PULSE_HOLD_MS)
+    })
+    return () => {
+      unsubscribe()
+      if (offTimerRef.current !== null) {
+        clearTimeout(offTimerRef.current)
+        offTimerRef.current = null
+      }
+      setPulsing(false)
+    }
+  }, [active])
+
+  return pulsing
+}
+
 export default function Header() {
   const status = useConnectionStore((s) => s.status)
   const port = useConnectionStore((s) => s.port)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
   // Simulation has no real link, but show it in the status slot so the user
   // never wonders whether the editor they're hacking on is wired to a device
   // or just running off the demo config.
@@ -106,7 +153,9 @@ export default function Header() {
             height: 8,
             borderRadius: '50%',
             background: visual.dot,
-            boxShadow: `0 0 6px ${visual.dot}`,
+            boxShadow: pulsing ? `0 0 12px ${visual.dot}, 0 0 4px ${visual.dot}` : `0 0 6px ${visual.dot}`,
+            transform: pulsing ? 'scale(1.25)' : 'scale(1)',
+            transition: 'box-shadow 80ms ease-out, transform 80ms ease-out',
           }}
         />
         <span style={{ color: 'hsl(var(--text))' }}>{visual.label}</span>
