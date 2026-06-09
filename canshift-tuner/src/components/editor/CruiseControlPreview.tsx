@@ -29,9 +29,10 @@ const INNER_R = 5
 const LABEL_PAD = 10
 const STROKE_W = 2
 
-// Placeholder set speed shown in preview only. Firmware feeds the live value
-// from the cruise control state machine.
-const DEMO_SET_SPEED = 100
+// Placeholder set speed shown in preview only. Zero matches the on-device
+// default when no cruise state machine is wired — firmware will feed the live
+// value from the cruise controller once #451 lands.
+const DEMO_SET_SPEED = 0
 const SPEED_UNIT = 'km/h'
 
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
