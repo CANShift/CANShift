@@ -227,6 +227,10 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
     // Composite IDs (e.g. "0x3E8:5533,0,2") — take the CAN id portion only.
     const rawId = (frameAttrs.id ?? '').split(':')[0] ?? ''
     const frameIdNum = parseHexOrDec(rawId) + baseId
+    if (!Number.isFinite(frameIdNum)) {
+      warnings.push(`Skipped frame with unparseable id "${rawId}"`)
+      continue
+    }
     const canFrameId = `0x${frameIdNum.toString(16)}`
 
     // Frame-level defaults; per-value attrs override these.
