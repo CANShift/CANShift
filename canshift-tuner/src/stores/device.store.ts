@@ -182,6 +182,11 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       transport: 'usb',
       wifiHost: null,
       connected: true,
+      // A live device link supersedes the dev-only simulation mode — they
+      // can't coexist, otherwise the Editor reads from DEFAULT_SIM_CONFIG
+      // while the device pushes real values and the user sees "Simulation"
+      // in the Header even though WebSerial is up.
+      simulationMode: false,
       syncing: false,
       errorMessage: null,
     })
@@ -194,6 +199,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       transport: 'wifi',
       wifiHost: host,
       connected: true,
+      simulationMode: false,
       syncing: false,
       errorMessage: null,
     })

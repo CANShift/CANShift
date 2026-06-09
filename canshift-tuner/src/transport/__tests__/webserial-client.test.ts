@@ -145,7 +145,7 @@ describe('SerialClient — frame parser', () => {
     client.disconnect()
   })
 
-  it('ignores empty lines and malformed JSON without crashing the dispatch loop', async () => {
+  it('silently drops free-form text and warns only on malformed JSON object frames', async () => {
     const fake = makeFakePort()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const client = new SerialClient({ disableReconnect: true })
@@ -153,11 +153,17 @@ describe('SerialClient — frame parser', () => {
     client.subscribe('log', log)
 
     await client.connect(fake.port)
-    fake.pushBytes('\n\nnot-json\n{"log":1,"lvl":"info","tag":"x","msg":"y"}\n')
+    // Free-form lines (Arduino framework log_e, LVGL warnings, ROM bootloader
+    // banner) start without `{` — should be silently dropped, NO warn.
+    fake.pushBytes('\n\nnot-json\n[   485][E][Preferences.cpp:50] nvs_open failed\n')
+    // A line that LOOKS LIKE a JSON object but is malformed → warn.
+    fake.pushBytes('{"log":1,"broken\n')
+    // A valid frame still dispatches.
+    fake.pushBytes('{"log":1,"lvl":"info","tag":"x","msg":"y"}\n')
     await flush()
 
     expect(log).toHaveBeenCalledTimes(1)
-    expect(warn).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledTimes(1)
     warn.mockRestore()
     client.disconnect()
   })

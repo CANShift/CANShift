@@ -25,6 +25,25 @@ const SEND_QUEUE_CAPACITY = 8
 
 export type SerialStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
 
+/**
+ * Map a raw WebSerial `port.open()` exception to a human-readable hint. The
+ * native messages ("Failed to execute 'open' on 'SerialPort'…") are accurate
+ * but tell the user nothing about WHAT to fix.
+ */
+function humanizeOpenError(raw: string): string {
+  const lower = raw.toLowerCase()
+  if (lower.includes('failed to open') || lower.includes('already open')) {
+    return 'Port busy — close other apps using it (PlatformIO Monitor, Arduino IDE, `screen`, another browser tab) and click Connect device again.'
+  }
+  if (lower.includes('notfounderror') || lower.includes('not found')) {
+    return 'Device not found — check the cable and unplug/replug the dash.'
+  }
+  if (lower.includes('access denied') || lower.includes('permission')) {
+    return 'Permission denied — re-grant access via Connect device.'
+  }
+  return raw
+}
+
 export interface SerialClientOptions {
   baudRate?: number
   /** Disable auto-reconnect (used by tests). */
@@ -68,12 +87,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+/**
+ * Try to parse `line` as JSON.
+ *
+ * The firmware multiplexes several streams onto the same UART:
+ *   - structured logger frames: `{"log":1,...}` / `{"tele":1,...}` / etc.
+ *   - Arduino-framework `log_e()` lines: `[   485][E][Preferences.cpp:50] …`
+ *   - LVGL `[Warn]` / `[Error]` lines
+ *   - ROM bootloader + ESP-IDF startup banner (`ets Jun  8 2016`, `rst:0xc`,
+ *     `configsip:`, `clk_drv:`, `mode:DIO`, `load:`, `entry`, `E (476) psram:`,
+ *     etc.) on every reset
+ *
+ * Only the first family is JSON. The rest is free-form text we'll surface to
+ * the (future) CLI panel as-is. Warn ONLY when a line looks like it WAS trying
+ * to be JSON (starts with `{`/`[` after trimming) but failed — that's a real
+ * protocol error worth investigating. Free-form text is dropped silently to
+ * avoid flooding the browser console with hundreds of warnings per boot.
+ */
 function safeJsonParse(line: string): unknown {
+  const trimmed = line.trim()
+  if (trimmed.length === 0) return null
+  // Every frame the firmware emits via the Logger is a JSON OBJECT ({"log":1,
+  // ...}, {"tele":1,...}, {"status":"ok"}, …) — never a top-level array.
+  // Arduino-framework `log_e()` lines `[   485][E][Preferences.cpp:50] …` and
+  // LVGL `[Warn] …` lines also start with `[` but are not JSON, so restricting
+  // to `{` lets us silently drop the free-form text while still warning on
+  // genuine malformed object frames.
+  const looksLikeFrame = trimmed.startsWith('{')
+  if (!looksLikeFrame) return null
   try {
-    return JSON.parse(line) as unknown
+    return JSON.parse(trimmed) as unknown
   } catch (err) {
     const reason = err instanceof Error ? err.message : 'unknown'
-    const preview = line.length > 80 ? `${line.slice(0, 80)}…` : line
+    const preview = trimmed.length > 80 ? `${trimmed.slice(0, 80)}…` : trimmed
     console.warn(`[serial] dropped malformed frame (${reason}): ${preview}`)
     return null
   }
@@ -217,10 +263,16 @@ export class SerialClient {
     try {
       await port.open({ baudRate: this.baudRate })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'open_failed'
+      // A failed `open()` here means the port was never established — usually
+      // it's held exclusive by another consumer (PlatformIO Monitor, Arduino
+      // IDE, `screen`, another browser tab). Retrying every 500 ms would flap
+      // the UI between "Reconnecting…" and "Disconnected" forever without ever
+      // succeeding. Park in disconnected with the friendly error and let the
+      // user free the port + click Connect again.
+      const raw = err instanceof Error ? err.message : 'open_failed'
+      const msg = humanizeOpenError(raw)
       this.lastError = msg
       this.setStatus('disconnected', msg)
-      this.scheduleReconnect(port)
       throw new Error(msg)
     }
 

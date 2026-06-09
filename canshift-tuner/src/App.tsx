@@ -16,7 +16,10 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
 import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
+import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
+import { deviceIpc } from './transport'
+import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 
@@ -75,6 +78,73 @@ function useSimulationBootstrap(): void {
 }
 
 /**
+ * On every successful WebSerial connect, fetch the dashboard config from the
+ * device and seed the editor store with it. Mirrors the studio-web behaviour
+ * that originally lived in `useDeviceConfigBootstrap`. Falls back to the demo
+ * (and logs `info`) when the device reports no config — fresh devices boot
+ * empty until the user does their first Burn.
+ */
+function useDeviceConfigBootstrap(): void {
+  const connected = useDeviceStore((s) => s.connected)
+  const transport = useDeviceStore((s) => s.transport)
+  const loadFromDeviceOrDemo = useDashboardStore((s) => s.loadFromDeviceOrDemo)
+  const log = useLogStore((s) => s.push)
+
+  useEffect(() => {
+    if (!connected || transport !== 'usb') return
+    let cancelled = false
+    void deviceIpc
+      .getConfig()
+      .then((result) => {
+        if (cancelled) return
+        if (result.kind === 'ok') {
+          const outcome = loadFromDeviceOrDemo(result.config)
+          if (outcome === 'device') log('success', 'Loaded config from device')
+        } else if (result.kind === 'none') {
+          const outcome = loadFromDeviceOrDemo(null)
+          if (outcome === 'demo') log('info', 'Device has no config — loaded demo')
+        } else {
+          log('error', `Failed to read device config: ${result.error}`)
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const message = err instanceof Error ? err.message : String(err)
+        log('error', `Failed to read device config: ${message}`)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [connected, transport, loadFromDeviceOrDemo, log])
+}
+
+/**
+ * Cmd/Ctrl+S → Burn. Global accelerator so it fires regardless of which
+ * section is open. Delegates to the same `useBurnDashboard` hook the Header's
+ * Burn button uses, so the gating (connected + dirty + not simulation) is
+ * identical between the two entry points.
+ */
+function useBurnShortcut(): void {
+  const { canBurn, burn } = useBurnDashboard()
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey
+      if (!isMod || e.key !== 's') return
+      // Skip when an input is focused — let the field own its native save.
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      e.preventDefault()
+      if (!canBurn) return
+      void burn()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [canBurn, burn])
+}
+
+/**
  * Redirect every non-Welcome path back to `/` while disconnected AND not in
  * simulation. The Sidebar already blocks the UI path, but a direct URL hit (or
  * a reload mid-session) still needs to be intercepted.
@@ -92,6 +162,8 @@ function DisconnectedGuard({ children }: { children: ReactNode }) {
 export default function App() {
   useAutoReconnect()
   useSimulationBootstrap()
+  useDeviceConfigBootstrap()
+  useBurnShortcut()
 
   return (
     <div style={shellStyle}>
