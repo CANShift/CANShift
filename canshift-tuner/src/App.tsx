@@ -17,6 +17,7 @@ import { FirmwareUnresponsiveBanner } from './components/Shell/FirmwareUnrespons
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
 import CanBusRoute from './routes/CanBusRoute'
+import CliRoute from './routes/CliRoute'
 import EcuRoute from './routes/EcuRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
 import LogsRoute from './routes/LogsRoute'
@@ -336,7 +337,7 @@ export default function App() {
               <Route path="/themes" element={<ThemesRoute />} />
               <Route path="/live" element={<LiveDataRoute />} />
               <Route path="/logs" element={<LogsRoute />} />
-              <Route path="/cli" element={<PlaceholderRoute label="CLI" icon="›_" />} />
+              <Route path="/cli" element={<CliRoute />} />
               <Route
                 path="/firmware"
                 element={
