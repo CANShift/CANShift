@@ -44,6 +44,7 @@ const CMD_SET_DAY_NIGHT = 0x09
 const CMD_GET_INPUT_BINDINGS = 0x0b
 const CMD_PUT_INPUT_BINDINGS = 0x0c
 const CMD_QUERY_VERSION = 0x10
+const CMD_PING = 0x11
 const CMD_CAN_SCAN_START = 0x20
 const CMD_CAN_SCAN_STOP = 0x21
 const CMD_REBOOT = 0xf0
@@ -80,6 +81,10 @@ export interface FirmwareIdentity {
 
 export type FirmwareIdentityResult =
   | { kind: 'ok'; identity: FirmwareIdentity }
+  | { kind: 'error'; error: string }
+
+export type PingResult =
+  | { kind: 'ok'; uptimeMs: number | null }
   | { kind: 'error'; error: string }
 
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
@@ -128,6 +133,15 @@ export const usbService = {
       portPath: null,
       firmwareVersion: null,
     })
+  },
+
+  ping: async (timeoutMs = 1_500): Promise<PingResult> => {
+    const result = await getSerialClient().send(CMD_PING, {}, { timeoutMs })
+    if (!result.ok) {
+      return { kind: 'error', error: result.error ?? 'unknown_error' }
+    }
+    const uptimeMs = typeof result.data?.uptime_ms === 'number' ? result.data.uptime_ms : null
+    return { kind: 'ok', uptimeMs }
   },
 
   queryVersion: async (): Promise<FirmwareIdentityResult> => {

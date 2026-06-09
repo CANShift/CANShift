@@ -268,6 +268,20 @@ export class SerialClient {
   // Internals
   // ---------------------------------------------------------------------------
 
+  private async deassertResetSignals(port: SerialPort): Promise<void> {
+    const setSignals = (
+      port as {
+        setSignals?: (signals: { dataTerminalReady?: boolean; requestToSend?: boolean }) => Promise<void>
+      }
+    ).setSignals
+    if (typeof setSignals !== 'function') return
+    try {
+      await setSignals.call(port, { dataTerminalReady: false, requestToSend: false })
+    } catch (err) {
+      console.warn('[serial] setSignals failed', err)
+    }
+  }
+
   private async requestPort(): Promise<SerialPort | null> {
     if (typeof navigator === 'undefined' || !navigator.serial) {
       throw new Error('webserial_unavailable')
@@ -284,6 +298,7 @@ export class SerialClient {
     this.setStatus(this.reconnectDelay > RECONNECT_INITIAL_MS ? 'reconnecting' : 'connecting')
     try {
       await port.open({ baudRate: this.baudRate })
+      await this.deassertResetSignals(port)
     } catch (err) {
       // A failed `open()` here means the port was never established — usually
       // it's held exclusive by another consumer (PlatformIO Monitor, Arduino

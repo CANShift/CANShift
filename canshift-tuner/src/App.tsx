@@ -13,6 +13,7 @@ import Sidebar from './components/Shell/Sidebar'
 import PlaceholderRoute from './components/Shell/PlaceholderRoute'
 import { VersionMismatchBanner } from './components/Shell/VersionMismatchBanner'
 import { HeapLowBanner } from './components/Shell/HeapLowBanner'
+import { FirmwareUnresponsiveBanner } from './components/Shell/FirmwareUnresponsiveBanner'
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
 import CanBusRoute from './routes/CanBusRoute'
@@ -25,6 +26,9 @@ import { useDashboardStore } from './stores/dashboard.store'
 import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
 import { deviceEvents, deviceIpc, usbService } from './transport'
+
+const HEARTBEAT_INTERVAL_MS = 5_000
+const HEARTBEAT_MISS_THRESHOLD = 3
 import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
@@ -167,6 +171,64 @@ function useVersionHandshake(): void {
   }, [connected, simulationMode, transport, setFirmwareVersion, setFirmwareCompat, log])
 }
 
+function useHeartbeat(): void {
+  const connected = useDeviceStore((s) => s.connected)
+  const transport = useDeviceStore((s) => s.transport)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const setFirmwareLiveness = useDeviceStore((s) => s.setFirmwareLiveness)
+  const log = useLogStore((s) => s.push)
+
+  useEffect(() => {
+    if (!connected || simulationMode || transport !== 'usb') {
+      setFirmwareLiveness({ kind: 'unknown' })
+      return
+    }
+    let cancelled = false
+    let missed = 0
+    let unresponsiveLogged = false
+    let firstMissedAt: number | null = null
+
+    const probe = async () => {
+      const result = await usbService.ping()
+      if (cancelled) return
+      if (result.kind === 'ok') {
+        missed = 0
+        firstMissedAt = null
+        unresponsiveLogged = false
+        setFirmwareLiveness({
+          kind: 'alive',
+          lastPongAt: Date.now(),
+          uptimeMs: result.uptimeMs,
+        })
+        return
+      }
+      missed += 1
+      if (firstMissedAt === null) firstMissedAt = Date.now()
+      if (missed >= HEARTBEAT_MISS_THRESHOLD) {
+        setFirmwareLiveness({
+          kind: 'unresponsive',
+          missedPings: missed,
+          sinceMs: firstMissedAt,
+        })
+        if (!unresponsiveLogged) {
+          log('error', `Firmware unresponsive — ${String(missed)} pings missed (${result.error})`)
+          unresponsiveLogged = true
+        }
+      }
+    }
+
+    void probe()
+    const id = window.setInterval(() => {
+      void probe()
+    }, HEARTBEAT_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+      setFirmwareLiveness({ kind: 'unknown' })
+    }
+  }, [connected, simulationMode, transport, setFirmwareLiveness, log])
+}
+
 function useHeapStatsSubscription(): void {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)
@@ -229,6 +291,7 @@ export default function App() {
   useAutoReconnect()
   useSimulationBootstrap()
   useVersionHandshake()
+  useHeartbeat()
   useHeapStatsSubscription()
   useDeviceConfigBootstrap()
   useBurnShortcut()
@@ -236,6 +299,7 @@ export default function App() {
   return (
     <div style={shellStyle}>
       <Header />
+      <FirmwareUnresponsiveBanner />
       <VersionMismatchBanner />
       <HeapLowBanner />
       <div style={bodyStyle}>

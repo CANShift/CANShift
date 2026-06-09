@@ -54,6 +54,11 @@ export type FirmwareCompat =
   | { kind: 'compatible'; protocol: number }
   | { kind: 'mismatch'; expected: number; got: number; version: string }
 
+export type FirmwareLiveness =
+  | { kind: 'unknown' }
+  | { kind: 'alive'; lastPongAt: number; uptimeMs: number | null }
+  | { kind: 'unresponsive'; missedPings: number; sinceMs: number }
+
 export interface HeapStatsEntry {
   tsMs: number
   freeInternal: number
@@ -92,6 +97,8 @@ interface DeviceState {
 
   firmwareCompat: FirmwareCompat
 
+  firmwareLiveness: FirmwareLiveness
+
   heapStats: HeapStatsEntry[]
 
   /**
@@ -119,6 +126,7 @@ interface DeviceState {
   setFirmwareVersion: (version: string | null) => void
   setFirmwareCheck: (check: FirmwareCheck) => void
   setFirmwareCompat: (compat: FirmwareCompat) => void
+  setFirmwareLiveness: (liveness: FirmwareLiveness) => void
   pushHeapStats: (entry: Omit<HeapStatsEntry, 'receivedAt'>) => void
   clearHeapStats: () => void
   /** Trigger a re-probe — useFirmwareCheck listens on `firmwareCheckTick`. */
@@ -193,6 +201,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   firmwareCheck: { kind: 'idle' },
   firmwareCheckTick: 0,
   firmwareCompat: { kind: 'unknown' },
+  firmwareLiveness: { kind: 'unknown' },
   heapStats: [],
   isDayMode: null,
   lastPushedConfig: null,
@@ -242,6 +251,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
       firmwareCompat: { kind: 'unknown' },
+  firmwareLiveness: { kind: 'unknown' },
       heapStats: [],
       // Clear `lastPushedConfig` too — it represents the config running on the
       // device we were connected to. Keeping it after disconnect makes the
@@ -284,6 +294,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFirmwareCompat: (compat) => {
     set({ firmwareCompat: compat })
+  },
+
+  setFirmwareLiveness: (liveness) => {
+    set({ firmwareLiveness: liveness })
   },
 
   pushHeapStats: (entry) => {
