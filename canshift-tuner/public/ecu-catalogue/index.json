@@ -1,0 +1,303 @@
+{
+  "source": "https://github.com/janimm/RealDash-extras",
+  "license": "Unlicense",
+  "fetchedAt": "2026-06-10",
+  "entries": [
+    {
+      "id": "adaptronic/adaptronic_can_full.xml",
+      "vendor": "Adaptronic",
+      "file": "adaptronic_can_full.xml",
+      "label": "Adaptronic CAN Full",
+      "path": "/ecu-catalogue/adaptronic/adaptronic_can_full.xml",
+      "sizeBytes": 86502
+    },
+    {
+      "id": "adaptronic/adaptronic_can_simple.xml",
+      "vendor": "Adaptronic",
+      "file": "adaptronic_can_simple.xml",
+      "label": "Adaptronic CAN Simple",
+      "path": "/ecu-catalogue/adaptronic/adaptronic_can_simple.xml",
+      "sizeBytes": 14790
+    },
+    {
+      "id": "aem/aem_22_unit1.xml",
+      "vendor": "AEM",
+      "file": "aem_22_unit1.xml",
+      "label": "AEM 22 Unit1",
+      "path": "/ecu-catalogue/aem/aem_22_unit1.xml",
+      "sizeBytes": 3947
+    },
+    {
+      "id": "aem/aem_22_unit2.xml",
+      "vendor": "AEM",
+      "file": "aem_22_unit2.xml",
+      "label": "AEM 22 Unit2",
+      "path": "/ecu-catalogue/aem/aem_22_unit2.xml",
+      "sizeBytes": 3947
+    },
+    {
+      "id": "aem/aem_6_can.xml",
+      "vendor": "AEM",
+      "file": "aem_6_can.xml",
+      "label": "AEM 6 CAN",
+      "path": "/ecu-catalogue/aem/aem_6_can.xml",
+      "sizeBytes": 969
+    },
+    {
+      "id": "aem/aem_infinity.xml",
+      "vendor": "AEM",
+      "file": "aem_infinity.xml",
+      "label": "AEM Infinity",
+      "path": "/ecu-catalogue/aem/aem_infinity.xml",
+      "sizeBytes": 15001
+    },
+    {
+      "id": "bmw/BMW335i.xml",
+      "vendor": "BMW",
+      "file": "BMW335i.xml",
+      "label": "BMW335i",
+      "path": "/ecu-catalogue/bmw/BMW335i.xml",
+      "sizeBytes": 4129
+    },
+    {
+      "id": "bmw/BMW_R1200GS_K25_CAN.xml",
+      "vendor": "BMW",
+      "file": "BMW_R1200GS_K25_CAN.xml",
+      "label": "BMW R1200GS K25 CAN",
+      "path": "/ecu-catalogue/bmw/BMW_R1200GS_K25_CAN.xml",
+      "sizeBytes": 4109
+    },
+    {
+      "id": "bmw/bmw_siemens_ms42_can.xml",
+      "vendor": "BMW",
+      "file": "bmw_siemens_ms42_can.xml",
+      "label": "BMW Siemens Ms42 CAN",
+      "path": "/ecu-catalogue/bmw/bmw_siemens_ms42_can.xml",
+      "sizeBytes": 1603
+    },
+    {
+      "id": "ecumaster/ecumaster_emublack.xml",
+      "vendor": "Ecumaster",
+      "file": "ecumaster_emublack.xml",
+      "label": "Ecumaster Emublack",
+      "path": "/ecu-catalogue/ecumaster/ecumaster_emublack.xml",
+      "sizeBytes": 5094
+    },
+    {
+      "id": "ecumaster/ecumaster_gps.xml",
+      "vendor": "Ecumaster",
+      "file": "ecumaster_gps.xml",
+      "label": "Ecumaster GPS",
+      "path": "/ecu-catalogue/ecumaster/ecumaster_gps.xml",
+      "sizeBytes": 2406
+    },
+    {
+      "id": "edelbrock/edelbrock_proflo4.xml",
+      "vendor": "Edelbrock",
+      "file": "edelbrock_proflo4.xml",
+      "label": "Edelbrock Proflo4",
+      "path": "/ecu-catalogue/edelbrock/edelbrock_proflo4.xml",
+      "sizeBytes": 2334
+    },
+    {
+      "id": "emerald/emerald_k3_k6.xml",
+      "vendor": "Emerald",
+      "file": "emerald_k3_k6.xml",
+      "label": "Emerald K3 K6",
+      "path": "/ecu-catalogue/emerald/emerald_k3_k6.xml",
+      "sizeBytes": 2249
+    },
+    {
+      "id": "emtron/emtron_packet_1.xml",
+      "vendor": "Emtron",
+      "file": "emtron_packet_1.xml",
+      "label": "Emtron Packet 1",
+      "path": "/ecu-catalogue/emtron/emtron_packet_1.xml",
+      "sizeBytes": 4541
+    },
+    {
+      "id": "flagtronics/flagtronics_can_v0_4.xml",
+      "vendor": "Flagtronics",
+      "file": "flagtronics_can_v0_4.xml",
+      "label": "Flagtronics CAN V0 4",
+      "path": "/ecu-catalogue/flagtronics/flagtronics_can_v0_4.xml",
+      "sizeBytes": 3861
+    },
+    {
+      "id": "gm/gm_ls7_can.xml",
+      "vendor": "GM",
+      "file": "gm_ls7_can.xml",
+      "label": "GM LS7 CAN",
+      "path": "/ecu-catalogue/gm/gm_ls7_can.xml",
+      "sizeBytes": 1171
+    },
+    {
+      "id": "gm/gm_ls_can.xml",
+      "vendor": "GM",
+      "file": "gm_ls_can.xml",
+      "label": "GM LS CAN",
+      "path": "/ecu-catalogue/gm/gm_ls_can.xml",
+      "sizeBytes": 5841
+    },
+    {
+      "id": "gm/gm_ls_can_full.xml",
+      "vendor": "GM",
+      "file": "gm_ls_can_full.xml",
+      "label": "GM LS CAN Full",
+      "path": "/ecu-catalogue/gm/gm_ls_can_full.xml",
+      "sizeBytes": 21007
+    },
+    {
+      "id": "grayhill/grayhill_touch_encoder.xml",
+      "vendor": "Grayhill",
+      "file": "grayhill_touch_encoder.xml",
+      "label": "Grayhill Touch Encoder",
+      "path": "/ecu-catalogue/grayhill/grayhill_touch_encoder.xml",
+      "sizeBytes": 923
+    },
+    {
+      "id": "haltech/haltech_v2_can.xml",
+      "vendor": "Haltech",
+      "file": "haltech_v2_can.xml",
+      "label": "Haltech V2 CAN",
+      "path": "/ecu-catalogue/haltech/haltech_v2_can.xml",
+      "sizeBytes": 12681
+    },
+    {
+      "id": "haltech/haltech_v3_can.xml",
+      "vendor": "Haltech",
+      "file": "haltech_v3_can.xml",
+      "label": "Haltech V3 CAN",
+      "path": "/ecu-catalogue/haltech/haltech_v3_can.xml",
+      "sizeBytes": 20498
+    },
+    {
+      "id": "holley/dominator_and_terminator_x_can.xml",
+      "vendor": "Holley",
+      "file": "dominator_and_terminator_x_can.xml",
+      "label": "Dominator And Terminator X CAN",
+      "path": "/ecu-catalogue/holley/dominator_and_terminator_x_can.xml",
+      "sizeBytes": 47690
+    },
+    {
+      "id": "holley/holley_efi_can.xml",
+      "vendor": "Holley",
+      "file": "holley_efi_can.xml",
+      "label": "Holley Efi CAN",
+      "path": "/ecu-catalogue/holley/holley_efi_can.xml",
+      "sizeBytes": 9920
+    },
+    {
+      "id": "holley/sniper_v2_can.xml",
+      "vendor": "Holley",
+      "file": "sniper_v2_can.xml",
+      "label": "Sniper V2 CAN",
+      "path": "/ecu-catalogue/holley/sniper_v2_can.xml",
+      "sizeBytes": 9451
+    },
+    {
+      "id": "life_racing/life_racing_default_can.xml",
+      "vendor": "Life Racing",
+      "file": "life_racing_default_can.xml",
+      "label": "Life Racing Default CAN",
+      "path": "/ecu-catalogue/life_racing/life_racing_default_can.xml",
+      "sizeBytes": 6991
+    },
+    {
+      "id": "link/displaylink.xml",
+      "vendor": "Link",
+      "file": "displaylink.xml",
+      "label": "Displaylink",
+      "path": "/ecu-catalogue/link/displaylink.xml",
+      "sizeBytes": 4868
+    },
+    {
+      "id": "link/link_dash2pro.xml",
+      "vendor": "Link",
+      "file": "link_dash2pro.xml",
+      "label": "Link Dash2pro",
+      "path": "/ecu-catalogue/link/link_dash2pro.xml",
+      "sizeBytes": 2261
+    },
+    {
+      "id": "maxxecu/maxxecu_default_can.xml",
+      "vendor": "MaxxECU",
+      "file": "maxxecu_default_can.xml",
+      "label": "Maxxecu Default CAN",
+      "path": "/ecu-catalogue/maxxecu/maxxecu_default_can.xml",
+      "sizeBytes": 11970
+    },
+    {
+      "id": "megasquirt/megasquirt_dashmode_can.xml",
+      "vendor": "Megasquirt",
+      "file": "megasquirt_dashmode_can.xml",
+      "label": "Megasquirt Dashmode CAN",
+      "path": "/ecu-catalogue/megasquirt/megasquirt_dashmode_can.xml",
+      "sizeBytes": 2365
+    },
+    {
+      "id": "megasquirt/megasquirt_realtime_data_broadcasting_can.xml",
+      "vendor": "Megasquirt",
+      "file": "megasquirt_realtime_data_broadcasting_can.xml",
+      "label": "Megasquirt Realtime Data Broadcasting CAN",
+      "path": "/ecu-catalogue/megasquirt/megasquirt_realtime_data_broadcasting_can.xml",
+      "sizeBytes": 5847
+    },
+    {
+      "id": "obr/obr_euro_8.xml",
+      "vendor": "OBR",
+      "file": "obr_euro_8.xml",
+      "label": "OBR Euro 8",
+      "path": "/ecu-catalogue/obr/obr_euro_8.xml",
+      "sizeBytes": 8768
+    },
+    {
+      "id": "scs_delta/scs-delta.xml",
+      "vendor": "SCS-Delta",
+      "file": "scs-delta.xml",
+      "label": "Scs Delta",
+      "path": "/ecu-catalogue/scs_delta/scs-delta.xml",
+      "sizeBytes": 11271
+    },
+    {
+      "id": "syvecs/syvecs_default_can.xml",
+      "vendor": "Syvecs",
+      "file": "syvecs_default_can.xml",
+      "label": "Syvecs Default CAN",
+      "path": "/ecu-catalogue/syvecs/syvecs_default_can.xml",
+      "sizeBytes": 4310
+    },
+    {
+      "id": "toyota/toyota_corolla_e150.xml",
+      "vendor": "Toyota",
+      "file": "toyota_corolla_e150.xml",
+      "label": "Toyota Corolla E150",
+      "path": "/ecu-catalogue/toyota/toyota_corolla_e150.xml",
+      "sizeBytes": 3267
+    },
+    {
+      "id": "toyota/toyota_fj_can.xml",
+      "vendor": "Toyota",
+      "file": "toyota_fj_can.xml",
+      "label": "Toyota Fj CAN",
+      "path": "/ecu-catalogue/toyota/toyota_fj_can.xml",
+      "sizeBytes": 7815
+    },
+    {
+      "id": "tpms/tiremagic_tpms.xml",
+      "vendor": "TPMS",
+      "file": "tiremagic_tpms.xml",
+      "label": "Tiremagic TPMS",
+      "path": "/ecu-catalogue/tpms/tiremagic_tpms.xml",
+      "sizeBytes": 3252
+    },
+    {
+      "id": "turbolamik/turbolamik_tcu.xml",
+      "vendor": "Turbolamik",
+      "file": "turbolamik_tcu.xml",
+      "label": "Turbolamik TCU",
+      "path": "/ecu-catalogue/turbolamik/turbolamik_tcu.xml",
+      "sizeBytes": 3428
+    }
+  ]
+}

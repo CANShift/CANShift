@@ -5,6 +5,8 @@ import type { SignalDef } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
 import { BuiltInProfilePicker } from '../components/ecu/BuiltInProfilePicker'
+import { EcuCatalogueList } from '../components/ecu/EcuCatalogueList'
+import type { EcuCatalogueEntry } from '../components/ecu/EcuCatalogueList'
 import { XmlImportZone } from '../components/ecu/XmlImportZone'
 import { SignalPreviewTable } from '../components/ecu/SignalPreviewTable'
 import { ApplyConfirmDialog } from '../components/ecu/ApplyConfirmDialog'
@@ -13,6 +15,12 @@ import { Button } from '../components/ui/button'
 type Source =
   | { kind: 'builtin'; profileId: string }
   | { kind: 'import'; fileName: string; signals: SignalDef[]; warnings: string[] }
+  | {
+      kind: 'catalogue'
+      entry: EcuCatalogueEntry
+      signals: SignalDef[]
+      warnings: string[]
+    }
 
 export default function EcuRoute() {
   const activeProfileKey = useSignalStore((s) => s.selectedProfileKey)
@@ -28,22 +36,39 @@ export default function EcuRoute() {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const previewSignals = useMemo<SignalDef[]>(() => {
-    if (source.kind === 'builtin') {
-      return ECU_PROFILES.find((p) => p.id === source.profileId)?.signals ?? []
+    switch (source.kind) {
+      case 'builtin':
+        return ECU_PROFILES.find((p) => p.id === source.profileId)?.signals ?? []
+      case 'import':
+      case 'catalogue':
+        return source.signals
     }
-    return source.signals
   }, [source])
 
-  const previewWarnings = source.kind === 'import' ? source.warnings : []
+  const previewWarnings = source.kind === 'import' || source.kind === 'catalogue' ? source.warnings : []
   const targetName = useMemo(() => {
-    if (source.kind === 'builtin') {
-      return ECU_PROFILES.find((p) => p.id === source.profileId)?.name ?? source.profileId
+    switch (source.kind) {
+      case 'builtin':
+        return ECU_PROFILES.find((p) => p.id === source.profileId)?.name ?? source.profileId
+      case 'import':
+        return source.fileName
+      case 'catalogue':
+        return `${source.entry.vendor} · ${source.entry.label}`
     }
-    return source.fileName
   }, [source])
 
-  const selectedKey =
-    source.kind === 'builtin' ? `builtin:${source.profileId}` : `import:${source.fileName}`
+  const selectedKey = (() => {
+    switch (source.kind) {
+      case 'builtin':
+        return `builtin:${source.profileId}`
+      case 'import':
+        return `import:${source.fileName}`
+      case 'catalogue':
+        return `catalogue:${source.entry.id}`
+    }
+  })()
+
+  const selectedCatalogueId = source.kind === 'catalogue' ? source.entry.id : null
 
   const canApply = previewSignals.length > 0
 
@@ -75,6 +100,28 @@ export default function EcuRoute() {
     setSource({ kind: 'builtin', profileId: ECU_PROFILES[0]?.id ?? '' })
   }
 
+  const onCatalogueSelect = async (entry: EcuCatalogueEntry) => {
+    setImportError(null)
+    try {
+      const res = await fetch(entry.path)
+      if (!res.ok) throw new Error(`HTTP ${String(res.status)}`)
+      const xml = await res.text()
+      const result = parseRealDashXML(xml)
+      if (result.signals.length === 0) {
+        const reason = result.warnings[0] ?? 'no signals found'
+        setImportError(`Catalogue load failed — ${reason}`)
+        log('error', `Catalogue entry "${entry.label}" failed: ${reason}`)
+        return
+      }
+      setSource({ kind: 'catalogue', entry, signals: result.signals, warnings: result.warnings })
+      log('info', `Catalogue "${entry.label}" parsed: ${String(result.signals.length)} signals`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'unknown_error'
+      setImportError(`Catalogue load failed — ${message}`)
+      log('error', `Catalogue entry "${entry.label}" fetch failed: ${message}`)
+    }
+  }
+
   const onConfirmApply = () => {
     setConfirmOpen(false)
     applyProfile(selectedKey, previewSignals)
@@ -87,7 +134,8 @@ export default function EcuRoute() {
         <div>
           <div style={titleStyle}>ECU Profile</div>
           <div style={subtitleStyle}>
-            Replace the active signal map with a built-in profile or an XML import.
+            Replace the active signal map with a built-in profile, a bundled catalogue entry, or
+            your own XML file.
           </div>
         </div>
         <Button
@@ -111,6 +159,13 @@ export default function EcuRoute() {
             activeProfileKey={activeProfileKey}
             onSelect={onPickProfile}
           />
+          <SectionHeader title="Catalogue" />
+          <div style={catalogueWrapperStyle}>
+            <EcuCatalogueList
+              selectedId={selectedCatalogueId}
+              onSelect={onCatalogueSelect}
+            />
+          </div>
           <SectionHeader title="XML import" />
           <XmlImportZone
             loadedFileName={source.kind === 'import' ? source.fileName : null}
@@ -206,6 +261,13 @@ const sectionHeaderStyle: CSSProperties = {
   letterSpacing: '0.1em',
   textTransform: 'uppercase',
   color: 'hsl(var(--text-muted))',
+}
+
+const catalogueWrapperStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: 320,
+  minHeight: 0,
 }
 
 const importErrorStyle: CSSProperties = {
