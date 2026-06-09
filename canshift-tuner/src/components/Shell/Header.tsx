@@ -143,7 +143,6 @@ const firmwareStyle: CSSProperties = {
 function BurnButton() {
   const { canBurn, isBurning, burn } = useBurnDashboard()
   const disabled = !canBurn
-  const label = isBurning ? 'Burning…' : 'Burn'
   const title = isBurning
     ? 'Burning dashboard to the device…'
     : canBurn
@@ -159,8 +158,28 @@ function BurnButton() {
       title={title}
       style={disabled ? burnButtonStyleDisabled : burnButtonStyleEnabled}
     >
-      {label}
+      {isBurning && <BurnSpinner />}
+      {isBurning ? 'Burning…' : 'Burn'}
     </button>
+  )
+}
+
+function BurnSpinner() {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block',
+        width: 10,
+        height: 10,
+        border: '2px solid hsl(var(--primary-foreground))',
+        borderTopColor: 'transparent',
+        borderRadius: '50%',
+        animation: 'canshift-tuner-spin 700ms linear infinite',
+        marginRight: 6,
+        verticalAlign: '-1px',
+      }}
+    />
   )
 }
 
