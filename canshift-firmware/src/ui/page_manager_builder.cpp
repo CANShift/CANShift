@@ -498,6 +498,12 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
             lv_obj_set_style_outline_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
             lv_obj_set_style_outline_width(btn, 0, LV_PART_MAIN | st);
             lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
+            // text_color is inheritable — pinning it on the PARENT button
+            // across every state means the label inherits a stable white
+            // regardless of which state the LVGL default theme thinks the
+            // button is currently in. Without this the theme overrides the
+            // label's text colour to its own (dark grey / black) on press.
+            lv_obj_set_style_text_color(btn, lv_color_hex(0xFFFFFFu), LV_PART_MAIN | st);
         }
 
         // Encode the corner orientation as the event user_data so a single
@@ -548,14 +554,22 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
                                       (i == static_cast<uint8_t>(CruiseCorner::kTR));
                 lv_obj_set_style_text_font(
                     label, isSymbol ? FontManager::primary(32) : FontManager::secondary(24), 0);
-                // Pin the label colour to white across every state so the
-                // LVGL default theme can't grey-out / black-out the glyph on
-                // CHECKED transitions (kills the OFF/ON label flip to black).
+                // Belt-and-suspenders: across every state lv_btn's theme
+                // might reach for, pin text colour to white AND set bg/
+                // border opacity to transparent on the LABEL itself. Some
+                // themes draw a tinted rect under the label on press —
+                // showed up as a red rectangle behind the glyph on the left
+                // column buttons.
                 for (lv_state_t st : {lv_state_t(LV_STATE_DEFAULT), lv_state_t(LV_STATE_PRESSED),
                                       lv_state_t(LV_STATE_CHECKED), lv_state_t(LV_STATE_FOCUSED),
+                                      lv_state_t(LV_STATE_FOCUS_KEY), lv_state_t(LV_STATE_EDITED),
+                                      lv_state_t(LV_STATE_HOVERED),
                                       lv_state_t(LV_STATE_DISABLED)}) {
                     lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFFu),
                                                 LV_PART_MAIN | st);
+                    lv_obj_set_style_bg_opa(label, LV_OPA_TRANSP, LV_PART_MAIN | st);
+                    lv_obj_set_style_border_opa(label, LV_OPA_TRANSP, LV_PART_MAIN | st);
+                    lv_obj_set_style_outline_opa(label, LV_OPA_TRANSP, LV_PART_MAIN | st);
                 }
                 // Alignment LAST so the post-wipe pos/align styles stick.
                 lv_obj_align(label, LV_ALIGN_CENTER, shiftX, shiftY);
