@@ -12,6 +12,9 @@ import Header from './components/Shell/Header'
 import Sidebar from './components/Shell/Sidebar'
 import PlaceholderRoute from './components/Shell/PlaceholderRoute'
 import WelcomeRoute from './routes/WelcomeRoute'
+import AboutRoute from './routes/AboutRoute'
+import LiveDataRoute from './routes/LiveDataRoute'
+import LogsRoute from './routes/LogsRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
 import { useDeviceStore } from './stores/device.store'
@@ -187,8 +190,8 @@ export default function App() {
               <Route path="/can" element={<PlaceholderRoute label="CAN Bus" icon="⇄" />} />
               <Route path="/obd2" element={<PlaceholderRoute label="OBD-II" icon="⚙" />} />
               <Route path="/themes" element={<PlaceholderRoute label="Themes" icon="◐" />} />
-              <Route path="/live" element={<PlaceholderRoute label="Live Data" icon="▤" />} />
-              <Route path="/logs" element={<PlaceholderRoute label="Logs" icon="☰" />} />
+              <Route path="/live" element={<LiveDataRoute />} />
+              <Route path="/logs" element={<LogsRoute />} />
               <Route path="/cli" element={<PlaceholderRoute label="CLI" icon="›_" />} />
               <Route
                 path="/firmware"
@@ -200,7 +203,7 @@ export default function App() {
                   />
                 }
               />
-              <Route path="/about" element={<PlaceholderRoute label="About" icon="ⓘ" />} />
+              <Route path="/about" element={<AboutRoute />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </DisconnectedGuard>
