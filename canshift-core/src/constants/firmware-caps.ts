@@ -62,7 +62,7 @@ export const CAN_29BIT_MAX = 0x1fffffff
 // buffers. Over-limit values would truncate (or, worse, overflow) on-device,
 // so the schema rejects them at the boundary (#1170).
 export const STRING_CAPS = {
-  SIGNAL_NAME: 31,
+  SIGNAL_NAME: 63,
   SIGNAL_UNIT: 15,
   WIDGET_LABEL: 64,
   WIDGET_PREFIX_SUFFIX: 32,

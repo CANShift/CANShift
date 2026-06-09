@@ -157,7 +157,7 @@ export const SignalDefSchema = z
     name: z.string().max(STRING_CAPS.SIGNAL_NAME),
     canFrameId: z
       .string()
-      .regex(CAN_FRAME_ID_REGEX, 'canFrameId must be hex like 0x123 (1-3 hex chars)'),
+      .regex(CAN_FRAME_ID_REGEX, 'canFrameId must be hex like 0x123 or 0x1E005000 (1-8 hex chars)'),
     startByte: z
       .number()
       .int()
