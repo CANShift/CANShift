@@ -54,6 +54,17 @@ export type FirmwareCompat =
   | { kind: 'compatible'; protocol: number }
   | { kind: 'mismatch'; expected: number; got: number; version: string }
 
+export interface HeapStatsEntry {
+  tsMs: number
+  freeInternal: number
+  largestInternal: number
+  freePsram: number | null
+  largestPsram: number | null
+  receivedAt: number
+}
+
+export const HEAP_STATS_RING_CAP = 360
+
 interface DeviceState {
   status: ConnectionStatus
   portPath: string | null
@@ -81,6 +92,8 @@ interface DeviceState {
 
   firmwareCompat: FirmwareCompat
 
+  heapStats: HeapStatsEntry[]
+
   /**
    * Bump-counter consumed by useFirmwareCheck to force a re-probe on demand
    * (e.g. the user clicked "Check now" in UpdateRoute). Storing the trigger
@@ -106,6 +119,8 @@ interface DeviceState {
   setFirmwareVersion: (version: string | null) => void
   setFirmwareCheck: (check: FirmwareCheck) => void
   setFirmwareCompat: (compat: FirmwareCompat) => void
+  pushHeapStats: (entry: Omit<HeapStatsEntry, 'receivedAt'>) => void
+  clearHeapStats: () => void
   /** Trigger a re-probe — useFirmwareCheck listens on `firmwareCheckTick`. */
   requestFirmwareRecheck: () => void
   setIsDayMode: (isDay: boolean | null) => void
@@ -178,6 +193,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   firmwareCheck: { kind: 'idle' },
   firmwareCheckTick: 0,
   firmwareCompat: { kind: 'unknown' },
+  heapStats: [],
   isDayMode: null,
   lastPushedConfig: null,
   burnPhase: 'idle',
@@ -226,6 +242,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
       firmwareCompat: { kind: 'unknown' },
+      heapStats: [],
       // Clear `lastPushedConfig` too — it represents the config running on the
       // device we were connected to. Keeping it after disconnect makes the
       // diff dialog show "Modified" against the *previous* device on the next
@@ -267,6 +284,20 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setFirmwareCompat: (compat) => {
     set({ firmwareCompat: compat })
+  },
+
+  pushHeapStats: (entry) => {
+    set((s) => {
+      const next = s.heapStats.concat({ ...entry, receivedAt: Date.now() })
+      if (next.length > HEAP_STATS_RING_CAP) {
+        next.splice(0, next.length - HEAP_STATS_RING_CAP)
+      }
+      return { heapStats: next }
+    })
+  },
+
+  clearHeapStats: () => {
+    set({ heapStats: [] })
   },
 
   requestFirmwareRecheck: () => {

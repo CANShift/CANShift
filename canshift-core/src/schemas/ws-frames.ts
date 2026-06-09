@@ -74,3 +74,25 @@ export const TeleFrameSchema = z
   .passthrough()
 
 export type TeleFrame = z.infer<typeof TeleFrameSchema>
+
+/**
+ * Inbound heap-stats frame from the firmware (issue #1369).
+ *   `{"heap_stats":1, "ts":<ms>, "free_int":<bytes>, "largest_int":<bytes>,
+ *     "free_psram":<bytes|null>, "largest_psram":<bytes|null>}`
+ * `ts` is `millis()` since firmware boot; the tuner converts to wall-clock
+ * via the connection start time. PSRAM fields are `null` on WROOM (no
+ * PSRAM); WROVER builds report both. Sample cadence is 30 s — see
+ * `EMIT_INTERVAL_MS` in `canshift-firmware/src/diag/heap_stats.cpp`.
+ */
+export const HeapStatsFrameSchema = z
+  .object({
+    heap_stats: FiniteNumberSchema,
+    ts: z.number().int().nonnegative(),
+    free_int: z.number().int().nonnegative(),
+    largest_int: z.number().int().nonnegative(),
+    free_psram: z.number().int().nonnegative().nullable(),
+    largest_psram: z.number().int().nonnegative().nullable(),
+  })
+  .passthrough()
+
+export type HeapStatsFrame = z.infer<typeof HeapStatsFrameSchema>

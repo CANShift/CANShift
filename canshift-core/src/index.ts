@@ -132,8 +132,13 @@ export {
 // Unsolicited WS frame schemas — defense-in-depth validation for the studio-web
 // transport (issue #1288, WS-5). Lets the dispatcher drop malformed frames with
 // a single warning instead of silently corrupting downstream stores.
-export type { LogFrame, CanFrame, TeleFrame } from './schemas/ws-frames.js'
-export { LogFrameSchema, CanFrameSchema, TeleFrameSchema } from './schemas/ws-frames.js'
+export type { LogFrame, CanFrame, TeleFrame, HeapStatsFrame } from './schemas/ws-frames.js'
+export {
+  LogFrameSchema,
+  CanFrameSchema,
+  TeleFrameSchema,
+  HeapStatsFrameSchema,
+} from './schemas/ws-frames.js'
 
 // Sensor color-ramp defaults (issue #430)
 export {
