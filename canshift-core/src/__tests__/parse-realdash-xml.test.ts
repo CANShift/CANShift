@@ -160,6 +160,54 @@ describe('conversion parsing', () => {
     expect(s?.offset).toBe(0)
   })
 
+  it('V alone → identity', () => {
+    const s = singleSignal('V')
+    expect(s?.scale).toBe(1)
+    expect(s?.offset).toBe(0)
+  })
+
+  it('1-V → scale -1, offset 1', () => {
+    const s = singleSignal('1-V')
+    expect(s?.scale).toBe(-1)
+    expect(s?.offset).toBe(1)
+  })
+
+  it('100-V → scale -1, offset 100', () => {
+    const s = singleSignal('100-V')
+    expect(s?.scale).toBe(-1)
+    expect(s?.offset).toBe(100)
+  })
+
+  it('V*0.00390625*0.06894757 → chained mul', () => {
+    const s = singleSignal('V*0.00390625*0.06894757')
+    expect(s?.scale).toBeCloseTo(0.00390625 * 0.06894757)
+    expect(s?.offset).toBe(0)
+  })
+
+  it('V/255*100 → scale 100/255', () => {
+    const s = singleSignal('V/255*100')
+    expect(s?.scale).toBeCloseTo(100 / 255)
+    expect(s?.offset).toBe(0)
+  })
+
+  it('(V/255)*100 → scale 100/255 (parens stripped)', () => {
+    const s = singleSignal('(V/255)*100')
+    expect(s?.scale).toBeCloseTo(100 / 255)
+    expect(s?.offset).toBe(0)
+  })
+
+  it('(V*0.1)/2 → scale 0.05', () => {
+    const s = singleSignal('(V*0.1)/2')
+    expect(s?.scale).toBeCloseTo(0.05)
+    expect(s?.offset).toBe(0)
+  })
+
+  it('(V*0.1) → scale 0.1 (outer parens stripped)', () => {
+    const s = singleSignal('(V*0.1)')
+    expect(s?.scale).toBeCloseTo(0.1)
+    expect(s?.offset).toBe(0)
+  })
+
   it('V>>0 → bitMask 0x01', () => {
     const s = singleSignal('V>>0')
     expect(s?.bitMask).toBe('0x01')
