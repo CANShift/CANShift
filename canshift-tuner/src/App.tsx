@@ -20,6 +20,7 @@ import CanBusRoute from './routes/CanBusRoute'
 import EcuRoute from './routes/EcuRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
 import LogsRoute from './routes/LogsRoute'
+import ThemesRoute from './routes/ThemesRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
 import { useDeviceStore } from './stores/device.store'
@@ -135,6 +136,7 @@ function useVersionHandshake(): void {
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const setFirmwareVersion = useDeviceStore((s) => s.setFirmwareVersion)
   const setFirmwareCompat = useDeviceStore((s) => s.setFirmwareCompat)
+  const setIsDayMode = useDeviceStore((s) => s.setIsDayMode)
   const log = useLogStore((s) => s.push)
 
   useEffect(() => {
@@ -147,8 +149,9 @@ function useVersionHandshake(): void {
         setFirmwareCompat({ kind: 'unknown' })
         return
       }
-      const { version, protocol } = result.identity
+      const { version, protocol, isDay } = result.identity
       setFirmwareVersion(version)
+      setIsDayMode(isDay)
       const reportedMajor = Number(version.split('.')[0] ?? 0)
       if (reportedMajor !== __EXPECTED_FIRMWARE_MAJOR__) {
         log(
@@ -169,7 +172,15 @@ function useVersionHandshake(): void {
     return () => {
       cancelled = true
     }
-  }, [connected, simulationMode, transport, setFirmwareVersion, setFirmwareCompat, log])
+  }, [
+    connected,
+    simulationMode,
+    transport,
+    setFirmwareVersion,
+    setFirmwareCompat,
+    setIsDayMode,
+    log,
+  ])
 }
 
 function useHeartbeat(): void {
@@ -322,7 +333,7 @@ export default function App() {
               <Route path="/can" element={<CanBusRoute />} />
               <Route path="/ecu" element={<EcuRoute />} />
               <Route path="/obd2" element={<PlaceholderRoute label="OBD-II" icon="⚙" />} />
-              <Route path="/themes" element={<PlaceholderRoute label="Themes" icon="◐" />} />
+              <Route path="/themes" element={<ThemesRoute />} />
               <Route path="/live" element={<LiveDataRoute />} />
               <Route path="/logs" element={<LogsRoute />} />
               <Route path="/cli" element={<PlaceholderRoute label="CLI" icon="›_" />} />
