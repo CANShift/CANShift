@@ -12,6 +12,7 @@ import Header from './components/Shell/Header'
 import Sidebar from './components/Shell/Sidebar'
 import PlaceholderRoute from './components/Shell/PlaceholderRoute'
 import { VersionMismatchBanner } from './components/Shell/VersionMismatchBanner'
+import { HeapLowBanner } from './components/Shell/HeapLowBanner'
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
@@ -22,7 +23,7 @@ import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
 import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
-import { deviceIpc, usbService } from './transport'
+import { deviceEvents, deviceIpc, usbService } from './transport'
 import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
@@ -165,6 +166,23 @@ function useVersionHandshake(): void {
   }, [connected, simulationMode, transport, setFirmwareVersion, setFirmwareCompat, log])
 }
 
+function useHeapStatsSubscription(): void {
+  const connected = useDeviceStore((s) => s.connected)
+  const transport = useDeviceStore((s) => s.transport)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const pushHeapStats = useDeviceStore((s) => s.pushHeapStats)
+  const clearHeapStats = useDeviceStore((s) => s.clearHeapStats)
+
+  useEffect(() => {
+    if (!connected || simulationMode || transport !== 'usb') return
+    clearHeapStats()
+    const unsubscribe = deviceEvents.onHeapStats((entry) => {
+      pushHeapStats(entry)
+    })
+    return unsubscribe
+  }, [connected, simulationMode, transport, pushHeapStats, clearHeapStats])
+}
+
 /**
  * Cmd/Ctrl+S → Burn. Global accelerator so it fires regardless of which
  * section is open. Delegates to the same `useBurnDashboard` hook the Header's
@@ -210,6 +228,7 @@ export default function App() {
   useAutoReconnect()
   useSimulationBootstrap()
   useVersionHandshake()
+  useHeapStatsSubscription()
   useDeviceConfigBootstrap()
   useBurnShortcut()
 
@@ -217,6 +236,7 @@ export default function App() {
     <div style={shellStyle}>
       <Header />
       <VersionMismatchBanner />
+      <HeapLowBanner />
       <div style={bodyStyle}>
         <Sidebar />
         <main style={mainStyle}>

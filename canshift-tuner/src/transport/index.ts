@@ -15,6 +15,7 @@ import {
   CanFrameSchema,
   DeviceConfigSchema,
   DeviceConfigWireSchema,
+  HeapStatsFrameSchema,
   InputBindingsConfigSchema,
   InputBindingsConfigWireSchema,
   LogFrameSchema,
@@ -344,7 +345,35 @@ export const deviceEvents = {
     })
   },
 
-  /** CAN health snapshot. Shape: `{ can_stat: 1, fps, errors }`. */
+  onHeapStats: (
+    handler: Handler<{
+      tsMs: number
+      freeInternal: number
+      largestInternal: number
+      freePsram: number | null
+      largestPsram: number | null
+    }>,
+  ): Unsubscribe => {
+    return getSerialClient().subscribe('heap_stats', (frame) => {
+      const parsed = HeapStatsFrameSchema.safeParse(frame)
+      if (!parsed.success) {
+        warnFrameDrop(
+          'heap_stats',
+          parsed.error.issues[0]?.code ?? 'unknown',
+          JSON.stringify(frame),
+        )
+        return
+      }
+      handler({
+        tsMs: parsed.data.ts,
+        freeInternal: parsed.data.free_int,
+        largestInternal: parsed.data.largest_int,
+        freePsram: parsed.data.free_psram,
+        largestPsram: parsed.data.largest_psram,
+      })
+    })
+  },
+
   onCanHealth: (handler: Handler<{ fps: number; errors: number }>): Unsubscribe => {
     return getSerialClient().subscribe('can_stat', (frame) => {
       if (!isRecord(frame)) return

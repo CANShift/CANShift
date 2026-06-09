@@ -7,6 +7,7 @@
 import type { CSSProperties } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
+import { HeapStatsPanel } from '../components/about/HeapStatsPanel'
 
 const REPO_URL = 'https://github.com/tburkhalterr/CANShift'
 const DOCS_URL = 'https://github.com/tburkhalterr/CANShift/tree/main/canshift-tuner/docs'
@@ -21,6 +22,7 @@ export default function AboutRoute() {
   const portPath = useDeviceStore((s) => s.portPath)
   const wifiHost = useDeviceStore((s) => s.wifiHost)
   const status = useConnectionStore((s) => s.status)
+  const heapStats = useDeviceStore((s) => s.heapStats)
 
   const linkLabel = connected
     ? transport === 'wifi'
@@ -53,10 +55,7 @@ export default function AboutRoute() {
         </Section>
 
         <Section title="Diagnostics">
-          <Row label="Heap free" value="—" mono />
-          <Row label="Largest free block" value="—" mono />
-          <Row label="Fragmentation" value="—" mono />
-          <Hint>Populated once heap telemetry (#1369) lands on the firmware.</Hint>
+          <HeapStatsPanel history={heapStats} />
         </Section>
 
         <Section title="Resources">
