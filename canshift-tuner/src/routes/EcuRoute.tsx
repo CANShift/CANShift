@@ -5,7 +5,7 @@ import type { SignalDef } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
 import { BuiltInProfilePicker } from '../components/ecu/BuiltInProfilePicker'
-import { RealDashImportZone } from '../components/ecu/RealDashImportZone'
+import { XmlImportZone } from '../components/ecu/XmlImportZone'
 import { SignalPreviewTable } from '../components/ecu/SignalPreviewTable'
 import { ApplyConfirmDialog } from '../components/ecu/ApplyConfirmDialog'
 import { Button } from '../components/ui/button'
@@ -58,7 +58,7 @@ export default function EcuRoute() {
     if (result.signals.length === 0) {
       const reason = result.warnings[0] ?? 'no signals found'
       setImportError(`Import failed — ${reason}`)
-      log('error', `RealDash import "${fileName}" failed: ${reason}`)
+      log('error', `XML import "${fileName}" failed: ${reason}`)
       return
     }
     setSource({
@@ -67,7 +67,7 @@ export default function EcuRoute() {
       signals: result.signals,
       warnings: result.warnings,
     })
-    log('info', `RealDash import "${fileName}" parsed: ${String(result.signals.length)} signals`)
+    log('info', `XML import "${fileName}" parsed: ${String(result.signals.length)} signals`)
   }
 
   const onImportClear = () => {
@@ -87,7 +87,7 @@ export default function EcuRoute() {
         <div>
           <div style={titleStyle}>ECU Profile</div>
           <div style={subtitleStyle}>
-            Replace the active signal map with a built-in profile or a RealDash XML import.
+            Replace the active signal map with a built-in profile or an XML import.
           </div>
         </div>
         <Button
@@ -111,8 +111,8 @@ export default function EcuRoute() {
             activeProfileKey={activeProfileKey}
             onSelect={onPickProfile}
           />
-          <SectionHeader title="RealDash XML" />
-          <RealDashImportZone
+          <SectionHeader title="XML import" />
+          <XmlImportZone
             loadedFileName={source.kind === 'import' ? source.fileName : null}
             onFileLoad={onImportLoad}
             onError={setImportError}
