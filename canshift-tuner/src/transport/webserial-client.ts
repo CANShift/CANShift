@@ -87,12 +87,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+/**
+ * Try to parse `line` as JSON.
+ *
+ * The firmware multiplexes several streams onto the same UART:
+ *   - structured logger frames: `{"log":1,...}` / `{"tele":1,...}` / etc.
+ *   - Arduino-framework `log_e()` lines: `[   485][E][Preferences.cpp:50] …`
+ *   - LVGL `[Warn]` / `[Error]` lines
+ *   - ROM bootloader + ESP-IDF startup banner (`ets Jun  8 2016`, `rst:0xc`,
+ *     `configsip:`, `clk_drv:`, `mode:DIO`, `load:`, `entry`, `E (476) psram:`,
+ *     etc.) on every reset
+ *
+ * Only the first family is JSON. The rest is free-form text we'll surface to
+ * the (future) CLI panel as-is. Warn ONLY when a line looks like it WAS trying
+ * to be JSON (starts with `{`/`[` after trimming) but failed — that's a real
+ * protocol error worth investigating. Free-form text is dropped silently to
+ * avoid flooding the browser console with hundreds of warnings per boot.
+ */
 function safeJsonParse(line: string): unknown {
+  const trimmed = line.trim()
+  if (trimmed.length === 0) return null
+  // Every frame the firmware emits via the Logger is a JSON OBJECT ({"log":1,
+  // ...}, {"tele":1,...}, {"status":"ok"}, …) — never a top-level array.
+  // Arduino-framework `log_e()` lines `[   485][E][Preferences.cpp:50] …` and
+  // LVGL `[Warn] …` lines also start with `[` but are not JSON, so restricting
+  // to `{` lets us silently drop the free-form text while still warning on
+  // genuine malformed object frames.
+  const looksLikeFrame = trimmed.startsWith('{')
+  if (!looksLikeFrame) return null
   try {
-    return JSON.parse(line) as unknown
+    return JSON.parse(trimmed) as unknown
   } catch (err) {
     const reason = err instanceof Error ? err.message : 'unknown'
-    const preview = line.length > 80 ? `${line.slice(0, 80)}…` : line
+    const preview = trimmed.length > 80 ? `${trimmed.slice(0, 80)}…` : trimmed
     console.warn(`[serial] dropped malformed frame (${reason}): ${preview}`)
     return null
   }
