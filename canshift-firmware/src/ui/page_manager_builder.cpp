@@ -25,6 +25,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <lvgl.h>
+#include <math.h>
 #include <string.h>
 
 namespace PageManagerInternal {
@@ -57,31 +58,47 @@ constexpr int16_t CRUISE_GAP_X = 12;
 constexpr int16_t CRUISE_GAP_Y = 10;
 constexpr int16_t CRUISE_OUTER_PAD = 8;
 
-// Centred SET-SPEED display geometry — mirrors CruiseControlPreview.tsx.
-// The display sits on top of the four buttons' inner corners with an opaque
-// page-coloured background, so visually the buttons read as L-shapes cropped
-// by this rect. True polygon L-shapes (rounded notch + outer corners) are
-// blocked on LVGL 8.4's lv_draw_polygon being convex-only — tracked as a
-// follow-up to #1375.
+// L-shape geometry — mirrors CruiseControlPreview.tsx exactly. Each button
+// renders as a true L polygon via a LV_EVENT_DRAW_MAIN_END callback: two
+// convex rectangles for the fill (the L's arms) + a polyline outline that
+// traces the 6 rounded corners. Allows full visual fidelity with the studio
+// preview — the rectangle-overlay approach couldn't round the two convex
+// notch corners.
 constexpr int16_t CRUISE_CENTER_W = 100;
 constexpr int16_t CRUISE_CENTER_H = 76;
-constexpr int16_t CRUISE_BUTTON_RADIUS = 8; // matches CruiseControlPreview CORNER_R
-// The page-coloured centre rect's rounded corners "carve" the inner corner
-// of each surrounding button — from the button's perspective the rounded
-// edge of the centre rect reads as a concave notch radius. Matches Studio's
-// INNER_R so both sides agree on the curvature.
-constexpr int16_t CRUISE_CENTER_RADIUS = 5;
-constexpr int16_t CRUISE_BUTTON_BORDER_W = 2; // matches CruiseControlPreview STROKE_W
+constexpr int16_t CRUISE_NOTCH_MARGIN = 6;
+constexpr int16_t CRUISE_NOTCH_W = CRUISE_CENTER_W / 2 + CRUISE_NOTCH_MARGIN; // 56
+constexpr int16_t CRUISE_NOTCH_H = CRUISE_CENTER_H / 2 + CRUISE_NOTCH_MARGIN; // 44
+constexpr int16_t CRUISE_BUTTON_RADIUS = 8;   // CruiseControlPreview CORNER_R
+constexpr int16_t CRUISE_INNER_R = 5;         // CruiseControlPreview INNER_R
+constexpr int16_t CRUISE_BUTTON_BORDER_W = 2; // CruiseControlPreview STROKE_W
+constexpr uint8_t CRUISE_BEZIER_SEGS = 4;     // segments per rounded corner
 
-// Per-button surface + stroke colours — hardcoded for now. Surface is a
-// subtle dark grey that reads against the typical black page background;
-// stroke is the same accent used by burn_overlay for visual continuity.
-// Future #451 work can wire these to the page palette.
+// 12 straight endpoints + 6 corners × 4 segs = 36 polygon vertices max.
+constexpr uint8_t CRUISE_L_MAX_PTS = 40;
+
+// Per-button surface + stroke colours. Hardcoded — no firmware-side
+// PagePalette wiring yet. Surface reads against typical black page bg;
+// stroke matches the burn_overlay accent for visual continuity.
 constexpr uint32_t CRUISE_BUTTON_FILL_RGB = 0x1A1A1Au;
+// Pressed-state surface — slightly brighter so the user sees feedback on tap.
+constexpr uint32_t CRUISE_BUTTON_FILL_PRESSED_RGB = 0x3A3A3Au;
 constexpr uint32_t CRUISE_BUTTON_STROKE_RGB = 0xE08030u;
 
 constexpr uint32_t CRUISE_CENTER_DIM_RGB = 0x888888u;
 constexpr uint32_t CRUISE_CENTER_VALUE_RGB = 0xFFFFFFu;
+
+// Prefixed values dodge collisions with xtensa specreg.h macros (TR, BR).
+enum class CruiseCorner : uint8_t { kTL = 0, kTR = 1, kBL = 2, kBR = 3 };
+
+// Cruise-active state — toggled visually by the OFF/ON button and forced ON
+// when SET is pressed. Tracked here rather than in a real state machine
+// because dispatchCruiseControl() is still a no-op (#451 pending). Pointers
+// to the live label widgets are cached on each page build so the toggle
+// callbacks can update them without walking the screen tree.
+static bool s_cruiseActive = false;
+static lv_obj_t *s_cruiseToggleBtn = nullptr;
+static lv_obj_t *s_cruiseToggleLabel = nullptr;
 
 struct CruiseButtonSpec {
     const char *id;
@@ -101,6 +118,270 @@ constexpr CruiseButtonSpec CRUISE_BUTTONS[4] = {
     {"cruise_set", "SET", CfgCruiseOp::SET},
     {"cruise_off", "OFF", CfgCruiseOp::OFF},
 };
+
+// ---------------------------------------------------------------------------
+// L-shape polygon helpers.
+//
+// The 6-corner L outline is built as a polyline whose corners are
+// quadratic-Bezier approximations of arcs. The same path drives both the
+// outline (lv_draw_line between adjacent points) and the fill (two
+// overlapping axis-aligned rectangles since a concave L isn't a valid
+// lv_draw_polygon input — LVGL 8.4's polygon routine is convex-only).
+// ---------------------------------------------------------------------------
+
+inline lv_point_t cruiseBezierAt(int16_t x0, int16_t y0, int16_t xc, int16_t yc, int16_t x2,
+                                 int16_t y2, float t) {
+    const float omt = 1.0f - t;
+    return {static_cast<lv_coord_t>(lroundf(omt * omt * x0 + 2.0f * omt * t * xc + t * t * x2)),
+            static_cast<lv_coord_t>(lroundf(omt * omt * y0 + 2.0f * omt * t * yc + t * t * y2))};
+}
+
+inline void cruiseEmitBezier(lv_point_t *out, uint8_t &n, int16_t x0, int16_t y0, int16_t xc,
+                             int16_t yc, int16_t x2, int16_t y2) {
+    // Skip i=0 — the previous polyline endpoint already sits there.
+    for (uint8_t i = 1; i <= CRUISE_BEZIER_SEGS; ++i) {
+        out[n++] = cruiseBezierAt(x0, y0, xc, yc, x2, y2, static_cast<float>(i) / CRUISE_BEZIER_SEGS);
+    }
+}
+
+// Build the L outline (clockwise) for one button. Coordinates are absolute
+// screen pixels. Returns the vertex count.
+uint8_t buildCruiseLPath(lv_point_t *pts, const lv_area_t &area, CruiseCorner corner) {
+    const int16_t x = area.x1;
+    const int16_t y = area.y1;
+    const int16_t w = static_cast<int16_t>(area.x2 - area.x1 + 1);
+    const int16_t h = static_cast<int16_t>(area.y2 - area.y1 + 1);
+    const int16_t r = CRUISE_BUTTON_RADIUS;
+    const int16_t ir = CRUISE_INNER_R;
+    const int16_t nW = CRUISE_NOTCH_W;
+    const int16_t nH = CRUISE_NOTCH_H;
+    uint8_t n = 0;
+
+    switch (corner) {
+        case CruiseCorner::kTL:
+            // Notch at bottom-right.
+            pts[n++] = {static_cast<lv_coord_t>(x + r), y};
+            pts[n++] = {static_cast<lv_coord_t>(x + w - r), y};
+            cruiseEmitBezier(pts, n, x + w - r, y, x + w, y, x + w, y + r);
+            pts[n++] = {static_cast<lv_coord_t>(x + w), static_cast<lv_coord_t>(y + h - nH - ir)};
+            cruiseEmitBezier(pts, n, x + w, y + h - nH - ir, x + w, y + h - nH, x + w - ir,
+                             y + h - nH);
+            pts[n++] = {static_cast<lv_coord_t>(x + w - nW + ir),
+                        static_cast<lv_coord_t>(y + h - nH)};
+            cruiseEmitBezier(pts, n, x + w - nW + ir, y + h - nH, x + w - nW, y + h - nH,
+                             x + w - nW, y + h - nH + ir);
+            pts[n++] = {static_cast<lv_coord_t>(x + w - nW), static_cast<lv_coord_t>(y + h - ir)};
+            cruiseEmitBezier(pts, n, x + w - nW, y + h - ir, x + w - nW, y + h, x + w - nW - ir,
+                             y + h);
+            pts[n++] = {static_cast<lv_coord_t>(x + r), static_cast<lv_coord_t>(y + h)};
+            cruiseEmitBezier(pts, n, x + r, y + h, x, y + h, x, y + h - r);
+            pts[n++] = {x, static_cast<lv_coord_t>(y + r)};
+            cruiseEmitBezier(pts, n, x, y + r, x, y, x + r, y);
+            break;
+        case CruiseCorner::kTR:
+            // Notch at bottom-left.
+            pts[n++] = {static_cast<lv_coord_t>(x + r), y};
+            pts[n++] = {static_cast<lv_coord_t>(x + w - r), y};
+            cruiseEmitBezier(pts, n, x + w - r, y, x + w, y, x + w, y + r);
+            pts[n++] = {static_cast<lv_coord_t>(x + w), static_cast<lv_coord_t>(y + h - r)};
+            cruiseEmitBezier(pts, n, x + w, y + h - r, x + w, y + h, x + w - r, y + h);
+            pts[n++] = {static_cast<lv_coord_t>(x + nW + ir), static_cast<lv_coord_t>(y + h)};
+            cruiseEmitBezier(pts, n, x + nW + ir, y + h, x + nW, y + h, x + nW, y + h - ir);
+            pts[n++] = {static_cast<lv_coord_t>(x + nW), static_cast<lv_coord_t>(y + h - nH + ir)};
+            cruiseEmitBezier(pts, n, x + nW, y + h - nH + ir, x + nW, y + h - nH, x + nW - ir,
+                             y + h - nH);
+            pts[n++] = {static_cast<lv_coord_t>(x + ir), static_cast<lv_coord_t>(y + h - nH)};
+            cruiseEmitBezier(pts, n, x + ir, y + h - nH, x, y + h - nH, x, y + h - nH - ir);
+            pts[n++] = {x, static_cast<lv_coord_t>(y + r)};
+            cruiseEmitBezier(pts, n, x, y + r, x, y, x + r, y);
+            break;
+        case CruiseCorner::kBL:
+            // Notch at top-right.
+            pts[n++] = {static_cast<lv_coord_t>(x + r), y};
+            pts[n++] = {static_cast<lv_coord_t>(x + w - nW - ir), y};
+            cruiseEmitBezier(pts, n, x + w - nW - ir, y, x + w - nW, y, x + w - nW,
+                             y + ir);
+            pts[n++] = {static_cast<lv_coord_t>(x + w - nW), static_cast<lv_coord_t>(y + nH - ir)};
+            cruiseEmitBezier(pts, n, x + w - nW, y + nH - ir, x + w - nW, y + nH, x + w - nW + ir,
+                             y + nH);
+            pts[n++] = {static_cast<lv_coord_t>(x + w - ir), static_cast<lv_coord_t>(y + nH)};
+            cruiseEmitBezier(pts, n, x + w - ir, y + nH, x + w, y + nH, x + w, y + nH + ir);
+            pts[n++] = {static_cast<lv_coord_t>(x + w), static_cast<lv_coord_t>(y + h - r)};
+            cruiseEmitBezier(pts, n, x + w, y + h - r, x + w, y + h, x + w - r, y + h);
+            pts[n++] = {static_cast<lv_coord_t>(x + r), static_cast<lv_coord_t>(y + h)};
+            cruiseEmitBezier(pts, n, x + r, y + h, x, y + h, x, y + h - r);
+            pts[n++] = {x, static_cast<lv_coord_t>(y + r)};
+            cruiseEmitBezier(pts, n, x, y + r, x, y, x + r, y);
+            break;
+        case CruiseCorner::kBR:
+            // Notch at top-left.
+            pts[n++] = {static_cast<lv_coord_t>(x + nW + ir), y};
+            pts[n++] = {static_cast<lv_coord_t>(x + w - r), y};
+            cruiseEmitBezier(pts, n, x + w - r, y, x + w, y, x + w, y + r);
+            pts[n++] = {static_cast<lv_coord_t>(x + w), static_cast<lv_coord_t>(y + h - r)};
+            cruiseEmitBezier(pts, n, x + w, y + h - r, x + w, y + h, x + w - r, y + h);
+            pts[n++] = {static_cast<lv_coord_t>(x + r), static_cast<lv_coord_t>(y + h)};
+            cruiseEmitBezier(pts, n, x + r, y + h, x, y + h, x, y + h - r);
+            pts[n++] = {x, static_cast<lv_coord_t>(y + nH + ir)};
+            cruiseEmitBezier(pts, n, x, y + nH + ir, x, y + nH, x + ir, y + nH);
+            pts[n++] = {static_cast<lv_coord_t>(x + nW - ir), static_cast<lv_coord_t>(y + nH)};
+            cruiseEmitBezier(pts, n, x + nW - ir, y + nH, x + nW, y + nH, x + nW, y + nH - ir);
+            pts[n++] = {static_cast<lv_coord_t>(x + nW), static_cast<lv_coord_t>(y + ir)};
+            cruiseEmitBezier(pts, n, x + nW, y + ir, x + nW, y, x + nW + ir, y);
+            break;
+    }
+    return n;
+}
+
+// Compute the two axis-aligned rectangles that fill the L (horizontal arm
+// + vertical arm). They overlap at the L's corner — same colour fill means
+// no visual seam.
+void buildCruiseLFillArms(const lv_area_t &btn, CruiseCorner corner, lv_area_t *armH,
+                          lv_area_t *armV) {
+    const int16_t x = btn.x1;
+    const int16_t y = btn.y1;
+    const int16_t w = static_cast<int16_t>(btn.x2 - btn.x1 + 1);
+    const int16_t h = static_cast<int16_t>(btn.y2 - btn.y1 + 1);
+    const int16_t nW = CRUISE_NOTCH_W;
+    const int16_t nH = CRUISE_NOTCH_H;
+    switch (corner) {
+        case CruiseCorner::kTL:
+            // Notch at BR — arms anchored at TL.
+            *armH = {x, y, static_cast<lv_coord_t>(x + w - 1),
+                     static_cast<lv_coord_t>(y + h - nH - 1)};
+            *armV = {x, y, static_cast<lv_coord_t>(x + w - nW - 1),
+                     static_cast<lv_coord_t>(y + h - 1)};
+            break;
+        case CruiseCorner::kTR:
+            *armH = {x, y, static_cast<lv_coord_t>(x + w - 1),
+                     static_cast<lv_coord_t>(y + h - nH - 1)};
+            *armV = {static_cast<lv_coord_t>(x + nW), y, static_cast<lv_coord_t>(x + w - 1),
+                     static_cast<lv_coord_t>(y + h - 1)};
+            break;
+        case CruiseCorner::kBL:
+            *armH = {x, static_cast<lv_coord_t>(y + nH), static_cast<lv_coord_t>(x + w - 1),
+                     static_cast<lv_coord_t>(y + h - 1)};
+            *armV = {x, y, static_cast<lv_coord_t>(x + w - nW - 1),
+                     static_cast<lv_coord_t>(y + h - 1)};
+            break;
+        case CruiseCorner::kBR:
+            *armH = {x, static_cast<lv_coord_t>(y + nH), static_cast<lv_coord_t>(x + w - 1),
+                     static_cast<lv_coord_t>(y + h - 1)};
+            *armV = {static_cast<lv_coord_t>(x + nW), y, static_cast<lv_coord_t>(x + w - 1),
+                     static_cast<lv_coord_t>(y + h - 1)};
+            break;
+    }
+}
+
+// LV_EVENT_DRAW_MAIN_END callback — runs after the (transparent) default
+// button background draw, before child labels. Paints the L fill + outline.
+void cruiseLDrawCb(lv_event_t *e) {
+    const lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_DRAW_MAIN_END)
+        return;
+    lv_obj_t *btn = static_cast<lv_obj_t *>(lv_event_get_target(e));
+    lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
+    if (!draw_ctx)
+        return;
+    const auto corner = static_cast<CruiseCorner>(
+        reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
+
+    lv_area_t area;
+    lv_obj_get_coords(btn, &area);
+
+    // Fill — two overlapping axis-aligned rectangles, no border/radius.
+    // State-aware colour so the user gets press feedback on tap AND so the
+    // OFF/ON toggle stays in the pressed visual while CHECKED.
+    const lv_state_t state = lv_obj_get_state(btn);
+    const bool active = (state & (LV_STATE_PRESSED | LV_STATE_CHECKED)) != 0;
+    lv_draw_rect_dsc_t fill;
+    lv_draw_rect_dsc_init(&fill);
+    fill.bg_color = lv_color_hex(active ? CRUISE_BUTTON_FILL_PRESSED_RGB
+                                        : CRUISE_BUTTON_FILL_RGB);
+    fill.bg_opa = LV_OPA_COVER;
+    fill.border_width = 0;
+    fill.radius = 0;
+    lv_area_t armH, armV;
+    buildCruiseLFillArms(area, corner, &armH, &armV);
+    lv_draw_rect(draw_ctx, &fill, &armH);
+    lv_draw_rect(draw_ctx, &fill, &armV);
+
+    // Outline — polyline closing back to start.
+    lv_point_t pts[CRUISE_L_MAX_PTS];
+    const uint8_t n = buildCruiseLPath(pts, area, corner);
+    lv_draw_line_dsc_t stroke;
+    lv_draw_line_dsc_init(&stroke);
+    stroke.color = lv_color_hex(CRUISE_BUTTON_STROKE_RGB);
+    stroke.width = CRUISE_BUTTON_BORDER_W;
+    stroke.opa = LV_OPA_COVER;
+    stroke.round_start = 1;
+    stroke.round_end = 1;
+    for (uint8_t i = 0; i < n; ++i) {
+        lv_draw_line(draw_ctx, &stroke, &pts[i], &pts[(i + 1u) % n]);
+    }
+}
+
+// Apply the current cruise-active visual to the toggle button: CHECKED
+// state lights up the pressed fill in cruiseLDrawCb, and the label flips
+// between OFF / ON.
+void cruiseSyncToggleVisual() {
+    if (!s_cruiseToggleBtn || !s_cruiseToggleLabel)
+        return;
+    if (s_cruiseActive) {
+        lv_obj_add_state(s_cruiseToggleBtn, LV_STATE_CHECKED);
+        lv_label_set_text(s_cruiseToggleLabel, "ON");
+    } else {
+        lv_obj_clear_state(s_cruiseToggleBtn, LV_STATE_CHECKED);
+        lv_label_set_text(s_cruiseToggleLabel, "OFF");
+    }
+    lv_obj_invalidate(s_cruiseToggleBtn);
+}
+
+// OFF/ON button click — flip the cruise-active flag and resync the visual.
+// The OFF/ON button is the ONLY way to toggle activation; SET just captures
+// a speed without engaging the controller.
+void cruiseToggleClickCb(lv_event_t *e) {
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+        return;
+    s_cruiseActive = !s_cruiseActive;
+    cruiseSyncToggleVisual();
+}
+
+// LV_EVENT_HIT_TEST callback — reject touches that fall inside the L's
+// notch so the centre area doesn't steal taps from neighbouring buttons.
+void cruiseLHitTestCb(lv_event_t *e) {
+    auto *info = lv_event_get_hit_test_info(e);
+    if (!info || !info->point)
+        return;
+    lv_obj_t *btn = static_cast<lv_obj_t *>(lv_event_get_target(e));
+    const auto corner = static_cast<CruiseCorner>(
+        reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
+    lv_area_t area;
+    lv_obj_get_coords(btn, &area);
+    const int16_t px = info->point->x - area.x1;
+    const int16_t py = info->point->y - area.y1;
+    const int16_t w = static_cast<int16_t>(area.x2 - area.x1 + 1);
+    const int16_t h = static_cast<int16_t>(area.y2 - area.y1 + 1);
+    const int16_t nW = CRUISE_NOTCH_W;
+    const int16_t nH = CRUISE_NOTCH_H;
+    bool inNotch = false;
+    switch (corner) {
+        case CruiseCorner::kTL:
+            inNotch = (px >= w - nW) && (py >= h - nH);
+            break;
+        case CruiseCorner::kTR:
+            inNotch = (px < nW) && (py >= h - nH);
+            break;
+        case CruiseCorner::kBL:
+            inNotch = (px >= w - nW) && (py < nH);
+            break;
+        case CruiseCorner::kBR:
+            inNotch = (px < nW) && (py < nH);
+            break;
+    }
+    if (inNotch)
+        info->res = false;
+}
 
 // Build a synthetic CfgWidget representing one cruise button. Returned by
 // value — small struct (~few hundred bytes), short-lived, only used to feed
@@ -164,6 +445,12 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
     if (startY < contentY + CRUISE_OUTER_PAD)
         startY = contentY + CRUISE_OUTER_PAD;
 
+    // Reset cached toggle state — the previous page (if any) was deleted
+    // and the cached handles now point to freed objects.
+    s_cruiseActive = false;
+    s_cruiseToggleBtn = nullptr;
+    s_cruiseToggleLabel = nullptr;
+
     uint8_t created = 0;
     for (uint8_t i = 0; i < 4; ++i) {
         const uint8_t col = i % 2;
@@ -175,70 +462,57 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         const int16_t y = startY + row * (CRUISE_BUTTON_H + CRUISE_GAP_Y);
         const CfgWidget w = makeCruiseButton(CRUISE_BUTTONS[i], cfg, x, y);
         lv_obj_t *btn = WidgetFactory::create(screen, w, /*yOffset=*/0);
-        if (btn) {
-            // Round all four corners to match CruiseControlPreview's CORNER_R.
-            // The SET-SPEED rect overlaid later masks each button's inner
-            // corner with the page bg, so visually the buttons read as
-            // L-shapes wrapping the readout.
-            lv_obj_set_style_radius(btn, CRUISE_BUTTON_RADIUS, LV_PART_MAIN);
-            // Persistent idle border so the L outline is visible at rest, not
-            // only on press. Matches CruiseControlPreview's STROKE_W + accent.
-            lv_obj_set_style_border_width(btn, CRUISE_BUTTON_BORDER_W, LV_PART_MAIN);
-            lv_obj_set_style_border_color(btn, lv_color_hex(CRUISE_BUTTON_STROKE_RGB),
-                                          LV_PART_MAIN);
-            lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
-            ++created;
-        }
-    }
+        if (!btn)
+            continue;
 
-    // For each button, paint a notch overlay over its inner corner: filled
-    // with the page background colour so the corner of the button is
-    // visually erased, and bordered on the two L-facing sides so the
-    // button's border continues across the notch into a complete L outline.
-    // The four notch overlays + the four button borders together form four
-    // L-shaped outlines — no polygon rendering needed.
-    //   notch position = button inner corner shifted by (notchW, notchH)
-    //   border sides   = the two sides of the notch that touch the L body
-    static constexpr int16_t notchW = CRUISE_CENTER_W / 2 + 6; // 56
-    static constexpr int16_t notchH = CRUISE_CENTER_H / 2 + 6; // 44
-    struct NotchSpec {
-        int16_t dx, dy;             // offset from button.x/.y to notch top-left
-        lv_border_side_t borderSide;
-    };
-    const NotchSpec specs[4] = {
-        // TL: notch at bottom-right of button — borders on TOP + LEFT
-        {CRUISE_BUTTON_W - notchW, CRUISE_BUTTON_H - notchH,
-         static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_LEFT)},
-        // TR: notch at bottom-left — borders on TOP + RIGHT
-        {0, CRUISE_BUTTON_H - notchH,
-         static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_RIGHT)},
-        // BL: notch at top-right — borders on BOTTOM + LEFT
-        {CRUISE_BUTTON_W - notchW, 0,
-         static_cast<lv_border_side_t>(LV_BORDER_SIDE_BOTTOM | LV_BORDER_SIDE_LEFT)},
-        // BR: notch at top-left — borders on BOTTOM + RIGHT
-        {0, 0,
-         static_cast<lv_border_side_t>(LV_BORDER_SIDE_BOTTOM | LV_BORDER_SIDE_RIGHT)},
-    };
-    for (uint8_t i = 0; i < 4; ++i) {
-        const uint8_t col = i % 2;
-        const uint8_t row = i / 2;
-        const int16_t bx = startX + col * (CRUISE_BUTTON_W + CRUISE_GAP_X);
-        const int16_t by = startY + row * (CRUISE_BUTTON_H + CRUISE_GAP_Y);
-        lv_obj_t *notch = lv_obj_create(screen);
-        lv_obj_set_pos(notch, bx + specs[i].dx, by + specs[i].dy);
-        lv_obj_set_size(notch, notchW, notchH);
-        lv_obj_set_style_bg_color(notch, lv_color_hex(cfg.bgColor.rgb), 0);
-        lv_obj_set_style_bg_opa(notch, LV_OPA_COVER, 0);
-        // Rounded corners on the notch overlay round the L's inner corners
-        // (concave at the deep corner, convex at the two notch transitions).
-        lv_obj_set_style_radius(notch, CRUISE_CENTER_RADIUS, 0);
-        lv_obj_set_style_pad_all(notch, 0, 0);
-        lv_obj_set_style_border_color(notch, lv_color_hex(CRUISE_BUTTON_STROKE_RGB), 0);
-        lv_obj_set_style_border_width(notch, CRUISE_BUTTON_BORDER_W, 0);
-        lv_obj_set_style_border_opa(notch, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_side(notch, specs[i].borderSide, 0);
-        lv_obj_clear_flag(notch, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_clear_flag(notch, LV_OBJ_FLAG_CLICKABLE);
+        // Suppress the default rectangle rendering — the L is painted by the
+        // DRAW_MAIN_END callback below. We keep the button widget itself
+        // (gives us free click dispatch through the existing tag system) but
+        // make its default visual invisible.
+        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN);
+        lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN);
+
+        // Encode the corner orientation as the event user_data so a single
+        // pair of callbacks handles all four buttons.
+        void *cornerData = reinterpret_cast<void *>(static_cast<uintptr_t>(i));
+        lv_obj_add_event_cb(btn, cruiseLDrawCb, LV_EVENT_DRAW_MAIN_END, cornerData);
+        // Hit-test reject points inside the notch so taps in the centre area
+        // fall through to the next sibling rather than registering on the
+        // wrong corner button. Requires ADV_HITTEST flag.
+        lv_obj_add_flag(btn, LV_OBJ_FLAG_ADV_HITTEST);
+        lv_obj_add_event_cb(btn, cruiseLHitTestCb, LV_EVENT_HIT_TEST, cornerData);
+        // Make absolutely sure the button stays clickable — defensive against
+        // any factory default that might have cleared the flag.
+        lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+
+        // Shift the action label firmly into the L body, away from the notch.
+        // The button widget uses a flex column layout — opt the label out via
+        // IGNORE_LAYOUT so manual alignment isn't overwritten on the next
+        // flex pass. Offset = ±notchW/2, ±notchH/2 — large enough that the
+        // glyph clears the outline + has clear visual breathing room inside
+        // its arm.
+        constexpr int16_t LABEL_OFF_X = CRUISE_NOTCH_W / 2; // 28
+        constexpr int16_t LABEL_OFF_Y = CRUISE_NOTCH_H / 2; // 22
+        const int16_t shiftX = (col == 0) ? -LABEL_OFF_X : LABEL_OFF_X;
+        const int16_t shiftY = (row == 0) ? -LABEL_OFF_Y : LABEL_OFF_Y;
+        lv_obj_t *label = nullptr;
+        if (lv_obj_get_child_cnt(btn) > 0) {
+            label = lv_obj_get_child(btn, 0);
+            if (label) {
+                lv_obj_add_flag(label, LV_OBJ_FLAG_IGNORE_LAYOUT);
+                lv_obj_align(label, LV_ALIGN_CENTER, shiftX, shiftY);
+            }
+        }
+
+        // OFF/ON toggle wiring — only the BR button toggles cruise activation.
+        // The cached handles let cruiseToggleClickCb flip both the visual
+        // state and the label text without re-walking the screen tree.
+        if (i == static_cast<uint8_t>(CruiseCorner::kBR)) {
+            s_cruiseToggleBtn = btn;
+            s_cruiseToggleLabel = label;
+            lv_obj_add_event_cb(btn, cruiseToggleClickCb, LV_EVENT_CLICKED, nullptr);
+        }
+        ++created;
     }
 
     // Centred SET-SPEED label stack. Labels float over the cross-shaped
