@@ -514,10 +514,23 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         // idle and pressed states. After remove_style_all there's no style
         // delta on STATE_PRESSED for LVGL to detect, so the automatic
         // invalidation on state change doesn't fire — drive it manually.
-        auto pressInvalidateCb = [](lv_event_t *ev) { lv_obj_invalidate(lv_event_get_target(ev)); };
+        auto pressInvalidateCb = [](lv_event_t *ev) {
+            lv_obj_t *bt = lv_event_get_target(ev);
+            // Aggressively strip FOCUSED / FOCUS_KEY so the LVGL default
+            // theme's focus-ring visual doesn't latch on first tap (showed
+            // up as a red rectangle on the left-column buttons that only
+            // disappeared on a second tap because the second tap toggled
+            // the focus bit off).
+            lv_obj_clear_state(bt, LV_STATE_FOCUSED);
+            lv_obj_clear_state(bt, LV_STATE_FOCUS_KEY);
+            lv_obj_invalidate(bt);
+        };
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESSED, nullptr);
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_RELEASED, nullptr);
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESS_LOST, nullptr);
+        // Remove from any input group so pointer focus management can't
+        // even consider these buttons for the focus highlight.
+        lv_group_remove_obj(btn);
         // Hit-test reject points inside the notch so taps in the centre area
         // fall through to the next sibling rather than registering on the
         // wrong corner button. Requires ADV_HITTEST flag.
@@ -537,44 +550,33 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         constexpr int16_t LABEL_OFF_Y = CRUISE_NOTCH_H / 2; // 22
         const int16_t shiftX = (col == 0) ? -LABEL_OFF_X : LABEL_OFF_X;
         const int16_t shiftY = (row == 0) ? -LABEL_OFF_Y : LABEL_OFF_Y;
-        lv_obj_t *label = nullptr;
+        // Hide the button widget's internal label — it kept catching the
+        // LVGL default theme's per-state text-colour overrides no matter
+        // how many local-style states we covered. Create a fresh label as
+        // a direct child of `screen` (sibling of the buttons) so neither
+        // button state nor the theme observer can touch it.
         if (lv_obj_get_child_cnt(btn) > 0) {
-            label = lv_obj_get_child(btn, 0);
-            if (label) {
-                // Wipe the label's theme styles FIRST — remove_style_all kills
-                // position/align/font/colour, so every property below has to
-                // be re-set after this call.
-                lv_obj_remove_style_all(label);
-                lv_obj_add_flag(label, LV_OBJ_FLAG_IGNORE_LAYOUT);
-                lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
-                // +/− are single glyphs — bump to primary(32) so they dominate
-                // visually. SET/OFF (3 chars) stay at secondary(24) to fit
-                // the L's arm width without truncating.
-                const bool isSymbol = (i == static_cast<uint8_t>(CruiseCorner::kTL)) ||
-                                      (i == static_cast<uint8_t>(CruiseCorner::kTR));
-                lv_obj_set_style_text_font(
-                    label, isSymbol ? FontManager::primary(32) : FontManager::secondary(24), 0);
-                // Belt-and-suspenders: across every state lv_btn's theme
-                // might reach for, pin text colour to white AND set bg/
-                // border opacity to transparent on the LABEL itself. Some
-                // themes draw a tinted rect under the label on press —
-                // showed up as a red rectangle behind the glyph on the left
-                // column buttons.
-                for (lv_state_t st : {lv_state_t(LV_STATE_DEFAULT), lv_state_t(LV_STATE_PRESSED),
-                                      lv_state_t(LV_STATE_CHECKED), lv_state_t(LV_STATE_FOCUSED),
-                                      lv_state_t(LV_STATE_FOCUS_KEY), lv_state_t(LV_STATE_EDITED),
-                                      lv_state_t(LV_STATE_HOVERED),
-                                      lv_state_t(LV_STATE_DISABLED)}) {
-                    lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFFu),
-                                                LV_PART_MAIN | st);
-                    lv_obj_set_style_bg_opa(label, LV_OPA_TRANSP, LV_PART_MAIN | st);
-                    lv_obj_set_style_border_opa(label, LV_OPA_TRANSP, LV_PART_MAIN | st);
-                    lv_obj_set_style_outline_opa(label, LV_OPA_TRANSP, LV_PART_MAIN | st);
-                }
-                // Alignment LAST so the post-wipe pos/align styles stick.
-                lv_obj_align(label, LV_ALIGN_CENTER, shiftX, shiftY);
+            lv_obj_t *innerLabel = lv_obj_get_child(btn, 0);
+            if (innerLabel) {
+                lv_obj_add_flag(innerLabel, LV_OBJ_FLAG_HIDDEN);
             }
         }
+        lv_obj_t *label = lv_label_create(screen);
+        lv_label_set_text(label, CRUISE_BUTTONS[i].label);
+        lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFFu), 0);
+        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+        // +/− single glyphs at primary(32); SET/OFF 3-char labels at
+        // secondary(24) so they fit the L body without truncating.
+        const bool isSymbol = (i == static_cast<uint8_t>(CruiseCorner::kTL)) ||
+                              (i == static_cast<uint8_t>(CruiseCorner::kTR));
+        lv_obj_set_style_text_font(
+            label, isSymbol ? FontManager::primary(32) : FontManager::secondary(24), 0);
+        // Position over the button rect centre + per-corner L-body shift.
+        // The (-) compensations centre the text glyph on the target point
+        // (LV_ALIGN_CENTER on a screen-level obj requires manual math).
+        const int16_t cx = x + (CRUISE_BUTTON_W / 2) + shiftX;
+        const int16_t cy = y + (CRUISE_BUTTON_H / 2) + shiftY;
+        lv_obj_set_pos(label, cx - (isSymbol ? 12 : 24), cy - (isSymbol ? 16 : 12));
 
         // OFF/ON toggle wiring — only the BR button toggles cruise activation.
         // The cached handles let cruiseToggleClickCb flip both the visual
