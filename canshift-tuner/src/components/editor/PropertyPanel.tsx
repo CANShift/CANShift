@@ -11,6 +11,7 @@ import type { HexColor, ScreenProfileId, Widget, WidgetType } from '@tmbk/canshi
 import {
   DEFAULT_PAGE_PALETTE,
   DEFAULT_SCREEN_PROFILE_ID,
+  FIRMWARE_CAPS,
   HexColorSchema,
   SCREEN_PROFILES,
 } from '@tmbk/canshift-core'
@@ -94,6 +95,19 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
       if (!config) return
       const existing = config.pages.find((p) => p.template === 'cruise_control')
       if (enabled && !existing) {
+        // The firmware page array is fixed-size — a 6th page would be
+        // silently dropped on load (see #1359). Stop the user here with a
+        // confirm rather than letting the burn succeed and the cruise page
+        // silently vanish on the device.
+        if (config.pages.length >= FIRMWARE_CAPS.MAX_PAGES) {
+          const list = config.pages.map((p, i) => `  ${(i + 1).toString()}. ${p.id}`).join('\n')
+          window.alert(
+            `You already have ${config.pages.length.toString()} pages — the firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()}. ` +
+              'Remove a page first, then enable cruise control.\n\n' +
+              `Current pages:\n${list}`
+          )
+          return
+        }
         addPage({
           id: CRUISE_CONTROL_PAGE_ID,
           backgroundImage: null,

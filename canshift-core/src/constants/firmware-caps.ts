@@ -5,11 +5,11 @@
 // firmware-side at load time). Keep these in sync if the firmware caps change.
 
 export const FIRMWARE_CAPS = {
-  // Reverted to 4 after the 4→8 bump in #1357 over-ate the runtime heap and
-  // broke CAN init + USB rxBuf alloc on WROOM (#1358). The proper fix is a
-  // firmware-side switch to heap-allocated page arrays so cap can grow
-  // without scaling BSS — tracked separately.
-  MAX_PAGES: 4,
+  // 4 → 8 in #1357 over-ate runtime heap (CAN + USB OOM, reverted in #1358).
+  // 4 → 5 in #1360 is the minimal bump that fits the demo seed (4 pages) + 1
+  // cruise_control page without flirting with the fragmentation cliff.
+  // Heap-allocating the page array (issue #1359) is the durable fix.
+  MAX_PAGES: 5,
   MAX_WIDGETS_PER_PAGE: 12,
   MAX_TOPBAR_ITEMS: 16,
   MAX_SIGNALS: 32,
