@@ -1,7 +1,7 @@
 import type { CSSProperties, DragEvent, ChangeEvent } from 'react'
 import { useRef, useState } from 'react'
 
-export interface RealDashImportZoneProps {
+export interface XmlImportZoneProps {
   loadedFileName: string | null
   onFileLoad: (fileName: string, xml: string) => void
   onError: (message: string) => void
@@ -10,12 +10,12 @@ export interface RealDashImportZoneProps {
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024
 
-export function RealDashImportZone({
+export function XmlImportZone({
   loadedFileName,
   onFileLoad,
   onError,
   onClear,
-}: RealDashImportZoneProps) {
+}: XmlImportZoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -83,7 +83,7 @@ export function RealDashImportZone({
       ) : (
         <div style={emptyStyle}>
           <div style={iconStyle}>↓</div>
-          <div style={emptyTitleStyle}>Drop a RealDash .xml here</div>
+          <div style={emptyTitleStyle}>Drop an XML file here</div>
           <div style={emptyHintStyle}>or pick a file from disk</div>
           <button
             type="button"
