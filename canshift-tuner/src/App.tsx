@@ -19,6 +19,7 @@ import { useDashboardStore } from './stores/dashboard.store'
 import { useLogStore } from './stores/log.store'
 import { DEFAULT_SIM_CONFIG } from './config/defaultSimConfig'
 import { deviceIpc } from './transport'
+import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 
@@ -119,12 +120,12 @@ function useDeviceConfigBootstrap(): void {
 
 /**
  * Cmd/Ctrl+S → Burn. Global accelerator so it fires regardless of which
- * section is open. Today logs a placeholder (the Burn button itself is still
- * disabled — push-to-device wires up in a follow-up). The handler stays here
- * so when Burn lands, only its body changes; the keyboard contract is set.
+ * section is open. Delegates to the same `useBurnDashboard` hook the Header's
+ * Burn button uses, so the gating (connected + dirty + not simulation) is
+ * identical between the two entry points.
  */
 function useBurnShortcut(): void {
-  const log = useLogStore((s) => s.push)
+  const { canBurn, burn } = useBurnDashboard()
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
@@ -133,13 +134,14 @@ function useBurnShortcut(): void {
       const tag = (document.activeElement as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       e.preventDefault()
-      log('info', 'Burn (Cmd/Ctrl+S) — push-to-device wires up in a follow-up PR')
+      if (!canBurn) return
+      void burn()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [log])
+  }, [canBurn, burn])
 }
 
 /**

@@ -3,11 +3,13 @@
 // Surfaces the brand, build version, live connection status (with a coloured
 // dot + optional vendor/product info pulled off the SerialPort), a firmware
 // version slot (placeholder until a follow-up wires the device handshake) and
-// a disabled Burn button slot for future dashboard push-to-device.
+// a Burn button that lights up when the editor has unsaved changes against a
+// live device.
 
 import type { CSSProperties } from 'react'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
+import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 
 const HEADER_HEIGHT = 40
 
@@ -119,14 +121,7 @@ export default function Header() {
         fw —
       </div>
 
-      <button
-        type="button"
-        disabled
-        title="Burn dashboard to device (coming soon)"
-        style={burnButtonStyle}
-      >
-        Burn
-      </button>
+      <BurnButton />
     </header>
   )
 }
@@ -145,16 +140,53 @@ const firmwareStyle: CSSProperties = {
   letterSpacing: '0.04em',
 }
 
-const burnButtonStyle: CSSProperties = {
-  background: 'hsl(var(--surface-2))',
-  color: 'hsl(var(--text-dim))',
-  border: '1px solid hsl(var(--border))',
+function BurnButton() {
+  const { canBurn, isBurning, burn } = useBurnDashboard()
+  const disabled = !canBurn
+  const label = isBurning ? 'Burning…' : 'Burn'
+  const title = isBurning
+    ? 'Burning dashboard to the device…'
+    : canBurn
+      ? 'Burn dashboard to device (Cmd/Ctrl+S)'
+      : 'Connect a device and edit the dashboard to enable Burn'
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => {
+        void burn()
+      }}
+      title={title}
+      style={disabled ? burnButtonStyleDisabled : burnButtonStyleEnabled}
+    >
+      {label}
+    </button>
+  )
+}
+
+const burnButtonStyleBase: CSSProperties = {
   borderRadius: 4,
   padding: '5px 14px',
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
+}
+
+const burnButtonStyleDisabled: CSSProperties = {
+  ...burnButtonStyleBase,
+  background: 'hsl(var(--surface-2))',
+  color: 'hsl(var(--text-dim))',
+  border: '1px solid hsl(var(--border))',
   cursor: 'not-allowed',
   opacity: 0.5,
+}
+
+const burnButtonStyleEnabled: CSSProperties = {
+  ...burnButtonStyleBase,
+  background: 'hsl(var(--primary))',
+  color: 'hsl(var(--primary-foreground))',
+  border: '1px solid hsl(var(--primary))',
+  cursor: 'pointer',
+  boxShadow: '0 1px 4px hsl(var(--primary) / 0.3)',
 }
