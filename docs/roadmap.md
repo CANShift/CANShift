@@ -1,5 +1,7 @@
 # CANShift roadmap
 
+> 🚨 **Pre-#1351 snapshot.** The roadmap below was written before the WiFi+SPA removal and the `canshift-tuner` introduction ([`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351)). Items referencing `canshift-studio-web` / dash-hosted Studio / WiFi are superseded by the tuner direction. The forward-looking sections still track the right product themes; the surface naming is stale.
+
 A living snapshot of where the project is and what's next. Each section
 points back at the GitHub issues that drive the actual work — when this
 file and the issue tracker disagree, the tracker wins.

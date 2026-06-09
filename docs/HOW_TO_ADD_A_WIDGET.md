@@ -1,5 +1,7 @@
 # How to add a widget
 
+> 🚨 **Pre-#1351.** "studio editor surface" below means [`canshift-tuner`](../canshift-tuner/) now — the file paths under `canshift-studio-web/` should be read as the matching files in `canshift-tuner/src/components/editor/`. The schema + firmware steps are unchanged. See [`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351).
+
 How to introduce a brand-new widget type (e.g. `tacho_arc`, `lap_delta`,
 `bar_graph_dual`) across the three packages it has to land in: schema,
 firmware renderer, and studio editor surface.
