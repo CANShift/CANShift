@@ -3,7 +3,7 @@
 // Surfaces the brand, build version, live connection status (with a coloured
 // dot + optional vendor/product info pulled off the SerialPort), a firmware
 // version slot (placeholder until a follow-up wires the device handshake) and
-// a disabled Save button slot for future dashboard persistence.
+// a disabled Burn button slot for future dashboard push-to-device.
 
 import type { CSSProperties } from 'react'
 import { useConnectionStore } from '../../stores/connection.store'
@@ -122,10 +122,10 @@ export default function Header() {
       <button
         type="button"
         disabled
-        title="Save dashboard (coming soon)"
-        style={saveButtonStyle}
+        title="Burn dashboard to device (coming soon)"
+        style={burnButtonStyle}
       >
-        Save
+        Burn
       </button>
     </header>
   )
@@ -145,7 +145,7 @@ const firmwareStyle: CSSProperties = {
   letterSpacing: '0.04em',
 }
 
-const saveButtonStyle: CSSProperties = {
+const burnButtonStyle: CSSProperties = {
   background: 'hsl(var(--surface-2))',
   color: 'hsl(var(--text-dim))',
   border: '1px solid hsl(var(--border))',
