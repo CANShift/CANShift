@@ -176,7 +176,14 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
   const framesTagMatch = /<frames\b([^>]*)>/.exec(safe)
   if (framesTagMatch) {
     const fa = getAttrs(framesTagMatch[1] ?? '')
-    if (fa.baseId) baseId = parseHexOrDec(fa.baseId)
+    if (fa.baseId) {
+      const parsedBase = parseHexOrDec(fa.baseId)
+      if (Number.isFinite(parsedBase)) {
+        baseId = parsedBase
+      } else {
+        warnings.push(`Ignored unparseable baseId "${fa.baseId}" (using 0)`)
+      }
+    }
   }
 
   const frameRe = /<frame\b([^>]*)>([\s\S]*?)<\/frame>/g
@@ -189,6 +196,10 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
     // Composite IDs (e.g. "0x3E8:5533,0,2") — take the CAN id portion only.
     const rawId = (frameAttrs.id ?? '').split(':')[0] ?? ''
     const frameIdNum = parseHexOrDec(rawId) + baseId
+    if (!Number.isFinite(frameIdNum)) {
+      warnings.push(`Skipped frame with unparseable id "${rawId}"`)
+      continue
+    }
     const canFrameId = `0x${frameIdNum.toString(16)}`
 
     // Frame-level defaults; per-value attrs override these.
