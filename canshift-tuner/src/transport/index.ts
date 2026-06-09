@@ -340,4 +340,13 @@ export const deviceEvents = {
       }
     })
   },
+
+  /**
+   * Per-frame TX/RX activity ticks — fires once per successful write and
+   * once per inbound frame. Header subscribes to drive the status-dot blink
+   * (the LED-style alive indicator above the device).
+   */
+  onActivity: (handler: Handler<'rx' | 'tx'>): Unsubscribe => {
+    return getSerialClient().onActivity(handler)
+  },
 }
