@@ -71,7 +71,7 @@ describe('validateSignalConfig — envelope', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateSignalConfig — canFrameId', () => {
-  it.each(['0x0', '0x1', '0xFF', '0x7FF', '0X123', '0xabc'])(
+  it.each(['0x0', '0x1', '0xFF', '0x7FF', '0X123', '0xabc', '0x1234', '0x1E005000', '0xFFFFFFFF'])(
     'accepts valid hex form %s',
     (canFrameId) => {
       const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
@@ -79,18 +79,14 @@ describe('validateSignalConfig — canFrameId', () => {
     }
   )
 
-  it.each([
-    '370', // missing 0x prefix
-    '#370', // wrong prefix
-    '0x', // empty
-    '0xGGG', // non-hex digits
-    '0x1234', // 4 hex chars (out of 11-bit range)
-    '', // empty string
-  ])('rejects invalid form %s', (canFrameId) => {
-    const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('canFrameId'))).toBe(true)
-  })
+  it.each(['370', '#370', '0x', '0xGGG', '0x123456789', ''])(
+    'rejects invalid form %s',
+    (canFrameId) => {
+      const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
+      expect(result.valid).toBe(false)
+      expect(result.errors.some((e) => e.includes('canFrameId'))).toBe(true)
+    }
+  )
 
   it('rejects a non-string canFrameId', () => {
     const result = validateSignalConfig(

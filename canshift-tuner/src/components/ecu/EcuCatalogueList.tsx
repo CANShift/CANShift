@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 
-export interface EcuCatalogueEntry {
+export interface CatalogueItem {
   id: string
   vendor: string
   file: string
@@ -10,29 +10,30 @@ export interface EcuCatalogueEntry {
   sizeBytes: number
 }
 
-interface CatalogueManifest {
+interface XmlManifest {
   source: string
   license: string
   fetchedAt: string
-  entries: EcuCatalogueEntry[]
+  entries: CatalogueItem[]
 }
 
 export interface EcuCatalogueListProps {
+  activeKey: string
   selectedId: string | null
-  onSelect: (entry: EcuCatalogueEntry) => Promise<void>
+  onSelect: (item: CatalogueItem) => Promise<void> | void
 }
 
 type LoadState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ready'; manifest: CatalogueManifest }
+  | { kind: 'ready'; manifest: XmlManifest }
   | { kind: 'error'; message: string }
 
 type SortKey = 'vendor' | 'label' | 'size'
 
 const CATALOGUE_URL = '/ecu-catalogue/index.json'
 
-export function EcuCatalogueList({ selectedId, onSelect }: EcuCatalogueListProps) {
+export function EcuCatalogueList({ activeKey, selectedId, onSelect }: EcuCatalogueListProps) {
   const [state, setState] = useState<LoadState>({ kind: 'idle' })
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('vendor')
@@ -43,7 +44,7 @@ export function EcuCatalogueList({ selectedId, onSelect }: EcuCatalogueListProps
     void fetch(CATALOGUE_URL)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${String(res.status)}`)
-        return res.json() as Promise<CatalogueManifest>
+        return res.json() as Promise<XmlManifest>
       })
       .then((manifest) => {
         if (cancelled) return
@@ -115,6 +116,7 @@ export function EcuCatalogueList({ selectedId, onSelect }: EcuCatalogueListProps
       {state.kind === 'error' && (
         <div style={errorStyle}>Failed to load catalogue: {state.message}</div>
       )}
+
       {state.kind === 'ready' && (
         <>
           <div style={metaStyle}>
@@ -131,23 +133,27 @@ export function EcuCatalogueList({ selectedId, onSelect }: EcuCatalogueListProps
             · {state.manifest.license}
           </div>
           <div style={listStyle} role="listbox" aria-label="ECU catalogue">
-            {filtered.map((entry) => {
-              const isSelected = selectedId === entry.id
+            {filtered.map((item) => {
+              const isSelected = selectedId === item.id
+              const isActive = activeKey === `catalogue:${item.id}`
               return (
                 <button
-                  key={entry.id}
+                  key={item.id}
                   type="button"
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => {
-                    void onSelect(entry)
+                    void onSelect(item)
                   }}
                   style={itemStyle(isSelected)}
                 >
-                  <div style={itemTitleStyle}>{entry.label}</div>
+                  <div style={titleRowStyle}>
+                    <span style={itemTitleStyle}>{item.label}</span>
+                    {isActive && <span style={activeTagStyle}>active</span>}
+                  </div>
                   <div style={itemMetaStyle}>
-                    <span>{entry.vendor}</span>
-                    <span style={{ color: 'hsl(var(--text-muted))' }}>{formatBytes(entry.sizeBytes)}</span>
+                    <span>{item.vendor}</span>
+                    <span style={{ color: 'hsl(var(--text-muted))' }}>{formatBytes(item.sizeBytes)}</span>
                   </div>
                 </button>
               )
@@ -251,7 +257,7 @@ const itemStyle = (selected: boolean): CSSProperties => ({
   display: 'flex',
   flexDirection: 'column',
   gap: 2,
-  padding: '8px 10px',
+  padding: '10px 12px',
   background: selected ? 'hsl(var(--primary) / 0.12)' : 'hsl(var(--surface))',
   border: `1px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
   borderRadius: 6,
@@ -261,9 +267,27 @@ const itemStyle = (selected: boolean): CSSProperties => ({
   fontFamily: 'inherit',
 })
 
+const titleRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  flexWrap: 'wrap',
+}
+
 const itemTitleStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
+}
+
+const activeTagStyle: CSSProperties = {
+  fontSize: 9,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  background: 'hsl(var(--success) / 0.2)',
+  color: 'hsl(var(--success))',
+  border: '1px solid hsl(var(--success))',
+  borderRadius: 999,
+  padding: '1px 6px',
 }
 
 const itemMetaStyle: CSSProperties = {
