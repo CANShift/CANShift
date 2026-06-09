@@ -514,23 +514,10 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         // idle and pressed states. After remove_style_all there's no style
         // delta on STATE_PRESSED for LVGL to detect, so the automatic
         // invalidation on state change doesn't fire — drive it manually.
-        auto pressInvalidateCb = [](lv_event_t *ev) {
-            lv_obj_t *bt = lv_event_get_target(ev);
-            // Aggressively strip FOCUSED / FOCUS_KEY so the LVGL default
-            // theme's focus-ring visual doesn't latch on first tap (showed
-            // up as a red rectangle on the left-column buttons that only
-            // disappeared on a second tap because the second tap toggled
-            // the focus bit off).
-            lv_obj_clear_state(bt, LV_STATE_FOCUSED);
-            lv_obj_clear_state(bt, LV_STATE_FOCUS_KEY);
-            lv_obj_invalidate(bt);
-        };
+        auto pressInvalidateCb = [](lv_event_t *ev) { lv_obj_invalidate(lv_event_get_target(ev)); };
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESSED, nullptr);
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_RELEASED, nullptr);
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESS_LOST, nullptr);
-        // Remove from any input group so pointer focus management can't
-        // even consider these buttons for the focus highlight.
-        lv_group_remove_obj(btn);
         // Hit-test reject points inside the notch so taps in the centre area
         // fall through to the next sibling rather than registering on the
         // wrong corner button. Requires ADV_HITTEST flag.
