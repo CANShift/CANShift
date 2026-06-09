@@ -1,5 +1,7 @@
 # Release Process — CANShift
 
+> 🚨 **Pre-#1351.** Steps referencing `canshift-studio-web` builds, SPIFFS-SPA gates, `canshift-spiffs-*.bin`, and `0x370000` SPIFFS offset are stale. Post-#1351 the SPA pipeline is gone and SPIFFS lives at `0x310000`. The actual release pipeline (`.github/workflows/release.yml`) has been simplified accordingly — read the workflow file as ground truth. See [`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351).
+
 How a version bump in `canshift-firmware/package.json` becomes a published
 GitHub Release with firmware artifacts attached to it. Concrete steps,
 what ships, what doesn't, how to validate before promoting, and how to

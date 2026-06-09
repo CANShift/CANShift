@@ -1,5 +1,7 @@
 # Config Contract — CANShift Configuration Schema
 
+> 🚨 **Pre-#1351.** Sections mentioning `canshift-studio-web` should be read as `canshift-tuner`; the JSON schema itself (in `canshift-core`) is unchanged. WiFi-coupled flow descriptions are historical. See [`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351).
+
 The configuration contract defines what valid config files look like and how they flow through the system.
 
 ## Config Files

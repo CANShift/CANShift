@@ -1,5 +1,7 @@
 # Architecture — CANShift
 
+> 🚨 **Pre-#1351 narrative.** This document predates the [`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351) refactor that retired `canshift-studio-web` (dash-hosted SPA over WiFi+WebSocket) in favour of [`canshift-tuner`](../canshift-tuner/) (Vercel-hosted, WebSerial over CH340 UART). The firmware lost its WiFi stack, USB CDC path, and SPIFFS-SPA pipeline along the way. References below to `canshift-studio-web`, `canshift.local`, WebSocket port 81, `crowpanel_28_wifi`, and SPIFFS-served SPA assets should be read as historical context — translate mentally to **`canshift-tuner` + WebSerial**. A deeper content rewrite is tracked as a follow-up.
+
 C4-style architecture documentation for CANShift. Read top-to-bottom: each
 level zooms one step deeper, from "what is this thing in the world" down to
 "how does a CAN frame become a pixel on the screen".

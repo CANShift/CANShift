@@ -1,5 +1,7 @@
 # Overall Architecture — CANShift
 
+> 🚨 **Pre-#1351 narrative.** WiFi-served Studio + `canshift-studio-web` references are historical. The configurator is now [`canshift-tuner`](../canshift-tuner/) over **WebSerial**. See [`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351).
+
 ## System Purpose
 
 CANShift is a configurable real-time automotive dashboard that works with any CAN-enabled ECU and vehicle. Signal mapping is fully runtime-configurable via `signals.json` — no firmware recompile needed to adapt to a different ECU or car.
