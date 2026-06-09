@@ -31,6 +31,7 @@ const ENTRIES: Entry[] = [
   { divider: true },
   { to: '/dashboard', label: 'Dashboard', icon: '◉' },
   { to: '/can', label: 'CAN Bus', icon: '⇄' },
+  { to: '/ecu', label: 'ECU Profile', icon: '⚛' },
   { to: '/obd2', label: 'OBD-II', icon: '⚙' },
   { to: '/themes', label: 'Themes', icon: '◐' },
   { divider: true },

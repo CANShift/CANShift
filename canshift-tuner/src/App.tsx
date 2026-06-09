@@ -17,6 +17,7 @@ import { FirmwareUnresponsiveBanner } from './components/Shell/FirmwareUnrespons
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
 import CanBusRoute from './routes/CanBusRoute'
+import EcuRoute from './routes/EcuRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
 import LogsRoute from './routes/LogsRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -319,6 +320,7 @@ export default function App() {
                 }
               />
               <Route path="/can" element={<CanBusRoute />} />
+              <Route path="/ecu" element={<EcuRoute />} />
               <Route path="/obd2" element={<PlaceholderRoute label="OBD-II" icon="⚙" />} />
               <Route path="/themes" element={<PlaceholderRoute label="Themes" icon="◐" />} />
               <Route path="/live" element={<LiveDataRoute />} />
