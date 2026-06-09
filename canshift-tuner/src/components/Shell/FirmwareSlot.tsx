@@ -1,15 +1,8 @@
-// FirmwareSlot.tsx — Header pill that surfaces the firmware version reported
-// by the connect-time handshake (#1365). Flips to a destructive variant when
-// the device runs a wrong-major firmware so the user can correlate the Header
-// signal with the disabled Burn button.
-
 import type { CSSProperties } from 'react'
 import type { FirmwareCompat } from '../../stores/device.store'
 
 export interface FirmwareSlotProps {
-  /** Firmware semver reported by `CMD_QUERY_VERSION`, `null` until handshake lands. */
   version: string | null
-  /** Compatibility verdict from `useVersionHandshake`. */
   compat: FirmwareCompat
 }
 

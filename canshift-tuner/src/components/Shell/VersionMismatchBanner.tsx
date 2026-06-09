@@ -1,8 +1,3 @@
-// VersionMismatchBanner.tsx — Strip rendered between Header and main when
-// `firmwareCompat.kind === 'mismatch'`. Burn is gated independently by
-// `useBurnDashboard`; this surface tells the user *why* and points them at
-// the firmware update path.
-
 import type { CSSProperties } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 

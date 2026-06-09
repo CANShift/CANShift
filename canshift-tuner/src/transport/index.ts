@@ -72,11 +72,8 @@ export interface ConnectionStatus {
 }
 
 export interface FirmwareIdentity {
-  /** Semver string reported by the firmware (e.g. `0.12.0`). */
   version: string
-  /** Wire-format protocol number — independent of the firmware version. */
   protocol: number
-  /** Mirrors the dash's day/night theme flag. */
   isDay: boolean
 }
 
@@ -132,11 +129,6 @@ export const usbService = {
     })
   },
 
-  /**
-   * Issue `CMD_QUERY_VERSION` and parse the firmware's identity blob. Wired
-   * by `useVersionHandshake` on each successful connect. Short timeout —
-   * the firmware answers within one main-loop tick (#1365).
-   */
   queryVersion: async (): Promise<FirmwareIdentityResult> => {
     const result = await getSerialClient().send(CMD_QUERY_VERSION, {}, { timeoutMs: 2_000 })
     if (!result.ok) {

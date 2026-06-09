@@ -122,13 +122,6 @@ function useDeviceConfigBootstrap(): void {
   }, [connected, transport, loadFromDeviceOrDemo, log])
 }
 
-/**
- * Issue `CMD_QUERY_VERSION` once per successful USB connect, populate the
- * device store with the firmware version, and verdict on wire-protocol
- * compatibility against the tuner build's expected firmware major (#1365).
- * A mismatch flips `firmwareCompat` to `mismatch`, which `useBurnDashboard`
- * watches to block Burn and the Header surfaces as a banner.
- */
 function useVersionHandshake(): void {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)

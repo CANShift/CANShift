@@ -30,12 +30,6 @@ export function useBurnDashboard(): UseBurnDashboard {
 
   const [isBurning, setIsBurning] = useState(false)
 
-  // Live link + something to write. Simulation mode is excluded — the demo
-  // config isn't something the user wants pushed to a real device by reflex.
-  // A `mismatch` verdict from the version handshake (#1365) also gates here:
-  // pushing against a wrong-major firmware can silently corrupt the typed
-  // envelope, so the safer default is to refuse until the user flashes a
-  // matching build.
   const canBurn =
     !isBurning &&
     connected &&

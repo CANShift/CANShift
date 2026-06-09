@@ -49,14 +49,6 @@ export type FirmwareCheck =
   | { kind: 'update_available'; version: string; latestVersion: string; checkedAt: number }
   | { kind: 'check_failed'; version: string; checkedAt: number }
 
-/**
- * Wire-protocol compatibility verdict from the connect-time version
- * handshake (#1365). `unknown` while the probe is in flight (or simulation
- * is up); `compatible` once the firmware's major matches the tuner build's
- * expected major; `mismatch` when they diverge — the editor blocks Burn and
- * surfaces a banner so the user can flash a matching build before writing
- * a config the device may misinterpret.
- */
 export type FirmwareCompat =
   | { kind: 'unknown' }
   | { kind: 'compatible'; protocol: number }
@@ -87,11 +79,6 @@ interface DeviceState {
   /** Result of the firmware check pipeline (probe + release comparison). */
   firmwareCheck: FirmwareCheck
 
-  /**
-   * Wire-protocol compatibility verdict from the connect-time version
-   * handshake (#1365). `unknown` until the probe lands; drives the editor's
-   * Burn gating + the mismatch banner in the Header.
-   */
   firmwareCompat: FirmwareCompat
 
   /**
