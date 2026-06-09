@@ -91,51 +91,91 @@ interface Conversion {
   bitShift: number | null
 }
 
-function parseConversion(expr: string | undefined): Conversion | 'complex' {
+const isFullyParenWrapped = (expr: string): boolean => {
+  let depth = 0
+  for (let i = 0; i < expr.length - 1; i++) {
+    depth += expr[i] === '(' ? 1 : expr[i] === ')' ? -1 : 0
+    if (depth === 0) return false
+  }
+  return true
+}
+
+const stripOuterParens = (expr: string): string => {
+  let current = expr.trim()
+  while (current.startsWith('(') && current.endsWith(')') && isFullyParenWrapped(current)) {
+    current = current.slice(1, -1).trim()
+  }
+  return current
+}
+
+const NUM_RE = '-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)'
+
+const flattenInnerVParens = (expr: string): string =>
+  expr.replace(
+    new RegExp(`\\(V((?:\\s*[*/]\\s*${NUM_RE})+)\\)`, 'g'),
+    (_, chain: string) => `V${chain}`
+  )
+
+const multiplyMulDivChain = (chain: string): number | null => {
+  const tokens = chain.match(new RegExp(`[*/]\\s*${NUM_RE}`, 'g'))
+  if (!tokens) return null
+  let product = 1
+  for (const token of tokens) {
+    const isDivision = token.startsWith('/')
+    const operand = parseFloat(token.slice(1))
+    if (!Number.isFinite(operand) || (isDivision && operand === 0)) return null
+    product = isDivision ? product / operand : product * operand
+  }
+  return product
+}
+
+const matchOrNull = <T>(
+  expr: string,
+  pattern: RegExp,
+  build: (m: RegExpExecArray) => T
+): T | null => {
+  const match = pattern.exec(expr)
+  return match ? build(match) : null
+}
+
+const REVERSE_SUB_RE = new RegExp(`^(${NUM_RE})\\s*-\\s*V$`)
+const MUL_DIV_CHAIN_RE = new RegExp(`^V((?:\\s*[*/]\\s*${NUM_RE})+)$`)
+const MUL_PLUS_OFFSET_RE = new RegExp(`^V\\s*\\*\\s*(${NUM_RE})\\s*([+-]\\s*${NUM_RE})?$`)
+const ADD_OFFSET_RE = new RegExp(`^V\\s*([+-]\\s*${NUM_RE})$`)
+
+const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
   if (!expr || expr.trim() === '') return { scale: 1, offset: 0, bitShift: null }
-  const s = expr.trim()
+  const normalised = flattenInnerVParens(stripOuterParens(expr.trim()))
 
-  // V>>N — right-shift = extract single bit
-  const shiftMatch = /^V\s*>>\s*(\d+)$/.exec(s)
-  if (shiftMatch) {
-    return { scale: 1, offset: 0, bitShift: parseInt(shiftMatch[1] ?? '0', 10) }
-  }
+  if (/^V$/i.test(normalised)) return { scale: 1, offset: 0, bitShift: null }
 
-  // V*N/M  (e.g. V*10/100 = scale 0.1)
-  const mulDivMatch = /^V\s*\*\s*(-?\d+\.?\d*)\s*\/\s*(-?\d+\.?\d*)$/.exec(s)
-  if (mulDivMatch) {
-    const divisor = parseFloat(mulDivMatch[2] ?? '0')
-    if (divisor === 0) return 'complex'
-    return { scale: parseFloat(mulDivMatch[1] ?? '1') / divisor, offset: 0, bitShift: null }
-  }
-
-  // V/N
-  const divMatch = /^V\s*\/\s*(-?\d+\.?\d*)$/.exec(s)
-  if (divMatch) {
-    const divisor = parseFloat(divMatch[1] ?? '0')
-    if (divisor === 0) return 'complex'
-    return { scale: 1 / divisor, offset: 0, bitShift: null }
-  }
-
-  // V*N  /  V*N+C  /  V*N-C  (spaces tolerated around the +/- operator)
-  const mulMatch = /^V\s*\*\s*(-?\d+\.?\d*)\s*([+-]\s*\d+\.?\d*)?$/.exec(s)
-  if (mulMatch) {
-    const scale = parseFloat(mulMatch[1] ?? '1')
-    const offset = mulMatch[2] ? parseFloat(mulMatch[2].replace(/\s+/g, '')) : 0
-    return { scale, offset, bitShift: null }
-  }
-
-  // V+C  /  V-C
-  const addMatch = /^V\s*([+-]\s*\d+\.?\d*)$/.exec(s)
-  if (addMatch) {
-    return {
+  return (
+    matchOrNull<Conversion | 'complex'>(normalised, /^V\s*>>\s*(\d+)$/, (m) => ({
       scale: 1,
-      offset: parseFloat((addMatch[1] ?? '0').replace(/\s+/g, '')),
+      offset: 0,
+      bitShift: parseInt(m[1] ?? '0', 10),
+    })) ??
+    matchOrNull<Conversion | 'complex'>(normalised, REVERSE_SUB_RE, (m) => ({
+      scale: -1,
+      offset: parseFloat(m[1] ?? '0'),
       bitShift: null,
-    }
-  }
-
-  return 'complex'
+    })) ??
+    matchOrNull<Conversion | 'complex'>(normalised, MUL_DIV_CHAIN_RE, (m) => {
+      const product = multiplyMulDivChain(m[1] ?? '')
+      return product === null ? 'complex' : { scale: product, offset: 0, bitShift: null }
+    }) ??
+    matchOrNull<Conversion | 'complex'>(normalised, MUL_PLUS_OFFSET_RE, (m) => ({
+      scale: parseFloat(m[1] ?? '1'),
+      offset: m[2] ? parseFloat(m[2].replace(/\s+/g, '')) : 0,
+      bitShift: null,
+    })) ??
+    matchOrNull<Conversion | 'complex'>(normalised, ADD_OFFSET_RE, (m) => ({
+      scale: 1,
+      offset: parseFloat((m[1] ?? '0').replace(/\s+/g, '')),
+      bitShift: null,
+    })) ??
+    'complex'
+  )
 }
 
 // ---------------------------------------------------------------------------
