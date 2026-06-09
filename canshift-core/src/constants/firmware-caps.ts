@@ -5,7 +5,11 @@
 // firmware-side at load time). Keep these in sync if the firmware caps change.
 
 export const FIRMWARE_CAPS = {
-  MAX_PAGES: 4,
+  // Bumped from 4 → 8 alongside the firmware-side bump (#1351 follow-up): the
+  // post-WiFi-removal DRAM budget covers the extra ~13 KB of BSS, and the
+  // 4-page cap was silently dropping a user's `cruise_control` template page
+  // when their dashboard already had 4 free-form pages.
+  MAX_PAGES: 8,
   MAX_WIDGETS_PER_PAGE: 12,
   MAX_TOPBAR_ITEMS: 16,
   MAX_SIGNALS: 32,
