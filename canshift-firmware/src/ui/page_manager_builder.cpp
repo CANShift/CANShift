@@ -83,7 +83,9 @@ constexpr uint8_t CRUISE_L_MAX_PTS = 40;
 constexpr uint32_t CRUISE_BUTTON_FILL_RGB = 0x1A1A1Au;
 // Pressed-state surface — slightly brighter so the user sees feedback on tap.
 constexpr uint32_t CRUISE_BUTTON_FILL_PRESSED_RGB = 0x3A3A3Au;
-constexpr uint32_t CRUISE_BUTTON_STROKE_RGB = 0xE08030u;
+// Saturated red outline — reads as "high-attention control surface" against
+// the dark page background, matches typical dash-cluster cruise UX.
+constexpr uint32_t CRUISE_BUTTON_STROKE_RGB = 0xE03030u;
 
 constexpr uint32_t CRUISE_CENTER_DIM_RGB = 0x888888u;
 constexpr uint32_t CRUISE_CENTER_VALUE_RGB = 0xFFFFFFu;
@@ -543,10 +545,10 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
                 // the top row to bring the glyph visual mass into parity.
                 // secondary(24) (Bold) is the closest baked tier — primary(32)
                 // would overflow the L's narrow body arm (h=85, notchH=44).
-                if (i == static_cast<uint8_t>(CruiseCorner::kTL) ||
-                    i == static_cast<uint8_t>(CruiseCorner::kTR)) {
-                    lv_obj_set_style_text_font(label, FontManager::secondary(24), 0);
-                }
+                // All four cruise labels share secondary(24) — Bold tier at
+                // 24 px reads cleanly inside the L body arms and matches the
+                // dash-cluster idiom of large action affordances.
+                lv_obj_set_style_text_font(label, FontManager::secondary(24), 0);
                 // Pin the label colour to white across every state so the
                 // LVGL default theme can't grey-out / black-out the glyph on
                 // CHECKED or DISABLED transitions. Without this the OFF/ON
