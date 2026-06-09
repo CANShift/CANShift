@@ -139,6 +139,8 @@ interface DashboardState {
   /** User dismisses the initial "no config on device — showing default" banner. */
   clearDemoFallback: () => void
   markSaved: (filePath: string) => void
+  /** Mark the editor in-sync with the connected device (post-burn). */
+  markPushed: () => void
 
   // Edit history
   undo: () => void
@@ -374,6 +376,15 @@ export const useDashboardStore = create<DashboardState>()(
     markSaved: (filePath) => {
       set((s) => {
         s.filePath = filePath
+        s.isDirty = false
+      })
+    },
+
+    markPushed: () => {
+      // Tuner-side equivalent of markSaved: the live device is now in sync
+      // with the editor — clear dirty but leave filePath alone (WebSerial has
+      // no concept of a file path).
+      set((s) => {
         s.isDirty = false
       })
     },
