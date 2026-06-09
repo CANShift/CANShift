@@ -25,6 +25,25 @@ const SEND_QUEUE_CAPACITY = 8
 
 export type SerialStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
 
+/**
+ * Map a raw WebSerial `port.open()` exception to a human-readable hint. The
+ * native messages ("Failed to execute 'open' on 'SerialPort'…") are accurate
+ * but tell the user nothing about WHAT to fix.
+ */
+function humanizeOpenError(raw: string): string {
+  const lower = raw.toLowerCase()
+  if (lower.includes('failed to open') || lower.includes('already open')) {
+    return 'Port busy — close other apps using it (PlatformIO Monitor, Arduino IDE, `screen`, another browser tab) and click Connect device again.'
+  }
+  if (lower.includes('notfounderror') || lower.includes('not found')) {
+    return 'Device not found — check the cable and unplug/replug the dash.'
+  }
+  if (lower.includes('access denied') || lower.includes('permission')) {
+    return 'Permission denied — re-grant access via Connect device.'
+  }
+  return raw
+}
+
 export interface SerialClientOptions {
   baudRate?: number
   /** Disable auto-reconnect (used by tests). */
@@ -217,10 +236,16 @@ export class SerialClient {
     try {
       await port.open({ baudRate: this.baudRate })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'open_failed'
+      // A failed `open()` here means the port was never established — usually
+      // it's held exclusive by another consumer (PlatformIO Monitor, Arduino
+      // IDE, `screen`, another browser tab). Retrying every 500 ms would flap
+      // the UI between "Reconnecting…" and "Disconnected" forever without ever
+      // succeeding. Park in disconnected with the friendly error and let the
+      // user free the port + click Connect again.
+      const raw = err instanceof Error ? err.message : 'open_failed'
+      const msg = humanizeOpenError(raw)
       this.lastError = msg
       this.setStatus('disconnected', msg)
-      this.scheduleReconnect(port)
       throw new Error(msg)
     }
 
