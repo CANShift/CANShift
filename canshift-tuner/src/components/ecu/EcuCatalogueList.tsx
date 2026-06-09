@@ -1,0 +1,299 @@
+import type { CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+export interface EcuCatalogueEntry {
+  id: string
+  vendor: string
+  file: string
+  label: string
+  path: string
+  sizeBytes: number
+}
+
+interface CatalogueManifest {
+  source: string
+  license: string
+  fetchedAt: string
+  entries: EcuCatalogueEntry[]
+}
+
+export interface EcuCatalogueListProps {
+  selectedId: string | null
+  onSelect: (entry: EcuCatalogueEntry) => Promise<void>
+}
+
+type LoadState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready'; manifest: CatalogueManifest }
+  | { kind: 'error'; message: string }
+
+type SortKey = 'vendor' | 'label' | 'size'
+
+const CATALOGUE_URL = '/ecu-catalogue/index.json'
+
+export function EcuCatalogueList({ selectedId, onSelect }: EcuCatalogueListProps) {
+  const [state, setState] = useState<LoadState>({ kind: 'idle' })
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('vendor')
+
+  useEffect(() => {
+    setState({ kind: 'loading' })
+    let cancelled = false
+    void fetch(CATALOGUE_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${String(res.status)}`)
+        return res.json() as Promise<CatalogueManifest>
+      })
+      .then((manifest) => {
+        if (cancelled) return
+        setState({ kind: 'ready', manifest })
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setState({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'fetch_failed',
+        })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filtered = useMemo(() => {
+    if (state.kind !== 'ready') return []
+    const q = query.trim().toLowerCase()
+    const matches = q
+      ? state.manifest.entries.filter(
+          (e) =>
+            e.vendor.toLowerCase().includes(q) ||
+            e.label.toLowerCase().includes(q) ||
+            e.file.toLowerCase().includes(q),
+        )
+      : state.manifest.entries.slice()
+    matches.sort((a, b) => {
+      switch (sortKey) {
+        case 'vendor':
+          return a.vendor.localeCompare(b.vendor) || a.label.localeCompare(b.label)
+        case 'label':
+          return a.label.localeCompare(b.label)
+        case 'size':
+          return b.sizeBytes - a.sizeBytes
+      }
+    })
+    return matches
+  }, [state, query, sortKey])
+
+  return (
+    <div style={wrapperStyle}>
+      <div style={toolbarStyle}>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+          }}
+          placeholder="Search vendor or model"
+          style={searchStyle}
+          disabled={state.kind !== 'ready'}
+        />
+        <div style={sortPillsStyle}>
+          <SortPill active={sortKey === 'vendor'} onClick={() => setSortKey('vendor')}>
+            Vendor
+          </SortPill>
+          <SortPill active={sortKey === 'label'} onClick={() => setSortKey('label')}>
+            Name
+          </SortPill>
+          <SortPill active={sortKey === 'size'} onClick={() => setSortKey('size')}>
+            Size
+          </SortPill>
+        </div>
+      </div>
+
+      {state.kind === 'loading' && <div style={hintStyle}>Loading catalogue…</div>}
+      {state.kind === 'error' && (
+        <div style={errorStyle}>Failed to load catalogue: {state.message}</div>
+      )}
+      {state.kind === 'ready' && (
+        <>
+          <div style={metaStyle}>
+            {filtered.length} of {state.manifest.entries.length} entr
+            {state.manifest.entries.length === 1 ? 'y' : 'ies'} ·{' '}
+            <a
+              href={state.manifest.source}
+              target="_blank"
+              rel="noreferrer"
+              style={attributionLinkStyle}
+            >
+              upstream
+            </a>{' '}
+            · {state.manifest.license}
+          </div>
+          <div style={listStyle} role="listbox" aria-label="ECU catalogue">
+            {filtered.map((entry) => {
+              const isSelected = selectedId === entry.id
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    void onSelect(entry)
+                  }}
+                  style={itemStyle(isSelected)}
+                >
+                  <div style={itemTitleStyle}>{entry.label}</div>
+                  <div style={itemMetaStyle}>
+                    <span>{entry.vendor}</span>
+                    <span style={{ color: 'hsl(var(--text-muted))' }}>{formatBytes(entry.sizeBytes)}</span>
+                  </div>
+                </button>
+              )
+            })}
+            {filtered.length === 0 && (
+              <div style={emptyStyle}>No catalogue entry matches the current search.</div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+interface SortPillProps {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}
+
+function SortPill({ active, onClick, children }: SortPillProps) {
+  return (
+    <button type="button" onClick={onClick} style={sortPillStyle(active)}>
+      {children}
+    </button>
+  )
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${String(bytes)} B`
+}
+
+const wrapperStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  flex: 1,
+  minHeight: 0,
+}
+
+const toolbarStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+}
+
+const searchStyle: CSSProperties = {
+  width: '100%',
+  background: 'hsl(var(--bg))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 6,
+  padding: '7px 10px',
+  fontSize: 12,
+  color: 'hsl(var(--text))',
+  outline: 'none',
+}
+
+const sortPillsStyle: CSSProperties = {
+  display: 'flex',
+  gap: 4,
+}
+
+const sortPillStyle = (active: boolean): CSSProperties => ({
+  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
+  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
+  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+  borderRadius: 999,
+  padding: '2px 10px',
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+})
+
+const metaStyle: CSSProperties = {
+  fontSize: 10,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: 'hsl(var(--text-muted))',
+}
+
+const attributionLinkStyle: CSSProperties = {
+  color: 'hsl(var(--text-dim))',
+  textDecoration: 'underline',
+}
+
+const listStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+  overflowY: 'auto',
+  flex: 1,
+  minHeight: 0,
+  paddingRight: 2,
+}
+
+const itemStyle = (selected: boolean): CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+  padding: '8px 10px',
+  background: selected ? 'hsl(var(--primary) / 0.12)' : 'hsl(var(--surface))',
+  border: `1px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+  borderRadius: 6,
+  textAlign: 'left',
+  cursor: 'pointer',
+  color: 'hsl(var(--text))',
+  fontFamily: 'inherit',
+})
+
+const itemTitleStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+}
+
+const itemMetaStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  fontSize: 10,
+  color: 'hsl(var(--text-dim))',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+}
+
+const hintStyle: CSSProperties = {
+  padding: '12px 10px',
+  fontSize: 12,
+  color: 'hsl(var(--text-muted))',
+}
+
+const errorStyle: CSSProperties = {
+  padding: '10px',
+  fontSize: 12,
+  color: 'hsl(var(--destructive))',
+  background: 'hsl(var(--destructive) / 0.1)',
+  border: '1px solid hsl(var(--destructive))',
+  borderRadius: 6,
+}
+
+const emptyStyle: CSSProperties = {
+  padding: '24px 8px',
+  fontSize: 12,
+  color: 'hsl(var(--text-muted))',
+  textAlign: 'center',
+}

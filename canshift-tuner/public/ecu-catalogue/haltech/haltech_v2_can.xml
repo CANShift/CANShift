@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RealDashCAN version="2">
+  <frames>
+    <frame id="0x360" endianess="big">
+      <value targetId="37" offset="0" length="2"></value> <!-- rpm -->
+      <value targetId="31" units="kPA" offset="2" length="2" conversion="V*0.1"></value> <!-- map -->
+      <value targetId="42" units="%" offset="4" length="2" conversion="V*0.1"></value> <!-- tps -->
+      <value targetId="759" units="bar" offset="6" length="2" conversion="V*0.001"></value> <!-- coolant pressure -->
+    </frame>
+
+    <frame id="0x361" endianess="big">
+      <value targetId="202" units="bar" offset="0" length="2" conversion="V*0.001"></value> <!-- fuel pressure -->
+      <value targetId="151" units="bar" offset="2" length="2" conversion="V*0.001"></value> <!-- oil pressure -->
+      <value name="Haltech: Accelerator Pedal Pos" units="%" offset="4" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Wastegate Pressure" units="kPA" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x362" endianess="big">
+      <value name="Haltech: Injector Duty Cycle (Primary)" units="%" offset="0" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Injector Duty Cycle (Secondary)" units="%" offset="2" length="2" conversion="V*0.1"></value>
+      <value targetId="38" offset="4" length="2" conversion="V*0.1"></value> <!-- spark advance -->
+      <value name="Haltech: Ignition Angle (Trailing)" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x363" endianess="big">
+      <value name="Haltech: Wheel Slip" units="kmh" offset="0" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Wheel Diff" units="kmh" offset="2" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Engine Acceleration" offset="4" length="2"></value>
+      <value name="Haltech: Manifold Pressure 2" units="kPA" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x368" endianess="big">
+      <value targetId="254" offset="0" length="2" conversion="V*0.001"></value> <!-- lambda 1 -->
+      <value targetId="255" offset="2" length="2" conversion="V*0.001"></value> <!-- lambda 2 -->
+      <value name="Haltech: Lambda 3" offset="4" length="2" conversion="V*0.001"></value>
+      <value name="Haltech: Lambda 4" offset="6" length="2" conversion="V*0.001"></value>
+    </frame>
+
+    <frame id="0x369" endianess="big">
+      <value name="Haltech: Miss Count" offset="0" length="2"></value>
+      <value name="Haltech: Trigger Counter" offset="2" length="2"></value>
+      <value name="Haltech: Home Counter" offset="4" length="2"></value>
+      <value name="Haltech: Triggers Since Last Home" offset="6" length="2"></value>
+    </frame>
+
+    <frame id="0x36A" endianess="big">
+      <value targetId="29" offset="0" length="2"></value> <!-- knock percentage -->
+      <value name="Haltech: Knock Level Logged 2" offset="2" length="2"></value>
+      <value targetId="28" offset="4" length="2" conversion="V*0.1"></value> <!-- knock retard -->
+      <value name="Haltech: Knock Retard - Bank 2" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x36B" endianess="big">
+      <value name="Haltech: Brake Pressure" units="kPA" offset="0" length="2"></value>
+      <value name="Haltech: NOS Pressure" units="kPA" offset="2" length="2"></value>
+      <value name="Haltech: Turbo Speed Sensor" offset="4" length="2"></value>
+      <value name="Haltech: G-Sensor" offset="6" length="2"></value>
+    </frame>
+
+    <frame id="0x36C" endianess="big">
+      <value name="Haltech: Wheelspeed Front Left" units="kmh" offset="0" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Wheelspeed Front Right" units="kmh" offset="2" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Wheelspeed Rear Left" units="kmh" offset="4" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Wheelspeed Rear Right" units="kmh" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x36D" endianess="big">
+      <value name="Haltech: Wheelspeed Front" units="kmh" offset="0" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Wheelspeed Rear" units="kmh" offset="2" length="2" conversion="V*0.1"></value>
+      <value targetId="493" offset="4" length="2" conversion="V*0.1"></value> <!-- exh. cam angle 1 -->
+      <value targetId="495" offset="6" length="2" conversion="V*0.1"></value> <!-- exh. cam angle 2 -->
+    </frame>
+
+    <frame id="0x36E" endianess="big">
+      <value targetId="406" units="%" offset="0" length="2" conversion="V*0.1"></value> <!-- fuel cut -->
+      <value name="Haltech: Launch Control Ign Retard" offset="2" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Launch Control Fuel Enrich" offset="4" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x36F" endianess="big">
+      <value name="Haltech: Boost Control Output" units="%" offset="2" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Timed Duty Output Duty 1" units="%" offset="4" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Timed Duty Output Duty 2" units="%" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x370" endianess="big">
+      <value name="Haltech: Wheelspeed General" units="kmh" offset="0" length="2" conversion="V*0.1"></value>
+      <value targetId="200" offset="2" length="2"></value> <!-- gear -->
+      <value targetId="492" offset="4" length="2" conversion="V*0.1"></value> <!-- int. cam angle 1 -->
+      <value targetId="494" offset="6" length="2" conversion="V*0.1"></value> <!-- int. cam angle 2 -->
+    </frame>
+
+    <frame id="0x371" endianess="big">
+      <value targetId="490" offset="0" length="2"></value> <!-- fuel flow -->
+      <value name="Haltech: Fuel Flow Return" offset="2" length="2"></value>
+      <value name="Haltech: Fuel Flow Differential" offset="4" length="2"></value>
+    </frame>
+
+    <frame id="0x372" endianess="big">
+      <value targetId="12" offset="0" length="2" conversion="V*0.1"></value> <!-- battery voltage -->
+      <value name="Haltech: Air Temp Sensor 2" units="K" offset="2" length="2" conversion="V*0.1"></value>
+      <value targetId="270" units="bar" offset="4" length="2" conversion="V*0.001"></value> <!-- boost target -->
+      <value targetId="11" units="kPA" offset="6" length="2" conversion="V*0.1"></value> <!-- barometer -->
+    </frame>
+
+    <frame id="0x373" endianess="big">
+      <value targetId="106" units="K" offset="0" length="2" conversion="V*0.1"></value> <!-- egt 1 -->
+      <value targetId="107" units="K" offset="2" length="2" conversion="V*0.1"></value> <!-- egt 2 -->
+      <value targetId="108" units="K" offset="4" length="2" conversion="V*0.1"></value> <!-- egt 3 -->
+      <value targetId="109" units="K" offset="6" length="2" conversion="V*0.1"></value> <!-- egt 4 -->
+    </frame>
+
+    <frame id="0x374" endianess="big">
+      <value targetId="110" units="K" offset="0" length="2" conversion="V*0.1"></value> <!-- egt 5 -->
+      <value targetId="111" units="K" offset="2" length="2" conversion="V*0.1"></value> <!-- egt 6 -->
+      <value targetId="112" units="K" offset="4" length="2" conversion="V*0.1"></value> <!-- egt 7 -->
+      <value targetId="113" units="K" offset="6" length="2" conversion="V*0.1"></value> <!-- egt 8 -->
+    </frame>
+
+    <frame id="0x375" endianess="big">
+      <value targetId="114" units="K" offset="0" length="2" conversion="V*0.1"></value> <!-- egt 9 -->
+      <value targetId="115" units="K" offset="2" length="2" conversion="V*0.1"></value> <!-- egt 10 -->
+      <value targetId="116" units="K" offset="4" length="2" conversion="V*0.1"></value> <!-- egt 11 -->
+      <value targetId="117" units="K" offset="6" length="2" conversion="V*0.1"></value> <!-- egt 12 -->
+    </frame>
+
+    <frame id="0x3E0" endianess="big">
+      <value targetId="14" units="K" offset="0" length="2" conversion="V*0.1"></value> <!-- coolant temp -->
+      <value targetId="27" units="K" offset="2" length="2" conversion="V*0.1"></value> <!-- iat -->
+      <value targetId="499" units="K" offset="4" length="2" conversion="V*0.1"></value> <!-- fuel temp -->
+      <value targetId="152" units="K" offset="6" length="2" conversion="V*0.1"></value> <!-- engine oil temp -->
+    </frame>
+
+    <frame id="0x3E1" endianess="big">
+      <value targetId="138" units="K" offset="0" length="2" conversion="V*0.1"></value> <!-- trans oil temp -->
+      <value name="Haltech: Diff Oil Temp" units="K" offset="2" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Fuel Composition" units="%" offset="4" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x3E2" endianess="big">
+      <value name="Haltech: Fuel Consumption Rate" offset="2" length="2" conversion="V*0.01"></value>
+      <value name="Haltech: Average Fuel Economy" offset="4" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x3E3" endianess="big">
+      <value targetId="17" units="%" offset="0" length="2" conversion="V*0.1"></value> <!-- fuel corr 1 -->
+      <value targetId="18" units="%" offset="2" length="2" conversion="V*0.1"></value> <!-- fuel corr 2 -->
+      <value name="Haltech: Fuel Trim Long Term Bank 1" units="%" offset="4" length="2" conversion="V*0.1"></value>
+      <value name="Haltech: Fuel Trim Long Term Bank 2" units="%" offset="6" length="2" conversion="V*0.1"></value>
+    </frame>
+
+    <frame id="0x3E4" endianess="big">
+      <value name="Haltech: NOS Switch" units="bit" offset="1" startbit="0" bitcount="1"></value>
+      <value name="Haltech: NOS Active" units="bit" offset="1" startbit="1" bitcount="1"></value>
+      <value name="Haltech: Gear Switch State" units="bit" offset="1" startbit="2" bitcount="1"></value>
+      <value name="Haltech: Decel Cut" units="bit" offset="1" startbit="3" bitcount="1"></value>
+      <value name="Haltech: Transient Throttle Active" units="bit" offset="1" startbit="4" bitcount="1"></value>
+      <value targetId="230" offset="1" startbit="5" bitcount="1" conversion="V*100"></value> <!-- brake pedal position -->
+      <value targetId="231" offset="1" startbit="6" bitcount="1" conversion="V*100"></value> <!-- cluth pedal position -->
+
+      <value targetId="394" units="bit" offset="2" startbit="0" bitcount="1"></value> <!-- launch control active -->
+      <value name="Haltech: Antilag Launch Switch On" units="bit" offset="2" startbit="1" bitcount="1"></value>
+      <value name="Haltech: Aux Rev Limiter Switch" units="bit" offset="2" startbit="2" bitcount="1"></value>
+      <value name="Haltech: Rally Anti Lag Swich" units="bit" offset="2" startbit="3" bitcount="1"></value>
+      <value name="Haltech: Flat Shift State" units="bit" offset="2" startbit="4" bitcount="1"></value>
+      <value name="Haltech: Timed Duty Output Active" units="bit" offset="2" startbit="5" bitcount="1"></value>
+      <value name="Haltech: Torque Reduction Active" units="bit" offset="2" startbit="6" bitcount="1"></value>
+      <value name="Haltech: Torque Reduction Cut Active" units="bit" offset="2" startbit="7" bitcount="1"></value>
+
+      <value targetId="65" units="bit" offset="7" startbit="0" bitcount="1"></value> <!-- check engine light -->
+      <value name="Haltech: Battery Light" units="bit" offset="7" startbit="1" bitcount="1"></value>
+      <value name="Haltech: Limp Mode Active" units="bit" offset="7" startbit="2" bitcount="1"></value>
+      <value targetId="160" units="bit" offset="7" startbit="3" bitcount="1"></value> <!-- left turn signal -->
+      <value targetId="161" units="bit" offset="7" startbit="4" bitcount="1"></value> <!-- right turn signal -->
+      <value targetId="157" units="bit" offset="7" startbit="5" bitcount="1"></value> <!-- high beam -->
+      <value targetId="164" units="bit" offset="7" startbit="6" bitcount="1"></value> <!-- parking brake -->
+    </frame>
+
+	<frame id="0x6F3" endianess="big">
+	  <value targetId="739" units="bit" offset="4" length="1"></value> <!-- Front Left tyre leaking -->
+	  <value targetId="740" units="bit" offset="4" length="1" conversion="V>>1"></value> <!-- Front Right tyre leaking -->
+	  <value targetId="741" units="bit" offset="4" length="1" conversion="V>>2"></value> <!-- Rear Left tyre leaking -->
+	  <value targetId="742" units="bit" offset="4" length="1" conversion="V>>3"></value> <!-- Rear Right tyre leaking -->
+	  <value name="Haltech: Engine Protection Severity Level" offset="5" length="1"></value>
+	  <value name="Haltech: Engine Protection Reason" offset="6" length="2"></value>
+	</frame>
+
+  </frames>
+</RealDashCAN>
+
