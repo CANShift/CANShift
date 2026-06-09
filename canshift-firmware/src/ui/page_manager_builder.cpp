@@ -57,13 +57,29 @@ constexpr int16_t CRUISE_GAP_X = 12;
 constexpr int16_t CRUISE_GAP_Y = 10;
 constexpr int16_t CRUISE_OUTER_PAD = 8;
 
-// Centred SET-SPEED display — mirrors CruiseControlPreview.tsx (CENTER_W /
-// CENTER_H / 100 km/h demo). Three labels stacked: dim "SET" header, large
-// bold value, dim "km/h" unit. Sits on top of the four buttons' inner
-// corners so visually the buttons read as L-shapes cropped by this rect
-// (real L-shape rendering tracked in #1375 follow-up).
+// Centred SET-SPEED display geometry — mirrors CruiseControlPreview.tsx.
+// The display sits on top of the four buttons' inner corners with an opaque
+// page-coloured background, so visually the buttons read as L-shapes cropped
+// by this rect. True polygon L-shapes (rounded notch + outer corners) are
+// blocked on LVGL 8.4's lv_draw_polygon being convex-only — tracked as a
+// follow-up to #1375.
 constexpr int16_t CRUISE_CENTER_W = 100;
 constexpr int16_t CRUISE_CENTER_H = 76;
+constexpr int16_t CRUISE_BUTTON_RADIUS = 8; // matches CruiseControlPreview CORNER_R
+// The page-coloured centre rect's rounded corners "carve" the inner corner
+// of each surrounding button — from the button's perspective the rounded
+// edge of the centre rect reads as a concave notch radius. Matches Studio's
+// INNER_R so both sides agree on the curvature.
+constexpr int16_t CRUISE_CENTER_RADIUS = 5;
+constexpr int16_t CRUISE_BUTTON_BORDER_W = 2; // matches CruiseControlPreview STROKE_W
+
+// Per-button surface + stroke colours — hardcoded for now. Surface is a
+// subtle dark grey that reads against the typical black page background;
+// stroke is the same accent used by burn_overlay for visual continuity.
+// Future #451 work can wire these to the page palette.
+constexpr uint32_t CRUISE_BUTTON_FILL_RGB = 0x1A1A1Au;
+constexpr uint32_t CRUISE_BUTTON_STROKE_RGB = 0xE08030u;
+
 constexpr uint32_t CRUISE_CENTER_DIM_RGB = 0x888888u;
 constexpr uint32_t CRUISE_CENTER_VALUE_RGB = 0xFFFFFFu;
 
@@ -101,10 +117,11 @@ CfgWidget makeCruiseButton(const CruiseButtonSpec &spec, const CfgPage &pageCfg,
     w.layout.h = CRUISE_BUTTON_H;
     w.layout.zOrder = 0;
 
-    // Reuse the page palette so the buttons follow day/night theming. The
-    // background mirrors the page so the button face stays subtle and the
-    // label reads as the primary visual.
-    w.style.primaryColor = pageCfg.bgColor;
+    // Subtle dark surface — visible against the typical black page bg without
+    // overpowering the central SET-SPEED readout. (void)pageCfg silences the
+    // unused-param warning while the palette wiring is still pending.
+    (void)pageCfg;
+    w.style.primaryColor = CfgColor{CRUISE_BUTTON_FILL_RGB};
     w.style.textColor = CfgColor{0xFFFFFFu};
     w.style.fontSize = 22;
 
@@ -157,28 +174,97 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         // top of layout.y, so passing 0 keeps the buttons where we placed them.
         const int16_t y = startY + row * (CRUISE_BUTTON_H + CRUISE_GAP_Y);
         const CfgWidget w = makeCruiseButton(CRUISE_BUTTONS[i], cfg, x, y);
-        if (WidgetFactory::create(screen, w, /*yOffset=*/0) != nullptr)
+        lv_obj_t *btn = WidgetFactory::create(screen, w, /*yOffset=*/0);
+        if (btn) {
+            // Round all four corners to match CruiseControlPreview's CORNER_R.
+            // The SET-SPEED rect overlaid later masks each button's inner
+            // corner with the page bg, so visually the buttons read as
+            // L-shapes wrapping the readout.
+            lv_obj_set_style_radius(btn, CRUISE_BUTTON_RADIUS, LV_PART_MAIN);
+            // Persistent idle border so the L outline is visible at rest, not
+            // only on press. Matches CruiseControlPreview's STROKE_W + accent.
+            lv_obj_set_style_border_width(btn, CRUISE_BUTTON_BORDER_W, LV_PART_MAIN);
+            lv_obj_set_style_border_color(btn, lv_color_hex(CRUISE_BUTTON_STROKE_RGB),
+                                          LV_PART_MAIN);
+            lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
             ++created;
+        }
     }
 
-    // Centred SET-SPEED display. Labels are direct children of `screen` so they
-    // stay siblings of the buttons — lv_label is not clickable by default so
-    // taps in the centre area still resolve to the underlying button at the
-    // touched corner. Value is a placeholder em-dash until the cruise state
-    // machine lands (#451 follow-up); structure (SET / value / km/h) matches
-    // CruiseControlPreview.tsx exactly.
+    // For each button, paint a notch overlay over its inner corner: filled
+    // with the page background colour so the corner of the button is
+    // visually erased, and bordered on the two L-facing sides so the
+    // button's border continues across the notch into a complete L outline.
+    // The four notch overlays + the four button borders together form four
+    // L-shaped outlines — no polygon rendering needed.
+    //   notch position = button inner corner shifted by (notchW, notchH)
+    //   border sides   = the two sides of the notch that touch the L body
+    static constexpr int16_t notchW = CRUISE_CENTER_W / 2 + 6; // 56
+    static constexpr int16_t notchH = CRUISE_CENTER_H / 2 + 6; // 44
+    struct NotchSpec {
+        int16_t dx, dy;             // offset from button.x/.y to notch top-left
+        lv_border_side_t borderSide;
+    };
+    const NotchSpec specs[4] = {
+        // TL: notch at bottom-right of button — borders on TOP + LEFT
+        {CRUISE_BUTTON_W - notchW, CRUISE_BUTTON_H - notchH,
+         static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_LEFT)},
+        // TR: notch at bottom-left — borders on TOP + RIGHT
+        {0, CRUISE_BUTTON_H - notchH,
+         static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_RIGHT)},
+        // BL: notch at top-right — borders on BOTTOM + LEFT
+        {CRUISE_BUTTON_W - notchW, 0,
+         static_cast<lv_border_side_t>(LV_BORDER_SIDE_BOTTOM | LV_BORDER_SIDE_LEFT)},
+        // BR: notch at top-left — borders on BOTTOM + RIGHT
+        {0, 0,
+         static_cast<lv_border_side_t>(LV_BORDER_SIDE_BOTTOM | LV_BORDER_SIDE_RIGHT)},
+    };
+    for (uint8_t i = 0; i < 4; ++i) {
+        const uint8_t col = i % 2;
+        const uint8_t row = i / 2;
+        const int16_t bx = startX + col * (CRUISE_BUTTON_W + CRUISE_GAP_X);
+        const int16_t by = startY + row * (CRUISE_BUTTON_H + CRUISE_GAP_Y);
+        lv_obj_t *notch = lv_obj_create(screen);
+        lv_obj_set_pos(notch, bx + specs[i].dx, by + specs[i].dy);
+        lv_obj_set_size(notch, notchW, notchH);
+        lv_obj_set_style_bg_color(notch, lv_color_hex(cfg.bgColor.rgb), 0);
+        lv_obj_set_style_bg_opa(notch, LV_OPA_COVER, 0);
+        // Rounded corners on the notch overlay round the L's inner corners
+        // (concave at the deep corner, convex at the two notch transitions).
+        lv_obj_set_style_radius(notch, CRUISE_CENTER_RADIUS, 0);
+        lv_obj_set_style_pad_all(notch, 0, 0);
+        lv_obj_set_style_border_color(notch, lv_color_hex(CRUISE_BUTTON_STROKE_RGB), 0);
+        lv_obj_set_style_border_width(notch, CRUISE_BUTTON_BORDER_W, 0);
+        lv_obj_set_style_border_opa(notch, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_side(notch, specs[i].borderSide, 0);
+        lv_obj_clear_flag(notch, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(notch, LV_OBJ_FLAG_CLICKABLE);
+    }
+
+    // Centred SET-SPEED label stack. Labels float over the cross-shaped
+    // page-bg gap between the four buttons + notch overlays. Non-clickable
+    // by default so taps pass through.
     const int16_t centerX = (LV_HOR_RES - CRUISE_CENTER_W) / 2;
     const int16_t centerY = contentY + (contentH - CRUISE_CENTER_H) / 2;
 
-    lv_obj_t *setHeader = lv_label_create(screen);
+    lv_obj_t *center = lv_obj_create(screen);
+    lv_obj_set_pos(center, centerX, centerY);
+    lv_obj_set_size(center, CRUISE_CENTER_W, CRUISE_CENTER_H);
+    lv_obj_set_style_bg_opa(center, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(center, 0, 0);
+    lv_obj_set_style_pad_all(center, 0, 0);
+    lv_obj_clear_flag(center, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(center, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t *setHeader = lv_label_create(center);
     lv_label_set_text(setHeader, "SET");
     lv_obj_set_style_text_color(setHeader, lv_color_hex(CRUISE_CENTER_DIM_RGB), 0);
     lv_obj_set_style_text_font(setHeader, FontManager::label(12), 0);
     lv_obj_set_width(setHeader, CRUISE_CENTER_W);
     lv_obj_set_style_text_align(setHeader, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(setHeader, centerX, centerY + 4);
+    lv_obj_set_pos(setHeader, 0, 4);
 
-    lv_obj_t *setValue = lv_label_create(screen);
+    lv_obj_t *setValue = lv_label_create(center);
     // Zero is the "no signal" placeholder — no cruise state machine yet, so
     // nothing feeds a real setpoint. Mirrors CruiseControlPreview.tsx's
     // DEMO_SET_SPEED. Replace with the live setpoint when #451 wires the
@@ -188,15 +274,15 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
     lv_obj_set_style_text_font(setValue, FontManager::primary(32), 0);
     lv_obj_set_width(setValue, CRUISE_CENTER_W);
     lv_obj_set_style_text_align(setValue, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(setValue, centerX, centerY + (CRUISE_CENTER_H - 32) / 2);
+    lv_obj_set_pos(setValue, 0, (CRUISE_CENTER_H - 32) / 2);
 
-    lv_obj_t *setUnit = lv_label_create(screen);
+    lv_obj_t *setUnit = lv_label_create(center);
     lv_label_set_text(setUnit, "km/h");
     lv_obj_set_style_text_color(setUnit, lv_color_hex(CRUISE_CENTER_DIM_RGB), 0);
     lv_obj_set_style_text_font(setUnit, FontManager::label(12), 0);
     lv_obj_set_width(setUnit, CRUISE_CENTER_W);
     lv_obj_set_style_text_align(setUnit, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(setUnit, centerX, centerY + CRUISE_CENTER_H - 16);
+    lv_obj_set_pos(setUnit, 0, CRUISE_CENTER_H - 16);
 
     LOG_INFO("UI", "Built cruise_control template on page '%s' (%u/4 buttons + SET display)",
              cfg.id, created);
