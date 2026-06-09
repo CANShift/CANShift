@@ -88,6 +88,7 @@ void showPage(uint8_t idx, lv_scr_load_anim_t anim, uint32_t durationMs) {
         LOG_WARN("UI", "showPage: idx=%u out of range (pageCount=%u)", idx, s_pageCount);
         return;
     }
+    LOG_INFO("UI", "showPage: %u -> %u anim=%d", s_currentIdx, idx, static_cast<int>(anim));
 
     // Release the page that finished its last animation. Do this BEFORE building
     // the new page so the freed pool space is available. Skip if the user

@@ -535,30 +535,30 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         if (lv_obj_get_child_cnt(btn) > 0) {
             label = lv_obj_get_child(btn, 0);
             if (label) {
+                // Wipe the label's theme styles FIRST — remove_style_all kills
+                // position/align/font/colour, so every property below has to
+                // be re-set after this call.
+                lv_obj_remove_style_all(label);
                 lv_obj_add_flag(label, LV_OBJ_FLAG_IGNORE_LAYOUT);
-                lv_obj_align(label, LV_ALIGN_CENTER, shiftX, shiftY);
-                // Mirror CruiseControlPreview.tsx's symbol bump: + and − are
-                // single glyphs that read much smaller than 3-char SET/OFF at
-                // the same em size, so Studio renders them at ~28 px while
-                // SET/OFF sit at ~15 px. ButtonWidget locks every label to
-                // label(16) via computeLabelFontSize, so override here for
-                // the top row to bring the glyph visual mass into parity.
-                // secondary(24) (Bold) is the closest baked tier — primary(32)
-                // would overflow the L's narrow body arm (h=85, notchH=44).
-                // All four cruise labels share secondary(24) — Bold tier at
-                // 24 px reads cleanly inside the L body arms and matches the
-                // dash-cluster idiom of large action affordances.
-                lv_obj_set_style_text_font(label, FontManager::secondary(24), 0);
+                lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+                // +/− are single glyphs — bump to primary(32) so they dominate
+                // visually. SET/OFF (3 chars) stay at secondary(24) to fit
+                // the L's arm width without truncating.
+                const bool isSymbol = (i == static_cast<uint8_t>(CruiseCorner::kTL)) ||
+                                      (i == static_cast<uint8_t>(CruiseCorner::kTR));
+                lv_obj_set_style_text_font(
+                    label, isSymbol ? FontManager::primary(32) : FontManager::secondary(24), 0);
                 // Pin the label colour to white across every state so the
                 // LVGL default theme can't grey-out / black-out the glyph on
-                // CHECKED or DISABLED transitions. Without this the OFF/ON
-                // toggle's "ON" label vanishes against the dark page bg.
+                // CHECKED transitions (kills the OFF/ON label flip to black).
                 for (lv_state_t st : {lv_state_t(LV_STATE_DEFAULT), lv_state_t(LV_STATE_PRESSED),
                                       lv_state_t(LV_STATE_CHECKED), lv_state_t(LV_STATE_FOCUSED),
                                       lv_state_t(LV_STATE_DISABLED)}) {
                     lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFFu),
                                                 LV_PART_MAIN | st);
                 }
+                // Alignment LAST so the post-wipe pos/align styles stick.
+                lv_obj_align(label, LV_ALIGN_CENTER, shiftX, shiftY);
             }
         }
 
