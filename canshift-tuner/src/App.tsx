@@ -15,6 +15,7 @@ import { VersionMismatchBanner } from './components/Shell/VersionMismatchBanner'
 import { HeapLowBanner } from './components/Shell/HeapLowBanner'
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
+import CanBusRoute from './routes/CanBusRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
 import LogsRoute from './routes/LogsRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -253,7 +254,7 @@ export default function App() {
                   </ErrorBoundary>
                 }
               />
-              <Route path="/can" element={<PlaceholderRoute label="CAN Bus" icon="⇄" />} />
+              <Route path="/can" element={<CanBusRoute />} />
               <Route path="/obd2" element={<PlaceholderRoute label="OBD-II" icon="⚙" />} />
               <Route path="/themes" element={<PlaceholderRoute label="Themes" icon="◐" />} />
               <Route path="/live" element={<LiveDataRoute />} />
