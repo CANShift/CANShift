@@ -23,8 +23,7 @@ import {
   STRING_CAPS,
 } from '../constants/firmware-caps.js'
 
-/** CAN frame identifier — 11-bit standard hex literal, e.g. "0x123" or "0X7FF". */
-const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,3}$/
+const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 
 /** Optional bit mask — any-length hex literal, e.g. "0x01", "0xFF00". */
 const BIT_MASK_REGEX = /^0[xX][0-9a-fA-F]+$/
