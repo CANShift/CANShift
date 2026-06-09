@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import type { PageConfig } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE, HexColorSchema } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE, FIRMWARE_CAPS, HexColorSchema } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
@@ -162,14 +162,33 @@ export default function EditorRoute() {
         <div style={{ padding: '8px 8px 0' }}>
           <div
             style={{
-              fontSize: 10,
-              color: '#AAAAAA',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
               marginBottom: 6,
             }}
           >
-            Pages
+            <span
+              style={{
+                fontSize: 10,
+                color: '#AAAAAA',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              Pages
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                color:
+                  config.pages.length >= FIRMWARE_CAPS.MAX_PAGES ? '#E08030' : '#666666',
+                fontFamily: 'monospace',
+              }}
+              title={`Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages`}
+            >
+              {config.pages.length}/{FIRMWARE_CAPS.MAX_PAGES}
+            </span>
           </div>
 
           {config.pages.map((page, index) => {
@@ -308,43 +327,57 @@ export default function EditorRoute() {
             )
           })}
 
-          {/* Add page button */}
-          <button
-            onClick={() => {
-              addPage({
-                id: generateId('page'),
-                backgroundImage: null,
-                // New pages default to pure black so the studio preview
-                // matches the firmware background (issue #143).
-                backgroundColor: NEW_PAGE_BG,
-                palette: { ...DEFAULT_PAGE_PALETTE },
-                showTopBar: true,
-                visible: true,
-                widgets: [],
-              })
-            }}
-            style={{
-              width: '100%',
-              padding: '5px 0',
-              marginBottom: 8,
-              background: 'transparent',
-              border: '1px dashed #2A2A2A',
-              borderRadius: 4,
-              color: '#AAAAAA',
-              cursor: 'pointer',
-              fontSize: 11,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#AAAAAA'
-              e.currentTarget.style.color = '#888888'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#2A2A2A'
-              e.currentTarget.style.color = '#AAAAAA'
-            }}
-          >
-            + Page
-          </button>
+          {/* Add page button — disabled at the firmware page cap to mirror
+              the fail-stop the device would do otherwise (silent truncation
+              at load time, see #1359). */}
+          {(() => {
+            const atCap = config.pages.length >= FIRMWARE_CAPS.MAX_PAGES
+            return (
+              <button
+                disabled={atCap}
+                onClick={() => {
+                  if (atCap) return
+                  addPage({
+                    id: generateId('page'),
+                    backgroundImage: null,
+                    backgroundColor: NEW_PAGE_BG,
+                    palette: { ...DEFAULT_PAGE_PALETTE },
+                    showTopBar: true,
+                    visible: true,
+                    widgets: [],
+                  })
+                }}
+                title={
+                  atCap
+                    ? `Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages — remove one to add another`
+                    : 'Add a new page'
+                }
+                style={{
+                  width: '100%',
+                  padding: '5px 0',
+                  marginBottom: 8,
+                  background: 'transparent',
+                  border: '1px dashed #2A2A2A',
+                  borderRadius: 4,
+                  color: atCap ? '#444444' : '#AAAAAA',
+                  cursor: atCap ? 'not-allowed' : 'pointer',
+                  fontSize: 11,
+                }}
+                onMouseEnter={(e) => {
+                  if (atCap) return
+                  e.currentTarget.style.borderColor = '#AAAAAA'
+                  e.currentTarget.style.color = '#888888'
+                }}
+                onMouseLeave={(e) => {
+                  if (atCap) return
+                  e.currentTarget.style.borderColor = '#2A2A2A'
+                  e.currentTarget.style.color = '#AAAAAA'
+                }}
+              >
+                + Page
+              </button>
+            )
+          })()}
         </div>
 
         {/* Separator */}
