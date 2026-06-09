@@ -1,23 +1,24 @@
 import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { ECU_PROFILES, parseRealDashXML } from '@tmbk/canshift-core'
+import { parseRealDashXML } from '@tmbk/canshift-core'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
-import { BuiltInProfilePicker } from '../components/ecu/BuiltInProfilePicker'
 import { EcuCatalogueList } from '../components/ecu/EcuCatalogueList'
-import type { EcuCatalogueEntry } from '../components/ecu/EcuCatalogueList'
+import type { CatalogueItem } from '../components/ecu/EcuCatalogueList'
 import { XmlImportZone } from '../components/ecu/XmlImportZone'
 import { SignalPreviewTable } from '../components/ecu/SignalPreviewTable'
 import { ApplyConfirmDialog } from '../components/ecu/ApplyConfirmDialog'
 import { Button } from '../components/ui/button'
 
 type Source =
-  | { kind: 'builtin'; profileId: string }
+  | { kind: 'none' }
   | { kind: 'import'; fileName: string; signals: SignalDef[]; warnings: string[] }
   | {
       kind: 'catalogue'
-      entry: EcuCatalogueEntry
+      itemId: string
+      label: string
+      vendor: string
       signals: SignalDef[]
       warnings: string[]
     }
@@ -28,53 +29,75 @@ export default function EcuRoute() {
   const applyProfile = useSignalStore((s) => s.applyProfile)
   const log = useLogStore((s) => s.push)
 
-  const [source, setSource] = useState<Source>({
-    kind: 'builtin',
-    profileId: ECU_PROFILES[0]?.id ?? '',
-  })
+  const [source, setSource] = useState<Source>({ kind: 'none' })
   const [importError, setImportError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const previewSignals = useMemo<SignalDef[]>(() => {
     switch (source.kind) {
-      case 'builtin':
-        return ECU_PROFILES.find((p) => p.id === source.profileId)?.signals ?? []
+      case 'none':
+        return []
       case 'import':
       case 'catalogue':
         return source.signals
     }
   }, [source])
 
-  const previewWarnings = source.kind === 'import' || source.kind === 'catalogue' ? source.warnings : []
+  const previewWarnings =
+    source.kind === 'import' || source.kind === 'catalogue' ? source.warnings : []
+
   const targetName = useMemo(() => {
     switch (source.kind) {
-      case 'builtin':
-        return ECU_PROFILES.find((p) => p.id === source.profileId)?.name ?? source.profileId
+      case 'none':
+        return ''
       case 'import':
         return source.fileName
       case 'catalogue':
-        return `${source.entry.vendor} · ${source.entry.label}`
+        return `${source.vendor} · ${source.label}`
     }
   }, [source])
 
+  const selectedItemId = source.kind === 'catalogue' ? source.itemId : null
+
   const selectedKey = (() => {
     switch (source.kind) {
-      case 'builtin':
-        return `builtin:${source.profileId}`
+      case 'none':
+        return ''
+      case 'catalogue':
+        return `catalogue:${source.itemId}`
       case 'import':
         return `import:${source.fileName}`
-      case 'catalogue':
-        return `catalogue:${source.entry.id}`
     }
   })()
 
-  const selectedCatalogueId = source.kind === 'catalogue' ? source.entry.id : null
-
   const canApply = previewSignals.length > 0
 
-  const onPickProfile = (profileId: string) => {
+  const onSelectItem = async (item: CatalogueItem) => {
     setImportError(null)
-    setSource({ kind: 'builtin', profileId })
+    try {
+      const res = await fetch(item.path)
+      if (!res.ok) throw new Error(`HTTP ${String(res.status)}`)
+      const xml = await res.text()
+      const result = parseRealDashXML(xml)
+      if (result.signals.length === 0) {
+        const reason = result.warnings[0] ?? 'no signals found'
+        setImportError(`Catalogue load failed — ${reason}`)
+        log('error', `Catalogue entry "${item.label}" failed: ${reason}`)
+        return
+      }
+      setSource({
+        kind: 'catalogue',
+        itemId: item.id,
+        label: item.label,
+        vendor: item.vendor,
+        signals: result.signals,
+        warnings: result.warnings,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'unknown_error'
+      setImportError(`Catalogue load failed — ${message}`)
+      log('error', `Catalogue entry "${item.label}" fetch failed: ${message}`)
+    }
   }
 
   const onImportLoad = (fileName: string, xml: string) => {
@@ -92,34 +115,11 @@ export default function EcuRoute() {
       signals: result.signals,
       warnings: result.warnings,
     })
-    log('info', `XML import "${fileName}" parsed: ${String(result.signals.length)} signals`)
   }
 
   const onImportClear = () => {
     setImportError(null)
-    setSource({ kind: 'builtin', profileId: ECU_PROFILES[0]?.id ?? '' })
-  }
-
-  const onCatalogueSelect = async (entry: EcuCatalogueEntry) => {
-    setImportError(null)
-    try {
-      const res = await fetch(entry.path)
-      if (!res.ok) throw new Error(`HTTP ${String(res.status)}`)
-      const xml = await res.text()
-      const result = parseRealDashXML(xml)
-      if (result.signals.length === 0) {
-        const reason = result.warnings[0] ?? 'no signals found'
-        setImportError(`Catalogue load failed — ${reason}`)
-        log('error', `Catalogue entry "${entry.label}" failed: ${reason}`)
-        return
-      }
-      setSource({ kind: 'catalogue', entry, signals: result.signals, warnings: result.warnings })
-      log('info', `Catalogue "${entry.label}" parsed: ${String(result.signals.length)} signals`)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'unknown_error'
-      setImportError(`Catalogue load failed — ${message}`)
-      log('error', `Catalogue entry "${entry.label}" fetch failed: ${message}`)
-    }
+    setSource({ kind: 'none' })
   }
 
   const onConfirmApply = () => {
@@ -134,8 +134,7 @@ export default function EcuRoute() {
         <div>
           <div style={titleStyle}>ECU Profile</div>
           <div style={subtitleStyle}>
-            Replace the active signal map with a built-in profile, a bundled catalogue entry, or
-            your own XML file.
+            Replace the active signal map with a catalogue entry or your own XML file.
           </div>
         </div>
         <Button
@@ -152,21 +151,13 @@ export default function EcuRoute() {
 
       <div style={bodyStyle}>
         <section style={leftColumnStyle}>
-          <SectionHeader title="Built-in profiles" />
-          <BuiltInProfilePicker
-            profiles={ECU_PROFILES}
-            selectedKey={selectedKey}
-            activeProfileKey={activeProfileKey}
-            onSelect={onPickProfile}
-          />
-          <SectionHeader title="Catalogue" />
           <div style={catalogueWrapperStyle}>
             <EcuCatalogueList
-              selectedId={selectedCatalogueId}
-              onSelect={onCatalogueSelect}
+              activeKey={activeProfileKey}
+              selectedId={selectedItemId}
+              onSelect={onSelectItem}
             />
           </div>
-          <SectionHeader title="XML import" />
           <XmlImportZone
             loadedFileName={source.kind === 'import' ? source.fileName : null}
             onFileLoad={onImportLoad}
@@ -177,7 +168,7 @@ export default function EcuRoute() {
         </section>
 
         <section style={rightColumnStyle}>
-          <SectionHeader title={`Preview — ${targetName || 'no selection'}`} />
+          <div style={previewHeaderStyle}>Preview — {targetName || 'no selection'}</div>
           <SignalPreviewTable signals={previewSignals} warnings={previewWarnings} />
         </section>
       </div>
@@ -192,10 +183,6 @@ export default function EcuRoute() {
       />
     </div>
   )
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return <div style={sectionHeaderStyle}>{title}</div>
 }
 
 const containerStyle: CSSProperties = {
@@ -232,7 +219,7 @@ const subtitleStyle: CSSProperties = {
 const bodyStyle: CSSProperties = {
   flex: 1,
   display: 'grid',
-  gridTemplateColumns: 'minmax(280px, 360px) 1fr',
+  gridTemplateColumns: 'minmax(300px, 380px) 1fr',
   gap: 0,
   minHeight: 0,
 }
@@ -243,7 +230,6 @@ const leftColumnStyle: CSSProperties = {
   gap: 10,
   padding: '16px 20px',
   borderRight: '1px solid hsl(var(--border))',
-  overflowY: 'auto',
   minHeight: 0,
 }
 
@@ -255,7 +241,7 @@ const rightColumnStyle: CSSProperties = {
   minHeight: 0,
 }
 
-const sectionHeaderStyle: CSSProperties = {
+const previewHeaderStyle: CSSProperties = {
   fontSize: 10,
   fontWeight: 600,
   letterSpacing: '0.1em',
@@ -264,9 +250,9 @@ const sectionHeaderStyle: CSSProperties = {
 }
 
 const catalogueWrapperStyle: CSSProperties = {
+  flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  height: 320,
   minHeight: 0,
 }
 
