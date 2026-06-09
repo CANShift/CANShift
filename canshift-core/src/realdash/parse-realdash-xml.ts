@@ -133,6 +133,7 @@ const tryMatch = (
   return m ? build(m) : null
 }
 
+const NUM_RE = '-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)'
 const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
   if (!expr || expr.trim() === '') return { scale: 1, offset: 0, bitShift: null }
   const s = unwrapVChain(stripOuterParens(expr.trim()))
@@ -145,21 +146,21 @@ const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
       offset: 0,
       bitShift: parseInt(m[1] ?? '0', 10),
     })) ??
-    tryMatch(s, /^(-?\d+\.?\d*)\s*-\s*V$/, (m) => ({
+    tryMatch(s, new RegExp(`^(${NUM_RE})\\s*-\\s*V$`), (m) => ({
       scale: -1,
       offset: parseFloat(m[1] ?? '0'),
       bitShift: null,
     })) ??
-    tryMatch(s, /^V((?:\s*[*/]\s*-?\d+\.?\d*)+)$/, (m) => {
+    tryMatch(s, new RegExp(`^V((?:\\s*[*/]\\s*${NUM_RE})+)$`), (m) => {
       const result = foldChain(m[1] ?? '')
       return result === null ? 'complex' : { scale: result, offset: 0, bitShift: null }
     }) ??
-    tryMatch(s, /^V\s*\*\s*(-?\d+\.?\d*)\s*([+-]\s*\d+\.?\d*)?$/, (m) => ({
+    tryMatch(s, new RegExp(`^V\\s*\\*\\s*(${NUM_RE})\\s*([+-]\\s*(?:\\d+(?:\\.\\d+)?|\\.\\d+))?$`), (m) => ({
       scale: parseFloat(m[1] ?? '1'),
       offset: m[2] ? parseFloat(m[2].replace(/\s+/g, '')) : 0,
       bitShift: null,
     })) ??
-    tryMatch(s, /^V\s*([+-]\s*\d+\.?\d*)$/, (m) => ({
+    tryMatch(s, /^V\s*([+-]\s*(?:\d+(?:\.\d+)?|\.\d+))$/, (m) => ({
       scale: 1,
       offset: parseFloat((m[1] ?? '0').replace(/\s+/g, '')),
       bitShift: null,
