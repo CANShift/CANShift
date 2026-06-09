@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { parseRealDashXML } from '@tmbk/canshift-core'
+import { parseCanXml } from '@tmbk/canshift-core'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
@@ -78,7 +78,7 @@ export default function EcuRoute() {
       const res = await fetch(item.path)
       if (!res.ok) throw new Error(`HTTP ${String(res.status)}`)
       const xml = await res.text()
-      const result = parseRealDashXML(xml)
+      const result = parseCanXml(xml)
       if (result.signals.length === 0) {
         const reason = result.warnings[0] ?? 'no signals found'
         setImportError(`Catalogue load failed — ${reason}`)
@@ -102,7 +102,7 @@ export default function EcuRoute() {
 
   const onImportLoad = (fileName: string, xml: string) => {
     setImportError(null)
-    const result = parseRealDashXML(xml)
+    const result = parseCanXml(xml)
     if (result.signals.length === 0) {
       const reason = result.warnings[0] ?? 'no signals found'
       setImportError(`Import failed — ${reason}`)
