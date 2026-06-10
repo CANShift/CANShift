@@ -1,0 +1,98 @@
+---
+/**
+ * Renders the GitHub Releases for tburkhalterr/CANShift at build time.
+ * Falls back gracefully on rate-limit / network errors so local dev never breaks.
+ */
+type Release = {
+  tag_name: string;
+  name: string | null;
+  published_at: string | null;
+  html_url: string;
+  body: string | null;
+  prerelease: boolean;
+  draft: boolean;
+};
+
+const REPO = "tburkhalterr/CANShift";
+const API_URL = `https://api.github.com/repos/${REPO}/releases?per_page=30`;
+
+let releases: Release[] = [];
+let fetchError: string | null = null;
+
+try {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "canshift-docs",
+  };
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const res = await fetch(API_URL, { headers });
+  if (!res.ok) {
+    fetchError = `GitHub API returned ${res.status} — ${res.statusText}`;
+  } else {
+    const data = (await res.json()) as Release[];
+    releases = data.filter((r) => !r.draft);
+  }
+} catch (err) {
+  fetchError = err instanceof Error ? err.message : String(err);
+}
+
+const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+---
+
+{fetchError && (
+  <p style="opacity:0.7">
+    <em>Liste vide en mode dev (raison: {fetchError}).</em>
+  </p>
+)}
+
+{!fetchError && releases.length === 0 && (
+  <p style="opacity:0.7">
+    <em>Aucune release publiée pour l'instant.</em>
+  </p>
+)}
+
+<ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:1.5rem">
+  {releases.map((r) => (
+    <li
+      style="border:1px solid var(--sl-color-gray-5);border-radius:0.5rem;padding:1rem 1.25rem"
+    >
+      <h3 style="margin:0 0 0.5rem 0">
+        <a href={r.html_url} target="_blank" rel="noopener">
+          {r.name || r.tag_name}
+        </a>
+        {r.prerelease && (
+          <span
+            style="margin-left:0.5rem;font-size:0.75rem;background:var(--sl-color-orange-low);color:var(--sl-color-orange-high);padding:0.125rem 0.5rem;border-radius:999px"
+          >
+            pre-release
+          </span>
+        )}
+      </h3>
+      {r.published_at && (
+        <p style="margin:0 0 0.75rem 0;font-size:0.875rem;opacity:0.7">
+          Publié le {dateFormatter.format(new Date(r.published_at))}
+        </p>
+      )}
+      {r.body ? (
+        <details>
+          <summary style="cursor:pointer;font-weight:600">Détails</summary>
+          <pre
+            style="white-space:pre-wrap;font-family:inherit;font-size:0.875rem;margin-top:0.75rem"
+          >{r.body}</pre>
+        </details>
+      ) : (
+        <p style="opacity:0.7;font-size:0.875rem">
+          <em>Pas de description sur cette release.</em>
+        </p>
+      )}
+    </li>
+  ))}
+</ul>

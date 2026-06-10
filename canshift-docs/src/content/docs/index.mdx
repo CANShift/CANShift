@@ -1,0 +1,49 @@
+---
+title: CANShift Documentation
+description: Architecture and reference for the CANShift dashboard ecosystem.
+template: splash
+hero:
+  tagline: Open-source CAN bus dashboard for ESP32 — firmware, tuner, mobile.
+  actions:
+    - text: Firmware architecture
+      link: /architecture/boot-sequence/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/tburkhalterr/CANShift
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Packages
+
+<CardGrid>
+  <Card title="canshift-firmware" icon="seti:cpp">
+    C++17 + Arduino + LVGL on ESP32 (CrowPanel 2.8″ ILI9341 + XPT2046). Runs the
+    dashboard, parses CAN, drives the UI.
+  </Card>
+  <Card title="canshift-core" icon="seti:typescript">
+    Shared TypeScript domain — Zod schemas, types, signal map. Single source of
+    truth between tuner and firmware.
+  </Card>
+  <Card title="canshift-tuner" icon="rocket">
+    Vite + React SPA hosted on Vercel. Talks to the dash over Web Serial; lets
+    drivers edit dashboards live.
+  </Card>
+  <Card title="canshift-mobile" icon="phone">
+    Expo React Native app. Pairs with the dash over BLE for in-car telemetry
+    and remote config.
+  </Card>
+</CardGrid>
+
+## Why these docs exist
+
+The firmware accumulated a heavy comment layer that documented WHY non-obvious
+patterns existed — LVGL ownership rules, heap reservation order, the PUT_CONFIG
+burn flow, the cruise control polygon trick. Issue #1394 stripped the bulk of
+the comments. Issue #1403 (this docs site) is where the load-bearing rationale
+lives instead.
+
+If you are about to edit a non-trivial subsystem, **read the matching
+architecture page first** — most surprises in this codebase are written down.

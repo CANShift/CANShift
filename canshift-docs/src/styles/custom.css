@@ -1,0 +1,18 @@
+/* Brand tweaks — CANShift accent colour matches the firmware splash. */
+:root {
+  --sl-color-accent-low: #4a1212;
+  --sl-color-accent: #cc3333;
+  --sl-color-accent-high: #ff8888;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #ffd6d6;
+  --sl-color-accent: #cc3333;
+  --sl-color-accent-high: #5a0e0e;
+}
+
+/* Tighter prose for technical docs */
+.sl-markdown-content {
+  --sl-text-h2: 1.5rem;
+  --sl-text-h3: 1.25rem;
+}

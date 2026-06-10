@@ -1,0 +1,39 @@
+---
+title: "Premier flash"
+description: "Flasher le firmware sur un CrowPanel 2.8 ESP32 neuf."
+sidebar:
+  order: 1
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+<Aside type="caution" title="Web Serial requis">
+  Le flasher tourne dans un navigateur **Chromium-based** (Chrome, Edge, Brave,
+  Arc, Opera). Firefox ne supporte pas Web Serial.
+</Aside>
+
+<Steps>
+
+1. **Branche l'écran** sur ton ordinateur via USB-C.
+
+2. **Ouvre le [flasher](https://github.com/tburkhalterr/canshift-flasher)** dans Chromium.
+
+3. **Sélectionne le port série** quand le navigateur le demande. L'écran apparaît
+   sous "USB JTAG/serial debug unit" sur la plupart des cartes ESP32-WROOM.
+
+4. **Choisis la release** (la dernière stable par défaut).
+
+5. **Clique "Flash"** et attends ~30 secondes. L'écran redémarre seul à la fin
+   et affiche le splash CANShift.
+
+</Steps>
+
+## Le splash apparaît mais reste figé ?
+
+Si le splash s'affiche mais la barre de progression bloque, c'est probablement un
+problème de heap. Va voir [Diagnostic boot](/user-guide/install/boot-issues/).
+
+## Pas de signal sur l'écran après flash ?
+
+Vérifie le câblage TFT — `MOSI=13`, `MISO=12`, `SCLK=14`, `CS=15`, `DC=2`, `BL=27`.
+Détails complets dans [Pinout](/technical/reference/pinout/).
