@@ -1,19 +1,3 @@
-// sha256.ts — Pure-JS SHA-256 for OTA checksum verification
-//
-// We can't add `expo-crypto` without a native dep; React Native's JSC/Hermes
-// runtime has no `crypto.subtle`. This module implements the FIPS 180-4
-// SHA-256 algorithm in pure JS over `Uint8Array`. It runs once per OTA flash
-// (~1.4 MB), so absolute throughput is uncritical — clarity first.
-//
-// Behaviour is locked in by `sha256.test.ts` against the standard NIST test
-// vectors and a few CANShift-specific cases. Do not optimise the inner loops
-// without re-running those tests.
-
-// ---------------------------------------------------------------------------
-// Constants — first 32 bits of the fractional parts of the cube roots of the
-// first 64 primes (FIPS 180-4 §4.2.2).
-// ---------------------------------------------------------------------------
-
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -25,30 +9,14 @@ const K = new Uint32Array([
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ])
 
-/** Initial hash values — first 32 bits of fractional parts of square roots of
- *  the first 8 primes (FIPS 180-4 §5.3.3). */
 const H0 = new Uint32Array([
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 ])
 
-// ---------------------------------------------------------------------------
-// Bit operations — Uint32 wrap-around via `>>> 0`
-// ---------------------------------------------------------------------------
-
-function rotr(x: number, n: number): number {
+const rotr = (x: number, n: number): number => {
   return ((x >>> n) | (x << (32 - n))) >>> 0
 }
 
-// ---------------------------------------------------------------------------
-// Streaming hasher
-// ---------------------------------------------------------------------------
-
-/**
- * Incremental SHA-256 hasher. Allocate one, feed `Uint8Array` chunks via
- * `update()`, then call `digest()` (or `digestHex()`) to finalize.
- *
- * Calling `update()` after `digest()` throws — create a new hasher per file.
- */
 export class Sha256 {
   private readonly h: Uint32Array
   private readonly buffer: Uint8Array
@@ -72,7 +40,6 @@ export class Sha256 {
     const n = data.length
     this.totalLen += n
 
-    // Drain into pending buffer first if it has content
     if (this.bufferLen > 0) {
       const space = 64 - this.bufferLen
       const take = Math.min(space, n)
@@ -85,13 +52,11 @@ export class Sha256 {
       }
     }
 
-    // Compress full 64-byte chunks directly from `data`
     while (n - i >= 64) {
       this.compress(data, i)
       i += 64
     }
 
-    // Stash the remainder
     if (i < n) {
       this.buffer.set(data.subarray(i, n), 0)
       this.bufferLen = n - i
@@ -105,21 +70,17 @@ export class Sha256 {
     }
     this.finalized = true
 
-    // Pad: append 0x80, then zeros up to mod 64 == 56, then 8-byte big-endian
-    // length-in-bits. If there isn't enough room, pad twice.
-    const bitLenHigh = Math.floor(this.totalLen / 0x20000000) | 0 // (totalLen * 8) >> 32 in 53-bit-safe form
+    const bitLenHigh = Math.floor(this.totalLen / 0x20000000) | 0
     const bitLenLow = (this.totalLen << 3) >>> 0
 
     this.buffer[this.bufferLen++] = 0x80
     if (this.bufferLen > 56) {
-      // No room for the length — pad this block, compress, start a new one
       while (this.bufferLen < 64) this.buffer[this.bufferLen++] = 0
       this.compress(this.buffer, 0)
       this.bufferLen = 0
     }
     while (this.bufferLen < 56) this.buffer[this.bufferLen++] = 0
 
-    // 64-bit big-endian bit length
     this.buffer[56] = (bitLenHigh >>> 24) & 0xff
     this.buffer[57] = (bitLenHigh >>> 16) & 0xff
     this.buffer[58] = (bitLenHigh >>> 8) & 0xff
@@ -130,7 +91,6 @@ export class Sha256 {
     this.buffer[63] = bitLenLow & 0xff
     this.compress(this.buffer, 0)
 
-    // Serialise H as big-endian bytes
     const out = new Uint8Array(32)
     for (let i = 0; i < 8; i++) {
       const v = this.h[i] ?? 0
@@ -147,7 +107,6 @@ export class Sha256 {
   }
 
   private compress(block: Uint8Array, offset: number): void {
-    // Message schedule W[0..63]
     const w = new Uint32Array(64)
     for (let t = 0; t < 16; t++) {
       const b0 = block[offset + t * 4] ?? 0
@@ -202,17 +161,11 @@ export class Sha256 {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Convenience helpers
-// ---------------------------------------------------------------------------
-
-/** One-shot hash of a `Uint8Array`, returns lowercase hex. */
-export function sha256Hex(data: Uint8Array): string {
+export const sha256Hex = (data: Uint8Array): string => {
   return new Sha256().update(data).digestHex()
 }
 
-/** Lowercase hex encoding of a byte array. */
-export function bytesToHex(bytes: Uint8Array): string {
+export const bytesToHex = (bytes: Uint8Array): string => {
   let s = ''
   for (const b of bytes) {
     s += (b >>> 4).toString(16) + (b & 0x0f).toString(16)

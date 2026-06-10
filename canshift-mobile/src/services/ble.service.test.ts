@@ -1,15 +1,3 @@
-// ble.service.test.ts — GATT serializer + BLE error mapping unit tests
-//
-// Notes on scope:
-// - We don't exercise the real `BleManager`; the GATT-queue tests inject a
-//   stub `Device` via the underscore-prefixed `_test_setConnectedDevice`
-//   helper and call `pushSettings` / `sendCmd` to drive `runGatt`.
-// - `mapBleError` is pure and tested directly.
-
-// react-native-ble-plx instantiates a NativeEventEmitter at module load — the
-// jest-expo runtime can't satisfy that, so we stub it out here. We preserve
-// the `BleErrorCode` and `State` enums so the mapping tests can use real
-// numeric values.
 jest.mock('react-native-ble-plx', () => ({
   BleManager: jest.fn().mockImplementation(() => ({
     state: jest.fn(),
@@ -47,10 +35,6 @@ import type { BleManager, Device } from 'react-native-ble-plx'
 import { BleService } from './ble.service'
 import { mapBleError } from './ble.errors'
 
-// ---------------------------------------------------------------------------
-// Test scaffolding
-// ---------------------------------------------------------------------------
-
 interface PendingOp {
   resolve: (value: unknown) => void
   reject: (reason: unknown) => void
@@ -61,11 +45,7 @@ interface DeferredFactory {
   next: () => Promise<unknown>
 }
 
-/**
- * Build a factory that returns a fresh deferred promise each call. Lets us
- * inspect call ordering and resolve/reject each in isolation.
- */
-function makeDeferredFactory(): DeferredFactory {
+const makeDeferredFactory = (): DeferredFactory => {
   const pending: PendingOp[] = []
   const next = () =>
     new Promise<unknown>((resolve, reject) => {
@@ -74,12 +54,7 @@ function makeDeferredFactory(): DeferredFactory {
   return { pending, next }
 }
 
-/**
- * Build a stub `Device` that records each GATT call into `factory.pending`.
- * The cast to `Device` is justified by the unit-test boundary — we never
- * exercise unmocked methods in these tests.
- */
-function makeStubDevice(factory: DeferredFactory): Device {
+const makeStubDevice = (factory: DeferredFactory): Device => {
   const stub = {
     id: 'test-device',
     name: 'CANShift-test',
@@ -90,11 +65,7 @@ function makeStubDevice(factory: DeferredFactory): Device {
   return stub as unknown as Device
 }
 
-/**
- * Build a `BleService` whose constructor doesn't touch the real `BleManager`.
- * We only need the queue + `connectedDevice` slot for these tests.
- */
-function makeService(): BleService {
+const makeService = (): BleService => {
   const managerStub = {
     destroy: jest.fn(),
     stopDeviceScan: jest.fn(),
@@ -105,16 +76,11 @@ function makeService(): BleService {
   })
 }
 
-/** Microtask flush — lets the `gattQueue.then(...)` chain advance. */
-function flush(): Promise<void> {
+const flush = (): Promise<void> => {
   return new Promise((resolve) => {
     setImmediate(resolve)
   })
 }
-
-// ---------------------------------------------------------------------------
-// GATT queue serialization
-// ---------------------------------------------------------------------------
 
 describe('BleService GATT serializer', () => {
   it('serializes concurrent writes — second op does not start until first settles', async () => {
@@ -125,12 +91,10 @@ describe('BleService GATT serializer', () => {
     const first = service.pushSettings({ brightness: 50, sleep: 0 })
     const second = service.sendCmd('ping')
 
-    // Allow the queue to schedule the first op.
     await flush()
 
     expect(factory.pending).toHaveLength(1)
 
-    // Resolve the first op — the second one should now run.
     factory.pending[0]?.resolve(undefined)
     await first
     await flush()
@@ -151,7 +115,6 @@ describe('BleService GATT serializer', () => {
     await flush()
     expect(factory.pending).toHaveLength(1)
 
-    // First op rejects. The queue must keep going.
     const failure = new Error('write failed')
     factory.pending[0]?.reject(failure)
     await expect(first).rejects.toBe(failure)
@@ -162,10 +125,6 @@ describe('BleService GATT serializer', () => {
     await expect(second).resolves.toBeUndefined()
   })
 })
-
-// ---------------------------------------------------------------------------
-// mapBleError — exhaustive coverage of the 4 required kinds
-// ---------------------------------------------------------------------------
 
 describe('mapBleError', () => {
   it('maps the android permission-denied sentinel (Error with .code) to permission-denied/android', () => {

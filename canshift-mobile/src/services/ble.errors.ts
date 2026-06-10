@@ -1,26 +1,7 @@
-// ble.errors.ts — Discriminated BLE error union and mapping helper
-//
-// `react-native-ble-plx` rejects with `BleError` whose `errorCode` is a number
-// from the `BleErrorCode` enum. Our service layer surfaces a UI-friendly
-// discriminated union instead, so screens can switch exhaustively on the
-// failure mode (permission, off, out of range, …) without poking at numbers.
-//
-// Tests live next to this file; consumers (UI + service) import the union and
-// the `mapBleError` helper.
-
 import { BleErrorCode } from 'react-native-ble-plx'
 
 import { currentPlatform } from '../lib/platform'
 
-// ---------------------------------------------------------------------------
-// Discriminated union
-// ---------------------------------------------------------------------------
-
-/**
- * UI-facing classification of a BLE failure. The shape is stable across
- * platforms; the `permission-denied` variant carries the platform tag so
- * screens can render iOS-vs-Android copy and CTAs.
- */
 export type BleConnectionError =
   | { kind: 'permission-denied'; platform: 'ios' | 'android' }
   | { kind: 'bluetooth-off' }
@@ -31,28 +12,19 @@ export type BleConnectionError =
   | { kind: 'write-failed'; reason?: string }
   | { kind: 'unknown'; message: string }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/** Type guard — does the unknown error look like a `BleError` with a numeric
- *  `errorCode` we can switch on? The numeric value is treated as a `BleErrorCode`
- *  for switch exhaustiveness; unrecognised numbers fall through to `default`. */
-function hasErrorCode(err: unknown): err is { errorCode: BleErrorCode } {
+const hasErrorCode = (err: unknown): err is { errorCode: BleErrorCode } => {
   if (err === null || typeof err !== 'object') return false
   const code = (err as { errorCode?: unknown }).errorCode
   return typeof code === 'number'
 }
 
-/** Best-effort string for the `unknown` fallback. Avoids leaking objects. */
-function describe(err: unknown): string {
+const describe = (err: unknown): string => {
   if (err instanceof Error) return err.message
   if (typeof err === 'string') return err
   return 'Unknown BLE error'
 }
 
-/** Best-effort retrieval of a write-failure reason for diagnostics. */
-function writeFailureReason(err: unknown): string | undefined {
+const writeFailureReason = (err: unknown): string | undefined => {
   if (err instanceof Error && err.message.length > 0) return err.message
   if (
     err !== null &&
@@ -65,21 +37,7 @@ function writeFailureReason(err: unknown): string | undefined {
   return undefined
 }
 
-// ---------------------------------------------------------------------------
-// Mapping
-// ---------------------------------------------------------------------------
-
-/**
- * Map any thrown value from a BLE call into a `BleConnectionError`.
- * - Recognises our own `android_ble_permission_denied` sentinel (thrown from
- *   `ensureAndroidBlePermissions`) and surfaces it as `permission-denied`.
- * - Recognises `BleError`-shaped objects via `errorCode` and switches over the
- *   `BleErrorCode` enum.
- * - Falls back to `{ kind: 'unknown', message }` for everything else.
- */
-export function mapBleError(err: unknown): BleConnectionError {
-  // App-level sentinel from ensureAndroidBlePermissions(): treat as permission
-  // denied regardless of platform. Android is the only emitter today.
+export const mapBleError = (err: unknown): BleConnectionError => {
   if (err instanceof Error) {
     const code = (err as Error & { code?: string }).code
     if (
@@ -122,16 +80,7 @@ export function mapBleError(err: unknown): BleConnectionError {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Description helper (for logs — never user-facing copy)
-// ---------------------------------------------------------------------------
-
-/**
- * Compact, log-friendly description of a `BleConnectionError`. Screens render
- * their own user-facing messages off `error.kind`; this is for `log('error', …)`
- * and similar diagnostics.
- */
-export function describeBleError(err: BleConnectionError): string {
+export const describeBleError = (err: BleConnectionError): string => {
   switch (err.kind) {
     case 'permission-denied':
       return `permission denied (${err.platform})`
