@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
-import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
+import type { PageConfig, PagePalette, TopBarConfig } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -329,7 +329,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         background: '#111111',
       }}
     >
-            <div
+      <div
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -340,7 +340,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           minHeight: 28,
         }}
       >
-                {selectedWidgetIds.length >= 2 ? (
+        {selectedWidgetIds.length >= 2 ? (
           <AlignToolbar
             pageId={page.id}
             widgetIds={selectedWidgetIds}
@@ -352,7 +352,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           </span>
         )}
 
-                {overflowingIds.size > 0 && (
+        {overflowingIds.size > 0 && (
           <span
             title="One or more widgets extend past the target screen bounds. Resize or move them to fit."
             style={{
@@ -372,7 +372,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
         <div style={{ flex: 1 }} />
 
-                {selectedWidgetIds.length >= 2 && (
+        {selectedWidgetIds.length >= 2 && (
           <span style={{ fontSize: 9, color: '#666666', letterSpacing: '0.04em' }}>
             {String(selectedWidgetIds.length)} selected
           </span>
@@ -400,7 +400,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         </button>
       </div>
 
-            <div
+      <div
         onMouseDown={(e) => {
           const target = e.target as HTMLElement
           if (target.closest('[data-widget]') === null) selectWidget(null)
@@ -413,8 +413,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           overflow: 'auto',
         }}
       >
-                <div>
-                    <div
+        <div>
+          <div
             style={{
               background: '#000000',
               border: '3px solid #2A2A2A',
@@ -423,7 +423,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               boxShadow: '0 8px 32px #00000088',
             }}
           >
-                        <div
+            <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -433,7 +433,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 overflow: 'hidden',
               }}
             >
-                            {page.showTopBar && (
+              {page.showTopBar && (
                 <DashTopBar
                   topBar={topBar}
                   scale={SCALE}
@@ -445,7 +445,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 />
               )}
 
-                            <div
+              <div
                 ref={containerRef}
                 onPointerDown={(e) => {
                   const target = e.target as HTMLElement
@@ -486,7 +486,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   cursor: 'default',
                 }}
               >
-                                <div
+                <div
                   style={{
                     position: 'absolute',
                     inset: 0,
@@ -499,7 +499,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   }}
                 />
 
-                                {(page.template ?? 'custom') === 'cruise_control' ? (
+                {(page.template ?? 'custom') === 'cruise_control' ? (
                   <CruiseControlPreview
                     scale={SCALE}
                     canvasW={CANVAS_W}
@@ -530,7 +530,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   ))
                 )}
 
-                                {rubberBand && (
+                {rubberBand && (
                   <div
                     style={{
                       position: 'absolute',
@@ -546,11 +546,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   />
                 )}
 
-                                {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
+                {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
 
-                                {diagOpen && <DiagnosticsPanel scale={SCALE} />}
+                {diagOpen && <DiagnosticsPanel scale={SCALE} />}
 
-                                {revLimiting && (
+                {revLimiting && (
                   <div
                     style={{
                       position: 'absolute',
@@ -564,7 +564,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                       justifyContent: 'center',
                     }}
                   >
-                                        <svg
+                    <svg
                       width={CANVAS_W * 0.28}
                       height={CANVAS_W * 0.28}
                       viewBox="0 0 100 100"
@@ -594,8 +594,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               </div>
             </div>
           </div>
-                  </div>
-              </div>
-          </div>
+        </div>
+      </div>
+    </div>
   )
 }

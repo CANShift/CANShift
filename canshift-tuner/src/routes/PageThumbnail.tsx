@@ -43,7 +43,7 @@ export const PageThumbnail = ({ page, topBar }: PageThumbnailProps) => {
           transformOrigin: 'top left',
         }}
       >
-                {page.showTopBar && (
+        {page.showTopBar && (
           <div
             style={{
               position: 'absolute',
@@ -57,7 +57,7 @@ export const PageThumbnail = ({ page, topBar }: PageThumbnailProps) => {
           />
         )}
 
-                {isCruiseTemplate ? (
+        {isCruiseTemplate ? (
           <CruiseControlPreview
             scale={1}
             canvasW={profile.width}

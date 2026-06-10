@@ -121,7 +121,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     const activeProfileId: ScreenProfileId = config.targetProfile ?? DEFAULT_SCREEN_PROFILE_ID
     return (
       <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-                <div
+        <div
           style={{
             fontSize: 10,
             color: PANEL_LABEL,
@@ -159,7 +159,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           flagged on the canvas so you can adjust manually.
         </div>
 
-                <div
+        <div
           style={{
             fontSize: 10,
             color: PANEL_LABEL,
@@ -207,7 +207,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
 
   return (
     <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-            <div
+      <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -253,7 +253,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </button>
       </div>
 
-            <Field label="ID">
+      <Field label="ID">
         <div
           style={{ fontSize: 10, color: PANEL_LABEL, fontFamily: 'monospace', padding: '3px 0' }}
         >
@@ -261,7 +261,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       </Field>
 
-            {widget.type !== 'gauge' && (
+      {widget.type !== 'gauge' && (
         <Field label="Size">
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {STANDARD_TOKEN_IDS.map((tokenId) => {
@@ -298,9 +298,9 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
-            {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
+      {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
         <Field label="Signal">
-                    <select
+          <select
             style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
             value={widget.signal || ''}
             onChange={(e) => {
@@ -332,7 +332,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
-            <Field label="Follow day-mode text colour">
+      <Field label="Follow day-mode text colour">
         <label
           style={{
             display: 'flex',
@@ -360,7 +360,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </label>
       </Field>
 
-            {widget.type === 'button' && widget.config.type === 'button' && (
+      {widget.type === 'button' && widget.config.type === 'button' && (
         <>
           <div
             style={{
@@ -447,7 +447,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </>
       )}
 
-            {ConfigFields && (
+      {ConfigFields && (
         <>
           <div
             style={{

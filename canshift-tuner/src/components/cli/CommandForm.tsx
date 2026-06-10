@@ -24,10 +24,7 @@ export const CommandForm = ({
   const fieldsRef = useRef<HTMLTextAreaElement | null>(null)
 
   const parsedOpcode = useMemo(() => parseOpcode(opcodeInput), [opcodeInput])
-  const matched = useMemo(
-    () => KNOWN_OPCODES.find((o) => o.id === parsedOpcode),
-    [parsedOpcode],
-  )
+  const matched = useMemo(() => KNOWN_OPCODES.find((o) => o.id === parsedOpcode), [parsedOpcode])
 
   useEffect(() => {
     setParseError(null)

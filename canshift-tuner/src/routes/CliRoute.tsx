@@ -53,7 +53,7 @@ export default function CliRoute() {
         setBusy(false)
       })
     },
-    [push],
+    [push]
   )
 
   const onHistoryUp = useCallback((): string | null => {

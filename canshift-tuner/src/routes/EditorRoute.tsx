@@ -118,7 +118,7 @@ export default function EditorRoute() {
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            <aside
+      <aside
         style={{
           width: 152,
           background: '#161616',
@@ -129,7 +129,7 @@ export default function EditorRoute() {
           overflowX: 'hidden',
         }}
       >
-                <div style={{ padding: '8px 8px 0' }}>
+        <div style={{ padding: '8px 8px 0' }}>
           <div
             style={{
               display: 'flex',
@@ -151,8 +151,7 @@ export default function EditorRoute() {
             <span
               style={{
                 fontSize: 10,
-                color:
-                  config.pages.length >= FIRMWARE_CAPS.MAX_PAGES ? '#E08030' : '#666666',
+                color: config.pages.length >= FIRMWARE_CAPS.MAX_PAGES ? '#E08030' : '#666666',
                 fontFamily: 'monospace',
               }}
               title={`Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages`}
@@ -198,7 +197,7 @@ export default function EditorRoute() {
                   opacity: isVisible ? 1 : 0.45,
                 }}
               >
-                                <div
+                <div
                   style={{
                     border: `2px solid ${isSelected ? '#FFFFFF' : '#2A2A2A'}`,
                     borderRadius: 4,
@@ -209,7 +208,7 @@ export default function EditorRoute() {
                   }}
                 >
                   <PageThumbnail page={page} topBar={config.topBar} />
-                                    <button
+                  <button
                     onClick={(e) => {
                       e.stopPropagation()
                       setDefaultPage(page.id)
@@ -236,7 +235,7 @@ export default function EditorRoute() {
                   >
                     {isDefault ? DEFAULT_PAGE_GLYPH : NON_DEFAULT_PAGE_GLYPH}
                   </button>
-                                    {config.pages.length > 1 && (
+                  {config.pages.length > 1 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -271,7 +270,7 @@ export default function EditorRoute() {
                       ×
                     </button>
                   )}
-                                    {!isVisible && (
+                  {!isVisible && (
                     <div
                       style={{
                         position: 'absolute',
@@ -292,7 +291,7 @@ export default function EditorRoute() {
             )
           })}
 
-                    {(() => {
+          {(() => {
             const atCap = config.pages.length >= FIRMWARE_CAPS.MAX_PAGES
             return (
               <button
@@ -342,9 +341,9 @@ export default function EditorRoute() {
           })()}
         </div>
 
-                <div style={{ height: 1, background: '#222222', flexShrink: 0 }} />
+        <div style={{ height: 1, background: '#222222', flexShrink: 0 }} />
 
-                <div style={{ padding: '4px 0' }}>
+        <div style={{ padding: '4px 0' }}>
           {currentPage && (
             <Suspense fallback={<PaletteFallback />}>
               <WidgetPalette pageId={currentPage.id} />
@@ -353,7 +352,7 @@ export default function EditorRoute() {
         </div>
       </aside>
 
-            {currentPage ? (
+      {currentPage ? (
         <ErrorBoundary scope="canvas">
           <Suspense fallback={<CanvasFallback />}>
             <Canvas page={currentPage} topBar={config.topBar} />
@@ -373,9 +372,9 @@ export default function EditorRoute() {
         </div>
       )}
 
-            <RightSidebar pageId={currentPage?.id} />
+      <RightSidebar pageId={currentPage?.id} />
 
-            {contextMenu && (
+      {contextMenu && (
         <PageContextMenu
           pageId={contextMenu.pageId}
           x={contextMenu.x}

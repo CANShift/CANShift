@@ -42,7 +42,7 @@ export default function LiveDataRoute() {
     const q = filter.trim().toLowerCase()
     if (!q) return signals
     return signals.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.unit.toLowerCase().includes(q),
+      (s) => s.name.toLowerCase().includes(q) || s.unit.toLowerCase().includes(q)
     )
   }, [signals, filter])
 

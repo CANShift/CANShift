@@ -21,7 +21,7 @@ export default function LogsRoute() {
   const clear = useLogStore((s) => s.clear)
 
   const [enabledLevels, setEnabledLevels] = useState<Set<LogLevel>>(
-    () => new Set<LogLevel>(['info', 'success', 'warn', 'error']),
+    () => new Set<LogLevel>(['info', 'success', 'warn', 'error'])
   )
   const [autoScroll, setAutoScroll] = useState(true)
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -35,7 +35,7 @@ export default function LogsRoute() {
 
   const filtered = useMemo(
     () => entries.filter((e) => visibleLevels.has(e.level)),
-    [entries, visibleLevels],
+    [entries, visibleLevels]
   )
 
   useEffect(() => {
@@ -183,7 +183,9 @@ const formatTimestamp = (d: Date): string => {
   return `${h}:${m}:${s}.${ms}`
 }
 
-const formatEntryForCopy = (entry: ReturnType<typeof useLogStore.getState>['entries'][number]): string => {
+const formatEntryForCopy = (
+  entry: ReturnType<typeof useLogStore.getState>['entries'][number]
+): string => {
   const ts = formatTimestamp(entry.timestamp)
   const scope = entry.scope ? `[${entry.scope}] ` : ''
   return `${ts}  ${entry.level.toUpperCase().padEnd(7)}  ${scope}${entry.message}`

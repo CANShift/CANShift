@@ -60,8 +60,8 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
-            {showRevFlash && <rect x={0} y={0} width={w} height={h} fill="#FF000022" />}
-            {revFlash && (
+      {showRevFlash && <rect x={0} y={0} width={w} height={h} fill="#FF000022" />}
+      {revFlash && (
         <circle
           cx={cx}
           cy={cy}
@@ -73,14 +73,14 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
           strokeDasharray={showRevFlash ? undefined : '4 3'}
         />
       )}
-            <path
+      <path
         d={gaugeArcD(cx, cy, r, 0, 1)}
         fill="none"
         stroke="#252525"
         strokeWidth={strokeW}
         strokeLinecap="butt"
       />
-            <path
+      <path
         d={gaugeArcD(cx, cy, r, 0, valuePct)}
         fill="none"
         stroke={arcValueColor}
@@ -88,7 +88,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
         strokeLinecap="butt"
         style={{ animation: danger ? BLINK_ANIM : undefined }}
       />
-                  <text
+      <text
         x={cx}
         y={cy + valueYOffset}
         textAnchor="middle"
@@ -110,7 +110,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
           )
         })()}
       </text>
-            {signalUnit !== '' && (
+      {signalUnit !== '' && (
         <text
           x={cx}
           y={cy + unitYOffset}
@@ -123,7 +123,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
           {signalUnit}
         </text>
       )}
-            <text
+      <text
         x={4}
         y={h - 4}
         textAnchor="start"

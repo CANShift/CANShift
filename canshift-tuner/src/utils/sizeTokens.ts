@@ -1,12 +1,6 @@
 import type { GaugeDisplayStyle } from '@tmbk/canshift-core'
 
-export type SizeTokenId =
-  | 'XXL'
-  | 'XL'
-  | 'L'
-  | 'H-FULL'
-  | 'V'
-  | 'V-M'
+export type SizeTokenId = 'XXL' | 'XL' | 'L' | 'H-FULL' | 'V' | 'V-M'
 
 export interface SizeToken {
   id: SizeTokenId

@@ -80,7 +80,13 @@ const computeLayout = (fwCanvasW: number, fwContentH: number) => {
   }
 }
 
-const buttonPathD = (w: number, h: number, notchW: number, notchH: number, corner: Corner): string => {
+const buttonPathD = (
+  w: number,
+  h: number,
+  notchW: number,
+  notchH: number,
+  corner: Corner
+): string => {
   const r = CORNER_R
   const ir = INNER_R
   switch (corner) {
@@ -242,7 +248,7 @@ export const CruiseControlPreview = ({
         )
       })}
 
-            <div
+      <div
         style={{
           position: 'absolute',
           left: layout.center.x * scale,
@@ -259,7 +265,7 @@ export const CruiseControlPreview = ({
           fontFamily: FONT_FAMILY,
         }}
       >
-                <span
+        <span
           style={{
             fontFamily: FONT_FAMILY,
             fontWeight: 500,
@@ -272,7 +278,7 @@ export const CruiseControlPreview = ({
         >
           SET
         </span>
-                <span
+        <span
           style={{
             color: palette.text,
             fontFamily: FONT_FAMILY,
@@ -286,7 +292,7 @@ export const CruiseControlPreview = ({
         >
           {DEMO_SET_SPEED}
         </span>
-                <span
+        <span
           style={{
             color: '#888888',
             fontFamily: FONT_FAMILY,

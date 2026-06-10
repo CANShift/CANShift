@@ -1,18 +1,9 @@
-// ErrorBoundary.tsx — Render-time crash guard for the editor tree (#1338).
-//
-// React only catches errors thrown during render, commit, and lifecycle —
-// async handlers (Promise rejections) still need their own catch. The
-// boundary logs via the studio log store so a render crash leaves a trace
-// in the CLI panel instead of silently white-screening the editor.
-
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { useLogStore } from '../stores/log.store'
 
 interface Props {
   children: ReactNode
-  /** Render override; defaults to the standard fallback panel. */
   fallback?: (error: Error, reset: () => void) => ReactNode
-  /** Scope tag passed to the log store (e.g. "editor", "canvas"). */
   scope?: string
 }
 
@@ -55,7 +46,7 @@ interface FallbackPanelProps {
   onReset: () => void
 }
 
-function FallbackPanel({ error, onReset }: FallbackPanelProps) {
+const FallbackPanel = ({ error, onReset }: FallbackPanelProps) => {
   return (
     <div
       role="alert"

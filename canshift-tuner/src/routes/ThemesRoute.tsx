@@ -23,7 +23,10 @@ export default function ThemesRoute() {
     if (result.success) {
       const next = isDayMode === true ? false : isDayMode === false ? true : null
       setIsDayMode(next)
-      log('success', `Theme toggled to ${next === true ? 'Day' : next === false ? 'Night' : 'unknown'}`)
+      log(
+        'success',
+        `Theme toggled to ${next === true ? 'Day' : next === false ? 'Night' : 'unknown'}`
+      )
     } else {
       log('error', `Theme toggle failed: ${result.error ?? 'unknown_error'}`)
     }
@@ -60,9 +63,9 @@ export default function ThemesRoute() {
         <header style={headerStyle}>
           <div style={titleStyle}>Themes</div>
           <div style={subtitleStyle}>
-            Day / night palette state read from the device on connect. The active dashboard
-            config decides per-page colours; this route flips the global mode the firmware uses
-            to pick which palette to render.
+            Day / night palette state read from the device on connect. The active dashboard config
+            decides per-page colours; this route flips the global mode the firmware uses to pick
+            which palette to render.
           </div>
         </header>
 

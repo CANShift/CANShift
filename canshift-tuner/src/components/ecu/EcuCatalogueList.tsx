@@ -70,7 +70,7 @@ export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalog
           (e) =>
             e.vendor.toLowerCase().includes(q) ||
             e.label.toLowerCase().includes(q) ||
-            e.file.toLowerCase().includes(q),
+            e.file.toLowerCase().includes(q)
         )
       : state.manifest.entries.slice()
     matches.sort((a, b) => {
@@ -153,7 +153,9 @@ export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalog
                   </div>
                   <div style={itemMetaStyle}>
                     <span>{item.vendor}</span>
-                    <span style={{ color: 'hsl(var(--text-muted))' }}>{formatBytes(item.sizeBytes)}</span>
+                    <span style={{ color: 'hsl(var(--text-muted))' }}>
+                      {formatBytes(item.sizeBytes)}
+                    </span>
                   </div>
                 </button>
               )

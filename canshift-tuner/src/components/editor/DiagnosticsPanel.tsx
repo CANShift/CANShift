@@ -48,7 +48,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
         overflow: 'hidden',
       }}
     >
-            <div
+      <div
         style={{
           padding: `${String(pad)}px ${String(pad)}px ${String(Math.round(scale * 3))}px`,
           borderBottom: `1px solid ${HEADER_BORDER}`,
@@ -69,7 +69,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
         >
           Diagnostics
         </span>
-                <span
+        <span
           style={{
             fontSize: fs - 1,
             color: isLive ? LIVE_FG : simulationMode ? SIM_FG : NO_DATA_FG,
@@ -84,7 +84,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
         </span>
       </div>
 
-            <div style={{ overflowY: 'auto', flex: 1 }}>
+      <div style={{ overflowY: 'auto', flex: 1 }}>
         {signals.length === 0 ? (
           <div
             style={{
@@ -119,7 +119,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                   gap: Math.round(scale * 3),
                 }}
               >
-                                <span
+                <span
                   style={{
                     fontSize: fs,
                     color: LABEL_FG,
@@ -132,7 +132,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                   {sig.name.replace(/_/g, ' ')}
                 </span>
 
-                                <div
+                <div
                   style={{
                     width: barW,
                     height: barH,
@@ -155,7 +155,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                   )}
                 </div>
 
-                                <span
+                <span
                   style={{
                     fontSize: fs,
                     color: valueColor,
@@ -168,7 +168,7 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
                   {valueStr}
                 </span>
 
-                                <span
+                <span
                   style={{
                     fontSize: fs - 1,
                     color: UNIT_FG,

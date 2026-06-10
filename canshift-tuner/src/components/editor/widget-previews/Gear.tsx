@@ -21,7 +21,7 @@ export const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRende
         overflow: 'hidden',
       }}
     >
-            <div
+      <div
         style={{
           display: 'flex',
           width: '100%',

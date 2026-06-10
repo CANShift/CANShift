@@ -71,14 +71,7 @@ export default function Sidebar() {
         }
         const disabled = offline && entry.alwaysOn !== true
         const active = location.pathname === entry.to
-        return (
-          <SidebarItem
-            key={entry.to}
-            item={entry}
-            active={active}
-            disabled={disabled}
-          />
-        )
+        return <SidebarItem key={entry.to} item={entry} active={active} disabled={disabled} />
       })}
     </nav>
   )
@@ -114,10 +107,7 @@ const SidebarItem = ({ item, active, disabled }: SidebarItemProps) => {
           cursor: 'not-allowed',
         }}
       >
-        <span
-          aria-hidden="true"
-          style={{ width: 16, textAlign: 'center', fontSize: 13 }}
-        >
+        <span aria-hidden="true" style={{ width: 16, textAlign: 'center', fontSize: 13 }}>
           {item.icon}
         </span>
         <span>{item.label}</span>
@@ -137,10 +127,7 @@ const SidebarItem = ({ item, active, disabled }: SidebarItemProps) => {
         fontWeight: active ? 600 : 400,
       }}
     >
-      <span
-        aria-hidden="true"
-        style={{ width: 16, textAlign: 'center', fontSize: 13 }}
-      >
+      <span aria-hidden="true" style={{ width: 16, textAlign: 'center', fontSize: 13 }}>
         {item.icon}
       </span>
       <span>{item.label}</span>

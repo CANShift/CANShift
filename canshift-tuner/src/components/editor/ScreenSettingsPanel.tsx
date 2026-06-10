@@ -134,7 +134,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           e.stopPropagation()
         }}
       >
-                <span
+        <span
           style={{
             fontSize: fsLg,
             fontWeight: 700,
@@ -146,7 +146,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           SCREEN SETTINGS
         </span>
 
-                <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
+        <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
           <input
             type="range"
             min={10}
@@ -167,7 +167,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           />
         </SettingRow>
 
-                <SettingRow label="THEME" value={activeDayMode ? 'Day' : 'Night'} scale={scale}>
+        <SettingRow label="THEME" value={activeDayMode ? 'Day' : 'Night'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {(['night', 'day'] as const).map((mode) => {
               const active = activeDayMode === (mode === 'day')
@@ -197,7 +197,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-                <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
+        <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {([0, 180] as const).map((deg) => {
               const active = rotation === deg
@@ -226,7 +226,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-                <SettingRow label="TOUCH" value="" scale={scale}>
+        <SettingRow label="TOUCH" value="" scale={scale}>
           <button
             onClick={handleCalibrate}
             disabled={!canDeviceAction || calibrating}
