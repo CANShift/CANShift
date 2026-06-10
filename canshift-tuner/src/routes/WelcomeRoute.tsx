@@ -66,8 +66,8 @@ export default function WelcomeRoute() {
           <div style={badgeStyle}>CANShift Tuner</div>
           <h1 style={titleStyle}>Configure your dash, live.</h1>
           <p style={taglineStyle}>
-            Edit pages, bind CAN signals, tune OBD-II polling — all in your browser,
-            with the dash connected over USB. No install, nothing to deploy.
+            Edit pages, bind CAN signals, tune OBD-II polling — all in your browser, with the dash
+            connected over USB. No install, nothing to deploy.
           </p>
         </header>
 
@@ -102,8 +102,7 @@ export default function WelcomeRoute() {
               >
                 {busy ? (
                   <>
-                    <Spinner />{' '}
-                    {status === 'reconnecting' ? 'Reconnecting…' : 'Connecting…'}
+                    <Spinner /> {status === 'reconnecting' ? 'Reconnecting…' : 'Connecting…'}
                   </>
                 ) : (
                   'Connect device'
@@ -145,9 +144,8 @@ const UnsupportedBrowserCard = () => {
         WebSerial isn't available in this browser
       </div>
       <div style={{ fontSize: 13, marginBottom: 12 }}>
-        CANShift Tuner needs the WebSerial API to talk to the dash over USB.
-        Open this page in one of the supported browsers — or copy the URL and
-        paste it into the new one:
+        CANShift Tuner needs the WebSerial API to talk to the dash over USB. Open this page in one
+        of the supported browsers — or copy the URL and paste it into the new one:
       </div>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13 }}>
         {SUPPORTED_BROWSERS.map((b) => (

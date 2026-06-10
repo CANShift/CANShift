@@ -1,10 +1,3 @@
-// App.tsx — Betaflight-style Tuner shell (Header + Sidebar + Routes outlet).
-//
-// Editor is lazy because it pulls Canvas + widget palette into its chunk.
-// First paint while disconnected forces the user back to Welcome — the
-// connect handshake happens there, and every other section gates on a live
-// device.
-
 import { lazy, Suspense, useEffect } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
@@ -36,7 +29,7 @@ import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 
-function RouteLoading() {
+const RouteLoading = () => {
   return (
     <div
       style={{
@@ -53,24 +46,13 @@ function RouteLoading() {
   )
 }
 
-/**
- * Re-use an already-authorized port from a previous session. Fires once on
- * mount — the connection store internally short-circuits if no port has been
- * granted yet.
- */
-function useAutoReconnect(): void {
+const useAutoReconnect = (): void => {
   useEffect(() => {
     void useConnectionStore.getState().tryAutoReconnect()
   }, [])
 }
 
-/**
- * In `vite dev`, drop straight into simulation mode if nothing is connected —
- * lets us hack on widgets / Editor UI without a physical board on the desk
- * (mirrors canshift-studio-web's dev-mode bootstrap). Skipped in production
- * builds: the user goes through Welcome → Connect on the real Vercel deploy.
- */
-function useSimulationBootstrap(): void {
+const useSimulationBootstrap = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const enterSimulation = useDeviceStore((s) => s.enterSimulation)
@@ -90,14 +72,7 @@ function useSimulationBootstrap(): void {
   }, [simulationMode, hasConfig, setConfig])
 }
 
-/**
- * On every successful WebSerial connect, fetch the dashboard config from the
- * device and seed the editor store with it. Mirrors the studio-web behaviour
- * that originally lived in `useDeviceConfigBootstrap`. Falls back to the demo
- * (and logs `info`) when the device reports no config — fresh devices boot
- * empty until the user does their first Burn.
- */
-function useDeviceConfigBootstrap(): void {
+const useDeviceConfigBootstrap = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)
   const loadFromDeviceOrDemo = useDashboardStore((s) => s.loadFromDeviceOrDemo)
@@ -131,7 +106,7 @@ function useDeviceConfigBootstrap(): void {
   }, [connected, transport, loadFromDeviceOrDemo, log])
 }
 
-function useVersionHandshake(): void {
+const useVersionHandshake = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -157,7 +132,7 @@ function useVersionHandshake(): void {
       if (reportedMajor !== __EXPECTED_FIRMWARE_MAJOR__) {
         log(
           'error',
-          `Firmware major mismatch — tuner expects ${String(__EXPECTED_FIRMWARE_MAJOR__)}.x, device reports ${version}. Burn disabled.`,
+          `Firmware major mismatch — tuner expects ${String(__EXPECTED_FIRMWARE_MAJOR__)}.x, device reports ${version}. Burn disabled.`
         )
         setFirmwareCompat({
           kind: 'mismatch',
@@ -184,7 +159,7 @@ function useVersionHandshake(): void {
   ])
 }
 
-function useHeartbeat(): void {
+const useHeartbeat = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -242,7 +217,7 @@ function useHeartbeat(): void {
   }, [connected, simulationMode, transport, setFirmwareLiveness, log])
 }
 
-function useHeapStatsSubscription(): void {
+const useHeapStatsSubscription = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -259,19 +234,12 @@ function useHeapStatsSubscription(): void {
   }, [connected, simulationMode, transport, pushHeapStats, clearHeapStats])
 }
 
-/**
- * Cmd/Ctrl+S → Burn. Global accelerator so it fires regardless of which
- * section is open. Delegates to the same `useBurnDashboard` hook the Header's
- * Burn button uses, so the gating (connected + dirty + not simulation) is
- * identical between the two entry points.
- */
-function useBurnShortcut(): void {
+const useBurnShortcut = (): void => {
   const { canBurn, burn } = useBurnDashboard()
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
       if (!isMod || e.key !== 's') return
-      // Skip when an input is focused — let the field own its native save.
       const tag = (document.activeElement as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       e.preventDefault()
@@ -285,12 +253,7 @@ function useBurnShortcut(): void {
   }, [canBurn, burn])
 }
 
-/**
- * Redirect every non-Welcome path back to `/` while disconnected AND not in
- * simulation. The Sidebar already blocks the UI path, but a direct URL hit (or
- * a reload mid-session) still needs to be intercepted.
- */
-function DisconnectedGuard({ children }: { children: ReactNode }) {
+const DisconnectedGuard = ({ children }: { children: ReactNode }) => {
   const status = useConnectionStore((s) => s.status)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const location = useLocation()
@@ -379,4 +342,3 @@ const mainStyle: CSSProperties = {
   flexDirection: 'column',
   overflow: 'hidden',
 }
-

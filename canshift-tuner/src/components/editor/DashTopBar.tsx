@@ -189,7 +189,7 @@ export const DashTopBar = ({
         {rightItems.map((it, i) => renderItem(it, i))}
       </div>
 
-            <div
+      <div
         style={{
           position: 'absolute',
           bottom: 1,

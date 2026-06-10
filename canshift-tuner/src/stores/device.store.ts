@@ -172,7 +172,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
       firmwareCompat: { kind: 'unknown' },
-  firmwareLiveness: { kind: 'unknown' },
+      firmwareLiveness: { kind: 'unknown' },
       heapStats: [],
       lastPushedConfig: null,
     })

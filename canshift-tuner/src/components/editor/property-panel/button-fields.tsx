@@ -46,7 +46,7 @@ const ActionRow = ({ action, pageIds, onUpdate, onRemove }: ActionRowProps) => {
         marginBottom: 5,
       }}
     >
-            <div
+      <div
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -81,7 +81,7 @@ const ActionRow = ({ action, pageIds, onUpdate, onRemove }: ActionRowProps) => {
         </button>
       </div>
 
-            {action.category === 'dashboard' && (
+      {action.category === 'dashboard' && (
         <select
           style={{ ...inputStyle, fontSize: 11 }}
           value={action.pageId}
@@ -282,7 +282,7 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
 
   return (
     <>
-            <Field label="Active state">
+      <Field label="Active state">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div
             style={{

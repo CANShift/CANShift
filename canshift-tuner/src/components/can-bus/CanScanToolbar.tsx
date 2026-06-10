@@ -33,12 +33,7 @@ export const CanScanToolbar = ({
     <header style={toolbarStyle}>
       <div style={controlsStyle}>
         {running ? (
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={status !== 'running'}
-            onClick={onStop}
-          >
+          <Button variant="destructive" size="sm" disabled={status !== 'running'} onClick={onStop}>
             Stop
           </Button>
         ) : (

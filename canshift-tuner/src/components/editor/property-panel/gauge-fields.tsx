@@ -5,14 +5,7 @@ import {
   gaugeTokenIds,
   tokenFromDimensions,
 } from '../../../utils/sizeTokens'
-import {
-  ConfigFieldsProps,
-  Field,
-  GAUGE_STYLES,
-  Row,
-  inputStyle,
-  numberInputStyle,
-} from './shared'
+import { ConfigFieldsProps, Field, GAUGE_STYLES, Row, numberInputStyle } from './shared'
 
 export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) => {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
@@ -25,7 +18,7 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
 
   return (
     <>
-            <Field label="Style">
+      <Field label="Style">
         <div style={{ display: 'flex', gap: 4 }}>
           {GAUGE_STYLES.map(({ value, label }) => (
             <button
@@ -56,7 +49,7 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </div>
       </Field>
 
-            <Field label="Size">
+      <Field label="Size">
         <div style={{ display: 'flex', gap: 4 }}>
           {allowedTokenIds.map((tokenId) => {
             const token = SIZE_TOKENS[tokenId]
@@ -87,8 +80,7 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </div>
       </Field>
 
-      
-            {style === 'arc' && (
+      {style === 'arc' && (
         <>
           <Row>
             <Field
@@ -223,7 +215,6 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
           </Row>
         </>
       )}
-
-          </>
+    </>
   )
 }

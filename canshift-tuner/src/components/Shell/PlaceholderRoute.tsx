@@ -24,15 +24,10 @@ export default function PlaceholderRoute({
         padding: 24,
       }}
     >
-      <div
-        aria-hidden="true"
-        style={{ fontSize: 32, color: 'hsl(var(--text-muted))' }}
-      >
+      <div aria-hidden="true" style={{ fontSize: 32, color: 'hsl(var(--text-muted))' }}>
         {icon}
       </div>
-      <div style={{ fontSize: 18, fontWeight: 600, color: 'hsl(var(--text))' }}>
-        {label}
-      </div>
+      <div style={{ fontSize: 18, fontWeight: 600, color: 'hsl(var(--text))' }}>{label}</div>
       <div style={{ fontSize: 12 }}>{subtext}</div>
     </div>
   )

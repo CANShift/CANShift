@@ -110,9 +110,7 @@ export default function Header() {
         gap: 14,
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'hsl(var(--text))' }}>
-        CANShift Tuner
-      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'hsl(var(--text))' }}>CANShift Tuner</div>
       <div style={versionStyle}>v{__TUNER_VERSION__}</div>
 
       <div style={{ flex: 1 }} />
@@ -135,7 +133,9 @@ export default function Header() {
             height: 8,
             borderRadius: '50%',
             background: visual.dot,
-            boxShadow: pulsing ? `0 0 12px ${visual.dot}, 0 0 4px ${visual.dot}` : `0 0 6px ${visual.dot}`,
+            boxShadow: pulsing
+              ? `0 0 12px ${visual.dot}, 0 0 4px ${visual.dot}`
+              : `0 0 6px ${visual.dot}`,
             transform: pulsing ? 'scale(1.25)' : 'scale(1)',
             transition: 'box-shadow 80ms ease-out, transform 80ms ease-out',
           }}

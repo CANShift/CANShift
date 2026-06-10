@@ -42,7 +42,7 @@ export default function CanBusRoute() {
 
   const sortedFrames = useMemo(
     () => sortFrames(Array.from(scanner.snapshot.frames.values()), sortKey),
-    [scanner.snapshot.frames, sortKey],
+    [scanner.snapshot.frames, sortKey]
   )
 
   const promote = useCallback(
@@ -56,7 +56,7 @@ export default function CanBusRoute() {
       setSignals([...signals, draft])
       log('success', `Promoted ${formatFrameIdHex(id)} to draft signal "${draft.name}"`)
     },
-    [signals, setSignals, log],
+    [signals, setSignals, log]
   )
 
   const canControl = connected && !simulationMode

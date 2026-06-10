@@ -148,7 +148,10 @@ export const useCanScanner = (): UseCanScanner => {
     if (status !== 'running') return
     const id = window.setInterval(() => {
       const now = performance.now()
-      while (totalRecentRef.current.length > 0 && now - (totalRecentRef.current[0] ?? 0) > RATE_WINDOW_MS) {
+      while (
+        totalRecentRef.current.length > 0 &&
+        now - (totalRecentRef.current[0] ?? 0) > RATE_WINDOW_MS
+      ) {
         totalRecentRef.current.shift()
       }
       const totalRate = totalRecentRef.current.length
