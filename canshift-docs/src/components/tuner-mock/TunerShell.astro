@@ -1,0 +1,270 @@
+---
+type RouteKey =
+  | "welcome"
+  | "dashboard"
+  | "can"
+  | "ecu"
+  | "obd2"
+  | "themes"
+  | "live"
+  | "logs"
+  | "cli"
+  | "firmware"
+  | "about";
+
+type Status = "connected" | "disconnected" | "simulation";
+
+interface Props {
+  route: RouteKey;
+  title?: string;
+  status?: Status;
+  port?: string;
+}
+
+const {
+  route,
+  title = "CANShift Tuner",
+  status = "connected",
+  port = "303a:1001",
+} = Astro.props;
+
+const entries: ({ to: RouteKey; label: string; icon: string } | "divider")[] = [
+  { to: "welcome", label: "Welcome", icon: "⚡" },
+  "divider",
+  { to: "dashboard", label: "Dashboard", icon: "◉" },
+  { to: "can", label: "CAN Bus", icon: "⇄" },
+  { to: "ecu", label: "ECU Profile", icon: "⚛" },
+  { to: "obd2", label: "OBD-II", icon: "⚙" },
+  { to: "themes", label: "Themes", icon: "◐" },
+  "divider",
+  { to: "live", label: "Live Data", icon: "▤" },
+  { to: "logs", label: "Logs", icon: "☰" },
+  { to: "cli", label: "CLI", icon: "›_" },
+  "divider",
+  { to: "firmware", label: "Firmware", icon: "⏏" },
+  { to: "about", label: "About", icon: "ⓘ" },
+];
+
+const statusVisual: Record<Status, { color: string; label: string }> = {
+  connected: { color: "var(--cs-success)", label: "Connected" },
+  disconnected: { color: "var(--cs-danger)", label: "Disconnected" },
+  simulation: { color: "var(--cs-accent)", label: "Simulation" },
+};
+const visual = statusVisual[status];
+---
+
+<figure class="tuner-shell not-content">
+  <div class="tuner-shell__frame">
+    <header class="tuner-shell__header">
+      <span class="tuner-shell__title">{title}</span>
+      <span class="tuner-shell__version">v0.42.0</span>
+      <span class="tuner-shell__spacer"></span>
+      <span class="tuner-shell__status" aria-live="polite">
+        <span
+          class="tuner-shell__dot"
+          style={`background:${visual.color};box-shadow:0 0 6px ${visual.color};`}
+        ></span>
+        <span class="tuner-shell__status-label">{visual.label}</span>
+        {
+          status === "connected" && (
+            <span class="tuner-shell__port">{port}</span>
+          )
+        }
+      </span>
+      <span class="tuner-shell__slot">fw 0.42.0</span>
+      <button type="button" class="tuner-shell__burn" disabled>Burn</button>
+    </header>
+    <div class="tuner-shell__body">
+      <nav class="tuner-shell__sidebar" aria-label="Tuner mock navigation">
+        {
+          entries.map((entry) =>
+            entry === "divider" ? (
+              <span class="tuner-shell__divider" aria-hidden="true" />
+            ) : (
+              <span
+                class:list={[
+                  "tuner-shell__nav-item",
+                  entry.to === route && "is-active",
+                ]}
+              >
+                <span class="tuner-shell__nav-icon" aria-hidden="true">
+                  {entry.icon}
+                </span>
+                <span>{entry.label}</span>
+              </span>
+            ),
+          )
+        }
+      </nav>
+      <div class="tuner-shell__main">
+        <slot />
+      </div>
+    </div>
+  </div>
+</figure>
+
+<style>
+  .tuner-shell {
+    margin: 1.5rem 0;
+    container-type: inline-size;
+  }
+
+  .tuner-shell__frame {
+    background: var(--cs-bg);
+    color: var(--cs-text);
+    border: 1px solid var(--cs-border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.4;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  }
+
+  .tuner-shell__header {
+    height: 40px;
+    background: var(--cs-surface);
+    border-bottom: 1px solid var(--cs-border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 12px;
+  }
+
+  .tuner-shell__title {
+    font-weight: 700;
+    color: var(--cs-text);
+    font-size: 13px;
+  }
+
+  .tuner-shell__version {
+    font-family: var(--sl-font-mono);
+    font-size: 10px;
+    color: var(--cs-text-dim);
+    letter-spacing: 0.04em;
+  }
+
+  .tuner-shell__spacer {
+    flex: 1;
+  }
+
+  .tuner-shell__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--cs-text-dim);
+  }
+
+  .tuner-shell__status-label {
+    color: var(--cs-text);
+  }
+
+  .tuner-shell__port {
+    font-family: var(--sl-font-mono);
+    color: var(--cs-text-muted);
+  }
+
+  .tuner-shell__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .tuner-shell__slot {
+    font-family: var(--sl-font-mono);
+    font-size: 10px;
+    color: var(--cs-text-muted);
+    padding: 2px 6px;
+    border: 1px solid var(--cs-border);
+    border-radius: 4px;
+  }
+
+  .tuner-shell__burn {
+    background: var(--cs-primary);
+    color: var(--cs-primary-foreground);
+    border: 1px solid var(--cs-primary);
+    border-radius: 4px;
+    padding: 4px 14px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow: 0 1px 4px rgba(255, 71, 71, 0.3);
+    cursor: default;
+    opacity: 0.92;
+  }
+  .tuner-shell__burn[disabled] {
+    cursor: not-allowed;
+  }
+
+  .tuner-shell__body {
+    display: flex;
+    min-height: 280px;
+  }
+
+  .tuner-shell__sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    background: var(--cs-surface);
+    border-right: 1px solid var(--cs-border);
+    padding: 8px 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tuner-shell__divider {
+    height: 1px;
+    background: var(--cs-border);
+    margin: 6px 12px;
+  }
+
+  .tuner-shell__nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    font-size: 12px;
+    color: var(--cs-text-dim);
+    border-left: 3px solid transparent;
+  }
+
+  .tuner-shell__nav-item.is-active {
+    color: var(--cs-text);
+    background: var(--cs-surface-2);
+    border-left-color: var(--cs-primary);
+    font-weight: 600;
+  }
+
+  .tuner-shell__nav-icon {
+    width: 14px;
+    text-align: center;
+    color: inherit;
+    font-size: 12px;
+  }
+
+  .tuner-shell__main {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+    background: var(--cs-bg);
+  }
+
+  @container (max-width: 640px) {
+    .tuner-shell__sidebar {
+      width: 56px;
+    }
+    .tuner-shell__nav-item span:last-child,
+    .tuner-shell__port,
+    .tuner-shell__slot,
+    .tuner-shell__version {
+      display: none;
+    }
+  }
+</style>

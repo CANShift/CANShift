@@ -1,0 +1,55 @@
+---
+import "./tuner-mock.css";
+---
+
+<div class="tuner-screen">
+  <div class="tuner-section-header">
+    <h3>ECU profile</h3>
+    <p>Pick a preset or import a custom map.</p>
+  </div>
+  <div class="tuner-section-body">
+    <div class="tuner-ecu__list">
+      <button type="button" class="tuner-ecu__row is-active">
+        <span class="tuner-ecu__name">Haltech v2 CAN</span>
+        <span class="tuner-ecu__meta">128 signals · 500 kbit/s</span>
+        <span class="tuner-pill tuner-pill--success">Active</span>
+      </button>
+      <button type="button" class="tuner-ecu__row">
+        <span class="tuner-ecu__name">Ecumaster EmuBlack</span>
+        <span class="tuner-ecu__meta">96 signals · 500 kbit/s</span>
+      </button>
+      <button type="button" class="tuner-ecu__row">
+        <span class="tuner-ecu__name">Adaptronic CAN simple</span>
+        <span class="tuner-ecu__meta">42 signals · 1 Mbit/s</span>
+      </button>
+      <button type="button" class="tuner-ecu__row">
+        <span class="tuner-ecu__name">OBD-II generic</span>
+        <span class="tuner-ecu__meta">Polled · Mode 01</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tuner-ecu__list { display: flex; flex-direction: column; gap: 6px; }
+  .tuner-ecu__row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--cs-text-dim);
+    font-size: 12px;
+  }
+  .tuner-ecu__row.is-active {
+    border-color: var(--cs-primary);
+    background: color-mix(in srgb, var(--cs-primary) 8%, var(--cs-surface));
+    color: var(--cs-text);
+  }
+  .tuner-ecu__name { font-weight: 600; }
+  .tuner-ecu__meta { color: var(--cs-text-muted); font-family: var(--sl-font-mono); font-size: 10px; }
+</style>

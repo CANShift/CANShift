@@ -1,0 +1,39 @@
+---
+import "./tuner-mock.css";
+---
+
+<div class="tuner-screen">
+  <div class="tuner-section-header">
+    <h3>Logs</h3>
+    <p>Serial log stream from the dash. Filtered to INFO+.</p>
+  </div>
+  <pre class="tuner-logs"><span><span class="t">14:02:11.412</span> <span class="lvl ok">INFO </span> bootloader     splash up, fb 80 KB free</span>
+<span><span class="t">14:02:11.638</span> <span class="lvl ok">INFO </span> fs             SPIFFS mounted (1.4 MB, 87% free)</span>
+<span><span class="t">14:02:11.722</span> <span class="lvl ok">INFO </span> can            tjA1051 up @ 500 kbit/s</span>
+<span><span class="t">14:02:11.840</span> <span class="lvl warn">WARN </span> obd2           pid 0x0B not supported by ECU, skipping</span>
+<span><span class="t">14:02:11.901</span> <span class="lvl ok">INFO </span> ui             3 pages built in 96 ms</span>
+<span><span class="t">14:02:12.013</span> <span class="lvl err">ERROR</span> ble            stack init failed (-3) — disabling</span>
+<span><span class="t">14:02:12.140</span> <span class="lvl ok">INFO </span> tuner          serial up, awaiting handshake</span></pre>
+</div>
+
+<style>
+  .tuner-logs {
+    margin: 0;
+    padding: 12px 16px;
+    background: var(--cs-bg-inset);
+    border-top: 1px solid var(--cs-border);
+    color: var(--cs-text-dim);
+    font-family: var(--sl-font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .tuner-logs span { display: block; }
+  .tuner-logs span span { display: inline; }
+  .tuner-logs .t { color: var(--cs-text-muted); }
+  .tuner-logs .lvl { font-weight: 700; margin: 0 6px; }
+  .tuner-logs .lvl.ok { color: var(--cs-success); }
+  .tuner-logs .lvl.warn { color: var(--cs-warning); }
+  .tuner-logs .lvl.err { color: var(--cs-danger); }
+</style>

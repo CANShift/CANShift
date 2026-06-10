@@ -5,9 +5,20 @@ sidebar:
   order: 3
 ---
 
+import TunerShell from "../../../../components/tuner-mock/TunerShell.astro";
+import TunerLogsScreen from "../../../../components/tuner-mock/TunerLogsScreen.astro";
+
 The Settings panel slides down from the top of the screen and exposes
 device-level controls that don't belong in the dashboard config (because they
 are per-device, not per-tune).
+
+If a setting silently doesn't apply, the tuner's **Logs** route surfaces what
+the firmware actually did with the request — handy to confirm the NVS write
+landed or to spot a `Reboot to apply` hint:
+
+<TunerShell route="logs" status="connected">
+  <TunerLogsScreen />
+</TunerShell>
 
 ## Open / close
 

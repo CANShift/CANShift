@@ -1,0 +1,76 @@
+---
+import "./tuner-mock.css";
+
+interface Props {
+  activeStep?: 1 | 2 | 3;
+}
+const { activeStep = 2 } = Astro.props;
+---
+
+<div class="tuner-screen tuner-firmware">
+  <div class="tuner-section-header">
+    <h3>Firmware</h3>
+    <p>
+      Write a new firmware image to the dash over WebSerial. Reuses the active
+      tuner connection.
+    </p>
+  </div>
+  <div class="tuner-section-body">
+    <article class="tuner-card">
+      <h4 class="tuner-card__title">
+        <span class={`num ${activeStep > 1 ? "" : "num--muted"}`}>1</span>
+        Device
+      </h4>
+      <div class="tuner-card__body">
+        <div class="tuner-row">
+          <span class="tuner-row__label">Port</span>
+          <span class="tuner-row__value">/dev/cu.usbserial-303a</span>
+          <span class="tuner-pill tuner-pill--success">● Detected</span>
+        </div>
+        <div class="tuner-row">
+          <span class="tuner-row__label">Chip</span>
+          <span class="tuner-row__value">ESP32-WROOM-32</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="tuner-card">
+      <h4 class="tuner-card__title">
+        <span class={`num ${activeStep >= 2 ? "" : "num--muted"}`}>2</span>
+        Firmware
+      </h4>
+      <div class="tuner-card__body">
+        <div class="tuner-row">
+          <span class="tuner-row__label">Channel</span>
+          <span class="tuner-row__value">stable · v0.42.0</span>
+          <span class="tuner-pill">latest</span>
+        </div>
+        <div class="tuner-row">
+          <span class="tuner-row__label">Size</span>
+          <span class="tuner-row__value">1.62 MB</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="tuner-card">
+      <h4 class="tuner-card__title">
+        <span class={`num ${activeStep === 3 ? "" : "num--muted"}`}>3</span>
+        Flash
+      </h4>
+      <div class="tuner-card__body">
+        <div class="tuner-row">
+          <button type="button" class="tuner-button tuner-button--primary"
+            >Flash now</button
+          >
+          <span class="tuner-row__label">~30 s, dash reboots at the end.</span>
+        </div>
+      </div>
+    </article>
+  </div>
+</div>
+
+<style>
+  .tuner-section-body {
+    overflow-y: auto;
+  }
+</style>

@@ -1,0 +1,29 @@
+---
+import "./tuner-mock.css";
+---
+
+<div class="tuner-screen">
+  <div class="tuner-section-header">
+    <h3>CAN bus monitor</h3>
+    <p>Frames captured live from the bus. Click a row to inspect bytes.</p>
+  </div>
+  <div class="tuner-section-body">
+    <div class="tuner-row" style="gap:14px;">
+      <span class="tuner-pill tuner-pill--success">● 500 kbit/s</span>
+      <span class="tuner-pill">Frames 12 482</span>
+      <span class="tuner-pill">Err 0</span>
+    </div>
+    <table class="tuner-table">
+      <thead>
+        <tr><th>Time</th><th>ID</th><th>DLC</th><th>Data</th><th>Δ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>00:03.412</td><td>0x280</td><td>8</td><td>4F 28 1C 00 00 00 00 00</td><td class="muted">20 ms</td></tr>
+        <tr><td>00:03.432</td><td>0x288</td><td>8</td><td>00 5A 00 00 00 7D 00 00</td><td class="muted">20 ms</td></tr>
+        <tr><td>00:03.440</td><td>0x320</td><td>8</td><td>00 00 00 00 00 00 00 00</td><td class="muted">100 ms</td></tr>
+        <tr><td>00:03.452</td><td>0x420</td><td>8</td><td>69 00 00 00 7E 1A 00 00</td><td class="muted">12 ms</td></tr>
+        <tr><td>00:03.460</td><td>0x540</td><td>8</td><td>00 00 00 00 00 00 00 00</td><td class="muted">200 ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
