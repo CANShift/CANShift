@@ -1,10 +1,3 @@
-// AboutScreen.tsx — Current vs latest GitHub release card (issue #571).
-//
-// Reachable from the dashboard top-bar menu. Mirrors the studio
-// `ReleaseInfoCard` surface: shows the running app version, the latest tag
-// fetched from GitHub, a comparison badge, the release notes, the asset
-// list, and a button that opens the release page on github.com.
-
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
@@ -46,11 +39,7 @@ interface SemverParts {
   patch: number
 }
 
-// ---------------------------------------------------------------------------
-// Pure helpers (unit-tested via about-helpers.test.ts)
-// ---------------------------------------------------------------------------
-
-function parseSemver(input: string): SemverParts | null {
+const parseSemver = (input: string): SemverParts | null => {
   const match = /^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(input.trim())
   if (!match) return null
   const major = Number(match[1])
@@ -60,21 +49,21 @@ function parseSemver(input: string): SemverParts | null {
   return { major, minor, patch }
 }
 
-function compareSemver(a: SemverParts, b: SemverParts): number {
+const compareSemver = (a: SemverParts, b: SemverParts): number => {
   if (a.major !== b.major) return a.major - b.major
   if (a.minor !== b.minor) return a.minor - b.minor
   return a.patch - b.patch
 }
 
-function isPreReleaseTag(version: string): boolean {
+const isPreReleaseTag = (version: string): boolean => {
   return /[-+]/.test(version)
 }
 
-export function classify(
+export const classify = (
   currentRaw: string | null,
   release: ReleaseInfo,
   prerelease: ReleaseInfo | null
-): ComparisonKind {
+): ComparisonKind => {
   if (currentRaw === null) return { kind: 'unknown' }
   const current = parseSemver(currentRaw)
   const latestStable = parseSemver(release.version)
@@ -94,21 +83,19 @@ export function classify(
   return { kind: 'ahead', current: currentRaw, latest: release.version }
 }
 
-export function formatBytes(bytes: number): string {
+export const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${String(bytes)} B`
 }
 
-export function formatDate(iso: string): string {
+export const formatDate = (iso: string): string => {
   const ms = Date.parse(iso)
   if (Number.isNaN(ms)) return iso
   return new Date(ms).toLocaleString()
 }
 
 async function loadPreReleaseToggle(): Promise<boolean> {
-  // Pre-1.0 we publish every build as a pre-release, so the toggle defaults
-  // to `true`. Flip the default to `false` once the app ships v1.0.
   try {
     const stored = await SecureStore.getItemAsync(PRE_RELEASE_TOGGLE_KEY)
     if (stored === null) return true
@@ -118,11 +105,11 @@ async function loadPreReleaseToggle(): Promise<boolean> {
   }
 }
 
-async function savePreReleaseToggle(value: boolean): Promise<void> {
+const savePreReleaseToggle = async (value: boolean): Promise<void> => {
   try {
     await SecureStore.setItemAsync(PRE_RELEASE_TOGGLE_KEY, value ? 'true' : 'false')
   } catch {
-    // Persistence is best-effort — the toggle still works for the session.
+    void 0
   }
 }
 
@@ -134,7 +121,7 @@ const COMPARISON_COPY: Record<ComparisonKind['kind'], { tone: string; label: str
   'on-prerelease': { tone: Colors.warning, label: 'Running a pre-release build' },
 }
 
-function comparisonDetail(comparison: ComparisonKind): string | null {
+const comparisonDetail = (comparison: ComparisonKind): string | null => {
   switch (comparison.kind) {
     case 'behind':
       return `v${comparison.current} → v${comparison.latest}`
@@ -155,10 +142,6 @@ function comparisonDetail(comparison: ComparisonKind): string | null {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
-
 export default function AboutScreen({ navigation }: Props) {
   const { state, isFetching, refresh } = useLatestRelease()
   const [currentVersion] = useState<string | null>(readAppVersion)
@@ -172,8 +155,6 @@ export default function AboutScreen({ navigation }: Props) {
         if (!cancelled) setShowPreRelease(value)
       })
       .catch(() => {
-        // loadPreReleaseToggle swallows its own errors and returns true —
-        // this catch is a belt-and-suspenders guard against future changes.
         if (!cancelled) setShowPreRelease(true)
       })
     return () => {
@@ -212,10 +193,6 @@ export default function AboutScreen({ navigation }: Props) {
   }, [currentVersion, displayedRelease, result])
 
   const openUrl = useCallback((url: string) => {
-    // Allowlist guard (#1013) — release notes are rendered Markdown so the
-    // URL can carry any scheme (tel:, sms:, itms-services:, intent://, …).
-    // Block anything that isn't HTTPS / HTTP / mailto before handing off to
-    // the OS resolver.
     if (!isAllowedExternalUrl(url)) {
       Alert.alert("Couldn't open link", `Blocked link (scheme not allowed): ${url}`)
       return
@@ -228,8 +205,6 @@ export default function AboutScreen({ navigation }: Props) {
 
   const hasPreRelease = result?.ok === true && result.prerelease !== null
   const showLoadingPlaceholder = state.status === 'loading' && displayedRelease === null
-  // Only set when an explicit failure happened AND we have nothing to display.
-  // The `result` discriminant is narrowed inline so the JSX can read `.message`.
   const failureWithoutCache =
     result !== null && !result.ok && displayedRelease === null ? result : null
 
@@ -303,11 +278,7 @@ export default function AboutScreen({ navigation }: Props) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function ComparisonBadge({ comparison }: { comparison: ComparisonKind }) {
+const ComparisonBadge = ({ comparison }: { comparison: ComparisonKind }) => {
   const { tone, label } = COMPARISON_COPY[comparison.kind]
   const detail = comparisonDetail(comparison)
   return (
@@ -321,7 +292,7 @@ function ComparisonBadge({ comparison }: { comparison: ComparisonKind }) {
   )
 }
 
-function ErrorBlock({ message }: { message: string }) {
+const ErrorBlock = ({ message }: { message: string }) => {
   return (
     <View style={styles.errorBlock}>
       <Text style={styles.errorText}>Couldn&apos;t reach GitHub: {message}</Text>
@@ -329,7 +300,7 @@ function ErrorBlock({ message }: { message: string }) {
   )
 }
 
-function ReleaseBody({
+const ReleaseBody = ({
   release,
   notesOpen,
   onToggleNotes,
@@ -339,7 +310,7 @@ function ReleaseBody({
   notesOpen: boolean
   onToggleNotes: () => void
   onOpenUrl: (url: string) => void
-}) {
+}) => {
   return (
     <>
       <View style={styles.metaRow}>
@@ -413,7 +384,7 @@ function ReleaseBody({
   )
 }
 
-function FooterRow({
+const FooterRow = ({
   result,
   isFetching,
   onRefresh,
@@ -427,7 +398,7 @@ function FooterRow({
   showPreRelease: boolean
   onTogglePreRelease: (next: boolean) => void
   hasPreRelease: boolean
-}) {
+}) => {
   return (
     <View style={styles.footer}>
       <TouchableOpacity
@@ -467,10 +438,6 @@ function FooterRow({
     </View>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
 
 const markdownStyles = StyleSheet.create({
   body: { color: Colors.text, fontSize: Typography.xs, lineHeight: 18 },

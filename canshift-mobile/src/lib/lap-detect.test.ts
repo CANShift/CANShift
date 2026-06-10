@@ -1,6 +1,3 @@
-// lap-detect.test.ts — Coverage for the pure-geometry crossing detector
-// from #845.
-
 import {
   bearingDeg,
   createLapCrossingDetector,
@@ -76,9 +73,6 @@ describe('signedAngleDelta', () => {
 })
 
 describe('createLapCrossingDetector', () => {
-  // Horizontal line at lat = 0, from lng -1 (point a) to lng +1 (point b).
-  // a→b heads east, so "right of a→b" (the default forward bearing) is
-  // south → travelling with lat decreasing is the forward direction.
   const line = { a: { lat: 0, lng: -1 }, b: { lat: 0, lng: 1 } }
 
   it('returns null on the first sample (no previous segment yet)', () => {
@@ -91,7 +85,6 @@ describe('createLapCrossingDetector', () => {
     det.update({ t: 1000, lat: 0.5, lng: 0 })
     const crossing = det.update({ t: 2000, lat: -0.5, lng: 0 })
     expect(crossing).not.toBeNull()
-    // Linear interpolation: line at lat=0, samples at +0.5 and -0.5 → midpoint t=1500.
     expect(crossing).toBeCloseTo(1500)
   })
 
@@ -113,8 +106,7 @@ describe('createLapCrossingDetector', () => {
     det.update({ t: 1000, lat: 0.5, lng: 0 })
     const first = det.update({ t: 2000, lat: -0.5, lng: 0 })
     expect(first).not.toBeNull()
-    // Cross forward again 500 ms later — within hysteresis, should be dropped.
-    det.update({ t: 2400, lat: 0.5, lng: 0.5 }) // off-line move
+    det.update({ t: 2400, lat: 0.5, lng: 0.5 })
     const second = det.update({ t: 2500, lat: -0.5, lng: 0.5 })
     expect(second).toBeNull()
   })
@@ -123,7 +115,6 @@ describe('createLapCrossingDetector', () => {
     const det = createLapCrossingDetector(line)
     det.update({ t: 1000, lat: 0.5, lng: 0 })
     det.reset()
-    // After reset, the next sample is "first" again and never produces a crossing.
     expect(det.update({ t: 2000, lat: -0.5, lng: 0 })).toBeNull()
   })
 

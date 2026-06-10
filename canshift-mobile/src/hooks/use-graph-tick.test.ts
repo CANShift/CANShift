@@ -1,12 +1,5 @@
-// use-graph-tick.test.ts — counter behaviour under both pause sources:
-//   - explicit `paused` flag (toolbar)
-//   - screen-focus (#1017 M-LO-6 — pause off-screen to save battery)
-
 import { renderHook, act } from '@testing-library/react-native'
 
-// Module-level jest mock for the navigation focus hook. Each test sets the
-// return value before rendering. Has to live at the file top because jest
-// hoists `jest.mock`.
 const mockIsFocused = jest.fn<boolean, []>()
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => mockIsFocused(),

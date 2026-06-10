@@ -1,5 +1,3 @@
-// open-studio.test.ts — URL resolution + browser-open dispatch.
-
 import { getStudioUrl, STUDIO_URL_CANDIDATES } from './open-studio'
 
 describe('STUDIO_URL_CANDIDATES', () => {

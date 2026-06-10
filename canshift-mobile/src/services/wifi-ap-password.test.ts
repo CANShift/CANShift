@@ -1,6 +1,3 @@
-// wifi-ap-password.test.ts — Coverage for the SecureStore-backed
-// password helper from #890.
-
 import * as SecureStore from 'expo-secure-store'
 import { clearWifiApPassword, getWifiApPassword, setWifiApPassword } from './wifi-ap-password'
 

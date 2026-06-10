@@ -1,5 +1,3 @@
-// card.tsx — Surface container primitive (shadcn-style)
-
 import * as React from 'react'
 import { Text, View, type TextProps, type ViewProps } from 'react-native'
 import { cva, type VariantProps } from 'class-variance-authority'

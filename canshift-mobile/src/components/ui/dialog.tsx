@@ -17,7 +17,7 @@ interface DialogContextValue {
 
 const DialogContext = React.createContext<DialogContextValue | null>(null)
 
-function useDialogContext(): DialogContextValue {
+const useDialogContext = (): DialogContextValue => {
   const ctx = React.useContext(DialogContext)
   if (ctx === null) {
     throw new Error('Dialog subcomponents must be used within a <Dialog>')
@@ -32,12 +32,12 @@ export interface DialogProps {
   children: React.ReactNode
 }
 
-export function Dialog({
+export const Dialog = ({
   open,
   defaultOpen,
   onOpenChange,
   children,
-}: DialogProps): React.ReactElement {
+}: DialogProps): React.ReactElement => {
   const isControlledRef = React.useRef(open !== undefined)
   const [internalOpen, setInternalOpen] = React.useState<boolean>(defaultOpen ?? false)
 
@@ -96,12 +96,12 @@ export interface DialogContentProps {
   dismissOnBackdropPress?: boolean
 }
 
-export function DialogContent({
+export const DialogContent = ({
   children,
   className,
   overlayClassName,
   dismissOnBackdropPress = true,
-}: DialogContentProps): React.ReactElement {
+}: DialogContentProps): React.ReactElement => {
   const { open, setOpen } = useDialogContext()
   return (
     <Modal
@@ -142,7 +142,7 @@ export interface DialogHeaderProps extends ViewProps {
   className?: string
 }
 
-export function DialogHeader({ className, ...props }: DialogHeaderProps): React.ReactElement {
+export const DialogHeader = ({ className, ...props }: DialogHeaderProps): React.ReactElement => {
   return (
     <View accessibilityRole="header" className={cn('flex-col gap-1.5', className)} {...props} />
   )
@@ -153,7 +153,7 @@ export interface DialogFooterProps extends ViewProps {
   className?: string
 }
 
-export function DialogFooter({ className, ...props }: DialogFooterProps): React.ReactElement {
+export const DialogFooter = ({ className, ...props }: DialogFooterProps): React.ReactElement => {
   return <View className={cn('flex-row justify-end gap-2', className)} {...props} />
 }
 DialogFooter.displayName = 'DialogFooter'
@@ -162,7 +162,7 @@ export interface DialogTitleProps extends TextProps {
   className?: string
 }
 
-export function DialogTitle({ className, ...props }: DialogTitleProps): React.ReactElement {
+export const DialogTitle = ({ className, ...props }: DialogTitleProps): React.ReactElement => {
   return (
     <Text
       accessibilityRole="header"
@@ -177,10 +177,10 @@ export interface DialogDescriptionProps extends TextProps {
   className?: string
 }
 
-export function DialogDescription({
+export const DialogDescription = ({
   className,
   ...props
-}: DialogDescriptionProps): React.ReactElement {
+}: DialogDescriptionProps): React.ReactElement => {
   return <Text className={cn('text-sm text-text-muted', className)} {...props} />
 }
 DialogDescription.displayName = 'DialogDescription'

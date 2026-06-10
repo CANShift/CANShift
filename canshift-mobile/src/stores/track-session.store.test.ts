@@ -1,6 +1,3 @@
-// track-session.store.test.ts — Coverage for the recorder ring buffer +
-// session lifecycle from #845.
-
 import {
   MAX_GPS_SAMPLES,
   clearAll,
@@ -82,7 +79,6 @@ describe('track-session.store', () => {
 
     it('caps the buffer at MAX_GPS_SAMPLES, dropping the oldest first', () => {
       for (let i = 0; i < MAX_GPS_SAMPLES + 50; i += 1) pushSample(sample(i))
-      // Oldest 50 are evicted; getSampleAt(49) is below the window.
       expect(getSampleAt(49)).toBeUndefined()
       expect(getSampleAt(50)?.t).toBe(50)
       expect(getSampleAt(MAX_GPS_SAMPLES + 49)?.t).toBe(MAX_GPS_SAMPLES + 49)
@@ -143,14 +139,14 @@ describe('track-session.store', () => {
     it('keeps bestLapMs when a slower lap is recorded', () => {
       startSession(0)
       recordLap(0, 1500)
-      recordLap(1500, 3300) // 1800 ms — slower
+      recordLap(1500, 3300)
       expect(useTrackSessionStore.getState().bestLapMs).toBe(1500)
     })
 
     it('updates bestLapMs when a faster lap is recorded', () => {
       startSession(0)
       recordLap(0, 1500)
-      recordLap(1500, 2900) // 1400 ms — faster
+      recordLap(1500, 2900)
       expect(useTrackSessionStore.getState().bestLapMs).toBe(1400)
     })
 

@@ -1,5 +1,3 @@
-// ConnectedNavigator.tsx — Bottom tab navigator shown after device connect
-
 import React from 'react'
 import { Text, useWindowDimensions } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -14,8 +12,6 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connected'>
 }
 
-// Must remain a `type` (not `interface`) — React Navigation's ParamListBase
-// constraint requires an index-signature shape that interfaces don't satisfy.
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export type ConnectedTabParamList = {
   Dash: undefined
@@ -25,7 +21,7 @@ export type ConnectedTabParamList = {
 
 const Tab = createBottomTabNavigator<ConnectedTabParamList>()
 
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+const TabIcon = ({ icon, focused }: { icon: string; focused: boolean }) => {
   return (
     <Text style={{ fontSize: 18, color: focused ? Colors.accent : Colors.textMuted }}>{icon}</Text>
   )

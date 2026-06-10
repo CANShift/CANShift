@@ -23,7 +23,7 @@ interface SelectContextValue {
 
 const SelectContext = React.createContext<SelectContextValue | null>(null)
 
-function useSelectContext(): SelectContextValue {
+const useSelectContext = (): SelectContextValue => {
   const ctx = React.useContext(SelectContext)
   if (ctx === null) {
     throw new Error('Select subcomponents must be used within a <Select>')
@@ -39,13 +39,13 @@ export interface SelectProps {
   children: React.ReactNode
 }
 
-export function Select({
+export const Select = ({
   value,
   defaultValue,
   onValueChange,
   placeholder,
   children,
-}: SelectProps): React.ReactElement {
+}: SelectProps): React.ReactElement => {
   const isControlledRef = React.useRef(value !== undefined)
   const [internalValue, setInternalValue] = React.useState<string>(defaultValue ?? '')
   const [open, setOpenState] = React.useState<boolean>(false)
@@ -124,11 +124,11 @@ export interface SelectValueProps extends Omit<TextProps, 'children'> {
   placeholder?: string
 }
 
-export function SelectValue({
+export const SelectValue = ({
   className,
   placeholder,
   ...props
-}: SelectValueProps): React.ReactElement {
+}: SelectValueProps): React.ReactElement => {
   const ctx = useSelectContext()
   const display = ctx.value !== '' ? ctx.value : (placeholder ?? ctx.placeholder ?? '')
   const isPlaceholder = ctx.value === ''
@@ -151,12 +151,12 @@ export interface SelectContentProps {
   dismissOnBackdropPress?: boolean
 }
 
-export function SelectContent({
+export const SelectContent = ({
   children,
   className,
   overlayClassName,
   dismissOnBackdropPress = true,
-}: SelectContentProps): React.ReactElement {
+}: SelectContentProps): React.ReactElement => {
   const ctx = useSelectContext()
   return (
     <Modal
@@ -251,7 +251,7 @@ export interface SelectGroupProps extends ViewProps {
   className?: string
 }
 
-export function SelectGroup({ className, ...props }: SelectGroupProps): React.ReactElement {
+export const SelectGroup = ({ className, ...props }: SelectGroupProps): React.ReactElement => {
   return <View className={cn('flex-col', className)} {...props} />
 }
 SelectGroup.displayName = 'SelectGroup'
@@ -260,7 +260,7 @@ export interface SelectLabelProps extends TextProps {
   className?: string
 }
 
-export function SelectLabel({ className, ...props }: SelectLabelProps): React.ReactElement {
+export const SelectLabel = ({ className, ...props }: SelectLabelProps): React.ReactElement => {
   return (
     <Text
       className={cn('px-3 py-2 text-xs font-semibold uppercase text-text-muted', className)}
@@ -274,7 +274,10 @@ export interface SelectSeparatorProps extends ViewProps {
   className?: string
 }
 
-export function SelectSeparator({ className, ...props }: SelectSeparatorProps): React.ReactElement {
+export const SelectSeparator = ({
+  className,
+  ...props
+}: SelectSeparatorProps): React.ReactElement => {
   return <View className={cn('my-1 h-px bg-border', className)} {...props} />
 }
 SelectSeparator.displayName = 'SelectSeparator'
