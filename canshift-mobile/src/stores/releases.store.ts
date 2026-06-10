@@ -22,7 +22,7 @@ export const useReleasesStore = create<ReleasesState>(() => initial)
 
 let inFlight: Promise<void> | null = null
 
-export async function loadReleases(force: boolean): Promise<void> {
+export const loadReleases = async (force: boolean): Promise<void> => {
   if (inFlight) return inFlight
 
   useReleasesStore.setState((s) => ({
