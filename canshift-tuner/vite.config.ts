@@ -19,7 +19,9 @@ const firmwarePkg = JSON.parse(
 ) as { version: string }
 const firmwareMajor = Number(firmwarePkg.version.split('.')[0] ?? 0)
 
-export default defineConfig({
+const CORE_SRC_INDEX = resolve(__dirname, '../canshift-core/src/index.ts')
+
+export default defineConfig(({ command }) => ({
   root: resolve(__dirname, '.'),
   define: {
     __TUNER_VERSION__: JSON.stringify(pkg.version),
@@ -34,6 +36,7 @@ export default defineConfig({
       '@stores': resolve(__dirname, 'src/stores'),
       '@services': resolve(__dirname, 'src/transport'),
       '@hooks': resolve(__dirname, 'src/hooks'),
+      ...(command === 'serve' ? { '@tmbk/canshift-core': CORE_SRC_INDEX } : {}),
     },
   },
   build: {
@@ -64,4 +67,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
