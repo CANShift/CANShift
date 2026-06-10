@@ -13,11 +13,8 @@ static bool s_isDayMode = false;
 
 void ThemeManager::apply() {
     lv_disp_t *disp = lv_disp_get_default();
-    lv_theme_t *th = lv_theme_default_init(disp,
-                                           lv_color_hex(0xFF4444),
-                                           lv_color_hex(0xFF8800),
-                                           true,
-                                           LV_FONT_DEFAULT);
+    lv_theme_t *th = lv_theme_default_init(disp, lv_color_hex(0xFF4444), lv_color_hex(0xFF8800),
+                                           true, LV_FONT_DEFAULT);
     lv_disp_set_theme(disp, th);
     LOG_INFO("THEME", "LVGL dark theme applied");
 }
@@ -85,14 +82,11 @@ CfgColor ThemeManager::getEffectiveBgColor(const CfgColor &nightBg) {
 }
 
 uint32_t ThemeManager::getEffectiveTextColor() {
-    // Day mode → black on grey, night mode → white on black. Bespoke per-widget
-    // text colours are intentionally collapsed (#171). The top bar uses its
-    // own constants and is unaffected.
+    // Day → black on grey, night → white on black. Per-widget overrides collapsed (#171).
     return s_isDayMode ? 0x000000u : 0xFFFFFFu;
 }
 
 uint32_t ThemeManager::getEffectiveTextColor(uint32_t styleTextColor, bool respectDayMode) {
-    // Opt-out path (#191) — widget keeps its bespoke colour in both modes.
     if (!respectDayMode)
         return styleTextColor;
     return getEffectiveTextColor();

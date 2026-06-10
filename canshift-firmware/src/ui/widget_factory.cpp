@@ -17,8 +17,8 @@ namespace {
 
 static constexpr uint8_t MAX_TRACKED_WIDGETS = CONFIG_MAX_PAGES * CONFIG_MAX_WIDGETS_PER_PAGE;
 
-// `cfg` is borrowed into ConfigLoader::s_dashboard — alive for the program
-// lifetime; reload paths route through clearAll() before updateAll() runs (#677).
+// `cfg` borrows from ConfigLoader::s_dashboard (program lifetime). Reload paths
+// route through clearAll() before updateAll() runs (#677).
 struct WidgetEntry {
     lv_obj_t *parent;
     lv_obj_t *obj;
