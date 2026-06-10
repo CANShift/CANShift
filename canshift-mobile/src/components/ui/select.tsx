@@ -274,7 +274,10 @@ export interface SelectSeparatorProps extends ViewProps {
   className?: string
 }
 
-export const SelectSeparator = ({ className, ...props }: SelectSeparatorProps): React.ReactElement => {
+export const SelectSeparator = ({
+  className,
+  ...props
+}: SelectSeparatorProps): React.ReactElement => {
   return <View className={cn('my-1 h-px bg-border', className)} {...props} />
 }
 SelectSeparator.displayName = 'SelectSeparator'
