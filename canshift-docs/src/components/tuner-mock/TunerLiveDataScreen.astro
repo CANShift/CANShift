@@ -1,119 +1,66 @@
 ---
 import "./tuner-mock.css";
+
+const ROWS = [
+  { name: "ENGINE_RPM", value: "4280.0", min: 0, max: 7500, unit: "rpm", age: "<1s", pct: 57 },
+  { name: "COOLANT_TEMP", value: "92.0", min: -40, max: 215, unit: "°C", age: "<1s", pct: 51 },
+  { name: "BOOST_KPA", value: "184.0", min: 0, max: 300, unit: "kPa", age: "<1s", pct: 61 },
+  { name: "LAMBDA", value: "0.9", min: 0.6, max: 1.4, unit: "λ", age: "1s ago", pct: 37 },
+  { name: "OIL_PRESSURE", value: "4.1", min: 0, max: 10, unit: "bar", age: "<1s", pct: 41 },
+  { name: "GEAR", value: "3.0", min: 0, max: 6, unit: "—", age: "2s ago", pct: 50 },
+];
 ---
 
-<div class="tuner-screen tuner-live">
-  <div class="tuner-section-header">
-    <h3>Live data</h3>
-    <p>
-      Real-time signal values streamed from the dash. Snapshot from a running
-      Golf III sim.
-    </p>
-  </div>
-  <div class="tuner-section-body">
-    <div class="tuner-live__grid">
-      <div class="tuner-live__tile">
-        <span class="tuner-live__label">RPM</span>
-        <span class="tuner-live__value">4 280</span>
-        <span class="tuner-live__bar" style="--p:0.62"></span>
-      </div>
-      <div class="tuner-live__tile">
-        <span class="tuner-live__label">Coolant</span>
-        <span class="tuner-live__value">92 °C</span>
-        <span class="tuner-live__bar" style="--p:0.71"></span>
-      </div>
-      <div class="tuner-live__tile">
-        <span class="tuner-live__label">Boost</span>
-        <span class="tuner-live__value">0.84 bar</span>
-        <span class="tuner-live__bar" style="--p:0.42"></span>
-      </div>
-      <div class="tuner-live__tile">
-        <span class="tuner-live__label">Lambda</span>
-        <span class="tuner-live__value">0.91</span>
-        <span class="tuner-live__bar tuner-live__bar--accent" style="--p:0.55"
-        ></span>
-      </div>
-      <div class="tuner-live__tile">
-        <span class="tuner-live__label">Oil P</span>
-        <span class="tuner-live__value">4.1 bar</span>
-        <span class="tuner-live__bar" style="--p:0.51"></span>
-      </div>
-      <div class="tuner-live__tile">
-        <span class="tuner-live__label">Gear</span>
-        <span class="tuner-live__value">3</span>
-        <span class="tuner-live__bar" style="--p:0.3"></span>
+<div class="tuner-screen">
+  <header class="tuner-route-header">
+    <div>
+      <div class="tuner-route-header__title">Live Data</div>
+      <div class="tuner-route-header__subtitle">
+        {ROWS.length} signals · <span class="tuner-source-badge tuner-source-badge--live">Live</span>
       </div>
     </div>
+    <div class="tuner-route-header__toolbar">
+      <input
+        type="search"
+        class="tuner-filter"
+        placeholder="Filter by name or unit"
+        readonly
+      />
+      <button type="button" class="tuner-btn tuner-btn--outline">Export CSV</button>
+    </div>
+  </header>
 
-    <div class="tuner-card">
-      <h4 class="tuner-card__title">OBD-II polling</h4>
-      <table class="tuner-table">
-        <thead>
-          <tr><th>PID</th><th>Name</th><th>Value</th><th>Rate</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>0x0C</td><td class="muted">Engine RPM</td><td>4280</td><td
-            >50 Hz</td
-          ></tr>
-          <tr><td>0x05</td><td class="muted">Coolant temp</td><td>92 °C</td><td
-            >1 Hz</td
-          ></tr>
-          <tr><td>0x0B</td><td class="muted">MAP</td><td>184 kPa</td><td
-            >20 Hz</td
-          ></tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="tuner-table-wrap">
+    <table class="tuner-table">
+      <thead>
+        <tr>
+          <th>Signal</th>
+          <th class="num">Value</th>
+          <th class="num">Range</th>
+          <th>Unit</th>
+          <th class="num">Last update</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          ROWS.map((r) => (
+            <tr>
+              <td>{r.name}</td>
+              <td class="num">{r.value}</td>
+              <td class="num">
+                <div class="tuner-range">
+                  <div class="tuner-range__track">
+                    <div class="tuner-range__fill" style={`width:${r.pct}%`} />
+                  </div>
+                  <span class="tuner-range__label">{r.min}–{r.max}</span>
+                </div>
+              </td>
+              <td class="dim">{r.unit}</td>
+              <td class="num dim">{r.age}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
   </div>
 </div>
-
-<style>
-  .tuner-live__grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-  .tuner-live__tile {
-    background: var(--cs-surface);
-    border: 1px solid var(--cs-border);
-    border-radius: 6px;
-    padding: 10px 12px;
-    display: grid;
-    grid-template-rows: auto auto auto;
-    gap: 4px;
-  }
-  .tuner-live__label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--cs-text-muted);
-  }
-  .tuner-live__value {
-    font-family: "Orbitron", system-ui, sans-serif;
-    font-weight: 700;
-    color: var(--cs-text);
-    font-size: 18px;
-    letter-spacing: 0.02em;
-  }
-  .tuner-live__bar {
-    height: 3px;
-    background: linear-gradient(
-      to right,
-      var(--cs-primary) calc(var(--p) * 100%),
-      var(--cs-surface-2) 0
-    );
-    border-radius: 2px;
-  }
-  .tuner-live__bar--accent {
-    background: linear-gradient(
-      to right,
-      var(--cs-accent) calc(var(--p) * 100%),
-      var(--cs-surface-2) 0
-    );
-  }
-  @container (max-width: 640px) {
-    .tuner-live__grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-</style>
