@@ -1,7 +1,3 @@
-// PageContextMenu.tsx — Right-click menu over a page-list thumbnail.
-// Pure presentation: every action is dispatched through a callback prop so
-// EditorRoute keeps the page-list orchestration. Closes on outside click.
-
 import { useEffect, useRef } from 'react'
 
 export interface PageContextMenuProps {
@@ -18,7 +14,7 @@ export interface PageContextMenuProps {
   onDelete: () => void
 }
 
-export function PageContextMenu({
+export const PageContextMenu = ({
   x,
   y,
   isDefault,
@@ -29,7 +25,7 @@ export function PageContextMenu({
   onSetDefault,
   onToggleVisible,
   onDelete,
-}: PageContextMenuProps) {
+}: PageContextMenuProps) => {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -42,7 +38,6 @@ export function PageContextMenu({
     }
   }, [onClose])
 
-  // ★ matches `DEFAULT_PAGE_GLYPH` in EditorRoute — keep both in sync.
   const items: {
     label: string
     action: () => void

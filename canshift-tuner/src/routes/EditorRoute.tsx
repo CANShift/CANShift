@@ -1,5 +1,3 @@
-// EditorRoute.tsx — Dashboard layout editor
-
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import type { PageConfig } from '@tmbk/canshift-core'
 import { DEFAULT_PAGE_PALETTE, FIRMWARE_CAPS, HexColorSchema } from '@tmbk/canshift-core'
@@ -9,37 +7,19 @@ import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 
-// Lazy editor sub-trees (#1207 — Bundle / Vite). Each split into its own
-// rollup chunk so the EditorRoute entry payload stays focused on layout,
-// page navigation and orchestration. Canvas drags in WidgetPreview's
-// per-widget renderers; WidgetPalette drags in the palette catalogue.
 const Canvas = lazy(() => import('../components/editor/Canvas'))
 const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
 
-// Default background for a freshly added page — branded `HexColor` literal
-// parsed once at module load (#1207).
 const NEW_PAGE_BG = HexColorSchema.parse('#000000')
 
-// Page list marker — `★` = default page (the one shown at boot), `☆` = secondary.
-// Click toggles the default. Replaces the prior diamond marker per #142.
-// Keep `DEFAULT_PAGE_GLYPH` in sync with the "Default ★" label inside
-// `PageContextMenu.tsx`.
 const DEFAULT_PAGE_GLYPH = '★'
 const NON_DEFAULT_PAGE_GLYPH = '☆'
 
-// ---------------------------------------------------------------------------
-// ID generator
-// ---------------------------------------------------------------------------
-
-function generateId(prefix: string): string {
+const generateId = (prefix: string): string => {
   return `${prefix}_${Date.now().toString(36)}`
 }
 
-// ---------------------------------------------------------------------------
-// Lazy-boundary fallbacks
-// ---------------------------------------------------------------------------
-
-function CanvasFallback() {
+const CanvasFallback = () => {
   return (
     <div
       style={{
@@ -56,13 +36,9 @@ function CanvasFallback() {
   )
 }
 
-function PaletteFallback() {
+const PaletteFallback = () => {
   return <div style={{ minHeight: 40 }} />
 }
-
-// ---------------------------------------------------------------------------
-// Route
-// ---------------------------------------------------------------------------
 
 export default function EditorRoute() {
   const config = useDashboardStore((s) => s.config)
@@ -84,9 +60,6 @@ export default function EditorRoute() {
 
   const dragFromIndex = useRef<number | null>(null)
 
-  // Keyboard: Delete key removes selected page — only when no widget is selected.
-  // When a widget is selected, the Canvas handler (capture phase) intercepts
-  // Delete/Backspace first and calls stopPropagation, so this never fires then.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
@@ -138,7 +111,6 @@ export default function EditorRoute() {
     }
     const originalLength = config.pages.length
     addPage(newPage)
-    // Move new page (now at originalLength) to right after original
     if (originalIndex + 1 < originalLength) {
       movePage(originalLength, originalIndex + 1)
     }
@@ -146,8 +118,7 @@ export default function EditorRoute() {
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-      {/* ── Left sidebar: pages (as thumbnails) + widget palette ─────────── */}
-      <aside
+            <aside
         style={{
           width: 152,
           background: '#161616',
@@ -158,8 +129,7 @@ export default function EditorRoute() {
           overflowX: 'hidden',
         }}
       >
-        {/* Pages section */}
-        <div style={{ padding: '8px 8px 0' }}>
+                <div style={{ padding: '8px 8px 0' }}>
           <div
             style={{
               display: 'flex',
@@ -228,8 +198,7 @@ export default function EditorRoute() {
                   opacity: isVisible ? 1 : 0.45,
                 }}
               >
-                {/* Thumbnail */}
-                <div
+                                <div
                   style={{
                     border: `2px solid ${isSelected ? '#FFFFFF' : '#2A2A2A'}`,
                     borderRadius: 4,
@@ -240,9 +209,7 @@ export default function EditorRoute() {
                   }}
                 >
                   <PageThumbnail page={page} topBar={config.topBar} />
-                  {/* Default-page star — overlaid on the thumbnail so the page list
-                      stays compact after the per-page title was dropped (#142). */}
-                  <button
+                                    <button
                     onClick={(e) => {
                       e.stopPropagation()
                       setDefaultPage(page.id)
@@ -269,8 +236,7 @@ export default function EditorRoute() {
                   >
                     {isDefault ? DEFAULT_PAGE_GLYPH : NON_DEFAULT_PAGE_GLYPH}
                   </button>
-                  {/* Delete button — top-right, only when more than one page exists */}
-                  {config.pages.length > 1 && (
+                                    {config.pages.length > 1 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -305,8 +271,7 @@ export default function EditorRoute() {
                       ×
                     </button>
                   )}
-                  {/* Hidden badge */}
-                  {!isVisible && (
+                                    {!isVisible && (
                     <div
                       style={{
                         position: 'absolute',
@@ -327,10 +292,7 @@ export default function EditorRoute() {
             )
           })}
 
-          {/* Add page button — disabled at the firmware page cap to mirror
-              the fail-stop the device would do otherwise (silent truncation
-              at load time, see #1359). */}
-          {(() => {
+                    {(() => {
             const atCap = config.pages.length >= FIRMWARE_CAPS.MAX_PAGES
             return (
               <button
@@ -380,11 +342,9 @@ export default function EditorRoute() {
           })()}
         </div>
 
-        {/* Separator */}
-        <div style={{ height: 1, background: '#222222', flexShrink: 0 }} />
+                <div style={{ height: 1, background: '#222222', flexShrink: 0 }} />
 
-        {/* Widget palette */}
-        <div style={{ padding: '4px 0' }}>
+                <div style={{ padding: '4px 0' }}>
           {currentPage && (
             <Suspense fallback={<PaletteFallback />}>
               <WidgetPalette pageId={currentPage.id} />
@@ -393,8 +353,7 @@ export default function EditorRoute() {
         </div>
       </aside>
 
-      {/* ── Canvas centre ────────────────────────────────────────────────── */}
-      {currentPage ? (
+            {currentPage ? (
         <ErrorBoundary scope="canvas">
           <Suspense fallback={<CanvasFallback />}>
             <Canvas page={currentPage} topBar={config.topBar} />
@@ -414,11 +373,9 @@ export default function EditorRoute() {
         </div>
       )}
 
-      {/* ── Right sidebar: property panel + signals panel (#21) ─────────────── */}
-      <RightSidebar pageId={currentPage?.id} />
+            <RightSidebar pageId={currentPage?.id} />
 
-      {/* ── Context menu ─────────────────────────────────────────────────── */}
-      {contextMenu && (
+            {contextMenu && (
         <PageContextMenu
           pageId={contextMenu.pageId}
           x={contextMenu.x}

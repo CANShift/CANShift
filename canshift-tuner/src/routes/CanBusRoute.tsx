@@ -89,7 +89,7 @@ interface SortBarProps {
   onChange: (key: SortKey) => void
 }
 
-function SortBar({ sortKey, onChange }: SortBarProps) {
+const SortBar = ({ sortKey, onChange }: SortBarProps) => {
   const options: ReadonlyArray<{ key: SortKey; label: string }> = [
     { key: 'id', label: 'ID' },
     { key: 'lastSeen', label: 'Last seen' },
@@ -118,7 +118,7 @@ function SortBar({ sortKey, onChange }: SortBarProps) {
   )
 }
 
-function sortFrames(frames: CanFrameStats[], key: SortKey): CanFrameStats[] {
+const sortFrames = (frames: CanFrameStats[], key: SortKey): CanFrameStats[] => {
   const sorted = frames.slice()
   switch (key) {
     case 'id':
@@ -137,19 +137,19 @@ function sortFrames(frames: CanFrameStats[], key: SortKey): CanFrameStats[] {
   return sorted
 }
 
-function formatFrameIdHex(id: number): string {
+const formatFrameIdHex = (id: number): string => {
   const extended = id > 0x7ff
   const width = extended ? 8 : 3
   return `0x${id.toString(16).toUpperCase().padStart(width, '0')}`
 }
 
-function parseHexFrameId(hex: string): number {
+const parseHexFrameId = (hex: string): number => {
   const trimmed = hex.toLowerCase().replace(/^0x/, '')
   const parsed = parseInt(trimmed, 16)
   return Number.isFinite(parsed) ? parsed : -1
 }
 
-function buildDraftSignal(id: number, existingCount: number): SignalDef {
+const buildDraftSignal = (id: number, existingCount: number): SignalDef => {
   return {
     name: `scan_signal_${String(existingCount + 1)}`,
     canFrameId: formatFrameIdHex(id),

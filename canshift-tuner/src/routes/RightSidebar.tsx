@@ -1,28 +1,12 @@
-// RightSidebar.tsx — Right-hand sidebar of the editor: tab strip + active panel.
-//
-// Tab state is encapsulated here so EditorRoute only owns the page selection;
-// the sidebar decides for itself which panel is visible. Extending with extra
-// tabs is a one-row change to `TABS`.
-//
-// Mirrors the chrome of the page-list pills above so the right sidebar reads
-// like one continuous surface (issue #21).
-
 import { lazy, Suspense, useState } from 'react'
 import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
 
-// Lazy PropertyPanel (#1207 — Bundle / Vite). Splits the property editor
-// (selectors, sliders, color pickers) out of the EditorRoute chunk so the
-// initial paint stays light. Tab state lives in this component so the
-// Suspense boundary is mounted only when the Properties tab is active.
 const PropertyPanel = lazy(() => import('../components/editor/PropertyPanel'))
 
 type Tab = 'properties' | 'signals'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'properties', label: 'Properties' },
-  // Signals tab — per-signal input-mode editor (broadcast vs OBD-II polling,
-  // issue #841). Lets a user switch a signal's source without leaving the
-  // editor.
   { id: 'signals', label: 'Signals' },
 ]
 
@@ -32,11 +16,10 @@ const TAB_IDLE_FG = '#777777'
 const TAB_BORDER = '#222222'
 
 export interface RightSidebarProps {
-  /** Currently selected page — `undefined` when no page is selected. */
   pageId: string | undefined
 }
 
-function PropertyPanelFallback() {
+const PropertyPanelFallback = () => {
   return (
     <div
       style={{
@@ -53,7 +36,7 @@ function PropertyPanelFallback() {
   )
 }
 
-export function RightSidebar({ pageId }: RightSidebarProps) {
+export const RightSidebar = ({ pageId }: RightSidebarProps) => {
   const [tab, setTab] = useState<Tab>('properties')
 
   return (
