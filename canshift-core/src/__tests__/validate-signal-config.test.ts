@@ -1,49 +1,28 @@
-// validate-signal-config.test.ts — Issue #701
-//
-// Covers each invariant on `SignalConfigSchema` / `validateSignalConfig`:
-//   - hex `canFrameId`
-//   - `byteLength` ∈ {1, 2, 4}
-//   - `min < max`
-//   - optional hex `bitMask`
-//   - `canSpeedKbps` enum
-
 import { validateSignalConfig } from '../validation/validate-signal-config.js'
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
+const validSignal = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  name: 'rpm',
+  canFrameId: '0x370',
+  startByte: 0,
+  byteLength: 2,
+  bigEndian: true,
+  signed: false,
+  scale: 1,
+  offset: 0,
+  unit: 'rpm',
+  min: 0,
+  max: 8000,
+  timeoutMs: 1000,
+  ...overrides,
+})
 
-function validSignal(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    name: 'rpm',
-    canFrameId: '0x370',
-    startByte: 0,
-    byteLength: 2,
-    bigEndian: true,
-    signed: false,
-    scale: 1,
-    offset: 0,
-    unit: 'rpm',
-    min: 0,
-    max: 8000,
-    timeoutMs: 1000,
-    ...overrides,
-  }
-}
-
-function validConfig(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    version: '1.14.0',
-    protocol: 'custom_v1.0',
-    canSpeedKbps: 500,
-    signals: [validSignal()],
-    ...overrides,
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Result envelope
-// ---------------------------------------------------------------------------
+const validConfig = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  version: '1.14.0',
+  protocol: 'custom_v1.0',
+  canSpeedKbps: 500,
+  signals: [validSignal()],
+  ...overrides,
+})
 
 describe('validateSignalConfig — envelope', () => {
   it('returns valid:true for a minimal valid catalog', () => {
@@ -65,10 +44,6 @@ describe('validateSignalConfig — envelope', () => {
     expect(result.errors.some((e) => e.startsWith('canSpeedKbps:'))).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// canFrameId — hex literal
-// ---------------------------------------------------------------------------
 
 describe('validateSignalConfig — canFrameId', () => {
   it.each(['0x0', '0x1', '0xFF', '0x7FF', '0X123', '0xabc', '0x1234', '0x1E005000', '0xFFFFFFFF'])(
@@ -96,10 +71,6 @@ describe('validateSignalConfig — canFrameId', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// byteLength — must be 1, 2, or 4
-// ---------------------------------------------------------------------------
-
 describe('validateSignalConfig — byteLength', () => {
   it.each([1, 2, 4])('accepts %i', (byteLength) => {
     const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
@@ -112,10 +83,6 @@ describe('validateSignalConfig — byteLength', () => {
     expect(result.errors.some((e) => e.includes('byteLength'))).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// min < max
-// ---------------------------------------------------------------------------
 
 describe('validateSignalConfig — min/max range', () => {
   it('accepts min < max', () => {
@@ -153,10 +120,6 @@ describe('validateSignalConfig — min/max range', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// bitMask — optional hex literal
-// ---------------------------------------------------------------------------
-
 describe('validateSignalConfig — bitMask', () => {
   it('accepts a signal without bitMask', () => {
     const result = validateSignalConfig(validConfig())
@@ -175,10 +138,6 @@ describe('validateSignalConfig — bitMask', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// canSpeedKbps — enum
-// ---------------------------------------------------------------------------
-
 describe('validateSignalConfig — canSpeedKbps', () => {
   it.each([125, 250, 500, 1000])('accepts %i', (canSpeedKbps) => {
     const result = validateSignalConfig(validConfig({ canSpeedKbps }))
@@ -196,10 +155,6 @@ describe('validateSignalConfig — canSpeedKbps', () => {
     expect(result.valid).toBe(false)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Underscore-comment fields — issue #1289
-// ---------------------------------------------------------------------------
 
 describe('validateSignalConfig — underscore comments (#1289)', () => {
   it('accepts the firmware signals.json top-level underscore documentation fields', () => {
@@ -229,10 +184,6 @@ describe('validateSignalConfig — underscore comments (#1289)', () => {
     expect(result.valid).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Outbound `out` block — issue #1303 / refs #317
-// ---------------------------------------------------------------------------
 
 describe('validateSignalConfig — out block (#1303)', () => {
   it('accepts the firmware demo out.map_switch shape', () => {
@@ -302,10 +253,6 @@ describe('validateSignalConfig — out block (#1303)', () => {
     expect(result.valid).toBe(false)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Per-signal `_batteryThresholds` — issue #1303
-// ---------------------------------------------------------------------------
 
 describe('validateSignalConfig — _batteryThresholds (#1303)', () => {
   it('accepts a descriptive _batteryThresholds string (matches firmware demo)', () => {

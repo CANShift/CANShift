@@ -5,22 +5,19 @@ import { parseCanXml } from '../can-xml/parse-can-xml.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-function xml(framesAttrs: string, content: string): string {
-  return `<?xml version="1.0" encoding="utf-8"?>
+const xml = (framesAttrs: string, content: string): string =>
+  `<?xml version="1.0" encoding="utf-8"?>
 <RealDashCAN version="2">
   <frames${framesAttrs ? ` ${framesAttrs}` : ''}>
     ${content}
   </frames>
 </RealDashCAN>`
-}
 
-function frame(id: string, values: string, frameAttrs = ''): string {
-  return `<frame id="${id}" timeout="2000"${frameAttrs ? ` ${frameAttrs}` : ''}>${values}</frame>`
-}
+const frame = (id: string, values: string, frameAttrs = ''): string =>
+  `<frame id="${id}" timeout="2000"${frameAttrs ? ` ${frameAttrs}` : ''}>${values}</frame>`
 
-function simpleXml(values: string, frameAttrs = '', framesAttrs = ''): string {
-  return xml(framesAttrs, frame('0x520', values, frameAttrs))
-}
+const simpleXml = (values: string, frameAttrs = '', framesAttrs = ''): string =>
+  xml(framesAttrs, frame('0x520', values, frameAttrs))
 
 describe('non-CAN-XML input', () => {
   it('returns a warning for empty string', () => {
@@ -76,11 +73,9 @@ describe('frames baseId', () => {
 })
 
 describe('conversion parsing', () => {
-  function singleSignal(conversion: string) {
-    return parseCanXml(
-      simpleXml(`<value name="test" offset="0" length="2" conversion="${conversion}"/>`)
-    ).signals[0]
-  }
+  const singleSignal = (conversion: string) =>
+    parseCanXml(simpleXml(`<value name="test" offset="0" length="2" conversion="${conversion}"/>`))
+      .signals[0]
 
   it('empty conversion → scale=1 offset=0', () => {
     const { signals } = parseCanXml(simpleXml('<value name="test" offset="0" length="2"/>'))
