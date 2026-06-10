@@ -1,5 +1,3 @@
-// device.store.test.ts — Tests for the BLE connection state store
-
 import type { BleConnectionError } from '../services/ble.errors'
 import { useDeviceStore } from './device.store'
 

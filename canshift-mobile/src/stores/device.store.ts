@@ -1,15 +1,8 @@
-// device.store.ts — BLE connection state.
-//
-// The WiFi-AP password is intentionally not in this store. It is a device
-// secret (boots OTA over HTTP) and lives in expo-secure-store via
-// services/wifi-ap-password.ts (#890).
-
 import { create } from 'zustand'
 import type { BleConnectionError } from '../services/ble.errors'
 
 export type ConnectionState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'error'
 
-/** Active data source for the dashboard — drives reactive top-bar badges. */
 export type DeviceMode = 'idle' | 'sim' | 'ble'
 
 interface DeviceState {

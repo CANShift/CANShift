@@ -1,5 +1,3 @@
-// reconnect.store.ts — UI state for the BLE auto-reconnect loop
-
 import { create } from 'zustand'
 
 interface ReconnectState {

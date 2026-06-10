@@ -1,5 +1,3 @@
-// reconnect.store.test.ts — Tests for the BLE auto-reconnect UI state store
-
 import { useReconnectStore } from './reconnect.store'
 
 const initialState = useReconnectStore.getState()
