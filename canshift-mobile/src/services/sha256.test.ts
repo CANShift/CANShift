@@ -1,18 +1,11 @@
-// sha256.test.ts — SHA-256 conformance against NIST test vectors
-//
-// We trust this implementation only insofar as it matches the canonical
-// vectors from FIPS 180-4 and a few extra cases that exercise the multi-block
-// path we'll hit on real firmware binaries.
-
 import { Buffer } from 'buffer'
 import { Sha256, sha256Hex, bytesToHex } from './sha256'
 
-function utf8(s: string): Uint8Array {
+const utf8 = (s: string): Uint8Array => {
   return new Uint8Array(Buffer.from(s, 'utf8'))
 }
 
 describe('sha256Hex', () => {
-  // FIPS 180-4 published test vectors
   it('hashes the empty string', () => {
     expect(sha256Hex(new Uint8Array(0))).toBe(
       'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
@@ -44,7 +37,6 @@ describe('sha256Hex', () => {
 
   it('handles a 63-byte message (one byte short of a block)', () => {
     const data = new Uint8Array(63).fill(0xab)
-    // Independently produced via Node's crypto.createHash('sha256').
     expect(sha256Hex(data)).toBe('d1036ba30d050c74b1a5ab301fa29ff0c607a27cc55af3412577f7e06dbd190b')
   })
 

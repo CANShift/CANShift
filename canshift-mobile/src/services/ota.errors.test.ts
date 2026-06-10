@@ -1,13 +1,3 @@
-// ota.errors.test.ts — Discriminated OTA error mapping & UI copy
-//
-// Locks in:
-//  - `mapOtaError` unwraps OtaServiceError and falls back for unknowns
-//  - `describeOtaErrorForUser` covers every variant with actionable copy
-//  - `describeOtaError` covers every variant for log lines
-//
-// If you add a new variant to `OtaError`, the exhaustive switch in both
-// describe helpers will fail to compile — add the case here too.
-
 import {
   describeOtaError,
   describeOtaErrorForUser,

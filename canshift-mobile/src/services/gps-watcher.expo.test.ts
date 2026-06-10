@@ -1,13 +1,8 @@
-// gps-watcher.expo.test.ts — Coverage for the expo-location adapter from
-// #845 layer 3. The expo-location module is mocked so this is pure-logic.
-
 import * as Location from 'expo-location'
 import type { GpsWatcherUpdate } from './gps-subscription'
 import { expoLocationWatcher, requestForegroundLocationPermission } from './gps-watcher.expo'
 
 jest.mock('expo-location', () => ({
-  // Accuracy + PermissionStatus constants the adapter and the tests
-  // reference. Kept in sync with the real module by string value.
   Accuracy: { High: 4 },
   PermissionStatus: { GRANTED: 'granted', DENIED: 'denied', UNDETERMINED: 'undetermined' },
   watchPositionAsync: jest.fn(),
@@ -132,7 +127,7 @@ describe('expoLocationWatcher', () => {
     const detach = await expoLocationWatcher.start(() => undefined)
 
     detach()
-    detach() // detacher does NOT enforce idempotency — the subscription layer does.
+    detach()
     expect(remove).toHaveBeenCalledTimes(2)
   })
 })

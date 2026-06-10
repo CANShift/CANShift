@@ -1,55 +1,28 @@
-// track-telemetry-publisher.ts — 1 Hz publisher loop that snapshots the
-// track-session store, builds a `TrackTelemetry` payload via the pure
-// builder, and writes it to the firmware (#845 layer 4 / #887 part 3).
-//
-// The actual BLE write is injected — keeps this module hardware-agnostic
-// and fully unit-testable. The real BLE adapter lives in `ble.service`
-// (a layer 4 follow-up) and just hands its `sendTrackTelemetry` here.
-//
-// State the publisher itself tracks:
-//   - the previous `bestLapMs` it saw, so it can fire the one-shot
-//     `bestLapPulse` flag exactly once per new personal-best,
-//   - the active interval handle, so it can be cleanly stopped.
-
 import { TrackTelemetrySchema, type TrackTelemetry } from '@tmbk/canshift-core'
 import { log } from '../stores/log.store'
 import { useTrackSessionStore } from '../stores/track-session.store'
 import { buildTrackTelemetry } from './track-telemetry'
 
-/** Function the publisher calls each tick to push the payload over the wire. */
 export type TrackTelemetryWriter = (payload: TrackTelemetry) => Promise<void>
 
 export interface TrackTelemetryPublisherDeps {
-  /** BLE write — typically `BleService.sendTrackTelemetry`. */
   write: TrackTelemetryWriter
-  /** Tick interval in ms. Default 1000 (1 Hz). */
   intervalMs?: number
-  /** Wall clock — overridable for deterministic tests. Default Date.now. */
   now?: () => number
-  /** Best-effort failure sink. Default: pushes a `warn` entry into the
-   * app log store so the failure shows up in the in-app log viewer rather
-   * than the (invisible-in-production) console (#1017 M-MD-4). */
   onError?: (err: unknown) => void
 }
 
 export interface TrackTelemetryPublisher {
-  /** Start the periodic write loop. Idempotent. */
   start(): void
-  /** Stop the loop and clear pulse state. Idempotent. */
   stop(): void
-  /** Emit a single payload immediately, without scheduling. Used in tests. */
   tickNow(): Promise<void>
 }
 
 const DEFAULT_INTERVAL_MS = 1000
 
-/**
- * Build a publisher with the given write function. Construction is cheap;
- * no work happens until `start()` is called.
- */
-export function createTrackTelemetryPublisher(
+export const createTrackTelemetryPublisher = (
   deps: TrackTelemetryPublisherDeps
-): TrackTelemetryPublisher {
+): TrackTelemetryPublisher => {
   const intervalMs = deps.intervalMs ?? DEFAULT_INTERVAL_MS
   const now = deps.now ?? Date.now
   const onError =
@@ -60,20 +33,12 @@ export function createTrackTelemetryPublisher(
     })
 
   let handle: ReturnType<typeof setInterval> | null = null
-  // Last bestLapMs we observed. Used to detect a fresh personal-best so
-  // we fire `isBestLap=true` for exactly one tick.
   let prevBestLapMs = 0
-  // True when the NEXT tick should set `bestLapPulse=true`. Cleared after.
   let pendingPulse = false
 
-  async function tick(): Promise<void> {
+  const tick = async (): Promise<void> => {
     const state = useTrackSessionStore.getState()
 
-    // Detect a new best lap by comparing the store's bestLapMs against
-    // what we observed last tick. Two conditions to fire the pulse:
-    //   1) the value changed (i.e. a lap finished this interval), and
-    //   2) the new value is strictly less than the prior (faster) OR the
-    //      prior was 0 (very first lap of the session).
     if (
       state.bestLapMs > 0 &&
       state.bestLapMs !== prevBestLapMs &&
@@ -91,16 +56,8 @@ export function createTrackTelemetryPublisher(
       nowMs: now(),
       bestLapPulse: pendingPulse,
     })
-    // Consume the pulse — even if the write fails, we don't want to
-    // re-fire it on the next tick (the firmware already missed it).
     pendingPulse = false
 
-    // Wire-boundary validation (#887 part 4). The pure builder is statically
-    // typed against `TrackTelemetry` but a future refactor / bad merge could
-    // produce a payload that fails the canonical schema. Catch it here once
-    // per tick (~1 Hz cost) and surface the drift through the same logger
-    // path BLE write failures use, rather than silently shipping garbage to
-    // the firmware where the TRACK characteristic will mis-decode it.
     const parsed = TrackTelemetrySchema.safeParse(payload)
     if (!parsed.success) {
       onError(
@@ -123,8 +80,6 @@ export function createTrackTelemetryPublisher(
   return {
     start() {
       if (handle !== null) return
-      // Emit an initial payload immediately so the firmware doesn't have
-      // to wait a full interval before learning the session state.
       void tick()
       handle = setInterval(() => {
         void tick()

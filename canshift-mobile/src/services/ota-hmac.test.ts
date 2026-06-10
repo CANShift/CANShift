@@ -1,38 +1,20 @@
-// ota-hmac.test.ts — HMAC-SHA256 conformance + trailer producer
-//
-// We trust this implementation only insofar as it matches the canonical
-// vectors from RFC 4231 (HMAC-SHA-256). Additional CANShift-specific
-// vectors lock in cross-platform agreement with the firmware verifier
-// (which uses mbedTLS) and the studio counterpart (#519).
-//
-// All "expected" digests in this file were independently produced via
-// Node's `crypto.createHmac('sha256', key).update(msg).digest('hex')`.
-
 import { Buffer } from 'buffer'
 import { appendHmacTrailer, hmacSha256, HMAC_SHA256_LEN } from './ota-hmac'
 import { bytesToHex } from './sha256'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function hex(s: string): Uint8Array {
+const hex = (s: string): Uint8Array => {
   return new Uint8Array(Buffer.from(s, 'hex'))
 }
 
-function utf8(s: string): Uint8Array {
+const utf8 = (s: string): Uint8Array => {
   return new Uint8Array(Buffer.from(s, 'utf8'))
 }
 
-function filled(len: number, byte: number): Uint8Array {
+const filled = (len: number, byte: number): Uint8Array => {
   return new Uint8Array(len).fill(byte)
 }
 
 const DEV_SECRET_BYTES = utf8('DEV_INSECURE_REPLACE_BEFORE_PROD')
-
-// ---------------------------------------------------------------------------
-// RFC 4231 — HMAC-SHA-256 test vectors
-// ---------------------------------------------------------------------------
 
 describe('hmacSha256 — RFC 4231 vectors', () => {
   it('test case 1 (20-byte 0x0b key, "Hi There")', () => {
@@ -67,10 +49,6 @@ describe('hmacSha256 — RFC 4231 vectors', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// CANShift dev-secret cross-platform vectors
-// ---------------------------------------------------------------------------
-
 describe('hmacSha256 — CANShift dev secret', () => {
   it('hashes the empty message', () => {
     expect(bytesToHex(hmacSha256(DEV_SECRET_BYTES, new Uint8Array(0)))).toBe(
@@ -104,10 +82,6 @@ describe('hmacSha256 — CANShift dev secret', () => {
     )
   })
 })
-
-// ---------------------------------------------------------------------------
-// Trailer producer
-// ---------------------------------------------------------------------------
 
 describe('appendHmacTrailer', () => {
   it('appends exactly 32 bytes', () => {

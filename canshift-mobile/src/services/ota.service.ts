@@ -1,22 +1,3 @@
-// ota.service.ts — Firmware release download + WiFi OTA push
-//
-// Failure modes are surfaced through the `OtaError` discriminated union (see
-// ota.errors.ts) so the UI can render actionable copy. Network drops, size
-// mismatches, checksum mismatches and device-side rejections all produce
-// distinct, typed failures.
-//
-// Checksum strategy: GitHub Releases v3 publishes a per-asset
-// `digest: "sha256:<hex>"` field on every uploaded asset. We pin that digest
-// at listing time, then re-verify it via the pure-JS SHA-256 implementation
-// in `sha256.ts` (no native dep required). If a release was uploaded before
-// the digest field was rolled out the digest is `null` and we skip checksum
-// verification but still enforce the strict size check.
-//
-// Verification timing (issue #706): the SHA-256 check runs inside
-// `stageFirmwareWithHmac` rather than `verifyFirmware`, so the firmware
-// bytes are pulled off disk exactly once for both the digest and the HMAC
-// trailer. `verifyFirmware` only does the size check pre-Wi-Fi-switch.
-
 import { Buffer } from 'buffer'
 import * as FileSystem from 'expo-file-system'
 import {
@@ -30,26 +11,13 @@ import { appendHmacTrailer } from './ota-hmac'
 import { getOtaHmacSecretBytes } from './ota-secret'
 import { Sha256 } from './sha256'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/**
- * React Native's FormData accepts a `{ uri, type, name }` file descriptor as
- * the second argument to `append`, but the DOM `FormData` lib type only
- * accepts `string | Blob`. This narrow shape is the documented contract from
- * the React Native polyfill — typing it here keeps the cast confined to one
- * site (vs sprinkling `as unknown as Blob` at every upload call).
- */
 interface RNFileDescriptor {
   uri: string
   type: string
   name: string
 }
 
-function appendRNFile(form: FormData, field: string, file: RNFileDescriptor): void {
-  // The cast is unavoidable until @types/react-native ships a typed override
-  // for FormData.append — keep it inside this helper so callers stay clean.
+const appendRNFile = (form: FormData, field: string, file: RNFileDescriptor): void => {
   form.append(field, file as unknown as Blob)
 }
 
@@ -59,47 +27,27 @@ export interface FirmwareRelease {
   notes: string
   downloadUrl: string
   sizeBytes: number
-  /** Lowercase hex SHA-256 digest from the GitHub asset metadata, or null if
-   *  the release predates the asset-digest rollout. */
   sha256?: string | null
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** Multipart upload timeout — generous enough for slow phones, short enough
- *  to fail loud rather than spinning forever on a dead connection. */
 const OTA_UPLOAD_TIMEOUT_MS = 5 * 60 * 1000
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Throw a typed OTA error wrapped in `OtaServiceError`. */
-function fail(cause: OtaError): never {
+const fail = (cause: OtaError): never => {
   throw new OtaServiceError(cause)
 }
 
-// ---------------------------------------------------------------------------
-// Download firmware binary (over cellular / current network)
-// ---------------------------------------------------------------------------
-
-export async function downloadFirmware(
+export const downloadFirmware = async (
   release: FirmwareRelease,
   onProgress?: (progress: number) => void
-): Promise<string> {
+): Promise<string> => {
   const dest = `${FileSystem.cacheDirectory ?? ''}canshift-${release.version}.bin`
 
-  // Cache hit: existing file with matching size — assume verified previously.
-  // The checksum is still cross-checked at staging time before upload.
   const info = await FileSystem.getInfoAsync(dest)
   if (info.exists && info.size === release.sizeBytes) {
     onProgress?.(1)
     return dest
   }
 
-  // Stale cache (size mismatch) — drop before re-downloading
   if (info.exists) {
     await FileSystem.deleteAsync(dest, { idempotent: true })
   }
@@ -124,26 +72,15 @@ export async function downloadFirmware(
     })
   }
   if (!result?.uri) {
-    fail({ kind: 'download-failed', reason: 'no file written' })
+    return fail({ kind: 'download-failed', reason: 'no file written' })
   }
   return result.uri
 }
 
-// ---------------------------------------------------------------------------
-// Verify the downloaded binary
-// ---------------------------------------------------------------------------
-
-/**
- * Verify that the downloaded firmware matches the published release size.
- *
- * SHA-256 verification is deferred to `stageFirmwareWithHmac` (called from
- * `pushFirmware`) so the firmware bytes are read off disk exactly once for
- * both hash and HMAC computation — this halves the OTA staging memory peak
- * on low-RAM devices (see issue #706).
- *
- * Throws `OtaServiceError({ kind: 'size-mismatch' })` on failure.
- */
-export async function verifyFirmware(localPath: string, release: FirmwareRelease): Promise<void> {
+export const verifyFirmware = async (
+  localPath: string,
+  release: FirmwareRelease
+): Promise<void> => {
   const info = await FileSystem.getInfoAsync(localPath)
   const actualSize = info.exists ? info.size : 0
   if (!info.exists || actualSize !== release.sizeBytes) {
@@ -155,45 +92,19 @@ export async function verifyFirmware(localPath: string, release: FirmwareRelease
   }
 }
 
-// ---------------------------------------------------------------------------
-// HMAC-trailer staging for push
-// ---------------------------------------------------------------------------
-
-/** Suffix used for the HMAC-trailered staging file. Distinct from the verified
- *  download so re-runs don't have to re-download — only re-stage. */
 const HMAC_STAGED_SUFFIX = '.hmac.bin'
 
-/** Decode a file's base64 contents to a single `Uint8Array`. Scoped so the
- *  base64 string can be released by the GC before downstream allocations
- *  (hash state, HMAC trailer, staged base64) push memory higher. */
-async function readFileBytes(localPath: string): Promise<Uint8Array> {
+const readFileBytes = async (localPath: string): Promise<Uint8Array> => {
   const base64 = await FileSystem.readAsStringAsync(localPath, {
     encoding: FileSystem.EncodingType.Base64,
   })
   return new Uint8Array(Buffer.from(base64, 'base64'))
 }
 
-/**
- * Read the verified firmware off disk once, compute both the SHA-256 digest
- * (verified against `expectedSha256` when present) and the HMAC-SHA256
- * trailer over the same buffer, then write `<body> || HMAC` to a sibling
- * staging file. Returns the staging URI.
- *
- * Single-read design (issue #706): the previous implementation called
- * `readAsStringAsync` twice — once in `sha256OfFile` for verification and
- * again here for HMAC staging. That doubled peak heap on low-RAM Android
- * devices for any reasonably sized firmware. We now share one base64 read
- * (plus the decoded `Uint8Array`) for both passes.
- *
- * The original `localPath` is left untouched so the cached download can be
- * reused on a retry. The secret is loaded from `ota-secret.ts` and passed
- * straight into the HMAC primitive — never logged, copied to disk, or
- * returned.
- */
-async function stageFirmwareWithHmac(
+const stageFirmwareWithHmac = async (
   localPath: string,
   expectedSha256: string | null
-): Promise<string> {
+): Promise<string> => {
   const stagedPath = `${localPath}${HMAC_STAGED_SUFFIX}`
   try {
     const body = await readFileBytes(localPath)
@@ -216,10 +127,7 @@ async function stageFirmwareWithHmac(
     })
     return stagedPath
   } catch (e) {
-    // Preserve already-typed OTA errors (e.g. checksum-mismatch from above).
     if (e instanceof OtaServiceError) throw e
-    // Map any FS / encoding failure to a typed error. Reason text comes from
-    // the underlying error message — never from the secret material.
     throw new OtaServiceError({
       kind: 'hmac-prepare-failed',
       reason: e instanceof Error ? e.message : 'unknown error',
@@ -227,50 +135,31 @@ async function stageFirmwareWithHmac(
   }
 }
 
-/** Best-effort removal of the HMAC-trailered staging file. Swallows errors so
- *  cleanup never masks a real OTA failure surfaced earlier in the flow. */
-async function discardStagedFile(stagedPath: string): Promise<void> {
+const discardStagedFile = async (stagedPath: string): Promise<void> => {
   try {
     await FileSystem.deleteAsync(stagedPath, { idempotent: true })
   } catch {
-    // Intentionally swallow — see doc above. The next OTA run will overwrite
-    // the staging file anyway, so a leftover is annoying but not unsafe.
+    void 0
   }
 }
 
-// ---------------------------------------------------------------------------
-// Push firmware to ESP32 over WiFi AP
-// The device must be in WiFi AP mode (triggered via BLE CMD start_wifi_ap).
-// Phone must be connected to the CANShift-XXXX WiFi network.
-//
-// Wire contract: `<firmware bytes> || HMAC_SHA256(firmware bytes, secret)`.
-// The 32-byte trailer is appended in `stageFirmwareWithHmac` before the
-// multipart upload. Firmware verifier lives in `hal/wifi/ota_hmac.cpp`.
-// ---------------------------------------------------------------------------
-
-export async function pushFirmware(
+export const pushFirmware = async (
   localPath: string,
   release: FirmwareRelease,
   onProgress?: (progress: number) => void
-): Promise<void> {
+): Promise<void> => {
   const stagedPath = await stageFirmwareWithHmac(localPath, release.sha256 ?? null)
   try {
     await uploadStagedFile(stagedPath, onProgress)
   } finally {
-    // Always discard the trailered staging file once the upload terminates —
-    // success or failure. The verified `localPath` remains so a retry can
-    // re-stage without re-downloading. (Issue #706.)
     await discardStagedFile(stagedPath)
   }
 }
 
-/** Multipart-upload the trailered staging file to the dashboard. Throws a
- *  typed `OtaServiceError` on any transport failure; the caller is
- *  responsible for staging and cleanup. */
-async function uploadStagedFile(
+const uploadStagedFile = async (
   stagedPath: string,
   onProgress?: (progress: number) => void
-): Promise<void> {
+): Promise<void> => {
   const formData = new FormData()
   appendRNFile(formData, OTA_UPLOAD_FIELD_NAME, {
     uri: stagedPath,
@@ -279,8 +168,6 @@ async function uploadStagedFile(
   })
 
   const xhr = new XMLHttpRequest()
-  // Heuristic for distinguishing "device never reached" from "dropped mid-
-  // transfer": if any upload-progress event fired, we did make contact.
   let progressEverFired = false
 
   await new Promise<void>((resolve, reject) => {
@@ -293,9 +180,6 @@ async function uploadStagedFile(
         resolve()
         return
       }
-      // Status 0 here means the request never reached the device; treat that
-      // as unreachable rather than rejected so the UI guides the user to the
-      // Wi-Fi step rather than blaming the firmware.
       if (xhr.status === 0) {
         reject(new OtaServiceError({ kind: 'device-unreachable' }))
         return

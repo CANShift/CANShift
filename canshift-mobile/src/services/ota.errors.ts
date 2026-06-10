@@ -1,23 +1,3 @@
-// ota.errors.ts — Discriminated OTA error union and mapping helper
-//
-// The OTA flow has several distinct failure modes (release listing, asset
-// download, checksum verification, multipart upload to the device, network
-// drops mid-transfer, device-side rejection). Surfacing them as a typed
-// discriminated union lets the UI render actionable copy and lets the service
-// layer fail loud at the right boundary.
-//
-// Tests live next to this file; consumers (UI + service) import the union and
-// the `mapOtaError` / `describeOtaErrorForUser` helpers.
-
-// ---------------------------------------------------------------------------
-// Discriminated union
-// ---------------------------------------------------------------------------
-
-/**
- * UI-facing classification of an OTA failure. The shape is stable across
- * platforms; each variant carries just enough context for the UI to render
- * actionable, copy-ready guidance.
- */
 export type OtaError =
   | { kind: 'releases-fetch-failed'; status?: number }
   | { kind: 'no-binary-asset'; version: string }
@@ -30,37 +10,18 @@ export type OtaError =
   | { kind: 'device-rejected'; status: number }
   | { kind: 'unknown'; message: string }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/** Best-effort string for the `unknown` fallback. Avoids leaking objects. */
-function describe(err: unknown): string {
+const describe = (err: unknown): string => {
   if (err instanceof Error) return err.message
   if (typeof err === 'string') return err
   return 'Unknown OTA error'
 }
 
-// ---------------------------------------------------------------------------
-// Mapping
-// ---------------------------------------------------------------------------
-
-/**
- * Map any thrown value from an OTA call into an `OtaError`. Service-layer
- * callers throw `OtaServiceError` (below) with a typed `cause`; this helper
- * unwraps that and falls back to `{ kind: 'unknown' }` for anything else.
- */
-export function mapOtaError(err: unknown): OtaError {
+export const mapOtaError = (err: unknown): OtaError => {
   if (err instanceof OtaServiceError) return err.cause
   return { kind: 'unknown', message: describe(err) }
 }
 
-/**
- * User-facing copy for an `OtaError`. Keep this aligned with what the
- * `UpdateScreen` shows in its error banner. Lines focus on the *next action*
- * the user can take, not on internal jargon.
- */
-export function describeOtaErrorForUser(err: OtaError): string {
+export const describeOtaErrorForUser = (err: OtaError): string => {
   switch (err.kind) {
     case 'releases-fetch-failed':
       return err.status !== undefined
@@ -91,12 +52,7 @@ export function describeOtaErrorForUser(err: OtaError): string {
   }
 }
 
-/**
- * Compact, log-friendly description of an `OtaError`. Screens render their
- * own user-facing messages off `err.kind`; this is for `log('error', …)`
- * and similar diagnostics.
- */
-export function describeOtaError(err: OtaError): string {
+export const describeOtaError = (err: OtaError): string => {
   switch (err.kind) {
     case 'releases-fetch-failed':
       return `releases fetch failed${err.status !== undefined ? ` (HTTP ${String(err.status)})` : ''}`
@@ -125,14 +81,6 @@ export function describeOtaError(err: OtaError): string {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Service-layer error wrapper
-// ---------------------------------------------------------------------------
-
-/**
- * Thrown by the OTA service so callers (screens, tests) can `instanceof`-
- * detect a typed failure and recover the discriminated cause via `mapOtaError`.
- */
 export class OtaServiceError extends Error {
   readonly cause: OtaError
 

@@ -1,6 +1,3 @@
-// ble.validators.test.ts — Pure-logic tests for BLE payload validators.
-// STATUS coverage lives in canshift-core/__tests__/ble-status.test.ts (#887).
-
 import { _resetSessionState, parseTelemetry } from './ble.validators'
 import { useLogStore } from '../stores/log.store'
 

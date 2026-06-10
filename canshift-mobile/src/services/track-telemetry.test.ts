@@ -1,6 +1,3 @@
-// track-telemetry.test.ts — Coverage for the TrackTelemetry builder
-// from #887 part 3 / #845 layer 4. Pure-logic.
-
 import { TrackTelemetrySchema } from '@tmbk/canshift-core'
 import type { LapRecord } from '../stores/track-session.store'
 import { buildTrackTelemetry } from './track-telemetry'
@@ -45,7 +42,7 @@ describe('buildTrackTelemetry', () => {
       sessionStartMs: 5000,
       laps: [],
       bestLapMs: 0,
-      nowMs: 1000, // pretend the clock went backwards
+      nowMs: 1000,
     })
     expect(result.currentLapMs).toBe(0)
   })
@@ -75,7 +72,7 @@ describe('buildTrackTelemetry', () => {
       sessionStartMs: 0,
       laps,
       bestLapMs: 80_000,
-      nowMs: 165_000 + 1500, // lap 3 in progress, 1.5s in
+      nowMs: 165_000 + 1500,
     })
     expect(result.currentLapMs).toBe(1500)
     expect(result.deltaMs).toBe(1500 - 80_000)
@@ -89,7 +86,7 @@ describe('buildTrackTelemetry', () => {
       sessionStartMs: 0,
       laps: [lap(1, 0, 90_000)],
       bestLapMs: 90_000,
-      nowMs: 92_000, // current lap at 2s, well below the 90s best
+      nowMs: 92_000,
     })
     expect(result.currentLapMs).toBe(2000)
     expect(result.deltaMs).toBe(2000 - 90_000)
