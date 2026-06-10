@@ -3,7 +3,6 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/Shell/Header'
 import Sidebar from './components/Shell/Sidebar'
-import PlaceholderRoute from './components/Shell/PlaceholderRoute'
 import { VersionMismatchBanner } from './components/Shell/VersionMismatchBanner'
 import { HeapLowBanner } from './components/Shell/HeapLowBanner'
 import { FirmwareUnresponsiveBanner } from './components/Shell/FirmwareUnresponsiveBanner'
@@ -12,6 +11,7 @@ import AboutRoute from './routes/AboutRoute'
 import CanBusRoute from './routes/CanBusRoute'
 import CliRoute from './routes/CliRoute'
 import EcuRoute from './routes/EcuRoute'
+import FirmwareRoute from './routes/FirmwareRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
 import LogsRoute from './routes/LogsRoute'
 import Obd2Route from './routes/Obd2Route'
@@ -302,16 +302,7 @@ export default function App() {
               <Route path="/live" element={<LiveDataRoute />} />
               <Route path="/logs" element={<LogsRoute />} />
               <Route path="/cli" element={<CliRoute />} />
-              <Route
-                path="/firmware"
-                element={
-                  <PlaceholderRoute
-                    label="Firmware"
-                    icon="⏏"
-                    subtext="Flasher coming in a follow-up PR"
-                  />
-                }
-              />
+              <Route path="/firmware" element={<FirmwareRoute />} />
               <Route path="/about" element={<AboutRoute />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
