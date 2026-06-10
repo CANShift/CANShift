@@ -9,11 +9,12 @@ export type ForegroundPermissionResult =
   | { granted: true }
   | { granted: false; canAskAgain: boolean }
 
-export const requestForegroundLocationPermission = async (): Promise<ForegroundPermissionResult> => {
-  const response = await Location.requestForegroundPermissionsAsync()
-  if (response.granted) return { granted: true }
-  return { granted: false, canAskAgain: response.canAskAgain }
-}
+export const requestForegroundLocationPermission =
+  async (): Promise<ForegroundPermissionResult> => {
+    const response = await Location.requestForegroundPermissionsAsync()
+    if (response.granted) return { granted: true }
+    return { granted: false, canAskAgain: response.canAskAgain }
+  }
 
 export const expoLocationWatcher: GpsWatcher = {
   async start(onUpdate) {

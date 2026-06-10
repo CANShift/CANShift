@@ -243,7 +243,9 @@ const fetchReleasesWithRetry = async (): Promise<FetchOutcome> => {
   return fetchReleasesOnce()
 }
 
-const pickLatest = (releases: readonly GitHubRelease[]): {
+const pickLatest = (
+  releases: readonly GitHubRelease[]
+): {
   stable: GitHubRelease | null
   prerelease: GitHubRelease | null
 } => {

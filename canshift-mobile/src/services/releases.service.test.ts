@@ -215,10 +215,7 @@ describe('ReleasesService', () => {
 
   it('filters out malformed releases without rejecting the whole response', async () => {
     global.fetch = makeFetchMock({
-      body: [
-        { tag_name: 12345 },
-        makeRelease(),
-      ],
+      body: [{ tag_name: 12345 }, makeRelease()],
     })
     const svc = makeService()
     const result = await svc.getLatest()

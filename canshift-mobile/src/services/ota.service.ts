@@ -77,7 +77,10 @@ export const downloadFirmware = async (
   return result.uri
 }
 
-export const verifyFirmware = async (localPath: string, release: FirmwareRelease): Promise<void> => {
+export const verifyFirmware = async (
+  localPath: string,
+  release: FirmwareRelease
+): Promise<void> => {
   const info = await FileSystem.getInfoAsync(localPath)
   const actualSize = info.exists ? info.size : 0
   if (!info.exists || actualSize !== release.sizeBytes) {
