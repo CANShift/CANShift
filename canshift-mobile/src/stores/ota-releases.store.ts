@@ -52,7 +52,7 @@ export const useOtaReleasesStore = create<OtaReleasesState>(() => initial)
 
 let inFlight: Promise<void> | null = null
 
-export async function loadOtaReleases(): Promise<void> {
+export const loadOtaReleases = async (): Promise<void> => {
   if (inFlight) return inFlight
 
   useOtaReleasesStore.setState((s) => ({
