@@ -1,10 +1,3 @@
-// connection.store.ts — Owns the WebSerial port handle + live status for the
-// canshift-tuner SPA.
-//
-// Mirrors `canshift-studio-web/src/stores/connection.store.ts` but adapted for
-// WebSerial: no host/port literal — the underlying connection is a SerialPort
-// handle the user grants via `navigator.serial.requestPort()`.
-
 import { create } from 'zustand'
 import { getSerialClient, type SerialStatus } from '../transport/webserial-client'
 import { useDeviceStore } from './device.store'
@@ -12,32 +5,18 @@ import { useDeviceStore } from './device.store'
 const USB_LABEL = 'webserial'
 
 interface ConnectionState {
-  /** The granted SerialPort handle, or `null` when disconnected. */
   port: SerialPort | null
   status: SerialStatus
-  /** Last connection error message (open failure, queue exhaustion, etc.). */
   lastError: string | null
 
-  /**
-   * Open a connection. If `port` is omitted, prompts the user via
-   * `navigator.serial.requestPort()`. Resolves once the port is open.
-   */
   connect: (port?: SerialPort) => Promise<void>
-  /** Close the port and stop reconnecting. */
   disconnect: () => void
-  /**
-   * Reconnect to the first already-authorised port without a chooser prompt.
-   * Used on app boot so a returning user picks up where they left off.
-   */
   tryAutoReconnect: () => Promise<void>
 }
 
 export const useConnectionStore = create<ConnectionState>()((set, get) => {
   const client = getSerialClient()
 
-  // Mirror the serial client's status into both this store and the device
-  // store. The device store is what the editor surfaces read (`connected`
-  // flag) — promote `connected` and `disconnected` transitions into it here.
   const unsubscribeStatus = client.onStatus((status, error) => {
     set({ status, lastError: error ?? null })
     if (status === 'connected') {

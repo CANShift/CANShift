@@ -1,5 +1,3 @@
-// dashboard.store.ts — Dashboard config state
-
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { current } from 'immer'
@@ -18,43 +16,29 @@ import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } fr
 import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
 import { DAY_THEME_PRESET } from '../constants/theme'
 
-/**
- * Outcome of {@link DashboardState.loadFromDeviceOrDemo} — lets callers log
- * what happened without re-implementing the decision they just delegated.
- */
 export type LoadFromDeviceOrDemoResult = 'device' | 'demo' | 'kept-edits'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 const HISTORY_LIMIT = 50
 
 export type AlignDirection = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v'
 
-// Canvas dimensions are driven by the dashboard's `targetProfile` (issue #548).
-// `undefined` falls back to the default profile (`crowpanel-28`, 320×240) via
-// `resolveScreenProfile`, so legacy configs keep their previous canvas bounds.
-function canvasDims(config: DashboardConfig): { w: number; h: number } {
+const canvasDims = (config: DashboardConfig): { w: number; h: number } => {
   const profile = resolveScreenProfile(config.targetProfile)
   return { w: profile.width, h: profile.height }
 }
 
-function widgetAreaHeight(
-  page: PageConfig,
-  topBarHeight: number,
-  canvasH: number
-): number {
-  return page.showTopBar ? canvasH - topBarHeight : canvasH
-}
+const widgetAreaHeight = (page: PageConfig, topBarHeight: number, canvasH: number): number =>
+  page.showTopBar ? canvasH - topBarHeight : canvasH
 
-function toLayoutRect(w: Widget): { id: string; x: number; y: number; w: number; h: number } {
-  return { id: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h }
-}
-
-// ---------------------------------------------------------------------------
-// Store types
-// ---------------------------------------------------------------------------
+const toLayoutRect = (
+  w: Widget
+): { id: string; x: number; y: number; w: number; h: number } => ({
+  id: w.id,
+  x: w.layout.x,
+  y: w.layout.y,
+  w: w.layout.w,
+  h: w.layout.h,
+})
 
 interface DashboardState {
   config: DashboardConfig | null
@@ -62,166 +46,67 @@ interface DashboardState {
   isDirty: boolean
   selectedPageId: string | null
   selectedWidgetId: string | null
-  /** All currently selected widget ids (superset of selectedWidgetId). */
   selectedWidgetIds: string[]
 
-  /** Widgets held in the in-app clipboard (Cmd+C / Cmd+X). */
   clipboardWidgets: Widget[]
 
-  /** Undo history — configs before the last N mutations. */
   past: DashboardConfig[]
-  /** Redo stack — configs after the last undo. */
   future: DashboardConfig[]
 
-  /**
-   * Studio-only preview flag — true = render canvas using config.dayTheme
-   * (or the built-in day defaults if dayTheme isn't set yet).
-   * Does NOT mutate the config; does NOT go through history.
-   */
   isPreviewDayMode: boolean
 
-  /**
-   * Set when {@link DashboardState.loadFromDeviceOrDemo} seeds the demo
-   * because the device had no config and the editor was empty (issue #418).
-   * Drives the post-recovery banner: if a later device probe returns a real
-   * config, we ask the user before clobbering their preview-only demo.
-   * Cleared as soon as the user explicitly picks a real config (device,
-   * imported, opened from disk) or dismisses the prompt.
-   */
   loadedFromDemoFallback: boolean
 
-  /**
-   * Device config returned by a probe AFTER {@link loadedFromDemoFallback}
-   * was set — held aside so the user can decide between swapping in or
-   * keeping the demo (issue #418). `null` when nothing is pending.
-   */
   pendingDeviceConfig: DashboardConfig | null
 
-  // Config lifecycle
   setConfig: (config: DashboardConfig, filePath?: string) => void
-  /** Stamp the active ECU profile key into the current config so it survives a device push/read cycle. */
   setEcuProfileKey: (key: string) => void
-  /**
-   * Pick the target screen profile this dashboard is authored for (issue #548).
-   * Drives the canvas dimensions in the editor preview and travels with the
-   * config through every push-config / save cycle. Goes through undo history
-   * so the user can revert a misclick like any other dashboard edit.
-   */
   setTargetProfile: (id: ScreenProfileId) => void
-  /**
-   * Replace the current config from an imported source (Import menu, shared
-   * dashboard) — clears `filePath`, marks dirty so the user is prompted to
-   * Save As, resets history. The next Save will land in a new file.
-   */
   loadImported: (config: DashboardConfig) => void
-  /**
-   * Atomically pick between the device's config, the demo fallback, and
-   * keeping the user's current in-progress edits — reads the latest store
-   * state inside the setter so concurrent edits aren't clobbered (#216).
-   *
-   * Decision (latest state, never a stale closure):
-   * - `deviceConfig` provided → device wins, replace editor state.
-   * - `deviceConfig === null` and editor is empty → load DEFAULT_SIM_CONFIG.
-   * - `deviceConfig === null` and editor has a config → keep edits, no-op.
-   */
   loadFromDeviceOrDemo: (deviceConfig: DashboardConfig | null) => LoadFromDeviceOrDemoResult
-  /**
-   * Stage a real device config behind the demo fallback prompt — used by
-   * the device-config-load hook when the editor is currently showing the
-   * auto-loaded demo (issue #418). Caller must check {@link loadedFromDemoFallback}
-   * before invoking; otherwise prefer {@link loadFromDeviceOrDemo} directly.
-   */
   stagePendingDeviceConfig: (deviceConfig: DashboardConfig) => void
-  /** User accepts the staged device config — replaces the demo, clears flags. */
   acceptPendingDeviceConfig: () => void
-  /** User keeps the demo — discards the staged device config and clears the prompt. */
   dismissPendingDeviceConfig: () => void
-  /** User dismisses the initial "no config on device — showing default" banner. */
   clearDemoFallback: () => void
   markSaved: (filePath: string) => void
-  /** Mark the editor in-sync with the connected device (post-burn). */
   markPushed: () => void
 
-  // Edit history
   undo: () => void
   redo: () => void
 
-  // Page operations
   selectPage: (pageId: string | null) => void
   addPage: (page: PageConfig) => void
   removePage: (pageId: string) => void
   setDefaultPage: (pageId: string) => void
   updatePage: (pageId: string, patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
-  /**
-   * Set the page rendering template (#451). Passing `custom` clears the field
-   * so default configs stay byte-stable when re-saved; any other value writes
-   * the template literal as-is.
-   */
   setPageTemplate: (pageId: string, template: PageTemplate) => void
   movePage: (fromIndex: number, toIndex: number) => void
   updateTopBar: (patch: Partial<TopBarConfig>) => void
 
-  // Theme
-  /** Toggle the studio day/night preview without touching the config. */
   togglePreviewTheme: () => void
-  /** Save (or clear) the day theme in the config. Goes through undo history. */
   setDayTheme: (theme: ThemePreset | null) => void
-  /**
-   * Save (or clear) the night theme in the config. Mirror of {@link setDayTheme}
-   * — goes through undo history, marks dirty. Issue #21 v2.
-   */
   setNightTheme: (theme: ThemePreset | null) => void
 
-  // Widget operations
   selectWidget: (widgetId: string | null) => void
-  /** Set the full multi-selection (replaces current selection). */
   selectWidgets: (widgetIds: string[]) => void
-  /** Toggle a single widget in/out of the current multi-selection (Shift+click). */
   toggleWidgetSelection: (widgetId: string) => void
-  /** Add a widget; auto-places it in the first free spot. */
   addWidget: (pageId: string, widget: Widget) => void
-  /**
-   * Clone the given widgets within a page (Cmd+D). Each clone gets a fresh id
-   * and is auto-placed near the source widget. New clones become the selection.
-   */
   duplicateWidgets: (pageId: string, widgetIds: string[]) => void
   removeWidget: (pageId: string, widgetId: string) => void
   updateWidget: (pageId: string, widgetId: string, patch: Partial<Widget>) => void
-  /**
-   * Preview a widget move during drag — updates position but does NOT push to undo
-   * history. Call this on every mousemove event for smooth tracking.
-   */
   moveWidget: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
-  /**
-   * Commit a widget move on drag-end — updates position AND pushes to undo history.
-   * Call this on mouseup after a single-widget drag instead of resolveWidgetCollisions
-   * when you want to skip collision cascading.
-   */
   commitWidgetMove: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
-  /** Move multiple widgets simultaneously during a multi-drag — no history. */
   moveWidgets: (pageId: string, moves: { id: string; x: number; y: number }[]) => void
-  /** Called on drag-end: resolves collisions and cascades pushed widgets. */
   resolveWidgetCollisions: (pageId: string, widgetId: string) => void
-  /** Called on multi-widget drag-end: commits positions to history (no collision resolution). */
   commitDrag: () => void
-  /** Align selected widgets along the given axis. */
   alignWidgets: (pageId: string, widgetIds: string[], direction: AlignDirection) => void
-  /** Distribute selected widgets evenly along the given axis. */
   distributeWidgets: (pageId: string, widgetIds: string[], axis: 'h' | 'v') => void
 
-  /** Copy widgets into the clipboard — no history push. */
   copyWidgets: (pageId: string, widgetIds: string[]) => void
-  /** Paste clipboard contents onto the page, auto-placed, with history. */
   pasteWidgets: (pageId: string) => void
-  /** Remove multiple widgets in a single history step. */
   removeWidgets: (pageId: string, widgetIds: string[]) => void
-  /** Move widgets by (dx, dy) firmware-pixels — clamps to canvas, pushes to history. */
   nudgeWidgets: (pageId: string, widgetIds: string[], dx: number, dy: number) => void
 }
-
-// ---------------------------------------------------------------------------
-// Store implementation
-// ---------------------------------------------------------------------------
 
 export const useDashboardStore = create<DashboardState>()(
   immer((set) => ({
@@ -243,14 +128,12 @@ export const useDashboardStore = create<DashboardState>()(
         s.past = []
         s.future = []
         s.config = config
-        // Day theme is always active — backfill if absent in older configs.
         s.config.dayTheme ??= DAY_THEME_PRESET
         s.filePath = filePath ?? null
         s.isDirty = false
         s.selectedPageId = config.defaultPageId
         s.selectedWidgetId = null
         s.selectedWidgetIds = []
-        // User picked a real config — clear any auto-demo bookkeeping.
         s.loadedFromDemoFallback = false
         s.pendingDeviceConfig = null
       })
@@ -268,8 +151,6 @@ export const useDashboardStore = create<DashboardState>()(
     setTargetProfile: (id) => {
       set((s) => {
         if (!s.config) return
-        // No-op when the value isn't actually changing — keeps the undo
-        // stack uncluttered when the user re-selects the current profile.
         if (s.config.targetProfile === id) return
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
@@ -306,7 +187,6 @@ export const useDashboardStore = create<DashboardState>()(
           s.selectedPageId = deviceConfig.defaultPageId
           s.selectedWidgetId = null
           s.selectedWidgetIds = []
-          // Real device config landed — drop the demo-fallback bookkeeping.
           s.loadedFromDemoFallback = false
           s.pendingDeviceConfig = null
           outcome = 'device'
@@ -315,17 +195,12 @@ export const useDashboardStore = create<DashboardState>()(
         if (s.config === null) {
           s.past = []
           s.future = []
-          // Clone so Immer drafting can't mutate the module-level constant —
-          // mirrors App.tsx:80 and prevents leaked edits between successive
-          // demo-fallback loads (#1287).
           s.config = structuredClone(DEFAULT_SIM_CONFIG)
           s.filePath = null
           s.isDirty = false
           s.selectedPageId = DEFAULT_SIM_CONFIG.defaultPageId
           s.selectedWidgetId = null
           s.selectedWidgetIds = []
-          // Tag the editor so we know to prompt before clobbering this demo
-          // if the device's SD comes back online with a real config (#418).
           s.loadedFromDemoFallback = true
           s.pendingDeviceConfig = null
           outcome = 'demo'
@@ -362,8 +237,6 @@ export const useDashboardStore = create<DashboardState>()(
     dismissPendingDeviceConfig: () => {
       set((s) => {
         s.pendingDeviceConfig = null
-        // Keep loadedFromDemoFallback true — the editor still shows the demo,
-        // and any FUTURE device probe with a real config should still prompt.
       })
     },
 
@@ -381,9 +254,6 @@ export const useDashboardStore = create<DashboardState>()(
     },
 
     markPushed: () => {
-      // Tuner-side equivalent of markSaved: the live device is now in sync
-      // with the editor — clear dirty but leave filePath alone (WebSerial has
-      // no concept of a file path).
       set((s) => {
         s.isDirty = false
       })
@@ -494,8 +364,6 @@ export const useDashboardStore = create<DashboardState>()(
         const existing = s.config.pages[idx]
         if (!existing) return
         if (template === 'custom') {
-          // `custom` is the implicit default — drop the field so existing
-          // configs re-serialize byte-for-byte.
           const { template: _drop, ...rest } = existing
           s.config.pages[idx] = rest
         } else {
@@ -610,7 +478,6 @@ export const useDashboardStore = create<DashboardState>()(
         const nw = widget.layout.w
         const nh = widget.layout.h
 
-        // Try to place adjacent to the currently selected widget (right, below, left, above)
         let pos: { x: number; y: number } | null = null
         const refWidget = s.selectedWidgetId
           ? page.widgets.find((w) => w.id === s.selectedWidgetId)
@@ -620,10 +487,10 @@ export const useDashboardStore = create<DashboardState>()(
           const ref = toLayoutRect(refWidget)
           const gap = LAYOUT_GAP
           const adjacent = [
-            { x: ref.x + ref.w + gap, y: ref.y }, // right
-            { x: ref.x, y: ref.y + ref.h + gap }, // below
-            { x: ref.x - nw - gap, y: ref.y }, // left
-            { x: ref.x, y: ref.y - nh - gap }, // above
+            { x: ref.x + ref.w + gap, y: ref.y },
+            { x: ref.x, y: ref.y + ref.h + gap },
+            { x: ref.x - nw - gap, y: ref.y },
+            { x: ref.x, y: ref.y - nh - gap },
           ]
           for (const cand of adjacent) {
             const sx = snapToGrid(cand.x)
@@ -637,7 +504,6 @@ export const useDashboardStore = create<DashboardState>()(
           }
         }
 
-        // Fallback: scan for first free position
         pos ??= autoPlace({ w: nw, h: nh }, others, canvasW, canvasH)
 
         if (pos) {
@@ -674,8 +540,6 @@ export const useDashboardStore = create<DashboardState>()(
 
         for (const src of sources) {
           const newId = `${src.type}_${crypto.randomUUID()}`
-          // Try to land just below the source first; fall back to the right,
-          // then to the first free slot anywhere on the page.
           const candidates = [
             { x: src.layout.x, y: src.layout.y + src.layout.h + LAYOUT_GAP },
             { x: src.layout.x + src.layout.w + LAYOUT_GAP, y: src.layout.y },
@@ -712,7 +576,6 @@ export const useDashboardStore = create<DashboardState>()(
           s.selectedWidgetIds = newIds
           s.isDirty = true
         } else {
-          // No room anywhere — roll back the history push so undo isn't a no-op.
           s.past.pop()
         }
       })
@@ -746,7 +609,6 @@ export const useDashboardStore = create<DashboardState>()(
         const existing = page.widgets[widgetIdx]
         if (!existing) return
         const merged = { ...existing, ...patch }
-        // Clamp position so the widget never overflows the canvas after resize.
         const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
         const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         merged.layout = {
@@ -759,7 +621,6 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
-    // previewWidgetMove — called at 60fps during drag; does NOT push to undo history.
     moveWidget: (pageId, widgetId, layout) => {
       set((s) => {
         if (!s.config) return
@@ -774,7 +635,6 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
-    // commitWidgetMove — called on mouseup for a single-widget drag; pushes to history.
     commitWidgetMove: (pageId, widgetId, layout) => {
       set((s) => {
         if (!s.config) return
@@ -792,7 +652,6 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
-    // moveWidgets is NOT added to history — called 60fps during multi-drag
     moveWidgets: (pageId, moves) => {
       set((s) => {
         if (!s.config) return
@@ -817,7 +676,6 @@ export const useDashboardStore = create<DashboardState>()(
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
 
-        // Snapshot taken here (drag-end) — not during the drag itself
         s.past.push(current(s.config))
         if (s.past.length > HISTORY_LIMIT) s.past.shift()
         s.future = []
@@ -844,8 +702,6 @@ export const useDashboardStore = create<DashboardState>()(
           }
         }
 
-        // Verify the dropped widget no longer overlaps anything after cascade.
-        // If it does (crowded canvas / clamp edge case), relocate it via autoPlace.
         const finalOthers = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)
         const finalRect = toLayoutRect(page.widgets.find((w) => w.id === widgetId) ?? widget)
         const stillOverlaps = finalOthers.some((o) => rectsOverlap(finalRect, o))
@@ -866,8 +722,6 @@ export const useDashboardStore = create<DashboardState>()(
       })
     },
 
-    // Called on multi-widget drag-end: commits current positions to history without
-    // collision resolution (widgets may overlap — user chose these positions).
     commitDrag: () => {
       set((s) => {
         if (!s.config) return
