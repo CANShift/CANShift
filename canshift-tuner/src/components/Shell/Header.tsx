@@ -1,36 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import {
+  Header as UiHeader,
+  BurnButton as UiBurnButton,
+  FirmwareSlot as UiFirmwareSlot,
+} from '@tmbk/canshift-ui'
+import type { HeaderStatus } from '@tmbk/canshift-ui'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
-import { FirmwareSlot } from './FirmwareSlot'
 
 const PULSE_HOLD_MS = 220
 const PULSE_THROTTLE_MS = 60
-
-const HEADER_HEIGHT = 40
-
-type Status = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
-
-interface StatusVisual {
-  dot: string
-  label: string
-}
-
-const statusVisual = (status: Status): StatusVisual => {
-  switch (status) {
-    case 'connected':
-      return { dot: 'hsl(var(--success))', label: 'Connected' }
-    case 'connecting':
-      return { dot: 'hsl(var(--accent))', label: 'Connecting…' }
-    case 'reconnecting':
-      return { dot: 'hsl(var(--accent))', label: 'Reconnecting…' }
-    case 'disconnected':
-    default:
-      return { dot: 'hsl(var(--destructive))', label: 'Disconnected' }
-  }
-}
 
 interface PortLike {
   getInfo(): { usbVendorId?: number; usbProductId?: number }
@@ -92,142 +73,37 @@ export default function Header() {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
-  const visual: StatusVisual = simulationMode
-    ? { dot: 'hsl(var(--accent))', label: 'Simulation' }
-    : statusVisual(status)
   const portLabel = !simulationMode && status === 'connected' ? readPortLabel(port) : null
 
+  const resolvedStatus: HeaderStatus = simulationMode ? 'simulation' : status
+
   return (
-    <header
-      style={{
-        height: HEADER_HEIGHT,
-        flexShrink: 0,
-        background: 'hsl(var(--surface))',
-        borderBottom: '1px solid hsl(var(--border))',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 14px',
-        gap: 14,
-      }}
-    >
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'hsl(var(--text))' }}>CANShift Tuner</div>
-      <div style={versionStyle}>v{__TUNER_VERSION__}</div>
-
-      <div style={{ flex: 1 }} />
-
-      <div
-        role="status"
-        aria-live="polite"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          fontSize: 12,
-          color: 'hsl(var(--text-dim))',
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: visual.dot,
-            boxShadow: pulsing
-              ? `0 0 12px ${visual.dot}, 0 0 4px ${visual.dot}`
-              : `0 0 6px ${visual.dot}`,
-            transform: pulsing ? 'scale(1.25)' : 'scale(1)',
-            transition: 'box-shadow 80ms ease-out, transform 80ms ease-out',
-          }}
-        />
-        <span style={{ color: 'hsl(var(--text))' }}>{visual.label}</span>
-        {portLabel && (
-          <span style={{ fontFamily: 'monospace', color: 'hsl(var(--text-muted))' }}>
-            {portLabel}
-          </span>
-        )}
-      </div>
-
-      <FirmwareSlot version={firmwareVersion} compat={firmwareCompat} />
-
-      <BurnButton />
-    </header>
+    <UiHeader
+      tunerVersion={__TUNER_VERSION__}
+      status={resolvedStatus}
+      portLabel={portLabel}
+      activityPulse={pulsing}
+      firmwareSlot={<UiFirmwareSlot version={firmwareVersion} compat={firmwareCompat} />}
+      burnButton={<BurnButton />}
+    />
   )
-}
-
-const versionStyle: CSSProperties = {
-  fontSize: 11,
-  color: 'hsl(var(--text-dim))',
-  fontFamily: 'monospace',
-  letterSpacing: '0.04em',
 }
 
 const BurnButton = () => {
   const { canBurn, isBurning, burn } = useBurnDashboard()
-  const disabled = !canBurn
   const title = isBurning
     ? 'Burning dashboard to the device…'
     : canBurn
       ? 'Burn dashboard to device (Cmd/Ctrl+S)'
       : 'Connect a device and edit the dashboard to enable Burn'
   return (
-    <button
-      type="button"
-      disabled={disabled}
+    <UiBurnButton
+      disabled={!canBurn}
+      busy={isBurning}
+      title={title}
       onClick={() => {
         void burn()
       }}
-      title={title}
-      style={disabled ? burnButtonStyleDisabled : burnButtonStyleEnabled}
-    >
-      {isBurning && <BurnSpinner />}
-      {isBurning ? 'Burning…' : 'Burn'}
-    </button>
-  )
-}
-
-const BurnSpinner = () => {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        display: 'inline-block',
-        width: 10,
-        height: 10,
-        border: '2px solid hsl(var(--primary-foreground))',
-        borderTopColor: 'transparent',
-        borderRadius: '50%',
-        animation: 'canshift-tuner-spin 700ms linear infinite',
-        marginRight: 6,
-        verticalAlign: '-1px',
-      }}
     />
   )
-}
-
-const burnButtonStyleBase: CSSProperties = {
-  borderRadius: 4,
-  padding: '5px 14px',
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-}
-
-const burnButtonStyleDisabled: CSSProperties = {
-  ...burnButtonStyleBase,
-  background: 'hsl(var(--surface-2))',
-  color: 'hsl(var(--text-dim))',
-  border: '1px solid hsl(var(--border))',
-  cursor: 'not-allowed',
-  opacity: 0.5,
-}
-
-const burnButtonStyleEnabled: CSSProperties = {
-  ...burnButtonStyleBase,
-  background: 'hsl(var(--primary))',
-  color: 'hsl(var(--primary-foreground))',
-  border: '1px solid hsl(var(--primary))',
-  cursor: 'pointer',
-  boxShadow: '0 1px 4px hsl(var(--primary) / 0.3)',
 }

@@ -25,6 +25,7 @@
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-switch": "^1.2.6",
     "@tmbk/canshift-core": "file:../canshift-core",
+    "@tmbk/canshift-ui": "file:../canshift-ui",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "immer": "^10.1.1",

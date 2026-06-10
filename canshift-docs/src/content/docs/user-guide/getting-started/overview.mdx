@@ -5,8 +5,7 @@ sidebar:
   order: 1
 ---
 
-import TunerShell from "../../../../components/tuner-mock/TunerShell.astro";
-import TunerWelcomeScreen from "../../../../components/tuner-mock/TunerWelcomeScreen.astro";
+import { TunerPreview } from "../../../../components/tuner-preview/TunerPreview";
 
 CANShift is an **open-source CAN bus dashboard** for sport and track cars. It
 runs on an ESP32 touch screen and displays ECU signals in real time — RPM,
@@ -25,9 +24,7 @@ The browser-based tuner is where you connect to the dash, edit the dashboard,
 and flash firmware. Here's what the Welcome screen looks like when no device
 is plugged in:
 
-<TunerShell route="welcome" status="disconnected">
-  <TunerWelcomeScreen variant="connect" />
-</TunerShell>
+<TunerPreview client:load route="welcome" status="disconnected" />
 
 ## Ecosystem
 
