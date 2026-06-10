@@ -6,17 +6,12 @@ the upload / serial port.
 
 ## Why this package
 
-The previous in-browser configurator (`canshift-studio-web`) was an SPA
-embedded in the firmware and served from SPIFFS over a WiFi AP the device
-brought up. That coupled every Studio change to a firmware reflash, tied the
-studio's CI to the firmware partition layout, and on WROOM boards without
-PSRAM the WiFi stack fought the USB receive buffer for the ~80 KB of contiguous
-DRAM that just isn't there at boot. Both packages have been retired (#1351);
-`canshift-tuner` is the single configurator surface going forward.
+`canshift-tuner` is the configurator surface for CANShift dashes.
 
-- Hosted on Vercel — Studio updates ship without touching the device.
+- Hosted on Vercel — tuner updates ship without touching the device.
 - WebSerial transport — works on any Chromium browser, talks to the
-  Arduino `Serial` (UART) the firmware speaks. No WiFi stack, no SPA-on-SPIFFS.
+  Arduino `Serial` (UART) the firmware speaks. No on-device WiFi stack, no
+  SPA-on-SPIFFS coupling between configurator and firmware partitions.
 - Betaflight-style sidebar UX — sections for Welcome, Dashboard editor,
   CAN bus, OBD-II, Themes, Live data, Logs, CLI, Firmware (flasher), About.
 

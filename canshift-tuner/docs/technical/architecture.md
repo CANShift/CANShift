@@ -23,16 +23,15 @@ firmware has always spoken, and surfaces the device state back to the user.
 
 `canshift-tuner/` is a sibling package of `canshift-firmware/` (the ESP32
 firmware). It depends on `@tmbk/canshift-core` for the shared Zod schemas +
-design tokens. The previous WiFi-served Studio (`canshift-studio-web/`) was
-retired alongside the WiFi+SPA removal (#1351). See the top-level
-[README](../../../README.md) for the full monorepo layout.
+design tokens. See the top-level [README](../../../README.md) for the full
+monorepo layout.
 
 ## Section / route map
 
 | Route | Component | Status |
 |---|---|---|
 | `/` | `WelcomeRoute` | Wired |
-| `/dashboard` | `EditorRoute` (lazy) | Wired (ported from the retired studio-web in #1352) |
+| `/dashboard` | `EditorRoute` (lazy) | Wired |
 | `/can`, `/obd2`, `/themes`, `/live`, `/logs`, `/cli`, `/firmware`, `/about` | `PlaceholderRoute` | Stubs, filled by follow-up PRs |
 
 ## State management

@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-// scripts/generate-tokens.css.ts — Mirror of canshift-studio-web's generator.
-// Reads DARK_TOKENS from @tmbk/canshift-core and emits
-// src/styles/tokens.generated.css. Kept aligned with studio-web's copy so the
-// two consume the same token surface during the transition.
-
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -20,7 +15,7 @@ const HEADER = [
   '',
 ].join('\n')
 
-function buildCss(cssVars) {
+const buildCss = (cssVars) => {
   const lines = [':root {']
   for (const [name, value] of Object.entries(cssVars)) {
     lines.push(`  ${name}: ${value};`)
@@ -29,7 +24,7 @@ function buildCss(cssVars) {
   return `${HEADER}\n${lines.join('\n')}`
 }
 
-function writeIfChanged(path, content) {
+const writeIfChanged = (path, content) => {
   if (existsSync(path)) {
     const previous = readFileSync(path, 'utf8')
     if (previous === content) return false
@@ -39,7 +34,7 @@ function writeIfChanged(path, content) {
   return true
 }
 
-async function main() {
+const main = async () => {
   if (!existsSync(CORE_TOKENS_JS)) {
     throw new Error(
       `canshift-core build artifact not found at ${CORE_TOKENS_JS}. ` +

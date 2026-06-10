@@ -1,10 +1,3 @@
-// vite.config.ts — CANShift Tuner (Vercel-hosted SPA).
-//
-// Unlike canshift-studio-web, this bundle is NOT embedded in firmware SPIFFS.
-// It is hosted on Vercel and talks to the firmware over WebSerial (CH340 UART).
-// Standard hashed asset names — no SPIFFS path-length / embed_files contract
-// to honour, no manual chunk pinning for the legacy `a/` output dir.
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
