@@ -11,7 +11,6 @@ import { markFirstScreenReady } from './diag/cold-start'
 export default function App() {
   useBleForegroundReconnect()
   useEffect(() => {
-    // Fires after the first commit — the earliest moment the user sees pixels.
     markFirstScreenReady()
   }, [])
   return (

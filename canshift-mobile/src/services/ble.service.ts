@@ -333,6 +333,24 @@ export class BleService {
     return true
   }
 
+  private async tryConnectAttempt(
+    deviceId: string,
+    attempt: number,
+    signal: AbortSignal
+  ): Promise<'aborted' | 'connected' | 'failed'> {
+    try {
+      await this.connect(deviceId)
+      if (isAborted(signal)) return 'aborted'
+      log('info', `Auto-reconnect: succeeded on attempt ${String(attempt)}`)
+      return 'connected'
+    } catch (err) {
+      if (isAborted(signal)) return 'aborted'
+      const msg = err instanceof Error ? err.message : 'unknown error'
+      log('warn', `Auto-reconnect: connect failed on attempt ${String(attempt)}: ${msg}`)
+      return 'failed'
+    }
+  }
+
   private async runReconnectLoop(deviceId: string): Promise<void> {
     if (this.reconnectController) {
       log('warn', 'Reconnect loop already running — ignoring duplicate trigger')
@@ -367,16 +385,8 @@ export class BleService {
           continue
         }
 
-        try {
-          await this.connect(deviceId)
-          if (isAborted(signal)) return
-          log('info', `Auto-reconnect: succeeded on attempt ${String(attempt)}`)
-          return
-        } catch (err) {
-          if (isAborted(signal)) return
-          const msg = err instanceof Error ? err.message : 'unknown error'
-          log('warn', `Auto-reconnect: connect failed on attempt ${String(attempt)}: ${msg}`)
-        }
+        const outcome = await this.tryConnectAttempt(deviceId, attempt, signal)
+        if (outcome === 'aborted' || outcome === 'connected') return
       }
 
       if (!isAborted(signal)) {

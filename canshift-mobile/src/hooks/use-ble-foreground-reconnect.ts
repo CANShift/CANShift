@@ -48,11 +48,11 @@ const resolveDeps = (deps: BleForegroundReconnectDeps): ResolvedDeps => {
 
 const DEFAULT_DEPS: BleForegroundReconnectDeps = Object.freeze({})
 
-export async function handleAppStateTransition(
+export const handleAppStateTransition = async (
   prev: AppStateStatus,
   next: AppStateStatus,
   deps: ResolvedDeps
-): Promise<void> {
+): Promise<void> => {
   if (next !== 'active' || !isBackgrounded(prev)) return
 
   if (deps.getIsReconnecting()) return
