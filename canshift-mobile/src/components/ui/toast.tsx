@@ -1,5 +1,3 @@
-// src/components/ui/toast.tsx — themed wrapper around react-native-toast-message
-
 import * as React from 'react'
 import RNToast, {
   BaseToast,
@@ -63,7 +61,7 @@ const toastConfig: ToastConfig = {
   ),
 }
 
-export function Toaster(): React.ReactElement {
+export const Toaster = (): React.ReactElement => {
   return <RNToast config={toastConfig} />
 }
 Toaster.displayName = 'Toaster'

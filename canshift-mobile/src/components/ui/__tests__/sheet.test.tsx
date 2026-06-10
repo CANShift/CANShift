@@ -9,7 +9,7 @@ interface HarnessProps {
   onOpenChange?: (next: boolean) => void
 }
 
-function Harness({ open, defaultOpen, onOpenChange }: HarnessProps): React.ReactElement {
+const Harness = ({ open, defaultOpen, onOpenChange }: HarnessProps): React.ReactElement => {
   return (
     <Sheet
       {...(open !== undefined && { open })}
