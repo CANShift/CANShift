@@ -1,4 +1,3 @@
-// jest.config.ts — canshift-core test configuration
 import type { Config } from 'jest'
 
 const config: Config = {
