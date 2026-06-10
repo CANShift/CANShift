@@ -1,18 +1,301 @@
-/* Brand tweaks — CANShift accent colour matches the firmware splash. */
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Orbitron-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Orbitron-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Orbitron';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Orbitron-Black.woff2') format('woff2');
+}
+
 :root {
-  --sl-color-accent-low: #4a1212;
-  --sl-color-accent: #cc3333;
-  --sl-color-accent-high: #ff8888;
-}
+  --cs-bg: #121212;
+  --cs-bg-inset: #080808;
+  --cs-surface: #1f1f1f;
+  --cs-surface-2: #292929;
+  --cs-border: #333333;
+  --cs-primary: #ff4747;
+  --cs-primary-foreground: #ffffff;
+  --cs-accent: #ff8800;
+  --cs-accent-dim: #1a0808;
+  --cs-text: #ffffff;
+  --cs-text-dim: #bababa;
+  --cs-text-muted: #8f8f8f;
+  --cs-success: #00cc2a;
+  --cs-warning: #ff8800;
+  --cs-danger: #ff0000;
 
-:root[data-theme="light"] {
-  --sl-color-accent-low: #ffd6d6;
-  --sl-color-accent: #cc3333;
-  --sl-color-accent-high: #5a0e0e;
-}
+  --sl-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sl-font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Mono',
+    monospace;
 
-/* Tighter prose for technical docs */
-.sl-markdown-content {
+  --sl-text-base: 0.875rem;
+  --sl-text-h1: 2rem;
   --sl-text-h2: 1.5rem;
   --sl-text-h3: 1.25rem;
+  --sl-text-h4: 1.05rem;
+  --sl-text-code-sm: 0.8125rem;
+
+  --sl-nav-height: 3.5rem;
+}
+
+:root,
+:root[data-theme='dark'] {
+  --sl-color-white: var(--cs-text);
+  --sl-color-gray-1: #ededed;
+  --sl-color-gray-2: var(--cs-text-dim);
+  --sl-color-gray-3: var(--cs-text-muted);
+  --sl-color-gray-4: #5a5a5a;
+  --sl-color-gray-5: var(--cs-border);
+  --sl-color-gray-6: var(--cs-surface-2);
+  --sl-color-gray-7: var(--cs-surface);
+  --sl-color-black: var(--cs-bg-inset);
+
+  --sl-color-accent-low: #4a1212;
+  --sl-color-accent: var(--cs-primary);
+  --sl-color-accent-high: #ffb3b3;
+
+  --sl-color-text: var(--cs-text-dim);
+  --sl-color-text-accent: var(--cs-primary);
+  --sl-color-text-invert: var(--cs-bg);
+
+  --sl-color-bg: var(--cs-bg);
+  --sl-color-bg-nav: var(--cs-surface);
+  --sl-color-bg-sidebar: var(--cs-bg);
+  --sl-color-bg-inline-code: var(--cs-surface-2);
+  --sl-color-bg-accent: var(--cs-primary);
+
+  --sl-color-hairline: var(--cs-border);
+  --sl-color-hairline-light: var(--cs-border);
+  --sl-color-hairline-shade: var(--cs-bg-inset);
+
+  --sl-color-orange-low: #3a1f08;
+  --sl-color-orange-high: var(--cs-accent);
+  --sl-color-green-low: #163a16;
+  --sl-color-green-high: var(--cs-success);
+  --sl-color-red-low: #3a1010;
+  --sl-color-red-high: var(--cs-danger);
+}
+
+:root[data-theme='light'] {
+  --sl-color-white: #0a0a0a;
+  --sl-color-gray-1: #1a1a1a;
+  --sl-color-gray-2: #333333;
+  --sl-color-gray-3: #555555;
+  --sl-color-gray-4: #8a8a8a;
+  --sl-color-gray-5: #d4d4d4;
+  --sl-color-gray-6: #ebebeb;
+  --sl-color-gray-7: #f5f5f5;
+  --sl-color-black: #ffffff;
+
+  --sl-color-accent-low: #ffd9d9;
+  --sl-color-accent: var(--cs-primary);
+  --sl-color-accent-high: #5a0e0e;
+
+  --sl-color-text: #2a2a2a;
+  --sl-color-text-accent: var(--cs-primary);
+
+  --sl-color-bg: #ffffff;
+  --sl-color-bg-nav: #fafafa;
+  --sl-color-bg-sidebar: #ffffff;
+  --sl-color-bg-inline-code: #f0f0f0;
+
+  --sl-color-hairline: #e5e5e5;
+  --sl-color-hairline-light: #ebebeb;
+  --sl-color-hairline-shade: #d4d4d4;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.site-title,
+header.header .site-title span:last-of-type {
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  color: var(--cs-text);
+}
+
+header.header {
+  border-bottom: 1px solid var(--cs-border);
+  background: var(--cs-surface);
+}
+
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--cs-text);
+}
+
+.sl-markdown-content h1 {
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.sl-markdown-content h2 {
+  border-top: 1px solid var(--cs-border);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+}
+
+.sidebar-pane {
+  background: var(--cs-bg);
+  border-inline-end: 1px solid var(--cs-border);
+}
+
+.sidebar-content a {
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  padding-block: 0.35rem;
+}
+
+.sidebar-content a[aria-current='page'] {
+  background: var(--cs-accent-dim);
+  color: var(--cs-text);
+  border-inline-start: 2px solid var(--cs-primary);
+  font-weight: 600;
+}
+
+.sl-link-card,
+.card {
+  background: var(--cs-surface);
+  border: 1px solid var(--cs-border);
+  border-radius: 8px;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.sl-link-card:hover,
+.card:hover {
+  border-color: var(--cs-primary);
+  transform: translateY(-1px);
+}
+
+.sl-markdown-content code:not(:where(.not-content *)) {
+  background: var(--cs-surface-2);
+  border: 1px solid var(--cs-border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+  color: var(--cs-text);
+}
+
+.sl-markdown-content pre {
+  border: 1px solid var(--cs-border);
+  border-radius: 8px;
+}
+
+.sl-markdown-content blockquote {
+  border-inline-start: 3px solid var(--cs-primary);
+  background: var(--cs-surface);
+  padding: 0.75rem 1rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.sl-markdown-content :is(a):not(:where(.not-content *)) {
+  color: var(--cs-primary);
+  text-decoration-color: color-mix(in srgb, var(--cs-primary) 40%, transparent);
+  text-underline-offset: 3px;
+}
+
+.sl-markdown-content :is(a):hover:not(:where(.not-content *)) {
+  color: var(--cs-text);
+  text-decoration-color: var(--cs-primary);
+}
+
+.pagination-links a {
+  background: var(--cs-surface);
+  border: 1px solid var(--cs-border);
+  border-radius: 6px;
+  transition: border-color 120ms ease;
+}
+
+.pagination-links a:hover {
+  border-color: var(--cs-primary);
+}
+
+.sl-badge {
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 0.1em 0.45em;
+  font-weight: 700;
+}
+
+.sl-badge.success {
+  background: color-mix(in srgb, var(--cs-success) 18%, transparent);
+  color: var(--cs-success);
+  border: 1px solid color-mix(in srgb, var(--cs-success) 40%, transparent);
+}
+
+.sl-badge.caution {
+  background: color-mix(in srgb, var(--cs-warning) 18%, transparent);
+  color: var(--cs-warning);
+  border: 1px solid color-mix(in srgb, var(--cs-warning) 40%, transparent);
+}
+
+.sl-badge.note {
+  background: var(--cs-surface-2);
+  color: var(--cs-text-dim);
+  border: 1px solid var(--cs-border);
+}
+
+.starlight-aside {
+  border-radius: 8px;
+  border-inline-start-width: 3px;
+}
+
+.starlight-aside--note {
+  background: var(--cs-surface);
+  border-color: var(--cs-text-muted);
+}
+
+.starlight-aside--tip {
+  background: color-mix(in srgb, var(--cs-success) 10%, var(--cs-surface));
+  border-color: var(--cs-success);
+}
+
+.starlight-aside--caution {
+  background: color-mix(in srgb, var(--cs-warning) 10%, var(--cs-surface));
+  border-color: var(--cs-warning);
+}
+
+.starlight-aside--danger {
+  background: color-mix(in srgb, var(--cs-danger) 10%, var(--cs-surface));
+  border-color: var(--cs-danger);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--cs-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cs-surface-2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cs-border);
 }
