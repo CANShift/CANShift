@@ -1,15 +1,3 @@
-// schemas.test.ts — Regression tests for the Zod schemas introduced by #673.
-//
-// Each schema gets:
-//   1. a valid-sample happy-path
-//   2. an invalid-field rejection (wrong enum / wrong type)
-// Plus an explicit guard that `ButtonActionSchema` does not accept the legacy
-// `targetPageId` field removed in #672.
-
-// `DashboardConfigSchema` / `SignalConfigSchema` / `DeviceConfigSchema` /
-// `InputBindingsConfigSchema` are re-exported from the package barrel (#771,
-// #1016); sub-schemas (single binding, wire variants) are internal and
-// imported directly from the schemas modules.
 import {
   DashboardConfigSchema,
   DeviceConfigSchema,
@@ -51,10 +39,6 @@ import {
   type InputBindingsConfigWire,
 } from '../schemas/input-bindings.js'
 import { SignalConfigSchema } from '../schemas/signal.js'
-
-// ---------------------------------------------------------------------------
-// DashboardConfigSchema
-// ---------------------------------------------------------------------------
 
 describe('DashboardConfigSchema', () => {
   const validDashboard = {
@@ -118,8 +102,6 @@ describe('DashboardConfigSchema', () => {
     }
   })
 
-  // PR #800 (#769) applied `.strict()` to every object schema — unknown keys at
-  // the top level must be rejected outright rather than silently stripped.
   it('rejects an unknown top-level key', () => {
     const result = DashboardConfigSchema.safeParse({ ...validDashboard, mystery: 1 })
     expect(result.success).toBe(false)
@@ -128,8 +110,6 @@ describe('DashboardConfigSchema', () => {
     }
   })
 
-  // Issue #548 — optional `targetProfile` field. Backward compatibility:
-  // dashboards predating the field must parse cleanly without one.
   it('accepts a dashboard with no targetProfile (backward compat)', () => {
     const result = DashboardConfigSchema.safeParse(validDashboard)
     expect(result.success).toBe(true)
@@ -160,9 +140,6 @@ describe('DashboardConfigSchema', () => {
     }
   })
 
-  // Issue #21 v2 — optional `nightTheme` field, mirror of `dayTheme`. Backward
-  // compat: dashboards predating the field must parse cleanly without one and
-  // resolve their night-mode colours from per-page palette + backgroundColor.
   describe('DashboardConfigSchema.nightTheme', () => {
     const validNightTheme = {
       bgColor: '#000000',
@@ -231,8 +208,6 @@ describe('DashboardConfigSchema', () => {
     })
   })
 
-  // Issue #451 — optional `template` field on PageConfig. Backward compat:
-  // pages predating the field must parse and default to `custom` semantics.
   describe('PageConfigSchema.template', () => {
     it('accepts a page with no template (defaults to custom behavior)', () => {
       const result = DashboardConfigSchema.safeParse(validDashboard)
@@ -276,10 +251,6 @@ describe('DashboardConfigSchema', () => {
     })
   })
 })
-
-// ---------------------------------------------------------------------------
-// SignalConfigSchema
-// ---------------------------------------------------------------------------
 
 describe('SignalConfigSchema', () => {
   const validSignals = {
@@ -329,8 +300,6 @@ describe('SignalConfigSchema', () => {
     }
   })
 
-  // PR #800 (#769) applied `.strict()` to every object schema — unknown keys at
-  // the top level must be rejected outright rather than silently stripped.
   it('rejects an unknown top-level key', () => {
     const result = SignalConfigSchema.safeParse({ ...validSignals, mystery: 1 })
     expect(result.success).toBe(false)
@@ -353,9 +322,6 @@ describe('SignalConfigSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  // colorRamp cap enforcement (#700) — firmware mirrors MAX_RAMP_STOPS=8 as a
-  // fixed C array. Over-limit configs lose stops on-device, and a single-stop
-  // ramp can't interpolate so it's degenerate too.
   it('rejects a colorRamp with fewer than 2 stops', () => {
     const broken = {
       ...validSignals,
@@ -409,10 +375,6 @@ describe('SignalConfigSchema', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// ButtonActionSchema (discriminated union — the core of #673)
-// ---------------------------------------------------------------------------
-
 describe('ButtonActionSchema', () => {
   it('accepts a navigate action', () => {
     const result = ButtonActionSchema.safeParse({
@@ -462,8 +424,6 @@ describe('ButtonActionSchema', () => {
   })
 
   it('rejects a mismatched (category, type) pair', () => {
-    // map_switch is an ECU action — pairing it with category: 'dashboard'
-    // must fail because each variant pins its own `category` literal.
     const result = ButtonActionSchema.safeParse({
       category: 'dashboard',
       type: 'map_switch',
@@ -487,11 +447,6 @@ describe('ButtonActionSchema', () => {
   })
 
   it('rejects the legacy targetPageId field on a navigate action (issue #672)', () => {
-    // `targetPageId` lived on ButtonWidgetConfig before the 1.0→1.1 migration
-    // (issue #672). Since #769 every object schema is `.strict()`, so an
-    // unknown key is now an outright rejection rather than a silent strip —
-    // the stricter behaviour catches drift immediately if the legacy field
-    // ever resurfaces in a config.
     const parsed = ButtonActionSchema.safeParse({
       category: 'dashboard',
       type: 'navigate',
@@ -504,10 +459,6 @@ describe('ButtonActionSchema', () => {
     }
   })
 })
-
-// ---------------------------------------------------------------------------
-// DeviceConfigSchema — camelCase domain shape (issue #715)
-// ---------------------------------------------------------------------------
 
 describe('DeviceConfigSchema', () => {
   const validDeviceConfig: DeviceConfig = {
@@ -557,8 +508,6 @@ describe('DeviceConfigSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  // -- #831: chip-level GPIO safety enforced through DeviceConfigSchema -------
-
   it('rejects twaiTxPin in the SPI-flash range (7) — would brick the device', () => {
     const result = DeviceConfigSchema.safeParse({ ...validDeviceConfig, twaiTxPin: 7 })
     expect(result.success).toBe(false)
@@ -574,10 +523,6 @@ describe('DeviceConfigSchema', () => {
     expect(result.success).toBe(false)
   })
 })
-
-// ---------------------------------------------------------------------------
-// DeviceConfigWireSchema — snake_case on-disk format consumed by firmware
-// ---------------------------------------------------------------------------
 
 describe('DeviceConfigWireSchema', () => {
   const validWire: DeviceConfigWire = {
@@ -614,8 +559,6 @@ describe('DeviceConfigWireSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  // -- #831: chip-level GPIO safety also enforced on the wire schema ----------
-
   it('rejects twai_tx_pin in the SPI-flash range (7)', () => {
     const result = DeviceConfigWireSchema.safeParse({ ...validWire, twai_tx_pin: 7 })
     expect(result.success).toBe(false)
@@ -626,10 +569,6 @@ describe('DeviceConfigWireSchema', () => {
     expect(result.success).toBe(false)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Esp32OutputGpioSchema / Esp32InputGpioSchema (issue #831)
-// ---------------------------------------------------------------------------
 
 describe('Esp32OutputGpioSchema', () => {
   it('accepts known-safe output pins (22, 25, 32)', () => {
@@ -670,9 +609,6 @@ describe('Esp32InputGpioSchema', () => {
     expect(Esp32InputGpioSchema.safeParse(pin).success).toBe(false)
   })
 
-  // Follow-up to audit #1289 — error message must spell out the full excluded
-  // set (SPI flash 6-11, unbonded 20/24/28-31) so Studio surfaces an actionable
-  // diagnostic instead of the old wording that only mentioned SPI flash.
   it('rejection message names SPI flash, unbonded pins, and the input-only exception', () => {
     const result = Esp32InputGpioSchema.safeParse(6)
     expect(result.success).toBe(false)
@@ -687,10 +623,6 @@ describe('Esp32InputGpioSchema', () => {
     }
   })
 })
-
-// ---------------------------------------------------------------------------
-// SAFE_OUTPUT_PINS_WROOM32 / SAFE_INPUT_PINS_WROOM32 (audit C-LO-7, #1016)
-// ---------------------------------------------------------------------------
 
 describe('SAFE_OUTPUT_PINS_WROOM32', () => {
   it('matches the canonical snapshot', () => {
@@ -719,10 +651,6 @@ describe('SAFE_INPUT_PINS_WROOM32', () => {
     for (const pin of [34, 35, 36, 37, 38, 39]) expect(input.has(pin)).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// deviceConfigFromWire / deviceConfigToWire — boundary mappers (issue #715)
-// ---------------------------------------------------------------------------
 
 describe('deviceConfigFromWire / deviceConfigToWire', () => {
   it('deviceConfigFromWire renames snake_case keys to camelCase verbatim', () => {
@@ -769,10 +697,6 @@ describe('deviceConfigFromWire / deviceConfigToWire', () => {
     expect(deviceConfigFromWire(deviceConfigToWire(cfg))).toEqual(cfg)
   })
 })
-
-// ---------------------------------------------------------------------------
-// ButtonActionSchema — cruise control variant (issue #833 / #451)
-// ---------------------------------------------------------------------------
 
 describe('ButtonActionSchema — cruise_control variant', () => {
   it('accepts a bare op (on/off/toggle/set/resume)', () => {
@@ -833,10 +757,6 @@ describe('ButtonActionSchema — cruise_control variant', () => {
     ).toBe(false)
   })
 })
-
-// ---------------------------------------------------------------------------
-// InputBindingsConfig — physical GPIO buttons (issue #833)
-// ---------------------------------------------------------------------------
 
 describe('InputBindingWireSchema / InputBindingSchema', () => {
   const validWire = {
@@ -989,10 +909,6 @@ describe('inputBindingsFromWire / inputBindingsToWire', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// HardwareProfile helpers (issue #831)
-// ---------------------------------------------------------------------------
-
 describe('isPinAvailableForBoard', () => {
   it('marks display MOSI (GPIO 13) as unavailable on crowpanel_28', () => {
     expect(isPinAvailableForBoard('crowpanel_28', 13)).toBe(false)
@@ -1007,10 +923,6 @@ describe('isPinAvailableForBoard', () => {
     expect(isPinAvailableForBoard('crowpanel_28', 32)).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// TrackTelemetrySchema (issue #843) — BLE Track-mode message contract
-// ---------------------------------------------------------------------------
 
 describe('TrackTelemetrySchema', () => {
   it('accepts the minimal payload with only trackMode', () => {
@@ -1073,56 +985,49 @@ describe('TrackTelemetrySchema', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// schema bounds hardening (#1168, #1169, #1170)
-// ---------------------------------------------------------------------------
-
 describe('schema bounds hardening', () => {
-  function validSignal(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    return {
-      name: 'rpm',
-      canFrameId: '0x370',
-      startByte: 0,
-      byteLength: 2,
-      bigEndian: true,
-      signed: false,
-      scale: 1,
-      offset: 0,
-      unit: 'rpm',
-      min: 0,
-      max: 8000,
-      timeoutMs: 1000,
-      ...overrides,
-    }
-  }
+  const validSignal = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    name: 'rpm',
+    canFrameId: '0x370',
+    startByte: 0,
+    byteLength: 2,
+    bigEndian: true,
+    signed: false,
+    scale: 1,
+    offset: 0,
+    unit: 'rpm',
+    min: 0,
+    max: 8000,
+    timeoutMs: 1000,
+    ...overrides,
+  })
 
-  function validSignalConfig(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    return {
-      version: '1.14.0',
-      protocol: 'custom_v1.0',
-      canSpeedKbps: 500,
-      signals: [validSignal()],
-      ...overrides,
-    }
-  }
+  const validSignalConfig = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    version: '1.14.0',
+    protocol: 'custom_v1.0',
+    canSpeedKbps: 500,
+    signals: [validSignal()],
+    ...overrides,
+  })
 
-  function validStyle(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    return {
-      primaryColor: '#FFFFFF',
-      secondaryColor: '#2A2A2A',
-      warningColor: '#FF8800',
-      criticalColor: '#FF4444',
-      textColor: '#FFFFFF',
-      fontSize: 14,
-      ...overrides,
-    }
-  }
+  const validStyle = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    primaryColor: '#FFFFFF',
+    secondaryColor: '#2A2A2A',
+    warningColor: '#FF8800',
+    criticalColor: '#FF4444',
+    textColor: '#FFFFFF',
+    fontSize: 14,
+    ...overrides,
+  })
 
-  function validLayout(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    return { x: 0, y: 0, w: 80, h: 40, zOrder: 0, ...overrides }
-  }
-
-  // -- #1168: signals[] cap ---------------------------------------------------
+  const validLayout = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    x: 0,
+    y: 0,
+    w: 80,
+    h: 40,
+    zOrder: 0,
+    ...overrides,
+  })
 
   describe('signals[] cap (#1168)', () => {
     it(`accepts a catalog with exactly ${String(FIRMWARE_CAPS.MAX_SIGNALS)} signals`, () => {
@@ -1144,8 +1049,6 @@ describe('schema bounds hardening', () => {
       }
     })
   })
-
-  // -- #1169: numeric bounds --------------------------------------------------
 
   describe('SignalDef.startByte', () => {
     it('accepts the high boundary (CAN_FRAME_MAX_BYTES - 1)', () => {
@@ -1309,8 +1212,6 @@ describe('schema bounds hardening', () => {
     })
   })
 
-  // -- #1170: string caps -----------------------------------------------------
-
   describe('SignalDef.name cap', () => {
     it('accepts a name at the cap', () => {
       expect(
@@ -1435,41 +1336,35 @@ describe('schema bounds hardening', () => {
     })
   })
 
-  // -- #1289: Widget.signal / TopBarItem.signal bounds -----------------------
-
   describe('Widget.signal bounds (#1289)', () => {
-    function validGaugeWidget(signal: string): Record<string, unknown> {
-      return {
-        id: 'w1',
+    const validGaugeWidget = (signal: string): Record<string, unknown> => ({
+      id: 'w1',
+      type: 'gauge',
+      signal,
+      layout: validLayout(),
+      style: validStyle(),
+      config: {
         type: 'gauge',
-        signal,
-        layout: validLayout(),
-        style: validStyle(),
-        config: {
-          type: 'gauge',
-          displayStyle: 'numeric',
-          minValue: 0,
-          maxValue: 100,
-          dangerLevel: 80,
-          decimalPlaces: 0,
-        },
-      }
-    }
+        displayStyle: 'numeric',
+        minValue: 0,
+        maxValue: 100,
+        dangerLevel: 80,
+        decimalPlaces: 0,
+      },
+    })
 
-    function validButtonWidget(signal: string): Record<string, unknown> {
-      return {
-        id: 'b1',
+    const validButtonWidget = (signal: string): Record<string, unknown> => ({
+      id: 'b1',
+      type: 'button',
+      signal,
+      layout: validLayout(),
+      style: validStyle(),
+      config: {
         type: 'button',
-        signal,
-        layout: validLayout(),
-        style: validStyle(),
-        config: {
-          type: 'button',
-          label: 'Map 1',
-          actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p1' }],
-        },
-      }
-    }
+        label: 'Map 1',
+        actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p1' }],
+      },
+    })
 
     it('accepts a gauge signal at the SIGNAL_NAME cap', () => {
       expect(
@@ -1503,9 +1398,11 @@ describe('schema bounds hardening', () => {
   })
 
   describe('TopBarItem.signal bounds (#1289)', () => {
-    function validStatusDot(signal: string): Record<string, unknown> {
-      return { type: 'statusDot', signal, position: 'left' }
-    }
+    const validStatusDot = (signal: string): Record<string, unknown> => ({
+      type: 'statusDot',
+      signal,
+      position: 'left',
+    })
 
     it('accepts a signal at the SIGNAL_NAME cap', () => {
       expect(
@@ -1523,8 +1420,6 @@ describe('schema bounds hardening', () => {
       ).toBe(false)
     })
   })
-
-  // -- #1289: CanRawAction 11-bit guard --------------------------------------
 
   describe('CanRawAction 11-bit guard (#1289)', () => {
     it('rejects frameId 0x800 with extended=false', () => {

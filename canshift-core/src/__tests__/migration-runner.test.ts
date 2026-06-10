@@ -1,5 +1,3 @@
-// migration-runner.test.ts
-
 import {
   BUILTIN_MIGRATIONS,
   migrateConfig,
@@ -8,44 +6,30 @@ import {
 import type { MigrationRegistry } from '../migrations/migration-runner.js'
 import { CURRENT_SCHEMA_VERSION } from '../index.js'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const makeButtonWidget = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'btn1',
+  type: 'button',
+  config: { label: 'Go', targetPageId: 'p2' },
+  ...overrides,
+})
 
-function makeButtonWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'btn1',
-    type: 'button',
-    config: { label: 'Go', targetPageId: 'p2' },
-    ...overrides,
-  }
-}
+const makeLabelWidget = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'lbl1',
+  type: 'label',
+  config: { signalId: 'rpm', decimalPlaces: 1, suffix: ' rpm' },
+  ...overrides,
+})
 
-function makeLabelWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'lbl1',
-    type: 'label',
-    config: { signalId: 'rpm', decimalPlaces: 1, suffix: ' rpm' },
-    ...overrides,
-  }
-}
+const makeGaugeWidget = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'g1',
+  type: 'gauge',
+  config: { signalId: 'rpm', minValue: 0, maxValue: 8000, warningLevel: 70, dangerLevel: 90 },
+  ...overrides,
+})
 
-function makeGaugeWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'g1',
-    type: 'gauge',
-    config: { signalId: 'rpm', minValue: 0, maxValue: 8000, warningLevel: 70, dangerLevel: 90 },
-    ...overrides,
-  }
-}
-
-function wrapInPages(widgets: Record<string, unknown>[]): Record<string, unknown>[] {
-  return [{ id: 'p1', name: 'Main', widgets }]
-}
-
-// ---------------------------------------------------------------------------
-// No-op: same version
-// ---------------------------------------------------------------------------
+const wrapInPages = (widgets: Record<string, unknown>[]): Record<string, unknown>[] => [
+  { id: 'p1', name: 'Main', widgets },
+]
 
 describe('migrateConfig — no migration needed', () => {
   it('returns config unchanged when already at target version', () => {
@@ -61,15 +45,9 @@ describe('migrateConfig — no migration needed', () => {
     }
     const config: Cyclic = { version: '1.0.0' }
     config.self = config
-    // We must target a version that requires migration so deepClone runs —
-    // a no-op path returns the input unchanged without cloning.
     expect(() => migrateConfig(config, '1.1.0')).toThrow(/not serializable to JSON/i)
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.0.0 → 1.1.0: button targetPageId → actions array
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.0.0 → 1.1.0', () => {
   it('converts button targetPageId to navigate action', () => {
@@ -133,10 +111,6 @@ describe('migrateConfig — 1.0.0 → 1.1.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.1.0 → 1.2.0: label widgets → gauge + gauge gets displayStyle
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.1.0 → 1.2.0', () => {
   it('converts label widget to gauge with displayStyle: numeric', () => {
     const config = {
@@ -188,10 +162,6 @@ describe('migrateConfig — 1.1.0 → 1.2.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.0.0 → 1.2.0: full two-step chain
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — multi-step chain (1.0.0 → 1.2.0)', () => {
   it('applies both migrations in sequence', () => {
     const config = {
@@ -207,24 +177,12 @@ describe('migrateConfig — multi-step chain (1.0.0 → 1.2.0)', () => {
       unknown
     >[]
 
-    // Button was migrated in 1.0.0→1.1.0
     const btn = widgets[0]!.config as Record<string, unknown>
     expect(btn['actions']).toBeDefined()
 
-    // Label was migrated in 1.1.0→1.2.0
     expect(widgets[1]!.type).toBe('gauge')
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.2.0 → 1.3.0: every page gains a `palette` block — snapshot lock
-//
-// The migration emits a frozen palette literal (see DEFAULT_PALETTE in
-// migration-runner.ts). This test pins the exact bytes so a future
-// refactor that imports `DEFAULT_PAGE_PALETTE` from schemas — and then
-// silently mutates yesterday's configs the next time the active palette
-// is refreshed — fails fast. Audit C-ME-3.
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.2.0 → 1.3.0 (palette snapshot)', () => {
   it('emits the locked v1.3.0 palette literal on every existing page', () => {
@@ -274,22 +232,16 @@ describe('migrateConfig — 1.2.0 → 1.3.0 (palette snapshot)', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.5.0 → 1.6.0: drop XS / S / M sizes — upgrade legacy small widgets to L
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.5.0 → 1.6.0', () => {
-  function makeStandardWidget(
+  const makeStandardWidget = (
     type: string,
     layout: { w: number; h: number }
-  ): Record<string, unknown> {
-    return {
-      id: `${type}_1`,
-      type,
-      layout: { x: 0, y: 0, zOrder: 0, ...layout },
-      config: { type },
-    }
-  }
+  ): Record<string, unknown> => ({
+    id: `${type}_1`,
+    type,
+    layout: { x: 0, y: 0, zOrder: 0, ...layout },
+    config: { type },
+  })
 
   it('upgrades XS button (80×28) to L (160×56)', () => {
     const config = {
@@ -345,9 +297,6 @@ describe('migrateConfig — 1.5.0 → 1.6.0', () => {
   })
 
   it('leaves gauge widgets alone (they keep their narrow bar tokens)', () => {
-    // A vertical bar gauge sized 40×112 (V-M) must not be touched by the
-    // standard-widget migration. A vertical bar at 80×56 (legacy S vertical)
-    // also stays — gauges are exempt from the L/XL collapse.
     const config = {
       version: '1.5.0',
       pages: wrapInPages([
@@ -372,10 +321,6 @@ describe('migrateConfig — 1.5.0 → 1.6.0', () => {
     expect(out.version).toBe('1.6.0')
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.6.0 → 1.7.0: drop unused page-level fields
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.6.0 → 1.7.0', () => {
   it('drops page.name silently', () => {
@@ -428,23 +373,17 @@ describe('migrateConfig — 1.6.0 → 1.7.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.7.0 → 1.8.0: button colours, drop iconName from gauge/bar
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.7.0 → 1.8.0', () => {
-  function makeButton(
+  const makeButton = (
     overrides: Record<string, unknown> = {},
     style?: Record<string, unknown>
-  ): Record<string, unknown> {
-    return {
-      id: 'btn1',
-      type: 'button',
-      style: style ?? { primaryColor: '#FF4444', textColor: '#FFFFFF' },
-      config: { type: 'button', label: 'Go', actions: [] },
-      ...overrides,
-    }
-  }
+  ): Record<string, unknown> => ({
+    id: 'btn1',
+    type: 'button',
+    style: style ?? { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+    config: { type: 'button', label: 'Go', actions: [] },
+    ...overrides,
+  })
 
   it('populates button colors from style.primaryColor and brightens for active', () => {
     const config = {
@@ -554,25 +493,19 @@ describe('migrateConfig — 1.7.0 → 1.8.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.8.0 → 1.9.0: H-FULL bar gauge token doubled (320×28 → 320×56)
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.8.0 → 1.9.0', () => {
-  function makeHorizontalBar(layout: Record<string, unknown>): Record<string, unknown> {
-    return {
-      id: 'tps',
+  const makeHorizontalBar = (layout: Record<string, unknown>): Record<string, unknown> => ({
+    id: 'tps',
+    type: 'gauge',
+    layout,
+    config: {
       type: 'gauge',
-      layout,
-      config: {
-        type: 'gauge',
-        displayStyle: 'bar',
-        barOrientation: 'horizontal',
-        minValue: 0,
-        maxValue: 100,
-      },
-    }
-  }
+      displayStyle: 'bar',
+      barOrientation: 'horizontal',
+      minValue: 0,
+      maxValue: 100,
+    },
+  })
 
   it('upgrades horizontal bar gauges from 320×28 to 320×56', () => {
     const config = {
@@ -645,10 +578,6 @@ describe('migrateConfig — 1.8.0 → 1.9.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.9.0 → 1.10.0: alertThreshold added to gauge / bar widget configs
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.9.0 → 1.10.0', () => {
   it('bumps version with no data transformation', () => {
     const config = {
@@ -695,10 +624,6 @@ describe('migrateConfig — 1.9.0 → 1.10.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.10.0 → 1.11.0: arc gauges gain an optional `arcFillStyle` field
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.10.0 → 1.11.0', () => {
   it('bumps version with no data transformation', () => {
     const config = {
@@ -717,9 +642,7 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
     const cfg = (
       (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
     )[0]!.config as Record<string, unknown>
-    // No defaulting on the migration side — undefined stays undefined.
     expect(cfg.arcFillStyle).toBeUndefined()
-    // Existing fields are preserved.
     expect(cfg.displayStyle).toBe('arc')
     expect(cfg.minValue).toBe(0)
     expect(cfg.maxValue).toBe(100)
@@ -778,16 +701,7 @@ describe('migrateConfig — 1.10.0 → 1.11.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Full chain regression — load a 1.0.0 config and walk it to the latest
-// schema. Guards against silent breakage of the chain when adding migrations.
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — full chain to current', () => {
-  // Rebuild the expected `applied` list from BUILTIN_MIGRATIONS so the
-  // regression test always walks every registered step up to
-  // CURRENT_SCHEMA_VERSION. BUILTIN_MIGRATIONS is registered newest-first;
-  // reverse to walk forward through history.
   const expectedApplied = [...BUILTIN_MIGRATIONS]
     .reverse()
     .map((m) => `${m.fromVersion} → ${m.toVersion}`)
@@ -801,36 +715,32 @@ describe('migrateConfig — full chain to current', () => {
         height: 16,
         bgColor: '#0D0D0D',
         textColor: '#AAAAAA',
-        showMapName: true, // dropped in 1.6→1.7
+        showMapName: true,
       },
       pages: [
         {
           id: 'p1',
-          name: 'Main', // dropped in 1.6→1.7
+          name: 'Main',
           showTopBar: true,
           backgroundColor: '#000000',
           widgets: [
-            // Button — gains `actions` in 1.0→1.1, then `colors` in 1.7→1.8
             {
               id: 'btn1',
               type: 'button',
               style: { primaryColor: '#CC3333', textColor: '#FFFFFF' },
               config: { type: 'button', label: 'Engine', targetPageId: 'p2' },
             },
-            // Label — becomes a numeric gauge in 1.1→1.2
             {
               id: 'lbl1',
               type: 'label',
               config: { signalId: 'rpm', decimalPlaces: 0, suffix: ' rpm' },
             },
-            // Standard widget at legacy 80×56 — collapsed to 160×56 in 1.5→1.6
             {
               id: 'gear1',
               type: 'gear',
               layout: { x: 0, y: 0, w: 80, h: 56, zOrder: 0 },
               config: { type: 'gear', decimalPlaces: 0 },
             },
-            // Horizontal bar gauge at the legacy 320×28 — doubled to 320×56 in 1.8→1.9
             {
               id: 'tps_bar',
               type: 'gauge',
@@ -842,7 +752,7 @@ describe('migrateConfig — full chain to current', () => {
                 barOrientation: 'horizontal',
                 minValue: 0,
                 maxValue: 100,
-                warningLevel: 70, // dropped in 1.16→1.17
+                warningLevel: 70,
                 dangerLevel: 90,
               },
             },
@@ -855,39 +765,30 @@ describe('migrateConfig — full chain to current', () => {
     expect(out.version).toBe(CURRENT_SCHEMA_VERSION)
     expect(applied).toEqual(expectedApplied)
 
-    // Belt-and-braces: assert the last step lands on CURRENT_SCHEMA_VERSION.
-    // Catches a future refactor where `expectedApplied` is built from a
-    // truncated registry slice without anyone noticing — the equality above
-    // would still pass (truncated == truncated), but the chain wouldn't
-    // actually reach the current version.
     expect(applied[applied.length - 1]).toBe(
       `${BUILTIN_MIGRATIONS[0]!.fromVersion} → ${CURRENT_SCHEMA_VERSION}`
     )
 
     const page = (out.pages as Record<string, unknown>[])[0]!
-    expect(page.name).toBeUndefined() // dropped in 1.6→1.7
-    expect(page.palette).toBeDefined() // added in 1.2→1.3
+    expect(page.name).toBeUndefined()
+    expect(page.palette).toBeDefined()
 
     const topBar = out.topBar as Record<string, unknown>
-    expect(topBar.showMapName).toBeUndefined() // dropped in 1.6→1.7
+    expect(topBar.showMapName).toBeUndefined()
 
     const widgets = page.widgets as Record<string, unknown>[]
 
-    // Button: gained colors block, kept its label
     const btn = widgets[0]!
     expect((btn.config as Record<string, unknown>).colors).toBeDefined()
 
-    // Label widget became a numeric gauge
     const lbl = widgets[1]!
     expect(lbl.type).toBe('gauge')
 
-    // Gear at 80×56 was collapsed to 160×56
     const gear = widgets[2]!
     const gearLayout = gear.layout as Record<string, unknown>
     expect(gearLayout.w).toBe(160)
     expect(gearLayout.h).toBe(56)
 
-    // Horizontal bar at 320×28 was doubled to 320×56; warningLevel dropped in 1.16→1.17
     const tps = widgets[3]!
     const tpsLayout = tps.layout as Record<string, unknown>
     expect(tpsLayout.w).toBe(320)
@@ -907,11 +808,6 @@ describe('migrateConfig — full chain to current', () => {
     expect(out).toEqual(config)
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.13.0 → 1.14.0: signals.json protocol field migrated away from
-// MaxxECU-specific identifier (issue #639)
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.13.0 → 1.14.0', () => {
   it('rewrites legacy "maxxecu_v1.2" protocol to "custom_v1.0"', () => {
@@ -953,10 +849,6 @@ describe('migrateConfig — 1.13.0 → 1.14.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.12.0 → 1.13.0: SignalDef gains optional colorRamp (issue #430)
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.12.0 → 1.13.0', () => {
   it('bumps the version on a config without any explicit ramps', () => {
     const config = { version: '1.12.0', name: 'Plain', pages: [] }
@@ -989,10 +881,6 @@ describe('migrateConfig — 1.12.0 → 1.13.0', () => {
     expect(applied).toEqual(['1.11.0 → 1.12.0', '1.12.0 → 1.13.0'])
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.11.0 → 1.12.0: bump default topBar.height 24 → 30 (issue #379)
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.11.0 → 1.12.0', () => {
   it('rewrites topBar.height from the previous default 24 to 30', () => {
@@ -1037,10 +925,6 @@ describe('migrateConfig — 1.11.0 → 1.12.0', () => {
     expect(out.topBar).toBeUndefined()
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.16.0 → 1.17.0: collapse gauge/bar thresholds — drop warningLevel
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.16.0 → 1.17.0', () => {
   it('drops warningLevel from gauge configs and keeps dangerLevel', () => {
@@ -1157,10 +1041,6 @@ describe('migrateConfig — 1.16.0 → 1.17.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.17.0 → 1.18.0: add optional targetProfile (issue #548) — no-op transform
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.17.0 → 1.18.0', () => {
   it('bumps the version without touching existing fields', () => {
     const config = {
@@ -1174,15 +1054,11 @@ describe('migrateConfig — 1.17.0 → 1.18.0', () => {
     const { config: out, applied } = migrateConfig(config, '1.18.0')
     expect(applied).toEqual(['1.17.0 → 1.18.0'])
     expect(out.version).toBe('1.18.0')
-    // Every other top-level field round-trips byte-for-byte.
     expect(out.name).toBe('Demo')
     expect(out.defaultPageId).toBe('p1')
     expect(out.revLimitRpm).toBe(7000)
     expect(out.topBar).toEqual(config.topBar)
     expect(out.pages).toEqual(config.pages)
-    // The new optional field is intentionally NOT seeded — `resolveScreenProfile`
-    // turns `undefined` into the default profile at the read side so old configs
-    // re-serialize without growing an explicit field.
     expect('targetProfile' in out).toBe(false)
   })
 
@@ -1196,10 +1072,6 @@ describe('migrateConfig — 1.17.0 → 1.18.0', () => {
     expect(out.targetProfile).toBe('crowpanel-28')
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.18.0 → 1.19.0: add optional bar.barOrientation (#1232 flag) — no-op transform
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.18.0 → 1.19.0', () => {
   it('bumps the version without touching existing fields', () => {
@@ -1230,12 +1102,9 @@ describe('migrateConfig — 1.18.0 → 1.19.0', () => {
     const { config: out, applied } = migrateConfig(config, '1.19.0')
     expect(applied).toEqual(['1.18.0 → 1.19.0'])
     expect(out.version).toBe('1.19.0')
-    // Every other top-level field round-trips byte-for-byte.
     expect(out.name).toBe('Demo')
     expect(out.defaultPageId).toBe('p1')
     expect(out.pages).toEqual(config.pages)
-    // The new optional field is intentionally NOT seeded — undefined means
-    // horizontal (the only orientation pre-1.19 configs could express).
     const firstWidget = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!
       .widgets[0]!
     expect('barOrientation' in firstWidget.config).toBe(false)
@@ -1275,10 +1144,6 @@ describe('migrateConfig — 1.18.0 → 1.19.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 1.19.0 → 1.20.0: drop hideWhenInvalid from gauge / gear configs (issue #1243)
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — 1.19.0 → 1.20.0', () => {
   it('strips hideWhenInvalid from a gauge widget when present', () => {
     const config = {
@@ -1315,7 +1180,6 @@ describe('migrateConfig — 1.19.0 → 1.20.0', () => {
     const widget = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!
       .widgets[0]!
     expect('hideWhenInvalid' in widget.config).toBe(false)
-    // Every other gauge field round-trips unchanged.
     expect(widget.config.displayStyle).toBe('numeric')
     expect(widget.config.minValue).toBe(10)
     expect(widget.config.maxValue).toBe(15)
@@ -1383,10 +1247,6 @@ describe('migrateConfig — 1.19.0 → 1.20.0', () => {
     expect((out.pages as unknown[])[0]).toEqual(config.pages[0])
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.20.0 → 1.21.0: drop standalone bar widget (issue #1245)
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.20.0 → 1.21.0', () => {
   it('removes type:"bar" widgets from each page', () => {
@@ -1474,10 +1334,6 @@ describe('migrateConfig — 1.20.0 → 1.21.0', () => {
     expect(out.version).toBe('1.21.0')
   })
 })
-
-// ---------------------------------------------------------------------------
-// 1.21.0 → 1.22.0: drop custom widget labels (issue #1244)
-// ---------------------------------------------------------------------------
 
 describe('migrateConfig — 1.21.0 → 1.22.0', () => {
   it('strips label + labelPosition from gauge / gear / timer / warning / image widgets', () => {
@@ -1609,10 +1465,6 @@ describe('migrateConfig — 1.21.0 → 1.22.0', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Error cases
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — error cases', () => {
   it('throws when no migration path exists', () => {
     const config = { version: '0.5.0' }
@@ -1624,17 +1476,6 @@ describe('migrateConfig — error cases', () => {
     expect(() => migrateConfig(config, '1.2.0')).toThrow(/Migration chain incomplete/)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Downgrade detection (audit follow-up to #1289)
-// ---------------------------------------------------------------------------
-//
-// A config emitted by a newer Studio build can land in front of an older
-// firmware/Studio runtime. The forward-only migration chain would walk past
-// the target and report a confusing "missing steps [1.22.0→1.18.0]" gap.
-// `migrateConfig` and `validateMigrationChain` now raise an explicit
-// "downgrade not supported" error at entry so the caller can surface the
-// real cause.
 
 describe('migrateConfig — downgrade detection', () => {
   it('throws "downgrade not supported" when currentVersion > targetVersion', () => {
@@ -1666,10 +1507,6 @@ describe('migrateConfig — downgrade detection', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// validateMigrationChain
-// ---------------------------------------------------------------------------
-
 describe('validateMigrationChain', () => {
   const identity = (c: Record<string, unknown>): Record<string, unknown> => c
 
@@ -1689,7 +1526,6 @@ describe('validateMigrationChain', () => {
   it('returns missing step when a single step is absent', () => {
     const registry: MigrationRegistry = [
       { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
-      // 1.1.0 → 1.2.0 is missing
     ]
     const missing = validateMigrationChain('1.0.0', '1.2.0', registry)
     expect(missing.length).toBeGreaterThan(0)
@@ -1709,8 +1545,6 @@ describe('validateMigrationChain', () => {
     expect(validateMigrationChain('1.0.0', '1.1.0', registry)).toEqual([])
   })
 
-  // Audit follow-up to #1289 — downgrade attempt must raise a distinct
-  // error rather than silently return a missing-step gap.
   it('throws "downgrade not supported" when fromVersion > toVersion', () => {
     const registry: MigrationRegistry = [
       { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
@@ -1725,23 +1559,12 @@ describe('validateMigrationChain', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Anchor: BUILTIN_MIGRATIONS terminates at CURRENT_SCHEMA_VERSION
-// ---------------------------------------------------------------------------
-//
-// These tests fail fast at build/test time when CURRENT_SCHEMA_VERSION is
-// bumped without adding the matching migration entry, instead of failing at
-// runtime when a user opens an old config.
-
 describe('BUILTIN_MIGRATIONS chain anchor', () => {
   it('is non-empty', () => {
     expect(BUILTIN_MIGRATIONS.length).toBeGreaterThan(0)
   })
 
   it('forms a contiguous chain (every toVersion is the next fromVersion)', () => {
-    // Walk the chain in registration order. Each migration's `to` must equal
-    // the next migration's `from`. Order in the source file is descending
-    // (newest first), so we reverse to walk forward through history.
     const ordered = [...BUILTIN_MIGRATIONS].reverse()
     for (let i = 0; i < ordered.length - 1; i += 1) {
       const current = ordered[i]
@@ -1778,10 +1601,6 @@ describe('BUILTIN_MIGRATIONS chain anchor', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// migrateConfig deep-clones its input
-// ---------------------------------------------------------------------------
-
 describe('migrateConfig — input isolation', () => {
   it('does not mutate nested objects on the caller', () => {
     const page = { id: 'p1', widgets: [] as Record<string, unknown>[] }
@@ -1791,7 +1610,7 @@ describe('migrateConfig — input isolation', () => {
     migrateConfig(config, '1.5.0')
 
     expect(config).toEqual(snapshot)
-    expect(config.pages[0]).toBe(page) // caller still owns the same reference
+    expect(config.pages[0]).toBe(page)
     expect(page.widgets).toEqual([])
   })
 
