@@ -1,7 +1,3 @@
-// ScreenSettingsPanel.tsx — Full-canvas overlay page for physical screen settings.
-// Rendered inside the 320×240 canvas widget area, simulating an on-device settings page.
-// Closed exclusively via swipe-down gesture in the top bar.
-
 import { useState } from 'react'
 import { useScreenSettingsStore } from '../../stores/screen-settings.store'
 import { useLogStore } from '../../stores/log.store'
@@ -19,21 +15,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-// On-device preview chrome — this panel simulates a physical screen page, so
-// every colour is a 1:1 mirror of the firmware palette. Kept as named
-// constants for the planned token promotion (audit S-H-5, umbrella #1015).
-// MUST stay literal — do NOT swap for studio chrome tokens without firmware
-// review (preview-fidelity surface, see #957 / #1068).
-const SCREEN_BG = '#0D0D0D' // MIRROR: device-page background (darker than --bg)
-const SCREEN_LABEL = '#AAAAAA' // MIRROR: device-page row label
-const SCREEN_VALUE = '#888888' // MIRROR: device-page row value (≈ --text-muted #8F8F8F)
-const SCREEN_HEADER = '#CCCCCC' // MIRROR: device-page header text
-const BTN_BG = '#111111' // MIRROR: device-button idle bg
-const BTN_BORDER = '#2A2A2A' // MIRROR: device-button idle border
-const BTN_BORDER_DIM = '#1E1E1E' // MIRROR: device-button disabled border
-const BTN_FG_DISABLED = '#444444' // MIRROR: device-button disabled fg
-const ACCENT_RED = '#CC3333' // MIRROR: dimmer than --primary (#FF4747), device accent red
-const ACCENT_RED_BG = '#1A0A0A' // MIRROR: device-page selected red wash
+const SCREEN_BG = '#0D0D0D'
+const SCREEN_LABEL = '#AAAAAA'
+const SCREEN_VALUE = '#888888'
+const SCREEN_HEADER = '#CCCCCC'
+const BTN_BG = '#111111'
+const BTN_BORDER = '#2A2A2A'
+const BTN_BORDER_DIM = '#1E1E1E'
+const BTN_FG_DISABLED = '#444444'
+const ACCENT_RED = '#CC3333'
+const ACCENT_RED_BG = '#1A0A0A'
 
 interface ScreenSettingsPanelProps {
   scale: number
@@ -54,9 +45,6 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   const fsLg = Math.round(scale * 7)
   const gap = Math.round(scale * 6)
 
-  // Push the current local state to the device. No-op when we're offline
-  // or in simulation — the local store still tracks the value so the next
-  // connection picks it up via the existing setup flow.
   const pushScreenSettings = async (nextRotation = rotation) => {
     if (simulationMode || !connected) return
     const result = await usbService.pushScreenSettings({
@@ -71,15 +59,10 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
     }
   }
 
-  // Brightness commits on slider release (mouseup / touchend / keyup) so a
-  // drag doesn't spam the USB pipe. The local store is updated continuously
-  // via onChange so the preview tracks the cursor.
   const handleBrightnessCommit = () => {
     void pushScreenSettings()
   }
 
-  // Rotation commits immediately on click. 180° still goes through the
-  // confirmation dialog because it reboots the device.
   const handleRotationSelect = (deg: 0 | 180) => {
     if (rotation === deg) return
     updateScreenSettings({ rotation: deg })
@@ -97,10 +80,8 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
 
   const canDeviceAction = connected && !simulationMode
 
-  // Active day mode: device value when connected, local preview otherwise.
   const activeDayMode = isDayMode ?? isPreviewDayMode
 
-  // Day/Night selection — fires immediately for both connected and preview modes.
   const handleSelectMode = async (target: 'night' | 'day') => {
     const day = target === 'day'
     if (!canDeviceAction) {
@@ -153,8 +134,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           e.stopPropagation()
         }}
       >
-        {/* Header */}
-        <span
+                <span
           style={{
             fontSize: fsLg,
             fontWeight: 700,
@@ -166,10 +146,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           SCREEN SETTINGS
         </span>
 
-        {/* Brightness — autosave on slider release (#1182). onChange keeps the
-            local preview tracking the cursor, the release events fire the
-            single USB push so a drag doesn't flood the wire. */}
-        <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
+                <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
           <input
             type="range"
             min={10}
@@ -190,8 +167,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           />
         </SettingRow>
 
-        {/* Theme — fires immediately for both connected and preview modes */}
-        <SettingRow label="THEME" value={activeDayMode ? 'Day' : 'Night'} scale={scale}>
+                <SettingRow label="THEME" value={activeDayMode ? 'Day' : 'Night'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {(['night', 'day'] as const).map((mode) => {
               const active = activeDayMode === (mode === 'day')
@@ -221,9 +197,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-        {/* Mounting orientation — autosave on click. 180° goes through the
-            confirmation dialog because it reboots the device (#1182). */}
-        <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
+                <SettingRow label="MOUNTING" value={rotation === 180 ? '180°' : '0°'} scale={scale}>
           <div style={{ display: 'flex', gap: Math.round(scale * 3) }}>
             {([0, 180] as const).map((deg) => {
               const active = rotation === deg
@@ -252,9 +226,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
           </div>
         </SettingRow>
 
-        {/* Touch calibration — full-width row (#1182 dropped the sibling
-            local-reset button alongside the SAVE workflow). */}
-        <SettingRow label="TOUCH" value="" scale={scale}>
+                <SettingRow label="TOUCH" value="" scale={scale}>
           <button
             onClick={handleCalibrate}
             disabled={!canDeviceAction || calibrating}
@@ -315,7 +287,7 @@ export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps)
   )
 }
 
-function SettingRow({
+const SettingRow = ({
   label,
   value,
   scale,
@@ -325,7 +297,7 @@ function SettingRow({
   value: string
   scale: number
   children: React.ReactNode
-}) {
+}) => {
   const fs = Math.round(scale * 5.5)
 
   return (

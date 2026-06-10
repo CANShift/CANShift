@@ -1,6 +1,3 @@
-// AlignToolbar.tsx — Alignment + distribution controls for the Canvas
-// multi-select. Pure presentation: dispatches store actions, no local state.
-
 import { useCallback, type CSSProperties, type MouseEvent } from 'react'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
@@ -33,12 +30,11 @@ const DIVIDER_STYLE: CSSProperties = {
   margin: '0 2px',
 }
 
-// Hover state lives on the DOM element so it can't trigger React re-renders.
-function handleMouseEnter(e: MouseEvent<HTMLButtonElement>) {
+const handleMouseEnter = (e: MouseEvent<HTMLButtonElement>) => {
   e.currentTarget.style.borderColor = '#555555'
   e.currentTarget.style.color = '#CCCCCC'
 }
-function handleMouseLeave(e: MouseEvent<HTMLButtonElement>) {
+const handleMouseLeave = (e: MouseEvent<HTMLButtonElement>) => {
   e.currentTarget.style.borderColor = '#2A2A2A'
   e.currentTarget.style.color = '#888888'
 }
@@ -49,7 +45,7 @@ interface ToolbarButtonProps {
   onClick: () => void
 }
 
-function ToolbarButton({ glyph, title, onClick }: ToolbarButtonProps) {
+const ToolbarButton = ({ glyph, title, onClick }: ToolbarButtonProps) => {
   return (
     <button
       style={BUTTON_STYLE}
@@ -95,13 +91,10 @@ export interface AlignToolbarProps {
   canDistribute: boolean
 }
 
-export function AlignToolbar({ pageId, widgetIds, canDistribute }: AlignToolbarProps) {
+export const AlignToolbar = ({ pageId, widgetIds, canDistribute }: AlignToolbarProps) => {
   const alignWidgets = useDashboardStore((s) => s.alignWidgets)
   const distributeWidgets = useDashboardStore((s) => s.distributeWidgets)
 
-  // Memoised dispatchers so `ToolbarButton` (props-only memo target via
-  // stable handlers) doesn't see a fresh closure on every parent render
-  // (audit follow-up to #1207).
   const handleAlign = useCallback(
     (dir: AlignDirection) => {
       alignWidgets(pageId, widgetIds, dir)

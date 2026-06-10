@@ -1,7 +1,3 @@
-// Canvas.tsx — 320×240 widget layout editor.
-// Supports click/Shift+click selection, rubber-band multi-select, drag-to-move,
-// alignment tools, and swipe gestures for page navigation.
-
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
@@ -19,29 +15,11 @@ import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 
-// ---------------------------------------------------------------------------
-// Canvas layout constants
-// ---------------------------------------------------------------------------
-
-// Display scale factor: the firmware renders at the target screen profile's
-// native dimensions (today: 320×240); we show it at 1.5× for readability. All
-// firmware-pixel values are multiplied by SCALE before rendering. The canvas
-// pixel dimensions are derived from the active dashboard's `targetProfile`
-// (issue #548) rather than hard-coded, so adding a new profile to the catalog
-// (#17 / #18) will reshape the preview automatically.
 const SCALE = 1.5
 
-// Minimum rubber-band drag distance (firmware px) before activating selection
 const RB_THRESHOLD = 4
 
-// Module-level empty fallback for the `pages` selector — keeps the selector
-// reference-stable while `config === null` (loading), so unrelated store
-// updates don't re-render every Canvas consumer (R-4).
 const EMPTY_PAGES: readonly PageConfig[] = []
-
-// ---------------------------------------------------------------------------
-// Canvas
-// ---------------------------------------------------------------------------
 
 interface CanvasProps {
   page: PageConfig
@@ -49,9 +27,6 @@ interface CanvasProps {
 }
 
 export default function Canvas({ page, topBar }: CanvasProps) {
-  // Pull the target screen profile id from the active dashboard; falls back
-  // to the default profile (`crowpanel-28`, 320×240) when the field is
-  // missing on legacy configs (issue #548).
   const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
   const screenProfile = useMemo(() => resolveScreenProfile(targetProfileId), [targetProfileId])
   const CANVAS_W = screenProfile.width * SCALE
@@ -72,9 +47,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const selectPage = useDashboardStore((s) => s.selectPage)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<number>(1)
-  // Swipe left/right tracking (page navigation)
   const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
-  // Rubber-band selection
   const rubberBandRef = useRef<{ startFwX: number; startFwY: number } | null>(null)
   const [rubberBand, setRubberBand] = useState<{
     x: number
@@ -83,15 +56,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     h: number
   } | null>(null)
 
-  // Widget area height is the canvas height minus the top bar. The canvas
-  // height comes from the active target screen profile (issue #548) so the
-  // bounds shrink/expand as the user picks a different panel.
   const widgetAreaH = screenProfile.height - topBar.height
 
-  // Ref-based snapshot of values consumed inside drag callbacks. Keeps the
-  // memoized handlers (handleDragStart, selection helpers) ref-stable across
-  // renders so per-widget React.memo on WidgetBox is not invalidated every
-  // drag tick. The drag handler reads from .current at mousedown time.
   const dragInputsRef = useRef({
     pageId: page.id,
     pageWidgets: page.widgets,
@@ -107,23 +73,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     widgetAreaH,
   }
 
-  // Ref-based snapshot for the keyboard handler — lets the effect avoid
-  // re-registering on every drag tick (page.widgets changes at 60fps during
-  // drag, which would thrash the event listener). Reads from .current inside.
   const kbdRef = useRef({ pageId: page.id, pageWidgets: page.widgets })
   kbdRef.current = { pageId: page.id, pageWidgets: page.widgets }
 
-  // When a device is connected it reports its own isDayMode; otherwise default
-  // to night (dark) — the day/night toggle was removed from the editor chrome
-  // because the theme picker / day theme editor are no longer surfaced.
   const activeDayMode = deviceIsDayMode ?? false
 
-  // Effective palette and background — follow the active day/night mode.
-  // Day picks `dayTheme`, night picks `nightTheme` when set, otherwise falls
-  // back to the page-level palette / backgroundColor (pre-#21 v2 behaviour).
-  // Memoized so the reference stays stable across drag ticks (otherwise every
-  // mouse move would invalidate the WidgetPreview React.memo cache via a new
-  // palette object literal even though contents are unchanged).
   const effectivePalette: PagePalette = useMemo(
     () =>
       activeDayMode
@@ -140,7 +94,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
 
-  // Rev limit flash: alternates red overlay every 80ms, auto-stops after 5s
   useEffect(() => {
     if (!revLimiting) {
       setFlashPhase(false)
@@ -158,13 +111,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
   }, [revLimiting])
 
-  // Compute which widget ids currently overlap — shown with red border as
-  // feedback. Memoized on `page.widgets` so the O(n²) pair scan doesn't rerun
-  // on every render (Canvas rerenders at 60 fps during multi-widget drag —
-  // see `moveWidgets` in dashboard.store.ts which intentionally bypasses
-  // history for the drag path). Immer keeps `page.widgets` referentially
-  // stable across unrelated store updates, so unrelated rerenders are
-  // deduped too. Mirrors the `overflowingIds` block below.
   const overlappingIds = useMemo(() => {
     const ids = new Set<string>()
     const rects = page.widgets.map((w) => ({
@@ -191,10 +137,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     return ids
   }, [page.widgets])
 
-  // Compute which widget ids extend past the active screen profile bounds —
-  // warn, do NOT auto-clamp (issue #548). A dashboard authored on a 320×240
-  // profile and re-opened against a smaller catalog entry will surface every
-  // off-canvas widget so the author can fix the layout manually.
   const overflowingIds = useMemo(() => {
     const ids = new Set<string>()
     for (const w of page.widgets) {
@@ -207,22 +149,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     return ids
   }, [page.widgets, screenProfile.width, widgetAreaH])
 
-  // Keyboard handler — registered in the CAPTURE phase so it fires before the
-  // EditorRoute bubble handler (which deletes pages on Delete/Backspace without
-  // checking for widget selection). When we handle an event, stopPropagation
-  // prevents EditorRoute from also responding.
-  //
-  // Cmd+C/X/V are NOT handled here — the Electron menu's role:'copy/cut/paste'
-  // intercepts those at the main-process level. They are handled via the
-  // document 'copy'/'cut'/'paste' events below, which DO fire even with roles.
-  //
-  // Cmd+D is handled by the Electron menu → IPC → useMenuEvents (already works).
-  //
-  // Reads selection from `useDashboardStore.getState()` inside the listener so
-  // the effect depends only on stable zustand action setters. Re-registering
-  // on every selection change opened a microtask window where a queued keydown
-  // hit the EditorRoute bubble handler instead — which deleted the current
-  // page (R-6).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -248,7 +174,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (activeIds.length === 0) return // no widget selected — let EditorRoute handle page deletion
+        if (activeIds.length === 0) return
         e.preventDefault()
         e.stopPropagation()
         removeWidgets(kbdRef.current.pageId, activeIds)
@@ -278,9 +204,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     }
   }, [selectWidget, selectWidgets, removeWidgets, nudgeWidgets])
 
-  // Clipboard: copy/cut/paste events fire even when the Electron menu role
-  // intercepts the accelerator. Read fresh state via getState() so these
-  // handlers never go stale and don't need to re-register on selection changes.
   useEffect(() => {
     const isEditableTarget = (e: Event) => {
       const t = e.target as HTMLElement
@@ -324,10 +247,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
   const handleDragStart = useDragState({ dragInputsRef, zoomRef, scale: SCALE })
 
-  // Rubber-band: starts on background mousedown, selects widgets on mouseup.
-  // Snapshot `pageId` at pointerDown and resolve widgets fresh on mouseup from
-  // the store — surviving a mid-drag page swipe without selecting ids that
-  // belong to the previous page (R-2).
   const startRubberBand = useCallback(
     (e: React.PointerEvent) => {
       if (!containerRef.current) return
@@ -350,10 +269,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         })
       }
 
-      // Snapshot the active page id at drag-start. On mouseup we look it up
-      // again on the live store so the widget list reflects any deletions /
-      // edits that happened mid-drag, while still binding to the page the
-      // gesture started on.
       const capturedPageId = page.id
 
       const handleUp = (ev: MouseEvent) => {
@@ -382,7 +297,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           const widgets =
             useDashboardStore.getState().config?.pages.find((p) => p.id === capturedPageId)
               ?.widgets ?? []
-          // Select all widgets that intersect the rubber-band rect
           const rb = { id: '', x: rbX, y: rbY, w: rbW, h: rbH }
           const ids = widgets
             .filter((w) =>
@@ -396,9 +310,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
             )
             .map((w) => w.id)
           if (ids.length > 0) selectWidgets(ids)
-          // else: already deselected on pointerDown
         }
-        // Small movement → treat as tap (already deselected on pointerDown), no-op here
       }
 
       document.addEventListener('mousemove', handleMove)
@@ -417,8 +329,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         background: '#111111',
       }}
     >
-      {/* Studio toolbar */}
-      <div
+            <div
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -429,8 +340,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           minHeight: 28,
         }}
       >
-        {/* Alignment tools — shown when 2+ widgets selected */}
-        {selectedWidgetIds.length >= 2 ? (
+                {selectedWidgetIds.length >= 2 ? (
           <AlignToolbar
             pageId={page.id}
             widgetIds={selectedWidgetIds}
@@ -442,10 +352,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           </span>
         )}
 
-        {/* Overflow indicator — surfaces target-profile bounds violations
-            (issue #548) without auto-clamping the layout. Hidden when no widget
-            extends past the canvas. */}
-        {overflowingIds.size > 0 && (
+                {overflowingIds.size > 0 && (
           <span
             title="One or more widgets extend past the target screen bounds. Resize or move them to fit."
             style={{
@@ -465,8 +372,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
 
         <div style={{ flex: 1 }} />
 
-        {/* Multi-selection badge */}
-        {selectedWidgetIds.length >= 2 && (
+                {selectedWidgetIds.length >= 2 && (
           <span style={{ fontSize: 9, color: '#666666', letterSpacing: '0.04em' }}>
             {String(selectedWidgetIds.length)} selected
           </span>
@@ -494,10 +400,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
         </button>
       </div>
 
-      {/* Canvas area — scrollable if window is smaller than 320×240 */}
-      <div
+            <div
         onMouseDown={(e) => {
-          // Deselect when clicking outside any widget (canvas surround, border, etc.)
           const target = e.target as HTMLElement
           if (target.closest('[data-widget]') === null) selectWidget(null)
         }}
@@ -509,10 +413,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
           overflow: 'auto',
         }}
       >
-        {/* 1:1 frame — no transform scaling */}
-        <div>
-          {/* Physical screen border */}
-          <div
+                <div>
+                    <div
             style={{
               background: '#000000',
               border: '3px solid #2A2A2A',
@@ -521,8 +423,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               boxShadow: '0 8px 32px #00000088',
             }}
           >
-            {/* The 320×240 canvas — 1:1 firmware pixels, visually scaled by zoom */}
-            <div
+                        <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -532,8 +433,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 overflow: 'hidden',
               }}
             >
-              {/* Dashboard top bar — fixed height, pushes widget area down */}
-              {page.showTopBar && (
+                            {page.showTopBar && (
                 <DashTopBar
                   topBar={topBar}
                   scale={SCALE}
@@ -545,22 +445,18 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                 />
               )}
 
-              {/* Widget area — coordinate origin (0,0) is below the top bar */}
-              <div
+                            <div
                 ref={containerRef}
                 onPointerDown={(e) => {
                   const target = e.target as HTMLElement
                   const isBackground =
                     target === containerRef.current || target.closest('[data-widget]') === null
                   if (!isBackground) return
-                  // Track swipe start (horizontal page nav)
                   swipeRef.current = { startX: e.clientX, startY: e.clientY }
-                  // Deselect and start rubber-band
                   selectWidget(null)
                   startRubberBand(e)
                 }}
                 onPointerUp={(e) => {
-                  // Suppress swipe if rubber-band just finished a real drag
                   if (rubberBand && (rubberBand.w > RB_THRESHOLD || rubberBand.h > RB_THRESHOLD)) {
                     swipeRef.current = null
                     return
@@ -570,14 +466,12 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   const dy = e.clientY - swipeRef.current.startY
                   swipeRef.current = null
 
-                  // Vertical swipe takes priority over horizontal
                   if (Math.abs(dy) > 28) {
                     if (dy < 0 && !diagOpen && !settingsOpen) setDiagOpen(true)
                     if (dy > 0 && diagOpen) setDiagOpen(false)
                     return
                   }
 
-                  // Horizontal swipe — page navigation (only when overlays are closed)
                   if (diagOpen || settingsOpen) return
                   if (Math.abs(dy) > 20 || Math.abs(dx) < 40) return
                   const currentIdx = pages.findIndex((p) => p.id === page.id)
@@ -592,8 +486,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   cursor: 'default',
                 }}
               >
-                {/* Grid overlay */}
-                <div
+                                <div
                   style={{
                     position: 'absolute',
                     inset: 0,
@@ -606,11 +499,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   }}
                 />
 
-                {/* Page body — either the free-form widget grid (default) or
-                    a fixed template preview (#451). When a template is set,
-                    the firmware ignores widgets[]; the canvas mirrors that
-                    contract so what the user sees is what the device renders. */}
-                {(page.template ?? 'custom') === 'cruise_control' ? (
+                                {(page.template ?? 'custom') === 'cruise_control' ? (
                   <CruiseControlPreview
                     scale={SCALE}
                     canvasW={CANVAS_W}
@@ -618,7 +507,6 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                     palette={effectivePalette}
                   />
                 ) : (
-                  /* Widgets — warnings always rendered last (on top) */
                   [
                     ...page.widgets.filter((w) => w.type !== 'warning'),
                     ...page.widgets.filter((w) => w.type === 'warning'),
@@ -642,8 +530,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   ))
                 )}
 
-                {/* Rubber-band selection rect */}
-                {rubberBand && (
+                                {rubberBand && (
                   <div
                     style={{
                       position: 'absolute',
@@ -659,14 +546,11 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                   />
                 )}
 
-                {/* Screen settings overlay */}
-                {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
+                                {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
 
-                {/* Diagnostics overlay — swipe up to open, swipe down to close */}
-                {diagOpen && <DiagnosticsPanel scale={SCALE} />}
+                                {diagOpen && <DiagnosticsPanel scale={SCALE} />}
 
-                {/* Rev limit flash overlay — studio-only simulation */}
-                {revLimiting && (
+                                {revLimiting && (
                   <div
                     style={{
                       position: 'absolute',
@@ -680,8 +564,7 @@ export default function Canvas({ page, topBar }: CanvasProps) {
                       justifyContent: 'center',
                     }}
                   >
-                    {/* Warning triangle */}
-                    <svg
+                                        <svg
                       width={CANVAS_W * 0.28}
                       height={CANVAS_W * 0.28}
                       viewBox="0 0 100 100"
@@ -711,11 +594,8 @@ export default function Canvas({ page, topBar }: CanvasProps) {
               </div>
             </div>
           </div>
-          {/* end scale wrapper */}
-        </div>
-        {/* end screen border */}
-      </div>
-      {/* end wrapperRef */}
-    </div>
+                  </div>
+              </div>
+          </div>
   )
 }
