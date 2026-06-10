@@ -1,0 +1,69 @@
+---
+title: "Burn errors"
+description: "When the BurnOverlay flips red — what each error means and how to recover."
+sidebar:
+  order: 2
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+When you click **Burn** in the tuner, the dash shows a "Saving config…" overlay
+while it writes to SPIFFS. If the write fails, the overlay flips red and shows
+one of the messages below.
+
+## "Storage write failed"
+
+The atomic SPIFFS write failed — typically because the flash is nearly full or
+fragmented. The previous config (`.bak`) is still in place; the dash will
+re-load the old config on the next boot, so you keep what you had.
+
+**Recovery:**
+
+1. Reboot the dash.
+2. Open `pio device monitor` to confirm `[BOOT] Ready` prints normally.
+3. Try the burn again — transient SPIFFS errors usually resolve.
+4. If it keeps failing, the SPIFFS partition may be corrupt. Re-flash the
+   filesystem image: `pio run -t uploadfs`.
+
+## "Config reload failed"
+
+The write succeeded but the dash couldn't parse the new file. This means the
+tuner shipped invalid JSON, or the schema version doesn't match the firmware.
+
+The dash falls back to the built-in default config and surfaces
+`SCHEMA_MISMATCH` (or similar) in the ErrorBar.
+
+**Recovery:**
+
+- Refresh the tuner page and re-burn — the tuner reads the current schema
+  from `canshift-core` on every load.
+- If the issue persists, re-flash the firmware to the version your tuner
+  page is configured for. The schema version is logged at boot:
+  `[BOOT] Schema vN.M`.
+
+<Aside type="caution" title="Don't burn during a CAN scan">
+The tuner queues frames over USB while CAN scan is active. Burning a config
+in the middle can cause the burn to time out because the USB rxBuf is busy
+draining frames. Stop CAN scan first, then burn.
+</Aside>
+
+## The overlay clears but the dash didn't reload
+
+If the overlay disappears (success) but the new widgets don't appear, the
+likely cause is the page-rebuild trigger missed the reload. Reboot the dash —
+the new config is on disk and will load on the next boot.
+
+This shouldn't happen in normal operation; if it does, capture the boot log
+and open an issue.
+
+## OOM during burn
+
+A very large `dashboard.json` (close to `CONFIG_JSON_DOC_DASHBOARD = 16 KB`)
+plus a fragmented heap can cause the burn to OOM mid-write. Symptoms:
+
+- The overlay shows "Storage write failed".
+- `[USB]` logs contain `out_of_memory` or `parse_error`.
+
+**Recovery:** simplify the dashboard (fewer pages, fewer widgets per page) and
+re-burn. The 16 KB cap is firmware-side and not user-configurable; the tuner
+will warn before letting you burn an oversized config.
