@@ -1,8 +1,3 @@
-// ecu-profiles.test.ts — Coverage for the built-in ECU preset registry (#19).
-//
-// Each preset must validate against the canonical `SignalConfigSchema` shape
-// so that selecting it in Studio always produces an importable signals.json.
-
 import { ECU_PROFILES, SignalConfigSchema } from '../index.js'
 
 describe('ECU_PROFILES — built-in preset registry', () => {

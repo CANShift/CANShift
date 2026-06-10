@@ -1,6 +1,3 @@
-// screen-settings.test.ts — Bounds + strict-keys regression for the
-// ScreenSettingsSchema introduced for audit finding S-H-1 (#1015).
-
 import { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from '../index.js'
 
 describe('ScreenSettingsSchema', () => {

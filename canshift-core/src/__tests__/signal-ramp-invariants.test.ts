@@ -1,16 +1,3 @@
-// signal-ramp-invariants.test.ts — Issue #1010 relational invariants on
-// SignalDefSchema threshold fields (warningLevel / dangerLevel /
-// highWarningLevel / highDangerLevel).
-//
-// The schema accepts either a high-side ramp (warning <= danger) or a
-// low-side ramp (danger <= warning) for the primary pair, but enforces:
-//   - every threshold lies within [min, max]
-//   - the primary pair is monotonic (either direction)
-//   - the high-side dual pair (highWarning/highDanger) is ordered
-//     warning <= danger
-//   - on two-sided signals (battery overcharge + undervolt) the low-side
-//     primary pair sits below the high-side pair
-
 import { SignalDefSchema } from '../schemas/signal.js'
 
 const BASE = {
@@ -121,17 +108,14 @@ describe('SignalDefSchema — ramp-direction invariants (#1010)', () => {
       ...BASE,
       min: 0,
       max: 20,
-      warningLevel: 16.0, // low-side warn at 16 (with danger at 15.5)
+      warningLevel: 16.0,
       dangerLevel: 15.5,
-      highWarningLevel: 15.0, // overlaps with low-side warn
+      highWarningLevel: 15.0,
       highDangerLevel: 18.0,
     })
     expect(result.success).toBe(false)
   })
 
-  // Pins invariant #4 in SignalDefSchema's contract (#1036): low-side
-  // warningLevel must be STRICTLY below highWarningLevel — equality leaves
-  // no safe-zone gap and would collapse the two-sided topology.
   it('rejects a two-sided signal where warningLevel equals highWarningLevel', () => {
     const result = SignalDefSchema.safeParse({
       ...BASE,

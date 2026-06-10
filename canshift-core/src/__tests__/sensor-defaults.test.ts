@@ -1,8 +1,3 @@
-// sensor-defaults.test.ts — Validate the built-in ramp catalog and the
-// value→color sampler. The ramps cross the firmware/studio boundary, so the
-// shape invariants (sorted stops, in-range count, valid hex) MUST hold for
-// every ship-with-the-firmware default.
-
 import {
   SENSOR_DEFAULT_RAMPS,
   colorAtValue,
@@ -88,8 +83,6 @@ describe('colorAtValue', () => {
   })
 
   it('lerps channel-wise between two stops in linear mode', () => {
-    // Mid between 90 (#44CC66) and 100 (#CC8800) at value=95.
-    // R: 0x44 + (0xCC-0x44)/2 = 0x88, G: 0xCC + (0x88-0xCC)/2 = 0xAA, B: 0x66+(0x00-0x66)/2=0x33
     const out = colorAtValue(ramp, 95)
     expect(out).toBe('#88AA33')
   })

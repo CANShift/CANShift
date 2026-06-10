@@ -1,5 +1,3 @@
-// ws-frames.test.ts — Schema coverage for the inbound studio-web frames (#1288).
-
 import { CanFrameSchema, LogFrameSchema, TeleFrameSchema } from '../schemas/ws-frames.js'
 
 describe('LogFrameSchema', () => {

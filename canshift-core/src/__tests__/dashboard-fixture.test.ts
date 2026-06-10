@@ -1,11 +1,3 @@
-// dashboard-fixture.test.ts — pinned drift guard against bundled firmware dashboards
-//
-// Loads the dashboard.json shipped with the firmware (data/config) and asserts
-// it validates clean against the canonical signal catalog and is already at
-// CURRENT_SCHEMA_VERSION. This is the automated guard requested in issue #265:
-// future TS field additions cannot slip past without breaking the fixture or
-// being matched by a migration step.
-
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -32,9 +24,8 @@ const FIXTURES: Fixture[] = [
   },
 ]
 
-function loadJson(absolutePath: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(absolutePath, 'utf8')) as Record<string, unknown>
-}
+const loadJson = (absolutePath: string): Record<string, unknown> =>
+  JSON.parse(readFileSync(absolutePath, 'utf8')) as Record<string, unknown>
 
 describe.each(FIXTURES)('bundled fixture — $label', ({ dashboardPath, signalsPath }) => {
   const dashboard = loadJson(dashboardPath)

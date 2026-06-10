@@ -1,10 +1,3 @@
-// night-theme-defaults.test.ts — Pin the night-mode fallback palette + bg.
-//
-// Mirror of the day-theme defaults — locks the values so a renderer tweak
-// can't silently re-paint the preview, and exercises shape parity with
-// `DAY_THEME_PRESET` so the two themes stay swappable through the same
-// `ThemePresetSchema` boundary.
-
 import {
   DAY_PALETTE_DEFAULT,
   DAY_THEME_PRESET,

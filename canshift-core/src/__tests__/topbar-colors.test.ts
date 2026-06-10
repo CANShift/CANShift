@@ -1,9 +1,3 @@
-// topbar-colors.test.ts — pin TopBar status colour palette.
-//
-// The firmware C++ mirror (canshift-firmware/src/ui/top_bar.cpp) reads from
-// the same numbers. Pinning them prevents accidental drift; if a value is
-// changed here, the firmware top_bar.cpp constants MUST be updated to match.
-
 import { TopBarColors } from '../topbar-colors.js'
 
 describe('TopBarColors', () => {

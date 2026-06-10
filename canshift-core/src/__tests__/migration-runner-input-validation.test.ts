@@ -1,9 +1,3 @@
-// migration-runner-input-validation.test.ts
-//
-// Strict input validation for `migrateConfig` (audit C-HI-2, umbrella #1016).
-// Kept in a dedicated file to minimise merge conflicts with PR #1025, which
-// touches the main migration-runner test file in parallel.
-
 import { migrateConfig } from '../migrations/migration-runner.js'
 
 describe('migrateConfig — input validation', () => {
