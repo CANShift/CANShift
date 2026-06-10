@@ -19,6 +19,12 @@ hero:
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
+import TunerShell from "../../components/tuner-mock/TunerShell.astro";
+import TunerWelcomeScreen from "../../components/tuner-mock/TunerWelcomeScreen.astro";
+
+<TunerShell route="welcome" status="connected" title="CANShift Tuner">
+  <TunerWelcomeScreen variant="connected" />
+</TunerShell>
 
 ## Packages
 

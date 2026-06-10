@@ -1,0 +1,154 @@
+---
+import "./tuner-mock.css";
+---
+
+<div class="tuner-screen tuner-editor">
+  <div class="tuner-section-header tuner-editor__head">
+    <div class="tuner-editor__tabs">
+      <span class="tuner-editor__tab is-active">Main</span>
+      <span class="tuner-editor__tab">Engine</span>
+      <span class="tuner-editor__tab">Track</span>
+      <span class="tuner-editor__tab tuner-editor__tab--add">+</span>
+    </div>
+    <div class="tuner-editor__actions">
+      <button type="button" class="tuner-button">Preview</button>
+      <button type="button" class="tuner-button tuner-button--primary">Burn</button>
+    </div>
+  </div>
+  <div class="tuner-editor__body">
+    <div class="tuner-editor__canvas">
+      <div class="tuner-editor__widget tuner-editor__widget--gauge" style="grid-area: 1 / 1 / span 2 / span 2;">
+        <span class="tuner-editor__widget-label">RPM</span>
+        <span class="tuner-editor__widget-value">4 280</span>
+      </div>
+      <div class="tuner-editor__widget" style="grid-area: 1 / 3;">
+        <span class="tuner-editor__widget-label">Coolant</span>
+        <span class="tuner-editor__widget-value tuner-editor__widget-value--sm">92°</span>
+      </div>
+      <div class="tuner-editor__widget" style="grid-area: 1 / 4;">
+        <span class="tuner-editor__widget-label">Boost</span>
+        <span class="tuner-editor__widget-value tuner-editor__widget-value--sm">0.84</span>
+      </div>
+      <div class="tuner-editor__widget" style="grid-area: 2 / 3 / span 1 / span 2;">
+        <span class="tuner-editor__widget-label">Gear</span>
+        <span class="tuner-editor__widget-value">3</span>
+      </div>
+    </div>
+    <aside class="tuner-editor__inspector">
+      <h4 class="tuner-card__title" style="margin-bottom:8px;">Inspector</h4>
+      <div class="tuner-row">
+        <span class="tuner-row__label">Widget</span>
+        <span class="tuner-row__value">RPM gauge</span>
+      </div>
+      <div class="tuner-row">
+        <span class="tuner-row__label">Signal</span>
+        <span class="tuner-row__value">ENGINE_RPM</span>
+      </div>
+      <div class="tuner-row">
+        <span class="tuner-row__label">Range</span>
+        <span class="tuner-row__value">0 – 7 500</span>
+      </div>
+      <div class="tuner-row">
+        <span class="tuner-row__label">Redline</span>
+        <span class="tuner-row__value" style="color:var(--cs-primary);">6 800</span>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<style>
+  .tuner-editor__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .tuner-editor__tabs {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+  }
+  .tuner-editor__tab {
+    font-size: 11px;
+    padding: 4px 10px;
+    color: var(--cs-text-muted);
+    border: 1px solid var(--cs-border);
+    border-radius: 4px 4px 0 0;
+    background: var(--cs-surface);
+  }
+  .tuner-editor__tab.is-active {
+    color: var(--cs-text);
+    background: var(--cs-bg);
+    border-bottom-color: var(--cs-bg);
+    font-weight: 600;
+  }
+  .tuner-editor__tab--add {
+    color: var(--cs-text-muted);
+    padding: 4px 8px;
+  }
+  .tuner-editor__actions {
+    display: flex;
+    gap: 6px;
+  }
+  .tuner-editor__body {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 0;
+    height: 240px;
+  }
+  .tuner-editor__canvas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+    padding: 14px;
+    background: var(--cs-bg-inset);
+  }
+  .tuner-editor__widget {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+  }
+  .tuner-editor__widget--gauge {
+    border-color: var(--cs-primary);
+    box-shadow: 0 0 0 1px var(--cs-primary) inset;
+  }
+  .tuner-editor__widget-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--cs-text-muted);
+  }
+  .tuner-editor__widget-value {
+    font-family: "Orbitron", system-ui, sans-serif;
+    font-weight: 900;
+    font-size: 26px;
+    color: var(--cs-text);
+  }
+  .tuner-editor__widget-value--sm {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .tuner-editor__inspector {
+    background: var(--cs-surface);
+    border-left: 1px solid var(--cs-border);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  @container (max-width: 640px) {
+    .tuner-editor__body {
+      grid-template-columns: 1fr;
+    }
+    .tuner-editor__inspector {
+      border-left: 0;
+      border-top: 1px solid var(--cs-border);
+    }
+  }
+</style>
