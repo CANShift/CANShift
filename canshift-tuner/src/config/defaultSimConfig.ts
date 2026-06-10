@@ -1,9 +1,3 @@
-// defaultSimConfig.ts — Default dashboard loaded in simulation mode.
-// 4-page demo dashboard built on the L (160×56) and XL (160×112) size scale
-// only — no XS/S/M (issue #131). Vertical bar gauges keep their narrow tokens
-// (V-M = 40×112). Mirrors canshift-firmware/data/config/dashboard.json so the
-// studio preview and the device default ship identical content.
-
 import type { DashboardConfig } from '@tmbk/canshift-core'
 import {
   DEFAULT_PAGE_PALETTE,
@@ -65,32 +59,21 @@ const DEMO_STYLE_BUTTON = {
   fontSize: 16,
 }
 
-// Strong contrast between resting and active states so the user can tell at
-// a glance whether a button is engaged. Mirrors the firmware demo dashboard
-// (canshift-firmware/data/config/dashboard.json) after #966.
 const DEMO_BUTTON_COLORS_MAP = {
-  normal: '#3A1212', // deep dark red — resting
-  active: '#FF4444', // bright red — pressed flash
+  normal: '#3A1212',
+  active: '#FF4444',
 }
 
 const DEMO_BUTTON_COLORS_LAUNCH = {
-  normal: '#1F1F1F', // near-black resting
-  active: '#43A047', // palette launch green when engaged
+  normal: '#1F1F1F',
+  active: '#43A047',
 }
 
 const DEMO_BUTTON_COLORS_ANTILAG = {
-  normal: '#1F1F1F', // near-black resting
-  active: '#FF6F00', // palette flame amber when engaged
+  normal: '#1F1F1F',
+  active: '#FF6F00',
 }
 
-// The branded `HexColor` and `SemVer` types are nominal — literal strings in
-// this fixture don't carry the brand statically. Validating the whole demo
-// dashboard through `DashboardConfigSchema.parse` once at module load both
-// acquires the brand and traps any drift against the schema before the
-// simulator renders a single widget (#1207 brand follow-up to #1316).
-// Cast to DashboardConfig — `parse()` returns a structurally-equivalent type
-// but tsconfig's `exactOptionalPropertyTypes` distinguishes `prop?: T` from
-// `prop?: T | undefined`, so we re-narrow to the canonical alias.
 const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
   version: CURRENT_SCHEMA_VERSION,
   name: 'CANShift Demo',
@@ -103,9 +86,6 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
     textColor: '#AAAAAA',
   },
   pages: [
-    // -----------------------------------------------------------------------
-    // Page 1 — Overview
-    // -----------------------------------------------------------------------
     {
       id: 'overview',
       backgroundImage: null,
@@ -212,9 +192,6 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
       ],
     },
 
-    // -----------------------------------------------------------------------
-    // Page 2 — Engine
-    // -----------------------------------------------------------------------
     {
       id: 'engine',
       backgroundImage: null,
@@ -313,9 +290,6 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
       ],
     },
 
-    // -----------------------------------------------------------------------
-    // Page 3 — Fluids
-    // -----------------------------------------------------------------------
     {
       id: 'fluids',
       backgroundImage: null,
@@ -422,9 +396,6 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
       ],
     },
 
-    // -----------------------------------------------------------------------
-    // Page 4 — Controls (buttons)
-    // -----------------------------------------------------------------------
     {
       id: 'controls',
       backgroundImage: null,

@@ -1,16 +1,3 @@
-// signalLabels.ts — Curated short display labels for known signals.
-//
-// Used by every widget preview as the auto signal-name header (issue #1244 —
-// custom widget labels were dropped, this catalog is the only label path).
-// Keeps the 80-px-wide small numeric cells from clipping (auto-formatted
-// "COOLANT TEMP C" overflows; the curated "COOLANT" fits).
-//
-// Keep in sync with the firmware copy in
-// `canshift-firmware/src/ui/widget_label.h` (`displayLabelForSignal`).
-
-// The unit drops the metric type for us — `OIL` + `80°C` reads as oil temp,
-// `OIL` + `3.5 bar` as oil pressure. Same with `FUEL` / `MAP`. Keeping the
-// label short makes the value the focal point of every widget.
 const CURATED_LABELS: Record<string, string> = {
   rpm: 'RPM',
   speed_kph: 'SPEED',
@@ -33,14 +20,7 @@ const CURATED_LABELS: Record<string, string> = {
   flag_flat_shift: 'FLAT SHIFT',
 }
 
-/**
- * Returns a short, dashboard-friendly label for `signal`.
- * Falls back to a simple uppercase / underscore-to-space transform when the
- * signal is not in the curated dictionary.
- */
-export function displayLabelForSignal(signal: string): string {
+export const displayLabelForSignal = (signal: string): string => {
   if (!signal) return '—'
-  const curated = CURATED_LABELS[signal]
-  if (curated) return curated
-  return signal.replace(/_+/g, ' ').toUpperCase().trim()
+  return CURATED_LABELS[signal] ?? signal.replace(/_+/g, ' ').toUpperCase().trim()
 }

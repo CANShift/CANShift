@@ -1,21 +1,5 @@
-// layout.ts — Non-overlapping widget layout utilities
-//
-// Rules enforced by this module:
-//   - Widgets never overlap each other
-//   - A fixed gap (LAYOUT_GAP) is maintained between every pair of widgets
-//   - Positions are snapped to SNAP_GRID
-//   - Warnings sit on top visually (z-order is handled in Canvas.tsx, not here)
-//
-// Entry points:
-//   autoPlace(size, others, canvasW, canvasH) → first free grid position
-//   resolveCollisions(moved, newX, newY, others, canvasW, canvasH) → Map of id→pos
-
-export const LAYOUT_GAP = 0 // widgets can touch — adjacent is allowed, not overlapping
-export const SNAP_GRID = 4 // drag snap granularity (firmware px) — GCD of min width (40) and min height (28)
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+export const LAYOUT_GAP = 0
+export const SNAP_GRID = 4
 
 export interface LayoutRect {
   id: string
@@ -25,48 +9,27 @@ export interface LayoutRect {
   h: number
 }
 
-// ---------------------------------------------------------------------------
-// Primitives
-// ---------------------------------------------------------------------------
+const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v)
 
-function clamp(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v
-}
+export const snapToGrid = (v: number, grid = SNAP_GRID): number => Math.round(v / grid) * grid
 
-export function snapToGrid(v: number, grid = SNAP_GRID): number {
-  return Math.round(v / grid) * grid
-}
+const ceilToGrid = (v: number, grid = SNAP_GRID): number => Math.ceil(v / grid) * grid
 
-/** Snap up to the next grid line — ensures a minimum-gap push never lands short. */
-function ceilToGrid(v: number, grid = SNAP_GRID): number {
-  return Math.ceil(v / grid) * grid
-}
+const floorToGrid = (v: number, grid = SNAP_GRID): number => Math.floor(v / grid) * grid
 
-/** Snap down to the previous grid line — for leftward/upward pushes. */
-function floorToGrid(v: number, grid = SNAP_GRID): number {
-  return Math.floor(v / grid) * grid
-}
-
-/** True when a and b overlap (or are closer than LAYOUT_GAP). */
-export function rectsOverlap(a: LayoutRect, b: LayoutRect): boolean {
+export const rectsOverlap = (a: LayoutRect, b: LayoutRect): boolean => {
   const g = LAYOUT_GAP
   return a.x < b.x + b.w + g && a.x + a.w + g > b.x && a.y < b.y + b.h + g && a.y + a.h + g > b.y
 }
 
-/**
- * Push `victim` away from `anchor` until they no longer overlap.
- * Chooses the axis with the smallest displacement.
- * Returns the new position for victim (anchor is unchanged).
- */
-function pushAway(
+const pushAway = (
   anchor: LayoutRect,
   victim: LayoutRect,
   canvasW: number,
   canvasH: number
-): { x: number; y: number } {
+): { x: number; y: number } => {
   const g = LAYOUT_GAP
 
-  // Required displacement to clear on each side
   const pushRight = anchor.x + anchor.w + g - victim.x
   const pushLeft = victim.x + victim.w + g - anchor.x
   const pushDown = anchor.y + anchor.h + g - victim.y
@@ -79,17 +42,15 @@ function pushAway(
   let ny = victim.y
 
   if (minH <= minV) {
-    if (pushRight <= pushLeft) {
-      nx = ceilToGrid(anchor.x + anchor.w + g) // push right — ceil so gap ≥ g
-    } else {
-      nx = floorToGrid(anchor.x - victim.w - g) // push left — floor so gap ≥ g
-    }
+    nx =
+      pushRight <= pushLeft
+        ? ceilToGrid(anchor.x + anchor.w + g)
+        : floorToGrid(anchor.x - victim.w - g)
   } else {
-    if (pushDown <= pushUp) {
-      ny = ceilToGrid(anchor.y + anchor.h + g) // push down — ceil so gap ≥ g
-    } else {
-      ny = floorToGrid(anchor.y - victim.h - g) // push up — floor so gap ≥ g
-    }
+    ny =
+      pushDown <= pushUp
+        ? ceilToGrid(anchor.y + anchor.h + g)
+        : floorToGrid(anchor.y - victim.h - g)
   }
 
   return {
@@ -98,22 +59,12 @@ function pushAway(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Find the first grid-aligned position where a widget of `size` fits
- * without overlapping any of `others` (respecting LAYOUT_GAP).
- *
- * Scans left→right, top→bottom. Returns null if the canvas is full.
- */
-export function autoPlace(
+export const autoPlace = (
   size: { w: number; h: number },
   others: LayoutRect[],
   canvasW: number,
   canvasH: number
-): { x: number; y: number } | null {
+): { x: number; y: number } | null => {
   for (let y = 0; y + size.h <= canvasH; y += SNAP_GRID) {
     for (let x = 0; x + size.w <= canvasW; x += SNAP_GRID) {
       const candidate: LayoutRect = { id: '__candidate__', x, y, w: size.w, h: size.h }
@@ -125,25 +76,14 @@ export function autoPlace(
   return null
 }
 
-/**
- * Place `moved` at (newX, newY) and cascade-push any widgets that now overlap.
- *
- * - The moved widget is the immovable anchor; other widgets are pushed away.
- * - Each pushed widget may trigger further pushes (cascade, max 8 passes).
- * - All results are snapped to SNAP_GRID and clamped to the canvas.
- *
- * Returns a Map of widget id → new {x, y}.
- * Only changed positions are included (moved widget always included).
- */
-export function resolveCollisions(
+export const resolveCollisions = (
   moved: LayoutRect,
   newX: number,
   newY: number,
   others: LayoutRect[],
   canvasW: number,
   canvasH: number
-): Map<string, { x: number; y: number }> {
-  // Working state — mutable copy of all positions
+): Map<string, { x: number; y: number }> => {
   const pos = new Map<string, LayoutRect>()
   pos.set(moved.id, { ...moved, x: newX, y: newY })
   for (const o of others) pos.set(o.id, { ...o })
@@ -156,7 +96,6 @@ export function resolveCollisions(
 
     for (let i = 0; i < all.length; i++) {
       for (let j = i + 1; j < all.length; j++) {
-        // noUncheckedIndexedAccess — guard before use
         const aOrig = all[i]
         const bOrig = all[j]
         if (!aOrig || !bOrig) continue
@@ -167,7 +106,6 @@ export function resolveCollisions(
 
         dirty = true
 
-        // The moved widget is the anchor — never displace it
         if (a.id === moved.id) {
           const np = pushAway(a, b, canvasW, canvasH)
           pos.set(b.id, { id: b.id, x: np.x, y: np.y, w: b.w, h: b.h })
@@ -175,7 +113,6 @@ export function resolveCollisions(
           const np = pushAway(b, a, canvasW, canvasH)
           pos.set(a.id, { id: a.id, x: np.x, y: np.y, w: a.w, h: a.h })
         } else {
-          // Two non-moved widgets: push the smaller one to minimise disruption
           const smallerIsA = a.w * a.h <= b.w * b.h
           if (smallerIsA) {
             const np = pushAway(b, a, canvasW, canvasH)
@@ -191,7 +128,6 @@ export function resolveCollisions(
     if (!dirty) break
   }
 
-  // Collect results — skip unchanged non-moved rects
   const result = new Map<string, { x: number; y: number }>()
   result.set(moved.id, { x: newX, y: newY })
 

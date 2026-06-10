@@ -1,10 +1,3 @@
-// transport/index.ts — Tuner transport surface (WebSerial).
-//
-// Mirrors `canshift-studio-web/src/transport/index.ts` exactly so the editor
-// surfaces lift over unchanged. Bodies delegate to `getSerialClient()` instead
-// of `getWsClient()`; the wire envelope (`{cmd, payload, ...}` out, `{status,
-// message?, ...}` in) and opcodes are identical.
-
 import type {
   DashboardConfig,
   DeviceConfig,
@@ -26,12 +19,6 @@ import {
   inputBindingsToWire,
 } from '@tmbk/canshift-core'
 import { getSerialClient } from './webserial-client'
-
-// ---------------------------------------------------------------------------
-// Firmware command opcodes — kept in lock-step with
-// `canshift-studio-web/src/transport/index.ts`. Sourced from
-// `canshift-firmware/src/hal/usb/usb_comm.h`.
-// ---------------------------------------------------------------------------
 
 const CMD_GET_CONFIG = 0x01
 const CMD_PUSH_CONFIG = 0x02
@@ -101,10 +88,6 @@ export const KNOWN_OPCODES: readonly KnownOpcode[] = [
   { id: CMD_REBOOT, name: 'CMD_REBOOT', description: 'Reboot the dash' },
 ]
 
-// ---------------------------------------------------------------------------
-// Shared result shapes — structurally identical to studio-web's surface.
-// ---------------------------------------------------------------------------
-
 export interface PortInfo {
   path: string
   manufacturer?: string
@@ -152,18 +135,10 @@ export type DeviceConfigResult =
 
 const OK: UsbResult = { success: true }
 
-function toUsbResult(result: { ok: boolean; error?: string }): UsbResult {
-  if (result.ok) return OK
-  return { success: false, error: result.error ?? 'unknown_error' }
-}
-
-// ---------------------------------------------------------------------------
-// Device commands — backed by the shared `SerialClient` singleton. The export
-// name `usbService` is preserved so studio-web imports lift over unchanged.
-// ---------------------------------------------------------------------------
+const toUsbResult = (result: { ok: boolean; error?: string }): UsbResult =>
+  result.ok ? OK : { success: false, error: result.error ?? 'unknown_error' }
 
 export const usbService = {
-  /** WebSerial doesn't expose a port listing surface — return empty. */
   listPorts: (): Promise<PortInfo[]> => Promise.resolve([]),
   connect: (_portPath: string): Promise<UsbResult> => Promise.resolve(OK),
   disconnect: (): Promise<UsbResult> => Promise.resolve(OK),
@@ -220,8 +195,6 @@ export const usbService = {
   },
 
   reboot: async (): Promise<UsbResult> => {
-    // Reboot drops the link before any ack lands — treat a missing ack as
-    // success so the UI doesn't surface a spurious timeout.
     const result = await getSerialClient().send(CMD_REBOOT, {}, { timeoutMs: 1_000 })
     if (result.ok) return OK
     if (result.error === 'ack_timeout' || result.error === 'connection_closed') return OK
@@ -277,10 +250,6 @@ export const canScannerIpc = {
   },
 }
 
-// ---------------------------------------------------------------------------
-// Device hardware config — same wire ↔ domain mapping as studio-web.
-// ---------------------------------------------------------------------------
-
 export const deviceConfigIpc = {
   read: async (): Promise<{ success: boolean; config: DeviceConfig | null; error?: string }> => {
     const result = await getSerialClient().send(CMD_GET_DEVICE_CONFIG)
@@ -308,10 +277,6 @@ export const deviceConfigIpc = {
     return { success: false, error: result.error ?? 'unknown_error' }
   },
 }
-
-// ---------------------------------------------------------------------------
-// Input bindings — same wire ↔ domain mapping as studio-web.
-// ---------------------------------------------------------------------------
 
 export const inputBindingsIpc = {
   read: async (): Promise<{
@@ -350,22 +315,16 @@ export const inputBindingsIpc = {
   },
 }
 
-// ---------------------------------------------------------------------------
-// Event subscriptions — discriminator routing via the serial client.
-// ---------------------------------------------------------------------------
-
 export type Unsubscribe = () => void
 type Handler<T> = (event: T) => void
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
 
-// Bounded dedup set — same shape as studio-web's #1288 WS-5 / #1343 logic.
 const SEEN_SCHEMA_ERRORS_CAP = 100
 const seenSchemaErrors = new Set<string>()
 
-function warnFrameDrop(discriminator: string, code: string, sample: string): void {
+const warnFrameDrop = (discriminator: string, code: string, sample: string): void => {
   const key = `${discriminator}:${code}`
   if (seenSchemaErrors.has(key)) return
   if (seenSchemaErrors.size >= SEEN_SCHEMA_ERRORS_CAP) {
@@ -377,7 +336,6 @@ function warnFrameDrop(discriminator: string, code: string, sample: string): voi
 }
 
 export const deviceEvents = {
-  /** Device log lines. Shape: `{ log: 1, lvl, tag, msg }`. */
   onLogLine: (handler: Handler<{ level: string; tag: string; message: string }>): Unsubscribe => {
     return getSerialClient().subscribe('log', (frame) => {
       const parsed = LogFrameSchema.safeParse(frame)
@@ -393,7 +351,6 @@ export const deviceEvents = {
     })
   },
 
-  /** Raw CAN frames captured by the scanner. Shape: `{ can: 1, id, len, d }`. */
   onCanFrame: (handler: Handler<{ id: number; len: number; data: number[] }>): Unsubscribe => {
     return getSerialClient().subscribe('can', (frame) => {
       const parsed = CanFrameSchema.safeParse(frame)
@@ -411,7 +368,6 @@ export const deviceEvents = {
     })
   },
 
-  /** Live signal values. Shape: `{ tele: 1, v: { signalName: number } }`. */
   onSignal: (handler: Handler<Record<string, number>>): Unsubscribe => {
     return getSerialClient().subscribe('tele', (frame) => {
       const parsed = TeleFrameSchema.safeParse(frame)
@@ -466,7 +422,6 @@ export const deviceEvents = {
     })
   },
 
-  /** Connection state changes — wired off the serial client's status stream. */
   onConnectionChange: (
     handler: Handler<{ connected: boolean; reason?: string }>
   ): Unsubscribe => {
@@ -481,11 +436,6 @@ export const deviceEvents = {
     })
   },
 
-  /**
-   * Per-frame TX/RX activity ticks — fires once per successful write and
-   * once per inbound frame. Header subscribes to drive the status-dot blink
-   * (the LED-style alive indicator above the device).
-   */
   onActivity: (handler: Handler<'rx' | 'tx'>): Unsubscribe => {
     return getSerialClient().onActivity(handler)
   },
