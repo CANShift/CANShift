@@ -450,7 +450,7 @@ const MIGRATIONS: Migration[] = [
 
 export interface MigrationResult {
   config: Record<string, unknown>
-  applied: string[] // List of migration steps applied
+  applied: string[]
 }
 
 export type MigrationRegistry = Migration[]
