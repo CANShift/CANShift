@@ -1,5 +1,3 @@
-// SettingsScreen.tsx — Screen settings pushed to device via BLE
-
 import React, { useEffect, useState, useCallback } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native'
 import Slider from '@react-native-community/slider'
@@ -51,9 +49,6 @@ export default function SettingsScreen({ navigation }: Props) {
     null
   )
 
-  /** Route a thrown BLE error: permission denials open the shared Settings
-   *  dialog, everything else falls back to a generic Alert. Returns true
-   *  when the error was a permission denial (so callers can short-circuit). */
   const handleBleFailure = useCallback((err: unknown, fallbackTitle: string): boolean => {
     const mapped = mapBleError(err)
     if (mapped.kind === 'permission-denied') {
@@ -65,10 +60,6 @@ export default function SettingsScreen({ navigation }: Props) {
     return false
   }, [])
 
-  // Pull current values from the device on mount so sliders/segments don't
-  // open at hardcoded defaults that misrepresent the device state (#26).
-  // If the read fails (older firmware, transient BLE error), we silently
-  // keep the defaults — saving will just push them, no worse than before.
   useEffect(() => {
     let cancelled = false
     void BleService.readSettings()
@@ -78,7 +69,7 @@ export default function SettingsScreen({ navigation }: Props) {
         setSleep(current.sleep)
       })
       .catch(() => {
-        // Older firmware exposes SETTINGS as write-only — fall back to defaults.
+        void 0
       })
     return () => {
       cancelled = true
@@ -103,16 +94,9 @@ export default function SettingsScreen({ navigation }: Props) {
   }
 
   const handleSetDayNight = async (target: boolean) => {
-    // Idempotent at the UI level — tapping the active segment is a no-op.
-    // Also no-op while a write is already in flight, otherwise rapid taps
-    // queue multiple BLE writes against a slow link (#707).
     if (isDayMode === target || dayNightPending) return
     setDayNightPending(true)
     try {
-      // Prefer the explicit command. Older firmware (no set_day_night handler)
-      // ignores it gracefully (logs a warning), so we don't double-fire by
-      // also sending toggle_day_night — that would defeat the idempotency
-      // guarantee the new command exists to provide.
       await BleService.sendCmd('set_day_night', { day: target })
       Toast.show({
         type: 'success',
@@ -156,8 +140,7 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Brightness */}
-        <Section>
+                <Section>
           <View style={styles.rowHeader}>
             <Label>BRIGHTNESS</Label>
             <Text style={styles.value}>{brightness}%</Text>
@@ -175,8 +158,7 @@ export default function SettingsScreen({ navigation }: Props) {
           />
         </Section>
 
-        {/* Sleep */}
-        <Section title="SLEEP">
+                <Section title="SLEEP">
           <View style={styles.segRow}>
             {SLEEP_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -194,8 +176,7 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         </Section>
 
-        {/* Day / Night */}
-        <Section title="THEME">
+                <Section title="THEME">
           <View style={styles.segRow}>
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
@@ -218,8 +199,7 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         </Section>
 
-        {/* Touch calibration */}
-        <Section title="TOUCH">
+                <Section title="TOUCH">
           <TouchableOpacity
             style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
             onPress={handleCalibrate}
@@ -232,8 +212,7 @@ export default function SettingsScreen({ navigation }: Props) {
         </Section>
       </ScrollView>
 
-      {/* Save */}
-      <View style={styles.footer}>
+            <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
           onPress={() => void handleSave()}

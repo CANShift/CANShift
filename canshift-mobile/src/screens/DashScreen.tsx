@@ -1,11 +1,3 @@
-// DashScreen.tsx — Live dashboard via BLE telemetry
-//
-// Each cell subscribes to its own signal key via `useSignalValue(key)` so the
-// 10 Hz tick only re-renders the cells whose value actually changed. The
-// screen itself subscribes only to `isLive` (flips on/off rarely) — without
-// per-key selectors the whole grid would re-render 10 times per second on
-// every BLE update (#687).
-
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -24,12 +16,12 @@ interface Props {
 const PRIMARY_SIGNALS = ['r', 's', 'g']
 const GRID_SIGNALS = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
 
-function formatValue(value: number | undefined, meta: SignalMeta): string {
+const formatValue = (value: number | undefined, meta: SignalMeta): string => {
   if (value === undefined) return '---'
   return meta.decimals === 0 ? Math.round(value).toString() : value.toFixed(meta.decimals)
 }
 
-function PrimaryCellPortrait({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) {
+const PrimaryCellPortrait = ({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
   return (
@@ -41,7 +33,7 @@ function PrimaryCellPortrait({ signalKey, meta }: { signalKey: string; meta: Sig
   )
 }
 
-function PrimaryCellLandscape({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) {
+const PrimaryCellLandscape = ({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
   return (
@@ -55,7 +47,7 @@ function PrimaryCellLandscape({ signalKey, meta }: { signalKey: string; meta: Si
   )
 }
 
-function LiveSignalCard({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) {
+const LiveSignalCard = ({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
   return <SignalCard meta={meta} value={isLive ? value : undefined} compact />
@@ -70,7 +62,6 @@ export default function DashScreen(_: Props) {
       <DashTopBar />
 
       {isLandscape ? (
-        // Landscape: primary signals stacked on left, grid scrolls on right
         <View style={styles.landscapeBody}>
           <View style={styles.landscapeLeft}>
             {PRIMARY_SIGNALS.map((key) => {
@@ -92,7 +83,6 @@ export default function DashScreen(_: Props) {
           </ScrollView>
         </View>
       ) : (
-        // Portrait: stacked scroll layout
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.primaryRow}>
             {PRIMARY_SIGNALS.map((key) => {
@@ -118,7 +108,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   scroll: { padding: Spacing.lg, gap: Spacing.lg },
 
-  // Portrait primary cards
   primaryRow: { flexDirection: 'row', gap: Spacing.md },
   primaryCard: {
     flex: 1,
@@ -139,7 +128,6 @@ const styles = StyleSheet.create({
   primaryUnit: { fontSize: Typography.sm, color: Colors.textDim, marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
 
-  // Landscape layout
   landscapeBody: { flex: 1, flexDirection: 'row' },
   landscapeLeft: {
     width: 160,

@@ -1,5 +1,3 @@
-// AboutScreen.test.tsx — Pure helper unit tests + markdown rendering smoke test.
-
 import * as React from 'react'
 import { render } from '@testing-library/react-native'
 import Markdown from 'react-native-markdown-display'
@@ -15,10 +13,6 @@ const STABLE: import('@tmbk/canshift-core').ReleaseInfo = {
   notes: '',
   assets: [],
 }
-
-// ---------------------------------------------------------------------------
-// classify
-// ---------------------------------------------------------------------------
 
 describe('classify', () => {
   it('returns up-to-date when current matches stable', () => {
@@ -42,10 +36,6 @@ describe('classify', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// formatBytes
-// ---------------------------------------------------------------------------
-
 describe('formatBytes', () => {
   it('formats bytes as-is below 1 KB', () => {
     expect(formatBytes(512)).toBe('512 B')
@@ -60,10 +50,6 @@ describe('formatBytes', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// formatDate
-// ---------------------------------------------------------------------------
-
 describe('formatDate', () => {
   it('returns the original string for invalid dates', () => {
     expect(formatDate('not-a-date')).toBe('not-a-date')
@@ -74,10 +60,6 @@ describe('formatDate', () => {
     expect(result.length).toBeGreaterThan(0)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Markdown rendering
-// ---------------------------------------------------------------------------
 
 describe('Markdown notes rendering', () => {
   it('renders without crashing', () => {
