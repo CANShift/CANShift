@@ -5,10 +5,14 @@ template: splash
 hero:
   tagline: Open-source CAN bus dashboard for ESP32 — firmware, tuner, mobile.
   actions:
-    - text: Firmware architecture
-      link: /architecture/boot-sequence/
+    - text: User guide
+      link: /user-guide/getting-started/overview/
       icon: right-arrow
       variant: primary
+    - text: Firmware architecture
+      link: /technical/architecture/boot-sequence/
+      icon: right-arrow
+      variant: secondary
     - text: GitHub
       link: https://github.com/tburkhalterr/CANShift
       icon: external
@@ -29,7 +33,8 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
   </Card>
   <Card title="canshift-tuner" icon="rocket">
     Vite + React SPA hosted on Vercel. Talks to the dash over Web Serial; lets
-    drivers edit dashboards live.
+    drivers edit dashboards live and flash firmware (the standalone flasher
+    repo was retired into the tuner's `/firmware` route).
   </Card>
   <Card title="canshift-mobile" icon="phone">
     Expo React Native app. Pairs with the dash over BLE for in-car telemetry

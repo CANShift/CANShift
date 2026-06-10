@@ -1,40 +1,39 @@
 ---
-title: "Setup dev"
-description: "Cloner le monorepo, builder firmware et tuner en local."
+title: "Dev setup"
+description: "Clone the monorepo, build firmware and tuner locally."
 sidebar:
   order: 1
 ---
 
-## Pré-requis
+## Prerequisites
 
-- Node ≥ 20 (pour tuner, mobile, docs)
-- PlatformIO Core (pour firmware) — `pip install platformio`
-- Rust toolchain xtensa (optionnel — uniquement si tu touches aux ports Rust du firmware)
+- Node ≥ 20 (for tuner, mobile, docs)
+- PlatformIO Core (for firmware) — `pip install platformio`
+- Rust toolchain (xtensa) — optional, only if you touch the firmware's Rust ports
 
-## Cloner
+## Clone
 
 ```bash
 git clone https://github.com/tburkhalterr/CANShift
 cd CANShift
 ```
 
-Les 4 packages :
+The five packages:
 
-| Package | Stack | Commande |
+| Package | Stack | Command |
 |---|---|---|
 | `canshift-core` | TypeScript | `cd canshift-core && npm install && npm run build` |
 | `canshift-firmware` | C++17 / PlatformIO | `cd canshift-firmware && pio run` |
 | `canshift-tuner` | Vite + React | `cd canshift-tuner && npm install && npm run dev` |
 | `canshift-docs` | Astro Starlight | `cd canshift-docs && npm install && npm run dev` |
+| `canshift-mobile` | Expo | inactive unless explicitly working on mobile |
 
-`canshift-mobile` (Expo) est inactif sauf cas spécifique — voir `.claude/` mémoire.
+## PR workflow
 
-## Workflow PR
+Always via `gh pr create` — never merge directly to main.
+Branch name: `type/package/short-description` (e.g. `feat/firmware/cruise-l-shape`).
 
-Toujours via `gh pr create` — jamais de merge direct sur main.
-Branche : `type/package/short-description` (ex. `feat/firmware/cruise-l-shape`).
-
-Commit conventional (subject only — pas de body) :
+Conventional commits, subject line only (no body):
 
 ```
 feat(firmware): cruise L-shape buttons

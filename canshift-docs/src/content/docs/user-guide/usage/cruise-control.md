@@ -1,14 +1,14 @@
 ---
 title: "Cruise control"
-description: "Comment utiliser la page cruise depuis l'écran."
+description: "Using the cruise page on the dash."
 sidebar:
   order: 1
 ---
 
-Le dash inclut une page cruise control dédiée — quatre boutons en L autour d'un
-affichage central de set-speed.
+The dash ships with a dedicated cruise control page — four L-shape buttons
+around a centred set-speed readout.
 
-## Disposition
+## Layout
 
 ```
 ┌──────────┐  ┌──────────┐
@@ -25,26 +25,26 @@ affichage central de set-speed.
 └──────────┘  └──────────┘
 ```
 
-- **+ / −** ajustent le set-speed (typiquement par incréments de 1 km/h selon la
-  config tuner).
-- **SET** mémorise la vitesse actuelle comme set-speed et arme le cruise.
-- **OFF** désarme le cruise — le badge "ON" disparaît du coin.
+- **+ / −** adjust the set-speed (typically 1 km/h per tap — depends on tuner
+  config).
+- **SET** saves the current speed as the set-speed and arms cruise.
+- **OFF** disarms cruise — the "ON" badge disappears.
 
-## L'indicateur "ON"
+## The "ON" indicator
 
-Quand le cruise est armé, le bouton OFF affiche un petit indicateur "ON" en
-surimpression. Tap dessus pour désarmer.
+When cruise is armed, the OFF button shows a small "ON" overlay badge. Tap to
+disarm.
 
-## Pas de signal au centre ?
+## No reading in the centre?
 
-Si le centre affiche `0` au lieu du set-speed :
+If the centre shows `0` instead of the set-speed:
 
-- Vérifie que ton ECU envoie le signal cruise (typiquement sur le frame ID
-  configuré dans `signals.json` côté SET / cruise_setpoint).
-- Le widget affiche `0` quand le signal est invalide (pas de frame reçu depuis
-  >1 s). Détails dans [SignalStore](/technical/architecture/signal-store/).
+- Check that your ECU emits the cruise signal (typically the frame ID
+  configured in `signals.json` for `cruise_setpoint`).
+- The widget shows `0` when the signal is invalid (no frame received in the
+  last ~1 s). See [SignalStore](/technical/architecture/signal-store/).
 
-## Détails techniques
+## Technical details
 
-Le rendu de la page cruise est non-trivial (formes en L, contraintes LVGL). Voir
-[Cruise template](/technical/architecture/cruise-template/).
+The cruise page renderer is non-trivial (L shapes, LVGL convex-polygon
+constraint). See [Cruise template](/technical/architecture/cruise-template/).

@@ -8,73 +8,63 @@ export default defineConfig({
     starlight({
       title: "CANShift Docs",
       description:
-        "Documentation utilisateur et technique pour le dashboard CANShift.",
-      social: [
-        {
-          icon: "github",
-          label: "GitHub",
-          href: "https://github.com/tburkhalterr/CANShift",
-        },
-      ],
+        "User and technical documentation for the CANShift dashboard.",
+      social: {
+        github: "https://github.com/tburkhalterr/CANShift",
+      },
       sidebar: [
         {
-          label: "Bienvenue",
-          items: [{ label: "Vue d'ensemble", link: "/" }],
+          label: "Welcome",
+          items: [{ label: "Overview", link: "/" }],
         },
         {
-          label: "Guide utilisateur",
-          badge: { text: "Pilote", variant: "success" },
+          label: "User guide",
+          badge: { text: "Driver", variant: "success" },
           collapsed: false,
           items: [
             {
-              label: "Démarrage rapide",
+              label: "Get started",
               autogenerate: { directory: "user-guide/getting-started" },
             },
             {
-              label: "Installation",
+              label: "Install",
               autogenerate: { directory: "user-guide/install" },
             },
             {
-              label: "Configuration",
+              label: "Configure",
               autogenerate: { directory: "user-guide/configure" },
             },
             {
-              label: "Utilisation",
+              label: "Use",
               autogenerate: { directory: "user-guide/usage" },
             },
           ],
         },
         {
-          label: "Documentation technique",
+          label: "Technical docs",
           badge: { text: "Dev", variant: "caution" },
           collapsed: false,
           items: [
             {
-              label: "Architecture firmware",
+              label: "Firmware architecture",
               autogenerate: { directory: "technical/architecture" },
             },
             {
-              label: "Référence",
+              label: "Reference",
               autogenerate: { directory: "technical/reference" },
             },
             {
-              label: "Contribuer",
+              label: "Contributing",
               autogenerate: { directory: "technical/contributing" },
             },
           ],
         },
         {
-          label: "Liens externes",
+          label: "External",
           collapsed: true,
           items: [
             {
-              label: "Flasher (web)",
-              link: "https://github.com/tburkhalterr/canshift-flasher",
-              attrs: { target: "_blank", rel: "noopener" },
-              badge: { text: "↗", variant: "note" },
-            },
-            {
-              label: "Tuner (web)",
+              label: "Tuner (web — includes flasher)",
               link: "https://canshift-tuner.vercel.app",
               attrs: { target: "_blank", rel: "noopener" },
               badge: { text: "↗", variant: "note" },

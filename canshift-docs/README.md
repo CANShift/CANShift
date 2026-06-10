@@ -1,6 +1,6 @@
 # canshift-docs
 
-Documentation utilisateur et technique pour CANShift. Stack : [Astro](https://astro.build/) + [Starlight](https://starlight.astro.build/).
+User and technical documentation for CANShift. Stack: [Astro](https://astro.build/) + [Starlight](https://starlight.astro.build/).
 
 ## Dev
 
@@ -10,19 +10,19 @@ npm install
 npm run dev
 ```
 
-Le site écoute sur `http://localhost:4321`.
+The site serves on `http://localhost:4321`.
 
 ## Build
 
 ```bash
 npm run build       # → dist/
-npm run preview     # serve dist/ en local
+npm run preview     # serve dist/ locally
 ```
 
 ## Deploy
 
-Build static — déployable sur n'importe quel host (Vercel, GitHub Pages, Cloudflare Pages, etc.).
-Le `astro.config.mjs` pointe sur `site: "https://canshift-docs.example"` — à mettre à jour avec l'URL de prod avant le premier deploy.
+Static build — deployable to any host (Vercel, GitHub Pages, Cloudflare Pages, etc.).
+`astro.config.mjs` is wired to `site: "https://canshift-docs.example"` — update to the production URL before the first deploy.
 
 ## Structure
 
@@ -30,25 +30,25 @@ Le `astro.config.mjs` pointe sur `site: "https://canshift-docs.example"` — à 
 src/content/docs/
 ├── index.mdx              # landing page (splash)
 ├── changelog.mdx          # rendered from GitHub Releases at build time
-├── user-guide/            # 🚗 audience pilote / installateur
+├── user-guide/            # 🚗 audience: driver / installer
 │   ├── getting-started/
 │   ├── install/
 │   ├── configure/
 │   └── usage/
-└── technical/             # 🔧 audience dev / contributeur
-    ├── architecture/      # rehome de #1403 — rationale stripped from firmware comments
+└── technical/             # 🔧 audience: dev / contributor
+    ├── architecture/      # rehome of #1403 — rationale stripped from firmware comments
     ├── reference/         # pinout, schemas, build flags
-    └── contributing/      # workflow PR, setup dev
+    └── contributing/      # PR workflow, dev setup
 ```
 
-## Convention release / changelog
+## Release / changelog convention
 
-Voir `.claude/projects/.../release_notes_quality.md` côté projet : chaque
-GitHub Release doit avoir une description structurée (Pilote / Tuner /
-Firmware / Breaking), car le changelog rendu ici les pull au build.
+See `.claude/projects/.../release_notes_quality.md` on the project side: every
+GitHub Release must carry a structured description (Driver / Tuner / Firmware /
+Breaking) — the changelog rendered here pulls them at build time. An empty
+release renders as a blank entry.
 
-## Liens
+## Links
 
 - [GitHub monorepo](https://github.com/tburkhalterr/CANShift)
-- [Flasher](https://github.com/tburkhalterr/canshift-flasher)
-- [Tuner (Vercel)](https://canshift-tuner.vercel.app)
+- [Tuner (Vercel) — includes flasher at `/firmware`](https://canshift-tuner.vercel.app)

@@ -1,49 +1,48 @@
 ---
-title: "C'est quoi CANShift ?"
-description: "Aperçu rapide du système avant de plonger dans l'installation."
+title: "What is CANShift?"
+description: "Quick overview of the system before you dive into installation."
 sidebar:
   order: 1
 ---
 
-CANShift est un **dashboard CAN bus open-source** pour les voitures de sport et de
-piste. Il tourne sur un écran tactile ESP32 et affiche en temps réel les signaux
-de ton ECU (RPM, températures, pressions, lambda, gear, etc.).
+CANShift is an **open-source CAN bus dashboard** for sport and track cars. It
+runs on an ESP32 touch screen and displays ECU signals in real time — RPM,
+temperatures, pressures, lambda, gear, and so on.
 
-## Ce dont tu as besoin
+## What you need
 
-- **Hardware** : un écran Elecrow CrowPanel 2.8" ESP32 + un module CAN (TJA1051T/3)
-  + le câblage entre les deux et vers ton ECU.
-- **Côté logiciel** : un navigateur Chromium-based pour flasher (Web Serial) et un
-  câble USB.
+- **Hardware**: an Elecrow CrowPanel 2.8" ESP32 screen + a CAN transceiver
+  (TJA1051T/3) + wiring between the two and to your ECU.
+- **Software**: a Chromium-based browser for flashing (Web Serial) and a USB
+  cable.
 
-## L'écosystème en un schéma
+## Ecosystem at a glance
 
 ```
-                          ┌─────────────────────┐
-                          │  canshift-flasher   │  ← flash le firmware
-                          │   (web, Chromium)   │
-                          └──────────┬──────────┘
-                                     │ USB
-        ┌─────────────────┐          │          ┌─────────────────┐
-        │                 │          ▼          │                 │
-        │  canshift-tuner ├──────► [ Dash ] ◄───┤ canshift-mobile │
-        │  (web, Vercel)  │  USB    ESP32  BLE  │  (Expo, iOS/    │
-        │                 │                     │   Android)      │
-        └─────────────────┘          ▲          └─────────────────┘
-                                     │
-                                  CAN bus
-                                     │
-                                ┌────┴────┐
-                                │   ECU   │
-                                └─────────┘
+        ┌─────────────────────────┐          ┌─────────────────┐
+        │     canshift-tuner      │          │ canshift-mobile │
+        │  (web — Vercel)         │          │ (Expo iOS/      │
+        │  /firmware → flasher    │          │  Android)       │
+        │  /dashboard → live edit │          │                 │
+        └────────────┬────────────┘          └────────┬────────┘
+                     │ USB                            │ BLE
+                     ▼                                ▼
+                  [ Dash ] (ESP32 firmware)
+                     ▲
+                     │
+                  CAN bus
+                     │
+                ┌────┴────┐
+                │   ECU   │
+                └─────────┘
 ```
 
-- **flasher** — flashe le firmware sur l'ESP via Web Serial.
-- **dash** (firmware) — le device lui-même : affiche, parse CAN, gère cruise/UI.
-- **tuner** — édite live le dashboard depuis un navigateur (USB Web Serial).
-- **mobile** — telemetry et config secondaire via BLE.
+- **dash** (firmware) — the device itself: renders, parses CAN, runs cruise/UI.
+- **tuner** — edits the dashboard live from a browser over USB Web Serial.
+  Also hosts the firmware flasher at `/firmware`.
+- **mobile** — telemetry and secondary config over BLE.
 
-## Suite
+## Next
 
-Va lire [Premier flash](/user-guide/install/first-flash/) pour passer du carton
-au dashboard qui clignote.
+Read [First flash](/user-guide/install/first-flash/) to go from box to a
+dashboard that boots.
