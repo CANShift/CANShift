@@ -1,7 +1,3 @@
-// property-panel/shared.tsx — Primitives, styles, constants, and the
-// `ConfigFieldsProps` contract reused by every per-widget editor split out
-// from the legacy `PropertyPanel.tsx` (#697).
-
 import React from 'react'
 import type {
   GaugeDisplayStyle,
@@ -11,22 +7,15 @@ import type {
 } from '@tmbk/canshift-core'
 import { SENSOR_ICON_LABELS, SENSOR_ICON_NAMES, SensorIcon } from '../../icons/SensorIcons'
 
-// ---------------------------------------------------------------------------
-// Field + Row primitives — keep the original look-and-feel verbatim. Inline
-// styles are deliberate: PropertyPanel pre-dates the Tailwind migration and
-// a wholesale rewrite is out of scope for this refactor.
-// ---------------------------------------------------------------------------
-
-export function Field({
+export const Field = ({
   label,
   children,
   onReset,
 }: {
   label: string
   children: React.ReactNode
-  /** Show a small reset icon next to the label that calls back when clicked. */
   onReset?: (() => void) | undefined
-}) {
+}) => {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
@@ -84,21 +73,17 @@ export const numberInputStyle: React.CSSProperties = {
   width: '100%',
 }
 
-export function Row({ children }: { children: React.ReactNode }) {
+export const Row = ({ children }: { children: React.ReactNode }) => {
   return <div style={{ display: 'flex', gap: 6 }}>{children}</div>
 }
 
-// ---------------------------------------------------------------------------
-// Icon picker — used by both ButtonFields and WarningFields.
-// ---------------------------------------------------------------------------
-
-export function IconPicker({
+export const IconPicker = ({
   value,
   onChange,
 }: {
   value: SensorIconName | undefined
   onChange: (name: SensorIconName | undefined) => void
-}) {
+}) => {
   return (
     <div>
       <div
@@ -155,14 +140,9 @@ export function IconPicker({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Shared constants
-// ---------------------------------------------------------------------------
-
 export interface ConfigFieldsProps {
   widget: Widget
   onChange: (patch: Partial<Widget>) => void
-  /** Definition for the bound signal (when one is bound) — used to resolve "reset to default". */
   signalDef?: SignalDef | undefined
 }
 
@@ -171,7 +151,6 @@ export const GAUGE_STYLES: { value: GaugeDisplayStyle; label: string }[] = [
   { value: 'numeric', label: 'Numeric' },
 ]
 
-/** All automotive units available as quick chips. */
 export const ALL_UNITS = [
   'rpm',
   'km/h',
@@ -188,7 +167,6 @@ export const ALL_UNITS = [
   's',
 ]
 
-/** Units relevant to each signal — restricts the chips shown when a signal is bound. */
 export const SIGNAL_UNITS: Record<string, string[]> = {
   rpm: ['rpm'],
   throttle_pos: ['%'],

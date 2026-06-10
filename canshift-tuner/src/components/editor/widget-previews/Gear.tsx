@@ -1,7 +1,3 @@
-// widget-previews/Gear.tsx — Large gear-position digit preview.
-// The digit is the focal point and stands on its own — no header label is
-// drawn (the digit communicates the signal). Issue #1244.
-
 import { memo } from 'react'
 import { FONT_FAMILY } from '../widgetPreview.styles'
 import type { BaseRendererProps } from './shared'
@@ -25,12 +21,7 @@ export const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRende
         overflow: 'hidden',
       }}
     >
-      {/* Centering wrapper — Orbitron Black single-digit side bearings are
-          asymmetric, so flex `alignItems: center` alone shifts the glyph off
-          the visual axis. Wrapping the span in a full-width flex row and
-          giving the span `width: 100%` + `textAlign: center` anchors the
-          digit on the container midline (issue #513). */}
-      <div
+            <div
         style={{
           display: 'flex',
           width: '100%',
@@ -43,8 +34,6 @@ export const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRende
           style={{
             color: st.primaryColor,
             fontSize,
-            // Primary value tier — gear digit is the focal element. Black 900
-            // matches FontManager::primary on the device.
             fontWeight: 900,
             fontFamily: FONT_FAMILY,
             lineHeight: 1,

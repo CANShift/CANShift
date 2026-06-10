@@ -1,9 +1,3 @@
-// property-panel/gauge-fields.tsx — Editor for `gauge` widgets.
-//
-// The arc / bar / numeric variants all live in this same component because
-// switching style automatically applies the matching default size token,
-// and the shared range/warn/danger row needs to know about that transition.
-
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   GAUGE_DEFAULT_TOKEN,
@@ -20,23 +14,18 @@ import {
   numberInputStyle,
 } from './shared'
 
-export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) {
+export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) => {
   const cfg = widget.config.type === 'gauge' ? widget.config : null
   if (!cfg) return null
   const style = cfg.displayStyle
-  // Pre-narrowed default for the "Reset to signal default" affordance —
-  // TypeScript can't follow signalDef?.X through the chained ternaries inside
-  // the JSX, so we hoist the value once.
   const defaultDanger = signalDef?.dangerLevel
   const allowedTokenIds = gaugeTokenIds(style)
-  // If current dimensions don't match any token, fall back to the first available
   const activeTokenId =
     tokenFromDimensions(widget.layout.w, widget.layout.h) ?? allowedTokenIds[0] ?? null
 
   return (
     <>
-      {/* Display style selector — switching also applies the default size token */}
-      <Field label="Style">
+            <Field label="Style">
         <div style={{ display: 'flex', gap: 4 }}>
           {GAUGE_STYLES.map(({ value, label }) => (
             <button
@@ -67,8 +56,7 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </div>
       </Field>
 
-      {/* Size tokens for the current style */}
-      <Field label="Size">
+            <Field label="Size">
         <div style={{ display: 'flex', gap: 4 }}>
           {allowedTokenIds.map((tokenId) => {
             const token = SIZE_TOKENS[tokenId]
@@ -99,13 +87,8 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </div>
       </Field>
 
-      {/* Unit, prefix, decimals — inherited from the bound signal definition
-          (signal.unit + signal-side scaling). Per-widget overrides were
-          dropped from the picker so the dashboard reads consistently with
-          the signal catalogue. */}
-
-      {/* Arc range fields. */}
-      {style === 'arc' && (
+      
+            {style === 'arc' && (
         <>
           <Row>
             <Field
@@ -150,8 +133,6 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
                 value={cfg.maxValue}
                 onChange={(e) => {
                   const newMax = Number(e.target.value)
-                  // Scale dangerLevel proportionally when max changes so the
-                  // user's relative cut-off survives the range adjustment.
                   const range = cfg.maxValue - cfg.minValue || 1
                   const dangerPct = (cfg.dangerLevel - cfg.minValue) / range
                   const newRange = newMax - cfg.minValue || 1
@@ -243,11 +224,6 @@ export function GaugeFields({ widget, onChange, signalDef }: ConfigFieldsProps) 
         </>
       )}
 
-      {/* Sensor + Label blocks were dropped from the gauge editor. The
-          two-zone palette now resolves through the bound signal's `type`
-          (see SignalType / signalTypeOkColor in canshift-core), and the
-          widget renders the signal name as an auto-header — no per-widget
-          icon or custom label fields needed here. */}
-    </>
+          </>
   )
 }
