@@ -1,112 +1,219 @@
 ---
+import "./tuner-mock.css";
+
 interface Props {
-  variant?: "connect" | "connected";
+  variant?: "connect" | "connecting";
 }
 const { variant = "connect" } = Astro.props;
+
+const STEPS = [
+  { title: "Plug your dash", body: "USB-C cable, directly into your computer. No hub." },
+  {
+    title: "Pick the port",
+    body: "Click Connect device. Your browser asks which USB port to use.",
+  },
+  {
+    title: "Start tuning",
+    body: "Edit your dashboard live — your changes preview as you type.",
+  },
+];
 ---
 
 <div class="tuner-screen tuner-welcome">
-  <div class="tuner-welcome__hero">
-    <span class="tuner-welcome__mark">⚡</span>
-    <h2 class="tuner-welcome__title">CANShift</h2>
-    <p class="tuner-welcome__tagline">
-      Open dashboard for ESP32. Plug your dash, hit Connect, edit live.
-    </p>
-    {
-      variant === "connect" ? (
-        <button type="button" class="tuner-welcome__cta">
-          Connect device
-        </button>
-      ) : (
-        <div class="tuner-welcome__row">
-          <span class="tuner-pill tuner-pill--success">● Connected</span>
-          <span class="tuner-pill">USB JTAG/serial debug unit</span>
-        </div>
-      )
-    }
+  <div class="tuner-welcome__content">
+    <header class="tuner-welcome__hero">
+      <div class="tuner-welcome__badge">CANShift Tuner</div>
+      <h1 class="tuner-welcome__title">Configure your dash, live.</h1>
+      <p class="tuner-welcome__tagline">
+        Edit pages, bind CAN signals, tune OBD-II polling — all in your browser,
+        with the dash connected over USB. No install, nothing to deploy.
+      </p>
+    </header>
+
+    <ol class="tuner-welcome__steps">
+      {
+        STEPS.map((step, idx) => (
+          <li class="tuner-welcome__step">
+            <div class="tuner-welcome__step-num">{idx + 1}</div>
+            <div>
+              <div class="tuner-welcome__step-title">{step.title}</div>
+              <div class="tuner-welcome__step-body">{step.body}</div>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="tuner-welcome__cta-row">
+      <button
+        type="button"
+        class="tuner-welcome__cta"
+        aria-disabled={variant === "connecting"}
+      >
+        {
+          variant === "connecting" ? (
+            <>
+              <span class="tuner-welcome__spinner" aria-hidden="true" />
+              Connecting…
+            </>
+          ) : (
+            "Connect device"
+          )
+        }
+      </button>
+    </div>
+
+    <footer class="tuner-welcome__footer">
+      <span class="tuner-welcome__link">About</span>
+      <span class="tuner-welcome__sep">·</span>
+      <span class="tuner-welcome__link">Troubleshooting</span>
+      <span class="tuner-welcome__sep">·</span>
+      <span class="tuner-welcome__link">Report a problem</span>
+    </footer>
   </div>
-  <ul class="tuner-welcome__hints">
-    <li>Press <kbd>Cmd</kbd>+<kbd>S</kbd> to Burn</li>
-    <li>The dash auto-reconnects after a reboot</li>
-    <li>Use Simulation mode without hardware</li>
-  </ul>
 </div>
 
 <style>
+  /* Mirrors canshift-tuner/src/routes/WelcomeRoute.tsx */
   .tuner-welcome {
-    display: grid;
-    place-items: center;
-    padding: 28px 24px;
-    gap: 24px;
-    text-align: center;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 32px;
+    overflow-y: auto;
+  }
+  .tuner-welcome__content {
+    width: 100%;
+    max-width: 540px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
   }
   .tuner-welcome__hero {
+    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
-  .tuner-welcome__mark {
-    font-size: 36px;
-    color: var(--cs-primary);
-    text-shadow: 0 0 18px rgba(255, 71, 71, 0.4);
+  .tuner-welcome__badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-text-dim);
+    font-family: "Orbitron", system-ui, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
   .tuner-welcome__title {
-    font-family: "Orbitron", system-ui, sans-serif;
-    font-weight: 900;
-    font-size: 26px;
-    margin: 0;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 30px;
+    font-weight: 700;
     color: var(--cs-text);
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1.15;
+    font-family: inherit;
   }
   .tuner-welcome__tagline {
+    font-size: 14px;
     color: var(--cs-text-dim);
-    font-size: 12px;
-    max-width: 340px;
+    line-height: 1.6;
     margin: 0;
+    max-width: 440px;
   }
-  .tuner-welcome__cta {
-    margin-top: 4px;
-    background: var(--cs-primary);
-    color: var(--cs-primary-foreground);
-    border: 1px solid var(--cs-primary);
-    border-radius: 6px;
-    padding: 7px 22px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    box-shadow: 0 1px 6px rgba(255, 71, 71, 0.32);
-  }
-  .tuner-welcome__row {
-    display: flex;
-    gap: 8px;
-  }
-  .tuner-welcome__hints {
+  .tuner-welcome__steps {
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-    color: var(--cs-text-muted);
-    font-size: 11px;
+    flex-direction: column;
+    gap: 14px;
   }
-  .tuner-welcome__hints li {
+  .tuner-welcome__step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
     background: var(--cs-surface);
     border: 1px solid var(--cs-border);
-    border-radius: 4px;
-    padding: 4px 8px;
+    border-radius: 8px;
   }
-  .tuner-welcome__hints kbd {
-    font-family: var(--sl-font-mono);
-    background: var(--cs-surface-2);
-    border: 1px solid var(--cs-border);
-    border-radius: 3px;
-    padding: 0 4px;
-    font-size: 10px;
+  .tuner-welcome__step-num {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--cs-primary) 15%, transparent);
+    color: var(--cs-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    margin-top: 2px;
+  }
+  .tuner-welcome__step-title {
+    font-weight: 600;
     color: var(--cs-text);
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .tuner-welcome__step-body {
+    font-size: 13px;
+    color: var(--cs-text-dim);
+    line-height: 1.5;
+  }
+  .tuner-welcome__cta-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  .tuner-welcome__cta {
+    background: var(--cs-primary);
+    color: var(--cs-primary-foreground);
+    border: none;
+    border-radius: 8px;
+    padding: 14px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(255, 71, 71, 0.3);
+    font-family: inherit;
+    cursor: default;
+  }
+  .tuner-welcome__cta[aria-disabled="true"] {
+    opacity: 0.7;
+  }
+  .tuner-welcome__spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--cs-primary-foreground);
+    border-top-color: transparent;
+    border-radius: 50%;
+  }
+  .tuner-welcome__footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--cs-border);
+    margin-top: 8px;
+  }
+  .tuner-welcome__link {
+    color: var(--cs-text-dim);
+    font-size: 12px;
+  }
+  .tuner-welcome__sep {
+    color: var(--cs-text-muted);
+    font-size: 12px;
   }
 </style>

@@ -1,55 +1,214 @@
 ---
 import "./tuner-mock.css";
+
+const CATALOGUE = [
+  { vendor: "Haltech", label: "Haltech v2 CAN", signals: 128, active: true },
+  { vendor: "Ecumaster", label: "EmuBlack", signals: 96, active: false },
+  { vendor: "Adaptronic", label: "CAN simple", signals: 42, active: false },
+  { vendor: "Adaptronic", label: "CAN full", signals: 64, active: false },
+  { vendor: "AEM", label: "AEM 6 CAN", signals: 38, active: false },
+  { vendor: "Flagtronics", label: "Flagtronics CAN v0.4", signals: 24, active: false },
+];
+
+const PREVIEW = [
+  { name: "ENGINE_RPM", id: "0x360", bytes: "0..1", scale: "×0.25", unit: "rpm" },
+  { name: "COOLANT_TEMP", id: "0x361", bytes: "2", scale: "−40", unit: "°C" },
+  { name: "BOOST_KPA", id: "0x362", bytes: "0..1", scale: "×0.1", unit: "kPa" },
+  { name: "LAMBDA", id: "0x363", bytes: "0..1", scale: "×0.001", unit: "λ" },
+  { name: "OIL_PRESSURE", id: "0x364", bytes: "0..1", scale: "×0.01", unit: "bar" },
+];
 ---
 
-<div class="tuner-screen">
-  <div class="tuner-section-header">
-    <h3>ECU profile</h3>
-    <p>Pick a preset or import a custom map.</p>
-  </div>
-  <div class="tuner-section-body">
-    <div class="tuner-ecu__list">
-      <button type="button" class="tuner-ecu__row is-active">
-        <span class="tuner-ecu__name">Haltech v2 CAN</span>
-        <span class="tuner-ecu__meta">128 signals · 500 kbit/s</span>
-        <span class="tuner-pill tuner-pill--success">Active</span>
-      </button>
-      <button type="button" class="tuner-ecu__row">
-        <span class="tuner-ecu__name">Ecumaster EmuBlack</span>
-        <span class="tuner-ecu__meta">96 signals · 500 kbit/s</span>
-      </button>
-      <button type="button" class="tuner-ecu__row">
-        <span class="tuner-ecu__name">Adaptronic CAN simple</span>
-        <span class="tuner-ecu__meta">42 signals · 1 Mbit/s</span>
-      </button>
-      <button type="button" class="tuner-ecu__row">
-        <span class="tuner-ecu__name">OBD-II generic</span>
-        <span class="tuner-ecu__meta">Polled · Mode 01</span>
-      </button>
+<div class="tuner-screen tuner-ecu">
+  <header class="tuner-route-header">
+    <div>
+      <div class="tuner-route-header__title">ECU profile</div>
+      <div class="tuner-route-header__subtitle">
+        Pick a preset from the catalogue or drop a CAN XML to import a custom map.
+      </div>
     </div>
+  </header>
+
+  <div class="tuner-ecu__body">
+    <section class="tuner-ecu__left">
+      <div class="tuner-ecu__list">
+        {
+          CATALOGUE.map((c) => (
+            <button
+              type="button"
+              class:list={["tuner-ecu__row", c.active && "is-active"]}
+            >
+              <span class="tuner-ecu__vendor">{c.vendor}</span>
+              <span class="tuner-ecu__label">{c.label}</span>
+              <span class="tuner-ecu__count">{c.signals} sig</span>
+              {c.active && <span class="tuner-ecu__active">Active</span>}
+            </button>
+          ))
+        }
+      </div>
+
+      <div class="tuner-ecu__drop">
+        <span class="tuner-ecu__drop-glyph" aria-hidden="true">↥</span>
+        <span class="tuner-ecu__drop-text">
+          Drop a <code>.xml</code> here or click to import
+        </span>
+      </div>
+    </section>
+
+    <section class="tuner-ecu__right">
+      <div class="tuner-ecu__preview-header">
+        Preview — Haltech · Haltech v2 CAN
+      </div>
+      <table class="tuner-table tuner-ecu__table">
+        <thead>
+          <tr>
+            <th>Signal</th>
+            <th>Frame ID</th>
+            <th>Bytes</th>
+            <th>Scale</th>
+            <th>Unit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            PREVIEW.map((s) => (
+              <tr>
+                <td>{s.name}</td>
+                <td>{s.id}</td>
+                <td class="dim">{s.bytes}</td>
+                <td class="dim">{s.scale}</td>
+                <td class="dim">{s.unit}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <div class="tuner-ecu__apply-row">
+        <button type="button" class="tuner-btn tuner-btn--primary tuner-btn--lg">
+          Apply 5 signals
+        </button>
+      </div>
+    </section>
   </div>
 </div>
 
 <style>
-  .tuner-ecu__list { display: flex; flex-direction: column; gap: 6px; }
+  /* EcuRoute.tsx grid: minmax(300, 380) 1fr */
+  .tuner-ecu__body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    min-height: 0;
+  }
+  .tuner-ecu__left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 20px;
+    border-right: 1px solid var(--cs-border);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .tuner-ecu__right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 24px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .tuner-ecu__list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+  }
   .tuner-ecu__row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 88px 1fr auto auto;
     align-items: center;
     gap: 12px;
-    text-align: left;
     background: var(--cs-surface);
     border: 1px solid var(--cs-border);
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     color: var(--cs-text-dim);
     font-size: 12px;
+    text-align: left;
+    font-family: inherit;
+    cursor: default;
   }
   .tuner-ecu__row.is-active {
     border-color: var(--cs-primary);
     background: color-mix(in srgb, var(--cs-primary) 8%, var(--cs-surface));
     color: var(--cs-text);
   }
-  .tuner-ecu__name { font-weight: 600; }
-  .tuner-ecu__meta { color: var(--cs-text-muted); font-family: var(--sl-font-mono); font-size: 10px; }
+  .tuner-ecu__vendor {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cs-text-muted);
+  }
+  .tuner-ecu__label { font-weight: 600; }
+  .tuner-ecu__count {
+    font-family: var(--sl-font-mono);
+    color: var(--cs-text-muted);
+    font-size: 10px;
+  }
+  .tuner-ecu__active {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cs-success);
+    background: color-mix(in srgb, var(--cs-success) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--cs-success) 40%, transparent);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .tuner-ecu__drop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border: 1px dashed var(--cs-border);
+    border-radius: 8px;
+    color: var(--cs-text-dim);
+    background: var(--cs-bg-inset);
+    font-size: 12px;
+  }
+  .tuner-ecu__drop-glyph {
+    font-size: 20px;
+    color: var(--cs-text-muted);
+  }
+  .tuner-ecu__drop code {
+    background: var(--cs-surface-2);
+    border: 1px solid var(--cs-border);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 11px;
+    font-family: var(--sl-font-mono);
+  }
+
+  .tuner-ecu__preview-header {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cs-text-muted);
+  }
+  .tuner-ecu__table { font-size: 12px; }
+  .tuner-ecu__apply-row {
+    margin-top: 4px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @container (max-width: 720px) {
+    .tuner-ecu__body { grid-template-columns: 1fr; }
+    .tuner-ecu__left { border-right: 0; border-bottom: 1px solid var(--cs-border); }
+  }
 </style>

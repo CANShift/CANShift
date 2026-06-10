@@ -2,9 +2,24 @@
 import "./tuner-mock.css";
 
 interface Props {
-  activeStep?: 1 | 2 | 3;
+  step1Status?: "idle" | "active" | "done" | "disabled";
+  step2Status?: "idle" | "active" | "done" | "disabled";
+  step3Status?: "idle" | "active" | "done" | "disabled";
 }
-const { activeStep = 2 } = Astro.props;
+const {
+  step1Status = "done",
+  step2Status = "active",
+  step3Status = "disabled",
+} = Astro.props;
+
+const badgePalette = (status: "idle" | "active" | "done" | "disabled") => {
+  if (status === "done") return { bg: "color-mix(in srgb, var(--cs-success) 18%, transparent)", fg: "var(--cs-success)" };
+  if (status === "active") return { bg: "color-mix(in srgb, var(--cs-primary) 18%, transparent)", fg: "var(--cs-primary)" };
+  return { bg: "var(--cs-bg-inset)", fg: "var(--cs-text-muted)" };
+};
+const p1 = badgePalette(step1Status);
+const p2 = badgePalette(step2Status);
+const p3 = badgePalette(step3Status);
 ---
 
 <div class="tuner-screen tuner-firmware">
@@ -12,65 +27,151 @@ const { activeStep = 2 } = Astro.props;
     <h3>Firmware</h3>
     <p>
       Write a new firmware image to the dash over WebSerial. Reuses the active
-      tuner connection.
+      tuner connection so there is no second port selection step.
     </p>
   </div>
-  <div class="tuner-section-body">
-    <article class="tuner-card">
-      <h4 class="tuner-card__title">
-        <span class={`num ${activeStep > 1 ? "" : "num--muted"}`}>1</span>
-        Device
-      </h4>
-      <div class="tuner-card__body">
-        <div class="tuner-row">
-          <span class="tuner-row__label">Port</span>
-          <span class="tuner-row__value">/dev/cu.usbserial-303a</span>
-          <span class="tuner-pill tuner-pill--success">● Detected</span>
-        </div>
-        <div class="tuner-row">
-          <span class="tuner-row__label">Chip</span>
-          <span class="tuner-row__value">ESP32-WROOM-32</span>
-        </div>
-      </div>
-    </article>
 
-    <article class="tuner-card">
-      <h4 class="tuner-card__title">
-        <span class={`num ${activeStep >= 2 ? "" : "num--muted"}`}>2</span>
-        Firmware
-      </h4>
-      <div class="tuner-card__body">
-        <div class="tuner-row">
-          <span class="tuner-row__label">Channel</span>
-          <span class="tuner-row__value">stable · v0.42.0</span>
-          <span class="tuner-pill">latest</span>
-        </div>
-        <div class="tuner-row">
-          <span class="tuner-row__label">Size</span>
-          <span class="tuner-row__value">1.62 MB</span>
-        </div>
+  <div class="tuner-firmware__body">
+    <section
+      class="tuner-flash-section"
+      data-status={step1Status}
+    >
+      <header class="tuner-flash-section__head">
+        <span
+          class="tuner-flash-section__badge"
+          style={`background:${p1.bg}; color:${p1.fg};`}
+        >1</span>
+        <h2 class="tuner-flash-section__title">Device</h2>
+      </header>
+      <div class="tuner-flash-section__body">
+        <p>
+          Tuner is talking to the dash on
+          <strong>/dev/cu.usbserial-303a</strong>. The flasher reuses this
+          connection — no second port selection needed.
+        </p>
       </div>
-    </article>
+    </section>
 
-    <article class="tuner-card">
-      <h4 class="tuner-card__title">
-        <span class={`num ${activeStep === 3 ? "" : "num--muted"}`}>3</span>
-        Flash
-      </h4>
-      <div class="tuner-card__body">
-        <div class="tuner-row">
-          <button type="button" class="tuner-button tuner-button--primary"
-            >Flash now</button
-          >
-          <span class="tuner-row__label">~30 s, dash reboots at the end.</span>
+    <section class="tuner-flash-section" data-status={step2Status}>
+      <header class="tuner-flash-section__head">
+        <span
+          class="tuner-flash-section__badge"
+          style={`background:${p2.bg}; color:${p2.fg};`}
+        >2</span>
+        <h2 class="tuner-flash-section__title">Firmware</h2>
+      </header>
+      <div class="tuner-flash-section__body">
+        <p>Pick which firmware build to write to the dash.</p>
+        <ul class="tuner-firmware__list">
+          <li>
+            <strong>Latest stable release</strong> — fetched from the GitHub
+            releases feed, signed, size-checked.
+          </li>
+          <li>
+            <strong>Pre-release / beta channel</strong> — opt-in track for
+            in-flight features.
+          </li>
+          <li>
+            <strong>Local .bin file</strong> — for developers building from
+            source.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="tuner-flash-section" data-status={step3Status}>
+      <header class="tuner-flash-section__head">
+        <span
+          class="tuner-flash-section__badge"
+          style={`background:${p3.bg}; color:${p3.fg};`}
+        >3</span>
+        <h2 class="tuner-flash-section__title">Flash</h2>
+      </header>
+      <div class="tuner-flash-section__body">
+        <p>
+          Erase the flash, write the new firmware, verify the checksum, then
+          reboot into the freshly written image. The dash is unreachable for
+          ~30 seconds during the flow.
+        </p>
+        <div>
+          <button type="button" class="tuner-btn tuner-btn--lg tuner-btn--primary" disabled>
+            Flash firmware (coming soon)
+          </button>
         </div>
       </div>
-    </article>
+    </section>
   </div>
 </div>
 
 <style>
-  .tuner-section-body {
+  /* Body padding matches FirmwareRoute.tsx (padding 20, gap 16) */
+  .tuner-firmware__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
     overflow-y: auto;
+  }
+
+  /* FlashSection.tsx — padding 16, radius 8, border, gap 12 */
+  .tuner-flash-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--cs-border);
+    background: var(--cs-surface);
+  }
+  .tuner-flash-section[data-status="disabled"] {
+    opacity: 0.55;
+  }
+
+  .tuner-flash-section__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Badge: 22x22 round, font 11/700 */
+  .tuner-flash-section__badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .tuner-flash-section__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cs-text);
+    letter-spacing: 0.02em;
+    margin: 0;
+    font-family: inherit;
+  }
+
+  .tuner-flash-section__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--cs-text-dim);
+    line-height: 1.5;
+  }
+  .tuner-flash-section__body p { margin: 0; }
+  .tuner-flash-section__body strong { color: var(--cs-text); }
+
+  .tuner-firmware__list {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 </style>

@@ -1,116 +1,138 @@
 ---
 import "./tuner-mock.css";
+
+interface Props {
+  mode?: "day" | "night";
+}
+const { mode = "night" } = Astro.props;
 ---
 
-<div class="tuner-screen">
-  <div class="tuner-section-header">
-    <h3>Themes</h3>
-    <p>Day / night palettes applied to the dash. Live preview on the right.</p>
-  </div>
-  <div class="tuner-section-body">
-    <div class="tuner-themes">
-      <div class="tuner-themes__list">
-        <button type="button" class="tuner-themes__card is-active" style="--c1:#121212;--c2:#FF4747;--c3:#FF8800;">
-          <span class="tuner-themes__swatch"></span>
-          <span class="tuner-themes__name">Night red</span>
-          <span class="tuner-pill tuner-pill--success">Active</span>
-        </button>
-        <button type="button" class="tuner-themes__card" style="--c1:#0E1B2E;--c2:#3CC3FF;--c3:#FFFFFF;">
-          <span class="tuner-themes__swatch"></span>
-          <span class="tuner-themes__name">Night blue</span>
-        </button>
-        <button type="button" class="tuner-themes__card" style="--c1:#F5F0E8;--c2:#1E1E1E;--c3:#CC3333;">
-          <span class="tuner-themes__swatch"></span>
-          <span class="tuner-themes__name">Day paper</span>
-        </button>
+<div class="tuner-screen tuner-themes">
+  <div class="tuner-themes__content">
+    <header class="tuner-themes__head">
+      <div class="tuner-themes__title">Themes</div>
+      <div class="tuner-themes__subtitle">
+        Day / night palette state read from the device on connect. The active
+        dashboard config decides per-page colours; this route flips the global
+        mode the firmware uses to pick which palette to render.
       </div>
-      <div class="tuner-themes__preview">
-        <span class="tuner-themes__preview-label">Preview</span>
-        <div class="tuner-themes__preview-value">7 250</div>
-        <div class="tuner-themes__preview-bar"></div>
-        <div class="tuner-themes__preview-pills">
-          <span>92°</span>
-          <span>0.84</span>
-          <span>3rd</span>
+    </header>
+
+    <div class="tuner-themes__status" data-variant={mode}>
+      <div class="tuner-themes__icon">{mode === "day" ? "☀" : "☾"}</div>
+      <div class="tuner-themes__details">
+        <div class="tuner-themes__label">Current theme</div>
+        <div class="tuner-themes__value">{mode === "day" ? "Day" : "Night"}</div>
+        <div class="tuner-themes__hint">
+          {
+            mode === "day"
+              ? "Bright palette: light background, dark text."
+              : "Dark palette: black background, white text."
+          }
         </div>
+      </div>
+    </div>
+
+    <div class="tuner-themes__controls">
+      <button type="button" class="tuner-btn tuner-btn--primary tuner-btn--lg">
+        Toggle day / night
+      </button>
+      <div class="tuner-themes__row">
+        <button
+          type="button"
+          class="tuner-btn tuner-btn--outline tuner-btn--lg"
+          aria-disabled={mode === "day"}
+        >Force Day</button>
+        <button
+          type="button"
+          class="tuner-btn tuner-btn--outline tuner-btn--lg"
+          aria-disabled={mode === "night"}
+        >Force Night</button>
       </div>
     </div>
   </div>
 </div>
 
 <style>
+  /* ThemesRoute container — centered, padding 32/28, max 560, gap 24 */
   .tuner-themes {
-    display: grid;
-    grid-template-columns: 1fr 220px;
-    gap: 14px;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 28px;
+    overflow-y: auto;
   }
-  .tuner-themes__list { display: flex; flex-direction: column; gap: 6px; }
-  .tuner-themes__card {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 12px;
-    background: var(--cs-surface);
-    border: 1px solid var(--cs-border);
-    border-radius: 6px;
-    padding: 10px 12px;
-    text-align: left;
-    color: var(--cs-text-dim);
-    font-size: 12px;
-  }
-  .tuner-themes__card.is-active {
-    border-color: var(--cs-primary);
-    color: var(--cs-text);
-  }
-  .tuner-themes__swatch {
-    width: 36px;
-    height: 24px;
-    border-radius: 4px;
-    background: linear-gradient(135deg, var(--c1) 0 50%, var(--c2) 50% 80%, var(--c3) 80% 100%);
-    border: 1px solid var(--cs-border);
-  }
-  .tuner-themes__name { font-weight: 600; }
-
-  .tuner-themes__preview {
-    background: #121212;
-    border: 1px solid var(--cs-border);
-    border-radius: 6px;
-    padding: 14px;
+  .tuner-themes__content {
+    width: 100%;
+    max-width: 560px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 24px;
   }
-  .tuner-themes__preview-label {
+  .tuner-themes__head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tuner-themes__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cs-text);
+    letter-spacing: -0.01em;
+  }
+  .tuner-themes__subtitle {
+    font-size: 13px;
+    color: var(--cs-text-dim);
+    line-height: 1.5;
+  }
+
+  /* ThemeStatusCard — padding 20/22, radius 10, day vs night palette */
+  .tuner-themes__status {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px 22px;
+    border-radius: 10px;
+    background: var(--cs-bg-inset);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-text);
+  }
+  .tuner-themes__status[data-variant="day"] {
+    background: hsl(45 90% 95%);
+    border-color: hsl(45 70% 70%);
+    color: hsl(45 50% 18%);
+  }
+  .tuner-themes__icon {
+    font-size: 40px;
+    line-height: 1;
+  }
+  .tuner-themes__details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tuner-themes__label {
     font-size: 10px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--cs-text-muted);
+    opacity: 0.7;
   }
-  .tuner-themes__preview-value {
-    font-family: "Orbitron", system-ui, sans-serif;
-    font-weight: 900;
-    font-size: 32px;
-    color: #ff4747;
-    text-shadow: 0 0 12px rgba(255, 71, 71, 0.4);
+  .tuner-themes__value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
-  .tuner-themes__preview-bar {
-    height: 4px;
-    background: linear-gradient(to right, #ff4747 78%, #292929 0);
-    border-radius: 2px;
+  .tuner-themes__hint {
+    font-size: 12px;
+    opacity: 0.75;
   }
-  .tuner-themes__preview-pills {
+
+  .tuner-themes__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tuner-themes__row {
     display: flex;
     gap: 8px;
-    font-family: var(--sl-font-mono);
-    color: #fff;
-    font-size: 12px;
-  }
-  .tuner-themes__preview-pills span {
-    background: #292929;
-    border-radius: 4px;
-    padding: 2px 8px;
-  }
-  @container (max-width: 640px) {
-    .tuner-themes { grid-template-columns: 1fr; }
   }
 </style>
