@@ -189,9 +189,7 @@ const SignalRow = ({ signal, index }: RowProps) => {
               </option>
             ))}
             {isRawPid && (
-              <option value={polling.pid.toString(10)}>
-                {formatPid(polling.pid)} — custom
-              </option>
+              <option value={polling.pid.toString(10)}>{formatPid(polling.pid)} — custom</option>
             )}
           </select>
 
@@ -241,8 +239,8 @@ export default function Obd2PollingPanel() {
         Signal sources
       </div>
       <p style={{ fontSize: 10, color: PANEL_HINT, marginBottom: 6, lineHeight: 1.4 }}>
-        OBD-II ECUs do not broadcast — the dash must send a query frame for each
-        signal. Faster intervals = more CAN traffic. Stick to ≥{OBD2_MIN_INTERVAL_MS}
+        OBD-II ECUs do not broadcast — the dash must send a query frame for each signal. Faster
+        intervals = more CAN traffic. Stick to ≥{OBD2_MIN_INTERVAL_MS}
         ms; busy buses choke below that.
       </p>
       <div style={{ fontSize: 10, color: PANEL_SECTION, marginBottom: 4 }}>

@@ -1,36 +1,17 @@
-// transport/__tests__/webserial-client.test.ts — Unit coverage for the
-// WebSerial client: frame parser, ack matching, subscription routing, single-
-// instance refusal, and the bounded send queue.
-//
-// Mocks `navigator.serial` and a controllable fake `SerialPort` with hand-
-// driven `readable`/`writable` streams so the suite stays hermetic.
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import {
-  SerialClient,
-  __resetSerialClientSingleton,
-  getSerialClient,
-} from '../webserial-client'
-
-// ---------------------------------------------------------------------------
-// Fake SerialPort harness — minimal surface, full control over each side.
-// ---------------------------------------------------------------------------
+import { SerialClient, __resetSerialClientSingleton, getSerialClient } from '../webserial-client'
 
 interface FakePort {
   port: SerialPort
-  /** Feed bytes into the host-side reader. */
   pushBytes: (bytes: Uint8Array | string) => void
-  /** Close the readable stream from the device side (simulates unplug). */
   closeReader: () => void
-  /** Inspect everything written by the client. */
   written: string[]
   opened: boolean
   closed: boolean
-  /** Spy on `port.close()` invocations. */
   closeCalls: number
 }
 
-function makeFakePort(): FakePort {
+const makeFakePort = (): FakePort => {
   let readableController: ReadableStreamDefaultController<Uint8Array> | null = null
   const written: string[] = []
   const decoder = new TextDecoder()
@@ -61,9 +42,7 @@ function makeFakePort(): FakePort {
       state.closed = true
       try {
         readableController?.close()
-      } catch {
-        // Stream may already be closed by the test — ignore.
-      }
+      } catch {}
     }),
     readable,
     writable,
@@ -78,9 +57,7 @@ function makeFakePort(): FakePort {
     closeReader: () => {
       try {
         readableController?.close()
-      } catch {
-        // Ignore double-close.
-      }
+      } catch {}
     },
     get written() {
       return written
@@ -97,7 +74,7 @@ function makeFakePort(): FakePort {
   }
 }
 
-function installNavigatorSerial(getPortsResult: SerialPort[] = []): void {
+const installNavigatorSerial = (getPortsResult: SerialPort[] = []): void => {
   const fakeSerial = {
     requestPort: vi.fn(async () => {
       throw new Error('test should pass a port directly')
@@ -110,8 +87,7 @@ function installNavigatorSerial(getPortsResult: SerialPort[] = []): void {
   })
 }
 
-/** Yield to microtasks so the read loop drains any queued bytes. */
-async function flush(): Promise<void> {
+const flush = async (): Promise<void> => {
   for (let i = 0; i < 5; i++) {
     await Promise.resolve()
   }
@@ -153,12 +129,8 @@ describe('SerialClient — frame parser', () => {
     client.subscribe('log', log)
 
     await client.connect(fake.port)
-    // Free-form lines (Arduino framework log_e, LVGL warnings, ROM bootloader
-    // banner) start without `{` — should be silently dropped, NO warn.
     fake.pushBytes('\n\nnot-json\n[   485][E][Preferences.cpp:50] nvs_open failed\n')
-    // A line that LOOKS LIKE a JSON object but is malformed → warn.
     fake.pushBytes('{"log":1,"broken\n')
-    // A valid frame still dispatches.
     fake.pushBytes('{"log":1,"lvl":"info","tag":"x","msg":"y"}\n')
     await flush()
 
@@ -193,7 +165,6 @@ describe('SerialClient — ack matching', () => {
     const ackPromise = client.send(0x02, { payload: { a: 1 } })
     await flush()
 
-    // Verify the wire frame: one JSON line + trailing newline.
     expect(fake.written.join('')).toBe('{"cmd":2,"payload":{"a":1}}\n')
 
     fake.pushBytes('{"status":"ok","echo":true}\n')
@@ -235,7 +206,6 @@ describe('SerialClient — subscription dispatch', () => {
 
     await client.connect(fake.port)
 
-    // Open ack and confirm subscription frames do NOT resolve it.
     const ackPromise = client.send(0x10)
     await flush()
     fake.pushBytes('{"log":1,"lvl":"info","tag":"x","msg":"y"}\n')
@@ -256,7 +226,6 @@ describe('SerialClient — subscription dispatch', () => {
     await flush()
     expect(resolved).toBe(false)
 
-    // Now resolve the ack so the test doesn't leak a pending promise.
     fake.pushBytes('{"status":"ok"}\n')
     await ackPromise
     client.disconnect()
@@ -291,8 +260,6 @@ describe('SerialClient — send queue', () => {
 
     await client.connect(fake.port)
 
-    // First send becomes the in-flight ack (pendingAck), next 8 fill the
-    // queue. The 10th must surface `queue_full`.
     const inFlight = client.send(0x01)
     const queued: Promise<unknown>[] = []
     for (let i = 0; i < 8; i++) {
@@ -303,11 +270,9 @@ describe('SerialClient — send queue', () => {
     expect(overflow.ok).toBe(false)
     expect(overflow.error).toBe('queue_full')
 
-    // Let everything drain so we don't leak open promises.
     fake.pushBytes('{"status":"ok"}\n')
     await flush()
     await inFlight
-    // Drain remaining acks one-by-one as the queue replays them.
     for (let i = 0; i < 8; i++) {
       await flush()
       fake.pushBytes('{"status":"ok"}\n')

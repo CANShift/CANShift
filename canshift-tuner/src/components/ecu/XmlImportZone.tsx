@@ -25,7 +25,9 @@ export const XmlImportZone = ({
       return
     }
     if (file.size > MAX_FILE_BYTES) {
-      onError(`"${file.name}" is ${formatBytes(file.size)} — over the ${formatBytes(MAX_FILE_BYTES)} limit`)
+      onError(
+        `"${file.name}" is ${formatBytes(file.size)} — over the ${formatBytes(MAX_FILE_BYTES)} limit`
+      )
       return
     }
     void file.text().then((text) => {
@@ -85,11 +87,7 @@ export const XmlImportZone = ({
           <div style={iconStyle}>↓</div>
           <div style={emptyTitleStyle}>Drop an XML file here</div>
           <div style={emptyHintStyle}>or pick a file from disk</div>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            style={pickButtonStyle}
-          >
+          <button type="button" onClick={() => inputRef.current?.click()} style={pickButtonStyle}>
             Choose file…
           </button>
         </div>

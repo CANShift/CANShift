@@ -37,8 +37,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const headChars = willSplit ? intLen - 3 : intLen
   const tailChars = willSplit ? 3 : valueStr.includes('.') ? valueStr.length - intLen : 0
   const unitChars = signalUnit.length
-  const charBudget =
-    headChars + tailChars * FRAC_FONT_SCALE + unitChars * FRAC_FONT_SCALE * 0.45
+  const charBudget = headChars + tailChars * FRAC_FONT_SCALE + unitChars * FRAC_FONT_SCALE * 0.45
   const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 16) / (charBudget * 0.68)))
 
   return (
@@ -57,7 +56,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
         gap: 0,
       }}
     >
-            <span
+      <span
         style={{
           position: 'absolute',
           top: 1,
@@ -77,7 +76,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
       >
         {signalLabel.toUpperCase()}
       </span>
-            <div
+      <div
         style={{
           display: 'flex',
           flexDirection: 'row',
@@ -107,7 +106,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
                 animation: danger ? BLINK_ANIM : undefined,
               }}
             >
-                            <span style={{ fontSize }}>{prefix + intHead}</span>
+              <span style={{ fontSize }}>{prefix + intHead}</span>
               {intTail !== '' && (
                 <span style={{ fontSize: fontSize * FRAC_FONT_SCALE }}>{intTail}</span>
               )}

@@ -30,9 +30,7 @@ const canvasDims = (config: DashboardConfig): { w: number; h: number } => {
 const widgetAreaHeight = (page: PageConfig, topBarHeight: number, canvasH: number): number =>
   page.showTopBar ? canvasH - topBarHeight : canvasH
 
-const toLayoutRect = (
-  w: Widget
-): { id: string; x: number; y: number; w: number; h: number } => ({
+const toLayoutRect = (w: Widget): { id: string; x: number; y: number; w: number; h: number } => ({
   id: w.id,
   x: w.layout.x,
   y: w.layout.y,

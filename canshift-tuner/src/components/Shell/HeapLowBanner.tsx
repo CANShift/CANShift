@@ -16,10 +16,9 @@ export const HeapLowBanner = () => {
     <div role="alert" style={bannerStyle}>
       <span style={titleStyle}>Heap low</span>
       <span>
-        Largest contiguous free block is{' '}
-        <strong>{formatBytes(latest.largestInternal)}</strong> — below the{' '}
-        {formatBytes(LOW_HEAP_THRESHOLD_BYTES)} safety floor. Subsequent allocations (font load,
-        icon decode, JSON parse) may fail silently. Reboot the dash to defragment.
+        Largest contiguous free block is <strong>{formatBytes(latest.largestInternal)}</strong> —
+        below the {formatBytes(LOW_HEAP_THRESHOLD_BYTES)} safety floor. Subsequent allocations (font
+        load, icon decode, JSON parse) may fail silently. Reboot the dash to defragment.
       </span>
     </div>
   )

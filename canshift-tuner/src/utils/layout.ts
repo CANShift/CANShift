@@ -76,6 +76,43 @@ export const autoPlace = (
   return null
 }
 
+const area = (r: LayoutRect): number => r.w * r.h
+
+const moveRect = (r: LayoutRect, x: number, y: number): LayoutRect => ({ ...r, x, y })
+
+const pickVictim = (a: LayoutRect, b: LayoutRect, movedId: string): [LayoutRect, LayoutRect] => {
+  if (a.id === movedId) return [a, b]
+  if (b.id === movedId) return [b, a]
+  return area(a) <= area(b) ? [b, a] : [a, b]
+}
+
+const collidingPairs = (rects: LayoutRect[]): [LayoutRect, LayoutRect][] => {
+  const pairs: [LayoutRect, LayoutRect][] = []
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i]
+      const b = rects[j]
+      if (a && b && rectsOverlap(a, b)) pairs.push([a, b])
+    }
+  }
+  return pairs
+}
+
+const settlePass = (
+  pos: Map<string, LayoutRect>,
+  movedId: string,
+  canvasW: number,
+  canvasH: number
+): boolean => {
+  const pairs = collidingPairs(Array.from(pos.values()))
+  for (const [a, b] of pairs) {
+    const [anchor, victim] = pickVictim(a, b, movedId)
+    const np = pushAway(anchor, victim, canvasW, canvasH)
+    pos.set(victim.id, moveRect(victim, np.x, np.y))
+  }
+  return pairs.length > 0
+}
+
 export const resolveCollisions = (
   moved: LayoutRect,
   newX: number,
@@ -89,42 +126,8 @@ export const resolveCollisions = (
   for (const o of others) pos.set(o.id, { ...o })
 
   const MAX_PASSES = 8
-
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    let dirty = false
-    const all = Array.from(pos.values())
-
-    for (let i = 0; i < all.length; i++) {
-      for (let j = i + 1; j < all.length; j++) {
-        const aOrig = all[i]
-        const bOrig = all[j]
-        if (!aOrig || !bOrig) continue
-        const a = pos.get(aOrig.id) ?? aOrig
-        const b = pos.get(bOrig.id) ?? bOrig
-
-        if (!rectsOverlap(a, b)) continue
-
-        dirty = true
-
-        if (a.id === moved.id) {
-          const np = pushAway(a, b, canvasW, canvasH)
-          pos.set(b.id, { id: b.id, x: np.x, y: np.y, w: b.w, h: b.h })
-        } else if (b.id === moved.id) {
-          const np = pushAway(b, a, canvasW, canvasH)
-          pos.set(a.id, { id: a.id, x: np.x, y: np.y, w: a.w, h: a.h })
-        } else {
-          const smallerIsA = a.w * a.h <= b.w * b.h
-          if (smallerIsA) {
-            const np = pushAway(b, a, canvasW, canvasH)
-            pos.set(a.id, { id: a.id, x: np.x, y: np.y, w: a.w, h: a.h })
-          } else {
-            const np = pushAway(a, b, canvasW, canvasH)
-            pos.set(b.id, { id: b.id, x: np.x, y: np.y, w: b.w, h: b.h })
-          }
-        }
-      }
-    }
-
+    const dirty = settlePass(pos, moved.id, canvasW, canvasH)
     if (!dirty) break
   }
 

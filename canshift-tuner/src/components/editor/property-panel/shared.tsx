@@ -1,10 +1,5 @@
 import React from 'react'
-import type {
-  GaugeDisplayStyle,
-  SensorIconName,
-  SignalDef,
-  Widget,
-} from '@tmbk/canshift-core'
+import type { GaugeDisplayStyle, SensorIconName, SignalDef, Widget } from '@tmbk/canshift-core'
 import { SENSOR_ICON_LABELS, SENSOR_ICON_NAMES, SensorIcon } from '../../icons/SensorIcons'
 
 export const Field = ({
@@ -180,4 +175,3 @@ export const SIGNAL_UNITS: Record<string, string[]> = {
   oil_press_bar: ['bar', 'psi', 'kPa'],
   battery_volts: ['V'],
 }
-

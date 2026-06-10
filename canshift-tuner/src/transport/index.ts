@@ -118,9 +118,7 @@ export type FirmwareIdentityResult =
   | { kind: 'ok'; identity: FirmwareIdentity }
   | { kind: 'error'; error: string }
 
-export type PingResult =
-  | { kind: 'ok'; uptimeMs: number | null }
-  | { kind: 'error'; error: string }
+export type PingResult = { kind: 'ok'; uptimeMs: number | null } | { kind: 'error'; error: string }
 
 export type RawAck =
   | { kind: 'ok'; data: Record<string, unknown> }
@@ -216,7 +214,7 @@ export const usbService = {
   sendRaw: async (
     cmd: number,
     fields: Record<string, unknown> = {},
-    timeoutMs = 3_000,
+    timeoutMs = 3_000
   ): Promise<RawAck> => {
     const result = await getSerialClient().send(cmd, fields, { timeoutMs })
     if (result.ok) {
@@ -390,7 +388,7 @@ export const deviceEvents = {
       largestInternal: number
       freePsram: number | null
       largestPsram: number | null
-    }>,
+    }>
   ): Unsubscribe => {
     return getSerialClient().subscribe('heap_stats', (frame) => {
       const parsed = HeapStatsFrameSchema.safeParse(frame)
@@ -398,7 +396,7 @@ export const deviceEvents = {
         warnFrameDrop(
           'heap_stats',
           parsed.error.issues[0]?.code ?? 'unknown',
-          JSON.stringify(frame),
+          JSON.stringify(frame)
         )
         return
       }
@@ -422,9 +420,7 @@ export const deviceEvents = {
     })
   },
 
-  onConnectionChange: (
-    handler: Handler<{ connected: boolean; reason?: string }>
-  ): Unsubscribe => {
+  onConnectionChange: (handler: Handler<{ connected: boolean; reason?: string }>): Unsubscribe => {
     return getSerialClient().onStatus((status, error) => {
       if (status === 'connected') {
         handler({ connected: true })

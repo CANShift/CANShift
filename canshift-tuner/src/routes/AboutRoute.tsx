@@ -33,8 +33,8 @@ export default function AboutRoute() {
           <div style={badgeStyle}>About</div>
           <h1 style={titleStyle}>CANShift Tuner</h1>
           <p style={taglineStyle}>
-            Browser configurator for the CANShift dash. Hosted on Vercel, talks to
-            the device over WebSerial.
+            Browser configurator for the CANShift dash. Hosted on Vercel, talks to the device over
+            WebSerial.
           </p>
         </header>
 
@@ -64,7 +64,7 @@ export default function AboutRoute() {
 
 const prettyStatus = (
   status: ReturnType<typeof useConnectionStore.getState>['status'],
-  simulationMode: boolean,
+  simulationMode: boolean
 ): string => {
   if (simulationMode) return 'Simulation mode'
   switch (status) {
@@ -108,10 +108,6 @@ const Row = ({ label, value, mono }: RowProps) => {
       <span style={mono ? rowValueMonoStyle : rowValueStyle}>{value}</span>
     </div>
   )
-}
-
-const Hint = ({ children }: { children: React.ReactNode }) => {
-  return <div style={hintStyle}>{children}</div>
 }
 
 const LinkRow = ({ href, label }: { href: string; label: string }) => {
@@ -228,14 +224,6 @@ const rowValueMonoStyle: CSSProperties = {
   fontWeight: 500,
   fontFamily: "'JetBrains Mono', ui-monospace, monospace",
   fontVariantNumeric: 'tabular-nums',
-}
-
-const hintStyle: CSSProperties = {
-  padding: '8px 14px',
-  fontSize: 11,
-  color: 'hsl(var(--text-muted))',
-  background: 'hsl(var(--bg-inset))',
-  borderTop: '1px solid hsl(var(--border))',
 }
 
 const linkRowStyle: CSSProperties = {

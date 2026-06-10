@@ -187,7 +187,11 @@ export class SerialClient {
     })
   }
 
-  send(cmd: number, fields: Record<string, unknown> = {}, opts: SendOptions = {}): Promise<AckResult> {
+  send(
+    cmd: number,
+    fields: Record<string, unknown> = {},
+    opts: SendOptions = {}
+  ): Promise<AckResult> {
     if (!this.writer || this.status !== 'connected') {
       return Promise.resolve({ ok: false, error: 'not_connected' })
     }
@@ -205,7 +209,10 @@ export class SerialClient {
   private async deassertResetSignals(port: SerialPort): Promise<void> {
     const setSignals = (
       port as {
-        setSignals?: (signals: { dataTerminalReady?: boolean; requestToSend?: boolean }) => Promise<void>
+        setSignals?: (signals: {
+          dataTerminalReady?: boolean
+          requestToSend?: boolean
+        }) => Promise<void>
       }
     ).setSignals
     if (typeof setSignals !== 'function') return
@@ -237,7 +244,7 @@ export class SerialClient {
       const msg = humanizeOpenError(raw)
       this.lastError = msg
       this.setStatus('disconnected', msg)
-      throw new Error(msg)
+      throw new Error(msg, { cause: err })
     }
 
     if (!port.readable || !port.writable) {
@@ -456,22 +463,18 @@ export class SerialClient {
     if (reader) {
       try {
         await reader.cancel()
-      } catch {
-      }
+      } catch {}
       try {
         reader.releaseLock()
-      } catch {
-      }
+      } catch {}
     }
     if (writer) {
       try {
         await writer.close()
-      } catch {
-      }
+      } catch {}
       try {
         writer.releaseLock()
-      } catch {
-      }
+      } catch {}
     }
     if (port) await this.safeClose(port)
   }
@@ -479,8 +482,7 @@ export class SerialClient {
   private async safeClose(port: SerialPort): Promise<void> {
     try {
       await port.close()
-    } catch {
-    }
+    } catch {}
   }
 
   private setStatus(next: SerialStatus, error?: string): void {
@@ -490,8 +492,7 @@ export class SerialClient {
     for (const listener of this.statusListeners) {
       try {
         listener(next, this.lastError)
-      } catch {
-      }
+      } catch {}
     }
   }
 }

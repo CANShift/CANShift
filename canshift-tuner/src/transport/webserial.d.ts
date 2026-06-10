@@ -1,8 +1,3 @@
-// transport/webserial.d.ts — Minimal ambient types for the WebSerial API.
-//
-// The TS DOM lib doesn't ship WebSerial yet (not stable). We declare only the
-// shape we actually use; @types/w3c-web-serial would be heavier than needed.
-
 interface SerialPortInfo {
   usbVendorId?: number
   usbProductId?: number
