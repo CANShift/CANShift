@@ -1,7 +1,3 @@
-// useBurnDashboard.ts — Push the editor dashboard config to the connected
-// device. Shared by the Header's Burn button and the Cmd/Ctrl+S accelerator
-// so the gating + side effects (mark-pushed, log) live in one place.
-
 import { useCallback, useState } from 'react'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
@@ -10,15 +6,12 @@ import { useLogStore } from '../stores/log.store'
 import { usbService } from '../transport'
 
 interface UseBurnDashboard {
-  /** True when a real device is connected (not simulation) and the editor has unsaved changes. */
   canBurn: boolean
-  /** True while a push is in flight. */
   isBurning: boolean
-  /** Trigger the push. No-op when `canBurn` is false. */
   burn: () => Promise<void>
 }
 
-export function useBurnDashboard(): UseBurnDashboard {
+export const useBurnDashboard = (): UseBurnDashboard => {
   const config = useDashboardStore((s) => s.config)
   const isDirty = useDashboardStore((s) => s.isDirty)
   const markPushed = useDashboardStore((s) => s.markPushed)

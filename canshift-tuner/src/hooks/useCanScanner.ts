@@ -47,7 +47,7 @@ export interface UseCanScanner {
   reset: () => void
 }
 
-export function useCanScanner(): UseCanScanner {
+export const useCanScanner = (): UseCanScanner => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const log = useLogStore((s) => s.push)
