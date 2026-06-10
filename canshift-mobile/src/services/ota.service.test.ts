@@ -1,15 +1,3 @@
-// ota.service.test.ts — fetchReleases, downloadFirmware, verifyFirmware,
-// pushFirmware (HMAC trailer staging)
-//
-// We mock `expo-file-system` to a tiny in-memory FS so we can drive the
-// service without touching a real device. Network calls go through a
-// jest-mocked global `fetch`. `expo-constants` is mocked so the OTA secret
-// loader returns the dev fallback deterministically.
-
-// ---------------------------------------------------------------------------
-// In-memory expo-file-system mock
-// ---------------------------------------------------------------------------
-
 interface MockFile {
   bytes: Uint8Array
 }
@@ -20,9 +8,6 @@ let mockNextDownloadBytes: Uint8Array = new Uint8Array(0)
 let mockNextDownloadShouldThrow: Error | null = null
 
 jest.mock('expo-file-system', () => {
-  // Inline base64 codecs — jest forbids referencing top-level `Buffer` from
-  // the mock factory, so we use the global `btoa` / `atob` over binary
-  // strings.
   const bytesToBase64 = (bytes: Uint8Array): string => {
     let s = ''
     for (const b of bytes) s += String.fromCharCode(b)
@@ -87,16 +72,10 @@ jest.mock('expo-file-system', () => {
   }
 })
 
-// expo-constants — drive the OTA secret loader to its dev fallback so HMAC
-// vectors are reproducible and cross-platform stable.
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: { expoConfig: { extra: {} } },
 }))
-
-// ---------------------------------------------------------------------------
-// Imports under test (after mocks are registered)
-// ---------------------------------------------------------------------------
 
 import { Buffer } from 'buffer'
 import { downloadFirmware, pushFirmware, verifyFirmware, type FirmwareRelease } from './ota.service'
@@ -105,11 +84,7 @@ import { hmacSha256 } from './ota-hmac'
 import { DEV_INSECURE_OTA_SECRET } from './ota-secret'
 import { bytesToHex, sha256Hex } from './sha256'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function resetMocks(): void {
+const resetMocks = (): void => {
   for (const k of Object.keys(mockFs)) {
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete mockFs[k]
@@ -118,16 +93,7 @@ function resetMocks(): void {
   mockNextDownloadShouldThrow = null
 }
 
-/**
- * Wire a one-shot interceptor on the mocked `deleteAsync` that snapshots the
- * bytes of `stagedPath` into `out.bytes` just before the file is removed.
- * Used by `pushFirmware` tests because the service discards the staging file
- * after upload, leaving nothing to read from `mockFs` once the call returns.
- */
-function captureStagedOnDelete(out: { bytes?: Uint8Array }, stagedPath: string): void {
-  // jest.requireMock returns the same module factory we registered above, so
-  // we know the shape; the `unknown` cast keeps the boundary explicit without
-  // pulling in @types/expo-file-system here.
+const captureStagedOnDelete = (out: { bytes?: Uint8Array }, stagedPath: string): void => {
   const fs = jest.requireMock('expo-file-system') as unknown as { deleteAsync: jest.Mock }
   const originalDeleteAsync = fs.deleteAsync.getMockImplementation()
   fs.deleteAsync.mockImplementationOnce((uri: string, opts?: unknown): Promise<void> => {
@@ -141,9 +107,6 @@ function captureStagedOnDelete(out: { bytes?: Uint8Array }, stagedPath: string):
     return Promise.resolve()
   })
 }
-
-// ---------------------------------------------------------------------------
-// Tests
 
 describe('downloadFirmware', () => {
   beforeEach(resetMocks)
@@ -197,8 +160,6 @@ describe('downloadFirmware', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-
 describe('verifyFirmware', () => {
   beforeEach(resetMocks)
 
@@ -219,9 +180,6 @@ describe('verifyFirmware', () => {
   })
 
   it('passes regardless of the published sha256 (checksum is deferred to staging)', async () => {
-    // Issue #706: SHA-256 verification was moved into stageFirmwareWithHmac so
-    // the firmware bytes are read off disk exactly once. verifyFirmware now
-    // only enforces the size precondition before the Wi-Fi switch.
     mockFs[path] = { bytes }
     const release: FirmwareRelease = {
       version: '0.7.1',
@@ -265,12 +223,7 @@ describe('verifyFirmware', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-
 describe('pushFirmware (HMAC-trailer staging)', () => {
-  // Minimal XHR mock — drives the multipart upload through to a configurable
-  // terminal status so we can assert what was sent. The constructor records
-  // each instance into `lastXhr` to avoid `this`-aliasing inside `send()`.
   class MockXhr {
     method: string | null = null
     url: string | null = null
@@ -285,9 +238,6 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
     status = 0
 
     constructor() {
-      // Tracking the most recently constructed instance is the most
-      // straightforward way to assert XHR semantics in this test. The
-      // alternative (a "hasInstance" tracker) is more code for no benefit.
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       lastXhr = this
     }
@@ -299,8 +249,6 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
 
     send(body: FormData): void {
       this.body = body
-      // Deliver result on the next microtask so the caller can attach its
-      // handlers before they fire — matches real XHR semantics.
       queueMicrotask(() => {
         this.status = nextStatus
         this.onload?.()
@@ -322,7 +270,7 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
   const firmwareBytes = new Uint8Array([0x10, 0x20, 0x30, 0x40, 0x50, 0x60])
   const firmwareDigest = sha256Hex(firmwareBytes)
 
-  function makeRelease(overrides: Partial<FirmwareRelease> = {}): FirmwareRelease {
+  const makeRelease = (overrides: Partial<FirmwareRelease> = {}): FirmwareRelease => {
     return {
       version: '0.7.1',
       publishedAt: '',
@@ -337,8 +285,6 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
   it('writes a staging file with payload + 32-byte HMAC trailer, then uploads it', async () => {
     mockFs[localPath] = { bytes: firmwareBytes }
 
-    // pushFirmware deletes the staging file after upload, so snapshot the
-    // staged bytes the moment `deleteAsync` is called.
     const stagedSnapshot: { bytes?: Uint8Array } = {}
     captureStagedOnDelete(stagedSnapshot, `${localPath}.hmac.bin`)
 
@@ -347,10 +293,8 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
     const staged = stagedSnapshot.bytes ?? new Uint8Array(0)
     expect(staged.length).toBe(firmwareBytes.length + 32)
 
-    // Original payload bytes are preserved
     expect(staged.subarray(0, firmwareBytes.length)).toEqual(firmwareBytes)
 
-    // Trailer matches HMAC-SHA256(devSecret, firmware)
     const trailer = staged.subarray(firmwareBytes.length)
     const expectedTrailer = hmacSha256(
       new Uint8Array(Buffer.from(DEV_INSECURE_OTA_SECRET, 'utf8')),
@@ -358,7 +302,6 @@ describe('pushFirmware (HMAC-trailer staging)', () => {
     )
     expect(bytesToHex(trailer)).toBe(bytesToHex(expectedTrailer))
 
-    // The XHR was POSTed to the OTA endpoint.
     expect(lastXhr).not.toBeNull()
     expect(lastXhr?.method).toBe('POST')
     expect(lastXhr?.url).toContain('/ota')

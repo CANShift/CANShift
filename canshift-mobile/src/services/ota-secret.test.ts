@@ -1,14 +1,4 @@
-// ota-secret.test.ts — OTA HMAC secret loader (build-time + runtime)
-//
-// Mocks `expo-constants` to drive both code paths: configured-secret and
-// dev-fallback. Asserts that the loader never returns an empty buffer and
-// never throws on missing config.
-
 import { Buffer } from 'buffer'
-
-// ---------------------------------------------------------------------------
-// expo-constants mock — must be registered before importing the SUT
-// ---------------------------------------------------------------------------
 
 interface MockExtra {
   otaHmacSecret?: string
@@ -25,13 +15,9 @@ jest.mock('expo-constants', () => ({
   },
 }))
 
-// ---------------------------------------------------------------------------
-// SUT
-// ---------------------------------------------------------------------------
-
 import { DEV_INSECURE_OTA_SECRET, getOtaHmacSecretBytes } from './ota-secret'
 
-function decodeUtf8(bytes: Uint8Array): string {
+const decodeUtf8 = (bytes: Uint8Array): string => {
   return Buffer.from(bytes).toString('utf8')
 }
 

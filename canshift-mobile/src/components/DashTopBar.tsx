@@ -1,5 +1,3 @@
-// DashTopBar.tsx — Shared top bar for Dash and Graph tabs
-
 import React, { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
@@ -40,7 +38,6 @@ export default function DashTopBar() {
   const [menuVisible, setMenuVisible] = useState(false)
   const [disconnectVisible, setDisconnectVisible] = useState(false)
 
-  // Tab navigation lives here; parent is the root stack
   const tabNav = useNavigation()
   const rootNav = tabNav.getParent<RootNav>()
 

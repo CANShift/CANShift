@@ -1,54 +1,20 @@
-// releases.service.ts — Surface GitHub release info to the mobile UI.
-//
-// Issue #571 (mobile side; studio side landed in #597). Mobile talks to the
-// GitHub REST API directly — there is no main-process indirection in React
-// Native. The service mirrors the studio's `releases.service.ts` behaviour:
-//
-//   - in-memory cache with a 5-minute TTL,
-//   - persistent cache hydration via `expo-file-system` so the screen can
-//     show the last known release immediately on cold start,
-//   - one retry on 5xx,
-//   - honours `Retry-After` on 403/429,
-//   - 8 s `AbortController` timeout per request,
-//   - validates the response shape with a runtime type guard so a malformed
-//     payload never reaches the UI as `any`.
-//
-// Errors are NEVER thrown across the boundary — every outcome is surfaced as
-// a discriminated `LatestReleaseResult` so the UI can keep a single render
-// path. Network details (status codes, error messages) are kept in the
-// `message` field; secrets and stack traces are never embedded.
-
 import * as FileSystem from 'expo-file-system'
 import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 
 const GITHUB_OWNER = 'tburkhalterr'
 const GITHUB_REPO = 'CANShift'
 
-/** TTL for the in-memory cache. Five minutes is comfortable below GitHub's
- *  unauthenticated rate limit of 60 req/h while still feeling live. */
 const CACHE_TTL_MS = 5 * 60 * 1000
 
-/** Max number of releases to scan when looking for the latest pre-release. */
 const RELEASES_PAGE_SIZE = 20
 
-/** Total budget for an entire fetch attempt — bounds the user-facing latency. */
 const FETCH_TIMEOUT_MS = 8_000
 
-/** Path for the persistent JSON cache file. Release payloads include GitHub
- *  release notes (markdown, can exceed SecureStore's 2048-byte limit — #610).
- *  Non-sensitive data; expo-file-system document directory is appropriate. */
 const PERSISTENT_CACHE_PATH = `${FileSystem.documentDirectory ?? ''}releases-cache.json`
 
-/** Cap the `Retry-After` honour window so a misconfigured server can't park
- *  the UI for hours. */
 const MAX_RETRY_AFTER_MS = 60_000
 
-/** Backoff between the initial 5xx attempt and the single retry. */
 const RETRY_BACKOFF_MS = 500
-
-// ---------------------------------------------------------------------------
-// Network shapes (subset of the GitHub API response)
-// ---------------------------------------------------------------------------
 
 interface GitHubAsset {
   name: string
@@ -68,7 +34,7 @@ interface GitHubRelease {
   assets: GitHubAsset[]
 }
 
-function isAsset(value: unknown): value is GitHubAsset {
+const isAsset = (value: unknown): value is GitHubAsset => {
   if (typeof value !== 'object' || value === null) return false
   const a = value as Record<string, unknown>
   if (typeof a.name !== 'string') return false
@@ -79,7 +45,7 @@ function isAsset(value: unknown): value is GitHubAsset {
   return true
 }
 
-function isRelease(value: unknown): value is GitHubRelease {
+const isRelease = (value: unknown): value is GitHubRelease => {
   if (typeof value !== 'object' || value === null) return false
   const r = value as Record<string, unknown>
   if (typeof r.tag_name !== 'string') return false
@@ -92,11 +58,7 @@ function isRelease(value: unknown): value is GitHubRelease {
   return true
 }
 
-// ---------------------------------------------------------------------------
-// Mapping
-// ---------------------------------------------------------------------------
-
-function toReleaseInfo(raw: GitHubRelease): ReleaseInfo {
+const toReleaseInfo = (raw: GitHubRelease): ReleaseInfo => {
   const assets: ReleaseAsset[] = raw.assets.filter(isAsset).map((a) => {
     const base = {
       name: a.name,
@@ -121,10 +83,6 @@ function toReleaseInfo(raw: GitHubRelease): ReleaseInfo {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Persistent cache shape (SecureStore)
-// ---------------------------------------------------------------------------
-
 interface PersistedPayload {
   release: ReleaseInfo
   prerelease: ReleaseInfo | null
@@ -137,7 +95,7 @@ interface CachedPayload {
   fetchedAt: number
 }
 
-function isPersistedPayload(value: unknown): value is PersistedPayload {
+const isPersistedPayload = (value: unknown): value is PersistedPayload => {
   if (typeof value !== 'object' || value === null) return false
   const p = value as Record<string, unknown>
   if (typeof p.fetchedAt !== 'number' || !Number.isFinite(p.fetchedAt)) return false
@@ -146,7 +104,7 @@ function isPersistedPayload(value: unknown): value is PersistedPayload {
   return true
 }
 
-function isReleaseInfo(value: unknown): value is ReleaseInfo {
+const isReleaseInfo = (value: unknown): value is ReleaseInfo => {
   if (typeof value !== 'object' || value === null) return false
   const r = value as Record<string, unknown>
   if (typeof r.version !== 'string') return false
@@ -160,15 +118,11 @@ function isReleaseInfo(value: unknown): value is ReleaseInfo {
   return true
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function sleep(ms: number): Promise<void> {
+const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function isAbortError(err: unknown): boolean {
+const isAbortError = (err: unknown): boolean => {
   if (err instanceof Error) {
     if (err.name === 'AbortError') return true
     return /aborted|timeout/i.test(err.message)
@@ -176,10 +130,7 @@ function isAbortError(err: unknown): boolean {
   return false
 }
 
-/** Parse GitHub's `Retry-After` header (seconds or HTTP-date). Returns 0 when
- *  missing or malformed so the caller can fall through to the rate-limit error
- *  without an unbounded wait. */
-function parseRetryAfterMs(header: string | null): number {
+const parseRetryAfterMs = (header: string | null): number => {
   if (header === null) return 0
   const seconds = Number(header)
   if (Number.isFinite(seconds) && seconds >= 0) {
@@ -193,11 +144,7 @@ function parseRetryAfterMs(header: string | null): number {
   return 0
 }
 
-// ---------------------------------------------------------------------------
-// Persistent cache load / save (best-effort)
-// ---------------------------------------------------------------------------
-
-async function loadPersistedCache(): Promise<CachedPayload | null> {
+const loadPersistedCache = async (): Promise<CachedPayload | null> => {
   try {
     const raw = await FileSystem.readAsStringAsync(PERSISTENT_CACHE_PATH)
     const parsed: unknown = JSON.parse(raw)
@@ -208,12 +155,11 @@ async function loadPersistedCache(): Promise<CachedPayload | null> {
       fetchedAt: parsed.fetchedAt,
     }
   } catch {
-    // File not found on first launch, or corrupt payload — start fresh.
     return null
   }
 }
 
-async function savePersistedCache(payload: CachedPayload): Promise<void> {
+const savePersistedCache = async (payload: CachedPayload): Promise<void> => {
   try {
     const persisted: PersistedPayload = {
       release: payload.release,
@@ -222,14 +168,9 @@ async function savePersistedCache(payload: CachedPayload): Promise<void> {
     }
     await FileSystem.writeAsStringAsync(PERSISTENT_CACHE_PATH, JSON.stringify(persisted))
   } catch {
-    // Persistence is best-effort; the in-memory cache still works for the
-    // current session.
+    void 0
   }
 }
-
-// ---------------------------------------------------------------------------
-// Fetch primitive
-// ---------------------------------------------------------------------------
 
 type FetchOutcome =
   | { kind: 'ok'; releases: GitHubRelease[] }
@@ -238,7 +179,7 @@ type FetchOutcome =
   | { kind: 'offline'; message: string }
   | { kind: 'invalid'; message: string }
 
-async function fetchReleasesOnce(): Promise<FetchOutcome> {
+const fetchReleasesOnce = async (): Promise<FetchOutcome> => {
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases?per_page=${String(RELEASES_PAGE_SIZE)}`
   const controller = new AbortController()
   const timer = setTimeout(() => {
@@ -295,38 +236,24 @@ async function fetchReleasesOnce(): Promise<FetchOutcome> {
   return { kind: 'ok', releases }
 }
 
-/** Try once, retry exactly one more time on the 5xx branch (#571 AC). */
-async function fetchReleasesWithRetry(): Promise<FetchOutcome> {
+const fetchReleasesWithRetry = async (): Promise<FetchOutcome> => {
   const first = await fetchReleasesOnce()
   if (first.kind !== 'http-error' || first.status < 500) return first
   await sleep(RETRY_BACKOFF_MS)
   return fetchReleasesOnce()
 }
 
-function pickLatest(releases: readonly GitHubRelease[]): {
+const pickLatest = (
+  releases: readonly GitHubRelease[]
+): {
   stable: GitHubRelease | null
   prerelease: GitHubRelease | null
-} {
-  // GitHub returns releases sorted by `created_at` descending. The first
-  // non-prerelease entry is the latest stable; the first prerelease entry
-  // is the latest pre-release. We don't sort ourselves — trusting GitHub's
-  // ordering keeps the behaviour aligned with their /releases/latest view.
+} => {
   const stable = releases.find((r) => !r.prerelease) ?? null
   const prerelease = releases.find((r) => r.prerelease) ?? null
   return { stable, prerelease }
 }
 
-// ---------------------------------------------------------------------------
-// Public service
-// ---------------------------------------------------------------------------
-
-/**
- * Outcome of `ReleasesService.getAllReleases()` — consumed by the OTA picker
- * (`ota-releases.store`) which needs every published release, not just the
- * latest stable + prerelease pair. Same discriminated shape as
- * `LatestReleaseResult` so the UI can keep one error-handling path; kept
- * mobile-local because no studio screen consumes it.
- */
 export type AllReleasesResult =
   | { ok: true; releases: ReleaseInfo[]; fetchedAt: string; fromCache: boolean }
   | {
@@ -334,7 +261,6 @@ export type AllReleasesResult =
       reason: 'offline' | 'rate-limited' | 'http-error' | 'invalid-response'
       message: string
       fetchedAt: string
-      /** Last cached list, when present, so the UI can degrade gracefully. */
       cachedReleases: ReleaseInfo[] | null
     }
 
@@ -345,27 +271,18 @@ interface CachedAllReleases {
 
 export class ReleasesService {
   private cache: CachedPayload | null = null
-  /** Separate slot for the full release list — kept short-lived (same TTL)
-   *  so the OTA picker doesn't show stale entries after a new release lands. */
   private allCache: CachedAllReleases | null = null
-  /** Earliest wall-clock time (ms) at which a new request may be sent. */
   private rateLimitedUntil = 0
-  /** Concurrent callers share the same in-flight promise to avoid duplicate fetches. */
   private inFlight: Promise<LatestReleaseResult> | null = null
-  /** Same dedup as `inFlight` but for the `getAllReleases()` pathway. */
   private inFlightAll: Promise<AllReleasesResult> | null = null
-  /** Resolved once the persistent-cache hydration attempt has finished. */
   private hydrationPromise: Promise<void> | null = null
 
-  /** Test seam — overrides `Date.now()` so cache TTL is deterministic. */
   private readonly now: () => number
 
   constructor(opts?: { now?: () => number }) {
     this.now = opts?.now ?? Date.now
   }
 
-  /** Lazily hydrate the in-memory cache from SecureStore. Idempotent — every
-   *  caller awaits the same promise so we never deserialise twice. */
   private hydrate(): Promise<void> {
     if (this.hydrationPromise !== null) return this.hydrationPromise
     this.hydrationPromise = loadPersistedCache().then((persisted) => {
@@ -376,11 +293,6 @@ export class ReleasesService {
     return this.hydrationPromise
   }
 
-  /**
-   * Returns the latest stable + latest prerelease, honouring the in-memory
-   * cache and GitHub's rate-limit hint. Never throws — every failure mode is
-   * surfaced as a discriminated `LatestReleaseResult`.
-   */
   async getLatest(force = false): Promise<LatestReleaseResult> {
     await this.hydrate()
 
@@ -412,15 +324,6 @@ export class ReleasesService {
     }
   }
 
-  /**
-   * Returns every published release surfaced by GitHub, honouring the same
-   * 5-minute in-memory cache, in-flight dedup, and rate-limit cooldown as
-   * `getLatest()`. Consumed by the OTA picker (`ota-releases.store`) so the
-   * user can pick an older version for downgrades. Issue #1012 — replaces
-   * `OtaService.fetchReleases`, which had no timeout, no retry, no rate-limit
-   * handling, and double-billed GitHub's 60 req/h unauth limit alongside the
-   * About-screen fetch.
-   */
   async getAllReleases(force = false): Promise<AllReleasesResult> {
     await this.hydrate()
 
@@ -460,12 +363,6 @@ export class ReleasesService {
 
     switch (outcome.kind) {
       case 'ok': {
-        // Same shape the OTA picker has always shown: stable releases first.
-        // Pre-releases stay out by default to match the previous
-        // `OtaService.fetchReleases` behaviour — a release flagged "rc1"
-        // historically never appeared in the picker. Callers that need the
-        // pre-release row in the future can read `outcome.releases` from a
-        // future `getAllReleasesIncludingPrereleases` variant.
         const releases = outcome.releases.filter((r) => !r.prerelease).map(toReleaseInfo)
         const payload: CachedAllReleases = { releases, fetchedAt: nowMs }
         this.allCache = payload
@@ -518,9 +415,6 @@ export class ReleasesService {
         if (release === null) {
           return this.makeFailure('invalid-response', 'No releases published yet')
         }
-        // Only surface `prerelease` separately when it's distinct from the
-        // surfaced `release`. When no stable exists, the pre-release IS the
-        // release — duplicating it under both fields would be misleading.
         const surfacePrerelease = stable !== null && prerelease !== null ? prerelease : null
         const payload: CachedPayload = {
           release: toReleaseInfo(release),
@@ -528,7 +422,6 @@ export class ReleasesService {
           fetchedAt: nowMs,
         }
         this.cache = payload
-        // Fire-and-forget — never block the UI on disk I/O.
         void savePersistedCache(payload)
         return {
           ok: true,
@@ -578,5 +471,4 @@ export class ReleasesService {
   }
 }
 
-/** Shared singleton — keeps the in-memory cache alive across screens. */
 export const releasesService = new ReleasesService()

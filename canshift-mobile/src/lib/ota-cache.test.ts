@@ -1,5 +1,3 @@
-// ota-cache.test.ts — Coverage for the isStillValid() cache helper (#1165).
-
 import * as FileSystem from 'expo-file-system'
 import type { OtaFlowState } from '../stores/ota-flow.store'
 import { isStillValid } from './ota-cache'
@@ -16,7 +14,7 @@ const mockRelease = {
   sha256: 'abc123',
 }
 
-function makeEntry(overrides: Partial<OtaFlowState> = {}): OtaFlowState {
+const makeEntry = (overrides: Partial<OtaFlowState> = {}): OtaFlowState => {
   return {
     stage: 'verified',
     release: mockRelease,

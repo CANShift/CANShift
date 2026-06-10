@@ -7,7 +7,7 @@ interface HarnessProps {
   onValueChange?: (next: string) => void
 }
 
-function Harness({ defaultValue, onValueChange }: HarnessProps): React.ReactElement {
+const Harness = ({ defaultValue, onValueChange }: HarnessProps): React.ReactElement => {
   return (
     <Select
       {...(defaultValue !== undefined && { defaultValue })}

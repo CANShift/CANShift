@@ -1,15 +1,5 @@
-// releases.service.test.ts — Cache, retry, rate-limit, validation paths.
-//
-// We mock the global `fetch` and `expo-file-system` so the suite never
-// touches the network or the filesystem. `Date.now()` is overridden
-// per-service so cache TTL assertions stay deterministic.
-
 import { ReleasesService } from './releases.service'
 import * as FileSystem from 'expo-file-system'
-
-// ---------------------------------------------------------------------------
-// expo-file-system mock — in-memory filesystem
-// ---------------------------------------------------------------------------
 
 const mockFs = new Map<string, string>()
 
@@ -27,21 +17,16 @@ jest.mock('expo-file-system', () => ({
   }),
 }))
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 interface MockResponseShape {
   status?: number
   ok?: boolean
   body?: unknown
   jsonThrows?: boolean
   headers?: Record<string, string>
-  /** Reject the fetch call entirely (network error). */
   reject?: Error
 }
 
-function makeFetchMock(...queue: MockResponseShape[]): jest.Mock {
+const makeFetchMock = (...queue: MockResponseShape[]): jest.Mock => {
   return jest.fn().mockImplementation(() => {
     const next = queue.shift()
     if (!next) return Promise.reject(new Error('fetch mock exhausted'))
@@ -61,7 +46,7 @@ function makeFetchMock(...queue: MockResponseShape[]): jest.Mock {
   })
 }
 
-function makeRelease(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+const makeRelease = (overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> => {
   return {
     tag_name: 'v0.8.3',
     name: 'CANShift v0.8.3',
@@ -81,10 +66,6 @@ function makeRelease(overrides: Partial<Record<string, unknown>> = {}): Record<s
   }
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('ReleasesService', () => {
   const originalFetch = global.fetch
   let nowMs = 1_700_000_000_000
@@ -98,7 +79,7 @@ describe('ReleasesService', () => {
     global.fetch = originalFetch
   })
 
-  function makeService(): ReleasesService {
+  const makeService = (): ReleasesService => {
     return new ReleasesService({ now: () => nowMs })
   }
 
@@ -137,8 +118,6 @@ describe('ReleasesService', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.release.version).toBe('0.1.0-beta')
-    // When there's no stable, prerelease is reported through `release`,
-    // and `prerelease` stays null to avoid duplicate surfacing.
     expect(result.prerelease).toBeNull()
   })
 
@@ -147,7 +126,7 @@ describe('ReleasesService', () => {
     global.fetch = fetchMock
     const svc = makeService()
     await svc.getLatest()
-    nowMs += 30_000 // 30 s later — still inside the 5 min TTL
+    nowMs += 30_000
     const second = await svc.getLatest()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     if (!second.ok) throw new Error('expected ok')
@@ -200,7 +179,6 @@ describe('ReleasesService', () => {
     if (first.ok) return
     expect(first.reason).toBe('rate-limited')
 
-    // Inside the cooldown window — service must NOT hit the network again.
     const second = await svc.getLatest()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(second.ok).toBe(false)
@@ -237,10 +215,7 @@ describe('ReleasesService', () => {
 
   it('filters out malformed releases without rejecting the whole response', async () => {
     global.fetch = makeFetchMock({
-      body: [
-        { tag_name: 12345 }, // garbage
-        makeRelease(),
-      ],
+      body: [{ tag_name: 12345 }, makeRelease()],
     })
     const svc = makeService()
     const result = await svc.getLatest()
@@ -264,10 +239,9 @@ describe('ReleasesService', () => {
           assets: [],
         },
         prerelease: null,
-        fetchedAt: nowMs - 1000, // fresh cache
+        fetchedAt: nowMs - 1000,
       })
     )
-    // No live fetch should fire — cache is fresh.
     const fetchMock = jest.fn()
     global.fetch = fetchMock
     const svc = makeService()
@@ -280,7 +254,6 @@ describe('ReleasesService', () => {
   })
 
   it('keeps the cached payload alongside a failure result', async () => {
-    // Prime the cache, then fail on a forced refresh.
     global.fetch = makeFetchMock({ body: [makeRelease()] })
     const svc = makeService()
     await svc.getLatest()

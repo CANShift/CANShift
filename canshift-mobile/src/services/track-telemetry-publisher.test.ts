@@ -1,7 +1,3 @@
-// track-telemetry-publisher.test.ts — Coverage for the publisher loop
-// (#845 layer 4 / #887 part 3). The BLE write is injected so this is
-// pure-logic.
-
 import type { TrackTelemetry } from '@tmbk/canshift-core'
 import {
   clearAll,
@@ -12,10 +8,10 @@ import {
 } from '../stores/track-session.store'
 import { createTrackTelemetryPublisher } from './track-telemetry-publisher'
 
-function makeWriter(): {
+const makeWriter = (): {
   write: jest.Mock<Promise<void>, [TrackTelemetry]>
   payloads: TrackTelemetry[]
-} {
+} => {
   const payloads: TrackTelemetry[] = []
   const write = jest.fn((payload: TrackTelemetry) => {
     payloads.push(payload)
@@ -51,30 +47,25 @@ describe('createTrackTelemetryPublisher', () => {
       const pub = createTrackTelemetryPublisher({ write, now: () => clock })
 
       startSession(0)
-      // First tick — no laps yet.
       clock = 1000
       await pub.tickNow()
       expect(payloads.at(-1)?.isBestLap).toBeUndefined()
 
-      // Lap 1 finishes — bestLapMs goes from 0 → 80_000.
       recordLap(0, 80_000)
       clock = 80_500
       await pub.tickNow()
       expect(payloads.at(-1)?.isBestLap).toBe(true)
 
-      // Next tick: pulse already consumed.
       clock = 81_000
       await pub.tickNow()
       expect(payloads.at(-1)?.isBestLap).toBeUndefined()
 
-      // Lap 2 finishes slower — bestLapMs unchanged, no pulse.
-      recordLap(80_000, 165_000) // 85_000 ms
+      recordLap(80_000, 165_000)
       clock = 165_500
       await pub.tickNow()
       expect(payloads.at(-1)?.isBestLap).toBeUndefined()
 
-      // Lap 3 finishes faster — new personal-best, pulse fires again.
-      recordLap(165_000, 243_000) // 78_000 ms (< 80_000)
+      recordLap(165_000, 243_000)
       clock = 243_500
       await pub.tickNow()
       expect(payloads.at(-1)?.isBestLap).toBe(true)
@@ -101,7 +92,6 @@ describe('createTrackTelemetryPublisher', () => {
       recordLap(0, 80_000)
       clock = 80_500
       await pub.tickNow()
-      // First call: pulse fired (per the builder), write rejected.
       const firstCall = write.mock.calls[0]?.[0]
       expect(firstCall?.isBestLap).toBe(true)
 
@@ -120,8 +110,6 @@ describe('createTrackTelemetryPublisher', () => {
 
       startSession(0)
       pub.start()
-      // The synchronous part of start() schedules an immediate tick;
-      // flush microtasks so the awaited write runs.
       await Promise.resolve()
       await Promise.resolve()
       expect(write).toHaveBeenCalledTimes(1)
@@ -147,8 +135,6 @@ describe('createTrackTelemetryPublisher', () => {
       pub.start()
       await Promise.resolve()
       await Promise.resolve()
-      // Two immediate-on-start emissions would mean both starts wired up;
-      // a single one means the second start was a no-op.
       expect(write).toHaveBeenCalledTimes(1)
 
       jest.advanceTimersByTime(1000)
@@ -165,14 +151,14 @@ describe('createTrackTelemetryPublisher', () => {
       startSession(0)
       recordLap(0, 80_000)
       clock = 80_500
-      await pub.tickNow() // pulse fires here
+      await pub.tickNow()
 
       pub.stop()
       stopSession()
       clearAll()
 
       startSession(0)
-      recordLap(0, 78_000) // new session, same best-like value
+      recordLap(0, 78_000)
       clock = 79_000
       await pub.tickNow()
       expect(payloads.at(-1)?.isBestLap).toBe(true)
@@ -204,8 +190,6 @@ describe('createTrackTelemetryPublisher', () => {
     expect(payloads.at(-1)?.lastLapMs).toBe(80_000)
   })
 
-  // Ensure the publisher reflects subsequent store changes even after a
-  // session ends — when recording flips back to false the firmware sees it.
   it('emits trackMode=false after stopSession()', async () => {
     const { write, payloads } = makeWriter()
     const pub = createTrackTelemetryPublisher({ write, now: () => 0 })

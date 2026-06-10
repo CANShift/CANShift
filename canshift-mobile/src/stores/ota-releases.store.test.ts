@@ -1,8 +1,3 @@
-// ota-releases.store.test.ts — Coverage for the firmware-release store
-// from #905. The underlying ReleasesService.getAllReleases is mocked so
-// this stays pure-logic. Issue #1012 swapped the fetcher from
-// `OtaService.fetchReleases` to the shared service.
-
 import type { ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 import type { FirmwareRelease } from '../services/ota.service'
 import { releasesService } from '../services/releases.service'
@@ -19,7 +14,7 @@ const mockedGetAll = releasesService.getAllReleases as jest.MockedFunction<
   typeof releasesService.getAllReleases
 >
 
-function asset(name: string): ReleaseAsset {
+const asset = (name: string): ReleaseAsset => {
   return {
     name,
     downloadUrl: 'https://x',
@@ -27,7 +22,7 @@ function asset(name: string): ReleaseAsset {
   }
 }
 
-function releaseInfo(version: string, opts?: { assets?: ReleaseAsset[] }): ReleaseInfo {
+const releaseInfo = (version: string, opts?: { assets?: ReleaseAsset[] }): ReleaseInfo => {
   return {
     version,
     tag: `v${version}`,
@@ -40,7 +35,7 @@ function releaseInfo(version: string, opts?: { assets?: ReleaseAsset[] }): Relea
   }
 }
 
-function expectedFirmware(version: string): FirmwareRelease {
+const expectedFirmware = (version: string): FirmwareRelease => {
   return {
     version,
     publishedAt: '2026-01-01T00:00:00Z',
@@ -51,7 +46,7 @@ function expectedFirmware(version: string): FirmwareRelease {
   }
 }
 
-function okResult(releases: ReleaseInfo[]) {
+const okResult = (releases: ReleaseInfo[]) => {
   return {
     ok: true as const,
     releases,

@@ -21,13 +21,13 @@ interface HarnessProps {
   onCancel?: () => void
 }
 
-function Harness({
+const Harness = ({
   open,
   defaultOpen,
   onOpenChange,
   onAction,
   onCancel,
-}: HarnessProps): React.ReactElement {
+}: HarnessProps): React.ReactElement => {
   return (
     <AlertDialog
       {...(open !== undefined && { open })}

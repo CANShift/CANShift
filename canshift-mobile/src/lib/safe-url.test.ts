@@ -1,6 +1,3 @@
-// safe-url.test.ts — Boundary coverage for the URL-scheme allowlist guard
-// that fronts every Linking.openURL call site (security fix #1013).
-
 import { isAllowedExternalUrl } from './safe-url'
 
 describe('isAllowedExternalUrl — allowed schemes', () => {
@@ -80,9 +77,5 @@ describe('isAllowedExternalUrl — malformed input', () => {
 
   it('rejects garbage strings', () => {
     expect(isAllowedExternalUrl('not a url')).toBe(false)
-    // Note: `https:/missing-slash` parses to a valid URL under WHATWG rules
-    // because http(s) are "special" schemes and the parser auto-fills the
-    // missing slash. Tighter syntax checks belong at the schema layer, not
-    // here — this guard only blocks scheme.
   })
 })

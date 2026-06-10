@@ -1,14 +1,11 @@
-// gps-subscription.test.ts — Coverage for the GPS watcher → store pipeline
-// from #845 layer 2.
-
 import { clearAll, getSampleAt, getWriteIndex } from '../stores/track-session.store'
 import { startGpsSubscription, type GpsWatcher, type GpsWatcherUpdate } from './gps-subscription'
 
-function makeWatcher(): {
+const makeWatcher = (): {
   watcher: GpsWatcher
   emit: (update: GpsWatcherUpdate) => void
   detached: () => boolean
-} {
+} => {
   let listener: ((update: GpsWatcherUpdate) => void) | null = null
   let wasDetached = false
   return {

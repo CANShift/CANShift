@@ -1,5 +1,3 @@
-// src/components/ui/form.tsx — RN-flavored Form primitive built on react-hook-form
-
 import * as React from 'react'
 import { Text, View, type TextProps, type ViewProps } from 'react-native'
 import {
@@ -27,10 +25,12 @@ interface FormItemContextValue {
 
 const FormItemContext = React.createContext<FormItemContextValue | null>(null)
 
-function FormField<
+const FormField = <
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: ControllerProps<TFieldValues, TName>): React.ReactElement {
+>(
+  props: ControllerProps<TFieldValues, TName>
+): React.ReactElement => {
   const contextValue = React.useMemo<FormFieldContextValue>(
     () => ({ name: props.name }),
     [props.name]
@@ -54,7 +54,7 @@ interface UseFormFieldReturn {
   isTouched: boolean
 }
 
-function useFormField(): UseFormFieldReturn {
+const useFormField = (): UseFormFieldReturn => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
   const formContext = useFormContext()
