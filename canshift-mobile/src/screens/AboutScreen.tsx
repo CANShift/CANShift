@@ -95,7 +95,7 @@ export const formatDate = (iso: string): string => {
   return new Date(ms).toLocaleString()
 }
 
-async function loadPreReleaseToggle(): Promise<boolean> {
+const loadPreReleaseToggle = async (): Promise<boolean> => {
   try {
     const stored = await SecureStore.getItemAsync(PRE_RELEASE_TOGGLE_KEY)
     if (stored === null) return true
