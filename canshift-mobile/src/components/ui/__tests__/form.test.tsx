@@ -27,7 +27,7 @@ interface HarnessProps {
   defaultName?: string
 }
 
-function Harness({ onSubmit, defaultName = '' }: HarnessProps): React.ReactElement {
+const Harness = ({ onSubmit, defaultName = '' }: HarnessProps): React.ReactElement => {
   const methods = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { name: defaultName },

@@ -1,5 +1,3 @@
-// ota-flow.store.test.ts — Coverage for the in-session OTA flow cache (#1165).
-
 import type { FirmwareRelease } from '../services/ota.service'
 import { useOtaFlowStore } from './ota-flow.store'
 

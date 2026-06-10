@@ -1,12 +1,9 @@
-// section.tsx — Vertical block: optional title (Label) + content with consistent gap
-
 import * as React from 'react'
 import { View, type ViewProps } from 'react-native'
 import { cn } from '@/lib/utils'
 import { Label } from './label'
 
 export interface SectionProps extends ViewProps {
-  /** Optional uppercase label rendered above the content. */
   title?: string
   className?: string
   children?: React.ReactNode

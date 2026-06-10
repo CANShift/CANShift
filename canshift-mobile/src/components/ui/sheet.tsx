@@ -19,7 +19,7 @@ interface SheetContextValue {
 
 const SheetContext = React.createContext<SheetContextValue | null>(null)
 
-function useSheetContext(): SheetContextValue {
+const useSheetContext = (): SheetContextValue => {
   const ctx = React.useContext(SheetContext)
   if (ctx === null) {
     throw new Error('Sheet subcomponents must be used within a <Sheet>')
@@ -50,12 +50,12 @@ export interface SheetProps {
   children: React.ReactNode
 }
 
-export function Sheet({
+export const Sheet = ({
   open,
   defaultOpen,
   onOpenChange,
   children,
-}: SheetProps): React.ReactElement {
+}: SheetProps): React.ReactElement => {
   const isControlledRef = React.useRef(open !== undefined)
   const [internalOpen, setInternalOpen] = React.useState<boolean>(defaultOpen ?? false)
 
@@ -106,7 +106,7 @@ export const SheetTrigger = React.forwardRef<React.ElementRef<typeof Pressable>,
 )
 SheetTrigger.displayName = 'SheetTrigger'
 
-function resolveAnimationType(side: SheetSide): NonNullable<ModalProps['animationType']> {
+const resolveAnimationType = (side: SheetSide): NonNullable<ModalProps['animationType']> => {
   switch (side) {
     case 'top':
     case 'bottom':
@@ -121,7 +121,7 @@ function resolveAnimationType(side: SheetSide): NonNullable<ModalProps['animatio
   }
 }
 
-function resolveOverlayAlignment(side: SheetSide): string {
+const resolveOverlayAlignment = (side: SheetSide): string => {
   switch (side) {
     case 'top':
       return 'justify-start'
@@ -145,13 +145,13 @@ export interface SheetContentProps extends SheetContentVariantProps {
   dismissOnBackdropPress?: boolean
 }
 
-export function SheetContent({
+export const SheetContent = ({
   children,
   className,
   overlayClassName,
   dismissOnBackdropPress = true,
   side,
-}: SheetContentProps): React.ReactElement {
+}: SheetContentProps): React.ReactElement => {
   const { open, setOpen } = useSheetContext()
   const resolvedSide: SheetSide = side ?? 'bottom'
   const animationType = resolveAnimationType(resolvedSide)
@@ -199,7 +199,7 @@ export interface SheetHeaderProps extends ViewProps {
   className?: string
 }
 
-export function SheetHeader({ className, ...props }: SheetHeaderProps): React.ReactElement {
+export const SheetHeader = ({ className, ...props }: SheetHeaderProps): React.ReactElement => {
   return (
     <View accessibilityRole="header" className={cn('flex-col gap-1.5', className)} {...props} />
   )
@@ -210,7 +210,7 @@ export interface SheetFooterProps extends ViewProps {
   className?: string
 }
 
-export function SheetFooter({ className, ...props }: SheetFooterProps): React.ReactElement {
+export const SheetFooter = ({ className, ...props }: SheetFooterProps): React.ReactElement => {
   return <View className={cn('flex-row justify-end gap-2', className)} {...props} />
 }
 SheetFooter.displayName = 'SheetFooter'
@@ -219,7 +219,7 @@ export interface SheetTitleProps extends TextProps {
   className?: string
 }
 
-export function SheetTitle({ className, ...props }: SheetTitleProps): React.ReactElement {
+export const SheetTitle = ({ className, ...props }: SheetTitleProps): React.ReactElement => {
   return (
     <Text
       accessibilityRole="header"
@@ -234,10 +234,10 @@ export interface SheetDescriptionProps extends TextProps {
   className?: string
 }
 
-export function SheetDescription({
+export const SheetDescription = ({
   className,
   ...props
-}: SheetDescriptionProps): React.ReactElement {
+}: SheetDescriptionProps): React.ReactElement => {
   return <Text className={cn('text-sm text-text-muted', className)} {...props} />
 }
 SheetDescription.displayName = 'SheetDescription'

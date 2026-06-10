@@ -1,5 +1,3 @@
-// log.store.test.ts — Tests for the log ring buffer store
-
 import { useLogStore } from './log.store'
 
 describe('useLogStore', () => {

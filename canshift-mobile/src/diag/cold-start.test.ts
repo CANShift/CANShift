@@ -1,5 +1,3 @@
-// cold-start.test.ts — Cold-start timing instrumentation
-
 import { _resetForTests, markAppLaunch, markFirstScreenReady } from './cold-start'
 import { useLogStore } from '../stores/log.store'
 
