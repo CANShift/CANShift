@@ -80,7 +80,6 @@ static void initDisplayAndLVGL() {
     LOG_INFO("BOOT", "Display + LVGL ready");
 }
 
-
 namespace {
 static lv_obj_t *s_splashBar = nullptr;
 static lv_obj_t *s_splashStatus = nullptr;
