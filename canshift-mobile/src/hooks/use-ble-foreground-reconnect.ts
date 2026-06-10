@@ -76,7 +76,9 @@ export async function handleAppStateTransition(
   }
 }
 
-export const useBleForegroundReconnect = (deps: BleForegroundReconnectDeps = DEFAULT_DEPS): void => {
+export const useBleForegroundReconnect = (
+  deps: BleForegroundReconnectDeps = DEFAULT_DEPS
+): void => {
   const resolved = useMemo(() => resolveDeps(deps), [deps])
   const lastStateRef = useRef<AppStateStatus>(resolved.appState.currentState)
 
