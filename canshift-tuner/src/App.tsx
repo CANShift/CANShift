@@ -14,6 +14,7 @@ import CliRoute from './routes/CliRoute'
 import EcuRoute from './routes/EcuRoute'
 import LiveDataRoute from './routes/LiveDataRoute'
 import LogsRoute from './routes/LogsRoute'
+import Obd2Route from './routes/Obd2Route'
 import ThemesRoute from './routes/ThemesRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
@@ -296,7 +297,7 @@ export default function App() {
               />
               <Route path="/can" element={<CanBusRoute />} />
               <Route path="/ecu" element={<EcuRoute />} />
-              <Route path="/obd2" element={<PlaceholderRoute label="OBD-II" icon="⚙" />} />
+              <Route path="/obd2" element={<Obd2Route />} />
               <Route path="/themes" element={<ThemesRoute />} />
               <Route path="/live" element={<LiveDataRoute />} />
               <Route path="/logs" element={<LogsRoute />} />
