@@ -159,7 +159,7 @@ const ChartPanel = ({
 
   return (
     <>
-            <ScrollView
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.pillRow, { paddingVertical: vGap }]}
@@ -188,7 +188,7 @@ const ChartPanel = ({
         })}
       </ScrollView>
 
-            <View style={[styles.controls, { paddingVertical: vGap }]}>
+      <View style={[styles.controls, { paddingVertical: vGap }]}>
         <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause} hitSlop={HitSlop.default}>
           <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
         </TouchableOpacity>
@@ -222,7 +222,7 @@ const ChartPanel = ({
         </TouchableOpacity>
       </View>
 
-            <View style={styles.chartContainer} onLayout={onChartLayout}>
+      <View style={styles.chartContainer} onLayout={onChartLayout}>
         {!chartData.hasData ? (
           <View style={styles.noDataOverlay}>
             <Text style={styles.noDataText}>No telemetry data yet</Text>
@@ -253,7 +253,7 @@ const ChartPanel = ({
                 />
               ) : null
             )}
-                        {chartData.lines.map((line) => {
+            {chartData.lines.map((line) => {
               const range = SIGNAL_RANGE[line.key]
               if (!range || line.latestValue === undefined) return null
               const norm = Math.max(
@@ -279,7 +279,7 @@ const ChartPanel = ({
         )}
       </View>
 
-            <View style={styles.timeAxis}>
+      <View style={styles.timeAxis}>
         <Text style={styles.timeLabel}>{formatTime(chartData.windowStart)}</Text>
         <Text style={styles.timeLabel}>
           {formatTime((chartData.windowStart + chartData.windowEnd) / 2)}
@@ -287,7 +287,7 @@ const ChartPanel = ({
         <Text style={styles.timeLabel}>{formatTime(chartData.windowEnd)}</Text>
       </View>
 
-            {chartData.hasData && (
+      {chartData.hasData && (
         <View style={[styles.valuesGrid, { paddingVertical: vGap + 2 }]}>
           {chartData.lines.map((line) => (
             <View key={line.key} style={styles.valueChip}>

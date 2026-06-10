@@ -343,7 +343,7 @@ export default function UpdateScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
             navigation.goBack()
@@ -357,19 +357,19 @@ export default function UpdateScreen({ navigation }: Props) {
         <View style={styles.headerRight} />
       </View>
 
-            {step !== 'releases' && (
+      {step !== 'releases' && (
         <View style={styles.stepWrapper}>
           <StepIndicator current={stepIndex[step]} />
         </View>
       )}
 
-            {displayedError !== null && (
+      {displayedError !== null && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{displayedError}</Text>
         </View>
       )}
 
-            {step === 'releases' && (
+      {step === 'releases' && (
         <ScrollView contentContainerStyle={styles.list}>
           <View style={styles.installedRow}>
             <Text style={styles.installedLabel}>Installed</Text>
@@ -395,7 +395,7 @@ export default function UpdateScreen({ navigation }: Props) {
         </ScrollView>
       )}
 
-            {step === 'downloading' && (
+      {step === 'downloading' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Downloading v{selectedRelease?.version}</Text>
           <ProgressBar value={progress} />
@@ -403,7 +403,7 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-            {step === 'verifying' && (
+      {step === 'verifying' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Verifying firmware…</Text>
           <ActivityIndicator color={Colors.accent} />
@@ -411,7 +411,7 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-            {step === 'wifi_wait' && (
+      {step === 'wifi_wait' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Connect to CANShift Wi-Fi</Text>
           {wifiApSsid != null ? (
@@ -468,7 +468,7 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-            {step === 'retry_wifi' && (
+      {step === 'retry_wifi' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Wi-Fi AP failed</Text>
           <Text style={styles.hint}>
@@ -485,7 +485,7 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-            {step === 'pushing' && (
+      {step === 'pushing' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Flashing v{selectedRelease?.version}…</Text>
           <ProgressBar value={progress} />
@@ -493,7 +493,7 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-            {step === 'done' && (
+      {step === 'done' && (
         <View style={styles.center}>
           <View style={styles.doneCircle}>
             <Text style={styles.doneCheck}>✓</Text>

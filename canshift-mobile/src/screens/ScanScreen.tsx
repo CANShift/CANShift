@@ -180,7 +180,7 @@ export default function ScanScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-            <View style={styles.center}>
+      <View style={styles.center}>
         <Image
           // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
           source={require('../../assets/logo.png')}
@@ -218,7 +218,7 @@ export default function ScanScreen({ navigation }: Props) {
 
         {scanning && <Text style={styles.scanHint}>Searching for CANShift devices…</Text>}
 
-                {devices.length > 0 && (
+        {devices.length > 0 && (
           <View style={styles.listWrapper}>
             <FlatList
               data={devices}
@@ -249,7 +249,7 @@ export default function ScanScreen({ navigation }: Props) {
         )}
       </View>
 
-            <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
+      <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
         <Text style={styles.demoBtnText}>Demo mode</Text>
       </TouchableOpacity>
 

@@ -140,7 +140,7 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-                <Section>
+        <Section>
           <View style={styles.rowHeader}>
             <Label>BRIGHTNESS</Label>
             <Text style={styles.value}>{brightness}%</Text>
@@ -158,7 +158,7 @@ export default function SettingsScreen({ navigation }: Props) {
           />
         </Section>
 
-                <Section title="SLEEP">
+        <Section title="SLEEP">
           <View style={styles.segRow}>
             {SLEEP_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -176,7 +176,7 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         </Section>
 
-                <Section title="THEME">
+        <Section title="THEME">
           <View style={styles.segRow}>
             <TouchableOpacity
               style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
@@ -199,7 +199,7 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
         </Section>
 
-                <Section title="TOUCH">
+        <Section title="TOUCH">
           <TouchableOpacity
             style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
             onPress={handleCalibrate}
@@ -212,7 +212,7 @@ export default function SettingsScreen({ navigation }: Props) {
         </Section>
       </ScrollView>
 
-            <View style={styles.footer}>
+      <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
           onPress={() => void handleSave()}
