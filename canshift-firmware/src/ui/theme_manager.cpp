@@ -1,5 +1,3 @@
-// theme_manager.cpp — Runtime day/night theme switching
-
 #include "theme_manager.h"
 #include "page_manager.h"
 #include "config/config_loader.h"
@@ -8,29 +6,17 @@
 #include <lvgl.h>
 #include <Preferences.h>
 
-// ---------------------------------------------------------------------------
-// NVS
-// ---------------------------------------------------------------------------
-
 static constexpr char NVS_NS[] = "theme";
 static constexpr char KEY_DAY_MODE[] = "day_mode";
 
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
-
 static bool s_isDayMode = false;
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 void ThemeManager::apply() {
     lv_disp_t *disp = lv_disp_get_default();
     lv_theme_t *th = lv_theme_default_init(disp,
-                                           lv_color_hex(0xFF4444), // Primary — CANShift red
-                                           lv_color_hex(0xFF8800), // Secondary — amber
-                                           true,                   // Dark mode
+                                           lv_color_hex(0xFF4444),
+                                           lv_color_hex(0xFF8800),
+                                           true,
                                            LV_FONT_DEFAULT);
     lv_disp_set_theme(disp, th);
     LOG_INFO("THEME", "LVGL dark theme applied");
@@ -39,7 +25,7 @@ void ThemeManager::apply() {
 void ThemeManager::init() {
     const CfgDashboard &dash = ConfigLoader::getDashboardConfig();
     if (!dash.hasDayTheme) {
-        s_isDayMode = false; // Day mode unavailable without config
+        s_isDayMode = false;
         return;
     }
 
@@ -68,9 +54,6 @@ void ThemeManager::toggleDayMode() {
     p.end();
 
     LOG_INFO("THEME", "Day mode toggled: %s", s_isDayMode ? "ON" : "OFF");
-
-    // Rebuild all pages to apply the new background color.
-    // This also updates the top bar via TopBar::reapplyTheme() called inside.
     PageManager::requestRebuild();
 }
 
@@ -79,7 +62,7 @@ void ThemeManager::setDayMode(bool day) {
     if (!dash.hasDayTheme)
         return;
     if (s_isDayMode == day)
-        return; // Idempotent — already in requested mode.
+        return;
 
     s_isDayMode = day;
 
