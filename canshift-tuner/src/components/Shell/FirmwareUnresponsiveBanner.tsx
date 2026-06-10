@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
+import { RebootButton } from './RebootButton'
 
 export const FirmwareUnresponsiveBanner = () => {
   const liveness = useDeviceStore((s) => s.firmwareLiveness)
@@ -23,10 +24,11 @@ export const FirmwareUnresponsiveBanner = () => {
   return (
     <div role="alert" style={bannerStyle}>
       <span style={titleStyle}>Firmware unresponsive</span>
-      <span>
+      <span style={messageStyle}>
         Missed {String(liveness.missedPings)} consecutive pings ({formatElapsed(elapsedSec)} ago).
-        The device is connected but not replying. Try unplug / replug, or click Reboot.
+        The device is connected but not replying. Try unplug / replug, or reboot.
       </span>
+      <RebootButton />
     </div>
   )
 }
@@ -54,4 +56,8 @@ const titleStyle: CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
+}
+
+const messageStyle: CSSProperties = {
+  flex: 1,
 }

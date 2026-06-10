@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
+import { RebootButton } from './RebootButton'
 
 const LOW_HEAP_THRESHOLD_BYTES = 10 * 1024
 
@@ -15,11 +16,12 @@ export const HeapLowBanner = () => {
   return (
     <div role="alert" style={bannerStyle}>
       <span style={titleStyle}>Heap low</span>
-      <span>
+      <span style={messageStyle}>
         Largest contiguous free block is <strong>{formatBytes(latest.largestInternal)}</strong> —
         below the {formatBytes(LOW_HEAP_THRESHOLD_BYTES)} safety floor. Subsequent allocations (font
         load, icon decode, JSON parse) may fail silently. Reboot the dash to defragment.
       </span>
+      <RebootButton />
     </div>
   )
 }
@@ -45,4 +47,8 @@ const titleStyle: CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
+}
+
+const messageStyle: CSSProperties = {
+  flex: 1,
 }
