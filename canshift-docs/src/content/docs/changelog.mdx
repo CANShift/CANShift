@@ -1,6 +1,6 @@
 ---
 title: "Changelog"
-description: "Historique des releases — généré depuis GitHub Releases."
+description: "Release history — pulled from GitHub Releases."
 sidebar:
   order: 200
 ---
@@ -8,37 +8,39 @@ sidebar:
 import { Aside } from "@astrojs/starlight/components";
 
 <Aside type="note" title="Source">
-Cette page reflète les **GitHub Releases** publiées sur [tburkhalterr/CANShift](https://github.com/tburkhalterr/CANShift/releases).
-Chaque release décrit les changements visibles côté pilote, côté tuner, côté firmware,
-et marque explicitement les breaking changes.
+This page reflects the **GitHub Releases** published on
+[tburkhalterr/CANShift](https://github.com/tburkhalterr/CANShift/releases).
+Each release describes user-visible changes (driver, tuner, firmware) and
+explicitly flags breaking changes.
 </Aside>
 
-## Convention de rédaction
+## Release-notes convention
 
-Chaque release suit cette structure :
+Every release should follow this structure:
 
 ```markdown
 ## [Version] — YYYY-MM-DD
 
-### 🚗 Pour le pilote
-- (UX, nouveaux widgets, support hardware, etc.)
+### 🚗 For the driver
+- (UX, new widgets, hardware support, etc.)
 
-### 🔧 Pour le tuner / l'installateur
-- (config, calibration, paramètres ECU)
+### 🔧 For the tuner / installer
+- (config, calibration, ECU parameters)
 
-### 🔬 Firmware / Dev
-- (build flags, schema, ports Rust, refactors)
+### 🔬 Firmware / dev
+- (build flags, schema, Rust ports, refactors)
 
 ### ⚠️ Breaking
-- (impact concret + action requise — re-flash, re-burn config, etc.)
+- (concrete impact + required action — re-flash, re-burn config, etc.)
 
 ### PRs
 - #XXXX — ...
 - #YYYY — ...
 ```
 
-Une release vide ou réduite à une liste brute de titres de PRs n'est pas acceptée :
-le changelog public doit pouvoir être lu par quelqu'un qui n'a pas suivi le développement.
+An empty release, or one reduced to a bare list of PR titles, is not enough:
+the public changelog must be readable by someone who didn't watch the
+development stream.
 
 ## Releases
 
@@ -46,6 +48,6 @@ import ReleaseList from "../../components/ReleaseList.astro";
 
 <ReleaseList />
 
-> Si la liste ci-dessus est vide pendant le build local, c'est normal — elle se peuple
-> au build de production via l'API GitHub Releases. Pour la prévisualiser en dev,
-> définis `GITHUB_TOKEN` dans l'environnement.
+> If the list above is empty in local dev, that's expected — it populates at
+> build time via the GitHub Releases API. To preview in dev, set
+> `GITHUB_TOKEN` in your environment.

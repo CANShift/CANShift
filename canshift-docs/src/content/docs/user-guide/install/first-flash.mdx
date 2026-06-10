@@ -1,39 +1,41 @@
 ---
-title: "Premier flash"
-description: "Flasher le firmware sur un CrowPanel 2.8 ESP32 neuf."
+title: "First flash"
+description: "Flash the firmware onto a fresh CrowPanel 2.8 ESP32."
 sidebar:
   order: 1
 ---
 
 import { Aside, Steps } from "@astrojs/starlight/components";
 
-<Aside type="caution" title="Web Serial requis">
-  Le flasher tourne dans un navigateur **Chromium-based** (Chrome, Edge, Brave,
-  Arc, Opera). Firefox ne supporte pas Web Serial.
+<Aside type="caution" title="Web Serial required">
+  The flasher runs in a **Chromium-based** browser (Chrome, Edge, Brave, Arc,
+  Opera). Firefox does not support Web Serial.
 </Aside>
 
 <Steps>
 
-1. **Branche l'écran** sur ton ordinateur via USB-C.
+1. **Plug the screen** into your computer via USB-C.
 
-2. **Ouvre le [flasher](https://github.com/tburkhalterr/canshift-flasher)** dans Chromium.
+2. **Open [Tuner → Firmware](https://canshift-tuner.vercel.app/firmware)** in a
+   Chromium browser. The flasher lives inside the tuner — there is no separate
+   flasher site any more.
 
-3. **Sélectionne le port série** quand le navigateur le demande. L'écran apparaît
-   sous "USB JTAG/serial debug unit" sur la plupart des cartes ESP32-WROOM.
+3. **Pick the serial port** when the browser prompts. The screen shows up as
+   "USB JTAG/serial debug unit" on most ESP32-WROOM boards.
 
-4. **Choisis la release** (la dernière stable par défaut).
+4. **Choose a release** (latest stable by default).
 
-5. **Clique "Flash"** et attends ~30 secondes. L'écran redémarre seul à la fin
-   et affiche le splash CANShift.
+5. **Click "Flash"** and wait ~30 seconds. The screen reboots itself at the
+   end and shows the CANShift splash.
 
 </Steps>
 
-## Le splash apparaît mais reste figé ?
+## Splash shows up but the bar stalls?
 
-Si le splash s'affiche mais la barre de progression bloque, c'est probablement un
-problème de heap. Va voir [Diagnostic boot](/user-guide/install/boot-issues/).
+If the splash appears but the progress bar hangs, you most likely hit a heap
+issue. See [Boot diagnostics](/user-guide/install/boot-issues/).
 
-## Pas de signal sur l'écran après flash ?
+## No display after flash?
 
-Vérifie le câblage TFT — `MOSI=13`, `MISO=12`, `SCLK=14`, `CS=15`, `DC=2`, `BL=27`.
-Détails complets dans [Pinout](/technical/reference/pinout/).
+Check the TFT wiring — `MOSI=13`, `MISO=12`, `SCLK=14`, `CS=15`, `DC=2`,
+`BL=27`. Full details on [Pinout](/technical/reference/pinout/).
