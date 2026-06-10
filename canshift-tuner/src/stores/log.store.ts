@@ -1,11 +1,3 @@
-// log.store.ts — Application console log entries
-//
-// Verbose mode controls whether `debug` lines (high-volume traces such as
-// per-chunk SD push progress) are kept in `entries`. When verbose is off
-// `push` drops debug records on the floor so the visible log stays
-// user-readable. The toggle is persisted across reloads via localStorage so
-// debugging sessions survive a window restart.
-
 import { create } from 'zustand'
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug'
@@ -15,17 +7,7 @@ export interface LogEntry {
   level: LogLevel
   message: string
   timestamp: Date
-  /**
-   * Optional logical scope — surfaced as a `[scope]` tag in the CLI panel
-   * (issue #378). Existing 2-arg `push()` callers stay valid.
-   */
   scope?: string
-  /**
-   * True for entries injected by `pushFromBridge` (cross-window CLI sync —
-   * #433). The outbound bridge subscriber in `useCliLogBridge` skips these
-   * so a bridged entry isn't re-broadcast back to the originating window,
-   * which previously produced duplicate device log lines (#484).
-   */
   bridged?: boolean
 }
 
@@ -33,11 +15,6 @@ interface LogState {
   entries: LogEntry[]
   verbose: boolean
   push: (level: LogLevel, message: string, scope?: string) => void
-  /**
-   * Inject an entry produced in another renderer process (e.g. forwarded from
-   * the detached CLI window via `CLI_LOG_BROADCAST_BATCH` — issue #433). Bypasses
-   * the bridge-out path so we don't echo it back through main.
-   */
   pushFromBridge: (entry: LogEntry) => void
   setVerbose: (verbose: boolean) => void
   clear: () => void
@@ -45,7 +22,7 @@ interface LogState {
 
 const VERBOSE_STORAGE_KEY = 'canshift.log.verbose'
 
-function readVerboseFlag(): boolean {
+const readVerboseFlag = (): boolean => {
   if (typeof window === 'undefined') return false
   try {
     return window.localStorage.getItem(VERBOSE_STORAGE_KEY) === '1'
@@ -54,12 +31,12 @@ function readVerboseFlag(): boolean {
   }
 }
 
-function writeVerboseFlag(verbose: boolean): void {
+const writeVerboseFlag = (verbose: boolean): void => {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(VERBOSE_STORAGE_KEY, verbose ? '1' : '0')
   } catch {
-    /* localStorage unavailable (private mode, denied) — keep in-memory state */
+    void 0
   }
 }
 
@@ -82,11 +59,6 @@ export const useLogStore = create<LogState>()((set, get) => ({
 
   pushFromBridge: (entry) => {
     if (entry.level === 'debug' && !get().verbose) return
-    // Reserve a fresh local id so xterm's "skip already-written" guard in
-    // CliTerminal (`lastWrittenIdRef`) treats the bridged entry as new.
-    // The `bridged: true` marker lets the outbound bridge in
-    // `useCliLogBridge` skip this entry to avoid the echo loop that produced
-    // duplicate device log lines (#484).
     const base: LogEntry = {
       id: nextId++,
       level: entry.level,
