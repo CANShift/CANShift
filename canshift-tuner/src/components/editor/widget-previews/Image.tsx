@@ -1,10 +1,3 @@
-// widget-previews/Image.tsx — Static-image widget preview.
-// Mirrors firmware image_widget.cpp at design time: the firmware loads a BMP
-// from SPIFFS at runtime, but Studio has no access to that asset, so the
-// preview draws a neutral "picture" placeholder (frame + mountain glyph +
-// caption) at the widget bounds so authors see the slot occupied and can
-// position it precisely. Custom labels were dropped (issue #1244).
-
 import { memo } from 'react'
 import { FONT_FAMILY } from '../widgetPreview.styles'
 import type { BaseRendererProps } from './shared'
@@ -17,7 +10,6 @@ const CAPTION_RGB = '#2A2A2A'
 export const ImagePreview = memo(function ImagePreview({ widget, w, h }: BaseRendererProps) {
   if (widget.config.type !== 'image') return null
 
-  // Mountain silhouette polyline — proportional to widget bounds.
   const points = [
     `${String(w * 0.2)},${String(h * 0.72)}`,
     `${String(w * 0.42)},${String(h * 0.38)}`,

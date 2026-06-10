@@ -1,10 +1,3 @@
-// property-panel/button-fields.tsx — Editor for `button` widgets.
-//
-// Owns three small helpers (ActionRow, AddActionMenu) that are specific to
-// button-widget actions and not reusable anywhere else. They live in the
-// same file so a future per-action-type expansion stays local to this
-// component.
-
 import { useState } from 'react'
 import {
   CRUISE_CONTROL_OPS,
@@ -20,12 +13,8 @@ import { useDashboardStore } from '../../../stores/dashboard.store'
 import { actionKey, newId } from '../../../utils/listKeys'
 import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } from './shared'
 
-// Ops that accept an optional `stepKmh` adjustment.
 const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])
 
-// Module-level empty fallback for the `pages` selector — keeps the selector
-// reference-stable while `config === null` so unrelated store updates don't
-// re-render the property panel every tick (R-4).
 const EMPTY_PAGES: readonly PageConfig[] = []
 
 interface ActionRowProps {
@@ -35,7 +24,7 @@ interface ActionRowProps {
   onRemove: () => void
 }
 
-function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
+const ActionRow = ({ action, pageIds, onUpdate, onRemove }: ActionRowProps) => {
   const typeLabel =
     action.type === 'navigate'
       ? 'Navigate'
@@ -57,8 +46,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
         marginBottom: 5,
       }}
     >
-      {/* Row header */}
-      <div
+            <div
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -93,8 +81,7 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
         </button>
       </div>
 
-      {/* Action-specific fields */}
-      {action.category === 'dashboard' && (
+            {action.category === 'dashboard' && (
         <select
           style={{ ...inputStyle, fontSize: 11 }}
           value={action.pageId}
@@ -164,9 +151,6 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
               value={action.op}
               onChange={(e) => {
                 const nextOp = e.target.value as CruiseControlOp
-                // Drop `stepKmh` when switching to an op that doesn't honor it
-                // so the persisted config stays minimal (schema would accept
-                // it, but a stale value would be misleading).
                 if (!CRUISE_STEP_OPS.has(nextOp) && action.stepKmh !== undefined) {
                   const { stepKmh: _drop, ...rest } = action
                   void _drop
@@ -205,13 +189,13 @@ function ActionRow({ action, pageIds, onUpdate, onRemove }: ActionRowProps) {
   )
 }
 
-function AddActionMenu({
+const AddActionMenu = ({
   pageIds,
   onAdd,
 }: {
   pageIds: string[]
   onAdd: (a: ButtonAction) => void
-}) {
+}) => {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
       {[
@@ -266,7 +250,7 @@ function AddActionMenu({
   )
 }
 
-export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
+export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const cfg = widget.config.type === 'button' ? widget.config : null
   const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
   const pageIds = pages.map((p) => p.id)
@@ -284,18 +268,11 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
   }
 
   const addAction = (action: ButtonAction) => {
-    // Assign a stable id at creation so the React key in the action list
-    // survives reorders / removals (R-5).
     const withId: ButtonAction = action.id !== undefined ? action : { ...action, id: newId() }
     onChange({ config: { ...cfg, actions: [...cfg.actions, withId] } })
   }
 
   const { w, h } = widget.layout
-  // Sidebar is 220 px wide; the Field eats its own padding and the toggle
-  // button + gap sit alongside, so the preview gets ~140 px of real estate.
-  // Fixed 2× scaled big buttons (e.g. cruise 140×85 → 280×170) overflowed and
-  // pushed the toggle off-screen. Compute a per-render scale that fits the
-  // budget on both axes; cap at 4× so tiny widgets don't pixelate.
   const PREVIEW_BUDGET_W = 140
   const PREVIEW_BUDGET_H = 180
   const PREVIEW_MAX_SCALE = 4
@@ -305,8 +282,7 @@ export function ButtonFields({ widget, onChange }: ConfigFieldsProps) {
 
   return (
     <>
-      {/* Active state preview */}
-      <Field label="Active state">
+            <Field label="Active state">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div
             style={{

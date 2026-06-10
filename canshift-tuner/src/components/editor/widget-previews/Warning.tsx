@@ -1,15 +1,9 @@
-// widget-previews/Warning.tsx — Threshold-driven alert preview.
-// Mirrors firmware warning_widget.cpp: translucent critical background that
-// blinks while the alert is active, an icon centred above the auto signal
-// name. Custom labels were dropped (issue #1244).
-
 import { memo } from 'react'
 import { SensorIcon } from '../../icons/SensorIcons'
 import { BLINK_ANIM, FONT_FAMILY } from '../widgetPreview.styles'
 import { type BaseRendererProps, formatSignalLabel } from './shared'
 
 export interface WarningRendererProps extends BaseRendererProps {
-  /** When true, suppress the blink animation (used by thumbnails). */
   noAnimate: boolean
 }
 
@@ -26,7 +20,6 @@ export const WarningPreview = memo(function WarningPreview({
   const st = widget.style
 
   const iconName = cfg.iconName ?? DEFAULT_ICON
-  // Match firmware's 28-px floor on the signal label band (warning_widget.cpp).
   const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
   const labelH = sigFontSize + 4
   const iconSize = Math.max(0, Math.min(w * 0.55, h - labelH - 8, 64))
@@ -45,8 +38,6 @@ export const WarningPreview = memo(function WarningPreview({
         gap: 4,
         background: st.criticalColor + '22',
         borderRadius: 0,
-        // Thumbnails pass noAnimate to suppress the alert flash so they show
-        // layout rather than live state (issue #144).
         animation: noAnimate ? undefined : BLINK_ANIM,
         overflow: 'hidden',
         boxSizing: 'border-box',
