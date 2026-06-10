@@ -1,36 +1,26 @@
 import type { CSSProperties } from 'react'
+import { useFirmwareSelectionStore } from '../../stores/firmware-selection.store'
 import { FlashSection } from './FlashSection'
+import { LocalFirmwarePicker } from './LocalFirmwarePicker'
 
-export const FirmwareSection = () => (
-  <FlashSection step={2} title="Firmware" status="idle">
-    <p>Pick which firmware build to write to the dash.</p>
-    <ul style={listStyle}>
-      <li>
-        <strong>Latest stable release</strong> — fetched from the GitHub releases feed, signed,
-        size-checked.
-      </li>
-      <li>
-        <strong>Pre-release / beta channel</strong> — opt-in track for in-flight features.
-      </li>
-      <li>
-        <strong>Local .bin file</strong> — for developers building from source.
-      </li>
-    </ul>
-    <p style={hintStyle}>Release picker + file upload land in a follow-up PR.</p>
-  </FlashSection>
-)
+export const FirmwareSection = () => {
+  const selection = useFirmwareSelectionStore((s) => s.selection)
+  const status = selection.kind === 'local' ? 'done' : 'active'
 
-const listStyle: CSSProperties = {
-  margin: 0,
-  paddingLeft: 18,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
+  return (
+    <FlashSection step={2} title="Firmware" status={status}>
+      <p>Pick a local .bin built from source. GitHub release picker lands in a follow-up PR.</p>
+      <LocalFirmwarePicker />
+      <p style={hintStyle}>
+        Files larger than 16 MiB or empty files are rejected before they reach the flash flow. The
+        SHA-256 is computed at read time so a corrupted upload can't slip through.
+      </p>
+    </FlashSection>
+  )
 }
 
 const hintStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--text-muted))',
-  fontStyle: 'italic',
   margin: 0,
 }
