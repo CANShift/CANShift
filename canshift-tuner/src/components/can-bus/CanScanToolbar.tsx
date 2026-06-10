@@ -15,7 +15,7 @@ export interface CanScanToolbarProps {
   onReset: () => void
 }
 
-export function CanScanToolbar({
+export const CanScanToolbar = ({
   status,
   canControl,
   totalFrames,
@@ -25,7 +25,7 @@ export function CanScanToolbar({
   onStart,
   onStop,
   onReset,
-}: CanScanToolbarProps) {
+}: CanScanToolbarProps) => {
   const elapsedSec = useElapsedSeconds(startedAt, status === 'running')
   const running = status === 'running' || status === 'starting'
 
@@ -67,7 +67,7 @@ export function CanScanToolbar({
   )
 }
 
-function useElapsedSeconds(startedAt: number | null, running: boolean): number {
+const useElapsedSeconds = (startedAt: number | null, running: boolean): number => {
   const [tick, setTick] = useState(0)
   useEffect(() => {
     if (!running) return
@@ -83,7 +83,7 @@ function useElapsedSeconds(startedAt: number | null, running: boolean): number {
   return Math.floor((performance.now() - startedAt) / 1000)
 }
 
-function prettyStatus(status: CanScannerStatus): string {
+const prettyStatus = (status: CanScannerStatus): string => {
   switch (status) {
     case 'idle':
       return 'Idle'
@@ -98,20 +98,20 @@ function prettyStatus(status: CanScannerStatus): string {
   }
 }
 
-function formatCount(n: number): string {
+const formatCount = (n: number): string => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return String(n)
 }
 
-function formatElapsed(sec: number): string {
+const formatElapsed = (sec: number): string => {
   if (sec < 60) return `${String(sec)}s`
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return `${String(m)}m ${String(s).padStart(2, '0')}s`
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+const Metric = ({ label, value }: { label: string; value: string }) => {
   return (
     <div style={metricStyle}>
       <span style={metricLabelStyle}>{label}</span>

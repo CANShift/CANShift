@@ -6,7 +6,7 @@ export interface FirmwareSlotProps {
   compat: FirmwareCompat
 }
 
-export function FirmwareSlot({ version, compat }: FirmwareSlotProps) {
+export const FirmwareSlot = ({ version, compat }: FirmwareSlotProps) => {
   if (compat.kind === 'mismatch') {
     return (
       <div

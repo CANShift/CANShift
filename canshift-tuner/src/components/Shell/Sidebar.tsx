@@ -1,10 +1,3 @@
-// Sidebar.tsx — Left navigation in the Betaflight-style shell.
-//
-// Section entries below are the source of truth for the shell menu; route
-// definitions in App.tsx must stay in sync. When the device is not connected
-// only the Welcome entry is reachable — every other entry is greyed out and
-// blocks click-through so the user can't navigate past the connect handshake.
-
 import type { CSSProperties } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useConnectionStore } from '../../stores/connection.store'
@@ -16,7 +9,6 @@ interface NavItem {
   to: string
   label: string
   icon: string
-  /** When true, accessible even while disconnected (Welcome / About). */
   alwaysOn?: boolean
 }
 
@@ -45,8 +37,6 @@ const ENTRIES: Entry[] = [
 
 export default function Sidebar() {
   const status = useConnectionStore((s) => s.status)
-  // Treat dev-mode simulation as a "live device" for navigation gating —
-  // mirrors App.tsx's DisconnectedGuard so the two stay aligned.
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const location = useLocation()
   const offline = status !== 'connected' && !simulationMode
@@ -100,7 +90,7 @@ interface SidebarItemProps {
   disabled: boolean
 }
 
-function SidebarItem({ item, active, disabled }: SidebarItemProps) {
+const SidebarItem = ({ item, active, disabled }: SidebarItemProps) => {
   const baseStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',

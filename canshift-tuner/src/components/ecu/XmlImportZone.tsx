@@ -10,12 +10,12 @@ export interface XmlImportZoneProps {
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024
 
-export function XmlImportZone({
+export const XmlImportZone = ({
   loadedFileName,
   onFileLoad,
   onError,
   onClear,
-}: XmlImportZoneProps) {
+}: XmlImportZoneProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -98,7 +98,7 @@ export function XmlImportZone({
   )
 }
 
-function formatBytes(bytes: number): string {
+const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${String(bytes)} B`

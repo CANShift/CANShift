@@ -3,7 +3,7 @@ import { useDeviceStore } from '../../stores/device.store'
 
 const LOW_HEAP_THRESHOLD_BYTES = 10 * 1024
 
-export function HeapLowBanner() {
+export const HeapLowBanner = () => {
   const heapStats = useDeviceStore((s) => s.heapStats)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -25,7 +25,7 @@ export function HeapLowBanner() {
   )
 }
 
-function formatBytes(bytes: number): string {
+const formatBytes = (bytes: number): string => {
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${String(bytes)} B`
 }

@@ -10,11 +10,11 @@ export interface HeapStatsSparklineProps {
 const DEFAULT_WIDTH = 360
 const DEFAULT_HEIGHT = 56
 
-export function HeapStatsSparkline({
+export const HeapStatsSparkline = ({
   history,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
-}: HeapStatsSparklineProps) {
+}: HeapStatsSparklineProps) => {
   if (history.length < 2) {
     return <div style={emptyStyle(height)}>Collecting…</div>
   }
@@ -52,7 +52,7 @@ export function HeapStatsSparkline({
   )
 }
 
-function buildPath(values: number[], maxVal: number, width: number, height: number): string {
+const buildPath = (values: number[], maxVal: number, width: number, height: number): string => {
   const stepX = values.length > 1 ? width / (values.length - 1) : 0
   return values
     .map((v, i) => {

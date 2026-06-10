@@ -6,7 +6,7 @@ export interface SignalPreviewTableProps {
   warnings?: readonly string[]
 }
 
-export function SignalPreviewTable({ signals, warnings = [] }: SignalPreviewTableProps) {
+export const SignalPreviewTable = ({ signals, warnings = [] }: SignalPreviewTableProps) => {
   if (signals.length === 0 && warnings.length === 0) {
     return <div style={emptyStyle}>No signals to preview.</div>
   }
@@ -69,13 +69,13 @@ export function SignalPreviewTable({ signals, warnings = [] }: SignalPreviewTabl
   )
 }
 
-function groupByFrame(signals: readonly SignalDef[]): string[] {
+const groupByFrame = (signals: readonly SignalDef[]): string[] => {
   const set = new Set<string>()
   for (const s of signals) set.add(s.canFrameId)
   return Array.from(set)
 }
 
-function formatNumber(n: number): string {
+const formatNumber = (n: number): string => {
   if (Number.isInteger(n)) return String(n)
   return n.toFixed(3).replace(/\.?0+$/, '')
 }

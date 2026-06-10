@@ -33,7 +33,7 @@ type SortKey = 'vendor' | 'label' | 'size'
 
 const CATALOGUE_URL = '/ecu-catalogue/index.json'
 
-export function EcuCatalogueList({ activeKey, selectedId, onSelect }: EcuCatalogueListProps) {
+export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalogueListProps) => {
   const [state, setState] = useState<LoadState>({ kind: 'idle' })
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('vendor')
@@ -174,7 +174,7 @@ interface SortPillProps {
   children: React.ReactNode
 }
 
-function SortPill({ active, onClick, children }: SortPillProps) {
+const SortPill = ({ active, onClick, children }: SortPillProps) => {
   return (
     <button type="button" onClick={onClick} style={sortPillStyle(active)}>
       {children}
@@ -182,7 +182,7 @@ function SortPill({ active, onClick, children }: SortPillProps) {
   )
 }
 
-function formatBytes(bytes: number): string {
+const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${String(bytes)} B`

@@ -7,7 +7,7 @@ export interface CanByteHistogramProps {
   frame: CanFrameStats
 }
 
-export function CanByteHistogram({ frame }: CanByteHistogramProps) {
+export const CanByteHistogram = ({ frame }: CanByteHistogramProps) => {
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>Per-byte value distribution (most-common first)</div>
@@ -25,7 +25,7 @@ interface ByteColumnProps {
   counts: ReadonlyMap<number, number>
 }
 
-function ByteColumn({ byteIndex, counts }: ByteColumnProps) {
+const ByteColumn = ({ byteIndex, counts }: ByteColumnProps) => {
   if (counts.size === 0) {
     return (
       <div style={columnStyle}>
@@ -75,11 +75,11 @@ function ByteColumn({ byteIndex, counts }: ByteColumnProps) {
   )
 }
 
-function formatByte(value: number): string {
+const formatByte = (value: number): string => {
   return `0x${value.toString(16).toUpperCase().padStart(2, '0')}`
 }
 
-function formatPct(count: number, total: number): string {
+const formatPct = (count: number, total: number): string => {
   if (total === 0) return '0 %'
   return `${((count / total) * 100).toFixed(0)} %`
 }

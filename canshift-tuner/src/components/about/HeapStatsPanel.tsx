@@ -6,7 +6,7 @@ export interface HeapStatsPanelProps {
   history: HeapStatsEntry[]
 }
 
-export function HeapStatsPanel({ history }: HeapStatsPanelProps) {
+export const HeapStatsPanel = ({ history }: HeapStatsPanelProps) => {
   if (history.length === 0) {
     return (
       <div style={emptyStyle}>
@@ -42,7 +42,7 @@ interface RowProps {
   value: string
 }
 
-function Row({ label, value }: RowProps) {
+const Row = ({ label, value }: RowProps) => {
   return (
     <div style={rowStyle}>
       <span style={labelStyle}>{label}</span>
@@ -51,13 +51,13 @@ function Row({ label, value }: RowProps) {
   )
 }
 
-function formatBytes(bytes: number): string {
+const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${String(bytes)} B`
 }
 
-function formatFragmentationPct(free: number, largest: number): string {
+const formatFragmentationPct = (free: number, largest: number): string => {
   if (free === 0) return '—'
   const ratio = 1 - largest / free
   return `${(ratio * 100).toFixed(1)} %`

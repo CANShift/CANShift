@@ -16,7 +16,7 @@ export interface CliOutputProps {
   onClear: () => void
 }
 
-export function CliOutput({ entries, onClear }: CliOutputProps) {
+export const CliOutput = ({ entries, onClear }: CliOutputProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const lastIdRef = useRef<number | null>(null)
 
@@ -65,7 +65,7 @@ export function CliOutput({ entries, onClear }: CliOutputProps) {
   )
 }
 
-function formatTime(d: Date): string {
+const formatTime = (d: Date): string => {
   const h = String(d.getHours()).padStart(2, '0')
   const m = String(d.getMinutes()).padStart(2, '0')
   const s = String(d.getSeconds()).padStart(2, '0')
@@ -73,7 +73,7 @@ function formatTime(d: Date): string {
   return `${h}:${m}:${s}.${ms}`
 }
 
-function kindLabel(kind: CliEntryKind): string {
+const kindLabel = (kind: CliEntryKind): string => {
   switch (kind) {
     case 'request':
       return '→'
@@ -86,7 +86,7 @@ function kindLabel(kind: CliEntryKind): string {
   }
 }
 
-function kindColor(kind: CliEntryKind): string {
+const kindColor = (kind: CliEntryKind): string => {
   switch (kind) {
     case 'request':
       return 'hsl(var(--primary))'
@@ -99,7 +99,7 @@ function kindColor(kind: CliEntryKind): string {
   }
 }
 
-function formatPayload(payload: Record<string, unknown>): string {
+const formatPayload = (payload: Record<string, unknown>): string => {
   try {
     return JSON.stringify(payload, null, 2)
   } catch {

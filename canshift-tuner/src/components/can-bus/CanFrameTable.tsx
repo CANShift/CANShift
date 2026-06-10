@@ -8,7 +8,7 @@ export interface CanFrameTableProps {
   onPromote: (id: number) => void
 }
 
-export function CanFrameTable({ frames, nowMs, onPromote }: CanFrameTableProps) {
+export const CanFrameTable = ({ frames, nowMs, onPromote }: CanFrameTableProps) => {
   if (frames.length === 0) {
     return (
       <div style={emptyStyle}>

@@ -1,9 +1,3 @@
-// canshift-studio-web/src/components/icons/SensorIcons.tsx
-// Sensor icon set sourced from Phosphor Icons (Fill weight, MIT).
-// Mirrors the firmware bundle in canshift-firmware/data/assets/sensor_*.bin.
-// Public API (SensorIcon, SENSOR_ICON_NAMES, SENSOR_ICON_LABELS, ICON_MAP)
-// is byte-stable so widget palette / property panel / preview compile unchanged.
-
 import type { SensorIconName } from '@tmbk/canshift-core'
 
 interface IconProps {
@@ -11,8 +5,6 @@ interface IconProps {
   color?: string
 }
 
-// Phosphor Fill paths — viewBox 0 0 256 256, single <path d="..."/>, fill=currentColor.
-// Source: github.com/phosphor-icons/core @ 2b75f3ad12b420c9504ef05df8d2564a28f8500e
 const SENSOR_ICON_PATHS: Record<SensorIconName, string> = {
   rpm: 'M240,152v24a16,16,0,0,1-16,16H115.93a4,4,0,0,1-3.24-6.35L174.27,101a8.21,8.21,0,0,0-1.37-11.3,8,8,0,0,0-11.37,1.61l-72,99.06A4,4,0,0,1,86.25,192H32a16,16,0,0,1-16-16V153.13c0-1.79,0-3.57.13-5.33a4,4,0,0,1,4-3.8H48a8,8,0,0,0,8-8.53A8.17,8.17,0,0,0,47.73,128H23.92a4,4,0,0,1-3.87-5c12-43.84,49.66-77.13,95.52-82.28a4,4,0,0,1,4.43,4V72a8,8,0,0,0,8.53,8A8.17,8.17,0,0,0,136,71.73V44.67a4,4,0,0,1,4.43-4A112.18,112.18,0,0,1,236.23,123a4,4,0,0,1-3.88,5H208.27a8.17,8.17,0,0,0-8.25,7.47,8,8,0,0,0,8,8.53h27.92a4,4,0,0,1,4,3.86C240,149.23,240,150.61,240,152Z',
   speed:
@@ -58,11 +50,11 @@ const SENSOR_ICON_PATHS: Record<SensorIconName, string> = {
 
 const PHOSPHOR_VIEWBOX = '0 0 256 256' as const
 
-function PhosphorIcon({
+const PhosphorIcon = ({
   d,
   size = 20,
   color = 'currentColor',
-}: IconProps & { d: string }): React.JSX.Element {
+}: IconProps & { d: string }): React.JSX.Element => {
   return (
     <svg width={size} height={size} viewBox={PHOSPHOR_VIEWBOX} fill={color} aria-hidden="true">
       <path d={d} />
@@ -70,7 +62,6 @@ function PhosphorIcon({
   )
 }
 
-// Public API: name -> component, kept stable for PropertyPanel / WidgetPalette / WidgetPreview.
 const ICON_MAP: Record<SensorIconName, (props: IconProps) => React.JSX.Element> = {
   rpm: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.rpm} />,
   speed: (props) => <PhosphorIcon {...props} d={SENSOR_ICON_PATHS.speed} />,
@@ -103,12 +94,11 @@ interface SensorIconProps extends IconProps {
   name: SensorIconName
 }
 
-export function SensorIcon({ name, size = 20, color = 'currentColor' }: SensorIconProps) {
+export const SensorIcon = ({ name, size = 20, color = 'currentColor' }: SensorIconProps) => {
   const Component = ICON_MAP[name]
   return <Component size={size} color={color} />
 }
 
-/** Human-readable label for each sensor icon */
 export const SENSOR_ICON_LABELS: Record<SensorIconName, string> = {
   rpm: 'RPM',
   speed: 'Speed',
