@@ -1,4 +1,9 @@
-# LVGL mutex + thread ownership
+---
+title: "LVGL ownership"
+description: "Mutex + thread rules for every lv_* call in the firmware."
+sidebar:
+  order: 20
+---
 
 LVGL is single-threaded by contract. Every `lv_*` call on this firmware must
 happen on the UI task **OR** under `g_lvglMutex` held by the calling task.

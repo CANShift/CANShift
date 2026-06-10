@@ -1,4 +1,9 @@
-# Page lifecycle — build / lazy build / release
+---
+title: "Page lifecycle"
+description: "Build, lazy build, release — the dashboard page state machine."
+sidebar:
+  order: 30
+---
 
 PageManager owns the dashboard's page tree, the LVGL screens it represents,
 and the swipe/transition state machine. Memory pressure on a no-PSRAM WROOM

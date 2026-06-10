@@ -1,4 +1,9 @@
-# Boot sequence + heap reservation order
+---
+title: "Boot sequence"
+description: "Heap reservation ordering that makes the boot path work on a no-PSRAM WROOM."
+sidebar:
+  order: 10
+---
 
 This file documents the ordering constraints that make the boot path work on a
 no-PSRAM ESP32 WROOM. Re-ordering the early stages will OOM the largest

@@ -1,4 +1,9 @@
-# BLE transport — NimBLE topology + lifetime
+---
+title: "BLE transport"
+description: "NimBLE topology, GATT layout, and the stop-race snapshot pattern."
+sidebar:
+  order: 50
+---
 
 The BLE stack is the optional secondary transport (USB is primary).
 Phone-side `canshift-mobile` reads telemetry over GATT notify and writes

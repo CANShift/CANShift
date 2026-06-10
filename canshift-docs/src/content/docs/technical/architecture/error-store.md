@@ -1,4 +1,9 @@
-# ErrorStore — firmware error ring buffer
+---
+title: "ErrorStore"
+description: "Firmware error ring buffer + critical-section invariant."
+sidebar:
+  order: 70
+---
 
 ErrorStore is the firmware's single source of truth for "what went wrong"
 across boot, CAN, USB, BLE, config, and the UI alert chain. It's read by

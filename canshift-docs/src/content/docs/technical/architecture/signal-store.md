@@ -1,4 +1,9 @@
-# SignalStore — runtime signal table
+---
+title: "SignalStore"
+description: "Runtime signal table — taskCAN writes, taskUI reads."
+sidebar:
+  order: 80
+---
 
 SignalStore is the firmware's shared snapshot of every decoded CAN signal +
 synthesized derived values. It is written by taskCAN (and the OBD-II

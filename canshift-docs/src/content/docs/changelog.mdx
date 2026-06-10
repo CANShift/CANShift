@@ -1,0 +1,51 @@
+---
+title: "Changelog"
+description: "Historique des releases — généré depuis GitHub Releases."
+sidebar:
+  order: 200
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+<Aside type="note" title="Source">
+Cette page reflète les **GitHub Releases** publiées sur [tburkhalterr/CANShift](https://github.com/tburkhalterr/CANShift/releases).
+Chaque release décrit les changements visibles côté pilote, côté tuner, côté firmware,
+et marque explicitement les breaking changes.
+</Aside>
+
+## Convention de rédaction
+
+Chaque release suit cette structure :
+
+```markdown
+## [Version] — YYYY-MM-DD
+
+### 🚗 Pour le pilote
+- (UX, nouveaux widgets, support hardware, etc.)
+
+### 🔧 Pour le tuner / l'installateur
+- (config, calibration, paramètres ECU)
+
+### 🔬 Firmware / Dev
+- (build flags, schema, ports Rust, refactors)
+
+### ⚠️ Breaking
+- (impact concret + action requise — re-flash, re-burn config, etc.)
+
+### PRs
+- #XXXX — ...
+- #YYYY — ...
+```
+
+Une release vide ou réduite à une liste brute de titres de PRs n'est pas acceptée :
+le changelog public doit pouvoir être lu par quelqu'un qui n'a pas suivi le développement.
+
+## Releases
+
+import ReleaseList from "../../components/ReleaseList.astro";
+
+<ReleaseList />
+
+> Si la liste ci-dessus est vide pendant le build local, c'est normal — elle se peuple
+> au build de production via l'API GitHub Releases. Pour la prévisualiser en dev,
+> définis `GITHUB_TOKEN` dans l'environnement.

@@ -1,4 +1,9 @@
-# Cruise control template — L-shape buttons
+---
+title: "Cruise template"
+description: "L-shape buttons + LVGL convex-polygon workaround."
+sidebar:
+  order: 60
+---
 
 The cruise control page in `page_manager_builder.cpp` renders four buttons
 in an L-shape around a centred set-speed readout. The geometry is
