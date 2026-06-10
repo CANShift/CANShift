@@ -1,10 +1,3 @@
-// LiveDataRoute.tsx — Full-page live signal monitor.
-//
-// Lifts the same `useLiveSignals` + `useSignalStore` pipeline the Canvas diag
-// overlay uses, but renders Studio chrome (the overlay stays as the on-device
-// preview). Tracks per-signal last-update timestamps so the age column is
-// meaningful when the WS feed stalls.
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useLiveSignals } from '../hooks/useLiveSignals'
@@ -53,8 +46,6 @@ export default function LiveDataRoute() {
     )
   }, [signals, filter])
 
-  // `tick` is the explicit age-refresh trigger — listing it as a dep keeps the
-  // lint rule honest even though we never read it.
   void tick
 
   const handleExport = () => {
@@ -167,7 +158,7 @@ export default function LiveDataRoute() {
   )
 }
 
-function SourceBadge({ source }: { source: 'live' | 'sim' | 'none' }) {
+const SourceBadge = ({ source }: { source: 'live' | 'sim' | 'none' }) => {
   const label = source === 'live' ? 'Live' : source === 'sim' ? 'Simulation' : 'No data'
   const color =
     source === 'live'
@@ -178,7 +169,7 @@ function SourceBadge({ source }: { source: 'live' | 'sim' | 'none' }) {
   return <span style={{ color, fontWeight: 600 }}>{label}</span>
 }
 
-function formatAge(ageMs: number | null, source: 'live' | 'sim' | 'none'): string {
+const formatAge = (ageMs: number | null, source: 'live' | 'sim' | 'none'): string => {
   if (source === 'none') return '—'
   if (ageMs === null) return 'never'
   if (ageMs < 1000) return '<1s'
@@ -186,7 +177,7 @@ function formatAge(ageMs: number | null, source: 'live' | 'sim' | 'none'): strin
   return `${String(Math.round(ageMs / 60_000))}m ago`
 }
 
-function escapeCsv(value: string): string {
+const escapeCsv = (value: string): string => {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
   return value
 }

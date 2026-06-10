@@ -1,10 +1,3 @@
-// WelcomeRoute.tsx — Connect screen, browser-support check, support contact.
-//
-// First impression matters: this is where people land before they touch
-// hardware. The page leans warm/onboarding-first rather than minimal so a
-// first-time user sees "what is this, what do I do" before "where is the
-// button". Once the device is connected the route bounces to /dashboard.
-
 import type { CSSProperties } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useConnectionStore } from '../stores/connection.store'
@@ -27,11 +20,11 @@ const STEPS: Array<{ title: string; body: string }> = [
   },
 ]
 
-function isWebSerialAvailable(): boolean {
+const isWebSerialAvailable = (): boolean => {
   return typeof navigator !== 'undefined' && 'serial' in navigator
 }
 
-function buildSupportMailto(lastError: string | null): string {
+const buildSupportMailto = (lastError: string | null): string => {
   const subject = encodeURIComponent('CANShift Tuner — issue report')
   const lines = [
     'Hi,',
@@ -145,7 +138,7 @@ export default function WelcomeRoute() {
   )
 }
 
-function UnsupportedBrowserCard() {
+const UnsupportedBrowserCard = () => {
   return (
     <div style={unsupportedCardStyle} role="alert">
       <div style={{ fontWeight: 600, color: 'hsl(var(--text))', marginBottom: 6 }}>
@@ -167,7 +160,7 @@ function UnsupportedBrowserCard() {
   )
 }
 
-function Spinner() {
+const Spinner = () => {
   return (
     <span
       aria-hidden="true"

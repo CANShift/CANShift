@@ -107,7 +107,7 @@ export default function CliRoute() {
   )
 }
 
-function formatHex(id: number): string {
+const formatHex = (id: number): string => {
   return `0x${id.toString(16).toUpperCase().padStart(2, '0')}`
 }
 

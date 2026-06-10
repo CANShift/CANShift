@@ -1,8 +1,3 @@
-// LogsRoute.tsx — Application log stream view.
-//
-// Reads `useLogStore` directly — same buffer the burn hook and transport push
-// to, so a burn failure shows up here within one render of its `log('error', …)`.
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useLogStore } from '../stores/log.store'
@@ -180,7 +175,7 @@ export default function LogsRoute() {
   )
 }
 
-function formatTimestamp(d: Date): string {
+const formatTimestamp = (d: Date): string => {
   const h = String(d.getHours()).padStart(2, '0')
   const m = String(d.getMinutes()).padStart(2, '0')
   const s = String(d.getSeconds()).padStart(2, '0')
@@ -188,7 +183,7 @@ function formatTimestamp(d: Date): string {
   return `${h}:${m}:${s}.${ms}`
 }
 
-function formatEntryForCopy(entry: ReturnType<typeof useLogStore.getState>['entries'][number]): string {
+const formatEntryForCopy = (entry: ReturnType<typeof useLogStore.getState>['entries'][number]): string => {
   const ts = formatTimestamp(entry.timestamp)
   const scope = entry.scope ? `[${entry.scope}] ` : ''
   return `${ts}  ${entry.level.toUpperCase().padEnd(7)}  ${scope}${entry.message}`

@@ -1,9 +1,3 @@
-// AboutRoute.tsx — Build + runtime metadata: tuner version, device state, links.
-//
-// Firmware version + heap stats degrade to "—" until the device handshake (#1365)
-// and heap telemetry (#1369) land — wiring the placeholders now so those PRs
-// only swap a string for live data.
-
 import type { CSSProperties } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
@@ -68,10 +62,10 @@ export default function AboutRoute() {
   )
 }
 
-function prettyStatus(
+const prettyStatus = (
   status: ReturnType<typeof useConnectionStore.getState>['status'],
   simulationMode: boolean,
-): string {
+): string => {
   if (simulationMode) return 'Simulation mode'
   switch (status) {
     case 'connected':
@@ -92,7 +86,7 @@ interface SectionProps {
   children: React.ReactNode
 }
 
-function Section({ title, children }: SectionProps) {
+const Section = ({ title, children }: SectionProps) => {
   return (
     <section style={sectionStyle}>
       <div style={sectionTitleStyle}>{title}</div>
@@ -107,7 +101,7 @@ interface RowProps {
   mono?: boolean
 }
 
-function Row({ label, value, mono }: RowProps) {
+const Row = ({ label, value, mono }: RowProps) => {
   return (
     <div style={rowStyle}>
       <span style={rowLabelStyle}>{label}</span>
@@ -116,11 +110,11 @@ function Row({ label, value, mono }: RowProps) {
   )
 }
 
-function Hint({ children }: { children: React.ReactNode }) {
+const Hint = ({ children }: { children: React.ReactNode }) => {
   return <div style={hintStyle}>{children}</div>
 }
 
-function LinkRow({ href, label }: { href: string; label: string }) {
+const LinkRow = ({ href, label }: { href: string; label: string }) => {
   return (
     <a href={href} target="_blank" rel="noreferrer" style={linkRowStyle}>
       <span>{label}</span>
