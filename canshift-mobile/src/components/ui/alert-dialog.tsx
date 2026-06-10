@@ -18,7 +18,7 @@ interface AlertDialogContextValue {
 
 const AlertDialogContext = React.createContext<AlertDialogContextValue | null>(null)
 
-function useAlertDialogContext(): AlertDialogContextValue {
+const useAlertDialogContext = (): AlertDialogContextValue => {
   const ctx = React.useContext(AlertDialogContext)
   if (ctx === null) {
     throw new Error('AlertDialog subcomponents must be used within an <AlertDialog>')
@@ -33,12 +33,12 @@ export interface AlertDialogProps {
   children: React.ReactNode
 }
 
-export function AlertDialog({
+export const AlertDialog = ({
   open,
   defaultOpen,
   onOpenChange,
   children,
-}: AlertDialogProps): React.ReactElement {
+}: AlertDialogProps): React.ReactElement => {
   const isControlledRef = React.useRef(open !== undefined)
   const [internalOpen, setInternalOpen] = React.useState<boolean>(defaultOpen ?? false)
 
@@ -96,11 +96,11 @@ export interface AlertDialogContentProps {
   overlayClassName?: string
 }
 
-export function AlertDialogContent({
+export const AlertDialogContent = ({
   children,
   className,
   overlayClassName,
-}: AlertDialogContentProps): React.ReactElement {
+}: AlertDialogContentProps): React.ReactElement => {
   const { open, setOpen } = useAlertDialogContext()
   return (
     <Modal
@@ -132,10 +132,10 @@ export interface AlertDialogHeaderProps extends ViewProps {
   className?: string
 }
 
-export function AlertDialogHeader({
+export const AlertDialogHeader = ({
   className,
   ...props
-}: AlertDialogHeaderProps): React.ReactElement {
+}: AlertDialogHeaderProps): React.ReactElement => {
   return (
     <View accessibilityRole="header" className={cn('flex-col gap-1.5', className)} {...props} />
   )
@@ -146,10 +146,10 @@ export interface AlertDialogFooterProps extends ViewProps {
   className?: string
 }
 
-export function AlertDialogFooter({
+export const AlertDialogFooter = ({
   className,
   ...props
-}: AlertDialogFooterProps): React.ReactElement {
+}: AlertDialogFooterProps): React.ReactElement => {
   return <View className={cn('flex-row justify-end gap-2 mt-4', className)} {...props} />
 }
 AlertDialogFooter.displayName = 'AlertDialogFooter'
@@ -158,10 +158,10 @@ export interface AlertDialogTitleProps extends TextProps {
   className?: string
 }
 
-export function AlertDialogTitle({
+export const AlertDialogTitle = ({
   className,
   ...props
-}: AlertDialogTitleProps): React.ReactElement {
+}: AlertDialogTitleProps): React.ReactElement => {
   return (
     <Text
       accessibilityRole="header"
@@ -176,10 +176,10 @@ export interface AlertDialogDescriptionProps extends TextProps {
   className?: string
 }
 
-export function AlertDialogDescription({
+export const AlertDialogDescription = ({
   className,
   ...props
-}: AlertDialogDescriptionProps): React.ReactElement {
+}: AlertDialogDescriptionProps): React.ReactElement => {
   return <Text className={cn('text-sm text-text-muted', className)} {...props} />
 }
 AlertDialogDescription.displayName = 'AlertDialogDescription'

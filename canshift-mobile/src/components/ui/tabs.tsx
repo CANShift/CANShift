@@ -9,7 +9,7 @@ interface TabsContextValue {
 
 const TabsContext = React.createContext<TabsContextValue | null>(null)
 
-function useTabsContext(): TabsContextValue {
+const useTabsContext = (): TabsContextValue => {
   const ctx = React.useContext(TabsContext)
   if (ctx === null) {
     throw new Error('Tabs subcomponents must be used within a <Tabs>')
@@ -25,14 +25,14 @@ export interface TabsProps extends Omit<ViewProps, 'children'> {
   className?: string
 }
 
-export function Tabs({
+export const Tabs = ({
   value,
   defaultValue,
   onValueChange,
   children,
   className,
   ...props
-}: TabsProps): React.ReactElement {
+}: TabsProps): React.ReactElement => {
   const isControlledRef = React.useRef(value !== undefined)
   const [internalValue, setInternalValue] = React.useState<string>(defaultValue ?? '')
 
@@ -68,7 +68,7 @@ export interface TabsListProps extends ViewProps {
   className?: string
 }
 
-export function TabsList({ className, ...props }: TabsListProps): React.ReactElement {
+export const TabsList = ({ className, ...props }: TabsListProps): React.ReactElement => {
   return (
     <View
       accessibilityRole="tablist"
@@ -131,11 +131,11 @@ export interface TabsContentProps extends ViewProps {
   className?: string
 }
 
-export function TabsContent({
+export const TabsContent = ({
   value,
   className,
   ...props
-}: TabsContentProps): React.ReactElement | null {
+}: TabsContentProps): React.ReactElement | null => {
   const ctx = useTabsContext()
   if (ctx.value !== value) {
     return null

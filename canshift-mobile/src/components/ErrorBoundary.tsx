@@ -1,10 +1,3 @@
-// ErrorBoundary.tsx — Top-level catch for unhandled render errors.
-//
-// Mounted at the App root, outside <Navigation />, so a render crash anywhere
-// (malformed STATUS payload, SVG NaN in GraphScreen, etc.) doesn't white-
-// screen a driver-facing UI. The fallback offers a "Reconnect" affordance
-// that resets the boundary — Navigation remounts on initialRouteName="Scan".
-
 import React from 'react'
 import { Text, View } from 'react-native'
 import { Button } from './ui'
