@@ -1,27 +1,10 @@
-// sensor-defaults.ts — Built-in color ramps for the standard sensor catalog
-// (issue #430). Keeps firmware and studio in lockstep on the visual semantics
-// of common gauges (green / amber / red) without forcing the user to define a
-// ramp on every signal. The C++ table in
-// canshift-firmware/src/ui/sensor_color_ramp.cpp mirrors these values byte-for-
-// byte; the parity is enforced by an anchor test against the JSON fixture
-// emitted by `npm run export:sensor-defaults`.
-
 import { HEX_REGEX } from './colors/hex.js'
 import { HexColorSchema } from './schemas/common.js'
 import type { HexColor } from './schemas/common.js'
 import type { ColorRamp } from './schemas/signal.js'
 
-// Branded `HexColor` is nominal — plain hex literals must flow through the
-// schema once at module load (#1207 brand follow-up to #1316). The runtime
-// validation cost is amortised across the entire shipping ramp catalog.
 const hex = (value: string): HexColor => HexColorSchema.parse(value)
 
-/**
- * Discriminated kinds for the standard sensor catalog. The string values are
- * stable identifiers — keep in sync with the C++ `SensorKind` enum in
- * canshift-firmware/src/ui/sensor_color_ramp.h. Extending this list requires
- * a matching firmware change AND a new entry in `SENSOR_DEFAULT_RAMPS`.
- */
 export type SensorKind =
   | 'coolant_temp'
   | 'oil_temp'
@@ -33,19 +16,6 @@ export type SensorKind =
   | 'intake_temp'
   | 'egt'
 
-/**
- * Default ramps shipped with the firmware. Values use the signal's native
- * unit (°C for temperatures, bar for pressures, V for voltages, RPM, etc.).
- *
- * Color choices follow racing convention: blue/green = healthy, amber =
- * watch, red = danger. Battery and AFR alarm in BOTH directions — the ramp
- * goes red on either end with a green plateau in the middle.
- *
- * SAFETY NOTE: thresholds are sane defaults for a typical petrol engine, but
- * every engine has its own target windows — users override per signal in the
- * studio editor. A wrong AFR ramp on a different platform is a tuning aid,
- * not a fault detector.
- */
 export const SENSOR_DEFAULT_RAMPS: Record<SensorKind, ColorRamp> = {
   coolant_temp: {
     interpolate: 'linear',
@@ -130,15 +100,6 @@ export const SENSOR_DEFAULT_RAMPS: Record<SensorKind, ColorRamp> = {
   },
 }
 
-/**
- * Heuristic mapping from a signal name (as written in `signals.json`) to the
- * built-in `SensorKind`. Returns `undefined` when no rule matches — callers
- * fall back to the static color path.
- *
- * Ordering matters: more specific patterns (e.g. "oil_press") MUST come
- * before broader ones (e.g. "oil"). The C++ port (`sensorKindFromName`)
- * mirrors this list in the same order.
- */
 const NAME_HEURISTICS: readonly { pattern: string; kind: SensorKind }[] = [
   { pattern: 'coolant', kind: 'coolant_temp' },
   { pattern: 'oil_press', kind: 'oil_press' },
@@ -160,21 +121,7 @@ const NAME_HEURISTICS: readonly { pattern: string; kind: SensorKind }[] = [
   { pattern: 'exhaust_temp', kind: 'egt' },
 ]
 
-/**
- * Resolve a default ramp from a free-form signal name. Pure substring match
- * on the lower-cased name; matching follows the order in `NAME_HEURISTICS`
- * so more specific patterns win.
- */
-export function resolveDefaultRamp(signalName: string): ColorRamp | undefined {
-  const kind = resolveSensorKind(signalName)
-  return kind ? SENSOR_DEFAULT_RAMPS[kind] : undefined
-}
-
-/**
- * Resolve only the `SensorKind` (no ramp lookup). Exposed so the studio editor
- * can offer a "Reset to defaults" button keyed on the signal name.
- */
-export function resolveSensorKind(signalName: string): SensorKind | undefined {
+export const resolveSensorKind = (signalName: string): SensorKind | undefined => {
   const lowered = signalName.toLowerCase()
   for (const { pattern, kind } of NAME_HEURISTICS) {
     if (lowered.includes(pattern)) return kind
@@ -182,9 +129,10 @@ export function resolveSensorKind(signalName: string): SensorKind | undefined {
   return undefined
 }
 
-// ---------------------------------------------------------------------------
-// Color sampling
-// ---------------------------------------------------------------------------
+export const resolveDefaultRamp = (signalName: string): ColorRamp | undefined => {
+  const kind = resolveSensorKind(signalName)
+  return kind ? SENSOR_DEFAULT_RAMPS[kind] : undefined
+}
 
 interface RgbChannels {
   r: number
@@ -192,7 +140,7 @@ interface RgbChannels {
   b: number
 }
 
-function parseHex(color: HexColor): RgbChannels {
+const parseHex = (color: HexColor): RgbChannels => {
   const m = HEX_REGEX.exec(color)
   if (!m) return { r: 0, g: 0, b: 0 }
   const n = Number.parseInt(m[1] ?? '000000', 16)
@@ -201,19 +149,13 @@ function parseHex(color: HexColor): RgbChannels {
 
 const BLACK = hex('#000000')
 
-function toHex(channels: RgbChannels): HexColor {
+const toHex = (channels: RgbChannels): HexColor => {
   const clamp = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : Math.round(v))
   const byte = (v: number): string => clamp(v).toString(16).padStart(2, '0').toUpperCase()
   return hex(`#${byte(channels.r)}${byte(channels.g)}${byte(channels.b)}`)
 }
 
-/**
- * Sample a `ColorRamp` at `value`. O(stops), no allocation beyond the
- * returned hex string. Below the first stop returns the first color; above
- * the last stop returns the last color. Single-stop ramps are clamped to
- * that color (the validator forbids them, but be defensive at runtime).
- */
-export function colorAtValue(ramp: ColorRamp, value: number): HexColor {
+export const colorAtValue = (ramp: ColorRamp, value: number): HexColor => {
   const stops = ramp.stops
   if (stops.length === 0) return BLACK
   const first = stops[0]
@@ -222,9 +164,6 @@ export function colorAtValue(ramp: ColorRamp, value: number): HexColor {
   if (stops.length === 1 || value <= first.value) return first.color
   if (value >= last.value) return last.color
 
-  // Step mode: a stop at `v` with color C means "from v onward, until the
-  // next stop, color is C". Exact-match on a stop value picks that stop's
-  // color (i.e. the upper-bound stop wins on the boundary).
   if (ramp.interpolate === 'step') {
     let active = first.color
     for (const stop of stops) {

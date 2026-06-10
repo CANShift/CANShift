@@ -1,20 +1,8 @@
-// canshift-core/src/design-tokens.ts
-//
-// Single source of truth for CANShift visual design tokens (colors, radii,
-// spacing, typography). Consumed by canshift-studio-web (dash-hosted Studio)
-// and canshift-mobile — keep this module pure TypeScript, no runtime
-// dependencies, no Node or browser APIs.
-//
-// Hex values are the wire format; the `tokensToCssVars` helper converts them
-// into the `H S% L%` HSL channel format that studio's tailwind config
-// consumes via `hsl(var(--x) / <alpha-value>)`.
-
 import { HEX_REGEX } from './colors/hex.js'
 
 export interface DesignTokens {
   colors: {
     bg: string
-    /** Deeper than `bg` — chart canvas / graph backdrops on mobile (#1017 M-MD-1). */
     bgInset: string
     surface: string
     surface2: string
@@ -25,7 +13,6 @@ export interface DesignTokens {
     secondaryForeground: string
     accent: string
     accentForeground: string
-    /** Dimmed accent tint — active button states, segmented-control selected backgrounds. */
     accentDim: string
     destructive: string
     destructiveForeground: string
@@ -33,9 +20,7 @@ export interface DesignTokens {
     textDim: string
     textMuted: string
     success: string
-    /** Success-surface backdrop (e.g. "OTA staged" / connection-good chips). */
     successBg: string
-    /** Success-surface border (paired with `successBg`). */
     successBorder: string
     warning: string
     danger: string
@@ -58,11 +43,6 @@ export interface DesignTokens {
   }
 }
 
-/**
- * Canonical dark palette — mirrors the values currently shipping in
- * canshift-studio-web (src/index.css + tailwind.config.ts). Mobile drift will
- * be reconciled against this table in Phase 2 (issue #526).
- */
 export const DARK_TOKENS = {
   colors: {
     bg: '#121212',
@@ -97,18 +77,6 @@ export const DARK_TOKENS = {
   typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
 } as const satisfies DesignTokens
 
-/**
- * Light palette — placeholder alias of `DARK_TOKENS`. The theme editor
- * (issue #21) is on hold, so until a real light palette lands we deliberately
- * point at the dark one rather than duplicating the literal (audit C-ME-7,
- * umbrella #1016) — a future divergence then has to be intentional.
- *
- * Intentionally *not* re-exported from the package barrel until a real
- * consumer lands. Kept exported here so the shape check in
- * design-tokens.test.ts catches drift against DARK_TOKENS.
- *
- * TODO(#21): replace with a real light-mode palette when the theme editor ships.
- */
 export const LIGHT_TOKENS: DesignTokens = DARK_TOKENS
 
 interface RgbChannels {
@@ -117,7 +85,7 @@ interface RgbChannels {
   b: number
 }
 
-function parseHex(hex: string): RgbChannels {
+const parseHex = (hex: string): RgbChannels => {
   const match = HEX_REGEX.exec(hex)
   if (match?.[1] === undefined) {
     throw new Error(`Invalid hex color: ${hex} (expected #RRGGBB)`)
@@ -130,12 +98,7 @@ function parseHex(hex: string): RgbChannels {
   }
 }
 
-/**
- * Convert a hex color (`#RRGGBB`) to the `H S% L%` channel format consumed by
- * `hsl(var(--x) / <alpha-value>)`. H is rounded to integer degrees (0-360);
- * S and L are rounded to integer percentages.
- */
-export function hexToHslChannels(hex: string): string {
+export const hexToHslChannels = (hex: string): string => {
   const { r, g, b } = parseHex(hex)
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
@@ -163,16 +126,6 @@ export function hexToHslChannels(hex: string): string {
   return `${hRounded} ${sRounded}% ${lRounded}%`
 }
 
-/**
- * Mapping from `DesignTokens.colors` keys to the CSS variable names defined
- * in canshift-studio-web/src/index.css and tailwind.config.ts.
- */
-/**
- * Map every token color key (e.g. `bg`, `primaryForeground`) to its
- * corresponding `--*` CSS variable name. Exposed so downstream Tailwind /
- * styled-components configs can derive their color tables from a single
- * source of truth instead of re-listing the keys by hand (issue #906).
- */
 export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> = {
   bg: '--bg',
   bgInset: '--bg-inset',
@@ -202,13 +155,7 @@ export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> 
   ring: '--ring',
 }
 
-/**
- * Convert a `DesignTokens` object to a flat `Record<cssVarName, hslChannels>`
- * suitable for injection into `:root { ... }` or a styled element. Only color
- * tokens are emitted today (radii/spacing/typography are consumed directly by
- * components, not via CSS variables).
- */
-export function tokensToCssVars(tokens: DesignTokens): Record<string, string> {
+export const tokensToCssVars = (tokens: DesignTokens): Record<string, string> => {
   const out: Record<string, string> = {}
   for (const key of Object.keys(COLOR_KEY_TO_CSS_VAR) as (keyof DesignTokens['colors'])[]) {
     const cssVar = COLOR_KEY_TO_CSS_VAR[key]
