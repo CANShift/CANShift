@@ -1,39 +1,39 @@
 ---
 title: "Pinout — CrowPanel 2.8\""
-description: "Référence des GPIO pour la carte ESP32 + écran ILI9341 + touch XPT2046."
+description: "GPIO reference for the ESP32 board + ILI9341 display + XPT2046 touch."
 sidebar:
   order: 1
 ---
 
-| Fonction | GPIO | Note |
+| Function | GPIO | Note |
 |---|---:|---|
 | TFT MOSI | 13 | HSPI |
-| TFT MISO | 12 | non utilisé en pratique (panel write-only) |
+| TFT MISO | 12 | unused in practice (panel write-only) |
 | TFT SCLK | 14 | HSPI |
 | TFT CS | 15 | |
 | TFT DC | 2 | Data/Command (RS) |
-| TFT RST | — | non câblé (held high interne) |
+| TFT RST | — | not wired (held high internally) |
 | TFT BL | 27 | PWM backlight, 0–255 |
-| Touch CS | 33 | XPT2046, bus SPI partagé avec le TFT |
-| Touch IRQ | — | polling via `getTouch()` (pas d'IRQ) |
-| TWAI TX | 25 | CAN — header d'extension |
-| TWAI RX | 32 | CAN — header d'extension |
+| Touch CS | 33 | XPT2046, shares the SPI bus with the TFT |
+| Touch IRQ | — | polling via `getTouch()` — no IRQ |
+| TWAI TX | 25 | CAN — expansion header |
+| TWAI RX | 32 | CAN — expansion header |
 
-## Vitesses SPI
+## SPI clocks
 
-- **TFT** : 27 MHz par défaut (spec officielle), 40 MHz opt-in via
-  `-DHW_TFT_FAST_SPI=1` après validation hardware.
-- **Touch** : 2.5 MHz (max XPT2046).
+- **TFT**: 27 MHz by default (official spec), 40 MHz opt-in via
+  `-DHW_TFT_FAST_SPI=1` after hardware validation.
+- **Touch**: 2.5 MHz (XPT2046 max).
 
 ## Free pins
 
-GPIO 21/22 (I²C header), 16/17 (UART2) sont laissés libres exprès pour
-extension future.
+GPIO 21/22 (I²C header) and GPIO 16/17 (UART2) are intentionally left free for
+expansion.
 
 ## Avoid
 
-GPIO 6-11 sont réservés au flash SPI interne — ne **jamais** câbler quoi que ce
-soit dessus. GPIO 34-39 sont input-only, pas utilisables pour TWAI TX qui doit
-être bidirectionnel.
+GPIO 6–11 are reserved for the internal flash SPI — **never** wire anything to
+them. GPIO 34–39 are input-only and cannot host TWAI TX (which must be
+bidirectional).
 
-Source : `canshift-firmware/include/board_config.h`.
+Source: `canshift-firmware/include/board_config.h`.
