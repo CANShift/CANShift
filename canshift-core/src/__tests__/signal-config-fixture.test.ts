@@ -1,11 +1,3 @@
-// signal-config-fixture.test.ts — Issue #1303
-//
-// Pinned drift guard against the bundled firmware `signals.json`. PR #1297
-// fixed the `_comment`/`_warning`/`_outboundWarning` subset; this fixture
-// covers the remaining two carved-out fields (`out` block + per-signal
-// `_batteryThresholds`) so any future shape change in the firmware demo
-// either breaks this test or lands with a matching schema update.
-
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,9 +9,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(HERE, '../../..')
 const SIGNALS_JSON_PATH = resolve(REPO_ROOT, 'canshift-firmware/data/config/signals.json')
 
-function loadFirmwareSignals(): unknown {
-  return JSON.parse(readFileSync(SIGNALS_JSON_PATH, 'utf8')) as unknown
-}
+const loadFirmwareSignals = (): unknown =>
+  JSON.parse(readFileSync(SIGNALS_JSON_PATH, 'utf8')) as unknown
 
 describe('bundled fixture — canshift-firmware/data/config/signals.json (#1303)', () => {
   const signals = loadFirmwareSignals()

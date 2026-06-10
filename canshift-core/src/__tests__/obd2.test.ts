@@ -1,9 +1,3 @@
-// obd2.test.ts — Tests for the OBD-II polling schema added in #841
-// (phase 3 of #556). Covers:
-//   - Obd2PollingSchema accepts valid blocks and rejects out-of-range fields
-//   - SignalDefSchema accepts a signal with `polling` (forward compat) and
-//     still accepts one without (backward compat — the broadcast default).
-
 import {
   OBD2_DEFAULT_INTERVAL_MS,
   OBD2_MAX_INTERVAL_MS,
@@ -12,31 +6,21 @@ import {
 } from '../index.js'
 import { SignalDefSchema } from '../schemas/signal.js'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function broadcastSignal(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    name: 'rpm',
-    canFrameId: '0x7E8',
-    startByte: 3,
-    byteLength: 2,
-    bigEndian: true,
-    signed: false,
-    scale: 0.25,
-    offset: 0,
-    unit: 'rpm',
-    min: 0,
-    max: 8000,
-    timeoutMs: 2000,
-    ...overrides,
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Obd2PollingSchema
-// ---------------------------------------------------------------------------
+const broadcastSignal = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  name: 'rpm',
+  canFrameId: '0x7E8',
+  startByte: 3,
+  byteLength: 2,
+  bigEndian: true,
+  signed: false,
+  scale: 0.25,
+  offset: 0,
+  unit: 'rpm',
+  min: 0,
+  max: 8000,
+  timeoutMs: 2000,
+  ...overrides,
+})
 
 describe('Obd2PollingSchema', () => {
   it('accepts a valid block (Mode 01, RPM PID, 1s interval)', () => {
@@ -96,10 +80,6 @@ describe('Obd2PollingSchema', () => {
     expect(OBD2_DEFAULT_INTERVAL_MS).toBeLessThanOrEqual(OBD2_MAX_INTERVAL_MS)
   })
 })
-
-// ---------------------------------------------------------------------------
-// SignalDefSchema — polling block is optional + backward-compatible
-// ---------------------------------------------------------------------------
 
 describe('SignalDefSchema with polling', () => {
   it('accepts a signal without polling (legacy broadcast behaviour)', () => {

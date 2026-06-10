@@ -1,15 +1,3 @@
-// screen-profile.test.ts — Regression tests for the screen-profile schema +
-// catalog (issue #548).
-//
-// Coverage:
-//   - `ScreenProfileIdSchema` accepts the registered id and rejects unknown
-//     values.
-//   - `ScreenProfileSchema` accepts a well-formed entry; rejects bad shape.
-//   - `SCREEN_PROFILES` catalog is non-empty and each entry parses through
-//     the schema (the catalog can never silently drift from the schema).
-//   - `getScreenProfile` returns the catalog row for a valid id.
-//   - `resolveScreenProfile(undefined)` falls back to the default id.
-
 import {
   DEFAULT_SCREEN_PROFILE_ID,
   SCREEN_PROFILES,
@@ -77,8 +65,6 @@ describe('SCREEN_PROFILES catalog', () => {
   })
 
   it('exposes the default profile id', () => {
-    // The cast widens the literal so the `find` predicate isn't collapsed to
-    // a tautology by the type checker (lint: no-unnecessary-condition).
     const needle: string = DEFAULT_SCREEN_PROFILE_ID
     const found = SCREEN_PROFILES.find((p) => (p.id as string) === needle)
     expect(found).toBeDefined()

@@ -1,8 +1,3 @@
-// design-tokens.test.ts — pin canonical design tokens and HSL conversion.
-//
-// Any change to DARK_TOKENS values is intentional and must show up in review.
-// LIGHT_TOKENS shares the same shape so consumers can swap themes safely.
-
 import {
   COLOR_KEY_TO_CSS_VAR,
   DARK_TOKENS,

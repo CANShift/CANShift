@@ -1,9 +1,3 @@
-// hex.test.ts — shared `#RRGGBB` regex + type-guard (audit C-ME-4, #1016).
-//
-// Locks the contract that three former private hex regexes used to enforce
-// (sensor-defaults, design-tokens, migration-runner). One regression test
-// here protects every call site at once.
-
 import { HEX_REGEX, isHexColor } from '../colors/hex.js'
 import type { HexColor } from '../schemas/common.js'
 
@@ -34,8 +28,6 @@ describe('isHexColor', () => {
   })
 
   it('narrows the type so `as HexColor` is not required', () => {
-    // Compile-time check — if `isHexColor` ever loses its `is` predicate, this
-    // block stops typechecking. Runtime assertion just keeps Jest happy.
     const candidate: unknown = '#FF4444'
     if (typeof candidate === 'string' && isHexColor(candidate)) {
       const accepts = (_: HexColor): void => {

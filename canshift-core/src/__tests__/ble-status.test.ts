@@ -1,5 +1,3 @@
-// ble-status.test.ts — Schema + wire mapper coverage for #887.
-
 import { BleStatusWireSchema, bleStatusFromWire, parseBleStatus } from '../schemas/ble-status.js'
 import type { BleStatusWire } from '../schemas/ble-status.js'
 
@@ -32,9 +30,6 @@ describe('BleStatusWireSchema', () => {
     expect(() => BleStatusWireSchema.parse({ is_day: Number.POSITIVE_INFINITY })).toThrow()
   })
 
-  // Follow-up to audit #1289 — wire contract is strict 0/1; arbitrary floats
-  // and out-of-band integers must be rejected so `bleStatusFromWire` doesn't
-  // map `can: 0.5` to `canHealthy: true` via the `!== 0` predicate.
   it('rejects can/is_day values other than 0 or 1', () => {
     expect(BleStatusWireSchema.safeParse({ can: 0 }).success).toBe(true)
     expect(BleStatusWireSchema.safeParse({ can: 1 }).success).toBe(true)

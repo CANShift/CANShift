@@ -1,10 +1,3 @@
-// sensor-palette.test.ts — Lock the two-zone palette table shape (issue #954).
-//
-// The palette crosses the firmware/studio/mobile boundary, so we pin the
-// shape invariants (valid hex, key coverage) and the resolver fallback
-// contract here. Drift from the C++ mirror is caught by the firmware
-// native test against the JSON fixture.
-
 import { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from '../sensor-palette.js'
 import { SensorIconNameSchema } from '../schemas/dashboard.js'
 import { HEX_COLOR_REGEX } from '../constants/firmware-caps.js'

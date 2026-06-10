@@ -1,10 +1,3 @@
-// theme-presets.test.ts — Locks the built-in theme catalog (#21 v2).
-//
-// Each entry must parse cleanly against `ThemePresetSchema` so picker output
-// is always writable to `dayTheme` / `nightTheme` without an extra runtime
-// guard. Ids stay unique and stable — downstream serializes them into
-// project settings.
-
 import { THEME_PRESETS, getThemePreset } from '../theme-presets.js'
 import type { ThemePresetId } from '../theme-presets.js'
 import { ThemePresetSchema } from '../schemas/dashboard.js'
