@@ -62,8 +62,7 @@ void SignalStore::update(SignalId id, float value) {
     portENTER_CRITICAL(&s_signalsMux);
     SignalValue &sig = s_signals[id];
     const float new_smoothed =
-        sig.valid ? (SIGNAL_EMA_ALPHA * value + (1.0f - SIGNAL_EMA_ALPHA) * sig.smoothed)
-                  : value;
+        sig.valid ? (SIGNAL_EMA_ALPHA * value + (1.0f - SIGNAL_EMA_ALPHA) * sig.smoothed) : value;
     sig.raw = value;
     sig.smoothed = new_smoothed;
     sig.lastUpdateMs = now;
