@@ -1,93 +1,58 @@
-// realdash/parse-realdash-xml.ts — Pure regex RealDash CAN XML v2 parser.
-//
-// No runtime deps. Handles:
-//   - frames baseId (decimal / hex) added to every child frame id
-//   - frame-level signed + endianness defaults; per-value overrides
-//   - rangeMin/rangeMax when present (more accurate than computed range)
-//   - XML entity decoding (&amp; &lt; &gt;) in attribute values
-//   - V*N, V*N+C, V/N, V*N/M, V>>N conversions; warns on complex formulas
-//
-// Every emitted signal is validated through SignalDefSchema (issue #1016 /
-// C-HI-1). Malformed rows (e.g. length="3", which the schema does not allow)
-// are diverted to `warnings` instead of being silently coerced.
-
 import { SignalDefSchema, type SignalDef } from '../schemas/signal.js'
 
-export interface ParseRealDashXMLResult {
+export interface ParseCanXmlResult {
   signals: SignalDef[]
   warnings: string[]
 }
 
-// ---------------------------------------------------------------------------
-// Attribute extraction
-// ---------------------------------------------------------------------------
-
-// Replace literal `>` inside quoted attribute values with a Unicode PUA
-// placeholder so the outer [^>] regex doesn't stop early on V>>N strings.
-// U+E001 is in the Private Use Area; it cannot appear in valid XML content
-// and is not a control character (no-control-regex does not flag it).
 const GT_PUA = ''
 const GT_PUA_RE = //g
 
-function escapeAttribGT(xml: string): string {
-  return xml.replace(/"[^"]*"/g, (match) => match.replace(/>/g, GT_PUA))
+const escapeAttribGT = (xml: string): string =>
+  xml.replace(/"[^"]*"/g, (match) => match.replace(/>/g, GT_PUA))
+
+const XML_ENTITY_MAP: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
 }
 
-// Restore PUA placeholder and decode all standard XML entities.
-function decodeAttrValue(s: string): string {
-  return s
+const decodeAttrValue = (s: string): string =>
+  s
     .replace(GT_PUA_RE, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-}
+    .replace(/&(amp|lt|gt|quot|apos);/g, (match, name: string) => XML_ENTITY_MAP[name] ?? match)
 
-function getAttrs(tag: string): Record<string, string> {
+const getAttrs = (tag: string): Record<string, string> => {
   const attrs: Record<string, string> = {}
   const re = /(\w+)="([^"]*)"/g
   let m: RegExpExecArray | null
   while ((m = re.exec(tag)) !== null) {
     const key = m[1]
     const val = m[2]
-    if (key !== undefined && val !== undefined) {
-      attrs[key] = decodeAttrValue(val)
-    }
+    if (key !== undefined && val !== undefined) attrs[key] = decodeAttrValue(val)
   }
   return attrs
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function toSnakeCase(s: string): string {
-  return s
+const toSnakeCase = (s: string): string =>
+  s
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
-}
 
-function parseHexOrDec(s: string): number {
+const parseHexOrDec = (s: string): number => {
   const t = s.trim()
   return t.toLowerCase().startsWith('0x') ? parseInt(t, 16) : parseInt(t, 10)
 }
 
-/** Returns true/false when the endianness attr is present, null when absent. */
-function resolveEndian(raw: string | undefined): boolean | null {
-  if (!raw) return null
-  return raw.toLowerCase() === 'big'
-}
-
-// ---------------------------------------------------------------------------
-// Conversion formula parser
-// ---------------------------------------------------------------------------
+const resolveEndian = (raw: string | undefined): boolean | null =>
+  raw ? raw.toLowerCase() === 'big' : null
 
 interface Conversion {
   scale: number
   offset: number
-  /** Bit index (0-based) for V>>N formulas; null otherwise. */
   bitShift: number | null
 }
 
@@ -178,16 +143,12 @@ const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Min/max derivation from raw bit range (fallback when rangeMin/Max absent)
-// ---------------------------------------------------------------------------
-
-function computeRange(
+const computeRange = (
   byteLength: number,
   signed: boolean,
   scale: number,
   offset: number
-): { min: number; max: number } {
+): { min: number; max: number } => {
   const bits = byteLength * 8
   const rawMax = signed ? Math.pow(2, bits - 1) - 1 : Math.pow(2, bits) - 1
   const rawMin = signed ? -Math.pow(2, bits - 1) : 0
@@ -196,22 +157,16 @@ function computeRange(
   return { min: Math.min(lo, hi), max: Math.max(lo, hi) }
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
+export const parseCanXml = (xml: string): ParseCanXmlResult => {
   const signals: SignalDef[] = []
   const warnings: string[] = []
 
   if (!xml.includes('<RealDashCAN')) {
-    return { signals, warnings: ['Not a RealDash CAN XML file (missing <RealDashCAN> root)'] }
+    return { signals, warnings: ['Not a supported CAN XML file (missing root tag)'] }
   }
 
   const safe = escapeAttribGT(xml)
 
-  // Extract optional baseId from <frames baseId="...">.
-  // Per spec: every child frame id is added to this base (hex or decimal).
   let baseId = 0
   const framesTagMatch = /<frames\b([^>]*)>/.exec(safe)
   if (framesTagMatch) {
@@ -233,16 +188,14 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
     const frameAttrs = getAttrs(frameMatch[1] ?? '')
     const frameBody = frameMatch[2] ?? ''
 
-    // Composite IDs (e.g. "0x3E8:5533,0,2") — take the CAN id portion only.
     const rawId = (frameAttrs.id ?? '').split(':')[0] ?? ''
     const frameIdNum = parseHexOrDec(rawId) + baseId
     if (!Number.isFinite(frameIdNum)) {
-      warnings.push(`Skipped frame with unparseable id "${rawId}"`)
+      if (rawId !== '') warnings.push(`Skipped frame with unparseable id "${rawId}"`)
       continue
     }
     const canFrameId = `0x${frameIdNum.toString(16)}`
 
-    // Frame-level defaults; per-value attrs override these.
     const frameBigEndian = resolveEndian(frameAttrs.endianess ?? frameAttrs.endianness) ?? false
     const frameSignedDefault = frameAttrs.signed === 'true'
     const timeoutMs = parseInt(frameAttrs.timeout ?? '2000', 10) || 2000
@@ -254,20 +207,15 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
     while ((valueMatch = valueRe.exec(frameBody)) !== null) {
       const va = getAttrs(valueMatch[1] ?? '')
 
-      // Name: explicit name → channel_{targetId} → positional fallback
-      let name: string
-      if (va.name) {
-        name = toSnakeCase(va.name)
-      } else if (va.targetId) {
-        name = `channel_${va.targetId}`
-      } else {
-        name = `signal_${rawId.replace(/^0x/i, '')}_${String(valueIndex)}`
-      }
+      const name = va.name
+        ? toSnakeCase(va.name)
+        : va.targetId
+          ? `channel_${va.targetId}`
+          : `signal_${rawId.replace(/^0x/i, '')}_${String(valueIndex)}`
 
       const startByte = parseInt(va.offset ?? '0', 10)
       const byteLength = parseInt(va.length ?? '1', 10)
 
-      // Per-value signed / endianness override the frame-level defaults.
       const signed = va.signed !== undefined ? va.signed === 'true' : frameSignedDefault
       const valueEndian = resolveEndian(va.endianess ?? va.endianness)
       const bigEndian = valueEndian ?? frameBigEndian
@@ -285,28 +233,22 @@ export function parseRealDashXML(xml: string): ParseRealDashXMLResult {
 
       const { scale, offset, bitShift } = conv
 
-      let bitMask: string | undefined
-      if (bitShift !== null) {
-        bitMask = `0x${(1 << bitShift).toString(16).padStart(2, '0')}`
-      } else if (unit === 'bit' && !va.conversion) {
-        // No conversion + units="bit" → bit 0 per RealDash spec
-        bitMask = '0x01'
-      }
+      const bitMask =
+        bitShift !== null
+          ? `0x${(1 << bitShift).toString(16).padStart(2, '0')}`
+          : unit === 'bit' && !va.conversion
+            ? '0x01'
+            : undefined
 
       const isBit = bitMask !== undefined
 
-      // rangeMin/rangeMax from XML are more accurate than computed range.
-      let min: number
-      let max: number
-      if (isBit) {
-        min = 0
-        max = 1
-      } else if (va.rangeMin !== undefined && va.rangeMax !== undefined) {
-        min = parseFloat(va.rangeMin)
-        max = parseFloat(va.rangeMax)
-      } else {
-        ;({ min, max } = computeRange(byteLength, signed, scale, offset))
-      }
+      const explicitRange =
+        va.rangeMin !== undefined && va.rangeMax !== undefined
+          ? { min: parseFloat(va.rangeMin), max: parseFloat(va.rangeMax) }
+          : null
+      const { min, max } = isBit
+        ? { min: 0, max: 1 }
+        : (explicitRange ?? computeRange(byteLength, signed, scale, offset))
 
       const candidate = {
         name,

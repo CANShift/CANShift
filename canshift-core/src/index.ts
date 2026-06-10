@@ -299,5 +299,5 @@ export { ECU_PROFILES, DEFAULT_PROFILE_ID, MAXXECU_SIGNAL_UNITS } from './ecu-pr
 // ---------------------------------------------------------------------------
 // RealDash CAN XML import (issue #609)
 // ---------------------------------------------------------------------------
-export type { ParseRealDashXMLResult } from './realdash/parse-realdash-xml.js'
-export { parseRealDashXML } from './realdash/parse-realdash-xml.js'
+export type { ParseCanXmlResult } from './can-xml/parse-can-xml.js'
+export { parseCanXml } from './can-xml/parse-can-xml.js'
