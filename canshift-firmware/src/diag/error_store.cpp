@@ -23,33 +23,20 @@
     #include "error_store_rs.h"
 #endif
 
-// ---------------------------------------------------------------------------
-// Internal state
-// ---------------------------------------------------------------------------
-
-// Ring depth promoted to app_config.h::ERROR_STORE_RING_SIZE so the Studio
-// Error Bar UI and any other cross-package consumer can stay in sync with a
-// single source of truth (F-ME-12).
 static constexpr uint8_t RING_SIZE = ERROR_STORE_RING_SIZE;
 
 static FwError s_ring[RING_SIZE];
-static uint8_t s_head = 0; // Index of the oldest error
+static uint8_t s_head = 0;
 static uint8_t s_count = 0;
 static uint32_t s_version = 0;
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 void ErrorStore::push(ErrorSource source, const char *code, const char *message) {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
 #if USE_RUST_ERROR_STORE
     error_store_push_rs(s_ring, RING_SIZE, &s_head, &s_count, &s_version,
                         static_cast<uint8_t>(source), code, message);
 #else
-    // If same source+code already in ring, update message in-place
     for (uint8_t i = 0; i < s_count; i++) {
         uint8_t idx = (s_head + i) % RING_SIZE;
         if (s_ring[idx].source == source &&
