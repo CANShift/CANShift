@@ -6,6 +6,16 @@ sidebar:
 ---
 
 import { Aside, Steps } from "@astrojs/starlight/components";
+import TunerShell from "../../../../components/tuner-mock/TunerShell.astro";
+import TunerFirmwareScreen from "../../../../components/tuner-mock/TunerFirmwareScreen.astro";
+
+The flasher lives inside the tuner at `/firmware`. It's a 3-step wizard —
+**Device** → **Firmware** → **Flash** — that reuses the active tuner
+connection.
+
+<TunerShell route="firmware" status="connected">
+  <TunerFirmwareScreen activeStep={2} />
+</TunerShell>
 
 <Aside type="caution" title="Web Serial required">
   The flasher runs in a **Chromium-based** browser (Chrome, Edge, Brave, Arc,

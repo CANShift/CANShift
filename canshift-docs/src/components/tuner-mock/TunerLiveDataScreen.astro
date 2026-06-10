@@ -1,0 +1,119 @@
+---
+import "./tuner-mock.css";
+---
+
+<div class="tuner-screen tuner-live">
+  <div class="tuner-section-header">
+    <h3>Live data</h3>
+    <p>
+      Real-time signal values streamed from the dash. Snapshot from a running
+      Golf III sim.
+    </p>
+  </div>
+  <div class="tuner-section-body">
+    <div class="tuner-live__grid">
+      <div class="tuner-live__tile">
+        <span class="tuner-live__label">RPM</span>
+        <span class="tuner-live__value">4 280</span>
+        <span class="tuner-live__bar" style="--p:0.62"></span>
+      </div>
+      <div class="tuner-live__tile">
+        <span class="tuner-live__label">Coolant</span>
+        <span class="tuner-live__value">92 °C</span>
+        <span class="tuner-live__bar" style="--p:0.71"></span>
+      </div>
+      <div class="tuner-live__tile">
+        <span class="tuner-live__label">Boost</span>
+        <span class="tuner-live__value">0.84 bar</span>
+        <span class="tuner-live__bar" style="--p:0.42"></span>
+      </div>
+      <div class="tuner-live__tile">
+        <span class="tuner-live__label">Lambda</span>
+        <span class="tuner-live__value">0.91</span>
+        <span class="tuner-live__bar tuner-live__bar--accent" style="--p:0.55"
+        ></span>
+      </div>
+      <div class="tuner-live__tile">
+        <span class="tuner-live__label">Oil P</span>
+        <span class="tuner-live__value">4.1 bar</span>
+        <span class="tuner-live__bar" style="--p:0.51"></span>
+      </div>
+      <div class="tuner-live__tile">
+        <span class="tuner-live__label">Gear</span>
+        <span class="tuner-live__value">3</span>
+        <span class="tuner-live__bar" style="--p:0.3"></span>
+      </div>
+    </div>
+
+    <div class="tuner-card">
+      <h4 class="tuner-card__title">OBD-II polling</h4>
+      <table class="tuner-table">
+        <thead>
+          <tr><th>PID</th><th>Name</th><th>Value</th><th>Rate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0x0C</td><td class="muted">Engine RPM</td><td>4280</td><td
+            >50 Hz</td
+          ></tr>
+          <tr><td>0x05</td><td class="muted">Coolant temp</td><td>92 °C</td><td
+            >1 Hz</td
+          ></tr>
+          <tr><td>0x0B</td><td class="muted">MAP</td><td>184 kPa</td><td
+            >20 Hz</td
+          ></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tuner-live__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .tuner-live__tile {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 4px;
+  }
+  .tuner-live__label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--cs-text-muted);
+  }
+  .tuner-live__value {
+    font-family: "Orbitron", system-ui, sans-serif;
+    font-weight: 700;
+    color: var(--cs-text);
+    font-size: 18px;
+    letter-spacing: 0.02em;
+  }
+  .tuner-live__bar {
+    height: 3px;
+    background: linear-gradient(
+      to right,
+      var(--cs-primary) calc(var(--p) * 100%),
+      var(--cs-surface-2) 0
+    );
+    border-radius: 2px;
+  }
+  .tuner-live__bar--accent {
+    background: linear-gradient(
+      to right,
+      var(--cs-accent) calc(var(--p) * 100%),
+      var(--cs-surface-2) 0
+    );
+  }
+  @container (max-width: 640px) {
+    .tuner-live__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

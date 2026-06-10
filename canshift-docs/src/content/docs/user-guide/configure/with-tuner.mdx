@@ -5,9 +5,41 @@ sidebar:
   order: 1
 ---
 
+import TunerShell from "../../../../components/tuner-mock/TunerShell.astro";
+import TunerEditorScreen from "../../../../components/tuner-mock/TunerEditorScreen.astro";
+import TunerEcuScreen from "../../../../components/tuner-mock/TunerEcuScreen.astro";
+import TunerThemesScreen from "../../../../components/tuner-mock/TunerThemesScreen.astro";
+
 The **Tuner** is a web SPA hosted on Vercel. It talks to the dash over Web
 Serial. You change a colour, move a widget, add a page, then click **Burn** —
 the dash reloads the new config without re-flashing.
+
+## Edit the dashboard
+
+The **Dashboard** route is where you arrange widgets per page. Click a widget
+to bind it to a signal in the right-hand inspector.
+
+<TunerShell route="dashboard" status="connected">
+  <TunerEditorScreen />
+</TunerShell>
+
+## Pick an ECU profile
+
+ECU profiles map raw CAN frames to named signals. CANShift ships presets for
+the common aftermarket ECUs.
+
+<TunerShell route="ecu" status="connected">
+  <TunerEcuScreen />
+</TunerShell>
+
+## Style with themes
+
+Themes drive the dash's colour scheme — day vs night, accent colours, gauge
+backgrounds. The right side previews the active theme on a live tile.
+
+<TunerShell route="themes" status="connected">
+  <TunerThemesScreen />
+</TunerShell>
 
 ## Connect
 
