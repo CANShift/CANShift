@@ -1,11 +1,3 @@
-// PropertyPanel.tsx — Editor for the selected widget's properties.
-// Layout (x, y, w, h), signal binding, style, and type-specific config.
-//
-// Per-widget config editors live in `./property-panel/*-fields.tsx`. This
-// file owns the page-level fallback view, the cross-widget chrome (size,
-// signal binding, button colors), and the dispatch to the right widget
-// editor (#697).
-
 import { useState } from 'react'
 import type { HexColor, ScreenProfileId, Widget, WidgetType } from '@tmbk/canshift-core'
 import {
@@ -25,28 +17,23 @@ import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shar
 import { GaugeFields } from './property-panel/gauge-fields'
 import { ButtonFields } from './property-panel/button-fields'
 
-// Chrome shades that do not yet map to a core design token. Kept as named
-// constants so the planned token promotion (audit S-H-5, umbrella #1015) only
-// has to swap one place per shade. Documented in PR body as follow-up.
-const PANEL_LABEL = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
-const PANEL_HINT = '#333333' // MIRROR: ≈ --border (#333333) repurposed as dim hint
-const TYPE_BADGE = '#CC4444' // MIRROR: darker than --status-danger (#E03030), widget-type badge
-const DELETE_FG = '#AA3333' // MIRROR: darker than --status-danger (#E03030), delete button
-const INPUT_BG = '#111111' // MIRROR: between --scrim (#000000) and --bg (#121212), color-picker chrome
-const INPUT_BORDER = '#333333' // MIRROR: ≈ --border (#333333)
-const TOKEN_TILE_BG = '#111111' // MIRROR: same chrome as INPUT_BG for inactive size tiles
-const TOKEN_TILE_BORDER = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
-const TOKEN_TILE_ACTIVE_BG = '#1A2A1A' // MIRROR: custom dim-green active chrome; no token match
-const TOKEN_TILE_ACTIVE_BORDER = '#448844' // MIRROR: darker than --success (#00CC2A)
-const TOKEN_TILE_ACTIVE_FG = '#66AA66' // MIRROR: dimmer green than --success
+const PANEL_LABEL = '#AAAAAA'
+const PANEL_HINT = '#333333'
+const TYPE_BADGE = '#CC4444'
+const DELETE_FG = '#AA3333'
+const INPUT_BG = '#111111'
+const INPUT_BORDER = '#333333'
+const TOKEN_TILE_BG = '#111111'
+const TOKEN_TILE_BORDER = '#2A2A2A'
+const TOKEN_TILE_ACTIVE_BG = '#1A2A1A'
+const TOKEN_TILE_ACTIVE_BORDER = '#448844'
+const TOKEN_TILE_ACTIVE_FG = '#66AA66'
 
 const CONFIG_FIELDS: Partial<
   Record<WidgetType, (props: ConfigFieldsProps) => React.JSX.Element | null>
 > = {
   gauge: GaugeFields,
   button: ButtonFields,
-  // gear / warning / timer / image have no editable config beyond layout +
-  // signal binding now that custom labels were dropped (issue #1244).
 }
 
 interface PropertyPanelProps {
@@ -67,14 +54,8 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   } = useDashboardConfig()
   const signals = useSignalStore((s) => s.signals)
   const pushLog = useLogStore((s) => s.push)
-  // Per-field inline error surfaced when a color-picker commit produces a value
-  // that fails `HexColorSchema.parse` (R-7). Cleared on the next valid commit.
   const [colorError, setColorError] = useState<string | null>(null)
 
-  // Parse the raw color-picker value through HexColorSchema before persisting.
-  // Returns the validated `#RRGGBB` literal, or `null` on failure (and routes
-  // the failure through the log store so debugging surfaces it). Replaces the
-  // previous `as `#${string}`` cast that bypassed the schema entirely (R-7).
   const safeParseHex = (raw: string): HexColor | null => {
     const result = HexColorSchema.safeParse(raw)
     if (result.success) {
@@ -87,18 +68,11 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     return null
   }
 
-  // Memoised so checkbox `onChange` doesn't see a fresh closure every render
-  // and the panel's child editor components keep their referential identity
-  // (audit follow-up to #1207).
   const toggleCruiseControlPage = useCallback(
     (enabled: boolean) => {
       if (!config) return
       const existing = config.pages.find((p) => p.template === 'cruise_control')
       if (enabled && !existing) {
-        // The firmware page array is fixed-size — a 6th page would be
-        // silently dropped on load (see #1359). Stop the user here with a
-        // confirm rather than letting the burn succeed and the cruise page
-        // silently vanish on the device.
         if (config.pages.length >= FIRMWARE_CAPS.MAX_PAGES) {
           const list = config.pages.map((p, i) => `  ${(i + 1).toString()}. ${p.id}`).join('\n')
           window.alert(
@@ -128,11 +102,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
   const widgetId = widget?.id
 
-  // Memoised so the child config-field components (GaugeFields,
-  // ButtonFields, …) keep their `onChange` reference stable across renders
-  // (audit follow-up to #1207). Hoisted above the early-return so the hook
-  // call order stays stable when no widget is selected; the wrapped
-  // dispatcher is a no-op until `widgetId` resolves.
   const patch = useCallback(
     (p: Partial<Widget>) => {
       if (!widgetId) return
@@ -141,7 +110,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     [updateWidget, pageId, widgetId]
   )
 
-  // No widget selected → show page/theme settings
   if (!widget) {
     if (!page || !config) {
       return (
@@ -150,16 +118,10 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       )
     }
-    // Active target screen profile — falls back to the default catalog entry
-    // (320×240) for legacy dashboards that predate `targetProfile`. Issue #548.
     const activeProfileId: ScreenProfileId = config.targetProfile ?? DEFAULT_SCREEN_PROFILE_ID
     return (
       <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-        {/* Target screen profile picker — drives the editor canvas dimensions
-            and travels with the dashboard config (issue #548). The catalog
-            ships a single entry today; new boards (#17 / #18) extend
-            SCREEN_PROFILES and surface here automatically. */}
-        <div
+                <div
           style={{
             fontSize: 10,
             color: PANEL_LABEL,
@@ -197,11 +159,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           flagged on the canvas so you can adjust manually.
         </div>
 
-        {/* Cruise control — opt-in checkbox that ensures a `cruise_control`
-            templated page exists at the end of the dashboard. The firmware
-            draws this page procedurally (ignores widgets[]); studio just
-            tracks its presence. Unchecking removes the page. */}
-        <div
+                <div
           style={{
             fontSize: 10,
             color: PANEL_LABEL,
@@ -249,8 +207,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
 
   return (
     <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-      {/* Header */}
-      <div
+            <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -296,8 +253,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </button>
       </div>
 
-      {/* ID (read-only) */}
-      <Field label="ID">
+            <Field label="ID">
         <div
           style={{ fontSize: 10, color: PANEL_LABEL, fontFamily: 'monospace', padding: '3px 0' }}
         >
@@ -305,8 +261,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </div>
       </Field>
 
-      {/* Size tokens — gauge has its own picker inside GaugeFields */}
-      {widget.type !== 'gauge' && (
+            {widget.type !== 'gauge' && (
         <Field label="Size">
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {STANDARD_TOKEN_IDS.map((tokenId) => {
@@ -343,16 +298,9 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
-      {/* Signal binding — not applicable for button, timer, image.
-          Uses an <input list> + <datalist> for native filter-as-you-type
-          search; the dropdown stays scrollable in browsers that support it. */}
-      {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
+            {widget.type !== 'button' && widget.type !== 'timer' && widget.type !== 'image' && (
         <Field label="Signal">
-          {/* Native <select> — dropped the Radix Select wrapper to shave
-              ~25 KB gzip off the bundle. The widget→signal binding is the
-              only complex picker left, and native HTML handles the search /
-              keyboard / accessibility story without a dependency. */}
-          <select
+                    <select
             style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
             value={widget.signal || ''}
             onChange={(e) => {
@@ -384,10 +332,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </Field>
       )}
 
-      {/* Day-mode text colour override (#191).
-          Toggling this off keeps the widget's bespoke `style.textColor` in
-          day mode instead of collapsing to the active theme's black. */}
-      <Field label="Follow day-mode text colour">
+            <Field label="Follow day-mode text colour">
         <label
           style={{
             display: 'flex',
@@ -404,8 +349,6 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
             onChange={(e) => {
               const nextStyle = { ...widget.style }
               if (e.target.checked) {
-                // Default behaviour — drop the explicit flag so legacy
-                // configs round-trip unchanged.
                 delete nextStyle.respectDayMode
               } else {
                 nextStyle.respectDayMode = false
@@ -417,9 +360,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </label>
       </Field>
 
-      {/* Button states — only buttons expose colour pickers (#146).
-          Normal = idle state, Active = pressed / hover / triggered. */}
-      {widget.type === 'button' && widget.config.type === 'button' && (
+            {widget.type === 'button' && widget.config.type === 'button' && (
         <>
           <div
             style={{
@@ -506,8 +447,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
         </>
       )}
 
-      {/* Type-specific config */}
-      {ConfigFields && (
+            {ConfigFields && (
         <>
           <div
             style={{

@@ -1,22 +1,3 @@
-// Obd2PollingPanel.tsx — Per-signal OBD-II polling editor (issue #841).
-//
-// Background — CANShift signals come from two places:
-//   * Passive broadcast: the ECU sends a CAN frame on its own and the
-//     firmware decodes it (MaxxECU and friends — `polling` field absent).
-//   * Active polling: the dash must SEND a request (0x7DF, mode 01, PID)
-//     and decode the response (0x7E8). OBD-II ECUs only speak this dialect.
-//
-// This panel lists every loaded signal and lets the user flip its input mode
-// between Broadcast and OBD-II polling. When OBD-II is selected the user picks
-// a PID from the J1979 Mode 01 catalog (or types a raw PID) and an interval
-// (100ms..60s). Picking a catalog PID also rewrites the signal's decode
-// fields (startByte/byteLength/scale/offset/unit) so a fresh user gets a
-// working configuration without diving into the JSON.
-//
-// Edits write through `useSignalStore.setSignals` (in-memory until the user
-// applies a profile or pushes to the device) — exactly the same path the
-// existing inline edits use.
-
 import { useMemo } from 'react'
 import type { Obd2Mode01PidEntry, Obd2Polling, SignalDef } from '@tmbk/canshift-core'
 import {
@@ -28,8 +9,6 @@ import {
 } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
 
-// Chrome — mirrors PropertyPanel / ThemePanel so the sidebar reads as one
-// surface. Promotion to design tokens is the umbrella's S-H-5 follow-up.
 const PANEL_LABEL = '#AAAAAA'
 const PANEL_HINT = '#666666'
 const PANEL_SECTION = '#888888'
@@ -60,39 +39,25 @@ const inputStyle = {
   boxSizing: 'border-box' as const,
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatPid(pid: number): string {
+const formatPid = (pid: number): string => {
   return `0x${pid.toString(16).toUpperCase().padStart(2, '0')}`
 }
 
-function inputModeOf(signal: SignalDef): InputModeKey {
+const inputModeOf = (signal: SignalDef): InputModeKey => {
   return signal.polling ? 'obd2' : 'broadcast'
 }
 
-/**
- * Replace the signal at `index` with `next` and persist the new array via
- * `setSignals`. Centralised so every edit path uses the same write — without
- * this helper, four call sites would each have to remember the
- * `signals.map((s, i) => i === index ? next : s)` pattern.
- */
-function replaceSignal(
+const replaceSignal = (
   signals: SignalDef[],
   setSignals: (s: SignalDef[]) => void,
   index: number,
   next: SignalDef
-): void {
+): void => {
   const updated = signals.map((s, i) => (i === index ? next : s))
   setSignals(updated)
 }
 
-/**
- * Apply a catalog PID entry to a signal — rewrites decode fields and the
- * polling block so the result is immediately functional on a stock vehicle.
- */
-function applyCatalogPid(signal: SignalDef, entry: Obd2Mode01PidEntry): SignalDef {
+const applyCatalogPid = (signal: SignalDef, entry: Obd2Mode01PidEntry): SignalDef => {
   const polling: Obd2Polling = {
     mode: 0x01,
     pid: entry.pid,
@@ -114,16 +79,12 @@ function applyCatalogPid(signal: SignalDef, entry: Obd2Mode01PidEntry): SignalDe
   }
 }
 
-// ---------------------------------------------------------------------------
-// Row — one entry per signal
-// ---------------------------------------------------------------------------
-
 interface RowProps {
   signal: SignalDef
   index: number
 }
 
-function SignalRow({ signal, index }: RowProps) {
+const SignalRow = ({ signal, index }: RowProps) => {
   const signals = useSignalStore((s) => s.signals)
   const setSignals = useSignalStore((s) => s.setSignals)
 
@@ -142,8 +103,6 @@ function SignalRow({ signal, index }: RowProps) {
       replaceSignal(signals, setSignals, index, rest)
       return
     }
-    // Switching to OBD-II → seed with the RPM catalog entry by default
-    // (most common signal, also the demo PID in the catalog tests).
     const seed = OBD2_MODE01_PIDS.find((e) => e.signal === signal.name) ?? OBD2_MODE01_PIDS[0]
     if (!seed) return
     replaceSignal(signals, setSignals, index, applyCatalogPid(signal, seed))
@@ -157,7 +116,6 @@ function SignalRow({ signal, index }: RowProps) {
       replaceSignal(signals, setSignals, index, applyCatalogPid(signal, entry))
       return
     }
-    // Raw PID — keep decode fields untouched, just stamp the new PID byte.
     if (!polling) return
     const nextPolling: Obd2Polling = { ...polling, pid }
     replaceSignal(signals, setSignals, index, { ...signal, polling: nextPolling })
@@ -264,10 +222,6 @@ function SignalRow({ signal, index }: RowProps) {
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Panel
-// ---------------------------------------------------------------------------
 
 export default function Obd2PollingPanel() {
   const signals = useSignalStore((s) => s.signals)

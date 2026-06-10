@@ -1,14 +1,9 @@
-// WidgetPalette.tsx — Widget type picker.
-// Click a tile to add a new widget of that type to the current page.
-
 import { HexColorSchema } from '@tmbk/canshift-core'
 import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/sizeTokens'
 
-// Default widget style colours — branded `HexColor` literals validated once
-// at module load (#1207 brand follow-up to #1316).
 const DEFAULT_WIDGET_STYLE = {
   primaryColor: HexColorSchema.parse('#FF4444'),
   secondaryColor: HexColorSchema.parse('#333333'),
@@ -17,19 +12,10 @@ const DEFAULT_WIDGET_STYLE = {
   textColor: HexColorSchema.parse('#FFFFFF'),
 }
 
-// Chrome shades that do not yet map to a core design token. Kept as named
-// constants so the planned token promotion (audit S-H-5, umbrella #1015) only
-// has to swap one place per shade. Documented in PR body as follow-up.
-//
-// NOTE: the hex literals inside `addWidget(..., { style: { ... } })` below
-// are widget-config defaults persisted on the dashboard (HexColorSchema), not
-// UI chrome — they MUST stay literal.
-const TILE_LABEL = '#AAAAAA' // MIRROR: between --text-dim (#BABABA) and --text-muted (#8F8F8F)
-const TILE_HOVER_BG = '#2A2A2A' // MIRROR: between --bg (#121212) and --surface (#1F1F1F)
-const TILE_HOVER_BORDER = '#3A3A3A' // MIRROR: dim variant of --border (#333333)
+const TILE_LABEL = '#AAAAAA'
+const TILE_HOVER_BG = '#2A2A2A'
+const TILE_HOVER_BORDER = '#3A3A3A'
 
-// Palette only surfaces widget types still backed by a renderer + property
-// panel. warning / timer / image were dropped along with their UIs.
 type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear'>
 
 interface PaletteItem {
@@ -41,7 +27,6 @@ interface PaletteItem {
   defaultH: number
 }
 
-// Default sizes use binary-halving size tokens
 const PALETTE_ITEMS: PaletteItem[] = [
   {
     type: 'gauge',
@@ -69,7 +54,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
   },
 ]
 
-function generateId(type: string): string {
+const generateId = (type: string): string => {
   return `${type}_${Date.now().toString(36)}`
 }
 
@@ -80,9 +65,6 @@ interface WidgetPaletteProps {
 export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
   const addWidget = useDashboardStore((s) => s.addWidget)
   const page = useDashboardStore((s) => s.config?.pages.find((p) => p.id === pageId))
-  // Pages running a built-in template (#451) render a procedural layout — the
-  // free-form widget grid is ignored on-device, so adding widgets here would
-  // be a silent dead end. Surface the lock-out + a hint instead.
   const templateLocked = (page?.template ?? 'custom') !== 'custom'
 
   const handleAdd = (item: PaletteItem) => {

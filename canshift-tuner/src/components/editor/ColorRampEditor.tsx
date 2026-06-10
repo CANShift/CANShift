@@ -1,10 +1,3 @@
-// ColorRampEditor.tsx — visual editor for a per-signal color ramp (issue #430).
-//
-// Renders the list of stops with editable value + color, lets the user add or
-// remove stops within the firmware-side cap, and previews the resulting ramp
-// as a horizontal gradient sampled across the [min, max] range. A "Reset to
-// defaults" action restores the catalog ramp when a SensorKind is detected.
-
 import { useCallback, useMemo } from 'react'
 import {
   HexColorSchema,
@@ -30,14 +23,11 @@ export interface ColorRampEditorProps {
   onChange: (next: ColorRamp | undefined) => void
 }
 
-// Branded `HexColor` requires schema-validated literals. The fallback ramp's
-// two endpoint colours are validated once at module load — a typo here trips
-// Zod before any signal-less page can render (#1207).
 const RAMP_FALLBACK_OK = HexColorSchema.parse('#44CC66')
 const RAMP_FALLBACK_DANGER = HexColorSchema.parse('#CC3333')
 const RAMP_FALLBACK_BLACK = HexColorSchema.parse('#000000')
 
-function fallbackRamp(min: number, max: number): ColorRamp {
+const fallbackRamp = (min: number, max: number): ColorRamp => {
   const lo = Number.isFinite(min) ? min : 0
   const hi = Number.isFinite(max) && max > lo ? max : lo + 1
   return {
@@ -49,7 +39,7 @@ function fallbackRamp(min: number, max: number): ColorRamp {
   }
 }
 
-function clampHex(value: string): HexColor {
+const clampHex = (value: string): HexColor => {
   const parsed = HexColorSchema.safeParse(value)
   return parsed.success ? parsed.data : RAMP_FALLBACK_BLACK
 }
@@ -94,8 +84,6 @@ export default function ColorRampEditor({
     const second = effective.stops[effective.stops.length - 2]
     const span = last && second ? last.value - second.value : 1
     const insertValue = (last?.value ?? 0) + (span > 0 ? span : 1)
-    // Stable id at creation so the React key in the stops list survives
-    // reorders / removals (R-5).
     const next: ColorRampStop = {
       id: newId(),
       value: insertValue,
@@ -132,8 +120,6 @@ export default function ColorRampEditor({
     onChange(undefined)
   }, [onChange])
 
-  // Sample the ramp across [min, max] for the preview gradient. Memoized so
-  // we don't recompute every keystroke unrelated to the ramp.
   const gradient = useMemo(() => {
     const lo = Number.isFinite(min) ? min : (effective.stops[0]?.value ?? 0)
     const hi = Number.isFinite(max) && max > lo ? max : lo + 1
