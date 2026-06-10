@@ -1,5 +1,3 @@
-// ScanScreen.tsx — BLE device scan and connect
-
 import React, { useState, useCallback } from 'react'
 import {
   View,
@@ -37,12 +35,7 @@ interface FoundDevice {
   name: string
 }
 
-/**
- * Render copy for any non-permission BLE error. Permission denials are routed
- * through `BlePermissionDialog` (with "Open Settings" CTA) instead of this
- * helper.
- */
-function bleErrorMessage(err: BleConnectionError): { title: string; body: string } {
+const bleErrorMessage = (err: BleConnectionError): { title: string; body: string } => {
   switch (err.kind) {
     case 'bluetooth-off':
       return { title: 'Bluetooth is off', body: 'Turn Bluetooth on to connect to your dashboard.' }
@@ -72,8 +65,6 @@ function bleErrorMessage(err: BleConnectionError): { title: string; body: string
         body: err.reason ?? 'A BLE write failed. Try again in a moment.',
       }
     case 'permission-denied':
-      // Caller should route to the unauthorized dialog instead — this is a
-      // safety net for the exhaustive switch.
       return {
         title: 'Bluetooth permission needed',
         body:
@@ -189,7 +180,6 @@ export default function ScanScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Centered main content */}
       <View style={styles.center}>
         <Image
           // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
@@ -228,7 +218,6 @@ export default function ScanScreen({ navigation }: Props) {
 
         {scanning && <Text style={styles.scanHint}>Searching for CANShift devices…</Text>}
 
-        {/* Device list — only rendered when results exist */}
         {devices.length > 0 && (
           <View style={styles.listWrapper}>
             <FlatList
@@ -260,7 +249,6 @@ export default function ScanScreen({ navigation }: Props) {
         )}
       </View>
 
-      {/* Demo mode — pinned to bottom */}
       <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
         <Text style={styles.demoBtnText}>Demo mode</Text>
       </TouchableOpacity>

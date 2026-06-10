@@ -1,5 +1,3 @@
-// LogScreen.tsx — BLE and system event log
-
 import React from 'react'
 import { View, Text, FlatList, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -13,7 +11,7 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
   error: Colors.danger,
 }
 
-function formatTime(ms: number): string {
+const formatTime = (ms: number): string => {
   const d = new Date(ms)
   return d.toLocaleTimeString('en-US', { hour12: false })
 }

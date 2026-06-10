@@ -1,5 +1,3 @@
-// GraphScreen.tsx — Real-time telemetry graph (MTune-style)
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useGraphTick } from '../hooks/use-graph-tick'
 import {
@@ -19,11 +17,6 @@ import { TelemetrySample, clearBuffer, getRange, getWriteIndex } from '../stores
 import { SIGNAL_META } from '../constants/ble'
 import DashTopBar from '../components/DashTopBar'
 import { ingestIncremental } from './graph-buffer'
-
-// ---------------------------------------------------------------------------
-// Signal config — colors live in theme/signal-colors.ts and derive from
-// canshift-core's SENSOR_DEFAULT_RAMPS (#907).
-// ---------------------------------------------------------------------------
 
 const SIGNAL_RANGE: Record<string, { min: number; max: number }> = {
   r: { min: 0, max: 8000 },
@@ -50,18 +43,14 @@ const WINDOW_OPTIONS = [
 const DEFAULT_SIGNALS = ['r', 'lam']
 const ALL_SIGNALS = Object.keys(SIGNAL_META)
 
-// ---------------------------------------------------------------------------
-// Chart math helpers
-// ---------------------------------------------------------------------------
-
-function buildPoints(
+const buildPoints = (
   buffer: readonly TelemetrySample[],
   key: string,
   windowStart: number,
   windowEnd: number,
   w: number,
   h: number
-): string {
+): string => {
   const range = SIGNAL_RANGE[key]
   if (!range) return ''
   const span = windowEnd - windowStart
@@ -78,12 +67,12 @@ function buildPoints(
   return pts.join(' ')
 }
 
-function formatTime(ms: number): string {
+const formatTime = (ms: number): string => {
   const d = new Date(ms)
   return d.toLocaleTimeString('en-US', { hour12: false })
 }
 
-function formatValue(key: string, val: number | undefined): string {
+const formatValue = (key: string, val: number | undefined): string => {
   if (val === undefined) return '—'
   const meta = SIGNAL_META[key]
   if (!meta) return val.toString()
@@ -91,10 +80,6 @@ function formatValue(key: string, val: number | undefined): string {
     ? `${String(Math.round(val))}${meta.unit}`
     : `${val.toFixed(meta.decimals)}${meta.unit}`
 }
-
-// ---------------------------------------------------------------------------
-// Inner chart panel — shared between portrait and landscape
-// ---------------------------------------------------------------------------
 
 interface ChartPanelProps {
   visibleSignals: string[]
@@ -105,10 +90,10 @@ interface ChartPanelProps {
   onSetWindow: (s: number) => void
   onClear: () => void
   onToggleSignal: (key: string) => void
-  compact: boolean // true in landscape → tighter spacing
+  compact: boolean
 }
 
-function ChartPanel({
+const ChartPanel = ({
   visibleSignals,
   windowSecs,
   paused,
@@ -118,13 +103,10 @@ function ChartPanel({
   onClear,
   onToggleSignal,
   compact,
-}: ChartPanelProps) {
+}: ChartPanelProps) => {
   const [chartSize, setChartSize] = useState({ width: 300, height: 160 })
   const tick = useGraphTick(paused)
 
-  // Stable rolling buffer — append new samples each tick, drop ones outside the
-  // current time window. Avoids re-copying the full 3000-entry ring buffer at
-  // 10 Hz (closes #684).
   const rollingRef = useRef<TelemetrySample[]>([])
   const lastSeenIndexRef = useRef<number>(0)
 
@@ -137,10 +119,8 @@ function ChartPanel({
     const now = paused ? pausedAt : Date.now()
     const windowStart = now - windowSecs * 1000
 
-    // Incremental ingest: pull only samples added since the last tick.
     const currentWriteIndex = getWriteIndex()
     if (currentWriteIndex < lastSeenIndexRef.current) {
-      // Buffer was cleared — reset local state.
       rollingRef.current = []
       lastSeenIndexRef.current = 0
     }
@@ -150,7 +130,6 @@ function ChartPanel({
         : []
     lastSeenIndexRef.current = currentWriteIndex
 
-    // Trim head — drop samples outside the visible time window.
     const rolling = rollingRef.current
     ingestIncremental(rolling, fresh, windowStart)
 
@@ -169,10 +148,6 @@ function ChartPanel({
     }
   }, [tick, visibleSignals, windowSecs, paused, pausedAt, chartSize])
 
-  // Repopulate the rolling buffer when the time window grows — older samples
-  // that were trimmed for a 30s view must be re-pulled for a 2m view. We
-  // re-seed from the ring buffer (which retains the full MAX_SAMPLES history)
-  // and resync the lastSeen cursor.
   useEffect(() => {
     const writeIdx = getWriteIndex()
     const fromIdx = Math.max(0, writeIdx - 3000)
@@ -184,7 +159,6 @@ function ChartPanel({
 
   return (
     <>
-      {/* Signal pills */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -214,7 +188,6 @@ function ChartPanel({
         })}
       </ScrollView>
 
-      {/* Controls */}
       <View style={[styles.controls, { paddingVertical: vGap }]}>
         <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause} hitSlop={HitSlop.default}>
           <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
@@ -249,7 +222,6 @@ function ChartPanel({
         </TouchableOpacity>
       </View>
 
-      {/* Chart */}
       <View style={styles.chartContainer} onLayout={onChartLayout}>
         {!chartData.hasData ? (
           <View style={styles.noDataOverlay}>
@@ -281,7 +253,6 @@ function ChartPanel({
                 />
               ) : null
             )}
-            {/* Value labels at right edge, Y-positioned by signal value */}
             {chartData.lines.map((line) => {
               const range = SIGNAL_RANGE[line.key]
               if (!range || line.latestValue === undefined) return null
@@ -308,7 +279,6 @@ function ChartPanel({
         )}
       </View>
 
-      {/* Time axis */}
       <View style={styles.timeAxis}>
         <Text style={styles.timeLabel}>{formatTime(chartData.windowStart)}</Text>
         <Text style={styles.timeLabel}>
@@ -317,7 +287,6 @@ function ChartPanel({
         <Text style={styles.timeLabel}>{formatTime(chartData.windowEnd)}</Text>
       </View>
 
-      {/* Live values grid — 2 rows, fixed-width cells */}
       {chartData.hasData && (
         <View style={[styles.valuesGrid, { paddingVertical: vGap + 2 }]}>
           {chartData.lines.map((line) => (
@@ -335,10 +304,6 @@ function ChartPanel({
     </>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
 
 export default function GraphScreen() {
   const { width, height } = useWindowDimensions()
@@ -381,10 +346,6 @@ export default function GraphScreen() {
     </SafeAreaView>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },

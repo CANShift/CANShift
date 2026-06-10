@@ -1,7 +1,3 @@
-// UpdateScreen.tsx — Firmware OTA update
-//
-// Flow: fetch releases → select → download → WiFi AP → flash → done
-
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
@@ -46,13 +42,9 @@ type Step =
   | 'pushing'
   | 'done'
 
-// ---------------------------------------------------------------------------
-// Step indicator
-// ---------------------------------------------------------------------------
-
 const STEPS = ['Select', 'Download', 'Wi-Fi', 'Flash']
 
-function StepIndicator({ current }: { current: number }) {
+const StepIndicator = ({ current }: { current: number }) => {
   return (
     <View style={styles.stepRow}>
       {STEPS.map((label, i) => {
@@ -80,18 +72,12 @@ function StepIndicator({ current }: { current: number }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Progress bar
-// ---------------------------------------------------------------------------
-
-function ProgressBar({ value }: { value: number }) {
+const ProgressBar = ({ value }: { value: number }) => {
   return (
     <View style={styles.progressTrack}>
       <View
         style={[
           styles.progressFill,
-          // React Native's DimensionValue requires a `${number}%` literal here,
-          // so the eslint restrict-template rule must yield to the RN typing.
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           { width: `${Math.round(value * 100)}%` },
         ]}
@@ -100,11 +86,7 @@ function ProgressBar({ value }: { value: number }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Release row
-// ---------------------------------------------------------------------------
-
-function ReleaseRow({
+const ReleaseRow = ({
   release,
   isCurrent,
   onSelect,
@@ -112,7 +94,7 @@ function ReleaseRow({
   release: OtaService.FirmwareRelease
   isCurrent: boolean
   onSelect: () => void
-}) {
+}) => {
   const [notesOpen, setNotesOpen] = useState(false)
   const date = new Date(release.publishedAt).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -159,10 +141,6 @@ function ReleaseRow({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
-
 export default function UpdateScreen({ navigation }: Props) {
   const { firmwareVersion, wifiApSsid } = useDeviceStore(
     useShallow((s) => ({
@@ -170,11 +148,7 @@ export default function UpdateScreen({ navigation }: Props) {
       wifiApSsid: s.wifiApSsid,
     }))
   )
-  // Password lives in SecureStore (#890). Hydrated lazily when the WiFi
-  // step is reached so we never hold it in memory before it's actually shown.
   const [wifiApPassword, setWifiApPasswordState] = useState<string | null>(null)
-  // Firmware-release list lives in ota-releases.store (#905). Selector
-  // shape kept narrow so unrelated store fields don't trigger re-renders.
   const { releases, loading, fetchError, loadCount } = useOtaReleasesStore(
     useShallow((s) => ({
       releases: s.releases,
@@ -192,8 +166,6 @@ export default function UpdateScreen({ navigation }: Props) {
     null
   )
 
-  /** Returns true if the error was a permission denial (and the dialog opened);
-   *  callers can short-circuit and skip setting a redundant inline error. */
   const handleBleFailure = useCallback((err: unknown): boolean => {
     const mapped = mapBleError(err)
     if (mapped.kind === 'permission-denied') {
@@ -203,15 +175,10 @@ export default function UpdateScreen({ navigation }: Props) {
     return false
   }, [])
 
-  // Kick off the first load on mount when the store is untouched.
-  // Subsequent mounts (back-nav, re-enter) reuse the cached list.
   useEffect(() => {
     if (loadCount === 0) void loadOtaReleases()
   }, [loadCount])
 
-  // Clear stale OTA flow cache on mount once releases are loaded:
-  //   - TTL expired (>24 h), OR
-  //   - Cached release version no longer appears in the fetched release list.
   useEffect(() => {
     if (releases.length === 0) return
     const flowEntry = useOtaFlowStore.getState()
@@ -226,8 +193,6 @@ export default function UpdateScreen({ navigation }: Props) {
     }
   }, [releases])
 
-  // Displayed error banner: store fetch failure OR a mid-flow OTA failure
-  // (download/verify/push) stored locally — whichever is set takes priority.
   const displayedError = fetchError ?? error
 
   useEffect(() => {
@@ -264,9 +229,6 @@ export default function UpdateScreen({ navigation }: Props) {
     done: 3,
   }
 
-  /** Translate any thrown value during the OTA flow into an inline error
-   *  string. BLE permission denials open the platform dialog and return true
-   *  so the caller can short-circuit. */
   const describeFlowError = useCallback((err: unknown): string => {
     if (err instanceof OtaServiceError) {
       return describeOtaErrorForUser(mapOtaError(err))
@@ -279,7 +241,6 @@ export default function UpdateScreen({ navigation }: Props) {
       setSelectedRelease(release)
       setError(null)
 
-      // Cache hit: skip download + verify and jump straight to Wi-Fi step.
       const flowEntry = useOtaFlowStore.getState()
       if (
         flowEntry.stage === 'verified' &&
@@ -305,7 +266,6 @@ export default function UpdateScreen({ navigation }: Props) {
         return
       }
 
-      // Normal pipeline.
       setStep('downloading')
       setProgress(0)
       try {
@@ -323,7 +283,6 @@ export default function UpdateScreen({ navigation }: Props) {
           setStep('releases')
           return
         }
-        // If we already have a verified cache entry, preserve it and offer retry.
         const afterError = useOtaFlowStore.getState()
         if (afterError.stage === 'verified' && afterError.release?.version === release.version) {
           log(
@@ -384,7 +343,6 @@ export default function UpdateScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
@@ -399,21 +357,18 @@ export default function UpdateScreen({ navigation }: Props) {
         <View style={styles.headerRight} />
       </View>
 
-      {/* Step indicator — hidden on releases list */}
       {step !== 'releases' && (
         <View style={styles.stepWrapper}>
           <StepIndicator current={stepIndex[step]} />
         </View>
       )}
 
-      {/* Error banner */}
       {displayedError !== null && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{displayedError}</Text>
         </View>
       )}
 
-      {/* ── Releases list ── */}
       {step === 'releases' && (
         <ScrollView contentContainerStyle={styles.list}>
           <View style={styles.installedRow}>
@@ -440,7 +395,6 @@ export default function UpdateScreen({ navigation }: Props) {
         </ScrollView>
       )}
 
-      {/* ── Downloading ── */}
       {step === 'downloading' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Downloading v{selectedRelease?.version}</Text>
@@ -449,7 +403,6 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* ── Verifying ── */}
       {step === 'verifying' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Verifying firmware…</Text>
@@ -458,7 +411,6 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* ── WiFi wait ── */}
       {step === 'wifi_wait' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Connect to CANShift Wi-Fi</Text>
@@ -516,7 +468,6 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* ── Retry Wi-Fi ── */}
       {step === 'retry_wifi' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Wi-Fi AP failed</Text>
@@ -534,7 +485,6 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* ── Pushing ── */}
       {step === 'pushing' && (
         <View style={styles.center}>
           <Text style={styles.stepTitle}>Flashing v{selectedRelease?.version}…</Text>
@@ -543,7 +493,6 @@ export default function UpdateScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* ── Done ── */}
       {step === 'done' && (
         <View style={styles.center}>
           <View style={styles.doneCircle}>
