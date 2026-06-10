@@ -49,13 +49,11 @@ void ErrorStore::push(ErrorSource source, const char *code, const char *message)
         }
     }
 
-    // New error — write to next available slot
     uint8_t slot;
     if (s_count < RING_SIZE) {
         slot = (s_head + s_count) % RING_SIZE;
         s_count++;
     } else {
-        // Ring full — overwrite oldest
         slot = s_head;
         s_head = (s_head + 1) % RING_SIZE;
     }
@@ -70,13 +68,11 @@ void ErrorStore::push(ErrorSource source, const char *code, const char *message)
 }
 
 void ErrorStore::getAll(FwError *buf, uint8_t *count, uint8_t maxCount) {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
 #if USE_RUST_ERROR_STORE
     *count = error_store_get_all_rs(s_ring, RING_SIZE, s_head, s_count, buf, maxCount);
 #else
     uint8_t n = s_count < maxCount ? s_count : maxCount;
-    // Copy newest-first: index (head + count - 1) down to head
     for (uint8_t i = 0; i < n; i++) {
         uint8_t idx = (s_head + s_count - 1 - i) % RING_SIZE;
         buf[i] = s_ring[idx];
@@ -87,7 +83,6 @@ void ErrorStore::getAll(FwError *buf, uint8_t *count, uint8_t maxCount) {
 }
 
 uint8_t ErrorStore::getCount() {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
     uint8_t c = s_count;
     portEXIT_CRITICAL(&s_mux);
@@ -95,7 +90,6 @@ uint8_t ErrorStore::getCount() {
 }
 
 uint32_t ErrorStore::getVersion() {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
     uint32_t v = s_version;
     portEXIT_CRITICAL(&s_mux);
@@ -103,7 +97,6 @@ uint32_t ErrorStore::getVersion() {
 }
 
 void ErrorStore::dismissLatest() {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
     if (s_count > 0) {
         s_count--;
@@ -113,27 +106,22 @@ void ErrorStore::dismissLatest() {
 }
 
 void ErrorStore::dismissAt(uint8_t row) {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
 #if USE_RUST_ERROR_STORE
     error_store_dismiss_at_rs(s_ring, RING_SIZE, &s_head, &s_count, &s_version, row);
 #else
     if (row < s_count) {
-        // `row` is newest-first (matches getAll); convert to oldest-first
-        // position inside the ring so the shift math reads naturally.
+        // `row` is newest-first (matches getAll); convert to oldest-first index.
         const uint8_t pos = static_cast<uint8_t>(s_count - 1 - row);
         if (pos == 0) {
-            // Drop oldest — advance head, no copy needed.
             s_head = static_cast<uint8_t>((s_head + 1) % RING_SIZE);
         } else if (pos < s_count - 1) {
-            // Collapse the gap by shifting positions pos+1..count-1 down by one.
             for (uint8_t i = pos; i + 1 < s_count; i++) {
                 const uint8_t dst = static_cast<uint8_t>((s_head + i) % RING_SIZE);
                 const uint8_t src = static_cast<uint8_t>((s_head + i + 1) % RING_SIZE);
                 s_ring[dst] = s_ring[src];
             }
         }
-        // pos == s_count - 1 → newest, no copy needed (matches dismissLatest).
         s_count--;
         s_version++;
     }
@@ -142,7 +130,6 @@ void ErrorStore::dismissAt(uint8_t row) {
 }
 
 void ErrorStore::clear() {
-    // NO LOG / NO ALLOC / NO LOCK inside this critical section — see file header (#877).
     portENTER_CRITICAL(&s_mux);
     s_count = 0;
     s_head = 0;
