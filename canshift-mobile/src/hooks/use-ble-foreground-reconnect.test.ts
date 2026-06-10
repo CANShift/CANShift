@@ -1,11 +1,3 @@
-// use-ble-foreground-reconnect.test.ts — covers the AppState→reconnect bridge
-//
-// We test `handleAppStateTransition` directly: it captures the whole decision
-// graph (which transitions trigger, which states block, what the toast shows)
-// without dragging in the React lifecycle.
-
-// react-native-ble-plx instantiates a NativeEventEmitter at module load — the
-// jest-expo runtime can't satisfy that, so we stub it out here.
 jest.mock('react-native-ble-plx', () => ({
   BleManager: jest.fn().mockImplementation(() => ({
     state: jest.fn(),
@@ -31,7 +23,7 @@ interface ToastParams {
   text2?: string
 }
 
-function makeDeps(overrides: MakeDepsOverrides = {}) {
+const makeDeps = (overrides: MakeDepsOverrides = {}) => {
   const tryReconnect: () => Promise<boolean> =
     overrides.tryReconnect ?? (() => Promise.resolve(true))
   const noopToast = (_params: ToastParams): void => undefined

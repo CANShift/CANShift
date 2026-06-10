@@ -1,13 +1,8 @@
-// telemetry.store.test.ts — Tests for the telemetry ring buffer
-
 import { clearBuffer, getRange, getWriteIndex, pushSample } from './telemetry.store'
 
 const MAX_SAMPLES = 3000
 
-// Shorthand — every old `getBuffer()` test wanted "give me every retained
-// sample in order", which is `getRange(0, getWriteIndex())` after the
-// migration in #684 / #795.
-function snapshot() {
+const snapshot = () => {
   return getRange(0, getWriteIndex())
 }
 
@@ -22,7 +17,6 @@ describe('telemetry.store', () => {
     const buffer = snapshot()
     expect(buffer).toHaveLength(1)
     expect(buffer[0]?.v).toEqual({ r: 1500, tps: 10 })
-    // Mutating the source object after push must not affect the stored sample
     values.r = 9999
     expect(buffer[0]?.v.r).toBe(1500)
   })
@@ -33,7 +27,6 @@ describe('telemetry.store', () => {
     }
     const buffer = snapshot()
     expect(buffer).toHaveLength(MAX_SAMPLES)
-    // First retained sample should be at index 50 (50 oldest evicted)
     expect(buffer[0]?.v.r).toBe(50)
     expect(buffer[MAX_SAMPLES - 1]?.v.r).toBe(MAX_SAMPLES + 49)
   })
@@ -97,14 +90,11 @@ describe('telemetry.store', () => {
     })
 
     it('clamps fromIndex to the oldest retained sample after wrap', () => {
-      // Push enough to wrap the ring buffer.
       for (let i = 0; i < MAX_SAMPLES + 100; i += 1) {
         pushSample({ r: i })
       }
-      // Asking for samples older than the retained window should clamp.
       const slice = getRange(0, getWriteIndex())
       expect(slice).toHaveLength(MAX_SAMPLES)
-      // Oldest retained is monotonic index 100 (100 samples evicted).
       expect(slice[0]?.v.r).toBe(100)
       expect(slice[MAX_SAMPLES - 1]?.v.r).toBe(MAX_SAMPLES + 99)
     })
@@ -121,7 +111,6 @@ describe('telemetry.store', () => {
       for (let i = 0; i < MAX_SAMPLES + 5; i += 1) {
         pushSample({ r: i })
       }
-      // Ask for the last 10 samples — must straddle the head/tail wrap point.
       const writeIdx = getWriteIndex()
       const slice = getRange(writeIdx - 10, writeIdx)
       expect(slice).toHaveLength(10)

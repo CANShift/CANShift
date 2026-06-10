@@ -1,13 +1,7 @@
-// signal-colors.test.ts — Coverage for the per-signal graph color
-// resolution from #907.
-
 import { getSignalColor } from './signal-colors'
 
 describe('getSignalColor', () => {
   it('derives a color for compact keys mapped to a SensorKind', () => {
-    // Sampled mid-range — colors come from SENSOR_DEFAULT_RAMPS in core, so
-    // we only assert "we got a 6-digit hex back", not exact values (those
-    // are owned by the core ramp tests).
     for (const key of ['r', 'ct', 'ot', 'op', 'iat', 'bst', 'lam']) {
       expect(getSignalColor(key)).toMatch(/^#[0-9A-F]{6}$/i)
     }

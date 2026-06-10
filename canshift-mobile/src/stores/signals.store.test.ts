@@ -1,5 +1,3 @@
-// signals.store.test.ts — Tests for the live BLE signal values store
-
 import { clearBuffer, getRange, getWriteIndex } from './telemetry.store'
 import { useSignalsStore } from './signals.store'
 
@@ -50,10 +48,6 @@ describe('useSignalsStore', () => {
   })
 
   it('successive updates MERGE into the cached payload (issue #1017 M-LO-3)', () => {
-    // Firmware ble_server.cpp filters out invalid signals per tick, so the
-    // payload mobile receives is partial. Replacing the entire cache on
-    // every tick would blank every reading that happens to be quiet for one
-    // sample. Merging keeps the last-known value alongside the live update.
     useSignalsStore.getState().update({ r: 1500, tps: 10 })
     useSignalsStore.getState().update({ r: 2000 })
     expect(useSignalsStore.getState().values).toEqual({ r: 2000, tps: 10 })
@@ -70,8 +64,6 @@ describe('useSignalsStore', () => {
     const buffer = getRange(0, getWriteIndex())
     expect(buffer).toHaveLength(1)
     expect(buffer[0]?.v).toEqual({ r: 2000, ect: 90 })
-    // Cached store payload retains the partial shape — only the ring buffer
-    // is filtered (consumers branch on Number.isFinite already).
     expect(useSignalsStore.getState().values).toEqual({ r: 2000, tps: undefined, ect: 90 })
   })
 })
