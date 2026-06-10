@@ -1,5 +1,3 @@
-// SignalCard.tsx — Single signal value display tile
-
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { Colors, Typography, Spacing, Radius } from '../theme'
@@ -11,7 +9,7 @@ interface SignalCardProps {
   compact?: boolean
 }
 
-function SignalCard({ meta, value, compact = false }: SignalCardProps) {
+const SignalCard = ({ meta, value, compact = false }: SignalCardProps) => {
   const hasValue = value !== undefined
 
   const formatted = hasValue
