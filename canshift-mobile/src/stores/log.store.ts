@@ -1,5 +1,3 @@
-// log.store.ts — Circular buffer of app-level log events
-
 import { create } from 'zustand'
 
 export type LogLevel = 'info' | 'warn' | 'error'

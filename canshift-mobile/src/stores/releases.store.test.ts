@@ -1,6 +1,3 @@
-// releases.store.test.ts — Coverage for the releases Zustand store from
-// #905. The underlying releasesService is mocked so this is pure-logic.
-
 import type { LatestReleaseResult } from '@tmbk/canshift-core'
 import { releasesService } from '../services/releases.service'
 import { loadReleases, resetReleasesStore, useReleasesStore } from './releases.store'
@@ -69,7 +66,7 @@ describe('releases.store', () => {
       const firstResult = (useReleasesStore.getState().latest as { result: LatestReleaseResult })
         .result
 
-      mockedGetLatest.mockReturnValueOnce(new Promise(() => undefined)) // never resolves
+      mockedGetLatest.mockReturnValueOnce(new Promise(() => undefined))
       void loadReleases(true)
       const mid = useReleasesStore.getState().latest
       expect(mid.status).toBe('loading')
