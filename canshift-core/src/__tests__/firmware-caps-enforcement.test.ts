@@ -1,21 +1,8 @@
-// firmware-caps-enforcement.test.ts — Issue #700
-//
-// Validator must reject configs that would silently truncate on the firmware:
-//  - button.actions.length > FIRMWARE_CAPS.MAX_BUTTON_ACTIONS
-//  - signal.colorRamp.stops.length outside [2, FIRMWARE_CAPS.MAX_RAMP_STOPS]
-//  - signal.colorRamp.stops[*].value not strictly ascending
-
 import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
 import { HexColorSchema, SemVerSchema } from '../schemas/common.js'
 import type { ColorRampStop, SignalConfig } from '../schemas/signal.js'
 import { validateDashboard } from '../validation/validate-dashboard.js'
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
-// Branded `HexColor` / `SemVer` are nominal — fixture literals flow through
-// the schema once so the test setup stays compile-clean without `as` casts.
 const hex = (value: string): ReturnType<typeof HexColorSchema.parse> => HexColorSchema.parse(value)
 const semver = (value: string): ReturnType<typeof SemVerSchema.parse> => SemVerSchema.parse(value)
 
@@ -28,95 +15,81 @@ const widgetStyle = {
   fontSize: 14,
 }
 
-function gaugeWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'w0',
+const gaugeWidget = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'w0',
+  type: 'gauge',
+  signal: 'rpm',
+  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  style: widgetStyle,
+  config: {
     type: 'gauge',
-    signal: 'rpm',
-    layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
-    style: widgetStyle,
-    config: {
-      type: 'gauge',
-      displayStyle: 'arc',
-      minValue: 0,
-      maxValue: 100,
-      dangerLevel: 90,
-      decimalPlaces: 0,
-    },
-    ...overrides,
-  }
-}
+    displayStyle: 'arc',
+    minValue: 0,
+    maxValue: 100,
+    dangerLevel: 90,
+    decimalPlaces: 0,
+  },
+  ...overrides,
+})
 
-function minimalPage(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'p1',
-    backgroundImage: null,
-    backgroundColor: hex('#000000'),
-    showTopBar: true,
-    widgets: [gaugeWidget()],
-    ...overrides,
-  }
-}
+const minimalPage = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'p1',
+  backgroundImage: null,
+  backgroundColor: hex('#000000'),
+  showTopBar: true,
+  widgets: [gaugeWidget()],
+  ...overrides,
+})
 
-function minimalConfig(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    version: '1.14.0',
-    name: 'Test',
-    defaultPageId: 'p1',
-    revLimitRpm: 7000,
-    topBar: { height: 16, bgColor: hex('#000000'), textColor: hex('#FFFFFF') },
-    pages: [minimalPage()],
-    ...overrides,
-  }
-}
+const minimalConfig = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  version: '1.14.0',
+  name: 'Test',
+  defaultPageId: 'p1',
+  revLimitRpm: 7000,
+  topBar: { height: 16, bgColor: hex('#000000'), textColor: hex('#FFFFFF') },
+  pages: [minimalPage()],
+  ...overrides,
+})
 
-function buttonWithActions(count: number): Record<string, unknown> {
-  return {
-    id: 'btn',
+const buttonWithActions = (count: number): Record<string, unknown> => ({
+  id: 'btn',
+  type: 'button',
+  signal: 'rpm',
+  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  style: widgetStyle,
+  config: {
     type: 'button',
-    signal: 'rpm',
-    layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
-    style: widgetStyle,
-    config: {
-      type: 'button',
-      label: 'go',
-      actions: Array.from({ length: count }, (_, i) => ({
-        category: 'dashboard',
-        type: 'navigate',
-        pageId: `p${i.toString()}`,
-      })),
+    label: 'go',
+    actions: Array.from({ length: count }, (_, i) => ({
+      category: 'dashboard',
+      type: 'navigate',
+      pageId: `p${i.toString()}`,
+    })),
+  },
+})
+
+const signalCatalogWithRamp = (stops: ColorRampStop[]): SignalConfig => ({
+  version: semver('1.14.0'),
+  protocol: 'custom_v1.0',
+  canSpeedKbps: 500,
+  signals: [
+    {
+      name: 'rpm',
+      canFrameId: '0x370',
+      startByte: 0,
+      byteLength: 2,
+      bigEndian: true,
+      signed: false,
+      scale: 1,
+      offset: 0,
+      unit: 'rpm',
+      min: 0,
+      max: 8000,
+      timeoutMs: 1000,
+      colorRamp: { stops, interpolate: 'linear' },
     },
-  }
-}
-
-function signalCatalogWithRamp(stops: ColorRampStop[]): SignalConfig {
-  return {
-    version: semver('1.14.0'),
-    protocol: 'custom_v1.0',
-    canSpeedKbps: 500,
-    signals: [
-      {
-        name: 'rpm',
-        canFrameId: '0x370',
-        startByte: 0,
-        byteLength: 2,
-        bigEndian: true,
-        signed: false,
-        scale: 1,
-        offset: 0,
-        unit: 'rpm',
-        min: 0,
-        max: 8000,
-        timeoutMs: 1000,
-        colorRamp: { stops, interpolate: 'linear' },
-      },
-    ],
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Part A — button actions cap
-// ---------------------------------------------------------------------------
+  ],
+})
 
 describe('validateDashboard — button.actions cap (issue #700)', () => {
   it('accepts a button with exactly MAX_BUTTON_ACTIONS (4) actions', () => {
@@ -151,15 +124,6 @@ describe('validateDashboard — button.actions cap (issue #700)', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Part B — colorRamp.stops cap + monotonic value
-// ---------------------------------------------------------------------------
-
-// Ramp validation now flows through per-signal `ColorRampSchema.safeParse`
-// inside `validateDashboard` — see C-LO-4 (umbrella #1016) which retired the
-// standalone `validateSignalCatalog`. `ColorRampSchema` is the single source
-// of truth for ramp invariants, so coverage runs through the public
-// `validateDashboard` entry point with a `signalCatalog` option.
 describe('validateDashboard — signalCatalog colorRamp.stops (issue #700)', () => {
   it('accepts a valid 3-stop ascending ramp', () => {
     const result = validateDashboard(minimalConfig(), {
@@ -237,7 +201,6 @@ describe('validateDashboard — signalCatalog colorRamp.stops (issue #700)', () 
       { length: FIRMWARE_CAPS.MAX_RAMP_STOPS + 1 },
       (_, i) => ({ value: i * 10, color: hex('#00FF00') })
     )
-    // Empty object → DashboardConfig parse fails AND catalog still checked.
     const result = validateDashboard({}, { signalCatalog: signalCatalogWithRamp(stops) })
     expect(result.valid).toBe(false)
     expect(result.errors.some((e) => e.includes('cannot exceed'))).toBe(true)

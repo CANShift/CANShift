@@ -1,11 +1,3 @@
-// validate-dashboard.test.ts
-//
-// Issue #874: structural / shape validation now lives in
-// `DashboardConfigSchema` (covered by `schemas.test.ts`). This file only
-// tests the cross-document concerns that Zod cannot express on its own:
-// `defaultPageId` visibility, id uniqueness, signal cross-reference warnings,
-// and signal-catalog pass-through.
-
 import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
 import { HexColorSchema, SemVerSchema } from '../schemas/common.js'
 import type { SignalConfig } from '../schemas/signal.js'
@@ -13,10 +5,6 @@ import { validateDashboard } from '../validation/validate-dashboard.js'
 
 const hex = (value: string): ReturnType<typeof HexColorSchema.parse> => HexColorSchema.parse(value)
 const semver = (value: string): ReturnType<typeof SemVerSchema.parse> => SemVerSchema.parse(value)
-
-// ---------------------------------------------------------------------------
-// Fixtures — full Zod-valid shapes; tests apply targeted mutations.
-// ---------------------------------------------------------------------------
 
 const VALID_STYLE = {
   primaryColor: '#FFFFFF',
@@ -33,73 +21,61 @@ const VALID_TOPBAR = {
   textColor: '#AAAAAA',
 } as const
 
-function gaugeWidget(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'w0',
+const gaugeWidget = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'w0',
+  type: 'gauge',
+  signal: 'rpm',
+  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  style: VALID_STYLE,
+  config: {
     type: 'gauge',
-    signal: 'rpm',
-    layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
-    style: VALID_STYLE,
-    config: {
-      type: 'gauge',
-      displayStyle: 'arc',
-      minValue: 0,
-      maxValue: 8000,
-      dangerLevel: 7500,
-      decimalPlaces: 0,
-    },
-    ...overrides,
-  }
-}
+    displayStyle: 'arc',
+    minValue: 0,
+    maxValue: 8000,
+    dangerLevel: 7500,
+    decimalPlaces: 0,
+  },
+  ...overrides,
+})
 
-function validPage(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: 'p1',
-    backgroundImage: null,
-    backgroundColor: '#000000',
-    showTopBar: true,
-    widgets: [gaugeWidget()],
-    ...overrides,
-  }
-}
+const validPage = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 'p1',
+  backgroundImage: null,
+  backgroundColor: '#000000',
+  showTopBar: true,
+  widgets: [gaugeWidget()],
+  ...overrides,
+})
 
-function validConfig(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    version: '1.15.0',
-    name: 'Test Dashboard',
-    defaultPageId: 'p1',
-    revLimitRpm: 7000,
-    topBar: { ...VALID_TOPBAR },
-    pages: [validPage()],
-    ...overrides,
-  }
-}
+const validConfig = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  version: '1.15.0',
+  name: 'Test Dashboard',
+  defaultPageId: 'p1',
+  revLimitRpm: 7000,
+  topBar: { ...VALID_TOPBAR },
+  pages: [validPage()],
+  ...overrides,
+})
 
-function signalCatalog(names: string[]): SignalConfig {
-  return {
-    version: semver('1.15.0'),
-    protocol: 'custom_v1.0',
-    canSpeedKbps: 500,
-    signals: names.map((name) => ({
-      name,
-      canFrameId: '0x100',
-      startByte: 0,
-      byteLength: 2,
-      bigEndian: false,
-      signed: false,
-      scale: 1,
-      offset: 0,
-      unit: '',
-      min: 0,
-      max: 100,
-      timeoutMs: 1000,
-    })),
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Smoke + return shape
-// ---------------------------------------------------------------------------
+const signalCatalog = (names: string[]): SignalConfig => ({
+  version: semver('1.15.0'),
+  protocol: 'custom_v1.0',
+  canSpeedKbps: 500,
+  signals: names.map((name) => ({
+    name,
+    canFrameId: '0x100',
+    startByte: 0,
+    byteLength: 2,
+    bigEndian: false,
+    signed: false,
+    scale: 1,
+    offset: 0,
+    unit: '',
+    min: 0,
+    max: 100,
+    timeoutMs: 1000,
+  })),
+})
 
 describe('validateDashboard — return shape', () => {
   it('accepts a minimal valid config', () => {
@@ -122,10 +98,6 @@ describe('validateDashboard — return shape', () => {
     expect(Array.isArray(result.warnings)).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Cross-field — defaultPageId visibility
-// ---------------------------------------------------------------------------
 
 describe('validateDashboard — defaultPageId', () => {
   it('rejects defaultPageId that does not match any page id', () => {
@@ -155,10 +127,6 @@ describe('validateDashboard — defaultPageId', () => {
     expect(result.valid).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Cross-field — id uniqueness
-// ---------------------------------------------------------------------------
 
 describe('validateDashboard — id uniqueness', () => {
   it('rejects duplicate page ids', () => {
@@ -199,10 +167,6 @@ describe('validateDashboard — id uniqueness', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Cross-field — firmware caps
-// ---------------------------------------------------------------------------
-
 describe('validateDashboard — firmware caps', () => {
   it('rejects more than MAX_PAGES', () => {
     const pages = Array.from({ length: FIRMWARE_CAPS.MAX_PAGES + 1 }, (_, i) =>
@@ -241,10 +205,6 @@ describe('validateDashboard — firmware caps', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Cross-field — gauge / bar threshold + range refinements
-// ---------------------------------------------------------------------------
-
 describe('validateDashboard — gauge cross-field', () => {
   it('rejects minValue >= maxValue', () => {
     const w = gaugeWidget({
@@ -279,10 +239,6 @@ describe('validateDashboard — gauge cross-field', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Drift guard — schema variants that the old hand-rolled validator missed
-// ---------------------------------------------------------------------------
-
 describe('validateDashboard — accepts new action and topBar variants (drift guard)', () => {
   it('accepts cruise_control button action (#852)', () => {
     const button = {
@@ -313,10 +269,6 @@ describe('validateDashboard — accepts new action and topBar variants (drift gu
     expect(result.valid).toBe(true)
   })
 })
-
-// ---------------------------------------------------------------------------
-// Signal catalog cross-reference (warnings only)
-// ---------------------------------------------------------------------------
 
 describe('validateDashboard — signal cross-reference', () => {
   it('warns on widget signal that is not in the catalog', () => {
@@ -362,11 +314,6 @@ describe('validateDashboard — signal cross-reference', () => {
     expect(result.warnings).toEqual([])
   })
 })
-
-// ---------------------------------------------------------------------------
-// Signal catalog structural pass-through (#700 ramps re-checked via
-// ColorRampSchema since C-LO-4 retired validate-signal.ts)
-// ---------------------------------------------------------------------------
 
 describe('validateDashboard — signalCatalog option pass-through', () => {
   it('surfaces signal-catalog errors via validateDashboard', () => {
