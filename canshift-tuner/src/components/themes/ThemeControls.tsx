@@ -10,14 +10,14 @@ export interface ThemeControlsProps {
   onSetNight: () => void
 }
 
-export function ThemeControls({
+export const ThemeControls = ({
   isDayMode,
   disabled,
   busy,
   onToggle,
   onSetDay,
   onSetNight,
-}: ThemeControlsProps) {
+}: ThemeControlsProps) => {
   return (
     <div style={controlsStyle}>
       <Button onClick={onToggle} disabled={disabled || busy}>

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 
-export function VersionMismatchBanner() {
+export const VersionMismatchBanner = () => {
   const compat = useDeviceStore((s) => s.firmwareCompat)
   if (compat.kind !== 'mismatch') return null
   return (

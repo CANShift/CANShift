@@ -1,9 +1,3 @@
-// PlaceholderRoute.tsx — Shared "coming soon" panel for un-built sections.
-//
-// Used by every navigation entry except Welcome and Dashboard until its
-// dedicated route lands. Keeps a consistent empty state instead of routing
-// users to a blank screen.
-
 interface PlaceholderRouteProps {
   label: string
   icon?: string

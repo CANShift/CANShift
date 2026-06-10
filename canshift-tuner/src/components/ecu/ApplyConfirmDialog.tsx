@@ -18,14 +18,14 @@ export interface ApplyConfirmDialogProps {
   onConfirm: () => void
 }
 
-export function ApplyConfirmDialog({
+export const ApplyConfirmDialog = ({
   open,
   onOpenChange,
   targetName,
   newSignalCount,
   currentSignalCount,
   onConfirm,
-}: ApplyConfirmDialogProps) {
+}: ApplyConfirmDialogProps) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>

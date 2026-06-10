@@ -6,7 +6,7 @@ export interface ThemeStatusCardProps {
   simulationMode: boolean
 }
 
-export function ThemeStatusCard({ isDayMode, connected, simulationMode }: ThemeStatusCardProps) {
+export const ThemeStatusCard = ({ isDayMode, connected, simulationMode }: ThemeStatusCardProps) => {
   if (simulationMode) {
     return (
       <div style={cardStyle('night')}>

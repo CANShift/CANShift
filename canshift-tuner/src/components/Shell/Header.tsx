@@ -1,11 +1,3 @@
-// Header.tsx — Top header of the Tuner shell.
-//
-// Surfaces the brand, build version, live connection status (with a coloured
-// dot + optional vendor/product info pulled off the SerialPort), a firmware
-// version slot (placeholder until a follow-up wires the device handshake) and
-// a Burn button that lights up when the editor has unsaved changes against a
-// live device.
-
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useConnectionStore } from '../../stores/connection.store'
@@ -26,7 +18,7 @@ interface StatusVisual {
   label: string
 }
 
-function statusVisual(status: Status): StatusVisual {
+const statusVisual = (status: Status): StatusVisual => {
   switch (status) {
     case 'connected':
       return { dot: 'hsl(var(--success))', label: 'Connected' }
@@ -40,14 +32,11 @@ function statusVisual(status: Status): StatusVisual {
   }
 }
 
-// Minimal structural shape of the WebSerial `SerialPort.getInfo()` return.
-// Kept local so Header doesn't depend on a particular `@types/w3c-web-serial`
-// pull — anything assignable to this works.
 interface PortLike {
   getInfo(): { usbVendorId?: number; usbProductId?: number }
 }
 
-function readPortLabel(port: PortLike | null): string | null {
+const readPortLabel = (port: PortLike | null): string | null => {
   if (!port) return null
   try {
     const info = port.getInfo()
@@ -62,14 +51,7 @@ function readPortLabel(port: PortLike | null): string | null {
   }
 }
 
-/**
- * Drive the status-dot blink off the serial client's TX/RX activity ticks.
- * Throttles to one render per `PULSE_THROTTLE_MS` window — telemetry comes
- * in at ~5 Hz, so unthrottled it would re-render the header on every frame
- * and waste cycles. Returns `true` while a pulse is on-screen so the dot can
- * brighten / glow without an explicit `key={}` animation reset.
- */
-function useSerialActivityPulse(active: boolean): boolean {
+const useSerialActivityPulse = (active: boolean): boolean => {
   const [pulsing, setPulsing] = useState(false)
   const lastTickRef = useRef(0)
   const offTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -110,9 +92,6 @@ export default function Header() {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
-  // Simulation has no real link, but show it in the status slot so the user
-  // never wonders whether the editor they're hacking on is wired to a device
-  // or just running off the demo config.
   const visual: StatusVisual = simulationMode
     ? { dot: 'hsl(var(--accent))', label: 'Simulation' }
     : statusVisual(status)
@@ -183,8 +162,7 @@ const versionStyle: CSSProperties = {
   letterSpacing: '0.04em',
 }
 
-
-function BurnButton() {
+const BurnButton = () => {
   const { canBurn, isBurning, burn } = useBurnDashboard()
   const disabled = !canBurn
   const title = isBurning
@@ -208,7 +186,7 @@ function BurnButton() {
   )
 }
 
-function BurnSpinner() {
+const BurnSpinner = () => {
   return (
     <span
       aria-hidden="true"

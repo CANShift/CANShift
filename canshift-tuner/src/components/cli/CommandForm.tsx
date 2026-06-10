@@ -11,13 +11,13 @@ export interface CommandFormProps {
   onHistoryDown: () => string | null
 }
 
-export function CommandForm({
+export const CommandForm = ({
   disabled,
   busy,
   onSubmit,
   onHistoryUp,
   onHistoryDown,
-}: CommandFormProps) {
+}: CommandFormProps) => {
   const [opcodeInput, setOpcodeInput] = useState(formatHex(KNOWN_OPCODES[0]?.id ?? 0))
   const [fieldsInput, setFieldsInput] = useState('{}')
   const [parseError, setParseError] = useState<string | null>(null)
@@ -140,7 +140,7 @@ export function CommandForm({
   )
 }
 
-function parseOpcode(input: string): number | null {
+const parseOpcode = (input: string): number | null => {
   const trimmed = input.trim()
   if (!trimmed) return null
   const known = KNOWN_OPCODES.find((o) => o.name.toLowerCase() === trimmed.toLowerCase())
@@ -154,7 +154,7 @@ function parseOpcode(input: string): number | null {
   return null
 }
 
-function formatHex(id: number): string {
+const formatHex = (id: number): string => {
   return `0x${id.toString(16).toUpperCase().padStart(2, '0')}`
 }
 

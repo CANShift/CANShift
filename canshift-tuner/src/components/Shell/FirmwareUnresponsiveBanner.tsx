@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import { useDeviceStore } from '../../stores/device.store'
 
-export function FirmwareUnresponsiveBanner() {
+export const FirmwareUnresponsiveBanner = () => {
   const liveness = useDeviceStore((s) => s.firmwareLiveness)
   const [now, setNow] = useState(() => Date.now())
 
@@ -31,7 +31,7 @@ export function FirmwareUnresponsiveBanner() {
   )
 }
 
-function formatElapsed(sec: number): string {
+const formatElapsed = (sec: number): string => {
   if (sec < 60) return `${String(sec)} s`
   const m = Math.floor(sec / 60)
   const s = sec % 60

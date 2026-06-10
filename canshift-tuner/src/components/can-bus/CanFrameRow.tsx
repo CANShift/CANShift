@@ -10,7 +10,7 @@ export interface CanFrameRowProps {
   onPromote: (id: number) => void
 }
 
-export function CanFrameRow({ frame, nowMs, onPromote }: CanFrameRowProps) {
+export const CanFrameRow = ({ frame, nowMs, onPromote }: CanFrameRowProps) => {
   const [expanded, setExpanded] = useState(false)
   const idHex = formatCanId(frame.id)
   const stale = nowMs - frame.lastSeenMs > 2_000
@@ -60,25 +60,25 @@ export function CanFrameRow({ frame, nowMs, onPromote }: CanFrameRowProps) {
   )
 }
 
-function formatCanId(id: number): string {
+const formatCanId = (id: number): string => {
   const extended = id > 0x7ff
   const width = extended ? 8 : 3
   return `0x${id.toString(16).toUpperCase().padStart(width, '0')}`
 }
 
-function formatRelative(ms: number): string {
+const formatRelative = (ms: number): string => {
   if (ms < 1_000) return '<1s'
   if (ms < 60_000) return `${String(Math.floor(ms / 1_000))}s ago`
   return `${String(Math.floor(ms / 60_000))}m ago`
 }
 
-function formatCount(n: number): string {
+const formatCount = (n: number): string => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return String(n)
 }
 
-function formatPayload(bytes: readonly number[], dlc: number): string {
+const formatPayload = (bytes: readonly number[], dlc: number): string => {
   const slice = bytes.slice(0, dlc)
   return slice.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')
 }
