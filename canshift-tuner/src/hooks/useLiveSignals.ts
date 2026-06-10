@@ -1,15 +1,9 @@
-// useLiveSignals.ts — Live signal values for the diagnostics panel.
-//
-// Spike port (#1104): identical simulation path to canshift-studio, but the
-// connected branch is a no-op subscribe through the transport stub. Phase 3
-// re-introduces the real subscription against the dash WS feed.
-
 import { useEffect, useRef, useState } from 'react'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
 import { deviceEvents } from '../transport'
 
-export function useLiveSignals(): Record<string, number> {
+export const useLiveSignals = (): Record<string, number> => {
   const signals = useSignalStore((s) => s.signals)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -43,9 +37,6 @@ export function useLiveSignals(): Record<string, number> {
   }, [signals, simulationMode, connected])
 
   useEffect(() => {
-    // Simulation flips `connected: true` alongside `simulationMode: true` — bail
-    // here so the live-signal subscriber doesn't overwrite the simulated values
-    // with `setValues({})` (R-3).
     if (!connected || simulationMode) return
     setValues({})
     const unsubscribe = deviceEvents.onSignal((payload: unknown) => {
