@@ -1,35 +1,14 @@
-// ecu-profiles/index.ts — Built-in ECU signal profiles
-//
-// Each preset bundles a complete `SignalDef[]` ready to write to the device's
-// `signals.json`. Studio's signal-config dropdown surfaces every entry here
-// (see `SignalRoute.tsx`). The active preset is also persisted alongside the
-// dashboard config so the user can detect drift between the dropdown and the
-// on-disk signals catalog (#570).
-//
-// Adding a new preset is a one-entry change here. Keep frame IDs and byte
-// positions matched to the ECU vendor's published CAN protocol document —
-// when those aren't available, ship as `generic-blank` and let the user fill
-// the table from their own measurements.
-
 import type { SignalDef } from '../schemas/signal.js'
 
 export interface EcuProfile {
   id: string
   name: string
   description: string
-  /** Value written to SignalConfig.protocol on export */
   protocol: string
   signals: SignalDef[]
 }
 
-// ---------------------------------------------------------------------------
-// MaxxECU Street / Race — mirrors `canshift-firmware/data/config/signals.json`
-// which is the layout the firmware ships with by default. Frame IDs match the
-// MaxxECU 4-frame group at 0x370-0x375 (see issue #556).
-// ---------------------------------------------------------------------------
-
 const MAXXECU_SIGNALS: SignalDef[] = [
-  // FRAME 0x370 — Primary engine data
   {
     name: 'rpm',
     canFrameId: '0x370',
@@ -106,7 +85,6 @@ const MAXXECU_SIGNALS: SignalDef[] = [
     max: 300,
     timeoutMs: 500,
   },
-  // FRAME 0x371 — Lambda, gear, fuel pressure
   {
     name: 'lambda_1',
     canFrameId: '0x371',
@@ -151,7 +129,6 @@ const MAXXECU_SIGNALS: SignalDef[] = [
     max: 10,
     timeoutMs: 1000,
   },
-  // FRAME 0x372 — Temperatures + oil pressure
   {
     name: 'coolant_temp_c',
     canFrameId: '0x372',
@@ -200,7 +177,6 @@ const MAXXECU_SIGNALS: SignalDef[] = [
     dangerLevel: 1.0,
     timeoutMs: 1000,
   },
-  // FRAME 0x373 — Electrical
   {
     name: 'battery_volts',
     canFrameId: '0x373',
@@ -219,7 +195,6 @@ const MAXXECU_SIGNALS: SignalDef[] = [
     highDangerLevel: 16.0,
     timeoutMs: 2000,
   },
-  // FRAME 0x374 — ECU status flags (bit-packed)
   {
     name: 'flag_mil',
     canFrameId: '0x374',
@@ -295,7 +270,6 @@ const MAXXECU_SIGNALS: SignalDef[] = [
     max: 1,
     timeoutMs: 2000,
   },
-  // FRAME 0x375 — Map info
   {
     name: 'map_number',
     canFrameId: '0x375',
@@ -311,15 +285,6 @@ const MAXXECU_SIGNALS: SignalDef[] = [
     timeoutMs: 5000,
   },
 ]
-
-// ---------------------------------------------------------------------------
-// OBD-II J1979 (informational) — standard PIDs the firmware will be able to
-// poll once #841 ships the polling task. Frame ID 0x7E8 is the canonical
-// single-ECU response slot; multi-ECU vehicles will eventually need 0x7E9+
-// support which lands separately. Until polling is implemented these entries
-// are written verbatim to signals.json but they won't decode anything on a
-// purely-passive bus — that's the trade-off documented in the description.
-// ---------------------------------------------------------------------------
 
 const OBDII_SIGNALS: SignalDef[] = [
   {
@@ -414,10 +379,6 @@ const OBDII_SIGNALS: SignalDef[] = [
   },
 ]
 
-// ---------------------------------------------------------------------------
-// Registry — every entry shows up in Studio's preset dropdown.
-// ---------------------------------------------------------------------------
-
 export const ECU_PROFILES: EcuProfile[] = [
   {
     id: 'generic-blank',
@@ -446,13 +407,6 @@ export const ECU_PROFILES: EcuProfile[] = [
 
 export const DEFAULT_PROFILE_ID = 'generic-blank' as const
 
-// Tiny name → unit table for the Studio preview's unit-overlay fallback
-// (#967 follow-up). Importing `ECU_PROFILES` to derive the same data
-// drags the entire MaxxECU + OBD-II registry (CAN frame ids, byte
-// positions, scale/offset, every `_comment`) into the renderer bundle
-// and trips the studio size budget. The fallback only needs unit
-// strings keyed by signal name, so this lean constant carries just
-// that. Keep in lockstep with `MAXXECU_SIGNALS` above.
 export const MAXXECU_SIGNAL_UNITS: Readonly<Record<string, string>> = {
   rpm: 'rpm',
   throttle_pos: '%',
