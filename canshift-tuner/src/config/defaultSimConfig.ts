@@ -411,6 +411,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
+            mode: 'single' as const,
             label: 'MAP 1',
             iconName: 'map_icon',
             showLabel: true,
@@ -428,6 +429,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
+            mode: 'single' as const,
             label: 'MAP 2',
             iconName: 'map_icon',
             showLabel: true,
@@ -445,6 +447,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
+            mode: 'single' as const,
             label: 'Launch',
             iconName: 'launch',
             showLabel: true,
@@ -464,6 +467,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
+            mode: 'single' as const,
             label: 'Anti-lag',
             iconName: 'flame',
             showLabel: true,
