@@ -1,3 +1,5 @@
+import { verifyImageMagic } from './image'
+
 export interface LocalFirmware {
   name: string
   size: number
@@ -51,6 +53,7 @@ export const readFirmwareFile = async (file: File): Promise<LocalFirmware> => {
   }
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
+  verifyImageMagic(bytes)
   const sha256 = await computeSha256Hex(bytes)
   return { name: file.name, size: file.size, bytes, sha256 }
 }
