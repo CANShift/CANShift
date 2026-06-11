@@ -1,10 +1,12 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import react from "@astrojs/react";
 
 export default defineConfig({
   site: "https://canshift-docs.example",
   integrations: [
+    react(),
     starlight({
       title: "CANShift Docs",
       description:

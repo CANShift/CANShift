@@ -37,6 +37,22 @@
   --cs-warning: #ff8800;
   --cs-danger: #ff0000;
 
+  /* HSL channel form used by the canshift-ui presentational components
+     (hsl(var(--primary) / 0.3) etc). Mirrors canshift-core/design-tokens. */
+  --bg: 0 0% 7%;
+  --bg-inset: 0 0% 3%;
+  --surface: 0 0% 12%;
+  --surface-2: 0 0% 16%;
+  --border: 0 0% 20%;
+  --primary: 0 100% 64%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 32 100% 50%;
+  --text: 0 0% 100%;
+  --text-dim: 0 0% 73%;
+  --text-muted: 0 0% 56%;
+  --success: 132 100% 40%;
+  --destructive: 0 100% 50%;
+
   --sl-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --sl-font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Mono',
     monospace;
