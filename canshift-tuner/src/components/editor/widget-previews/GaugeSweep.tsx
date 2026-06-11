@@ -13,8 +13,10 @@ const PAD_LEFT = 12
 const PAD_RIGHT = 10
 const PAD_TOP = 14
 const PAD_BOTTOM = 16
-const CURVE_FRACTION = 0.18
+const CURVE_FRACTION = 0.32
 const TARGET_TICK_COUNT = 8
+const CHANNEL_THICKNESS = 10
+const STROKE_W = 1.5
 
 const pickTickStep = (range: number): number => {
   if (range <= 0) return 1
@@ -33,18 +35,16 @@ const formatTick = (value: number, step: number): string => {
   return value.toFixed(1)
 }
 
-const buildSweepPath = (innerW: number, innerH: number): string => {
-  const curveW = Math.max(12, Math.min(innerW * CURVE_FRACTION, innerH * 1.2))
-  const startX = 0
-  const startY = innerH
-  const cornerEndX = curveW
-  const cornerEndY = 0
-  const controlX = curveW * 0.45
-  const controlY = innerH * 0.45
+const buildChannelPath = (innerW: number, innerH: number, t: number): string => {
+  const curveW = Math.max(t * 2 + 8, Math.min(innerW * CURVE_FRACTION, innerH * 1.2))
   return [
-    `M ${String(startX)},${String(startY)}`,
-    `Q ${String(controlX)},${String(controlY)} ${String(cornerEndX)},${String(cornerEndY)}`,
-    `L ${String(innerW)},${String(cornerEndY)}`,
+    `M 0,${String(innerH)}`,
+    `Q 0,0 ${String(curveW)},0`,
+    `L ${String(innerW)},0`,
+    `L ${String(innerW)},${String(t)}`,
+    `L ${String(curveW)},${String(t)}`,
+    `Q ${String(t)},${String(t)} ${String(t)},${String(innerH)}`,
+    'Z',
   ].join(' ')
 }
 
@@ -67,17 +67,17 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const innerW = Math.max(1, w - PAD_LEFT - PAD_RIGHT)
   const innerH = Math.max(1, h - PAD_TOP - PAD_BOTTOM)
 
-  const path = buildSweepPath(innerW, innerH)
+  const channelPath = buildChannelPath(innerW, innerH, CHANNEL_THICKNESS)
   const fillWidth = innerW * pct
   const clipId = `sweep-fill-${widget.id}`
 
-  const trackColor = '#1F1F1F'
+  const trackColor = '#2A2A2A'
+  const channelBg = '#161616'
   const sweepBg = '#0F0F0F'
   const baselineColor = '#2A2A2A'
   const tickColor = '#3A3A3A'
   const tickLabelColor = '#888888'
   const fillColor = beyondDanger ? '#FF4444' : st.primaryColor
-  const fillStroke = beyondDanger ? '#FF8866' : st.primaryColor
 
   const range = cfg.maxValue - cfg.minValue
   const step = pickTickStep(range)
@@ -136,21 +136,23 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
           stroke={baselineColor}
           strokeWidth={1}
         />
-        <path d={path} fill="none" stroke={trackColor} strokeWidth={3} strokeLinecap="round" />
 
         <defs>
           <clipPath id={clipId}>
             <rect x={0} y={0} width={fillWidth} height={innerH} />
           </clipPath>
         </defs>
+
+        <path
+          d={channelPath}
+          fill={channelBg}
+          stroke={trackColor}
+          strokeWidth={STROKE_W}
+          strokeLinejoin="round"
+        />
+
         <g clipPath={`url(#${clipId})`}>
-          <path d={path} fill="none" stroke={fillStroke} strokeWidth={3} strokeLinecap="round" />
-          <path
-            d={`${path} L ${String(innerW)},${String(innerH)} L 0,${String(innerH)} Z`}
-            fill={fillColor}
-            fillOpacity={0.32}
-            stroke="none"
-          />
+          <path d={channelPath} fill={fillColor} fillOpacity={0.85} stroke="none" />
         </g>
 
         {tickValues.map((tick) => {
