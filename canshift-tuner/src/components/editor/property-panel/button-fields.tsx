@@ -251,7 +251,8 @@ const AddActionMenu = ({
 }
 
 export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
-  const cfg = widget.config.type === 'button' ? widget.config : null
+  const cfg =
+    widget.config.type === 'button' && widget.config.mode === 'single' ? widget.config : null
   const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
   const pageIds = pages.map((p) => p.id)
   const [previewActive, setPreviewActive] = useState(false)

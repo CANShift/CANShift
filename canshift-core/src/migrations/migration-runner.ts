@@ -49,6 +49,27 @@ const brightenHex = (hex: string, delta = 0x33): string => {
 
 const MIGRATIONS: Migration[] = [
   {
+    fromVersion: '1.22.0',
+    toVersion: '1.23.0',
+    migrate: (config) => {
+      const pages = config.pages as Record<string, unknown>[] | undefined
+      if (!Array.isArray(pages)) return { ...config, version: '1.23.0' }
+      const migratedPages = pages.map((page) => {
+        const widgets = page.widgets as Record<string, unknown>[] | undefined
+        if (!Array.isArray(widgets)) return page
+        const migratedWidgets = widgets.map((widget) => {
+          if (widget.type !== 'button') return widget
+          const cfg = widget.config as Record<string, unknown> | undefined
+          if (!cfg) return widget
+          if ('mode' in cfg) return widget
+          return { ...widget, config: { ...cfg, mode: 'single' } }
+        })
+        return { ...page, widgets: migratedWidgets }
+      })
+      return { ...config, version: '1.23.0', pages: migratedPages }
+    },
+  },
+  {
     fromVersion: '1.21.0',
     toVersion: '1.22.0',
     migrate: (config) => {

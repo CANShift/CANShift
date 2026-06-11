@@ -249,6 +249,7 @@ describe('validateDashboard — accepts new action and topBar variants (drift gu
       style: VALID_STYLE,
       config: {
         type: 'button',
+        mode: 'single',
         label: 'CC',
         actions: [{ category: 'ecu', type: 'cruise_control', op: 'toggle' }],
       },

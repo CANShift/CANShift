@@ -179,22 +179,27 @@ export const CycleButtonStateSchema = z
   })
   .strict()
 
-export const ButtonWidgetConfigSchema = z
+const buttonBaseFields = {
+  type: z.literal('button'),
+  label: z.string().max(STRING_CAPS.WIDGET_LABEL),
+  iconName: SensorIconNameSchema.optional(),
+  iconPath: z.string().max(STRING_CAPS.ICON_PATH).optional(),
+  showIcon: z.boolean().optional(),
+  showLabel: z.boolean().optional(),
+  isToggle: z.boolean().optional(),
+  colors: z
+    .object({
+      normal: HexColorSchema,
+      active: HexColorSchema,
+    })
+    .strict()
+    .optional(),
+}
+
+export const SingleActionButtonConfigSchema = z
   .object({
-    type: z.literal('button'),
-    label: z.string().max(STRING_CAPS.WIDGET_LABEL),
-    iconName: SensorIconNameSchema.optional(),
-    iconPath: z.string().max(STRING_CAPS.ICON_PATH).optional(),
-    showIcon: z.boolean().optional(),
-    showLabel: z.boolean().optional(),
-    isToggle: z.boolean().optional(),
-    colors: z
-      .object({
-        normal: HexColorSchema,
-        active: HexColorSchema,
-      })
-      .strict()
-      .optional(),
+    ...buttonBaseFields,
+    mode: z.literal('single'),
     actions: z
       .array(ButtonActionSchema)
       .min(1, 'actions must contain at least one entry')
@@ -202,17 +207,28 @@ export const ButtonWidgetConfigSchema = z
         FIRMWARE_CAPS.MAX_BUTTON_ACTIONS,
         `actions cannot exceed ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()} entries (firmware cap)`
       ),
+  })
+  .strict()
+
+export const CycleButtonConfigSchema = z
+  .object({
+    ...buttonBaseFields,
+    mode: z.literal('cycle'),
     states: z
       .array(CycleButtonStateSchema)
       .min(
         MIN_CYCLE_STATES,
         `cycle states must contain at least ${String(MIN_CYCLE_STATES)} entries`
       )
-      .max(MAX_CYCLE_STATES, `cycle states cannot exceed ${String(MAX_CYCLE_STATES)} entries`)
-      .optional(),
-    initialActiveIndex: z.number().int().min(0).optional(),
+      .max(MAX_CYCLE_STATES, `cycle states cannot exceed ${String(MAX_CYCLE_STATES)} entries`),
+    initialActiveIndex: z.number().int().min(0),
   })
   .strict()
+
+export const ButtonWidgetConfigSchema = z.discriminatedUnion('mode', [
+  SingleActionButtonConfigSchema,
+  CycleButtonConfigSchema,
+])
 
 export const TimerWidgetConfigSchema = z
   .object({
@@ -238,22 +254,18 @@ export const ImageWidgetConfigSchema = z
   })
   .strict()
 
-export const WidgetConfigSchema = z.discriminatedUnion('type', [
+export const WidgetConfigSchema = z.union([
   GaugeWidgetConfigSchema,
   WarningWidgetConfigSchema,
-  ButtonWidgetConfigSchema,
+  SingleActionButtonConfigSchema,
+  CycleButtonConfigSchema,
   TimerWidgetConfigSchema,
   GearWidgetConfigSchema,
   ImageWidgetConfigSchema,
 ])
 
-type WidgetConfigValueType =
-  (typeof WidgetConfigSchema)['options'][number]['shape']['type']['value']
-const WIDGET_TYPE_VALUES = WidgetConfigSchema.options.map((o) => o.shape.type.value) as [
-  WidgetConfigValueType,
-  ...WidgetConfigValueType[],
-] satisfies readonly [WidgetConfigValueType, ...WidgetConfigValueType[]]
-export const WidgetTypeSchema = z.enum(WIDGET_TYPE_VALUES)
+export const WIDGET_TYPES = ['gauge', 'warning', 'button', 'timer', 'gear', 'image'] as const
+export const WidgetTypeSchema = z.enum(WIDGET_TYPES)
 
 const SIGNAL_CONSUMING_WIDGET_TYPES = new Set(['gauge', 'warning', 'gear', 'timer'])
 
@@ -292,26 +304,8 @@ export const WidgetSchema = z
         })
       }
     }
-    if (cfg.type === 'button') {
-      const hasStates = cfg.states !== undefined
-      const hasIndex = cfg.initialActiveIndex !== undefined
-      if (hasStates && !hasIndex) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'initialActiveIndex is required when states is set',
-          path: ['config', 'initialActiveIndex'],
-        })
-      } else if (!hasStates && hasIndex) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'initialActiveIndex requires a states array',
-          path: ['config', 'initialActiveIndex'],
-        })
-      } else if (
-        cfg.states !== undefined &&
-        cfg.initialActiveIndex !== undefined &&
-        cfg.initialActiveIndex >= cfg.states.length
-      ) {
+    if (cfg.type === 'button' && cfg.mode === 'cycle') {
+      if (cfg.initialActiveIndex >= cfg.states.length) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `initialActiveIndex (${String(cfg.initialActiveIndex)}) must be less than states.length (${String(cfg.states.length)})`,
@@ -461,7 +455,9 @@ export type GaugeDisplayStyle = z.infer<typeof GaugeDisplayStyleSchema>
 export type GaugeArcFillStyle = z.infer<typeof GaugeArcFillStyleSchema>
 export type GaugeWidgetConfig = ExactOptional<z.infer<typeof GaugeWidgetConfigSchema>>
 export type WarningWidgetConfig = ExactOptional<z.infer<typeof WarningWidgetConfigSchema>>
-export type ButtonWidgetConfig = ExactOptional<z.infer<typeof ButtonWidgetConfigSchema>>
+export type SingleActionButtonConfig = ExactOptional<z.infer<typeof SingleActionButtonConfigSchema>>
+export type CycleButtonConfig = ExactOptional<z.infer<typeof CycleButtonConfigSchema>>
+export type ButtonWidgetConfig = SingleActionButtonConfig | CycleButtonConfig
 export type CycleButtonState = ExactOptional<z.infer<typeof CycleButtonStateSchema>>
 export type TimerWidgetConfig = ExactOptional<z.infer<typeof TimerWidgetConfigSchema>>
 export type GearWidgetConfig = ExactOptional<z.infer<typeof GearWidgetConfigSchema>>

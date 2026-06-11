@@ -17,6 +17,8 @@ export type {
   GaugeArcFillStyle,
   WarningWidgetConfig,
   ButtonWidgetConfig,
+  SingleActionButtonConfig,
+  CycleButtonConfig,
   CycleButtonState,
   TimerWidgetConfig,
   GearWidgetConfig,
@@ -192,7 +194,7 @@ export type {
 export type { DesignTokens } from './design-tokens.js'
 export { COLOR_KEY_TO_CSS_VAR, DARK_TOKENS, tokensToCssVars } from './design-tokens.js'
 
-export const CURRENT_SCHEMA_VERSION = '1.22.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.23.0' as const
 
 export const PRODUCT_NAME = 'CANShift' as const
 
