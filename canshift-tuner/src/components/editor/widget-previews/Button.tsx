@@ -4,6 +4,7 @@ import type { BaseRendererProps } from './shared'
 
 export interface ButtonRendererProps extends BaseRendererProps {
   active: boolean
+  cycleStateIndex?: number | undefined
 }
 
 export const computeButtonPreviewMetrics = (
@@ -23,17 +24,26 @@ export const ButtonPreview = memo(function ButtonPreview({
   w,
   h,
   active,
+  cycleStateIndex,
 }: ButtonRendererProps) {
   if (widget.config.type !== 'button') return null
   const cfg = widget.config
   const st = widget.style
-  const iconName = cfg.iconName ?? null
-  const showIcon = cfg.showIcon === true && iconName !== null
+
+  const activeStateIdx = cfg.mode === 'cycle' ? (cycleStateIndex ?? cfg.initialActiveIndex) : null
+  const activeState =
+    cfg.mode === 'cycle' && activeStateIdx !== null ? cfg.states[activeStateIdx] : null
+
+  const displayLabel = activeState?.label ?? cfg.label
+  const displayIconName = activeState?.iconName ?? cfg.iconName ?? null
+  const displayColors = activeState?.colors ?? cfg.colors
+
+  const showIcon = cfg.showIcon === true && displayIconName !== null
   const showLabel = cfg.showLabel !== false
   const { iconSize, fontSize } = computeButtonPreviewMetrics(w, h, showIcon)
 
-  const normalColor = cfg.colors?.normal ?? st.primaryColor
-  const activeColor = cfg.colors?.active ?? st.primaryColor
+  const normalColor = displayColors?.normal ?? st.primaryColor
+  const activeColor = displayColors?.active ?? st.primaryColor
   const stateColor = active ? activeColor : normalColor
   const bgColor = active ? activeColor + '55' : normalColor + '18'
   const borderColor = active ? activeColor : st.secondaryColor
@@ -58,9 +68,9 @@ export const ButtonPreview = memo(function ButtonPreview({
         transition: 'background 0.1s, border-color 0.1s',
       }}
     >
-      {showIcon && (
+      {showIcon && displayIconName !== null && (
         <div style={{ flexShrink: 0, display: 'flex' }}>
-          <SensorIcon name={iconName} size={iconSize} color={textColor + 'CC'} />
+          <SensorIcon name={displayIconName} size={iconSize} color={textColor + 'CC'} />
         </div>
       )}
       {showLabel && (
@@ -78,7 +88,7 @@ export const ButtonPreview = memo(function ButtonPreview({
             lineHeight: 1.1,
           }}
         >
-          {cfg.label}
+          {displayLabel}
         </span>
       )}
     </div>
