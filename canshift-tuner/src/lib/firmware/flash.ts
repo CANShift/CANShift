@@ -1,6 +1,8 @@
 const FLASH_BAUD = 921_600
 const MERGED_FLASH_OFFSET = 0x0
 
+const SUPPORTED_CHIPS: readonly string[] = ['ESP32']
+
 let esptoolModulePromise: Promise<typeof import('esptool-js')> | null = null
 
 const loadEsptool = (): Promise<typeof import('esptool-js')> => {
@@ -24,6 +26,17 @@ export class FlashError extends Error {
     super(message)
     this.name = 'FlashError'
     this.cause = cause
+  }
+}
+
+export class UnsupportedChipError extends Error {
+  readonly detectedChip: string
+  constructor(detectedChip: string) {
+    super(
+      `Refusing to flash — detected ${detectedChip}, CANShift firmware is built only for classic ESP32. Writing it onto a different family will brick the device.`
+    )
+    this.name = 'UnsupportedChipError'
+    this.detectedChip = detectedChip
   }
 }
 
@@ -58,6 +71,12 @@ export const flashFirmware = async ({
         'Could not enter ESP32 ROM bootloader. Hold BOOT, tap RESET (or unplug/replug while holding BOOT), then retry.',
         err
       )
+    }
+
+    const detectedChip = loader.chip.CHIP_NAME
+    onLog(`Detected chip: ${detectedChip}`)
+    if (!SUPPORTED_CHIPS.includes(detectedChip)) {
+      throw new UnsupportedChipError(detectedChip)
     }
 
     try {
