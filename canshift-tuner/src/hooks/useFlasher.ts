@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { flashFirmware, FlashError } from '../lib/firmware/flash'
+import { useConnectionStore } from '../stores/connection.store'
 import { useFirmwareSelectionStore } from '../stores/firmware-selection.store'
 import { useLogStore } from '../stores/log.store'
 
@@ -11,6 +12,31 @@ export type FlasherState =
 
 const isWebSerialAvailable = (): boolean =>
   typeof navigator !== 'undefined' && 'serial' in navigator
+
+const DISCONNECT_WAIT_MS = 1500
+const DISCONNECT_POLL_MS = 50
+
+const waitForDisconnect = async (): Promise<void> => {
+  const start = Date.now()
+  while (Date.now() - start < DISCONNECT_WAIT_MS) {
+    if (useConnectionStore.getState().status === 'disconnected') return
+    await new Promise<void>((resolve) => setTimeout(resolve, DISCONNECT_POLL_MS))
+  }
+}
+
+const acquirePort = async (
+  log: ReturnType<typeof useLogStore.getState>['push']
+): Promise<SerialPort> => {
+  const conn = useConnectionStore.getState()
+  if (conn.port && conn.status === 'connected') {
+    const port = conn.port
+    log('info', 'Releasing tuner port for flashing')
+    conn.disconnect()
+    await waitForDisconnect()
+    return port
+  }
+  return navigator.serial.requestPort()
+}
 
 export interface UseFlasher {
   state: FlasherState
@@ -55,7 +81,7 @@ const runFlash = async (
   log: ReturnType<typeof useLogStore.getState>['push'],
   setState: (next: FlasherState) => void
 ): Promise<void> => {
-  const port = await navigator.serial.requestPort()
+  const port = await acquirePort(log)
   setState({ kind: 'flashing', written: 0, total: bytes.byteLength })
   await flashFirmware({
     port,
@@ -68,5 +94,8 @@ const runFlash = async (
     },
   })
   setState({ kind: 'success' })
-  log('success', 'Flash completed — dash is rebooting')
+  log(
+    'success',
+    'Flash completed — dash is rebooting. Reconnect via Welcome when it comes back up.'
+  )
 }
