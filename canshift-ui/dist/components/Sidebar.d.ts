@@ -20,8 +20,10 @@ export interface SidebarLinkProps {
 export interface SidebarProps {
     activeRoute: string;
     offline: boolean;
+    collapsed?: boolean;
+    onToggleCollapse?: () => void;
     LinkComponent?: ComponentType<SidebarLinkProps>;
 }
-export declare const Sidebar: ({ activeRoute, offline, LinkComponent, }: SidebarProps) => import("react").JSX.Element;
+export declare const Sidebar: ({ activeRoute, offline, collapsed, onToggleCollapse, LinkComponent, }: SidebarProps) => import("react").JSX.Element;
 export {};
 //# sourceMappingURL=Sidebar.d.ts.map
