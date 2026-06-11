@@ -1,12 +1,17 @@
 import { Button } from '@/components/ui/button'
+import type { FirmwareSelection } from '../../stores/firmware-selection.store'
 import { useFirmwareSelectionStore } from '../../stores/firmware-selection.store'
 import { FlashSection } from './FlashSection'
 
+const labelFor = (selection: FirmwareSelection): string => {
+  if (selection.kind === 'release') return `Flash ${selection.release.tag} (coming soon)`
+  if (selection.kind === 'local') return `Flash ${selection.firmware.name} (coming soon)`
+  return 'Flash firmware'
+}
+
 export const FlashActionSection = () => {
   const selection = useFirmwareSelectionStore((s) => s.selection)
-  const status = selection.kind === 'local' ? 'active' : 'disabled'
-  const buttonLabel =
-    selection.kind === 'local' ? `Flash ${selection.firmware.name} (coming soon)` : 'Flash firmware'
+  const status = selection.kind === 'none' ? 'disabled' : 'active'
 
   return (
     <FlashSection step={3} title="Flash" status={status}>
@@ -16,7 +21,7 @@ export const FlashActionSection = () => {
       </p>
       <div>
         <Button type="button" variant="default" size="default" disabled>
-          {buttonLabel}
+          {labelFor(selection)}
         </Button>
       </div>
     </FlashSection>
