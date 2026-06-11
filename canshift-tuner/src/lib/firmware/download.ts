@@ -1,4 +1,5 @@
 import type { ReleaseAsset } from '@tmbk/canshift-core'
+import { verifyImageMagic } from './image'
 import { FIRMWARE_MAX_BYTES, LocalFirmwareError } from './local-firmware'
 import type { LocalFirmware } from './local-firmware'
 
@@ -54,6 +55,7 @@ export const downloadFirmwareAsset = async (
     throw new LocalFirmwareError('empty', 'Downloaded firmware is empty.')
   }
 
+  verifyImageMagic(bytes)
   const sha256 = await computeSha256Hex(bytes)
 
   const expected = asset.digest
