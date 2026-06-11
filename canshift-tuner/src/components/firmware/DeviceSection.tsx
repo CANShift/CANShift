@@ -12,13 +12,14 @@ export const DeviceSection = () => {
     <FlashSection step={1} title="Device" status={status}>
       {connected && !simulationMode ? (
         <p>
-          Tuner is talking to the dash on <strong>{portPath ?? 'the active port'}</strong>. The
-          flasher reuses this connection — no second port selection needed.
+          Tuner is on <strong>{portPath ?? 'the active port'}</strong>. The flasher releases this
+          connection automatically when you click Flash, reuses the same port handle, then leaves
+          the dash disconnected once the new firmware is running. Reconnect via Welcome to resume.
         </p>
       ) : (
         <p>
-          No device connected. The flasher needs an active WebSerial link to the dash. Connect via
-          the Welcome screen, then come back here.
+          No active tuner connection. Click Flash and pick the dash port when the browser prompts —
+          the flasher syncs the ROM bootloader and releases the port afterwards.
         </p>
       )}
     </FlashSection>
