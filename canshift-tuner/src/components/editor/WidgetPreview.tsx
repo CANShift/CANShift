@@ -31,6 +31,7 @@ interface RenderContext {
   h: number
   revLimiting: boolean
   buttonActive: boolean
+  cycleStateIndex: number | undefined
   noAnimate: boolean
   testValue: number | null
   danger: boolean
@@ -78,7 +79,13 @@ const RENDERERS: RendererDispatch = {
     <WarningPreview widget={widget} w={ctx.w} h={ctx.h} noAnimate={ctx.noAnimate} />
   ),
   button: (widget, ctx) => (
-    <ButtonPreview widget={widget} w={ctx.w} h={ctx.h} active={ctx.buttonActive} />
+    <ButtonPreview
+      widget={widget}
+      w={ctx.w}
+      h={ctx.h}
+      active={ctx.buttonActive}
+      cycleStateIndex={ctx.cycleStateIndex}
+    />
   ),
   gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} />,
   timer: (widget, ctx) => <TimerPreview widget={widget} w={ctx.w} h={ctx.h} />,
@@ -92,6 +99,7 @@ interface WidgetPreviewProps {
   palette?: PagePalette
   revLimiting?: boolean
   buttonActive?: boolean
+  cycleStateIndex?: number | undefined
   noAnimate?: boolean
   testValue?: number | null
 }
@@ -115,6 +123,7 @@ const WidgetPreviewImpl = ({
   palette,
   revLimiting = false,
   buttonActive = false,
+  cycleStateIndex,
   noAnimate = false,
   testValue = null,
 }: WidgetPreviewProps) => {
@@ -130,6 +139,7 @@ const WidgetPreviewImpl = ({
     h,
     revLimiting: noAnimate ? false : revLimiting,
     buttonActive,
+    cycleStateIndex,
     noAnimate,
     testValue,
     danger,

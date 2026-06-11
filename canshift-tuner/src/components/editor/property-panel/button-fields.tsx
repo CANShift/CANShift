@@ -500,6 +500,7 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
   const pageIds = pages.map((p) => p.id)
   const [previewActive, setPreviewActive] = useState(false)
+  const [previewStateIdx, setPreviewStateIdx] = useState(0)
 
   if (widget.config.type !== 'button') return null
   const cfg: ButtonWidgetConfig = widget.config
@@ -512,6 +513,9 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const previewW = Math.round(w * previewScale)
   const previewH = Math.round(h * previewScale)
 
+  const cycleStateCount = cfg.mode === 'cycle' ? cfg.states.length : 0
+  const clampedPreviewIdx = cycleStateCount > 0 ? previewStateIdx % cycleStateCount : 0
+
   const handleModeChange = (next: 'single' | 'cycle') => {
     if (cfg.mode === next) return
     if (cfg.mode === 'single' && next === 'cycle') {
@@ -519,6 +523,7 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
     } else if (cfg.mode === 'cycle' && next === 'single') {
       onChange({ config: convertCycleToSingle(cfg, pageIds) })
     }
+    setPreviewStateIdx(0)
   }
 
   return (
@@ -539,25 +544,48 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
               displayW={previewW}
               displayH={previewH}
               buttonActive={previewActive}
+              cycleStateIndex={cfg.mode === 'cycle' ? clampedPreviewIdx : undefined}
             />
           </div>
-          <button
-            onClick={() => {
-              setPreviewActive((v) => !v)
-            }}
-            style={{
-              fontSize: 10,
-              padding: '3px 8px',
-              background: previewActive ? '#2A1A1A' : 'transparent',
-              border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
-              borderRadius: 3,
-              color: previewActive ? '#FF4444' : '#AAAAAA',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            {previewActive ? 'Active' : 'Idle'}
-          </button>
+          {cfg.mode === 'single' ? (
+            <button
+              onClick={() => {
+                setPreviewActive((v) => !v)
+              }}
+              style={{
+                fontSize: 10,
+                padding: '3px 8px',
+                background: previewActive ? '#2A1A1A' : 'transparent',
+                border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
+                borderRadius: 3,
+                color: previewActive ? '#FF4444' : '#AAAAAA',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              {previewActive ? 'Active' : 'Idle'}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setPreviewStateIdx((i) => (i + 1) % Math.max(1, cycleStateCount))
+              }}
+              style={{
+                fontSize: 10,
+                padding: '3px 8px',
+                background: 'transparent',
+                border: '1px solid #2A2A2A',
+                borderRadius: 3,
+                color: '#AAAAAA',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontFamily: 'monospace',
+              }}
+              title="Click to preview next cycle state"
+            >
+              {clampedPreviewIdx + 1} / {Math.max(1, cycleStateCount)} ›
+            </button>
+          )}
         </div>
       </Field>
 
