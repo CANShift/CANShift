@@ -17,6 +17,7 @@ export type {
   GaugeArcFillStyle,
   WarningWidgetConfig,
   ButtonWidgetConfig,
+  CycleButtonState,
   TimerWidgetConfig,
   GearWidgetConfig,
   ImageWidgetConfig,
@@ -34,6 +35,7 @@ export type {
 
 export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './schemas/dashboard.js'
 export { CRUISE_CONTROL_OPS } from './schemas/dashboard.js'
+export { MIN_CYCLE_STATES, MAX_CYCLE_STATES } from './schemas/dashboard.js'
 export { PAGE_TEMPLATES, PageTemplateSchema } from './schemas/dashboard.js'
 export type {
   SignalConfig,

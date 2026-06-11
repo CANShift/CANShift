@@ -1469,4 +1469,128 @@ describe('schema bounds hardening', () => {
       ).toBe(true)
     })
   })
+
+  describe('ButtonWidget cycling states (#1380)', () => {
+    const singleStateAction = {
+      category: 'ecu' as const,
+      type: 'map_switch' as const,
+      mapIndex: 0,
+    }
+    const cycleState = (mapIndex: number) => ({
+      label: `Map ${String(mapIndex + 1)}`,
+      action: { ...singleStateAction, mapIndex },
+    })
+    const baseStyle = {
+      primaryColor: '#FFFFFF',
+      secondaryColor: '#2A2A2A',
+      warningColor: '#FF8800',
+      criticalColor: '#FF4444',
+      textColor: '#FFFFFF',
+      fontSize: 14,
+    }
+    const baseLayout = { x: 0, y: 0, w: 80, h: 40, zOrder: 0 }
+    const buildWidget = (overrides: Record<string, unknown>) => ({
+      id: 'btn1',
+      type: 'button' as const,
+      signal: '',
+      layout: baseLayout,
+      style: baseStyle,
+      config: {
+        type: 'button' as const,
+        label: 'Maps',
+        actions: [singleStateAction],
+        ...overrides,
+      },
+    })
+
+    it('accepts a single-action button with neither states nor initialActiveIndex (backwards-compat)', () => {
+      expect(WidgetSchema.safeParse(buildWidget({})).success).toBe(true)
+    })
+
+    it('accepts a cycling button with 2 states and a valid initialActiveIndex', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [cycleState(0), cycleState(1)],
+            initialActiveIndex: 0,
+          })
+        ).success
+      ).toBe(true)
+    })
+
+    it('accepts a cycling button with 4 states (max)', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [cycleState(0), cycleState(1), cycleState(2), cycleState(3)],
+            initialActiveIndex: 3,
+          })
+        ).success
+      ).toBe(true)
+    })
+
+    it('rejects 1 state (below min)', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [cycleState(0)],
+            initialActiveIndex: 0,
+          })
+        ).success
+      ).toBe(false)
+    })
+
+    it('rejects 5 states (above max)', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [cycleState(0), cycleState(1), cycleState(2), cycleState(3), cycleState(0)],
+            initialActiveIndex: 0,
+          })
+        ).success
+      ).toBe(false)
+    })
+
+    it('rejects initialActiveIndex out of range', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [cycleState(0), cycleState(1)],
+            initialActiveIndex: 2,
+          })
+        ).success
+      ).toBe(false)
+    })
+
+    it('rejects states without initialActiveIndex', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [cycleState(0), cycleState(1)],
+          })
+        ).success
+      ).toBe(false)
+    })
+
+    it('rejects initialActiveIndex without states', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            initialActiveIndex: 0,
+          })
+        ).success
+      ).toBe(false)
+    })
+
+    it('rejects a state with an empty label', () => {
+      expect(
+        WidgetSchema.safeParse(
+          buildWidget({
+            states: [{ label: '', action: singleStateAction }, cycleState(1)],
+            initialActiveIndex: 0,
+          })
+        ).success
+      ).toBe(false)
+    })
+  })
 })

@@ -160,6 +160,25 @@ export type DashboardButtonAction = NavigateAction
 export type EcuButtonAction = MapSwitchAction | CanRawAction | CruiseControlAction
 export type ButtonAction = z.infer<typeof ButtonActionSchema>
 
+export const MIN_CYCLE_STATES = 2
+export const MAX_CYCLE_STATES = 4
+
+export const CycleButtonStateSchema = z
+  .object({
+    id: z.string().min(1).optional(),
+    label: z.string().min(1).max(STRING_CAPS.WIDGET_LABEL),
+    iconName: SensorIconNameSchema.optional(),
+    colors: z
+      .object({
+        normal: HexColorSchema,
+        active: HexColorSchema,
+      })
+      .strict()
+      .optional(),
+    action: ButtonActionSchema,
+  })
+  .strict()
+
 export const ButtonWidgetConfigSchema = z
   .object({
     type: z.literal('button'),
@@ -183,6 +202,15 @@ export const ButtonWidgetConfigSchema = z
         FIRMWARE_CAPS.MAX_BUTTON_ACTIONS,
         `actions cannot exceed ${FIRMWARE_CAPS.MAX_BUTTON_ACTIONS.toString()} entries (firmware cap)`
       ),
+    states: z
+      .array(CycleButtonStateSchema)
+      .min(
+        MIN_CYCLE_STATES,
+        `cycle states must contain at least ${String(MIN_CYCLE_STATES)} entries`
+      )
+      .max(MAX_CYCLE_STATES, `cycle states cannot exceed ${String(MAX_CYCLE_STATES)} entries`)
+      .optional(),
+    initialActiveIndex: z.number().int().min(0).optional(),
   })
   .strict()
 
@@ -261,6 +289,33 @@ export const WidgetSchema = z
           code: z.ZodIssueCode.custom,
           message: 'gauge: dangerLevel must be in [minValue, maxValue]',
           path: ['config', 'dangerLevel'],
+        })
+      }
+    }
+    if (cfg.type === 'button') {
+      const hasStates = cfg.states !== undefined
+      const hasIndex = cfg.initialActiveIndex !== undefined
+      if (hasStates && !hasIndex) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'initialActiveIndex is required when states is set',
+          path: ['config', 'initialActiveIndex'],
+        })
+      } else if (!hasStates && hasIndex) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'initialActiveIndex requires a states array',
+          path: ['config', 'initialActiveIndex'],
+        })
+      } else if (
+        cfg.states !== undefined &&
+        cfg.initialActiveIndex !== undefined &&
+        cfg.initialActiveIndex >= cfg.states.length
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `initialActiveIndex (${String(cfg.initialActiveIndex)}) must be less than states.length (${String(cfg.states.length)})`,
+          path: ['config', 'initialActiveIndex'],
         })
       }
     }
@@ -407,6 +462,7 @@ export type GaugeArcFillStyle = z.infer<typeof GaugeArcFillStyleSchema>
 export type GaugeWidgetConfig = ExactOptional<z.infer<typeof GaugeWidgetConfigSchema>>
 export type WarningWidgetConfig = ExactOptional<z.infer<typeof WarningWidgetConfigSchema>>
 export type ButtonWidgetConfig = ExactOptional<z.infer<typeof ButtonWidgetConfigSchema>>
+export type CycleButtonState = ExactOptional<z.infer<typeof CycleButtonStateSchema>>
 export type TimerWidgetConfig = ExactOptional<z.infer<typeof TimerWidgetConfigSchema>>
 export type GearWidgetConfig = ExactOptional<z.infer<typeof GearWidgetConfigSchema>>
 export type ImageWidgetConfig = ExactOptional<z.infer<typeof ImageWidgetConfigSchema>>
