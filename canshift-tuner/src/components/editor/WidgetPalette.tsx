@@ -86,6 +86,7 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
         case 'button':
           return {
             type: 'button' as const,
+            mode: 'single' as const,
             label: 'Button',
             iconName: item.icon,
             showLabel: true,

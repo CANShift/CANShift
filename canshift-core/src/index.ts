@@ -17,6 +17,9 @@ export type {
   GaugeArcFillStyle,
   WarningWidgetConfig,
   ButtonWidgetConfig,
+  SingleActionButtonConfig,
+  CycleButtonConfig,
+  CycleButtonState,
   TimerWidgetConfig,
   GearWidgetConfig,
   ImageWidgetConfig,
@@ -34,6 +37,7 @@ export type {
 
 export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './schemas/dashboard.js'
 export { CRUISE_CONTROL_OPS } from './schemas/dashboard.js'
+export { MIN_CYCLE_STATES, MAX_CYCLE_STATES } from './schemas/dashboard.js'
 export { PAGE_TEMPLATES, PageTemplateSchema } from './schemas/dashboard.js'
 export type {
   SignalConfig,
@@ -190,7 +194,7 @@ export type {
 export type { DesignTokens } from './design-tokens.js'
 export { COLOR_KEY_TO_CSS_VAR, DARK_TOKENS, tokensToCssVars } from './design-tokens.js'
 
-export const CURRENT_SCHEMA_VERSION = '1.22.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.23.0' as const
 
 export const PRODUCT_NAME = 'CANShift' as const
 

@@ -59,6 +59,7 @@ const buttonWithActions = (count: number): Record<string, unknown> => ({
   style: widgetStyle,
   config: {
     type: 'button',
+    mode: 'single',
     label: 'go',
     actions: Array.from({ length: count }, (_, i) => ({
       category: 'dashboard',
