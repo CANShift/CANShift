@@ -1,5 +1,5 @@
 import { HexColorSchema } from '@tmbk/canshift-core'
-import type { GaugeDisplayStyle, WidgetType, SensorIconName } from '@tmbk/canshift-core'
+import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/sizeTokens'
@@ -25,7 +25,6 @@ interface PaletteItem {
   defaultSignal: string
   defaultW: number
   defaultH: number
-  gaugeStyle?: GaugeDisplayStyle
 }
 
 const PALETTE_ITEMS: PaletteItem[] = [
@@ -36,16 +35,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
     defaultSignal: 'rpm',
     defaultW: SIZE_TOKENS.XL.w,
     defaultH: SIZE_TOKENS.XL.h,
-    gaugeStyle: 'arc',
-  },
-  {
-    type: 'gauge',
-    label: 'Sweep',
-    icon: 'map_icon',
-    defaultSignal: 'map_kpa',
-    defaultW: SIZE_TOKENS['H-XL'].w,
-    defaultH: SIZE_TOKENS['H-XL'].h,
-    gaugeStyle: 'sweep',
   },
   {
     type: 'button',
@@ -84,29 +73,16 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
 
     const baseConfig = (() => {
       switch (item.type) {
-        case 'gauge': {
-          const style: GaugeDisplayStyle = item.gaugeStyle ?? 'arc'
-          if (style === 'sweep') {
-            return {
-              type: 'gauge' as const,
-              displayStyle: 'sweep' as const,
-              minValue: 0,
-              maxValue: 300,
-              dangerLevel: 250,
-              decimalPlaces: 0,
-              iconName: item.icon,
-            }
-          }
+        case 'gauge':
           return {
             type: 'gauge' as const,
-            displayStyle: style,
+            displayStyle: 'arc' as const,
             minValue: 0,
             maxValue: 8000,
             dangerLevel: 7000,
             decimalPlaces: 0,
             iconName: item.icon,
           }
-        }
         case 'button':
           return {
             type: 'button' as const,
