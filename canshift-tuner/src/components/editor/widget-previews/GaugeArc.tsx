@@ -50,8 +50,8 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
   const cx = w / 2
   const r = Math.min(w * 0.45, h * 0.46)
   const cy = h * 0.5
-  const valueYOffset = -8
-  const unitYOffset = 16
+  const valueYOffset = 0
+  const unitYOffset = 22
   const strokeW = Math.max(5, r * 0.24)
 
   const revFlash = cfg.revFlash === true
