@@ -51,7 +51,7 @@ const FeedbackButton = () => {
             boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
           }}
         >
-          Got a bug or a suggestion? Click the bubble.
+          Une suggestion, un bug ? Clique sur la bulle.
           <button
             type="button"
             onClick={dismissHint}
@@ -63,7 +63,7 @@ const FeedbackButton = () => {
               cursor: 'pointer',
               fontSize: 12,
             }}
-            aria-label="Dismiss hint"
+            aria-label="Masquer l'invite"
           >
             ✕
           </button>
@@ -72,8 +72,8 @@ const FeedbackButton = () => {
       <button
         type="button"
         className="posthog-feedback-trigger"
-        aria-label="Send feedback"
-        title="Send feedback"
+        aria-label="Envoyer un feedback"
+        title="Envoyer un feedback"
         style={{
           width: 44,
           height: 44,
