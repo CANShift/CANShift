@@ -16,7 +16,9 @@ const PAD_BOTTOM = 4
 const TARGET_TICK_COUNT = 8
 const RISE_SAMPLES = 28
 const KNEE_FRACTION = 0.28
-const LABEL_INSET = 14
+const LEFT_BAND = 6
+const TOP_BAND = 18
+const LABEL_INSET = 12
 const VALUE_LABEL_INSET_TOP = 6
 
 const pickTickStep = (range: number): number => {
@@ -49,7 +51,7 @@ const curveYAt = (x: number, innerW: number, innerH: number): number => {
   return innerH * (1 - smootherstep(t))
 }
 
-const buildCurvePath = (innerW: number, innerH: number): string => {
+const buildOuterCurvePath = (innerW: number, innerH: number): string => {
   const kneeX = innerW * KNEE_FRACTION
   const parts: string[] = []
   for (let i = 0; i <= RISE_SAMPLES; i++) {
@@ -62,9 +64,33 @@ const buildCurvePath = (innerW: number, innerH: number): string => {
   return parts.join(' ')
 }
 
-const buildSilhouettePath = (innerW: number, innerH: number): string => {
-  const curve = buildCurvePath(innerW, innerH)
+const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
+  const curve = buildOuterCurvePath(innerW, innerH)
   return `${curve} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L 0,${innerH.toFixed(2)} Z`
+}
+
+const buildInnerCurvePath = (innerW: number, innerH: number): string => {
+  const innerInnerW = Math.max(0, innerW - LEFT_BAND)
+  const innerKneeX = innerInnerW * KNEE_FRACTION
+  const innerRiseH = Math.max(0, innerH - TOP_BAND)
+  const parts: string[] = []
+  for (let i = 0; i <= RISE_SAMPLES; i++) {
+    const t = i / RISE_SAMPLES
+    const x = LEFT_BAND + t * innerKneeX
+    const y = TOP_BAND + innerRiseH * (1 - smootherstep(t))
+    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
+  }
+  parts.push(`L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`)
+  return parts.join(' ')
+}
+
+const buildInnerSilhouettePath = (innerW: number, innerH: number): string => {
+  const curve = buildInnerCurvePath(innerW, innerH)
+  return `${curve} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
+}
+
+const buildBandPath = (innerW: number, innerH: number): string => {
+  return `${buildOuterSilhouettePath(innerW, innerH)} ${buildInnerSilhouettePath(innerW, innerH)}`
 }
 
 export const GaugeSweepPreview = memo(function GaugeSweepPreview({
@@ -86,8 +112,9 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const innerW = Math.max(1, w - PAD_LEFT - PAD_RIGHT)
   const innerH = Math.max(1, h - PAD_TOP - PAD_BOTTOM)
 
-  const curvePath = buildCurvePath(innerW, innerH)
-  const silhouettePath = buildSilhouettePath(innerW, innerH)
+  const outerCurvePath = buildOuterCurvePath(innerW, innerH)
+  const innerCurvePath = buildInnerCurvePath(innerW, innerH)
+  const bandPath = buildBandPath(innerW, innerH)
   const fillWidth = innerW * pct
   const fillClipId = `sweep-left-${widget.id}`
   const restClipId = `sweep-right-${widget.id}`
@@ -135,18 +162,25 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
         </defs>
 
         <g clipPath={`url(#${restClipId})`}>
-          <path d={silhouettePath} fill={restColor} stroke="none" />
+          <path d={bandPath} fillRule="evenodd" fill={restColor} stroke="none" />
         </g>
         <g clipPath={`url(#${fillClipId})`}>
-          <path d={silhouettePath} fill={fillColor} stroke="none" />
+          <path d={bandPath} fillRule="evenodd" fill={fillColor} stroke="none" />
         </g>
 
         <path
-          d={curvePath}
+          d={outerCurvePath}
           fill="none"
           stroke={highlightColor}
           strokeOpacity={0.55}
           strokeWidth={1.5}
+        />
+        <path
+          d={innerCurvePath}
+          fill="none"
+          stroke={highlightColor}
+          strokeOpacity={0.25}
+          strokeWidth={1}
         />
 
         {tickValues.map((tick) => {
