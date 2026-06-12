@@ -16,16 +16,15 @@ const PAD_BOTTOM = 4
 const TARGET_TICK_COUNT = 8
 const RISE_SAMPLES = 28
 const KNEE_FRACTION = 0.3
+const STRAIGHT_LEG_FRACTION = 0.45
 const LEFT_BAND = 12
 const TOP_BAND = 32
 const LABEL_BAND_OFFSET = 4
-const VALUE_BOX_W = 110
-const VALUE_BOX_H = 36
-const VALUE_BOX_RIGHT_PAD = 4
-const VALUE_BOX_BOTTOM_PAD = 6
-const VALUE_BOX_RADIUS = 6
-const VALUE_FONT_SIZE = 22
-const VALUE_LABEL_FONT_SIZE = 8
+const VALUE_RIGHT_PAD = 6
+const VALUE_BOTTOM_PAD = 4
+const VALUE_FONT_SIZE = 30
+const VALUE_LABEL_FONT_SIZE = 9
+const VALUE_LABEL_GAP = 2
 
 const pickTickStep = (range: number): number => {
   if (range <= 0) return 1
@@ -50,24 +49,29 @@ const smootherstep = (t: number): number => {
   return t * t * t * (t * (t * 6 - 15) + 10)
 }
 
+const legTopYAt = (innerH: number): number => innerH * STRAIGHT_LEG_FRACTION
+
 const innerCurveYAt = (x: number, innerW: number, innerH: number): number => {
   const kneeX = innerW * KNEE_FRACTION
   if (x >= kneeX) return TOP_BAND
-  if (x <= LEFT_BAND) return innerH
+  const legTopY = legTopYAt(innerH)
+  if (x <= LEFT_BAND) return legTopY
   const innerRiseW = kneeX - LEFT_BAND
-  const innerRiseH = innerH - TOP_BAND
-  const t = (x - LEFT_BAND) / innerRiseW
-  return TOP_BAND + innerRiseH * (1 - smootherstep(t))
+  const t = innerRiseW <= 0 ? 1 : (x - LEFT_BAND) / innerRiseW
+  return legTopY + (TOP_BAND - legTopY) * smootherstep(t)
 }
 
 const buildOuterCurvePath = (innerW: number, innerH: number): string => {
   const kneeX = innerW * KNEE_FRACTION
+  const legTopY = legTopYAt(innerH)
   const parts: string[] = []
-  for (let i = 0; i <= RISE_SAMPLES; i++) {
+  parts.push(`M 0,${innerH.toFixed(2)}`)
+  parts.push(`L 0,${legTopY.toFixed(2)}`)
+  for (let i = 1; i <= RISE_SAMPLES; i++) {
     const t = i / RISE_SAMPLES
     const x = t * kneeX
-    const y = innerH * (1 - smootherstep(t))
-    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
+    const y = legTopY * (1 - smootherstep(t))
+    parts.push(`L ${x.toFixed(2)},${y.toFixed(2)}`)
   }
   parts.push(`L ${innerW.toFixed(2)},0`)
   return parts.join(' ')
@@ -75,14 +79,16 @@ const buildOuterCurvePath = (innerW: number, innerH: number): string => {
 
 const buildInnerCurvePath = (innerW: number, innerH: number): string => {
   const kneeX = innerW * KNEE_FRACTION
+  const legTopY = legTopYAt(innerH)
   const innerRiseW = kneeX - LEFT_BAND
-  const innerRiseH = innerH - TOP_BAND
   const parts: string[] = []
-  for (let i = 0; i <= RISE_SAMPLES; i++) {
+  parts.push(`M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)}`)
+  parts.push(`L ${LEFT_BAND.toFixed(2)},${legTopY.toFixed(2)}`)
+  for (let i = 1; i <= RISE_SAMPLES; i++) {
     const t = i / RISE_SAMPLES
     const x = LEFT_BAND + t * innerRiseW
-    const y = TOP_BAND + innerRiseH * (1 - smootherstep(t))
-    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
+    const y = legTopY + (TOP_BAND - legTopY) * smootherstep(t)
+    parts.push(`L ${x.toFixed(2)},${y.toFixed(2)}`)
   }
   parts.push(`L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`)
   return parts.join(' ')
@@ -130,7 +136,6 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const restColor = '#2A2A2A'
   const highlightColor = '#FFFFFF'
   const labelColor = '#FFFFFF'
-  const valueBoxStrokeColor = '#888888'
   const valueLabelColor = '#888888'
 
   const range = cfg.maxValue - cfg.minValue
@@ -148,8 +153,9 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const valueText = raw.toFixed(cfg.decimalPlaces)
   const valueStr = (cfg.prefix ?? '') + valueText + (cfg.suffix ?? (signalUnit ? signalUnit : ''))
 
-  const valueBoxX = innerW - VALUE_BOX_W - VALUE_BOX_RIGHT_PAD
-  const valueBoxY = innerH - VALUE_BOX_H - VALUE_BOX_BOTTOM_PAD - 8
+  const valueX = innerW - VALUE_RIGHT_PAD
+  const valueLabelY = innerH - VALUE_BOTTOM_PAD
+  const valueY = valueLabelY - VALUE_LABEL_FONT_SIZE - VALUE_LABEL_GAP
 
   return (
     <svg
@@ -223,41 +229,27 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
           )
         })}
 
-        <g transform={`translate(${String(valueBoxX)}, ${String(valueBoxY)})`}>
-          <rect
-            x={0}
-            y={0}
-            width={VALUE_BOX_W}
-            height={VALUE_BOX_H}
-            rx={VALUE_BOX_RADIUS}
-            ry={VALUE_BOX_RADIUS}
-            fill="none"
-            stroke={valueBoxStrokeColor}
-            strokeOpacity={0.6}
-            strokeWidth={1.5}
-          />
-          <text
-            x={VALUE_BOX_W / 2}
-            y={VALUE_BOX_H / 2 + VALUE_FONT_SIZE * 0.35}
-            fontSize={VALUE_FONT_SIZE}
-            fontWeight={700}
-            fill={st.textColor}
-            textAnchor="middle"
-            style={{ letterSpacing: '0.02em' }}
-          >
-            {valueStr}
-          </text>
-          <text
-            x={VALUE_BOX_W / 2}
-            y={VALUE_BOX_H + 10}
-            fontSize={VALUE_LABEL_FONT_SIZE}
-            fill={valueLabelColor}
-            textAnchor="middle"
-            style={{ letterSpacing: '0.12em', textTransform: 'uppercase' }}
-          >
-            {signalLabel}
-          </text>
-        </g>
+        <text
+          x={valueX}
+          y={valueY}
+          fontSize={VALUE_FONT_SIZE}
+          fontWeight={700}
+          fill={st.textColor}
+          textAnchor="end"
+          style={{ letterSpacing: '0.02em' }}
+        >
+          {valueStr}
+        </text>
+        <text
+          x={valueX}
+          y={valueLabelY}
+          fontSize={VALUE_LABEL_FONT_SIZE}
+          fill={valueLabelColor}
+          textAnchor="end"
+          style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}
+        >
+          {signalLabel}
+        </text>
 
         {danger && (
           <rect
