@@ -13,9 +13,10 @@ const PAD_LEFT = 12
 const PAD_RIGHT = 10
 const PAD_TOP = 14
 const PAD_BOTTOM = 16
-const CURVE_FRACTION = 0.32
+const CURVE_FRACTION = 0.22
+const CURVE_CONTROL_BIAS = 0.25
 const TARGET_TICK_COUNT = 8
-const CHANNEL_THICKNESS = 10
+const CHANNEL_THICKNESS = 18
 const STROKE_W = 1.5
 
 const pickTickStep = (range: number): number => {
@@ -37,13 +38,17 @@ const formatTick = (value: number, step: number): string => {
 
 const buildChannelPath = (innerW: number, innerH: number, t: number): string => {
   const curveW = Math.max(t * 2 + 8, Math.min(innerW * CURVE_FRACTION, innerH * 1.2))
+  const outerCx = curveW * CURVE_CONTROL_BIAS
+  const outerCy = innerH * CURVE_CONTROL_BIAS
+  const innerCx = t + (curveW - t) * CURVE_CONTROL_BIAS
+  const innerCy = t + (innerH - t) * CURVE_CONTROL_BIAS
   return [
     `M 0,${String(innerH)}`,
-    `Q 0,0 ${String(curveW)},0`,
+    `Q ${String(outerCx)},${String(outerCy)} ${String(curveW)},0`,
     `L ${String(innerW)},0`,
     `L ${String(innerW)},${String(t)}`,
     `L ${String(curveW)},${String(t)}`,
-    `Q ${String(t)},${String(t)} ${String(t)},${String(innerH)}`,
+    `Q ${String(innerCx)},${String(innerCy)} ${String(t)},${String(innerH)}`,
     'Z',
   ].join(' ')
 }
@@ -72,8 +77,6 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const clipId = `sweep-fill-${widget.id}`
 
   const trackColor = '#2A2A2A'
-  const channelBg = '#161616'
-  const sweepBg = '#0F0F0F'
   const baselineColor = '#2A2A2A'
   const tickColor = '#3A3A3A'
   const tickLabelColor = '#888888'
@@ -101,7 +104,6 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
       viewBox={`0 0 ${String(w)} ${String(h)}`}
       style={{
         display: 'block',
-        background: sweepBg,
         fontFamily: FONT_FAMILY,
         userSelect: 'none',
       }}
@@ -145,7 +147,7 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
 
         <path
           d={channelPath}
-          fill={channelBg}
+          fill="none"
           stroke={trackColor}
           strokeWidth={STROKE_W}
           strokeLinejoin="round"
