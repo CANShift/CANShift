@@ -9,15 +9,14 @@ export interface GaugeSweepRendererProps extends BaseRendererProps {
   signalUnit: string
 }
 
-const PAD_LEFT = 12
-const PAD_RIGHT = 10
-const PAD_TOP = 14
-const PAD_BOTTOM = 16
-const CURVE_FRACTION = 0.22
-const CURVE_CONTROL_BIAS = 0.25
+const PAD_LEFT = 4
+const PAD_RIGHT = 4
+const PAD_TOP = 8
+const PAD_BOTTOM = 4
 const TARGET_TICK_COUNT = 8
-const CHANNEL_THICKNESS = 18
-const STROKE_W = 1.5
+const CURVE_SAMPLES = 48
+const LABEL_INSET = 14
+const VALUE_LABEL_INSET_TOP = 6
 
 const pickTickStep = (range: number): number => {
   if (range <= 0) return 1
@@ -31,26 +30,36 @@ const pickTickStep = (range: number): number => {
 }
 
 const formatTick = (value: number, step: number): string => {
-  if (step >= 1000) return `${(value / 1000).toFixed(0)}k`
+  if (step >= 1000) return `${(value / 1000).toFixed(0)}`
   if (step >= 1) return value.toFixed(0)
   return value.toFixed(1)
 }
 
-const buildChannelPath = (innerW: number, innerH: number, t: number): string => {
-  const curveW = Math.max(t * 2 + 8, Math.min(innerW * CURVE_FRACTION, innerH * 1.2))
-  const outerCx = curveW * CURVE_CONTROL_BIAS
-  const outerCy = innerH * CURVE_CONTROL_BIAS
-  const innerCx = t + (curveW - t) * CURVE_CONTROL_BIAS
-  const innerCy = t + (innerH - t) * CURVE_CONTROL_BIAS
-  return [
-    `M 0,${String(innerH)}`,
-    `Q ${String(outerCx)},${String(outerCy)} ${String(curveW)},0`,
-    `L ${String(innerW)},0`,
-    `L ${String(innerW)},${String(t)}`,
-    `L ${String(curveW)},${String(t)}`,
-    `Q ${String(innerCx)},${String(innerCy)} ${String(t)},${String(innerH)}`,
-    'Z',
-  ].join(' ')
+const smootherstep = (t: number): number => {
+  if (t <= 0) return 0
+  if (t >= 1) return 1
+  return t * t * t * (t * (t * 6 - 15) + 10)
+}
+
+const curveYAt = (x: number, innerW: number, innerH: number): number => {
+  const t = innerW <= 0 ? 0 : x / innerW
+  return innerH * (1 - smootherstep(t))
+}
+
+const buildCurvePath = (innerW: number, innerH: number): string => {
+  const parts: string[] = []
+  for (let i = 0; i <= CURVE_SAMPLES; i++) {
+    const t = i / CURVE_SAMPLES
+    const x = t * innerW
+    const y = innerH * (1 - smootherstep(t))
+    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
+  }
+  return parts.join(' ')
+}
+
+const buildSilhouettePath = (innerW: number, innerH: number): string => {
+  const curve = buildCurvePath(innerW, innerH)
+  return `${curve} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L 0,${innerH.toFixed(2)} Z`
 }
 
 export const GaugeSweepPreview = memo(function GaugeSweepPreview({
@@ -72,15 +81,17 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const innerW = Math.max(1, w - PAD_LEFT - PAD_RIGHT)
   const innerH = Math.max(1, h - PAD_TOP - PAD_BOTTOM)
 
-  const channelPath = buildChannelPath(innerW, innerH, CHANNEL_THICKNESS)
+  const curvePath = buildCurvePath(innerW, innerH)
+  const silhouettePath = buildSilhouettePath(innerW, innerH)
   const fillWidth = innerW * pct
-  const clipId = `sweep-fill-${widget.id}`
+  const fillClipId = `sweep-left-${widget.id}`
+  const restClipId = `sweep-right-${widget.id}`
 
-  const trackColor = '#2A2A2A'
-  const baselineColor = '#2A2A2A'
-  const tickColor = '#3A3A3A'
-  const tickLabelColor = '#888888'
   const fillColor = beyondDanger ? '#FF4444' : st.primaryColor
+  const restColor = '#2A2A2A'
+  const highlightColor = '#FFFFFF'
+  const labelColor = '#FFFFFF'
+  const signalLabelColor = '#888888'
 
   const range = cfg.maxValue - cfg.minValue
   const step = pickTickStep(range)
@@ -108,75 +119,73 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
         userSelect: 'none',
       }}
     >
-      <text
-        x={PAD_LEFT}
-        y={PAD_TOP - 4}
-        fontSize={9}
-        fill={tickLabelColor}
-        textAnchor="start"
-        style={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}
-      >
-        {signalLabel}
-      </text>
-      <text
-        x={w - PAD_RIGHT}
-        y={PAD_TOP - 4}
-        fontSize={10}
-        fill={st.textColor}
-        textAnchor="end"
-        style={{ fontWeight: 700 }}
-      >
-        {valueStr}
-      </text>
-
       <g transform={`translate(${String(PAD_LEFT)}, ${String(PAD_TOP)})`}>
-        <line
-          x1={0}
-          y1={innerH + 0.5}
-          x2={innerW}
-          y2={innerH + 0.5}
-          stroke={baselineColor}
-          strokeWidth={1}
-        />
-
         <defs>
-          <clipPath id={clipId}>
+          <clipPath id={fillClipId}>
             <rect x={0} y={0} width={fillWidth} height={innerH} />
+          </clipPath>
+          <clipPath id={restClipId}>
+            <rect x={fillWidth} y={0} width={innerW - fillWidth} height={innerH} />
           </clipPath>
         </defs>
 
-        <path
-          d={channelPath}
-          fill="none"
-          stroke={trackColor}
-          strokeWidth={STROKE_W}
-          strokeLinejoin="round"
-        />
-
-        <g clipPath={`url(#${clipId})`}>
-          <path d={channelPath} fill={fillColor} fillOpacity={0.85} stroke="none" />
+        <g clipPath={`url(#${restClipId})`}>
+          <path d={silhouettePath} fill={restColor} stroke="none" />
+        </g>
+        <g clipPath={`url(#${fillClipId})`}>
+          <path d={silhouettePath} fill={fillColor} stroke="none" />
         </g>
 
+        <path
+          d={curvePath}
+          fill="none"
+          stroke={highlightColor}
+          strokeOpacity={0.55}
+          strokeWidth={1.5}
+        />
+
         {tickValues.map((tick) => {
+          if (range <= 0) return null
           const tickPct = (tick - cfg.minValue) / range
           const tickX = innerW * tickPct
-          const tickInDanger = tick >= cfg.dangerLevel
-          const tickColorActive = tickInDanger ? '#FF8800' : tickColor
+          const onCurveY = curveYAt(tickX, innerW, innerH)
+          const labelY = Math.min(innerH - 4, onCurveY + LABEL_INSET)
           return (
-            <g key={tick}>
-              <line x1={tickX} y1={2} x2={tickX} y2={9} stroke={tickColorActive} strokeWidth={1} />
-              <text
-                x={tickX}
-                y={innerH + 11}
-                fontSize={8}
-                fill={tickLabelColor}
-                textAnchor="middle"
-              >
-                {formatTick(tick, step)}
-              </text>
-            </g>
+            <text
+              key={tick}
+              x={tickX}
+              y={labelY}
+              fontSize={10}
+              fontWeight={700}
+              fill={labelColor}
+              textAnchor="middle"
+              style={{ letterSpacing: '0.04em' }}
+            >
+              {formatTick(tick, step)}
+            </text>
           )
         })}
+
+        <text
+          x={0}
+          y={innerH - 2}
+          fontSize={9}
+          fill={signalLabelColor}
+          textAnchor="start"
+          style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}
+        >
+          {signalLabel}
+        </text>
+        <text
+          x={innerW}
+          y={VALUE_LABEL_INSET_TOP}
+          fontSize={10}
+          fill={st.textColor}
+          textAnchor="end"
+          style={{ fontWeight: 700 }}
+        >
+          {valueStr}
+        </text>
 
         {danger && (
           <rect
