@@ -59,7 +59,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
       <span
         style={{
           position: 'absolute',
-          top: 1,
+          top: 4,
           left: 4,
           fontSize: 9,
           fontFamily: FONT_FAMILY,

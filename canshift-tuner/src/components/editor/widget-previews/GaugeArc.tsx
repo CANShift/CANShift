@@ -103,13 +103,27 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       >
         {(() => {
           const { int, frac } = splitDecimal(valueStr)
-          if (frac === '') return valueStr
-          return (
-            <>
-              <tspan>{int}</tspan>
-              <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{frac}</tspan>
-            </>
-          )
+          if (frac !== '') {
+            return (
+              <>
+                <tspan>{int}</tspan>
+                <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{frac}</tspan>
+              </>
+            )
+          }
+          const absInt = int.startsWith('-') ? int.slice(1) : int
+          if (absInt.length > 3) {
+            const sign = int.startsWith('-') ? '-' : ''
+            const head = absInt.slice(0, -3)
+            const tail = absInt.slice(-3)
+            return (
+              <>
+                <tspan>{sign + head}</tspan>
+                <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{tail}</tspan>
+              </>
+            )
+          }
+          return valueStr
         })()}
       </text>
       {signalUnit !== '' && (
@@ -127,7 +141,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       )}
       <text
         x={4}
-        y={SIGNAL_LABEL_FONT_SIZE + 1}
+        y={SIGNAL_LABEL_FONT_SIZE + 4}
         textAnchor="start"
         dominantBaseline="auto"
         fill="#888888"
