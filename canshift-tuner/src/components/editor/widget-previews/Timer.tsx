@@ -11,7 +11,7 @@ export const TimerPreview = memo(function TimerPreview({ widget, w, h }: BaseRen
   const st = widget.style
   const timeStr = cfg.format === 'ss.mmm' ? DEMO_SS_MMM : DEMO_MMSS
   const fontSize = Math.max(9, Math.min(h * 0.44, w * 0.22))
-  const sigFontSize = Math.max(5, Math.min(7, w * 0.07))
+  const sigFontSize = 9
 
   return (
     <div

@@ -20,7 +20,7 @@ export const WarningPreview = memo(function WarningPreview({
   const st = widget.style
 
   const iconName = cfg.iconName ?? DEFAULT_ICON
-  const sigFontSize = Math.max(8, Math.min(h * 0.16, w * 0.13, 14))
+  const sigFontSize = 9
   const labelH = sigFontSize + 4
   const iconSize = Math.max(0, Math.min(w * 0.55, h - labelH - 8, 64))
   const showSignalLabel = h >= 28
