@@ -14,12 +14,13 @@ const PAD_RIGHT = 4
 const PAD_TOP = 8
 const PAD_BOTTOM = 4
 const TARGET_TICK_COUNT = 8
-const RISE_SAMPLES = 28
-const KNEE_FRACTION = 0.28
-const LEFT_BAND = 6
-const TOP_BAND = 18
-const LABEL_INSET = 12
+const STRAIGHT_LEG_FRACTION = 0.55
+const CORNER_FRACTION_X = 0.3
+const LEFT_BAND = 16
+const TOP_BAND = 28
+const LABEL_INSET = 14
 const VALUE_LABEL_INSET_TOP = 6
+const LEG_LABEL_BOTTOM_PAD = 4
 
 const pickTickStep = (range: number): number => {
   if (range <= 0) return 1
@@ -38,55 +39,43 @@ const formatTick = (value: number, step: number): string => {
   return value.toFixed(1)
 }
 
-const smootherstep = (t: number): number => {
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  return t * t * t * (t * (t * 6 - 15) + 10)
-}
-
 const curveYAt = (x: number, innerW: number, innerH: number): number => {
-  const kneeX = innerW * KNEE_FRACTION
-  if (x >= kneeX) return 0
-  const t = kneeX <= 0 ? 0 : x / kneeX
-  return innerH * (1 - smootherstep(t))
+  const cornerStartY = innerH * STRAIGHT_LEG_FRACTION
+  const cornerEndX = innerW * CORNER_FRACTION_X
+  if (x >= cornerEndX) return 0
+  if (x <= 0) return cornerStartY
+  const t = Math.sqrt(x / cornerEndX)
+  return (1 - t) * (1 - t) * cornerStartY
 }
 
 const buildOuterCurvePath = (innerW: number, innerH: number): string => {
-  const kneeX = innerW * KNEE_FRACTION
-  const parts: string[] = []
-  for (let i = 0; i <= RISE_SAMPLES; i++) {
-    const t = i / RISE_SAMPLES
-    const x = t * kneeX
-    const y = innerH * (1 - smootherstep(t))
-    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
-  }
-  parts.push(`L ${innerW.toFixed(2)},0`)
-  return parts.join(' ')
-}
-
-const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
-  const curve = buildOuterCurvePath(innerW, innerH)
-  return `${curve} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L 0,${innerH.toFixed(2)} Z`
+  const cornerStartY = innerH * STRAIGHT_LEG_FRACTION
+  const cornerEndX = innerW * CORNER_FRACTION_X
+  return [
+    `M 0,${innerH.toFixed(2)}`,
+    `L 0,${cornerStartY.toFixed(2)}`,
+    `Q 0,0 ${cornerEndX.toFixed(2)},0`,
+    `L ${innerW.toFixed(2)},0`,
+  ].join(' ')
 }
 
 const buildInnerCurvePath = (innerW: number, innerH: number): string => {
-  const innerInnerW = Math.max(0, innerW - LEFT_BAND)
-  const innerKneeX = innerInnerW * KNEE_FRACTION
-  const innerRiseH = Math.max(0, innerH - TOP_BAND)
-  const parts: string[] = []
-  for (let i = 0; i <= RISE_SAMPLES; i++) {
-    const t = i / RISE_SAMPLES
-    const x = LEFT_BAND + t * innerKneeX
-    const y = TOP_BAND + innerRiseH * (1 - smootherstep(t))
-    parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
-  }
-  parts.push(`L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`)
-  return parts.join(' ')
+  const cornerStartY = innerH * STRAIGHT_LEG_FRACTION
+  const cornerEndX = innerW * CORNER_FRACTION_X
+  return [
+    `M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)}`,
+    `L ${LEFT_BAND.toFixed(2)},${cornerStartY.toFixed(2)}`,
+    `Q ${LEFT_BAND.toFixed(2)},${TOP_BAND.toFixed(2)} ${cornerEndX.toFixed(2)},${TOP_BAND.toFixed(2)}`,
+    `L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`,
+  ].join(' ')
+}
+
+const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
+  return `${buildOuterCurvePath(innerW, innerH)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L 0,${innerH.toFixed(2)} Z`
 }
 
 const buildInnerSilhouettePath = (innerW: number, innerH: number): string => {
-  const curve = buildInnerCurvePath(innerW, innerH)
-  return `${curve} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
+  return `${buildInnerCurvePath(innerW, innerH)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
 }
 
 const buildBandPath = (innerW: number, innerH: number): string => {
@@ -187,12 +176,18 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
           if (range <= 0) return null
           const tickPct = (tick - cfg.minValue) / range
           const tickX = innerW * tickPct
-          const onCurveY = curveYAt(tickX, innerW, innerH)
-          const labelY = Math.min(innerH - 4, onCurveY + LABEL_INSET)
+          const labelY =
+            tickX <= 0
+              ? innerH - LEG_LABEL_BOTTOM_PAD
+              : Math.min(
+                  innerH - LEG_LABEL_BOTTOM_PAD,
+                  curveYAt(tickX, innerW, innerH) + LABEL_INSET
+                )
+          const labelX = tickX <= 0 ? LEFT_BAND / 2 : tickX
           return (
             <text
               key={tick}
-              x={tickX}
+              x={labelX}
               y={labelY}
               fontSize={10}
               fontWeight={700}
