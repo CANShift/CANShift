@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
-import type { PageConfig } from '@tmbk/canshift-core'
+import { memo, useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import type { PageConfig, TopBarConfig } from '@tmbk/canshift-core'
 import { DEFAULT_PAGE_PALETTE, FIRMWARE_CAPS, HexColorSchema } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { PageThumbnail } from './PageThumbnail'
@@ -18,6 +19,157 @@ const NON_DEFAULT_PAGE_GLYPH = '☆'
 const generateId = (prefix: string): string => {
   return `${prefix}_${Date.now().toString(36)}`
 }
+
+interface PageListItemProps {
+  page: PageConfig
+  index: number
+  isDefault: boolean
+  isSelected: boolean
+  canRemove: boolean
+  topBar: TopBarConfig
+  onSelect: (pageId: string) => void
+  onDragStart: (index: number) => void
+  onDrop: (toIndex: number) => void
+  onSetDefault: (pageId: string) => void
+  onRemove: (pageId: string) => void
+  onContextMenu: (pageId: string, x: number, y: number) => void
+}
+
+const PageListItemImpl = ({
+  page,
+  index,
+  isDefault,
+  isSelected,
+  canRemove,
+  topBar,
+  onSelect,
+  onDragStart,
+  onDrop,
+  onSetDefault,
+  onRemove,
+  onContextMenu,
+}: PageListItemProps) => {
+  const isVisible = page.visible !== false
+  return (
+    <div
+      draggable
+      onDragStart={() => {
+        onDragStart(index)
+      }}
+      onDragOver={(e) => {
+        e.preventDefault()
+      }}
+      onDrop={() => {
+        onDrop(index)
+      }}
+      onClick={() => {
+        onSelect(page.id)
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextMenu(page.id, e.clientX, e.clientY)
+      }}
+      style={{
+        marginBottom: 8,
+        cursor: 'pointer',
+        opacity: isVisible ? 1 : 0.45,
+      }}
+    >
+      <div
+        style={{
+          border: `2px solid ${isSelected ? '#FFFFFF' : '#2A2A2A'}`,
+          borderRadius: 4,
+          overflow: 'hidden',
+          boxShadow: isSelected ? '0 0 0 1px #FFFFFF22' : 'none',
+          transition: 'border-color 0.1s',
+          position: 'relative',
+        }}
+      >
+        <PageThumbnail page={page} topBar={topBar} />
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onSetDefault(page.id)
+          }}
+          title={isDefault ? 'Default page (shown at boot)' : 'Set as default'}
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: 2,
+            width: 18,
+            height: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: isDefault ? '#000000AA' : '#00000055',
+            border: 'none',
+            borderRadius: 3,
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: 12,
+            lineHeight: 1,
+            color: isDefault ? '#FFAA00' : '#666666',
+          }}
+        >
+          {isDefault ? DEFAULT_PAGE_GLYPH : NON_DEFAULT_PAGE_GLYPH}
+        </button>
+        {canRemove && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove(page.id)
+            }}
+            title="Remove page"
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 18,
+              height: 18,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#00000055',
+              border: 'none',
+              borderRadius: 3,
+              padding: 0,
+              color: '#888888',
+              cursor: 'pointer',
+              fontSize: 14,
+              lineHeight: 1,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#FF6666'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#888888'
+            }}
+          >
+            ×
+          </button>
+        )}
+        {!isVisible && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#00000055',
+              fontSize: 16,
+              color: '#888888',
+            }}
+          >
+            ◌
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const PageListItem = memo(PageListItemImpl)
 
 const CanvasFallback = () => {
   return (
@@ -41,16 +193,23 @@ const PaletteFallback = () => {
 }
 
 export default function EditorRoute() {
-  const config = useDashboardStore((s) => s.config)
+  const pages = useDashboardStore((s) => s.config?.pages)
+  const topBar = useDashboardStore((s) => s.config?.topBar)
+  const defaultPageId = useDashboardStore((s) => s.config?.defaultPageId)
   const selectedPageId = useDashboardStore((s) => s.selectedPageId)
-  const selectPage = useDashboardStore((s) => s.selectPage)
-  const addPage = useDashboardStore((s) => s.addPage)
-  const removePage = useDashboardStore((s) => s.removePage)
-  const setDefaultPage = useDashboardStore((s) => s.setDefaultPage)
-  const movePage = useDashboardStore((s) => s.movePage)
-  const updatePage = useDashboardStore((s) => s.updatePage)
-
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
+
+  const { selectPage, addPage, removePage, setDefaultPage, movePage, updatePage } =
+    useDashboardStore(
+      useShallow((s) => ({
+        selectPage: s.selectPage,
+        addPage: s.addPage,
+        removePage: s.removePage,
+        setDefaultPage: s.setDefaultPage,
+        movePage: s.movePage,
+        updatePage: s.updatePage,
+      }))
+    )
 
   const [contextMenu, setContextMenu] = useState<{
     pageId: string
@@ -65,10 +224,10 @@ export default function EditorRoute() {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
       if (document.activeElement?.tagName === 'INPUT') return
       if (selectedWidgetId) return
-      if (!selectedPageId || !config || config.pages.length <= 1) return
+      if (!selectedPageId || !pages || pages.length <= 1) return
       removePage(selectedPageId)
     },
-    [selectedPageId, config, removePage, selectedWidgetId]
+    [selectedPageId, pages, removePage, selectedWidgetId]
   )
 
   useEffect(() => {
@@ -78,7 +237,23 @@ export default function EditorRoute() {
     }
   }, [handleKeyDown])
 
-  if (!config) {
+  const handlePageDragStart = useCallback((index: number) => {
+    dragFromIndex.current = index
+  }, [])
+  const handlePageDrop = useCallback(
+    (toIndex: number) => {
+      if (dragFromIndex.current !== null && dragFromIndex.current !== toIndex) {
+        movePage(dragFromIndex.current, toIndex)
+      }
+      dragFromIndex.current = null
+    },
+    [movePage]
+  )
+  const handlePageContextMenu = useCallback((pageId: string, x: number, y: number) => {
+    setContextMenu({ pageId, x, y })
+  }, [])
+
+  if (!pages || !topBar) {
     return (
       <div
         style={{
@@ -98,18 +273,18 @@ export default function EditorRoute() {
     )
   }
 
-  const currentPage = config.pages.find((p) => p.id === selectedPageId) ?? config.pages[0]
+  const currentPage = pages.find((p) => p.id === selectedPageId) ?? pages[0]
 
   const handleDuplicate = (pageId: string) => {
-    const page = config.pages.find((p) => p.id === pageId)
+    const page = pages.find((p) => p.id === pageId)
     if (!page) return
-    const originalIndex = config.pages.findIndex((p) => p.id === pageId)
+    const originalIndex = pages.findIndex((p) => p.id === pageId)
     const newPage: PageConfig = {
       ...page,
       id: generateId('page'),
       widgets: page.widgets.map((w) => ({ ...w, id: generateId(w.type) })),
     }
-    const originalLength = config.pages.length
+    const originalLength = pages.length
     addPage(newPage)
     if (originalIndex + 1 < originalLength) {
       movePage(originalLength, originalIndex + 1)
@@ -151,148 +326,35 @@ export default function EditorRoute() {
             <span
               style={{
                 fontSize: 10,
-                color: config.pages.length >= FIRMWARE_CAPS.MAX_PAGES ? '#E08030' : '#666666',
+                color: pages.length >= FIRMWARE_CAPS.MAX_PAGES ? '#E08030' : '#666666',
                 fontFamily: 'monospace',
               }}
               title={`Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages`}
             >
-              {config.pages.length}/{FIRMWARE_CAPS.MAX_PAGES}
+              {pages.length}/{FIRMWARE_CAPS.MAX_PAGES}
             </span>
           </div>
 
-          {config.pages.map((page, index) => {
-            const isDefault = page.id === config.defaultPageId
-            const isSelected = page.id === (selectedPageId ?? config.pages[0]?.id)
-            const isVisible = page.visible !== false
-
-            return (
-              <div
-                key={page.id}
-                draggable
-                onDragStart={() => {
-                  dragFromIndex.current = index
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                }}
-                onDrop={() => {
-                  if (dragFromIndex.current !== null && dragFromIndex.current !== index) {
-                    movePage(dragFromIndex.current, index)
-                  }
-                  dragFromIndex.current = null
-                }}
-                onDragEnd={() => {
-                  dragFromIndex.current = null
-                }}
-                onClick={() => {
-                  selectPage(page.id)
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  setContextMenu({ pageId: page.id, x: e.clientX, y: e.clientY })
-                }}
-                style={{
-                  marginBottom: 8,
-                  cursor: 'pointer',
-                  opacity: isVisible ? 1 : 0.45,
-                }}
-              >
-                <div
-                  style={{
-                    border: `2px solid ${isSelected ? '#FFFFFF' : '#2A2A2A'}`,
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                    boxShadow: isSelected ? '0 0 0 1px #FFFFFF22' : 'none',
-                    transition: 'border-color 0.1s',
-                    position: 'relative',
-                  }}
-                >
-                  <PageThumbnail page={page} topBar={config.topBar} />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setDefaultPage(page.id)
-                    }}
-                    title={isDefault ? 'Default page (shown at boot)' : 'Set as default'}
-                    style={{
-                      position: 'absolute',
-                      top: 2,
-                      left: 2,
-                      width: 18,
-                      height: 18,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: isDefault ? '#000000AA' : '#00000055',
-                      border: 'none',
-                      borderRadius: 3,
-                      padding: 0,
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      lineHeight: 1,
-                      color: isDefault ? '#FFAA00' : '#666666',
-                    }}
-                  >
-                    {isDefault ? DEFAULT_PAGE_GLYPH : NON_DEFAULT_PAGE_GLYPH}
-                  </button>
-                  {config.pages.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removePage(page.id)
-                      }}
-                      title="Remove page"
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        width: 18,
-                        height: 18,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#00000055',
-                        border: 'none',
-                        borderRadius: 3,
-                        padding: 0,
-                        color: '#888888',
-                        cursor: 'pointer',
-                        fontSize: 14,
-                        lineHeight: 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#FF6666'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = '#888888'
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-                  {!isVisible && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#00000055',
-                        fontSize: 16,
-                        color: '#888888',
-                      }}
-                    >
-                      ◌
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {pages.map((page, index) => (
+            <PageListItem
+              key={page.id}
+              page={page}
+              index={index}
+              isDefault={page.id === defaultPageId}
+              isSelected={page.id === (selectedPageId ?? pages[0]?.id)}
+              canRemove={pages.length > 1}
+              topBar={topBar}
+              onSelect={selectPage}
+              onDragStart={handlePageDragStart}
+              onDrop={handlePageDrop}
+              onSetDefault={setDefaultPage}
+              onRemove={removePage}
+              onContextMenu={handlePageContextMenu}
+            />
+          ))}
 
           {(() => {
-            const atCap = config.pages.length >= FIRMWARE_CAPS.MAX_PAGES
+            const atCap = pages.length >= FIRMWARE_CAPS.MAX_PAGES
             return (
               <button
                 disabled={atCap}
@@ -355,7 +417,7 @@ export default function EditorRoute() {
       {currentPage ? (
         <ErrorBoundary scope="canvas">
           <Suspense fallback={<CanvasFallback />}>
-            <Canvas page={currentPage} topBar={config.topBar} />
+            <Canvas page={currentPage} topBar={topBar} />
           </Suspense>
         </ErrorBoundary>
       ) : (
@@ -379,9 +441,9 @@ export default function EditorRoute() {
           pageId={contextMenu.pageId}
           x={contextMenu.x}
           y={contextMenu.y}
-          isDefault={contextMenu.pageId === config.defaultPageId}
-          isVisible={config.pages.find((p) => p.id === contextMenu.pageId)?.visible ?? true}
-          canDelete={config.pages.length > 1}
+          isDefault={contextMenu.pageId === defaultPageId}
+          isVisible={pages.find((p) => p.id === contextMenu.pageId)?.visible ?? true}
+          canDelete={pages.length > 1}
           onClose={() => {
             setContextMenu(null)
           }}
@@ -392,7 +454,7 @@ export default function EditorRoute() {
             setDefaultPage(contextMenu.pageId)
           }}
           onToggleVisible={() => {
-            const page = config.pages.find((p) => p.id === contextMenu.pageId)
+            const page = pages.find((p) => p.id === contextMenu.pageId)
             if (page) updatePage(contextMenu.pageId, { visible: !page.visible })
           }}
           onDelete={() => {
