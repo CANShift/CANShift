@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Sidebar as UiSidebar } from '@tmbk/canshift-ui'
-import type { SidebarLinkProps } from '@tmbk/canshift-ui'
+import { SidebarView, type SidebarLinkProps } from './SidebarView'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useUiStore } from '../../stores/ui.store'
@@ -20,7 +19,7 @@ export default function Sidebar() {
   const offline = status !== 'connected' && !simulationMode
 
   return (
-    <UiSidebar
+    <SidebarView
       activeRoute={location.pathname}
       offline={offline}
       collapsed={collapsed}

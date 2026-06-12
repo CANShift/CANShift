@@ -39,24 +39,6 @@ CANShift architecture documentation. Start here for system understanding.
 
 ---
 
-## Archived docs
-
-`archive/` — point-in-time audits, snapshot roadmaps, and strategy notes that drove past decisions but no longer describe the current system. Kept for context. Don't read these for current-state understanding.
-
-| File | What it was |
-|------|-------------|
-| `archive/audit-2026-05-20.md` | Multi-agent cross-package audit (May 2026) that fed the early roadmap |
-| `archive/architecture-roadmap-2026.md` | Themed roadmap synthesized from the May 2026 audit |
-| `archive/dash-hosted-readiness-audit.md` | Pre-flight audit (May 2026) of the dash-hosted Studio path that #1351 retired |
-| `archive/firmware-size-audit-2026-06-01.md` | Snapshot of what filled the firmware image before the #1353 WiFi removal |
-| `archive/widget-parity-audit-2026-06-01.md` | Snapshot of firmware ↔ studio widget parity per #1183 |
-| `archive/usb-first-strategy.md` | Phase 1 USB design — predates the WebSerial-everywhere posture in `canshift-tuner` |
-| `archive/future-wireless-strategy.md` | WiFi/BLE plan superseded by #1351 (WiFi removed; BLE remains for mobile) |
-| `archive/mobile-sdk-upgrade.md` | Expo SDK 52 → 53 tracker — mobile is deferred while the firmware/tuner pair stabilises |
-| `archive/mobile-sdk-upgrade-decisions/` | Per-decision notes from the mobile upgrade work |
-
----
-
 ## Cross-links
 
 - Repo root: [`../README.md`](../README.md)
