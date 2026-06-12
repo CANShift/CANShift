@@ -61,7 +61,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
           position: 'absolute',
           top: 1,
           left: 4,
-          fontSize: 11,
+          fontSize: 9,
           fontFamily: FONT_FAMILY,
           fontWeight: 500,
           color: '#888888',

@@ -16,6 +16,8 @@ export interface GaugeArcRendererProps extends BaseRendererProps {
   signalUnit: string
 }
 
+const SIGNAL_LABEL_FONT_SIZE = 9
+
 export const GaugeArcPreview = memo(function GaugeArcPreview({
   widget,
   w,
@@ -125,11 +127,11 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       )}
       <text
         x={4}
-        y={h - 4}
+        y={SIGNAL_LABEL_FONT_SIZE + 1}
         textAnchor="start"
         dominantBaseline="auto"
         fill="#888888"
-        fontSize={Math.max(6, Math.min(9, w * 0.1))}
+        fontSize={SIGNAL_LABEL_FONT_SIZE}
         fontFamily={FONT_FAMILY}
         fontWeight="500"
         letterSpacing="0.06em"
