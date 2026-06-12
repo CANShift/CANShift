@@ -3,6 +3,8 @@ import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
 import { deviceEvents } from '../transport'
 
+const LIVE_SIGNAL_THROTTLE_MS = 100
+
 export const useLiveSignals = (): Record<string, number> => {
   const signals = useSignalStore((s) => s.signals)
   const connected = useDeviceStore((s) => s.connected)
@@ -10,6 +12,7 @@ export const useLiveSignals = (): Record<string, number> => {
   const [values, setValues] = useState<Record<string, number>>({})
   const frameRef = useRef<number | null>(null)
   const startRef = useRef<number>(Date.now())
+  const lastSignalCommitRef = useRef<number>(0)
 
   useEffect(() => {
     if (connected || !simulationMode || signals.length === 0) {
@@ -39,14 +42,17 @@ export const useLiveSignals = (): Record<string, number> => {
   useEffect(() => {
     if (!connected || simulationMode) return
     setValues({})
+    lastSignalCommitRef.current = 0
     const unsubscribe = deviceEvents.onSignal((payload: unknown) => {
-      if (typeof payload === 'object' && payload !== null) {
-        const flat: Record<string, number> = {}
-        for (const [k, v] of Object.entries(payload as Record<string, unknown>)) {
-          if (typeof v === 'number') flat[k] = v
-        }
-        setValues(flat)
+      if (typeof payload !== 'object' || payload === null) return
+      const now = performance.now()
+      if (now - lastSignalCommitRef.current < LIVE_SIGNAL_THROTTLE_MS) return
+      lastSignalCommitRef.current = now
+      const flat: Record<string, number> = {}
+      for (const [k, v] of Object.entries(payload as Record<string, unknown>)) {
+        if (typeof v === 'number') flat[k] = v
       }
+      setValues(flat)
     })
     return unsubscribe
   }, [connected, simulationMode])
