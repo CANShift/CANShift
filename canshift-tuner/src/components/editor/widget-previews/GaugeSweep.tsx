@@ -88,12 +88,11 @@ const outerCps = (innerW: number, innerH: number): CubicCps => {
 
 const innerCps = (innerW: number, innerH: number): CubicCps => {
   const kneeX = innerW * KNEE_FRACTION
-  const legTopY = legTopYAt(innerH)
   return {
     p0x: LEFT_BAND,
-    p0y: legTopY,
+    p0y: innerH,
     cp1x: LEFT_BAND,
-    cp1y: legTopY * CP1_Y_RATIO + TOP_BAND * (1 - CP1_Y_RATIO),
+    cp1y: innerH * CP1_Y_RATIO + TOP_BAND * (1 - CP1_Y_RATIO),
     cp2x: LEFT_BAND + (kneeX - LEFT_BAND) * CP2_X_RATIO,
     cp2y: TOP_BAND,
     p1x: kneeX,
@@ -104,7 +103,7 @@ const innerCps = (innerW: number, innerH: number): CubicCps => {
 const innerCurveYAt = (x: number, innerW: number, innerH: number): number => {
   const kneeX = innerW * KNEE_FRACTION
   if (x >= kneeX) return TOP_BAND
-  if (x <= LEFT_BAND) return legTopYAt(innerH)
+  if (x <= LEFT_BAND) return innerH
   const cps = innerCps(innerW, innerH)
   let lo = 0
   let hi = 1
@@ -124,7 +123,7 @@ const buildOuterStrokePath = (innerW: number, innerH: number): string => {
 
 const buildInnerStrokePath = (innerW: number, innerH: number): string => {
   const c = innerCps(innerW, innerH)
-  return `M ${LEFT_BAND.toFixed(2)},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`
+  return `M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`
 }
 
 const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
@@ -134,7 +133,7 @@ const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
 
 const buildInnerSilhouettePath = (innerW: number, innerH: number): string => {
   const c = innerCps(innerW, innerH)
-  return `M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
+  return `M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
 }
 
 const buildBandPath = (innerW: number, innerH: number): string => {
