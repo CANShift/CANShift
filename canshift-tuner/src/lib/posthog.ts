@@ -19,3 +19,13 @@ export const initPostHog = (): void => {
 }
 
 export const isPostHogReady = (): boolean => initialized
+
+export const captureFeedback = (props: {
+  message: string
+  email?: string
+  route: string
+  tunerVersion: string
+}): void => {
+  if (!initialized) return
+  posthog.capture('feedback_submitted', props)
+}
