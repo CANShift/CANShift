@@ -117,22 +117,24 @@ const innerCurveYAt = (x: number, innerW: number, innerH: number): number => {
   return cubicAt(cps, (lo + hi) / 2).y
 }
 
-const buildOuterCurvePath = (innerW: number, innerH: number): string => {
+const buildOuterStrokePath = (innerW: number, innerH: number): string => {
   const c = outerCps(innerW, innerH)
-  return `M 0,${innerH.toFixed(2)} L 0,${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y} ${c.p1x.toFixed(2)},${c.p1y} L ${innerW.toFixed(2)},0`
+  return `M 0,${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y} ${c.p1x.toFixed(2)},${c.p1y} L ${innerW.toFixed(2)},0`
 }
 
-const buildInnerCurvePath = (innerW: number, innerH: number): string => {
+const buildInnerStrokePath = (innerW: number, innerH: number): string => {
   const c = innerCps(innerW, innerH)
-  return `M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`
+  return `M ${LEFT_BAND.toFixed(2)},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`
 }
 
 const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
-  return `${buildOuterCurvePath(innerW, innerH)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L 0,${innerH.toFixed(2)} Z`
+  const c = outerCps(innerW, innerH)
+  return `M 0,${innerH.toFixed(2)} L 0,${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y} ${c.p1x.toFixed(2)},${c.p1y} L ${innerW.toFixed(2)},0 L ${innerW.toFixed(2)},${innerH.toFixed(2)} L 0,${innerH.toFixed(2)} Z`
 }
 
 const buildInnerSilhouettePath = (innerW: number, innerH: number): string => {
-  return `${buildInnerCurvePath(innerW, innerH)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
+  const c = innerCps(innerW, innerH)
+  return `M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)} L ${innerW.toFixed(2)},${innerH.toFixed(2)} L ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)} Z`
 }
 
 const buildBandPath = (innerW: number, innerH: number): string => {
@@ -158,8 +160,8 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const innerW = Math.max(1, w - PAD_LEFT - PAD_RIGHT)
   const innerH = Math.max(1, h - PAD_TOP - PAD_BOTTOM)
 
-  const outerCurvePath = buildOuterCurvePath(innerW, innerH)
-  const innerCurvePath = buildInnerCurvePath(innerW, innerH)
+  const outerStrokePath = buildOuterStrokePath(innerW, innerH)
+  const innerStrokePath = buildInnerStrokePath(innerW, innerH)
   const bandPath = buildBandPath(innerW, innerH)
   const fillWidth = innerW * pct
   const fillClipId = `sweep-left-${widget.id}`
@@ -221,14 +223,14 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
         </g>
 
         <path
-          d={outerCurvePath}
+          d={outerStrokePath}
           fill="none"
           stroke={highlightColor}
           strokeOpacity={0.6}
           strokeWidth={1.5}
         />
         <path
-          d={innerCurvePath}
+          d={innerStrokePath}
           fill="none"
           stroke={highlightColor}
           strokeOpacity={0.25}
