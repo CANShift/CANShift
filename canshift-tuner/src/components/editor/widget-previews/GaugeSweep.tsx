@@ -14,7 +14,8 @@ const PAD_RIGHT = 4
 const PAD_TOP = 8
 const PAD_BOTTOM = 4
 const TARGET_TICK_COUNT = 8
-const CURVE_SAMPLES = 48
+const RISE_SAMPLES = 28
+const KNEE_FRACTION = 0.28
 const LABEL_INSET = 14
 const VALUE_LABEL_INSET_TOP = 6
 
@@ -42,18 +43,22 @@ const smootherstep = (t: number): number => {
 }
 
 const curveYAt = (x: number, innerW: number, innerH: number): number => {
-  const t = innerW <= 0 ? 0 : x / innerW
+  const kneeX = innerW * KNEE_FRACTION
+  if (x >= kneeX) return 0
+  const t = kneeX <= 0 ? 0 : x / kneeX
   return innerH * (1 - smootherstep(t))
 }
 
 const buildCurvePath = (innerW: number, innerH: number): string => {
+  const kneeX = innerW * KNEE_FRACTION
   const parts: string[] = []
-  for (let i = 0; i <= CURVE_SAMPLES; i++) {
-    const t = i / CURVE_SAMPLES
-    const x = t * innerW
+  for (let i = 0; i <= RISE_SAMPLES; i++) {
+    const t = i / RISE_SAMPLES
+    const x = t * kneeX
     const y = innerH * (1 - smootherstep(t))
     parts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)},${y.toFixed(2)}`)
   }
+  parts.push(`L ${innerW.toFixed(2)},0`)
   return parts.join(' ')
 }
 
