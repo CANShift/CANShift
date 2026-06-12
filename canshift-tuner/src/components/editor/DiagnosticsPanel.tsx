@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useLiveSignals } from '../../hooks/useLiveSignals'
 import { useSignalStore } from '../../stores/signal.store'
 import { useDeviceStore } from '../../stores/device.store'
@@ -22,6 +23,113 @@ const OK_BAR = '#33CC5555'
 interface DiagnosticsPanelProps {
   scale: number
 }
+
+const SIGNAL_ROW_DANGER_PCT = 0.95
+const SIGNAL_ROW_WARN_PCT = 0.8
+
+interface SignalRowProps {
+  name: string
+  unit: string
+  displayValue: string
+  pct: number | null
+  fs: number
+  rowPad: number
+  pad: number
+  barW: number
+  barH: number
+  scale: number
+}
+
+const SignalRowImpl = ({
+  name,
+  unit,
+  displayValue,
+  pct,
+  fs,
+  rowPad,
+  pad,
+  barW,
+  barH,
+  scale,
+}: SignalRowProps) => {
+  const isDanger = pct !== null && pct >= SIGNAL_ROW_DANGER_PCT
+  const isWarn = pct !== null && !isDanger && pct >= SIGNAL_ROW_WARN_PCT
+  const valueColor = isDanger ? DANGER_FG : isWarn ? SIM_FG : VALUE_FG
+  const barColor = isDanger ? DANGER_BAR : isWarn ? WARN_BAR : OK_BAR
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: `${String(rowPad)}px ${String(pad)}px`,
+        borderBottom: `1px solid ${ROW_BORDER}`,
+        gap: Math.round(scale * 3),
+      }}
+    >
+      <span
+        style={{
+          fontSize: fs,
+          color: LABEL_FG,
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {name.replace(/_/g, ' ')}
+      </span>
+
+      <div
+        style={{
+          width: barW,
+          height: barH,
+          background: BAR_TRACK,
+          borderRadius: 2,
+          flexShrink: 0,
+          overflow: 'hidden',
+        }}
+      >
+        {pct !== null && (
+          <div
+            style={{
+              width: `${String(Math.round(pct * 100))}%`,
+              height: '100%',
+              background: barColor,
+              borderRadius: 2,
+              transition: 'width 0.25s linear',
+            }}
+          />
+        )}
+      </div>
+
+      <span
+        style={{
+          fontSize: fs,
+          color: valueColor,
+          fontVariantNumeric: 'tabular-nums',
+          minWidth: Math.round(scale * 18),
+          textAlign: 'right',
+          flexShrink: 0,
+        }}
+      >
+        {displayValue}
+      </span>
+
+      <span
+        style={{
+          fontSize: fs - 1,
+          color: UNIT_FG,
+          minWidth: Math.round(scale * 10),
+          flexShrink: 0,
+        }}
+      >
+        {unit}
+      </span>
+    </div>
+  )
+}
+
+const SignalRow = memo(SignalRowImpl)
 
 export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
   const signals = useSignalStore((s) => s.signals)
@@ -102,83 +210,21 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
             const raw = values[sig.name]
             const range = sig.max - sig.min || 1
             const pct = raw !== undefined ? Math.max(0, Math.min(1, (raw - sig.min) / range)) : null
-            const isDanger = pct !== null && pct >= 0.95
-            const isWarn = pct !== null && !isDanger && pct >= 0.8
-            const valueColor = isDanger ? DANGER_FG : isWarn ? SIM_FG : VALUE_FG
-            const barColor = isDanger ? DANGER_BAR : isWarn ? WARN_BAR : OK_BAR
-            const valueStr = raw !== undefined ? raw.toFixed(1) : '—'
-
+            const displayValue = raw !== undefined ? raw.toFixed(1) : '—'
             return (
-              <div
+              <SignalRow
                 key={sig.name}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: `${String(rowPad)}px ${String(pad)}px`,
-                  borderBottom: `1px solid ${ROW_BORDER}`,
-                  gap: Math.round(scale * 3),
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: fs,
-                    color: LABEL_FG,
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {sig.name.replace(/_/g, ' ')}
-                </span>
-
-                <div
-                  style={{
-                    width: barW,
-                    height: barH,
-                    background: BAR_TRACK,
-                    borderRadius: 2,
-                    flexShrink: 0,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {pct !== null && (
-                    <div
-                      style={{
-                        width: `${String(Math.round(pct * 100))}%`,
-                        height: '100%',
-                        background: barColor,
-                        borderRadius: 2,
-                        transition: 'width 0.25s linear',
-                      }}
-                    />
-                  )}
-                </div>
-
-                <span
-                  style={{
-                    fontSize: fs,
-                    color: valueColor,
-                    fontVariantNumeric: 'tabular-nums',
-                    minWidth: Math.round(scale * 18),
-                    textAlign: 'right',
-                    flexShrink: 0,
-                  }}
-                >
-                  {valueStr}
-                </span>
-
-                <span
-                  style={{
-                    fontSize: fs - 1,
-                    color: UNIT_FG,
-                    minWidth: Math.round(scale * 10),
-                    flexShrink: 0,
-                  }}
-                >
-                  {sig.unit}
-                </span>
-              </div>
+                name={sig.name}
+                unit={sig.unit}
+                displayValue={displayValue}
+                pct={pct}
+                fs={fs}
+                rowPad={rowPad}
+                pad={pad}
+                barW={barW}
+                barH={barH}
+                scale={scale}
+              />
             )
           })
         )}

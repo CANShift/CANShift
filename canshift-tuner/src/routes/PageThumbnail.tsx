@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { PageConfig, ScreenProfile, TopBarConfig } from '@tmbk/canshift-core'
 import { DEFAULT_PAGE_PALETTE, resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
@@ -11,7 +12,7 @@ export interface PageThumbnailProps {
   topBar: TopBarConfig
 }
 
-export const PageThumbnail = ({ page, topBar }: PageThumbnailProps) => {
+const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
   const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
   const profile: ScreenProfile = resolveScreenProfile(targetProfileId)
   const thumbH = Math.round((THUMB_W * profile.height) / profile.width)
@@ -90,3 +91,5 @@ export const PageThumbnail = ({ page, topBar }: PageThumbnailProps) => {
     </div>
   )
 }
+
+export const PageThumbnail = memo(PageThumbnailImpl)
