@@ -16,6 +16,8 @@ export interface GaugeArcRendererProps extends BaseRendererProps {
   signalUnit: string
 }
 
+const SIGNAL_LABEL_FONT_SIZE = 9
+
 export const GaugeArcPreview = memo(function GaugeArcPreview({
   widget,
   w,
@@ -48,8 +50,8 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
   const cx = w / 2
   const r = Math.min(w * 0.45, h * 0.46)
   const cy = h * 0.5
-  const valueYOffset = -8
-  const unitYOffset = 16
+  const valueYOffset = 0
+  const unitYOffset = 22
   const strokeW = Math.max(5, r * 0.24)
 
   const revFlash = cfg.revFlash === true
@@ -101,13 +103,27 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       >
         {(() => {
           const { int, frac } = splitDecimal(valueStr)
-          if (frac === '') return valueStr
-          return (
-            <>
-              <tspan>{int}</tspan>
-              <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{frac}</tspan>
-            </>
-          )
+          if (frac !== '') {
+            return (
+              <>
+                <tspan>{int}</tspan>
+                <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{frac}</tspan>
+              </>
+            )
+          }
+          const absInt = int.startsWith('-') ? int.slice(1) : int
+          if (absInt.length > 3) {
+            const sign = int.startsWith('-') ? '-' : ''
+            const head = absInt.slice(0, -3)
+            const tail = absInt.slice(-3)
+            return (
+              <>
+                <tspan>{sign + head}</tspan>
+                <tspan fontSize={valueFontSize * FRAC_FONT_SCALE}>{tail}</tspan>
+              </>
+            )
+          }
+          return valueStr
         })()}
       </text>
       {signalUnit !== '' && (
@@ -125,11 +141,11 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       )}
       <text
         x={4}
-        y={h - 4}
+        y={SIGNAL_LABEL_FONT_SIZE + 4}
         textAnchor="start"
         dominantBaseline="auto"
         fill="#888888"
-        fontSize={Math.max(6, Math.min(9, w * 0.1))}
+        fontSize={SIGNAL_LABEL_FONT_SIZE}
         fontFamily={FONT_FAMILY}
         fontWeight="500"
         letterSpacing="0.06em"
