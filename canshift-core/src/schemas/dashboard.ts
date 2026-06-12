@@ -41,7 +41,7 @@ export const SensorIconNameSchema = z.enum([
   'cog',
 ])
 
-export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc', 'sweep'])
+export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc'])
 export const GaugeArcFillStyleSchema = z.enum(['zones', 'gradient'])
 
 export const GaugeWidgetConfigSchema = z

@@ -27,7 +27,6 @@ export const tokenFromDimensions = (w: number, h: number): SizeTokenId | null =>
 
 export const gaugeTokenIds = (displayStyle: GaugeDisplayStyle): SizeTokenId[] => {
   if (displayStyle === 'arc') return ['XL', 'XXL']
-  if (displayStyle === 'sweep') return ['H-XL']
   return ['XL', 'L']
 }
 
@@ -36,5 +35,4 @@ export const STANDARD_TOKEN_IDS: SizeTokenId[] = ['XL', 'L']
 export const GAUGE_DEFAULT_TOKEN: Record<GaugeDisplayStyle, SizeTokenId> = {
   arc: 'XL',
   numeric: 'L',
-  sweep: 'H-XL',
 }

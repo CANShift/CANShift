@@ -8,7 +8,6 @@ import { ButtonPreview } from './widget-previews/Button'
 import { GearPreview } from './widget-previews/Gear'
 import { GaugeArcPreview, type GaugeArcRendererProps } from './widget-previews/GaugeArc'
 import { GaugeNumericPreview, type GaugeNumericRendererProps } from './widget-previews/GaugeNumeric'
-import { GaugeSweepPreview, type GaugeSweepRendererProps } from './widget-previews/GaugeSweep'
 import { ImagePreview } from './widget-previews/Image'
 import { TimerPreview } from './widget-previews/Timer'
 import { WarningPreview } from './widget-previews/Warning'
@@ -45,18 +44,11 @@ type RendererDispatch = Record<
   (widget: Widget, ctx: RenderContext) => React.JSX.Element | null
 >
 
-type GaugeRendererProps =
-  | GaugeArcRendererProps
-  | GaugeNumericRendererProps
-  | GaugeSweepRendererProps
+type GaugeRendererProps = GaugeArcRendererProps | GaugeNumericRendererProps
 
-const gaugeRendererByDisplay: Record<
-  'arc' | 'numeric' | 'sweep',
-  ComponentType<GaugeRendererProps>
-> = {
+const gaugeRendererByDisplay: Record<'arc' | 'numeric', ComponentType<GaugeRendererProps>> = {
   arc: GaugeArcPreview as ComponentType<GaugeRendererProps>,
   numeric: GaugeNumericPreview as ComponentType<GaugeRendererProps>,
-  sweep: GaugeSweepPreview as ComponentType<GaugeRendererProps>,
 }
 
 const RENDERERS: RendererDispatch = {
