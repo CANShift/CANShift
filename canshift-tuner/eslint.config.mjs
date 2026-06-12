@@ -82,6 +82,7 @@ export default tseslint.config(
     ignores: [
       'dist/**',
       'node_modules/**',
+      '.vite/**',
       'scripts/**',
       'vite.config.ts',
       'tailwind.config.ts',

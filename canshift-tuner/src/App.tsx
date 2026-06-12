@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/Shell/Header'
 import Sidebar from './components/Shell/Sidebar'
+import FeedbackButton from './components/Shell/FeedbackButton'
 import { VersionMismatchBanner } from './components/Shell/VersionMismatchBanner'
 import { HeapLowBanner } from './components/Shell/HeapLowBanner'
 import { FirmwareUnresponsiveBanner } from './components/Shell/FirmwareUnresponsiveBanner'
@@ -309,6 +310,7 @@ export default function App() {
           </DisconnectedGuard>
         </main>
       </div>
+      <FeedbackButton />
     </div>
   )
 }
