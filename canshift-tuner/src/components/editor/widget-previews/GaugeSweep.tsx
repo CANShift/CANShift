@@ -14,17 +14,20 @@ const PAD_RIGHT = 4
 const PAD_TOP = 4
 const PAD_BOTTOM = 4
 const TARGET_TICK_COUNT = 8
-const RISE_SAMPLES = 28
-const KNEE_FRACTION = 0.3
-const STRAIGHT_LEG_FRACTION = 0.45
+const KNEE_FRACTION = 0.32
+const CP1_Y_RATIO = 0.35
+const CP2_X_RATIO = 0.55
 const LEFT_BAND = 12
 const TOP_BAND = 32
 const LABEL_BAND_OFFSET = 4
 const VALUE_RIGHT_PAD = 6
-const VALUE_BOTTOM_PAD = 4
+const VALUE_BOTTOM_PAD = 6
 const VALUE_FONT_SIZE = 30
-const VALUE_LABEL_FONT_SIZE = 9
-const VALUE_LABEL_GAP = 2
+const VALUE_UNIT_FONT_SIZE = 12
+const VALUE_UNIT_GAP = 4
+const TOP_LABEL_FONT_SIZE = 10
+const TOP_LABEL_LEFT_PAD = 6
+const TOP_LABEL_TOP_PAD = 12
 
 const pickTickStep = (range: number): number => {
   if (range <= 0) return 1
@@ -43,55 +46,80 @@ const formatTick = (value: number, step: number): string => {
   return value.toFixed(1)
 }
 
-const smootherstep = (t: number): number => {
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  return t * t * t * (t * (t * 6 - 15) + 10)
+interface CubicCps {
+  p0x: number
+  p0y: number
+  cp1x: number
+  cp1y: number
+  cp2x: number
+  cp2y: number
+  p1x: number
+  p1y: number
 }
 
-const legTopYAt = (innerH: number): number => innerH * STRAIGHT_LEG_FRACTION
+const cubicAt = (cp: CubicCps, t: number): { x: number; y: number } => {
+  const u = 1 - t
+  const uu = u * u
+  const uuu = uu * u
+  const tt = t * t
+  const ttt = tt * t
+  const x = uuu * cp.p0x + 3 * uu * t * cp.cp1x + 3 * u * tt * cp.cp2x + ttt * cp.p1x
+  const y = uuu * cp.p0y + 3 * uu * t * cp.cp1y + 3 * u * tt * cp.cp2y + ttt * cp.p1y
+  return { x, y }
+}
+
+const outerCps = (innerW: number, innerH: number): CubicCps => {
+  const kneeX = innerW * KNEE_FRACTION
+  return {
+    p0x: 0,
+    p0y: innerH,
+    cp1x: 0,
+    cp1y: innerH * CP1_Y_RATIO,
+    cp2x: kneeX * CP2_X_RATIO,
+    cp2y: 0,
+    p1x: kneeX,
+    p1y: 0,
+  }
+}
+
+const innerCps = (innerW: number, innerH: number): CubicCps => {
+  const kneeX = innerW * KNEE_FRACTION
+  return {
+    p0x: LEFT_BAND,
+    p0y: innerH,
+    cp1x: LEFT_BAND,
+    cp1y: innerH * CP1_Y_RATIO + TOP_BAND * (1 - CP1_Y_RATIO),
+    cp2x: LEFT_BAND + (kneeX - LEFT_BAND) * CP2_X_RATIO,
+    cp2y: TOP_BAND,
+    p1x: kneeX,
+    p1y: TOP_BAND,
+  }
+}
 
 const innerCurveYAt = (x: number, innerW: number, innerH: number): number => {
   const kneeX = innerW * KNEE_FRACTION
   if (x >= kneeX) return TOP_BAND
-  const legTopY = legTopYAt(innerH)
-  if (x <= LEFT_BAND) return legTopY
-  const innerRiseW = kneeX - LEFT_BAND
-  const t = innerRiseW <= 0 ? 1 : (x - LEFT_BAND) / innerRiseW
-  return legTopY + (TOP_BAND - legTopY) * smootherstep(t)
+  if (x <= LEFT_BAND) return innerH
+  const cps = innerCps(innerW, innerH)
+  let lo = 0
+  let hi = 1
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2
+    const sx = cubicAt(cps, mid).x
+    if (sx < x) lo = mid
+    else hi = mid
+  }
+  return cubicAt(cps, (lo + hi) / 2).y
 }
 
 const buildOuterCurvePath = (innerW: number, innerH: number): string => {
-  const kneeX = innerW * KNEE_FRACTION
-  const legTopY = legTopYAt(innerH)
-  const parts: string[] = []
-  parts.push(`M 0,${innerH.toFixed(2)}`)
-  parts.push(`L 0,${legTopY.toFixed(2)}`)
-  for (let i = 1; i <= RISE_SAMPLES; i++) {
-    const t = i / RISE_SAMPLES
-    const x = t * kneeX
-    const y = legTopY * (1 - smootherstep(t))
-    parts.push(`L ${x.toFixed(2)},${y.toFixed(2)}`)
-  }
-  parts.push(`L ${innerW.toFixed(2)},0`)
-  return parts.join(' ')
+  const c = outerCps(innerW, innerH)
+  return `M ${c.p0x},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y} ${c.p1x.toFixed(2)},${c.p1y} L ${innerW.toFixed(2)},0`
 }
 
 const buildInnerCurvePath = (innerW: number, innerH: number): string => {
-  const kneeX = innerW * KNEE_FRACTION
-  const legTopY = legTopYAt(innerH)
-  const innerRiseW = kneeX - LEFT_BAND
-  const parts: string[] = []
-  parts.push(`M ${LEFT_BAND.toFixed(2)},${innerH.toFixed(2)}`)
-  parts.push(`L ${LEFT_BAND.toFixed(2)},${legTopY.toFixed(2)}`)
-  for (let i = 1; i <= RISE_SAMPLES; i++) {
-    const t = i / RISE_SAMPLES
-    const x = LEFT_BAND + t * innerRiseW
-    const y = legTopY + (TOP_BAND - legTopY) * smootherstep(t)
-    parts.push(`L ${x.toFixed(2)},${y.toFixed(2)}`)
-  }
-  parts.push(`L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`)
-  return parts.join(' ')
+  const c = innerCps(innerW, innerH)
+  return `M ${c.p0x},${c.p0y.toFixed(2)} C ${c.cp1x},${c.cp1y.toFixed(2)} ${c.cp2x.toFixed(2)},${c.cp2y.toFixed(2)} ${c.p1x.toFixed(2)},${c.p1y.toFixed(2)} L ${innerW.toFixed(2)},${TOP_BAND.toFixed(2)}`
 }
 
 const buildOuterSilhouettePath = (innerW: number, innerH: number): string => {
@@ -136,7 +164,8 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   const restColor = '#2A2A2A'
   const highlightColor = '#FFFFFF'
   const labelColor = '#FFFFFF'
-  const valueLabelColor = '#888888'
+  const topLabelColor = '#888888'
+  const unitColor = '#555555'
 
   const range = cfg.maxValue - cfg.minValue
   const step = pickTickStep(range)
@@ -150,12 +179,13 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
   }
 
   const signalLabel = formatSignalLabel(widget.signal)
-  const valueText = raw.toFixed(cfg.decimalPlaces)
-  const valueStr = (cfg.prefix ?? '') + valueText + (cfg.suffix ?? (signalUnit ? signalUnit : ''))
+  const valueText = (cfg.prefix ?? '') + raw.toFixed(cfg.decimalPlaces)
+  const unitText = cfg.suffix ?? signalUnit ?? ''
 
-  const valueX = innerW - VALUE_RIGHT_PAD
-  const valueLabelY = innerH - VALUE_BOTTOM_PAD
-  const valueY = valueLabelY - VALUE_LABEL_FONT_SIZE - VALUE_LABEL_GAP
+  const valueY = innerH - VALUE_BOTTOM_PAD
+  const valueRightX = innerW - VALUE_RIGHT_PAD
+  const unitX = valueRightX
+  const valueX = valueRightX - VALUE_UNIT_GAP
 
   return (
     <svg
@@ -230,7 +260,31 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
         })}
 
         <text
-          x={valueX}
+          x={TOP_LABEL_LEFT_PAD}
+          y={TOP_LABEL_TOP_PAD}
+          fontSize={TOP_LABEL_FONT_SIZE}
+          fill={topLabelColor}
+          textAnchor="start"
+          style={{ letterSpacing: '0.12em', textTransform: 'uppercase' }}
+        >
+          {signalLabel}
+        </text>
+
+        {unitText && (
+          <text
+            x={unitX}
+            y={valueY}
+            fontSize={VALUE_UNIT_FONT_SIZE}
+            fontWeight={600}
+            fill={unitColor}
+            textAnchor="end"
+            style={{ letterSpacing: '0.04em' }}
+          >
+            {unitText}
+          </text>
+        )}
+        <text
+          x={unitText ? valueX - measureUnitWidth(unitText, VALUE_UNIT_FONT_SIZE) : valueRightX}
           y={valueY}
           fontSize={VALUE_FONT_SIZE}
           fontWeight={700}
@@ -238,17 +292,7 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
           textAnchor="end"
           style={{ letterSpacing: '0.02em' }}
         >
-          {valueStr}
-        </text>
-        <text
-          x={valueX}
-          y={valueLabelY}
-          fontSize={VALUE_LABEL_FONT_SIZE}
-          fill={valueLabelColor}
-          textAnchor="end"
-          style={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}
-        >
-          {signalLabel}
+          {valueText}
         </text>
 
         {danger && (
@@ -267,3 +311,7 @@ export const GaugeSweepPreview = memo(function GaugeSweepPreview({
     </svg>
   )
 })
+
+const measureUnitWidth = (text: string, fontSize: number): number => {
+  return text.length * fontSize * 0.55 + VALUE_UNIT_GAP
+}
