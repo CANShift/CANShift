@@ -30,7 +30,7 @@ interface ScreenSettingsPanelProps {
   scale: number
 }
 
-export default function ScreenSettingsPanel({ scale }: ScreenSettingsPanelProps) {
+const ScreenSettingsPanel = ({ scale }: ScreenSettingsPanelProps) => {
   const brightness = useScreenSettingsStore((s) => s.brightness)
   const rotation = useScreenSettingsStore((s) => s.rotation)
   const updateScreenSettings = useScreenSettingsStore((s) => s.update)
@@ -316,3 +316,5 @@ const SettingRow = ({
     </div>
   )
 }
+
+export default ScreenSettingsPanel

@@ -23,7 +23,7 @@ type Source =
       warnings: string[]
     }
 
-export default function EcuRoute() {
+const EcuRoute = () => {
   const activeProfileKey = useSignalStore((s) => s.selectedProfileKey)
   const currentSignalCount = useSignalStore((s) => s.signals.length)
   const applyProfile = useSignalStore((s) => s.applyProfile)
@@ -266,3 +266,5 @@ const importErrorStyle: CSSProperties = {
   border: '1px solid hsl(var(--destructive))',
   borderRadius: 6,
 }
+
+export default EcuRoute

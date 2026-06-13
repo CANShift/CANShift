@@ -10,7 +10,7 @@ const RouterLink = ({ to, style, children, title }: SidebarLinkProps) => (
   </NavLink>
 )
 
-export default function Sidebar() {
+const Sidebar = () => {
   const status = useConnectionStore((s) => s.status)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const collapsed = useUiStore((s) => s.sidebarCollapsed)
@@ -28,3 +28,5 @@ export default function Sidebar() {
     />
   )
 }
+
+export default Sidebar

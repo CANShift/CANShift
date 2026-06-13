@@ -63,7 +63,7 @@ const useSerialActivityPulse = (active: boolean): boolean => {
   return pulsing
 }
 
-export default function Header() {
+const Header = () => {
   const status = useConnectionStore((s) => s.status)
   const port = useConnectionStore((s) => s.port)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -104,3 +104,5 @@ const BurnButton = () => {
     />
   )
 }
+
+export default Header

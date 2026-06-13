@@ -7,7 +7,7 @@ const REPO_URL = 'https://github.com/tburkhalterr/CANShift'
 const DOCS_URL = 'https://docs.canshift.tmbk.ch'
 const LICENSE_URL = 'https://github.com/tburkhalterr/CANShift/blob/main/LICENSE'
 
-export default function AboutRoute() {
+const AboutRoute = () => {
   const tunerVersion = typeof __TUNER_VERSION__ !== 'undefined' ? __TUNER_VERSION__ : 'unknown'
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const connected = useDeviceStore((s) => s.connected)
@@ -236,3 +236,5 @@ const linkRowStyle: CSSProperties = {
   color: 'hsl(var(--text))',
   textDecoration: 'none',
 }
+
+export default AboutRoute

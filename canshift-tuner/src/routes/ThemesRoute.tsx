@@ -6,7 +6,7 @@ import { usbService } from '../transport'
 import { ThemeStatusCard } from '../components/themes/ThemeStatusCard'
 import { ThemeControls } from '../components/themes/ThemeControls'
 
-export default function ThemesRoute() {
+const ThemesRoute = () => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
@@ -145,3 +145,5 @@ const hintStyle: CSSProperties = {
   border: '1px solid hsl(var(--border))',
   borderRadius: 6,
 }
+
+export default ThemesRoute
