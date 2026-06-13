@@ -1,4 +1,9 @@
-# CAN Bus Integration Notes
+---
+title: "CAN integration notes"
+description: "TWAI peripheral configuration, bus speed, sample frame layouts."
+sidebar:
+  order: 10
+---
 
 ## Hardware Overview
 

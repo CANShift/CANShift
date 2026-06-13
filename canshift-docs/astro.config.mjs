@@ -4,7 +4,7 @@ import starlight from "@astrojs/starlight";
 import react from "@astrojs/react";
 
 export default defineConfig({
-  site: "https://canshift-docs.example",
+  site: "https://docs.canshift.tmbk.ch",
   integrations: [
     react(),
     starlight({
@@ -67,7 +67,7 @@ export default defineConfig({
           items: [
             {
               label: "Tuner (web — includes flasher)",
-              link: "https://canshift-tuner.vercel.app",
+              link: "https://canshift.tmbk.ch",
               attrs: { target: "_blank", rel: "noopener" },
               badge: { text: "↗", variant: "note" },
             },

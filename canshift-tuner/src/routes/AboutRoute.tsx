@@ -4,7 +4,7 @@ import { useConnectionStore } from '../stores/connection.store'
 import { HeapStatsPanel } from '../components/about/HeapStatsPanel'
 
 const REPO_URL = 'https://github.com/tburkhalterr/CANShift'
-const DOCS_URL = 'https://github.com/tburkhalterr/CANShift/tree/main/canshift-tuner/docs'
+const DOCS_URL = 'https://docs.canshift.tmbk.ch'
 const LICENSE_URL = 'https://github.com/tburkhalterr/CANShift/blob/main/LICENSE'
 
 export default function AboutRoute() {

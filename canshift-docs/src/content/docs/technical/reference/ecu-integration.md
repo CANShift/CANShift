@@ -1,4 +1,9 @@
-# ECU integration guide
+---
+title: "ECU integration reference"
+description: "Catalogue format, frame parser, RealDash XML import."
+sidebar:
+  order: 12
+---
 
 How to wire CANShift to an arbitrary CAN-bus ECU. This is the walkthrough
 mentioned in [#842](https://github.com/tburkhalterr/CANShift/issues/842) /

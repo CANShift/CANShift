@@ -1,4 +1,9 @@
-# How to add an ECU
+---
+title: "Add a new ECU profile"
+description: "Wire a new ECU's CAN signals into the firmware + studio config schema."
+sidebar:
+  order: 5
+---
 
 How to add CANShift support for a new ECU's CAN protocol — from finding
 the documentation through to shipping the catalog entry.

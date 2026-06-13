@@ -1,4 +1,9 @@
-# Firmware release signing (Ed25519)
+---
+title: "Firmware release signing"
+description: "Ed25519 signature workflow for shipped firmware binaries."
+sidebar:
+  order: 15
+---
 
 The release workflow (`.github/workflows/release.yml`) signs every shipped
 firmware binary with an Ed25519 private key whose public counterpart is

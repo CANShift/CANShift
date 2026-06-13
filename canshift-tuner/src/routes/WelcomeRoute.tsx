@@ -60,7 +60,7 @@ export default function WelcomeRoute() {
           </Link>
           <span style={dotSeparatorStyle}>·</span>
           <a
-            href="https://github.com/tburkhalterr/CANShift/blob/main/canshift-tuner/docs/user/troubleshooting.md"
+            href="https://docs.canshift.tmbk.ch/user-guide/install/boot-issues/"
             target="_blank"
             rel="noreferrer"
             style={linkStyle}
