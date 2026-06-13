@@ -11,7 +11,7 @@ namespace {
 bool s_initialized = false;
 bool s_available = false;
 size_t s_totalBytes = 0;
-} // namespace
+}
 
 void initPsram() {
     if (s_initialized) {
@@ -19,7 +19,6 @@ void initPsram() {
     }
     s_initialized = true;
 
-    // WROOM with BOARD_HAS_PSRAM returns 0 — IDF init silently fails (#563).
     s_totalBytes = ESP.getPsramSize();
     s_available = s_totalBytes > 0;
 
@@ -47,4 +46,4 @@ size_t getFreePsram() {
     return ESP.getFreePsram();
 }
 
-} // namespace canshift::hal::memory
+}

@@ -1,4 +1,4 @@
-// Table mirrors SENSOR_PALETTE in canshift-core/src/sensor-palette.ts.
+
 #include "sensor_palette.h"
 
 #include <cmath>
@@ -9,7 +9,6 @@ namespace {
 constexpr uint32_t RED = 0xCC3333u;
 constexpr uint32_t AMBER = 0xFFA000u;
 
-// Order matches the SensorIconName Zod enum — drift caught by JSON-fixture test.
 constexpr SensorPaletteEntry kEntries[] = {
     {"rpm", 0x00ACC1u, RED},
     {"speed", 0xECEFF1u, SensorPalette::kSentinelNoWarning},
@@ -36,7 +35,7 @@ constexpr SensorPaletteEntry kEntries[] = {
     {"cog", 0x9E9E9Eu, SensorPalette::kSentinelNoWarning},
 };
 
-} // namespace
+}
 
 const SensorPaletteEntry *SensorPalette::lookup(const char *iconName) {
     if (!iconName || iconName[0] == '\0')

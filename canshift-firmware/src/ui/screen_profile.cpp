@@ -16,7 +16,6 @@ struct ProfileEntry {
     uint16_t designHeight;
 };
 
-// Mirrors DEFAULT_SCREEN_PROFILE_ID in canshift-core.
 constexpr ProfileEntry kProfiles[] = {
     {"crowpanel-28", 320, 240},
 };
@@ -34,7 +33,7 @@ const ProfileEntry &findEntryOrDefault(const char *profileId) {
         LOG_WARN("SCRN", "unknown targetProfile='%s' — falling back to '%s'", profileId,
                  kDefaultProfileId);
     }
-    // Non-recursive — a typo in kDefaultProfileId surfaces at boot.
+
     for (const ProfileEntry &entry : kProfiles) {
         if (strcmp(entry.id, kDefaultProfileId) == 0) {
             return entry;
@@ -46,7 +45,7 @@ const ProfileEntry &findEntryOrDefault(const char *profileId) {
 static_assert(sizeof(kProfiles) / sizeof(kProfiles[0]) >= 1,
               "screen profile catalog must contain at least the default entry");
 
-} // namespace
+}
 
 DesignDimensions lookupDesignDimensions(const char *profileId) {
     const ProfileEntry &entry = findEntryOrDefault(profileId);
@@ -91,4 +90,4 @@ int16_t scaleYVal(int16_t value) {
     return static_cast<int16_t>(static_cast<float>(value) * s_factors.y);
 }
 
-} // namespace ScreenProfile
+}

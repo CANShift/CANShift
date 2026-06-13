@@ -46,7 +46,7 @@ void stopBlink(WarningTag *tag) {
     lv_obj_set_style_bg_opa(tag->root, 0x18, LV_PART_MAIN);
 }
 
-} // namespace
+}
 
 lv_obj_t *WarningWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOffset) {
     lv_obj_t *root = lv_obj_create(parent);

@@ -251,7 +251,7 @@ void btnClickHandler(lv_event_t *e) {
     }
 }
 
-} // namespace
+}
 
 lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOffset) {
     lv_obj_t *btn = lv_btn_create(parent);

@@ -41,8 +41,6 @@ class LockGuard {
     bool held_ = false;
 };
 
-// Private helpers — caller MUST already hold g_state.mutex.
-
 int64_t elapsedUsLocked() {
     if (g_state.state == TimerService::State::Running) {
         return g_state.accumulatedUs + (esp_timer_get_time() - g_state.lastStartUs);
@@ -61,7 +59,7 @@ void bumpVersionLocked() {
     g_state.version++;
 }
 
-} // namespace
+}
 
 void TimerService::init() {
     if (g_state.initialized)

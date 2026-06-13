@@ -48,7 +48,7 @@ void restoreLabelColors(State &s) {
     }
 }
 
-} // namespace
+}
 
 void attach(State &s, lv_obj_t *container) {
     s.overlay = lv_obj_create(container);
@@ -93,4 +93,4 @@ void update(State &s, float value, float threshold) {
     }
 }
 
-} // namespace AlertFlash
+}
