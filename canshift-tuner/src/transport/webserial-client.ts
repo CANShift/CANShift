@@ -463,18 +463,26 @@ export class SerialClient {
     if (reader) {
       try {
         await reader.cancel()
-      } catch {}
+      } catch (err) {
+        console.warn('[serial] reader.cancel failed', err)
+      }
       try {
         reader.releaseLock()
-      } catch {}
+      } catch (err) {
+        console.warn('[serial] reader.releaseLock failed', err)
+      }
     }
     if (writer) {
       try {
         await writer.close()
-      } catch {}
+      } catch (err) {
+        console.warn('[serial] writer.close failed', err)
+      }
       try {
         writer.releaseLock()
-      } catch {}
+      } catch (err) {
+        console.warn('[serial] writer.releaseLock failed', err)
+      }
     }
     if (port) await this.safeClose(port)
   }
@@ -482,7 +490,9 @@ export class SerialClient {
   private async safeClose(port: SerialPort): Promise<void> {
     try {
       await port.close()
-    } catch {}
+    } catch (err) {
+      console.warn('[serial] port.close failed', err)
+    }
   }
 
   private setStatus(next: SerialStatus, error?: string): void {
@@ -492,7 +502,9 @@ export class SerialClient {
     for (const listener of this.statusListeners) {
       try {
         listener(next, this.lastError)
-      } catch {}
+      } catch (err) {
+        console.warn('[serial] status listener threw', err)
+      }
     }
   }
 }

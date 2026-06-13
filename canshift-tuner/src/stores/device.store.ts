@@ -98,7 +98,8 @@ const MANUAL_DISCONNECT_KEY = 'canshift:manual-disconnect'
 const readManualDisconnect = (): boolean => {
   try {
     return sessionStorage.getItem(MANUAL_DISCONNECT_KEY) === '1'
-  } catch {
+  } catch (err) {
+    console.warn('[device.store] sessionStorage read failed', err)
     return false
   }
 }
@@ -107,8 +108,8 @@ const writeManualDisconnect = (flag: boolean): void => {
   try {
     if (flag) sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1')
     else sessionStorage.removeItem(MANUAL_DISCONNECT_KEY)
-  } catch {
-    void 0
+  } catch (err) {
+    console.warn('[device.store] sessionStorage write failed', err)
   }
 }
 
