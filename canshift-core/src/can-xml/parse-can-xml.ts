@@ -42,9 +42,15 @@ const toSnakeCase = (s: string): string =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
 
+const HEX_LITERAL_RE = /^[0-9a-fA-F]+$/
+const HAS_HEX_LETTER_RE = /[a-fA-F]/
+
 const parseHexOrDec = (s: string): number => {
   const t = s.trim()
-  return t.toLowerCase().startsWith('0x') ? parseInt(t, 16) : parseInt(t, 10)
+  if (t === '') return NaN
+  if (t.toLowerCase().startsWith('0x')) return parseInt(t.slice(2), 16)
+  if (HEX_LITERAL_RE.test(t) && HAS_HEX_LETTER_RE.test(t)) return parseInt(t, 16)
+  return parseInt(t, 10)
 }
 
 const resolveEndian = (raw: string | undefined): boolean | null =>
@@ -73,74 +79,173 @@ const stripOuterParens = (expr: string): string => {
   return current
 }
 
-const NUM_RE = '-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)'
+const BIDI_MARKS_RE = /[\u202A-\u202E\u2066-\u2069]/g
+const BIT_SHIFT_RE = /^V\s*>>\s*(\d+)$/
+const BIT_AND_RE = /^V\s*&\s*(0x[0-9a-fA-F]+|\d+)$/
+const BIT_SHIFT_AND_ONE_RE = /^\(?\s*V\s*>>\s*(\d+)\s*\)?\s*&\s*1$/
+const LEFT_SHIFT_RE = /V\s*<<\s*(\d+)/g
+const IMPLICIT_MUL_AFTER_V_RE = /V(?=[\d(])/g
+const IMPLICIT_MUL_BEFORE_V_RE = /([\d)])(?=V)/g
 
-const flattenInnerVParens = (expr: string): string =>
-  expr.replace(
-    new RegExp(`\\(V((?:\\s*[*/]\\s*${NUM_RE})+)\\)`, 'g'),
-    (_, chain: string) => `V${chain}`
+const log2Int = (n: number): number | null => {
+  if (n <= 0 || !Number.isInteger(n)) return null
+  const lg = Math.log2(n)
+  return Number.isInteger(lg) ? lg : null
+}
+
+const normaliseExpr = (expr: string): string => {
+  const withoutBidi = expr.replace(BIDI_MARKS_RE, '')
+  const upperV = withoutBidi.replace(/v/g, 'V')
+  const expandedShifts = upperV.replace(
+    LEFT_SHIFT_RE,
+    (_, n: string) => `V*${String(2 ** parseInt(n, 10))}`
   )
+  return expandedShifts.replace(IMPLICIT_MUL_AFTER_V_RE, 'V*').replace(
+    IMPLICIT_MUL_BEFORE_V_RE,
+    '$1*V'
+  )
+}
 
-const multiplyMulDivChain = (chain: string): number | null => {
-  const tokens = chain.match(new RegExp(`[*/]\\s*${NUM_RE}`, 'g'))
-  if (!tokens) return null
-  let product = 1
-  for (const token of tokens) {
-    const isDivision = token.startsWith('/')
-    const operand = parseFloat(token.slice(1))
-    if (!Number.isFinite(operand) || (isDivision && operand === 0)) return null
-    product = isDivision ? product / operand : product * operand
+const tokeniseArith = (expr: string): string[] | null => {
+  const tokens: string[] = []
+  let i = 0
+  while (i < expr.length) {
+    const c = expr[i] ?? ''
+    if (/\s/.test(c)) {
+      i++
+      continue
+    }
+    if ('()+-*/'.includes(c)) {
+      tokens.push(c)
+      i++
+      continue
+    }
+    if (c === 'V') {
+      tokens.push('V')
+      i++
+      continue
+    }
+    if (/[\d.]/.test(c)) {
+      let j = i
+      while (j < expr.length && /[\d.]/.test(expr[j] ?? '')) j++
+      tokens.push(expr.slice(i, j))
+      i = j
+      continue
+    }
+    return null
   }
-  return product
+  return tokens
 }
 
-const matchOrNull = <T>(
-  expr: string,
-  pattern: RegExp,
-  build: (m: RegExpExecArray) => T
-): T | null => {
-  const match = pattern.exec(expr)
-  return match ? build(match) : null
+type Evaluator = (v: number) => number
+
+const buildEvaluator = (tokens: string[]): Evaluator | null => {
+  let pos = 0
+
+  const parsePrimary = (): Evaluator | null => {
+    const t = tokens[pos]
+    if (t === undefined) return null
+    if (t === '(') {
+      pos++
+      const inner = parseAddSub()
+      if (inner === null || tokens[pos] !== ')') return null
+      pos++
+      return inner
+    }
+    if (t === '+') {
+      pos++
+      return parsePrimary()
+    }
+    if (t === '-') {
+      pos++
+      const inner = parsePrimary()
+      return inner === null ? null : (v) => -inner(v)
+    }
+    if (t === 'V') {
+      pos++
+      return (v) => v
+    }
+    const n = parseFloat(t)
+    if (!Number.isFinite(n)) return null
+    pos++
+    return () => n
+  }
+
+  const parseMulDiv = (): Evaluator | null => {
+    let left = parsePrimary()
+    while (left !== null && (tokens[pos] === '*' || tokens[pos] === '/')) {
+      const op = tokens[pos]
+      pos++
+      const right = parsePrimary()
+      if (right === null) return null
+      const L = left
+      const R = right
+      left = op === '*' ? (v) => L(v) * R(v) : (v) => L(v) / R(v)
+    }
+    return left
+  }
+
+  const parseAddSub = (): Evaluator | null => {
+    let left = parseMulDiv()
+    while (left !== null && (tokens[pos] === '+' || tokens[pos] === '-')) {
+      const op = tokens[pos]
+      pos++
+      const right = parseMulDiv()
+      if (right === null) return null
+      const L = left
+      const R = right
+      left = op === '+' ? (v) => L(v) + R(v) : (v) => L(v) - R(v)
+    }
+    return left
+  }
+
+  const root = parseAddSub()
+  if (root === null || pos !== tokens.length) return null
+  return root
 }
 
-const REVERSE_SUB_RE = new RegExp(`^(${NUM_RE})\\s*-\\s*V$`)
-const MUL_DIV_CHAIN_RE = new RegExp(`^V((?:\\s*[*/]\\s*${NUM_RE})+)$`)
-const MUL_PLUS_OFFSET_RE = new RegExp(`^V\\s*\\*\\s*(${NUM_RE})\\s*([+-]\\s*${NUM_RE})?$`)
-const ADD_OFFSET_RE = new RegExp(`^V\\s*([+-]\\s*${NUM_RE})$`)
+const LINEARITY_EPSILON = 1e-9
+
+const tryLinearInV = (expr: string): Conversion | null => {
+  const tokens = tokeniseArith(expr)
+  if (!tokens || tokens.length === 0) return null
+  const evaluator = buildEvaluator(tokens)
+  if (!evaluator) return null
+  const a0 = evaluator(0)
+  const a1 = evaluator(1)
+  const a2 = evaluator(2)
+  if (!Number.isFinite(a0) || !Number.isFinite(a1) || !Number.isFinite(a2)) return null
+  const scale = a1 - a0
+  const offset = a0
+  const expectedA2 = 2 * scale + offset
+  const tolerance = LINEARITY_EPSILON * Math.max(1, Math.abs(a2), Math.abs(expectedA2))
+  if (Math.abs(a2 - expectedA2) > tolerance) return null
+  return { scale: normaliseZero(scale), offset: normaliseZero(offset), bitShift: null }
+}
+
+const normaliseZero = (n: number): number => (Object.is(n, -0) ? 0 : n)
+
+const matchBitExtract = (expr: string): Conversion | null => {
+  const shiftMatch = BIT_SHIFT_RE.exec(expr) ?? BIT_SHIFT_AND_ONE_RE.exec(expr)
+  if (shiftMatch) {
+    return { scale: 1, offset: 0, bitShift: parseInt(shiftMatch[1] ?? '0', 10) }
+  }
+  const andMatch = BIT_AND_RE.exec(expr)
+  if (andMatch) {
+    const raw = andMatch[1] ?? '0'
+    const mask = raw.toLowerCase().startsWith('0x') ? parseInt(raw.slice(2), 16) : parseInt(raw, 10)
+    const bit = log2Int(mask)
+    if (bit !== null) return { scale: 1, offset: 0, bitShift: bit }
+  }
+  return null
+}
 
 const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
   if (!expr || expr.trim() === '') return { scale: 1, offset: 0, bitShift: null }
-  const normalised = flattenInnerVParens(stripOuterParens(expr.trim()))
-
-  if (/^V$/i.test(normalised)) return { scale: 1, offset: 0, bitShift: null }
-
-  return (
-    matchOrNull<Conversion | 'complex'>(normalised, /^V\s*>>\s*(\d+)$/, (m) => ({
-      scale: 1,
-      offset: 0,
-      bitShift: parseInt(m[1] ?? '0', 10),
-    })) ??
-    matchOrNull<Conversion | 'complex'>(normalised, REVERSE_SUB_RE, (m) => ({
-      scale: -1,
-      offset: parseFloat(m[1] ?? '0'),
-      bitShift: null,
-    })) ??
-    matchOrNull<Conversion | 'complex'>(normalised, MUL_DIV_CHAIN_RE, (m) => {
-      const product = multiplyMulDivChain(m[1] ?? '')
-      return product === null ? 'complex' : { scale: product, offset: 0, bitShift: null }
-    }) ??
-    matchOrNull<Conversion | 'complex'>(normalised, MUL_PLUS_OFFSET_RE, (m) => ({
-      scale: parseFloat(m[1] ?? '1'),
-      offset: m[2] ? parseFloat(m[2].replace(/\s+/g, '')) : 0,
-      bitShift: null,
-    })) ??
-    matchOrNull<Conversion | 'complex'>(normalised, ADD_OFFSET_RE, (m) => ({
-      scale: 1,
-      offset: parseFloat((m[1] ?? '0').replace(/\s+/g, '')),
-      bitShift: null,
-    })) ??
-    'complex'
-  )
+  const stripped = stripOuterParens(expr.trim())
+  const bitExtract = matchBitExtract(stripped)
+  if (bitExtract) return bitExtract
+  return tryLinearInV(normaliseExpr(stripped)) ?? 'complex'
 }
 
 const computeRange = (
@@ -206,6 +311,11 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
 
     while ((valueMatch = valueRe.exec(frameBody)) !== null) {
       const va = getAttrs(valueMatch[1] ?? '')
+
+      if (va.targetId === 'placeholder' || va.conversion === 'placeholder') {
+        valueIndex++
+        continue
+      }
 
       const name = va.name
         ? toSnakeCase(va.name)
