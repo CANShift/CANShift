@@ -2,7 +2,19 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { captureFeedback, isPostHogReady } from '../../lib/posthog'
 
-const STORAGE_KEY = 'tuner.feedback.dismissed-hint'
+const STORAGE_KEY = 'canshift:feedback-dismissed-hint'
+const LEGACY_STORAGE_KEY = 'tuner.feedback.dismissed-hint'
+
+const readDismissed = (): boolean => {
+  if (localStorage.getItem(STORAGE_KEY) === '1') return true
+  if (localStorage.getItem(LEGACY_STORAGE_KEY) === '1') {
+    localStorage.setItem(STORAGE_KEY, '1')
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+    return true
+  }
+  localStorage.removeItem(LEGACY_STORAGE_KEY)
+  return false
+}
 
 type Status = 'idle' | 'sending' | 'sent'
 
@@ -18,8 +30,7 @@ const FeedbackButton = () => {
   useEffect(() => {
     if (!isPostHogReady()) return
     setReady(true)
-    const dismissed = localStorage.getItem(STORAGE_KEY) === '1'
-    setShowHint(!dismissed)
+    setShowHint(!readDismissed())
   }, [])
 
   if (!ready) return null
