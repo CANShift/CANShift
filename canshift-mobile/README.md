@@ -1,9 +1,5 @@
 # CANShift Mobile
 
-<p align="center">
-  <img src="../logo/CANShift_mobile_logo.png" alt="Mobile logo" width="600">
-</p>
-
 Companion app for the CANShift dashboard. Live BLE telemetry, settings push,
 and Wi-Fi OTA firmware updates from your phone. See the
 [monorepo root](../README.md) for the full system overview.
