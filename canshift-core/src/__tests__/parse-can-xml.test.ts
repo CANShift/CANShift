@@ -436,6 +436,114 @@ describe('schema validation', () => {
   })
 })
 
+describe('recovered conversions (linear-in-V evaluator)', () => {
+  const oneSignal = (conv: string) =>
+    parseCanXml(simpleXml(`<value name="s" offset="0" length="2" conversion="${conv}"/>`))
+
+  it('(V+1000)/10 → scale=0.1, offset=100', () => {
+    const { signals } = oneSignal('(V+1000)/10')
+    expect(signals[0]?.scale).toBeCloseTo(0.1, 10)
+    expect(signals[0]?.offset).toBeCloseTo(100, 10)
+  })
+
+  it('(V*2+598)*0.1 → scale=0.2, offset=59.8', () => {
+    const { signals } = oneSignal('(V*2+598)*0.1')
+    expect(signals[0]?.scale).toBeCloseTo(0.2, 10)
+    expect(signals[0]?.offset).toBeCloseTo(59.8, 10)
+  })
+
+  it('(V-1)*(-1) → scale=-1, offset=1', () => {
+    const { signals } = oneSignal('(V-1)*(-1)')
+    expect(signals[0]?.scale).toBeCloseTo(-1, 10)
+    expect(signals[0]?.offset).toBeCloseTo(1, 10)
+  })
+
+  it('V-50+1.3 → scale=1, offset=-48.7', () => {
+    const { signals } = oneSignal('V-50+1.3')
+    expect(signals[0]?.scale).toBeCloseTo(1, 10)
+    expect(signals[0]?.offset).toBeCloseTo(-48.7, 10)
+  })
+
+  it('V*(2.55/256)*1.609344 → scale=2.55*1.609344/256', () => {
+    const { signals } = oneSignal('(V*(2.55/256))*1.609344')
+    expect(signals[0]?.scale).toBeCloseTo((2.55 * 1.609344) / 256, 10)
+    expect(signals[0]?.offset).toBeCloseTo(0, 10)
+  })
+
+  it('lowercase v works (v*0.1)', () => {
+    const { signals } = oneSignal('v*0.1')
+    expect(signals[0]?.scale).toBeCloseTo(0.1, 10)
+  })
+
+  it('implicit multiplication V0.5 → scale=0.5', () => {
+    const { signals } = oneSignal('V0.5')
+    expect(signals[0]?.scale).toBeCloseTo(0.5, 10)
+  })
+
+  it('left shift V << 6 → scale=64', () => {
+    const { signals } = oneSignal('V &lt;&lt; 6')
+    expect(signals[0]?.scale).toBe(64)
+  })
+
+  it('strips Unicode bidi marks (V/1.59375-10)', () => {
+    const { signals } = oneSignal('V/‭1.59375‬-10')
+    expect(signals[0]?.scale).toBeCloseTo(1 / 1.59375, 10)
+    expect(signals[0]?.offset).toBeCloseTo(-10, 10)
+  })
+})
+
+describe('recovered conversions (bit extraction)', () => {
+  it('V & 1 → bitMask 0x01', () => {
+    const { signals } = parseCanXml(
+      simpleXml('<value name="b" offset="0" length="1" conversion="V &amp; 1"/>')
+    )
+    expect(signals[0]?.bitMask).toBe('0x01')
+  })
+
+  it('V & 0x08 → bitMask 0x08', () => {
+    const { signals } = parseCanXml(
+      simpleXml('<value name="b" offset="0" length="1" conversion="V &amp; 0x08"/>')
+    )
+    expect(signals[0]?.bitMask).toBe('0x08')
+  })
+
+  it('(V>>1) & 1 → bitMask 0x02', () => {
+    const { signals } = parseCanXml(
+      simpleXml('<value name="b" offset="0" length="1" conversion="(V&gt;&gt;1) &amp; 1"/>')
+    )
+    expect(signals[0]?.bitMask).toBe('0x02')
+  })
+})
+
+describe('frame id recovery', () => {
+  it('parses unprefixed hex id "B600" as 0xb600', () => {
+    const { signals } = parseCanXml(
+      xml('', '<frame id="B600"><value name="x" offset="0" length="2"/></frame>')
+    )
+    expect(signals[0]?.canFrameId).toBe('0xb600')
+  })
+
+  it('still parses decimal id "264" as decimal', () => {
+    const { signals } = parseCanXml(
+      xml('', '<frame id="264"><value name="x" offset="0" length="2"/></frame>')
+    )
+    expect(signals[0]?.canFrameId).toBe('0x108')
+  })
+})
+
+describe('placeholder rows', () => {
+  it('silently skips conversion="placeholder"', () => {
+    const { signals, warnings } = parseCanXml(
+      simpleXml(
+        '<value name="real" offset="0" length="2"/>' +
+          '<value targetId="placeholder" offset="2" length="2" units="placeholder" conversion="placeholder"/>'
+      )
+    )
+    expect(signals).toHaveLength(1)
+    expect(warnings).toHaveLength(0)
+  })
+})
+
 describe('multiple frames', () => {
   it('collects signals from all frames', () => {
     const { signals } = parseCanXml(
