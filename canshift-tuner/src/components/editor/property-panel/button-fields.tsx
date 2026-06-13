@@ -22,6 +22,8 @@ import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } fr
 
 const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])
 
+const HEX_FRAME_ID_REGEX = /^(0[xX])?[0-9a-fA-F]{1,8}$/
+
 const EMPTY_PAGES: readonly PageConfig[] = []
 
 const defaultNavigateAction = (pageIds: string[]): ButtonAction => ({
@@ -80,8 +82,9 @@ const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) => (
             placeholder="0x123"
             value={`0x${action.frameId.toString(16).toUpperCase()}`}
             onChange={(e) => {
-              const v = parseInt(e.target.value, 16)
-              if (!isNaN(v)) onUpdate({ ...action, frameId: v })
+              const raw = e.target.value.trim()
+              if (!HEX_FRAME_ID_REGEX.test(raw)) return
+              onUpdate({ ...action, frameId: parseInt(raw, 16) })
             }}
           />
         </div>
