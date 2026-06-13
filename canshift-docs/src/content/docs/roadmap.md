@@ -1,4 +1,9 @@
-# CANShift roadmap
+---
+title: "Roadmap"
+description: "Planned work across firmware, tuner, mobile, and docs."
+sidebar:
+  order: 99
+---
 
 > 🚨 **Pre-#1351 snapshot.** The roadmap below was written before the WiFi+SPA removal and the `canshift-tuner` introduction ([`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351)). Items referencing `canshift-studio-web` / dash-hosted Studio / WiFi are superseded by the tuner direction. The forward-looking sections still track the right product themes; the surface naming is stale.
 

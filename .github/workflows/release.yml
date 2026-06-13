@@ -1,31 +1,9 @@
-# Release — triggered by every merge to main.
-# A release is only created when canshift-firmware/package.json version is new.
-# If the version already has a GitHub Release, the workflow exits silently.
-#
-# To ship a release: bump the version in canshift-firmware/package.json in your PR.
-# When that PR merges, this workflow fires and creates the GitHub Release automatically.
-#
-# Releases are firmware-only since the dash-hosted Studio refactor (#1077). The
-# Studio SPA ships in the SPIFFS data partition (mirrored at build time from
-# canshift-studio-web/dist/ by scripts/sync_studio_web.py per #1077 phase 4).
-# The Electron canshift-studio/ package was decommissioned post-cutover — its
-# installer (DMG / NSIS / AppImage) was already dropped per #1106 and the
-# package itself is gone. canshift-flasher (separate repo, canshift.tmbk.ch)
-# handles install / update over USB; mobile distributes through TestFlight /
-# Play Store on its own cadence.
-
 name: Release
-
-# Only the secret-supplied OTA HMAC (`OTA_HMAC_SECRET`) produces a flashable
-# artifact. The CI workflow uses a per-run `github.run_id` fallback so any
-# CI-built image is intentionally non-flashable on production devices.
 
 on:
   push:
     branches: [main]
 
-# `cancel-in-progress: false` — never interrupt a partially-completed release
-# (signing, asset uploads, draft creation must all reach a consistent state).
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -34,7 +12,6 @@ permissions:
   contents: write
 
 jobs:
-  # Detect whether this push introduces a new studio version
   check-version:
     name: Check version
     runs-on: ubuntu-latest
@@ -44,17 +21,8 @@ jobs:
       should_release: ${{ steps.check.outputs.should_release }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
-      # Source of truth: canshift-firmware/package.json `version`. This is also
-      # read by canshift-firmware/scripts/extra_targets.py to inject
-      # APP_VERSION_STR into the firmware binary, so the release tag and the
-      # firmware splash can never disagree as long as both readers point here.
-      #
-      # History: source-of-truth was canshift-studio/package.json until the
-      # Electron Studio package was decommissioned post-#1077 cutover. The
-      # firmware is the only artifact in releases now, so the version
-      # naturally tracks the firmware.
       - name: Read firmware version
         id: ver
         run: |
@@ -75,7 +43,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Build firmware and attach .bin files to the GitHub Release
   firmware-release:
     name: Firmware — build & attach
     needs: [check-version]
@@ -88,14 +55,14 @@ jobs:
         working-directory: canshift-firmware
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: '3.12'
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: |
             ~/.platformio/.packages
@@ -107,14 +74,6 @@ jobs:
       - name: Install PlatformIO CLI
         run: pip install platformio
 
-      # Write the OTA HMAC secret consumed by `extra_targets.py` before the
-      # production env builds. The guard introduced in #667 deliberately
-      # refuses to compile the release env with the placeholder, so the
-      # workflow needs a real key sourced from a repo secret. Set
-      # `OTA_HMAC_SECRET` under Settings → Secrets and variables → Actions
-      # (generate with `openssl rand -hex 32`). The same value must be
-      # configured on the OTA backend so signed bins verify against it.
-      # Closes #978.
       - name: Write secrets.ini for production firmware
         run: |
           if [ -z "${OTA_HMAC_SECRET:-}" ]; then
@@ -172,17 +131,6 @@ jobs:
           # SPIFFS image — flashed to the data partition.
           cp .pio/build/crowpanel_28/spiffs.bin canshift-spiffs-${TAG}-crowpanel_28.bin
 
-      # Ed25519 sign every release binary so the flasher can verify the asset
-      # before flashing over USB (issue #1259). The SHA-256 sidecar the
-      # flasher used to consume defends against in-transit corruption only —
-      # a compromised origin could swap both .bin and .sha256. An asymmetric
-      # signature whose public counterpart is embedded in the flasher build
-      # closes that gap.
-      #
-      # Secret format: `FIRMWARE_SIGNING_PRIVATE_KEY` = base64(PKCS8-PEM of
-      # the Ed25519 private key). When the secret is absent the step warns
-      # and exits 0 — the flasher's verification stays no-op until the
-      # rollout reaches every release in the wild (see canshift-flasher #61).
       - name: Sign firmware artifacts with Ed25519
         run: |
           if [ -z "${FIRMWARE_SIGNING_PRIVATE_KEY:-}" ]; then
@@ -199,10 +147,6 @@ jobs:
         env:
           FIRMWARE_SIGNING_PRIVATE_KEY: ${{ secrets.FIRMWARE_SIGNING_PRIVATE_KEY }}
 
-      # electron-builder used to create the draft Release as a side effect of
-      # the (now-removed) studio-release job. With that job gone, the firmware
-      # job is solely responsible for creating the Release before uploading
-      # assets.
       - name: Create GitHub Release if missing
         run: |
           TAG=${{ needs.check-version.outputs.tag }}
@@ -240,9 +184,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
 
-      # Pre-1.0 releases are alpha by definition — flip the prerelease flag so
-      # GitHub renders them as such. Drop this step (or tighten the regex)
-      # once we cut v1.0.0.
       - name: Flag 0.x releases as pre-release
         if: startsWith(needs.check-version.outputs.tag, 'v0.')
         run: gh release edit "${{ needs.check-version.outputs.tag }}" --prerelease

@@ -1,4 +1,9 @@
-# Config Contract — CANShift Configuration Schema
+---
+title: "Config contract"
+description: "Shared JSON contract between firmware, tuner, and mobile — schema versions, validation rules."
+sidebar:
+  order: 11
+---
 
 > 🚨 **Pre-#1351.** Sections mentioning `canshift-studio-web` should be read as `canshift-tuner`; the JSON schema itself (in `canshift-core`) is unchanged. WiFi-coupled flow descriptions are historical. See [`#1351`](https://github.com/tburkhalterr/CANShift/issues/1351).
 

@@ -11,11 +11,6 @@ concurrency:
 env:
   NODE_VERSION: '24'
   PYTHON_VERSION: '3.12'
-  # CI artifacts are not meant to be HMAC-flashable. A stable cleartext fallback
-  # would let any CI build be flashed under a known key if a regression ever
-  # shipped one; using `github.run_id` gives each CI build a unique non-flashable
-  # HMAC. The real secret lives in `release.yml` and is the only path to a
-  # flashable artifact (#1291).
   OTA_HMAC_CI_FALLBACK: ${{ github.run_id }}
 
 jobs:
@@ -104,11 +99,6 @@ jobs:
           awk -v p="$PCT" 'BEGIN { exit (p > 98) ? 1 : 0 }' \
             || (echo "::error::flash ${PCT}% > 98% (#305 / #158)" && exit 1)
 
-      # SPIFFS round-trip gate (#1240). mkspiffs silently drops files whose
-      # on-device path exceeds SPIFFS_OBJ_NAME_LEN (31 chars including NUL).
-      # Post-#1351 the SPA is no longer in SPIFFS — only fonts + config JSON
-      # remain, all committed under data/. The check still guards against a
-      # mkspiffs regression that drops one of those files silently.
       - name: buildfs (crowpanel_28)
         run: pio run -e crowpanel_28 -t buildfs
 
@@ -154,12 +144,6 @@ jobs:
           fi
 
       - name: build (secure)
-        # Exercise the secure-boot partition layout and SDK defaults on every PR
-        # so changes to `ota_4mb_secure.csv` or `APP_SECURE_BOOT_BUILD=1`-gated
-        # code paths can't break only at hand-build / release time (#1340).
-        # No flash-budget gate here — the secure layout has different partition
-        # sizing than `crowpanel_28`, so the existing 98 % rule wouldn't apply
-        # cleanly. The build itself succeeding is the contract.
         run: pio run -e secure
 
   mobile-ios:

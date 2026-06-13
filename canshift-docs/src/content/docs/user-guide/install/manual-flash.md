@@ -1,4 +1,9 @@
-# Manual flash (recovery)
+---
+title: "Manual flash"
+description: "USB esptool flashing when the desktop flasher is unavailable."
+sidebar:
+  order: 4
+---
 
 Use the in-browser flasher first — it covers 95% of cases. **This page is
 the fallback** for when the in-browser path can't recover the device

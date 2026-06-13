@@ -1,4 +1,9 @@
-# Secure Boot v2 + Flash Encryption — Setup Guide
+---
+title: "Secure boot setup"
+description: "Enable secure boot v2 + flash encryption on the ESP32 production builds."
+sidebar:
+  order: 13
+---
 
 > [!CAUTION]
 > **DO NOT RUN ON DEV BOARDS.** Burning eFuses is **irreversible**. A wrong
