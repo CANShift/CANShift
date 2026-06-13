@@ -18,17 +18,13 @@ export const BleStatusWireSchema = z
 
 export type BleStatusWire = z.infer<typeof BleStatusWireSchema>
 
-export const BleStatusSchema = z
-  .object({
-    firmwareVersion: z.string().optional(),
-    canHealthy: z.boolean().optional(),
-    apSsid: z.string().optional(),
-    apPassword: z.string().optional(),
-    isDay: z.boolean().optional(),
-  })
-  .strict()
-
-export type BleStatus = z.infer<typeof BleStatusSchema>
+export interface BleStatus {
+  firmwareVersion?: string
+  canHealthy?: boolean
+  apSsid?: string
+  apPassword?: string
+  isDay?: boolean
+}
 
 export const bleStatusFromWire = (wire: BleStatusWire): BleStatus => {
   const out: BleStatus = {}
@@ -40,19 +36,11 @@ export const bleStatusFromWire = (wire: BleStatusWire): BleStatus => {
   return out
 }
 
-export const BleStatusResultSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('ok'), status: BleStatusSchema }).strict(),
-  z.object({ kind: z.literal('invalid_json'), raw: z.string() }).strict(),
-  z.object({ kind: z.literal('not_an_object'), payload: z.unknown() }).strict(),
-  z
-    .object({
-      kind: z.literal('wrong_shape'),
-      issues: z.array(z.custom<z.ZodIssue>()),
-    })
-    .strict(),
-])
-
-export type BleStatusResult = z.infer<typeof BleStatusResultSchema>
+export type BleStatusResult =
+  | { kind: 'ok'; status: BleStatus }
+  | { kind: 'invalid_json'; raw: string }
+  | { kind: 'not_an_object'; payload: unknown }
+  | { kind: 'wrong_shape'; issues: z.ZodIssue[] }
 
 export const parseBleStatus = (raw: string): BleStatusResult => {
   let parsed: unknown

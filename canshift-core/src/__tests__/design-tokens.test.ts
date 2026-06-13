@@ -1,7 +1,6 @@
 import {
   COLOR_KEY_TO_CSS_VAR,
   DARK_TOKENS,
-  LIGHT_TOKENS,
   hexToHslChannels,
   tokensToCssVars,
 } from '../design-tokens.js'
@@ -42,19 +41,6 @@ describe('DARK_TOKENS', () => {
       spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
       typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
     })
-  })
-})
-
-describe('LIGHT_TOKENS', () => {
-  it('has the exact same key set as DARK_TOKENS (structural parity)', () => {
-    expect(Object.keys(LIGHT_TOKENS.colors).sort()).toEqual(Object.keys(DARK_TOKENS.colors).sort())
-    expect(Object.keys(LIGHT_TOKENS.radii).sort()).toEqual(Object.keys(DARK_TOKENS.radii).sort())
-    expect(Object.keys(LIGHT_TOKENS.spacing).sort()).toEqual(
-      Object.keys(DARK_TOKENS.spacing).sort()
-    )
-    expect(Object.keys(LIGHT_TOKENS.typography).sort()).toEqual(
-      Object.keys(DARK_TOKENS.typography).sort()
-    )
   })
 })
 

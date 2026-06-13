@@ -77,8 +77,6 @@ export const DARK_TOKENS = {
   typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
 } as const satisfies DesignTokens
 
-export const LIGHT_TOKENS: DesignTokens = DARK_TOKENS
-
 interface RgbChannels {
   r: number
   g: number

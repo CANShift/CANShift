@@ -55,7 +55,7 @@ canshift-core/
     │   ├── validate-signal-config.ts     # SignalConfig structural sanity
     │   └── validate-signal.ts            # validateSignalCatalog (color-ramp anchored)
     ├── ecu-profiles/                     # Built-in ECU presets (MaxxECU, …) — #570
-    ├── realdash/                         # RealDash CAN XML import (parseRealDashXML, #609)
+    ├── can-xml/                          # CAN XML import (parseCanXml, #609)
     ├── types/
     │   └── releases.ts                   # GitHub ReleaseInfo / LatestReleaseResult (#571)
     ├── design-tokens.ts                  # DARK_TOKENS, tokensToCssVars (#526)
@@ -92,7 +92,7 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 - Design tokens (#526): `DesignTokens`
 - Hardware profiles (#831): `HardwareProfileId`, `HardwareProfile`
 - ECU profiles (#570): `EcuProfile`
-- RealDash import (#609): `ParseRealDashXMLResult`
+- CAN XML import (#609): `ParseCanXmlResult`
 - TopBar mirror types: `TopBarMetricsRatios`, `TopBarColorPalette`
 - Sensors: `SensorKind`, `SensorPaletteEntry`
 
@@ -106,13 +106,9 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 - Sensors: `SENSOR_DEFAULT_RAMPS`, `SENSOR_PALETTE`, `resolveDefaultRamp`, `resolveSensorKind`, `colorAtValue`, `sensorOkColor`, `sensorWarningColor`
 - Design tokens: `COLOR_KEY_TO_CSS_VAR`, `DARK_TOKENS`, `tokensToCssVars`, `DAY_PALETTE_DEFAULT`, `DAY_BG_DEFAULT`, `DAY_THEME_PRESET`
 - Hardware / ECU: `HARDWARE_PROFILES`, `isPinAvailableForBoard`, `ECU_PROFILES`, `DEFAULT_PROFILE_ID`, `MAXXECU_SIGNAL_UNITS`
-- RealDash: `parseRealDashXML`
+- CAN XML: `parseCanXml`
 - TopBar mirrors: `TopBarMetrics`, `TopBarColors`
 - Firmware caps: `FIRMWARE_CAPS`, `CANVAS`, `TOPBAR_HEIGHT`, `REV_LIMIT_RPM`, `DECIMAL_PLACES`, `HEX_COLOR_REGEX`, `MAX_RAMP_STOPS`
-
-`LIGHT_TOKENS` is intentionally **not** re-exported — it is a placeholder for
-the on-hold theme editor (#21) and stays internal until a real consumer
-lands.
 
 **Validators** — all return `{ valid: boolean, errors: string[], warnings: string[], config?: T }`
 
@@ -127,7 +123,7 @@ lands.
 
 **Version**
 
-- `CURRENT_SCHEMA_VERSION` — currently `1.19.0`
+- `CURRENT_SCHEMA_VERSION` — currently `1.23.0`
 - `PRODUCT_NAME` — `'CANShift'`
 
 ---
@@ -137,7 +133,7 @@ lands.
 Every config file carries a `"version"` field at the root:
 
 ```json
-{ "version": "1.19.0", ... }
+{ "version": "1.23.0", ... }
 ```
 
 `CURRENT_SCHEMA_VERSION` (`src/index.ts`) is the version this code reads and writes. It follows semver:
@@ -178,6 +174,10 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 | 1.16.0 → 1.17.0 | Gauge / bar `warningLevel` dropped (#965); `dangerLevel` becomes the sole threshold above which a gauge turns red — `warningLevel` is discarded, `dangerLevel` preserved as-is |
 | 1.17.0 → 1.18.0 | `DashboardConfig` gains optional `targetProfile` (#548); undefined resolves to `DEFAULT_SCREEN_PROFILE_ID` ("crowpanel-28") — no data transform |
 | 1.18.0 → 1.19.0 | `BarWidgetConfig` gains optional `barOrientation` (#1232 flag); undefined keeps the legacy horizontal layout — no data transform |
+| 1.19.0 → 1.20.0 | `hideWhenInvalid` removed from every widget config; firmware now renders a stale state in-place rather than hiding the widget |
+| 1.20.0 → 1.21.0 | `bar` widget type removed; legacy `bar` widgets are filtered out, gauges shed any leftover `barOrientation` field |
+| 1.21.0 → 1.22.0 | `label` and `labelPosition` removed from non-button widget configs (labels now live on the widget frame, not the config body) |
+| 1.22.0 → 1.23.0 | `ButtonWidgetConfig` becomes a `mode`-discriminated union (#1232); existing button configs without `mode` are tagged `mode: 'single'` to preserve behavior — the `cycle` mode is opt-in |
 
 `migrateConfig` deep-clones the input before any migration runs (#282) so individual migrations can mutate freely without aliasing the caller's object.
 
