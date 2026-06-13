@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { WelcomeScreen } from '../components/Shell/WelcomeScreen'
+import { WelcomeScreen } from '../components/shell/WelcomeScreen'
 import { useConnectionStore } from '../stores/connection.store'
 
 const SUPPORT_EMAIL = 'support@canshift.tmbk.ch'

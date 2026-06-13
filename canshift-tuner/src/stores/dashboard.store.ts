@@ -13,7 +13,7 @@ import type {
 } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
-import { DEFAULT_SIM_CONFIG } from '../config/defaultSimConfig'
+import { DEFAULT_SIM_CONFIG } from '../config/default-sim-config'
 import { DAY_THEME_PRESET } from '../constants/theme'
 
 export type LoadFromDeviceOrDemoResult = 'device' | 'demo' | 'kept-edits'

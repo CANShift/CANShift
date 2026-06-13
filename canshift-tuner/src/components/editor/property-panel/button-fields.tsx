@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { IconTrash } from '../../icons/Icon'
 import { WidgetPreview } from '../WidgetPreview'
 import { useDashboardStore } from '../../../stores/dashboard.store'
-import { actionKey, newId } from '../../../utils/listKeys'
+import { actionKey, newId } from '../../../utils/list-keys'
 import { ConfigFieldsProps, Field, IconPicker, inputStyle, numberInputStyle } from './shared'
 
 const CRUISE_STEP_OPS = new Set<CruiseControlOp>(['increment', 'decrement'])

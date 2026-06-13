@@ -1,5 +1,5 @@
 import type { Widget } from '@tmbk/canshift-core'
-import { displayLabelForSignal } from '../../../utils/signalLabels'
+import { displayLabelForSignal } from '../../../utils/signal-labels'
 
 export interface BaseRendererProps {
   widget: Widget
