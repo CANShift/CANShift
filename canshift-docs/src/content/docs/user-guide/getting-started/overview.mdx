@@ -1,34 +1,64 @@
 ---
 title: "What is CANShift?"
-description: "Quick overview of the system before you dive into installation."
+description: "Before you flash anything — what the dash does, what it talks to, and what you'll need."
 sidebar:
   order: 1
 ---
 
-CANShift is an **open-source CAN bus dashboard** for sport and track cars. It
-runs on an ESP32 touch screen and displays ECU signals in real time — RPM,
-temperatures, pressures, lambda, gear, and so on.
+CANShift is a small ESP32 touch screen wired to your car's CAN bus. It listens for the frames your ECU broadcasts — RPM, coolant temp, oil pressure, lambda, gear, vehicle speed, you name it — decodes them in real time, and paints them on configurable dashboard pages you design from a browser. No proprietary tooling, no cloud round-trip.
 
-## What you need
+## What you'll have at the end
 
-- **Hardware**: an Elecrow CrowPanel 2.8" ESP32 screen + a CAN transceiver
-  (TJA1051T/3) + wiring between the two and to your ECU.
-- **Software**: a Chromium-based browser for flashing (Web Serial) and a USB
-  cable.
+- A **dash** on the steering column or centre console, reading signals at 1 kHz from the bus and rendering them at ~60 fps.
+- A **tuner** open in a Chromium tab on a laptop — drag-and-drop pages, ECU profile picker, live preview, CAN scan.
+- A **mobile companion** (optional) that mirrors telemetry over BLE when the laptop isn't in the car.
 
-## The tuner is the control surface
+The dash boots in ~2 seconds, holds a 2-second splash so you can read the version, then drops you onto the page you marked as default. Swipe sideways for other pages, swipe down for Settings, swipe up for the diag drawer.
 
-The browser-based tuner is where you connect to the dash, edit the dashboard,
-and flash firmware.
+## What runs where
 
-## Ecosystem
+<pre class="cs-ascii">{`
+  ┌───────────┐   USB-C / Web Serial     ┌──────────────────┐
+  │  Tuner    │ ◄──────────────────────► │      Dash        │
+  │  browser  │   JSON @ 115200          │   ESP32 + LVGL   │
+  └───────────┘                          └────────┬─────────┘
+                                                  │ CAN @ 500 kbit/s
+                                                  ▼
+                                          ┌──────────────────┐
+                                          │      Your ECU    │
+                                          └──────────────────┘
+                                                  ▲
+  ┌───────────┐   BLE  (optional)                 │
+  │  Mobile   │ ◄────────────────────────────────┘
+  │  Expo app │   telemetry mirror
+  └───────────┘
+`}</pre>
 
-- **dash** (firmware) — the device itself: renders, parses CAN, runs cruise/UI.
-- **tuner** — edits the dashboard live from a browser over USB Web Serial.
-  Also hosts the firmware flasher at `/firmware`.
-- **mobile** — telemetry and secondary config over BLE.
+The dash is the only thing on the car. The tuner is just a browser tab — open it when you want to change a page, then close it. The mobile app pairs over BLE for in-car telemetry without the laptop.
+
+## What you'll need
+
+<div class="cs-spec-sheet">
+  <div class="title">Bill of materials — reference build</div>
+  <dl>
+    <dt>Screen</dt><dd>Elecrow CrowPanel 2.8″ ESP32 (ILI9341 SPI + XPT2046 touch)</dd>
+    <dt>CAN transceiver</dt><dd>NXP TJA1051T/3 breakout, 3.3 V tolerant</dd>
+    <dt>Wiring</dt><dd>Dupont jumpers between screen ⇄ transceiver, OBD-II or direct splice to your ECU CAN H/L</dd>
+    <dt>Cable</dt><dd>USB-C data cable (not power-only) for flashing</dd>
+    <dt>Browser</dt><dd>Chromium-based (Chrome, Edge, Brave, Arc, Opera) — Firefox has no Web Serial</dd>
+  </dl>
+</div>
+
+## How long this takes
+
+| Step | Reading time | Doing time |
+|---|---:|---:|
+| [Wire up + first flash](/user-guide/install/first-flash/) | 4 min | ~5 min for a fresh board |
+| [Pick an ECU profile, edit a page](/user-guide/configure/with-tuner/) | 3 min | ~10 min the first time |
+| [Use the dash on the road](/user-guide/usage/navigating-pages/) | 2 min | 0 |
+
+If something goes wrong, the boot logs are explicit — see [Boot diagnostics](/user-guide/install/boot-issues/) for the failure dictionary.
 
 ## Next
 
-Read [First flash](/user-guide/install/first-flash/) to go from box to a
-dashboard that boots.
+Read [First flash](/user-guide/install/first-flash/) — it walks the box-to-splash path in five steps, with a serial monitor on standby in case the boot logs need a second look.
