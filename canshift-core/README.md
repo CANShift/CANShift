@@ -127,7 +127,7 @@ lands.
 
 **Version**
 
-- `CURRENT_SCHEMA_VERSION` — currently `1.19.0`
+- `CURRENT_SCHEMA_VERSION` — currently `1.23.0`
 - `PRODUCT_NAME` — `'CANShift'`
 
 ---
@@ -137,7 +137,7 @@ lands.
 Every config file carries a `"version"` field at the root:
 
 ```json
-{ "version": "1.19.0", ... }
+{ "version": "1.23.0", ... }
 ```
 
 `CURRENT_SCHEMA_VERSION` (`src/index.ts`) is the version this code reads and writes. It follows semver:
@@ -178,6 +178,10 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 | 1.16.0 → 1.17.0 | Gauge / bar `warningLevel` dropped (#965); `dangerLevel` becomes the sole threshold above which a gauge turns red — `warningLevel` is discarded, `dangerLevel` preserved as-is |
 | 1.17.0 → 1.18.0 | `DashboardConfig` gains optional `targetProfile` (#548); undefined resolves to `DEFAULT_SCREEN_PROFILE_ID` ("crowpanel-28") — no data transform |
 | 1.18.0 → 1.19.0 | `BarWidgetConfig` gains optional `barOrientation` (#1232 flag); undefined keeps the legacy horizontal layout — no data transform |
+| 1.19.0 → 1.20.0 | `hideWhenInvalid` removed from every widget config; firmware now renders a stale state in-place rather than hiding the widget |
+| 1.20.0 → 1.21.0 | `bar` widget type removed; legacy `bar` widgets are filtered out, gauges shed any leftover `barOrientation` field |
+| 1.21.0 → 1.22.0 | `label` and `labelPosition` removed from non-button widget configs (labels now live on the widget frame, not the config body) |
+| 1.22.0 → 1.23.0 | `ButtonWidgetConfig` becomes a `mode`-discriminated union (#1232); existing button configs without `mode` are tagged `mode: 'single'` to preserve behavior — the `cycle` mode is opt-in |
 
 `migrateConfig` deep-clones the input before any migration runs (#282) so individual migrations can mutate freely without aliasing the caller's object.
 
