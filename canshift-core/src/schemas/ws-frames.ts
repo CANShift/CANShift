@@ -39,7 +39,7 @@ export const TeleFrameSchema = z
 
 export type TeleFrame = z.infer<typeof TeleFrameSchema>
 
-export const HeapStatsFrameSchema = z
+export const HeapStatsFrameWireSchema = z
   .object({
     heap_stats: FiniteNumberSchema,
     ts: z.number().int().nonnegative(),
@@ -50,4 +50,20 @@ export const HeapStatsFrameSchema = z
   })
   .passthrough()
 
-export type HeapStatsFrame = z.infer<typeof HeapStatsFrameSchema>
+export type HeapStatsFrameWire = z.infer<typeof HeapStatsFrameWireSchema>
+
+export interface HeapStatsFrame {
+  tsMs: number
+  freeInternal: number
+  largestInternal: number
+  freePsram: number | null
+  largestPsram: number | null
+}
+
+export const heapStatsFromWire = (wire: HeapStatsFrameWire): HeapStatsFrame => ({
+  tsMs: wire.ts,
+  freeInternal: wire.free_int,
+  largestInternal: wire.largest_int,
+  freePsram: wire.free_psram,
+  largestPsram: wire.largest_psram,
+})

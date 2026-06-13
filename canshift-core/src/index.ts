@@ -99,12 +99,19 @@ export {
   parseBleStatus,
 } from './schemas/ble-status.js'
 
-export type { LogFrame, CanFrame, TeleFrame, HeapStatsFrame } from './schemas/ws-frames.js'
+export type {
+  LogFrame,
+  CanFrame,
+  TeleFrame,
+  HeapStatsFrame,
+  HeapStatsFrameWire,
+} from './schemas/ws-frames.js'
 export {
   LogFrameSchema,
   CanFrameSchema,
   TeleFrameSchema,
-  HeapStatsFrameSchema,
+  HeapStatsFrameWireSchema,
+  heapStatsFromWire,
 } from './schemas/ws-frames.js'
 
 export {
