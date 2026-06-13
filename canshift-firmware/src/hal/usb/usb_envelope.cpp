@@ -91,4 +91,4 @@ const char *findPayloadSlice(const char *jsonLine, size_t lineLen, size_t *outLe
 #endif
 }
 
-}
+} // namespace UsbEnvelope

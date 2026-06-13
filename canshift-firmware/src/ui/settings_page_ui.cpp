@@ -75,7 +75,7 @@ lv_obj_t *makeFullButton(lv_obj_t *parent, const char *label, uint32_t bgColor, 
     return btn;
 }
 
-}
+} // namespace
 
 void computePanelGeometry(int16_t yOffset, int16_t height) {
 
@@ -185,7 +185,7 @@ void animSetY(void *obj, int32_t v) {
     lv_obj_set_y(static_cast<lv_obj_t *>(obj), static_cast<lv_coord_t>(v));
 }
 
-void onSnapOpenDone(lv_anim_t * ) {
+void onSnapOpenDone(lv_anim_t *) {
     if (!s_panel)
         return;
     lv_obj_set_y(s_panel, s_openY);
@@ -196,7 +196,7 @@ void onSnapOpenDone(lv_anim_t * ) {
     }
 }
 
-void onSnapClosedDone(lv_anim_t * ) {
+void onSnapClosedDone(lv_anim_t *) {
     if (!s_panel)
         return;
     lv_obj_set_y(s_panel, s_closedY);
@@ -231,4 +231,4 @@ void runSnap(int16_t targetY, lv_anim_ready_cb_t doneCb) {
     lv_anim_start(&a);
 }
 
-}
+} // namespace SettingsPageInternal

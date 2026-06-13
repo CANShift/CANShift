@@ -24,7 +24,7 @@ constexpr size_t computeLvglBufLines(uint16_t screenW, size_t budgetBytes) {
 
 constexpr size_t kLvglBufLines = computeLvglBufLines(HW_DISPLAY_WIDTH, HW_LVGL_DRAW_BUDGET_BYTES);
 static_assert(kLvglBufLines == 10, "draw-buffer line count regression for CrowPanel 2.8\"");
-}
+} // namespace
 
 static lv_disp_draw_buf_t s_drawBuf;
 static lv_disp_drv_t s_dispDrv;
@@ -45,7 +45,7 @@ void DisplayDriver::flushCallback(lv_disp_drv_t *disp, const lv_area_t *area,
 
     s_lcd.startWrite();
     s_lcd.setAddrWindow(area->x1, area->y1, w, h);
-    s_lcd.writePixels(reinterpret_cast<uint16_t *>(colorMap), w * h, true );
+    s_lcd.writePixels(reinterpret_cast<uint16_t *>(colorMap), w * h, true);
     s_lcd.endWrite();
 
 #if APP_PROFILE_UI

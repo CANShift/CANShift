@@ -14,4 +14,4 @@ void flushCallback(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
 LGFX &getDisplay();
 
-}
+} // namespace DisplayDriver

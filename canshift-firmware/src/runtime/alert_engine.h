@@ -5,12 +5,7 @@
 
 namespace AlertEngine {
 
-enum class AlertLevel : uint8_t {
-    NORMAL = 0,
-    CAUTION = 1,
-    WARNING = 2,
-    CRITICAL = 3
-};
+enum class AlertLevel : uint8_t { NORMAL = 0, CAUTION = 1, WARNING = 2, CRITICAL = 3 };
 
 struct AlertState {
     AlertLevel revLimiter;
@@ -33,4 +28,4 @@ bool isRevLimiterFlashOn();
 
 uint32_t getRevLimiterOverlayColor();
 
-}
+} // namespace AlertEngine

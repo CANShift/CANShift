@@ -212,13 +212,13 @@ const char *errorSrcLabel(ErrorSource src) {
     return "?";
 }
 
-void onCloseReleased(lv_event_t * ) {
+void onCloseReleased(lv_event_t *) {
 
     LOG_INFO("DIAG_DRAWER", "close release");
     close();
 }
 
-void onClosePressed(lv_event_t * ) {
+void onClosePressed(lv_event_t *) {
     LOG_INFO("DIAG_DRAWER", "close press");
 }
 
@@ -236,7 +236,7 @@ void onPanelGesture(lv_event_t *e) {
     (void)e;
 }
 
-}
+} // namespace
 
 void init() {
     if (s_initDone)
@@ -383,4 +383,4 @@ void update() {
     }
 }
 
-}
+} // namespace DiagDrawer

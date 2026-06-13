@@ -32,4 +32,4 @@ bool getBleEnabled();
 
 void applyFromUsb(uint8_t brightness);
 
-}
+} // namespace SettingsPage

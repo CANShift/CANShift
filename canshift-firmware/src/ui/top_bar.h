@@ -13,4 +13,4 @@ int16_t getHeight();
 
 void reapplyTheme();
 
-}
+} // namespace TopBar

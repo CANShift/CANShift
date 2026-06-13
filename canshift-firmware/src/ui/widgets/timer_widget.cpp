@@ -115,7 +115,7 @@ void onTimerTouch(lv_event_t *e) {
     }
 }
 
-}
+} // namespace
 
 void TimerWidget::reapplyTheme(lv_obj_t *obj, const CfgWidget &cfg) {
     if (!obj)
@@ -189,7 +189,7 @@ lv_obj_t *TimerWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yO
     return cont;
 }
 
-void TimerWidget::update(lv_obj_t *obj, float , bool , const CfgWidget &cfg) {
+void TimerWidget::update(lv_obj_t *obj, float, bool, const CfgWidget &cfg) {
     if (!obj)
         return;
     auto *tag = static_cast<TimerTag *>(lv_obj_get_user_data(obj));

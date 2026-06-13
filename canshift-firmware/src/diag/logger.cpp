@@ -76,7 +76,7 @@ void escapeJson(const char *src, char *dst, size_t dstCap) {
     dst[w] = '\0';
 }
 
-}
+} // namespace
 
 void Logger::init() {
 

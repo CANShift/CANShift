@@ -39,7 +39,7 @@ constexpr NameToId kNameToId[] = {
     {"lap_timer_ms", SignalIds::LAP_TIMER_MS},
 };
 
-}
+} // namespace
 
 SignalId signalIdFromName(const char *name) {
 #if USE_RUST_SIGNAL_MAP

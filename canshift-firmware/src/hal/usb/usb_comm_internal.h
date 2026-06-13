@@ -34,4 +34,4 @@ void tickChunkTransferTimeout();
 void invokeBurnOverlayShow();
 void invokeBurnOverlayShowError(int reason);
 
-}
+} // namespace UsbCommInternal

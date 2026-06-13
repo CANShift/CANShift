@@ -281,9 +281,8 @@ void handleGetConfig() {
     constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
     memcpy(buf, kPrefix, kPrefixLen);
 
-    BufferPrint sink(buf + kPrefixLen, needed - kPrefixLen - 2 );
-    const size_t streamed = StorageDriver::streamFileTo(CONFIG_PATH_DASHBOARD, sink,
-                                                        true );
+    BufferPrint sink(buf + kPrefixLen, needed - kPrefixLen - 2);
+    const size_t streamed = StorageDriver::streamFileTo(CONFIG_PATH_DASHBOARD, sink, true);
 
     if (streamed == 0 || sink.used() == 0 || streamed != sink.used()) {
         free(buf);
@@ -302,7 +301,7 @@ void handleGetConfig() {
     LOG_INFO("USB", "GET_CONFIG: sent %u bytes", static_cast<unsigned>(streamed));
 }
 
-}
+} // namespace
 
 namespace UsbCommInternal {
 
@@ -519,4 +518,4 @@ void handleCommand(const char *jsonLine) {
     }
 }
 
-}
+} // namespace UsbCommInternal

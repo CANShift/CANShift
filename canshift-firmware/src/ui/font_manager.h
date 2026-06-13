@@ -4,7 +4,6 @@
 
 class FontManager {
   public:
-
     static void init();
 
     static void shutdown();

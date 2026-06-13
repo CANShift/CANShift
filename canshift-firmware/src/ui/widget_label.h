@@ -17,4 +17,4 @@ void applySignalHeader(_lv_obj_t *cont, const char *signalId, HeaderPos pos = He
 
 const char *displayLabelForSignal(const char *signalId);
 
-}
+} // namespace WidgetLabelOverlay

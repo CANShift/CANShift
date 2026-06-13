@@ -75,7 +75,7 @@ bool writeOne(const EmbeddedBlob &blob) {
     return true;
 }
 
-}
+} // namespace
 
 DefaultConfig::ProvisionResult DefaultConfig::provisionMissingFiles() {
     ProvisionResult result = {0, 0, 0};

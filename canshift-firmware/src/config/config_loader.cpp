@@ -25,7 +25,7 @@ constexpr size_t kRollbackSnapshotSize = sizeof(CfgSignalConfig);
 #ifndef BOARD_HAS_PSRAM
 alignas(CfgSignalConfig) uint8_t s_rollback_snapshot_bss[kRollbackSnapshotSize];
 #endif
-}
+} // namespace
 
 uint8_t *acquireRollbackSnapshot() {
 #ifdef BOARD_HAS_PSRAM
@@ -56,7 +56,7 @@ uint8_t *acquireRollbackSnapshot() {
 #endif
 }
 
-}
+} // namespace ConfigLoaderInternal
 
 ConfigLoader::LoadResult ConfigLoader::loadAll() {
     LoadResult r{};

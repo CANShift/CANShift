@@ -68,7 +68,7 @@ void emitFrame(const Snapshot &s) {
     UsbComm::sendLine(buf);
 }
 
-}
+} // namespace
 
 Snapshot sampleNow() {
     s_latest = sampleInternal();
@@ -97,4 +97,4 @@ void emitNow() {
     emitFrame(s_latest);
 }
 
-}
+} // namespace HeapStats

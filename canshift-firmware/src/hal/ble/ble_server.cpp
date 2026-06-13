@@ -41,7 +41,7 @@ namespace BleServerInternal {
 NimBLECharacteristic *s_pTele = nullptr;
 NimBLECharacteristic *s_pStatus = nullptr;
 bool s_connected = false;
-}
+} // namespace BleServerInternal
 
 static bool s_enabled = false;
 
@@ -279,7 +279,7 @@ bool startStack() {
     return true;
 }
 
-}
+} // namespace
 
 void BleServer::earlyInit() {
 

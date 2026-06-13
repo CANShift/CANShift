@@ -11,4 +11,4 @@ void update(lv_obj_t *obj, float value, bool valid, const CfgWidget &cfg);
 
 void reapplyTheme(lv_obj_t *obj, const CfgWidget &cfg);
 
-}
+} // namespace TimerWidget

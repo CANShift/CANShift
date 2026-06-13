@@ -64,7 +64,7 @@ const char *stripDriveLetter(const char *lvglPath) {
     return lvglPath;
 }
 
-}
+} // namespace
 
 const void *resolveSource(const char *iconName) {
 
@@ -119,7 +119,7 @@ void preloadIconNameOnce(char seen[SEEN_CAP][SEEN_LEN], uint8_t &seenCount, cons
     preload(path(iconName));
 }
 
-}
+} // namespace
 
 void preload(const char *lvglPath) {
     if (!lvglPath || lvglPath[0] == '\0')
@@ -172,4 +172,4 @@ void preloadDashboardAssets() {
     LOG_INFO("ICON", "Preloaded %u dashboard icon(s) (theme +2)", static_cast<unsigned>(seenCount));
 }
 
-}
+} // namespace IconAssets

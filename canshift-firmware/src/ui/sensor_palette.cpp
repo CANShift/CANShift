@@ -35,7 +35,7 @@ constexpr SensorPaletteEntry kEntries[] = {
     {"cog", 0x9E9E9Eu, SensorPalette::kSentinelNoWarning},
 };
 
-}
+} // namespace
 
 const SensorPaletteEntry *SensorPalette::lookup(const char *iconName) {
     if (!iconName || iconName[0] == '\0')

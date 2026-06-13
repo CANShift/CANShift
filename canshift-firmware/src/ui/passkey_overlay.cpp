@@ -28,7 +28,7 @@ void teardown() {
     }
 }
 
-}
+} // namespace
 
 void PasskeyOverlay::show(uint32_t passkey) {
     teardown();

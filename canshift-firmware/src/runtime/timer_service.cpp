@@ -59,7 +59,7 @@ void bumpVersionLocked() {
     g_state.version++;
 }
 
-}
+} // namespace
 
 void TimerService::init() {
     if (g_state.initialized)

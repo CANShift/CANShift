@@ -34,7 +34,7 @@ void updateStatus() {
     pStatus->setValue(buf);
 }
 
-}
+} // namespace BleServerInternal
 
 void BleServer::pushStatusNotify() {
     BleServerInternal::updateStatus();

@@ -31,7 +31,7 @@ inline void assertLocked(const char *file, int line, const char *fn) {
     }
 }
 
-}
+} // namespace LvglLock
 
     #define LVGL_ASSERT_LOCKED() ::LvglLock::assertLocked(__FILE__, __LINE__, __func__)
 

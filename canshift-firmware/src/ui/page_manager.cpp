@@ -35,7 +35,7 @@ uint8_t s_pendingFreeIdx = 0xFF;
 uint8_t s_pendingLazyBuildIdx = 0xFF;
 uint32_t s_pendingLazyBuildMs = 120;
 
-}
+} // namespace PageManagerInternal
 
 void PageManager::init() {
     using namespace PageManagerInternal;

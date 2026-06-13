@@ -110,4 +110,4 @@ void initContainer(lv_obj_t *cont, const CfgWidget &cfg, int16_t yOffset, bool h
     WidgetStyles::applyContainerBase(cont, hasBorder, borderRgb);
 }
 
-}
+} // namespace WidgetHelpers

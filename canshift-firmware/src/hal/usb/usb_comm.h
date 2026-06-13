@@ -67,4 +67,4 @@ using BurnOverlayShowErrorCb = void (*)(int reason);
 void setBurnOverlayShowCallback(BurnOverlayShowCb cb);
 void setBurnOverlayShowErrorCallback(BurnOverlayShowErrorCb cb);
 
-}
+} // namespace UsbComm

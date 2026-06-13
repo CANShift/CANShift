@@ -100,7 +100,7 @@ void dispatchCruiseControl(const CfgButtonAction &a) {
              cruiseOpName(a.cruiseOp), static_cast<unsigned>(a.cruiseStepKmh));
 }
 
-}
+} // namespace
 
 void dispatchAction(const CfgButtonAction &a, bool isActive) {
     switch (a.type) {
@@ -122,4 +122,4 @@ void dispatchAction(const CfgButtonAction &a, bool isActive) {
     }
 }
 
-}
+} // namespace ActionDispatcher

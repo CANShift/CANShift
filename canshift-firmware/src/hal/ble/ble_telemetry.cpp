@@ -85,7 +85,7 @@ size_t buildTelemetryPayload(char *buf, size_t bufSize) {
 
 uint8_t s_statusDiv = 0;
 
-}
+} // namespace
 
 namespace BleServerInternal {
 
@@ -113,6 +113,6 @@ void emitTelemetry() {
     }
 }
 
-}
+} // namespace BleServerInternal
 
 #endif

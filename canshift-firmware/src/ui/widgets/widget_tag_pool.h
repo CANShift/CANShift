@@ -68,4 +68,4 @@ class Slot {
     T *m_tag;
 };
 
-}
+} // namespace WidgetTagPool

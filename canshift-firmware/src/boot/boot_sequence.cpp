@@ -80,7 +80,7 @@ static void initDisplayAndLVGL() {
 namespace {
 static lv_obj_t *s_splashBar = nullptr;
 static lv_obj_t *s_splashStatus = nullptr;
-}
+} // namespace
 
 static lv_obj_t *buildSplashBase() {
     lv_obj_t *scr = lv_scr_act();

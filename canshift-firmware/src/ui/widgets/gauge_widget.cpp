@@ -405,7 +405,7 @@ static void attachAlertFlash(GaugeTag *tag, lv_obj_t *cont, const CfgWidget &cfg
     }
 }
 
-}
+} // namespace
 
 lv_obj_t *GaugeWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOffset) {
     lv_obj_t *cont = lv_obj_create(parent);

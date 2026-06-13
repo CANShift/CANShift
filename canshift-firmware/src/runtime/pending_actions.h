@@ -53,4 +53,4 @@ inline int8_t takeBurnOverlayShowError() {
     return burnOverlayShowError.exchange(-1, std::memory_order_relaxed);
 }
 
-}
+} // namespace PendingActions

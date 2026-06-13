@@ -23,4 +23,4 @@ namespace ConfigLoaderInternal {
 #endif
 }
 
-}
+} // namespace ConfigLoaderInternal

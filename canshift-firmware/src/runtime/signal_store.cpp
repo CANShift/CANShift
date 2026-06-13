@@ -25,7 +25,7 @@ inline bool idValid(SignalId id) {
     return id < SIGNAL_STORE_MAX_SIGNALS;
 }
 
-}
+} // namespace
 
 void SignalStore::init() {
 

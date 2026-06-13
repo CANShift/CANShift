@@ -139,7 +139,7 @@ AlertEngine::AlertLevel evalBattery(float volts) {
 #endif
 }
 
-}
+} // namespace
 
 void AlertEngine::init() {
     s_state = {};

@@ -127,7 +127,7 @@ void configurePin(const CfgInputBinding &b) {
     pinMode(b.pin, needsPullup ? INPUT_PULLUP : INPUT);
 }
 
-}
+} // namespace
 
 void init() {
     if (s_initDone)
@@ -155,4 +155,4 @@ void init() {
     s_initDone = true;
 }
 
-}
+} // namespace InputButtons

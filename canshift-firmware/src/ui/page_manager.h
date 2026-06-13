@@ -25,4 +25,4 @@ void requestRebuild();
 
 void requestReload();
 
-}
+} // namespace PageManager

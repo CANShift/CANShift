@@ -16,7 +16,7 @@ StorageDriver::InitStatus s_initStatus = StorageDriver::InitStatus::NotInitializ
 
 constexpr const char *kSpiffsMount = "/spiffs";
 constexpr size_t kSpiffsMountLen = 7;
-}
+} // namespace
 
 static constexpr size_t kAtomicSuffixLen = 4;
 static constexpr size_t kSuffixedPathLen = CFG_MAX_PATH_LEN + kAtomicSuffixLen + 1;
@@ -78,7 +78,7 @@ bool finalizeAtomicSwap(const char *path) {
     return true;
 }
 
-}
+} // namespace
 
 bool StorageDriver::init() {
     const esp_partition_t *part = esp_partition_find_first(
@@ -92,7 +92,7 @@ bool StorageDriver::init() {
     }
 
     constexpr uint8_t kSpiffsMaxOpenFiles = 16;
-    if (!SPIFFS.begin(true , kSpiffsMount, kSpiffsMaxOpenFiles)) {
+    if (!SPIFFS.begin(true, kSpiffsMount, kSpiffsMaxOpenFiles)) {
         const char *reason =
             (part == nullptr) ? "partition_missing" : "partition_corrupt_or_format_fail";
         LOG_ERROR("STORAGE", "Backend=SPIFFS mount=failed reason=%s", reason);
@@ -279,7 +279,7 @@ bool s_chunkOpen = false;
 bool s_chunkAtomic = false;
 char s_chunkAtomicPath[CFG_MAX_PATH_LEN] = {0};
 char s_chunkActualPath[kSuffixedPathLen] = {0};
-}
+} // namespace
 
 bool StorageDriver::ensureParentDirs(const char *path) {
     if (!path || path[0] != '/')

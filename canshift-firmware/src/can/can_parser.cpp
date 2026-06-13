@@ -29,7 +29,7 @@ static RuntimeSignal s_runtime[CONFIG_MAX_SIGNALS];
 static uint8_t s_runtimeCount = 0;
 static bool s_runtimeLoaded = false;
 
-}
+} // namespace
 
 float CanParser::detail::decodeBytes(const uint8_t *data, uint8_t startByte, uint8_t byteLen,
                                      bool bigEndian, bool isSigned, uint8_t bitMask, float scale,

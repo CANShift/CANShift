@@ -105,7 +105,7 @@ void updateWidget(WidgetEntry &entry,
     }
 }
 
-}
+} // namespace
 
 lv_obj_t *WidgetFactory::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOffset) {
     if (s_widgetCount >= MAX_TRACKED_WIDGETS) {

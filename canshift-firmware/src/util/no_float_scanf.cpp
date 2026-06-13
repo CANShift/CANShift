@@ -24,5 +24,4 @@ int _vfscanf_r(struct _reent *ptr, FILE *fp, const char *fmt, va_list ap) {
 int vfscanf(FILE *fp, const char *fmt, va_list ap) {
     return _vfiscanf_r(_REENT, fp, fmt, ap);
 }
-
 }

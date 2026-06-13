@@ -55,4 +55,4 @@ inline void attachTagDeleter(lv_obj_t *obj, T *tag) {
         LV_EVENT_DELETE, tag);
 }
 
-}
+} // namespace WidgetHelpers

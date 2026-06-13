@@ -77,4 +77,4 @@ struct BoardProfile {
     ConnectivityProfile conn;
 };
 
-}
+} // namespace canshift::boards

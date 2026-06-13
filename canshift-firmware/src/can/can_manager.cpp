@@ -117,7 +117,7 @@ void twaiInitTaskFn(void *arg) {
     vTaskDelete(NULL);
 }
 
-}
+} // namespace
 
 bool CanManager::isAvailable() {
     return s_twaiInstalled;
@@ -144,13 +144,13 @@ esp_err_t CanManager::initHardware() {
     TaskHandle_t handle = nullptr;
     if (s_initTaskStack) {
 
-        handle = xTaskCreateStaticPinnedToCore(twaiInitTaskFn, "twai_init", TWAI_INIT_TASK_STACK,
-                                               &ctx, TWAI_INIT_TASK_PRIO, s_initTaskStack,
-                                               &s_initTaskTCB, 0 );
+        handle =
+            xTaskCreateStaticPinnedToCore(twaiInitTaskFn, "twai_init", TWAI_INIT_TASK_STACK, &ctx,
+                                          TWAI_INIT_TASK_PRIO, s_initTaskStack, &s_initTaskTCB, 0);
     } else {
 
         BaseType_t ok = xTaskCreatePinnedToCore(twaiInitTaskFn, "twai_init", TWAI_INIT_TASK_STACK,
-                                                &ctx, TWAI_INIT_TASK_PRIO, &handle, 0 );
+                                                &ctx, TWAI_INIT_TASK_PRIO, &handle, 0);
         if (ok != pdPASS) {
             handle = nullptr;
         }

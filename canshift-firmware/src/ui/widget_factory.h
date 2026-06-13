@@ -13,4 +13,4 @@ void clearAll(lv_obj_t *parent);
 
 void reapplyTheme(lv_obj_t *parent);
 
-}
+} // namespace WidgetFactory

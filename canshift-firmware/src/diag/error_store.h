@@ -28,4 +28,4 @@ void dismissAt(uint8_t row);
 
 void clear();
 
-}
+} // namespace ErrorStore

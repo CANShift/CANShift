@@ -16,4 +16,4 @@ constexpr uint32_t kSentinelNoWarning = 0u;
 
 [[nodiscard]] uint32_t fillColor(const char *iconName, float value, float dangerLevel);
 
-}
+} // namespace SensorPalette

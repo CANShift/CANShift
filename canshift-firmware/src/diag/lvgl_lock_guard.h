@@ -30,7 +30,7 @@ class Guard {
     int64_t m_startUs;
 };
 
-}
+} // namespace LvglLockGuard
 
     #define LVGL_HOLD_GUARD(metric) ::LvglLockGuard::Guard _lvgl_hold_guard_##__LINE__(metric)
 

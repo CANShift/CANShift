@@ -35,7 +35,7 @@ const lv_font_t *selectFont(int16_t h, int16_t w) {
     return FontManager::label(size);
 }
 
-}
+} // namespace
 
 lv_obj_t *GearWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t yOffset) {
     lv_obj_t *cont = lv_obj_create(parent);

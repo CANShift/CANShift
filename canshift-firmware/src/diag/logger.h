@@ -12,7 +12,7 @@ void emit(char level, const char *tag, const char *fmt, ...) __attribute__((form
 
 bool lockUart(TickType_t timeout);
 void unlockUart();
-}
+} // namespace Logger
 
 #define LOG_LEVEL_ERROR 1
 #define LOG_LEVEL_WARN 2

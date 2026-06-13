@@ -112,7 +112,7 @@ const lv_font_t *resolve(const uint8_t *sizes, size_t count, const lv_font_t *co
     return (cached != nullptr) ? cached : &lv_font_orbitron_medium_14_nk;
 }
 
-}
+} // namespace
 
 void FontManager::init() {
     if (s_initialized) {

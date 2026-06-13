@@ -15,4 +15,4 @@ void hide();
 
 void showError(ErrorReason reason);
 
-}
+} // namespace BurnOverlay

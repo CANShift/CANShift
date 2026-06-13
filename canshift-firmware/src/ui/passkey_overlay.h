@@ -9,4 +9,4 @@ void show(uint32_t passkey);
 
 void hide();
 
-}
+} // namespace PasskeyOverlay

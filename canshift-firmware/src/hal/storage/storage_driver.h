@@ -49,4 +49,4 @@ bool ensureParentDirs(const char *path);
 
 void sweepOrphanTmp(const char *path);
 
-}
+} // namespace StorageDriver

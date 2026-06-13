@@ -28,4 +28,4 @@ Snapshot snapshot();
 State getState();
 uint32_t getElapsedMs();
 
-}
+} // namespace TimerService

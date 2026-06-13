@@ -86,7 +86,7 @@ void errorHoldExpiredCb(lv_timer_t *timer) {
     BurnOverlay::hide();
 }
 
-}
+} // namespace
 
 void BurnOverlay::show() {
     assertUiThreadHoldsLvglMutex();

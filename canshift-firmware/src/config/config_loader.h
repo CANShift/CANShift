@@ -25,4 +25,4 @@ struct LoadResult {
 
 [[nodiscard]] const CfgSignalDef *findSignal(const char *name);
 
-}
+} // namespace ConfigLoader

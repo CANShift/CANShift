@@ -93,7 +93,7 @@ uint32_t computeP95(Window &w) {
     return buf[idx];
 }
 
-}
+} // namespace
 
 namespace PerfCounters {
 
@@ -213,6 +213,6 @@ ScopedTimer::~ScopedTimer() {
     appendSample(s_windows[m_metric], static_cast<uint32_t>(delta));
 }
 
-}
+} // namespace PerfCounters
 
 #endif

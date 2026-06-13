@@ -14,4 +14,4 @@ void setVerticalSwipeHandler(VerticalSwipeHandler handler);
 
 void checkGestures();
 
-}
+} // namespace GestureController

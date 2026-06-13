@@ -54,7 +54,7 @@ bool buildRequestFrame(uint8_t mode, uint8_t pid, uint8_t out[kRequestDlc]) {
     return true;
 }
 
-}
+} // namespace
 
 void Obd2Poller::init() {
     s_slotCount = 0;

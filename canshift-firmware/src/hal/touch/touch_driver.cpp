@@ -20,7 +20,7 @@ static constexpr char NVS_KEY_CAL[] = "cal";
 
 static constexpr size_t CAL_DATA_SIZE = 8 * sizeof(uint16_t);
 
-void TouchDriver::readCallback(lv_indev_drv_t * , lv_indev_data_t *data) {
+void TouchDriver::readCallback(lv_indev_drv_t *, lv_indev_data_t *data) {
     int32_t x = 0, y = 0;
     const bool pressed = s_lcd.getTouch(&x, &y);
 
@@ -78,7 +78,7 @@ void TouchDriver::init() {
 
     lv_obj_add_event_cb(
         lv_layer_top(),
-        [](lv_event_t * ) {
+        [](lv_event_t *) {
             TouchLatency::consumePressAndWarnIfSlow();
 #if APP_PROFILE_UI
             uint32_t deltaUs = 0;

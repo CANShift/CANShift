@@ -13,7 +13,7 @@ namespace PageManagerInternal {
 
 namespace {
 
-void asyncDoLazyBuild(void * ) {
+void asyncDoLazyBuild(void *) {
     const uint8_t idx = s_pendingLazyBuildIdx;
     s_pendingLazyBuildIdx = 0xFF;
 
@@ -54,7 +54,7 @@ void asyncDoLazyBuild(void * ) {
     LOG_INFO("UI", "Navigated to page '%s' (idx=%u)", s_pages[idx].id, idx);
 }
 
-}
+} // namespace
 
 void showPage(uint8_t idx, lv_scr_load_anim_t anim, uint32_t durationMs) {
     if (idx >= s_pageCount) {
@@ -138,4 +138,4 @@ void onSwipe(lv_dir_t dir) {
     }
 }
 
-}
+} // namespace PageManagerInternal

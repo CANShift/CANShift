@@ -103,25 +103,25 @@ void onBleBtn(lv_event_t *e) {
 #endif
 }
 
-void onCalibrateTouch(lv_event_t * ) {
+void onCalibrateTouch(lv_event_t *) {
 
     SettingsPage::close();
     TouchDriver::calibrate();
 }
 
-void onResetTouchCal(lv_event_t * ) {
+void onResetTouchCal(lv_event_t *) {
 
     TouchDriver::resetCalibration();
     LOG_INFO("Settings", "Touch calibration reset — reboot to apply defaults");
 }
 
-void onSave(lv_event_t * ) {
+void onSave(lv_event_t *) {
     LOG_INFO("Settings", "SAVE button clicked");
     nvsSave();
     SettingsPage::close();
 }
 
-void onReset(lv_event_t * ) {
+void onReset(lv_event_t *) {
     s_brightness = DEFAULT_BRIGHTNESS;
     s_bleEnabled = DEFAULT_BLE_ENABLED;
 
@@ -134,4 +134,4 @@ void onReset(lv_event_t * ) {
 #endif
 }
 
-}
+} // namespace SettingsPageInternal

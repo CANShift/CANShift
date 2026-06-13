@@ -172,7 +172,7 @@ size_t formatWithSpec(char *buf, size_t size, float value, const char *spec) {
     return total;
 }
 
-}
+} // namespace
 
 namespace FloatFormat {
 
@@ -247,4 +247,4 @@ size_t formatGeneral(char *buf, size_t size, float value, int sigDigits) {
 #endif
 }
 
-}
+} // namespace FloatFormat

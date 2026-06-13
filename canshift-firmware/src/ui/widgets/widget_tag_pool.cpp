@@ -27,7 +27,7 @@ inline void assertUiThreadHoldsLvglMutex() {
     configASSERT(holder == nullptr || holder == xTaskGetCurrentTaskHandle());
 }
 
-}
+} // namespace
 
 namespace WidgetTagPool {
 
@@ -52,4 +52,4 @@ void releaseRaw(void *p) {
     }
 }
 
-}
+} // namespace WidgetTagPool

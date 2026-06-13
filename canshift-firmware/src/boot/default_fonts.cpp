@@ -67,7 +67,7 @@ bool writeOne(const EmbeddedFont &font) {
     return true;
 }
 
-}
+} // namespace
 
 DefaultFonts::ProvisionResult DefaultFonts::provisionMissingFiles() {
     ProvisionResult result = {0, 0, 0};

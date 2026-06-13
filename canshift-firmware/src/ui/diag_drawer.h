@@ -9,4 +9,4 @@ void update();
 void open();
 void close();
 
-}
+} // namespace DiagDrawer

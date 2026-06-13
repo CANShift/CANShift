@@ -7,4 +7,4 @@ namespace ErrorBar {
 void init();
 void update();
 
-}
+} // namespace ErrorBar

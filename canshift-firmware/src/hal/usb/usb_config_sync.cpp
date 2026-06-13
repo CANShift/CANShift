@@ -77,7 +77,7 @@ void persistTypedConfigAndReboot(const char *path, const char *fieldKey,
 #endif
 }
 
-}
+} // namespace
 
 namespace UsbCommInternal {
 
@@ -145,4 +145,4 @@ void handlePutInputBindings(const JsonObjectConst &obj) {
     persistTypedConfigAndReboot(CONFIG_PATH_INPUTS, "input_bindings", sub);
 }
 
-}
+} // namespace UsbCommInternal

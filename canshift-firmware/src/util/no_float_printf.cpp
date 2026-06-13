@@ -19,5 +19,4 @@ int _svfprintf_r(struct _reent *ptr, FILE *fp, const char *fmt, va_list ap) {
 int vfprintf(FILE *fp, const char *fmt, va_list ap) {
     return _vfiprintf_r(_REENT, fp, fmt, ap);
 }
-
 }

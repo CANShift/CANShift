@@ -41,4 +41,4 @@ static constexpr SignalId LAP_TIMER_MS = 40;
 
 static constexpr SignalId SIGNAL_COUNT = 64;
 
-}
+} // namespace SignalIds

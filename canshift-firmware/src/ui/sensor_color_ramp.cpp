@@ -90,7 +90,7 @@ constexpr CfgRampStop S(float v, uint32_t c) {
     return CfgRampStop{v, c};
 }
 
-}
+} // namespace
 
 // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
 const CfgColorRamp kSensorDefaultRamps[kSensorKindCount] = {

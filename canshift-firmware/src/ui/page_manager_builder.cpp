@@ -480,7 +480,7 @@ void applyPageBackground(lv_obj_t *screen, const CfgPage &cfg, const CfgColor &e
     }
 }
 
-}
+} // namespace
 
 void buildPage(uint8_t idx, const CfgPage &cfg) {
     LOG_INFO("UI", "buildPage(%s) entry: heap.largest=%u heap.free=%u stack.hwm=%u", cfg.id,
@@ -614,4 +614,4 @@ void rebuildAllPages() {
     LOG_INFO("UI", "Pages rebuilt for theme toggle");
 }
 
-}
+} // namespace PageManagerInternal

@@ -21,4 +21,4 @@ void watchLabel(State &s, lv_obj_t *label, uint32_t restoreRgb);
 
 void update(State &s, float value, float threshold);
 
-}
+} // namespace AlertFlash

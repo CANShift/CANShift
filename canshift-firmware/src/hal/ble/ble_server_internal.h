@@ -18,6 +18,6 @@ void updateStatus();
 
 void emitTelemetry();
 
-}
+} // namespace BleServerInternal
 
 #endif

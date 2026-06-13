@@ -58,7 +58,7 @@ static StaticTask_t s_bleTaskTCB;
 
 static esp_timer_handle_t s_lvglTickTimer = nullptr;
 
-static void lvglTickCb(void * ) {
+static void lvglTickCb(void *) {
     lv_tick_inc(LVGL_TICK_MS);
 }
 
@@ -365,7 +365,7 @@ inline void uiThrottle(TickType_t &lastWake) {
     lastWake = xTaskGetTickCount();
 }
 
-}
+} // namespace
 
 void taskUI(void *pvParameters) {
     TickType_t lastWake = xTaskGetTickCount();

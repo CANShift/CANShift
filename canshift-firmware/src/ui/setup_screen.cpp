@@ -67,7 +67,7 @@ lv_obj_t *createUsbIcon(lv_obj_t *parent, uint32_t color) {
     return icon;
 }
 
-}
+} // namespace
 
 void show() {
     lv_obj_t *scr = lv_obj_create(nullptr);
@@ -148,4 +148,4 @@ void show() {
     LOG_INFO("UI", "Setup screen shown — waiting for Studio connection");
 }
 
-}
+} // namespace SetupScreen

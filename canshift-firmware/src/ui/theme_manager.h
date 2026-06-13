@@ -21,4 +21,4 @@ void setDayMode(bool day);
 
 [[nodiscard]] uint32_t getEffectiveTextColor(uint32_t styleTextColor, bool respectDayMode);
 
-}
+} // namespace ThemeManager

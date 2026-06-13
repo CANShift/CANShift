@@ -181,12 +181,12 @@ void drainCanScanQueue() {
     }
 }
 
-}
+} // namespace
 
 namespace UsbCommInternal {
 char *s_rxBuf = nullptr;
 volatile uint32_t s_lastHostCmdMs = 0;
-}
+} // namespace UsbCommInternal
 
 void UsbComm::reserveRxBuf() {
     if (UsbCommInternal::s_rxBuf) {

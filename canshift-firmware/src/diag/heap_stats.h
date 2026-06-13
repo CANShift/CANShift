@@ -21,4 +21,4 @@ void tick();
 
 void emitNow();
 
-}
+} // namespace HeapStats

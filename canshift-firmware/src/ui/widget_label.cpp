@@ -41,7 +41,7 @@ void drawHeader(lv_obj_t *cont, const char *text, HeaderPos pos) {
     alignHeader(lbl, pos);
 }
 
-}
+} // namespace
 
 const char *displayLabelForSignal(const char *signalId) {
     if (!signalId || signalId[0] == '\0')
@@ -113,4 +113,4 @@ void applySignalHeader(lv_obj_t *cont, const char *signalId, HeaderPos pos) {
     drawHeader(cont, buf, pos);
 }
 
-}
+} // namespace WidgetLabelOverlay

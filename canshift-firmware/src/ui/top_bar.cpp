@@ -27,7 +27,7 @@ constexpr float SEPARATOR_RATIO = 0.55f;
 constexpr float GAP_RATIO = 0.25f;
 constexpr float PADDING_RATIO = 0.40f;
 constexpr float ICON_SIZE_RATIO = 1.15f;
-}
+} // namespace TopBarMetrics
 
 static inline int16_t metricRound(float v) {
     return static_cast<int16_t>(lroundf(v));
@@ -220,8 +220,8 @@ void buildItem(const CfgTopBarItem &item, lv_obj_t *prevByPos[3], int8_t lastMod
 
                 lv_obj_set_ext_click_area(obj, 10);
                 lv_obj_add_event_cb(
-                    obj, [](lv_event_t * ) { ThemeManager::toggleDayMode(); },
-                    LV_EVENT_CLICKED, nullptr);
+                    obj, [](lv_event_t *) { ThemeManager::toggleDayMode(); }, LV_EVENT_CLICKED,
+                    nullptr);
             } else {
                 lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             }
@@ -300,7 +300,7 @@ void buildFromLayout(const CfgTopBar &cfg, bool hasDayTheme) {
     }
 }
 
-}
+} // namespace
 
 void TopBar::init() {
     const CfgDashboard &dash = ConfigLoader::getDashboardConfig();
