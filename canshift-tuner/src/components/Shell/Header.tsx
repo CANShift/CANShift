@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Header as UiHeader,
-  BurnButton as UiBurnButton,
-  FirmwareSlot as UiFirmwareSlot,
-} from '@tmbk/canshift-ui'
-import type { HeaderStatus } from '@tmbk/canshift-ui'
+import { HeaderView, type HeaderStatus } from './HeaderView'
+import { BurnButton as UiBurnButton } from './BurnButton'
+import { FirmwareSlot as UiFirmwareSlot } from './FirmwareSlot'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
@@ -78,7 +75,7 @@ export default function Header() {
   const resolvedStatus: HeaderStatus = simulationMode ? 'simulation' : status
 
   return (
-    <UiHeader
+    <HeaderView
       tunerVersion={__TUNER_VERSION__}
       status={resolvedStatus}
       portLabel={portLabel}

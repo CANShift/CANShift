@@ -5,9 +5,6 @@ sidebar:
   order: 80
 ---
 
-import TunerShell from "../../../../components/tuner-mock/TunerShell.astro";
-import TunerCanBusScreen from "../../../../components/tuner-mock/TunerCanBusScreen.astro";
-
 SignalStore is the firmware's shared snapshot of every decoded CAN signal +
 synthesized derived values. It is written by taskCAN (and the OBD-II
 poller, and the button widget's optimistic-write path) and read by
@@ -16,11 +13,7 @@ Sources: `src/runtime/signal_store.cpp`, `src/runtime/signal_store.h`.
 
 The tuner's **CAN bus** route taps the same raw stream that feeds SignalStore
 on the device — useful to confirm an ID is on the wire before chasing a
-decoder bug:
-
-<TunerShell route="can" status="connected">
-  <TunerCanBusScreen />
-</TunerShell>
+decoder bug.
 
 ## Critical-section invariant
 
