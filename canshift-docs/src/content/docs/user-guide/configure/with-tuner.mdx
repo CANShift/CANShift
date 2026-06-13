@@ -1,70 +1,74 @@
 ---
 title: "Configure with the Tuner"
-description: "Edit the dashboard from canshift-tuner over Web Serial."
+description: "Live edit the dashboard from a browser over Web Serial — pages, signals, ECU profiles, themes."
 sidebar:
   order: 1
 ---
 
-The **Tuner** is a web SPA hosted on Vercel. It talks to the dash over Web
-Serial. You change a colour, move a widget, add a page, then click **Burn** —
-the dash reloads the new config without re-flashing.
+import { Aside } from "@astrojs/starlight/components";
 
-Until each route ships a presentational React component in `canshift-ui`, the
-authoritative live view is the deployed tuner itself:
-[canshift-tuner.vercel.app](https://canshift-tuner.vercel.app).
+The Tuner is a single-page web app that talks to the dash over Web Serial. You move widgets, bind signals, pick an ECU profile — then click **Burn** and the dash reloads the new config in place. No re-flash, no reboot.
+
+The Tuner is hosted on Vercel at [canshift-tuner.vercel.app](https://canshift-tuner.vercel.app) — open the URL, plug the dash in, you're in.
+
+## Connecting
+
+1. Plug the dash in over USB-C.
+2. Open [canshift-tuner.vercel.app](https://canshift-tuner.vercel.app) in a Chromium-based browser.
+3. Click **Connect device** in the top-right and pick the serial port.
+
+The header switches from a red *Disconnected* dot to a green *Connected* one, with the device's `vendor:product` next to it. The firmware version slot fills in once the handshake completes (~50 ms).
+
+<Aside type="tip" title="Simulation mode">
+No dash on hand? The Tuner runs in simulation when no device is connected — pages and widgets are interactive, the signal store fakes values. Useful for laying out a dashboard the night before fitting.
+</Aside>
 
 ## Edit the dashboard
 
-The **Dashboard** route is where you arrange widgets per page. Click a widget
-to bind it to a signal in the right-hand inspector. Pages live as draggable
-thumbnails on the left (up to `CONFIG_MAX_PAGES = 5`).
+The **Dashboard** route is the visual editor. Page thumbnails on the left (up to `CONFIG_MAX_PAGES = 5`), the canvas in the middle, the inspector on the right. Click a widget to bind it to a signal, drop a new widget from the palette to add it, drag to reorder.
+
+Changes are local until you burn. The canvas previews exactly what the dash will render — same fonts, same tokens, same units.
 
 ## Pick an ECU profile
 
-ECU profiles map raw CAN frames to named signals. CANShift ships presets for
-the common aftermarket ECUs (Haltech, Ecumaster EmuBlack, Adaptronic, AEM,
-Flagtronics, MaxxECU, MoTeC). Pick one, preview the signals it would import,
-and apply.
+Open the **ECU** route. CANShift ships presets for the common aftermarket and stock setups:
 
-You can also drop a CAN XML to import a custom map — the parser lives in
-`@tmbk/canshift-core/parseCanXml`.
+- **Aftermarket**: Haltech, Ecumaster EmuBlack, Adaptronic, AEM, Link, MaxxECU, MoTeC, Flagtronics.
+- **OEM-style**: stock OBD-II PIDs (works with most road cars supporting the standard).
+
+Pick a preset, preview the signals it would import, click *Apply*. The signal map writes to `signals.json` on the dash.
+
+Custom map? Drop a **CAN XML** export onto the page. The parser lives in `@tmbk/canshift-core/parseCanXml` and validates against the same schema the firmware enforces at boot.
 
 ## Style with themes
 
-Themes drive the dash's colour scheme — day vs night, accent colours, gauge
-backgrounds. The page reads the active mode from the device at connect and
-exposes three actions: toggle, force Day, force Night. Sent over USB as
-`CMD_TOGGLE_DAY_NIGHT` / `CMD_SET_DAY_NIGHT`.
-
-## Connect
-
-1. Plug the dash in via USB.
-2. Open [canshift-tuner.vercel.app](https://canshift-tuner.vercel.app) in a
-   Chromium browser.
-3. Click **Connect** in the top-right and pick the serial port.
-
-The tuner lists the signals it sees, the CAN status, and lets you edit pages
-live.
+The **Themes** route swaps the dash's colour palette — day vs night, accent colours, gauge backgrounds. The Tuner reads the active mode from the device on connect and exposes three actions: toggle, force *Day*, force *Night*. The commands hit the dash as `CMD_TOGGLE_DAY_NIGHT` / `CMD_SET_DAY_NIGHT` over USB.
 
 ## Burn = write the config
 
-When you click **Burn**, the tuner ships the full JSON envelope to the dash.
-The dash:
+Click **Burn** (top-right) and the Tuner ships the full JSON envelope to the dash. The dash:
 
 1. Shows the "Saving config…" overlay.
-2. Writes the file to SPIFFS atomically (the previous file is renamed `.bak`).
+2. Writes the new file to SPIFFS atomically (the previous one is renamed `.bak`).
 3. Reloads the config in memory.
-4. Rebuilds the pages.
+4. Rebuilds the pages on the next frame.
+
+End-to-end takes ~150–250 ms. The overlay vanishes when the burn completes; the new layout appears on the next page swipe (or immediately if you're on the page that changed).
 
 If the overlay flips red, see [Burn errors](/user-guide/configure/burn-errors/).
 
+<Aside type="caution" title="Don't burn during a CAN scan">
+The dash's USB RX buffer doubles as the PUT_CONFIG receive buffer. A live CAN scan keeps that buffer busy, and a burn that lands in the middle of a scan can time out. Stop the scan in the **CAN bus** route first, then burn.
+</Aside>
+
 ## Schema vs firmware version
 
-The firmware checks at boot that `dashboard.json` matches the schema it was
-compiled against. If you re-flash to a newer firmware but SPIFFS still holds an
-older `dashboard.json`, the ErrorBar will surface `SCHEMA_MISMATCH` and the
-dash will fall back to the built-in default config.
+The firmware validates `dashboard.json` against the schema it was compiled with. If you re-flash a newer firmware but SPIFFS still holds an older config, the dash boots into the built-in default and the ErrorBar shows `SCHEMA_MISMATCH`.
 
-Fix: re-edit and burn from the tuner. The tuner reads the current schema from
-`canshift-core`, so a burn from a freshly-loaded tuner will always match the
-current firmware.
+The fix is always the same: re-burn from the Tuner. The Tuner always reads the current schema from `canshift-core`, so a fresh burn matches the running firmware by construction.
+
+## Next
+
+- [Burn errors](/user-guide/configure/burn-errors/) — what each red overlay message means and how to recover.
+- [Navigating pages](/user-guide/usage/navigating-pages/) — gestures, default page, the 5-page cap.
+- [Cruise control](/user-guide/usage/cruise-control/) — how the cruise page binds to your ECU's `cruise_setpoint`.

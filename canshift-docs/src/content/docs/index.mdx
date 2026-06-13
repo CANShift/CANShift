@@ -1,12 +1,12 @@
 ---
-title: CANShift Documentation
-description: Architecture and reference for the CANShift dashboard ecosystem.
+title: CANShift
+description: Open-source CAN bus dashboard for ESP32 — firmware, tuner, mobile.
 template: splash
 hero:
-  tagline: Open-source CAN bus dashboard for ESP32 — firmware, tuner, mobile.
+  tagline: An open-source dashboard for sport and track cars. ESP32 firmware, browser tuner over Web Serial, mobile companion over BLE. Wire it to your ECU, edit pages live, burn the config.
   actions:
-    - text: User guide
-      link: /user-guide/getting-started/overview/
+    - text: Install your dash
+      link: /user-guide/install/first-flash/
       icon: right-arrow
       variant: primary
     - text: Firmware architecture
@@ -20,35 +20,105 @@ hero:
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-## Packages
+## Pick your doorway
+
+<ul class="cs-doorways not-content">
+  <li>
+    <a href="/user-guide/getting-started/overview/">
+      <div class="kicker">For the driver</div>
+      <h3>Install and use the dash</h3>
+      <p>From a sealed box to a dashboard reading your ECU — flashing, wiring, pages, cruise, settings.</p>
+      <div class="arrow">User guide →</div>
+    </a>
+  </li>
+  <li>
+    <a href="/user-guide/configure/with-tuner/">
+      <div class="kicker">For the tuner</div>
+      <h3>Configure the dash live</h3>
+      <p>Edit pages, bind CAN signals, pick an ECU profile, tune OBD-II polling. Burn the config and the dash reloads — no re-flash.</p>
+      <div class="arrow">Tuner workflows →</div>
+    </a>
+  </li>
+  <li>
+    <a href="/technical/architecture/boot-sequence/">
+      <div class="kicker">For the developer</div>
+      <h3>Read the firmware</h3>
+      <p>Heap reservation order, LVGL ownership rules, the PUT_CONFIG burn flow, the cruise polygon trick — the load-bearing rationale.</p>
+      <div class="arrow">Architecture →</div>
+    </a>
+  </li>
+</ul>
+
+## At a glance
+
+<ul class="cs-stat-grid not-content">
+  <li>
+    <span class="label">Target MCU</span>
+    <span class="value">ESP32 WROOM</span>
+    <span class="hint">no PSRAM required</span>
+  </li>
+  <li>
+    <span class="label">Panel</span>
+    <span class="value">320 × 240</span>
+    <span class="hint">ILI9341 + XPT2046</span>
+  </li>
+  <li>
+    <span class="label">Host link</span>
+    <span class="value">Web Serial</span>
+    <span class="hint">CH340 UART @ 115200</span>
+  </li>
+  <li>
+    <span class="label">Mobile link</span>
+    <span class="value">BLE</span>
+    <span class="hint">NimBLE, ~50 KB DRAM</span>
+  </li>
+  <li>
+    <span class="label">Telemetry</span>
+    <span class="value">10 Hz</span>
+    <span class="hint">JSON over USB CDC</span>
+  </li>
+  <li>
+    <span class="label">Config</span>
+    <span class="value">Live burn</span>
+    <span class="hint">SPIFFS, atomic, ≤ 16 KB</span>
+  </li>
+</ul>
+
+## The packages
 
 <CardGrid>
   <Card title="canshift-firmware" icon="seti:cpp">
-    C++17 + Arduino + LVGL on ESP32 (CrowPanel 2.8″ ILI9341 + XPT2046). Runs the
-    dashboard, parses CAN, drives the UI.
+    C++17 on Arduino-ESP32, LVGL 8.4, LovyanGFX. Parses CAN over TWAI, decodes signals, drives the panel. Source of truth for the dashboard's runtime behaviour.
   </Card>
   <Card title="canshift-core" icon="seti:typescript">
-    Shared TypeScript domain — Zod schemas, types, signal map. Single source of
-    truth between tuner and firmware.
+    Shared TypeScript domain — Zod schemas, signal map, design tokens. Pulled by `tuner` and `mobile`; mirrored by the firmware's `canshift-core/dist` types.
   </Card>
   <Card title="canshift-tuner" icon="rocket">
-    Vite + React SPA hosted on Vercel. Talks to the dash over Web Serial; lets
-    drivers edit dashboards live and flash firmware (the standalone flasher
-    repo was retired into the tuner's `/firmware` route).
+    Vite + React SPA on Vercel. Talks to the dash over Web Serial. Lets a tuner edit the dashboard, run a CAN scan, and flash firmware — the standalone flasher is gone; `/firmware` is the route.
   </Card>
   <Card title="canshift-mobile" icon="phone">
-    Expo React Native app. Pairs with the dash over BLE for in-car telemetry
-    and remote config.
+    Expo React Native. Pairs over BLE for in-car telemetry and secondary config. Useful when the tuner laptop isn't in the car.
   </Card>
 </CardGrid>
 
-## Why these docs exist
+## The hardware target
 
-The firmware accumulated a heavy comment layer that documented WHY non-obvious
-patterns existed — LVGL ownership rules, heap reservation order, the PUT_CONFIG
-burn flow, the cruise control polygon trick. Issue #1394 stripped the bulk of
-the comments. Issue #1403 (this docs site) is where the load-bearing rationale
-lives instead.
+<div class="cs-spec-sheet">
+  <div class="title">Reference build</div>
+  <dl>
+    <dt>MCU</dt><dd>ESP32-WROOM-32, 4 MB flash, no PSRAM</dd>
+    <dt>Panel</dt><dd>Elecrow CrowPanel 2.8″ — ILI9341 SPI + XPT2046 touch</dd>
+    <dt>CAN transceiver</dt><dd>NXP TJA1051T/3 (3.3 V tolerant)</dd>
+    <dt>Host port</dt><dd>USB-C → CH340 UART0 (GPIO 1 = TX, GPIO 3 = RX)</dd>
+    <dt>CAN GPIO</dt><dd>TX = 17, RX = 16 (TWAI peripheral, 500 kbit/s default)</dd>
+    <dt>Wire protocol</dt><dd>Newline-delimited JSON, `USB_PROTOCOL_VERSION = 2`</dd>
+  </dl>
+</div>
 
-If you are about to edit a non-trivial subsystem, **read the matching
-architecture page first** — most surprises in this codebase are written down.
+Different ESP32 board? Different panel? The signal map and most of the runtime are board-agnostic. See [Pinout](/technical/reference/pinout/) for the GPIO contract and [Build flags](/technical/reference/build-flags/) for the compile-time switches.
+
+## Why this docs site exists
+
+The firmware used to carry a thick comment layer explaining the non-obvious bits — LVGL ownership rules, the heap reservation order on a no-PSRAM WROOM, the PUT_CONFIG burn flow, the cruise control polygon workaround. Comments rot the moment they leave their reviewer's screen. The architecture section is where that rationale lives now, beside the code rather than inside it.
+
+If you are about to edit a non-trivial subsystem, read the matching architecture page first. The surprises in this codebase are written down — and almost all of them are surprises only the second time.
