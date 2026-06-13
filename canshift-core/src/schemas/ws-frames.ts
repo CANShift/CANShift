@@ -27,6 +27,10 @@ export const CanFrameSchema = z
     d: z.array(z.number().int().min(0).max(255)).max(8),
   })
   .passthrough()
+  .refine((f) => f.len === f.d.length, {
+    message: 'len must equal d.length',
+    path: ['len'],
+  })
 
 export type CanFrame = z.infer<typeof CanFrameSchema>
 
