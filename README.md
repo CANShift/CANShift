@@ -288,10 +288,8 @@ Full architecture docs in [`docs/`](docs/):
 | `RELEASE.md` | Release process — cadence, artifacts, validation, rollback |
 | `roadmap.md` | Phase breakdown and milestones |
 | `FIRST_FLASH.md` | Pre-flight checklist for first hardware power-up |
-| `usb-first-strategy.md` | Phase 1 USB communication design |
 | `config-contract.md` | JSON config schema specification |
 | `can-integration-notes.md` | CAN wiring and ECU integration |
-| `future-wireless-strategy.md` | Phase 2 Wi-Fi and BLE plans |
 
 ---
 

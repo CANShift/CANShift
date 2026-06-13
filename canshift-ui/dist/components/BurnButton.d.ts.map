@@ -1,1 +1,0 @@
-{"version":3,"file":"BurnButton.d.ts","sourceRoot":"","sources":["../../src/components/BurnButton.tsx"],"names":[],"mappings":"AAEA,MAAM,WAAW,eAAe;IAC9B,QAAQ,CAAC,EAAE,OAAO,CAAC;IACnB,IAAI,CAAC,EAAE,OAAO,CAAC;IACf,KAAK,CAAC,EAAE,MAAM,CAAC;IACf,OAAO,CAAC,EAAE,MAAM,IAAI,CAAC;CACtB;AAED,eAAO,MAAM,UAAU,GAAI,qCAKxB,eAAe,gCAcjB,CAAC"}

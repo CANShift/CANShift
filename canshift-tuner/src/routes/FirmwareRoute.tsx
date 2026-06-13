@@ -1,4 +1,4 @@
-import { FirmwareScreen } from '@tmbk/canshift-ui'
+import { FirmwareScreen } from '../components/firmware/FirmwareScreen'
 import { DeviceSection } from '../components/firmware/DeviceSection'
 import { FirmwareSection } from '../components/firmware/FirmwareSection'
 import { FlashActionSection } from '../components/firmware/FlashActionSection'
