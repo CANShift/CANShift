@@ -428,7 +428,7 @@ describe('schema validation', () => {
     expect(warnings[0]).toMatch(/byteLength:/)
   })
 
-  it('result still satisfies ParseRealDashXMLResult (string[] warnings)', () => {
+  it('result still satisfies ParseCanXmlResult (string[] warnings)', () => {
     const result = parseCanXml(simpleXml('<value name="bad" offset="0" length="3"/>'))
     expect(Array.isArray(result.signals)).toBe(true)
     expect(Array.isArray(result.warnings)).toBe(true)

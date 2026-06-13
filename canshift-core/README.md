@@ -55,7 +55,7 @@ canshift-core/
     │   ├── validate-signal-config.ts     # SignalConfig structural sanity
     │   └── validate-signal.ts            # validateSignalCatalog (color-ramp anchored)
     ├── ecu-profiles/                     # Built-in ECU presets (MaxxECU, …) — #570
-    ├── realdash/                         # RealDash CAN XML import (parseRealDashXML, #609)
+    ├── can-xml/                          # CAN XML import (parseCanXml, #609)
     ├── types/
     │   └── releases.ts                   # GitHub ReleaseInfo / LatestReleaseResult (#571)
     ├── design-tokens.ts                  # DARK_TOKENS, tokensToCssVars (#526)
@@ -92,7 +92,7 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 - Design tokens (#526): `DesignTokens`
 - Hardware profiles (#831): `HardwareProfileId`, `HardwareProfile`
 - ECU profiles (#570): `EcuProfile`
-- RealDash import (#609): `ParseRealDashXMLResult`
+- CAN XML import (#609): `ParseCanXmlResult`
 - TopBar mirror types: `TopBarMetricsRatios`, `TopBarColorPalette`
 - Sensors: `SensorKind`, `SensorPaletteEntry`
 
@@ -106,13 +106,9 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 - Sensors: `SENSOR_DEFAULT_RAMPS`, `SENSOR_PALETTE`, `resolveDefaultRamp`, `resolveSensorKind`, `colorAtValue`, `sensorOkColor`, `sensorWarningColor`
 - Design tokens: `COLOR_KEY_TO_CSS_VAR`, `DARK_TOKENS`, `tokensToCssVars`, `DAY_PALETTE_DEFAULT`, `DAY_BG_DEFAULT`, `DAY_THEME_PRESET`
 - Hardware / ECU: `HARDWARE_PROFILES`, `isPinAvailableForBoard`, `ECU_PROFILES`, `DEFAULT_PROFILE_ID`, `MAXXECU_SIGNAL_UNITS`
-- RealDash: `parseRealDashXML`
+- CAN XML: `parseCanXml`
 - TopBar mirrors: `TopBarMetrics`, `TopBarColors`
 - Firmware caps: `FIRMWARE_CAPS`, `CANVAS`, `TOPBAR_HEIGHT`, `REV_LIMIT_RPM`, `DECIMAL_PLACES`, `HEX_COLOR_REGEX`, `MAX_RAMP_STOPS`
-
-`LIGHT_TOKENS` is intentionally **not** re-exported — it is a placeholder for
-the on-hold theme editor (#21) and stays internal until a real consumer
-lands.
 
 **Validators** — all return `{ valid: boolean, errors: string[], warnings: string[], config?: T }`
 
