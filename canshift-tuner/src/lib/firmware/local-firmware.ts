@@ -1,3 +1,4 @@
+import { computeSha256Hex } from './hash'
 import { verifyImageMagic } from './image'
 
 export interface LocalFirmware {
@@ -19,21 +20,6 @@ export class LocalFirmwareError extends Error {
 }
 
 export const FIRMWARE_MAX_BYTES = 16 * 1024 * 1024
-
-const toHex = (bytes: Uint8Array): string => {
-  let out = ''
-  for (const b of bytes) {
-    out += b.toString(16).padStart(2, '0')
-  }
-  return out
-}
-
-const computeSha256Hex = async (bytes: Uint8Array): Promise<string> => {
-  const buffer = new ArrayBuffer(bytes.byteLength)
-  new Uint8Array(buffer).set(bytes)
-  const digest = await crypto.subtle.digest('SHA-256', buffer)
-  return toHex(new Uint8Array(digest))
-}
 
 export const formatBytes = (size: number): string => {
   if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MiB`
