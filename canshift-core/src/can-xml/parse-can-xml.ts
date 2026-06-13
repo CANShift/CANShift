@@ -100,10 +100,9 @@ const normaliseExpr = (expr: string): string => {
     LEFT_SHIFT_RE,
     (_, n: string) => `V*${String(2 ** parseInt(n, 10))}`
   )
-  return expandedShifts.replace(IMPLICIT_MUL_AFTER_V_RE, 'V*').replace(
-    IMPLICIT_MUL_BEFORE_V_RE,
-    '$1*V'
-  )
+  return expandedShifts
+    .replace(IMPLICIT_MUL_AFTER_V_RE, 'V*')
+    .replace(IMPLICIT_MUL_BEFORE_V_RE, '$1*V')
 }
 
 const tokeniseArith = (expr: string): string[] | null => {
