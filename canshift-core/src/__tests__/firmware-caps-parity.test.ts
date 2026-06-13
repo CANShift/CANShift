@@ -12,12 +12,9 @@ const extractDefine = (source: string, name: string): number | null => {
   return match ? Number.parseInt(match[1] ?? '', 10) : null
 }
 
-describe('firmware-caps parity', () => {
-  if (!existsSync(APP_CONFIG)) {
-    it.skip('firmware app_config.h not reachable from this checkout', () => {})
-    return
-  }
+const describeIfFirmware = existsSync(APP_CONFIG) ? describe : describe.skip
 
+describeIfFirmware('firmware-caps parity', () => {
   const source = readFileSync(APP_CONFIG, 'utf8')
 
   it('MAX_PAGES matches firmware CONFIG_MAX_PAGES', () => {
