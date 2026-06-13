@@ -55,6 +55,15 @@ describe('CanFrameSchema', () => {
     expect(() => CanFrameSchema.parse({ can: 1, id: -1, len: 0, d: [] })).toThrow()
     expect(() => CanFrameSchema.parse({ can: 1, id: 1.5, len: 0, d: [] })).toThrow()
   })
+
+  it('rejects a frame where len disagrees with d.length', () => {
+    expect(() => CanFrameSchema.parse({ can: 1, id: 1, len: 4, d: [1, 2, 3] })).toThrow(
+      /len must equal d.length/
+    )
+    expect(() => CanFrameSchema.parse({ can: 1, id: 1, len: 0, d: [1, 2] })).toThrow(
+      /len must equal d.length/
+    )
+  })
 })
 
 describe('TeleFrameSchema', () => {
