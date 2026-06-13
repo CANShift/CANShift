@@ -64,7 +64,7 @@ export const WidgetConfigSchema = z.union([
 export const WIDGET_TYPES = ['gauge', 'warning', 'button', 'timer', 'gear', 'image'] as const
 export const WidgetTypeSchema = z.enum(WIDGET_TYPES)
 
-const SIGNAL_CONSUMING_WIDGET_TYPES = new Set(['gauge', 'warning', 'gear', 'timer'])
+const SIGNAL_CONSUMING_WIDGET_TYPES = new Set(['gauge', 'warning', 'gear'])
 
 export const WidgetSchema = z
   .object({

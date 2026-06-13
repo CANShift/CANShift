@@ -104,19 +104,19 @@ export const SignalDefSchema = z
       }
     }
 
-    if (s.warningLevel !== undefined && s.dangerLevel !== undefined) {
-      const highSideOk = s.warningLevel <= s.dangerLevel
-      const lowSideOk = s.dangerLevel <= s.warningLevel
-      if (!highSideOk && !lowSideOk) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            'warningLevel/dangerLevel must form a monotonic ramp: ' +
-            'high-side requires warningLevel <= dangerLevel, ' +
-            'low-side requires dangerLevel <= warningLevel',
-          path: ['dangerLevel'],
-        })
-      }
+    if (
+      s.warningLevel !== undefined &&
+      s.dangerLevel !== undefined &&
+      s.warningLevel === s.dangerLevel
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'warningLevel and dangerLevel must differ to form a monotonic ramp: ' +
+          'use warningLevel < dangerLevel for high-side, ' +
+          'or warningLevel > dangerLevel for low-side',
+        path: ['dangerLevel'],
+      })
     }
 
     if (

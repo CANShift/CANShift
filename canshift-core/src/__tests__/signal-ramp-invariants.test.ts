@@ -34,13 +34,16 @@ describe('SignalDefSchema — ramp-direction invariants (#1010)', () => {
     expect(result.success).toBe(true)
   })
 
-  it('accepts equal warning and danger (degenerate but monotonic)', () => {
+  it('rejects equal warning and danger (no ramp)', () => {
     const result = SignalDefSchema.safeParse({
       ...BASE,
       warningLevel: 50,
       dangerLevel: 50,
     })
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('dangerLevel'))).toBe(true)
+    }
   })
 
   it('accepts a signal with no thresholds at all', () => {
