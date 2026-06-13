@@ -8,13 +8,14 @@ import {
   CanFrameSchema,
   DeviceConfigSchema,
   DeviceConfigWireSchema,
-  HeapStatsFrameSchema,
+  HeapStatsFrameWireSchema,
   InputBindingsConfigSchema,
   InputBindingsConfigWireSchema,
   LogFrameSchema,
   TeleFrameSchema,
   deviceConfigFromWire,
   deviceConfigToWire,
+  heapStatsFromWire,
   inputBindingsFromWire,
   inputBindingsToWire,
 } from '@tmbk/canshift-core'
@@ -391,7 +392,7 @@ export const deviceEvents = {
     }>
   ): Unsubscribe => {
     return getSerialClient().subscribe('heap_stats', (frame) => {
-      const parsed = HeapStatsFrameSchema.safeParse(frame)
+      const parsed = HeapStatsFrameWireSchema.safeParse(frame)
       if (!parsed.success) {
         warnFrameDrop(
           'heap_stats',
@@ -400,13 +401,7 @@ export const deviceEvents = {
         )
         return
       }
-      handler({
-        tsMs: parsed.data.ts,
-        freeInternal: parsed.data.free_int,
-        largestInternal: parsed.data.largest_int,
-        freePsram: parsed.data.free_psram,
-        largestPsram: parsed.data.largest_psram,
-      })
+      handler(heapStatsFromWire(parsed.data))
     })
   },
 

@@ -1,4 +1,10 @@
-import { CanFrameSchema, LogFrameSchema, TeleFrameSchema } from '../schemas/ws-frames.js'
+import {
+  CanFrameSchema,
+  HeapStatsFrameWireSchema,
+  LogFrameSchema,
+  TeleFrameSchema,
+  heapStatsFromWire,
+} from '../schemas/ws-frames.js'
 
 describe('LogFrameSchema', () => {
   it('accepts a well-formed log frame', () => {
@@ -68,5 +74,46 @@ describe('TeleFrameSchema', () => {
 
   it('rejects non-numeric values', () => {
     expect(() => TeleFrameSchema.parse({ tele: 1, v: { rpm: 'fast' } })).toThrow()
+  })
+})
+
+describe('HeapStatsFrameWireSchema + heapStatsFromWire', () => {
+  const wire = {
+    heap_stats: 1,
+    ts: 12345,
+    free_int: 200_000,
+    largest_int: 90_000,
+    free_psram: 1_500_000,
+    largest_psram: 800_000,
+  }
+
+  it('parses a well-formed wire frame', () => {
+    expect(HeapStatsFrameWireSchema.parse(wire)).toEqual(wire)
+  })
+
+  it('accepts null PSRAM counters when the device lacks PSRAM', () => {
+    const parsed = HeapStatsFrameWireSchema.parse({
+      ...wire,
+      free_psram: null,
+      largest_psram: null,
+    })
+    expect(parsed.free_psram).toBeNull()
+    expect(parsed.largest_psram).toBeNull()
+  })
+
+  it('heapStatsFromWire maps snake_case wire keys to camelCase domain shape', () => {
+    expect(heapStatsFromWire(wire)).toEqual({
+      tsMs: 12345,
+      freeInternal: 200_000,
+      largestInternal: 90_000,
+      freePsram: 1_500_000,
+      largestPsram: 800_000,
+    })
+  })
+
+  it('heapStatsFromWire preserves null PSRAM counters', () => {
+    const mapped = heapStatsFromWire({ ...wire, free_psram: null, largest_psram: null })
+    expect(mapped.freePsram).toBeNull()
+    expect(mapped.largestPsram).toBeNull()
   })
 })
