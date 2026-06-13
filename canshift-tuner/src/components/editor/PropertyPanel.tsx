@@ -16,6 +16,7 @@ import { SIZE_TOKENS, STANDARD_TOKEN_IDS, tokenFromDimensions } from '../../util
 import { ConfigFieldsProps, Field, Row, inputStyle } from './property-panel/shared'
 import { GaugeFields } from './property-panel/gauge-fields'
 import { ButtonFields } from './property-panel/button-fields'
+import { CruiseControlOverCapDialog } from './CruiseControlOverCapDialog'
 
 const PANEL_LABEL = '#AAAAAA'
 const PANEL_HINT = '#333333'
@@ -55,6 +56,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
   const signals = useSignalStore((s) => s.signals)
   const pushLog = useLogStore((s) => s.push)
   const [colorError, setColorError] = useState<string | null>(null)
+  const [overCapPageIds, setOverCapPageIds] = useState<string[] | null>(null)
 
   const safeParseHex = (raw: string): HexColor | null => {
     const result = HexColorSchema.safeParse(raw)
@@ -74,12 +76,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
       const existing = config.pages.find((p) => p.template === 'cruise_control')
       if (enabled && !existing) {
         if (config.pages.length >= FIRMWARE_CAPS.MAX_PAGES) {
-          const list = config.pages.map((p, i) => `  ${(i + 1).toString()}. ${p.id}`).join('\n')
-          window.alert(
-            `You already have ${config.pages.length.toString()} pages — the firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()}. ` +
-              'Remove a page first, then enable cruise control.\n\n' +
-              `Current pages:\n${list}`
-          )
+          setOverCapPageIds(config.pages.map((p) => p.id))
           return
         }
         addPage({
@@ -120,6 +117,7 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     }
     const activeProfileId: ScreenProfileId = config.targetProfile ?? DEFAULT_SCREEN_PROFILE_ID
     return (
+      <>
       <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
         <div
           style={{
@@ -199,6 +197,17 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
           Select a widget to edit its properties.
         </div>
       </div>
+      {overCapPageIds && (
+        <CruiseControlOverCapDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setOverCapPageIds(null)
+          }}
+          pageIds={overCapPageIds}
+          maxPages={FIRMWARE_CAPS.MAX_PAGES}
+        />
+      )}
+      </>
     )
   }
 
