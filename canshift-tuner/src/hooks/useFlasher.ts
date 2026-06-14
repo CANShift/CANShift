@@ -90,7 +90,7 @@ const runFlash = async (
       setState({ kind: 'flashing', written, total })
     },
     onLog: (line) => {
-      log('debug', `[flash] ${line}`)
+      log('info', `[flash] ${line}`)
     },
   })
   setState({ kind: 'success' })
