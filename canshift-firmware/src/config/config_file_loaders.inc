@@ -135,8 +135,6 @@ bool loadDashboard() {
             p.templateKind = CfgPageTemplate::CUSTOM;
         }
         p.widgetCount = 0;
-        p.widgetCapacity = 0;
-        p.widgets = nullptr;
 
         JsonArrayConst widgets = page["widgets"];
         const size_t totalWidgets = widgets.size();
@@ -145,34 +143,8 @@ bool loadDashboard() {
                      "page '%s': %u widgets exceed CONFIG_MAX_WIDGETS_PER_PAGE=%u — extras ignored",
                      p.id, static_cast<unsigned>(totalWidgets), CONFIG_MAX_WIDGETS_PER_PAGE);
         }
-        const size_t cap =
-            totalWidgets > CONFIG_MAX_WIDGETS_PER_PAGE ? CONFIG_MAX_WIDGETS_PER_PAGE : totalWidgets;
-        if (cap > 0) {
-            const size_t allocBytes = cap * sizeof(CfgWidget);
-            if (totalAllocBytes + allocBytes > CONFIG_DASHBOARD_HEAP_BUDGET_BYTES) {
-                LOG_ERROR("CFG",
-                          "dashboard.json: cumulative widget alloc would exceed budget %u B "
-                          "(at page '%s', running=%u + adding=%u) — refusing payload",
-                          static_cast<unsigned>(CONFIG_DASHBOARD_HEAP_BUDGET_BYTES), p.id,
-                          static_cast<unsigned>(totalAllocBytes),
-                          static_cast<unsigned>(allocBytes));
-                ErrorStore::push(ERROR_SRC_CONFIG, "BUDGET", "payload_too_large");
-                delete out;
-                return false;
-            }
-            p.widgets = new (std::nothrow) CfgWidget[cap]{};
-            if (!p.widgets) {
-                LOG_ERROR("CFG", "page '%s': widgets alloc (%u × %u B) failed", p.id,
-                          static_cast<unsigned>(cap), static_cast<unsigned>(sizeof(CfgWidget)));
-                ErrorStore::push(ERROR_SRC_CONFIG, "OOM", "widgets alloc failed");
-                delete out;
-                return false;
-            }
-            p.widgetCapacity = static_cast<uint8_t>(cap);
-            totalAllocBytes += allocBytes;
-        }
         for (JsonObjectConst w : widgets) {
-            if (p.widgetCount >= p.widgetCapacity)
+            if (p.widgetCount >= CONFIG_MAX_WIDGETS_PER_PAGE)
                 break;
             parseWidget(w, &p.widgets[p.widgetCount++]);
         }
