@@ -268,14 +268,12 @@ static lv_obj_t *buildValueRow(lv_obj_t *cont) {
     return valueRow;
 }
 
-static lv_obj_t *buildValueLabel(lv_obj_t *valueRow, const lv_font_t *font, uint32_t textRgb,
-                                 const CfgWidget &cfg) {
+static lv_obj_t *buildValueLabel(lv_obj_t *valueRow, const lv_font_t *font, uint32_t /*textRgb*/,
+                                 const CfgWidget & /*cfg*/) {
     lv_obj_t *label = lv_label_create(valueRow);
-    lv_obj_set_style_text_color(label, lv_color_hex(textRgb), 0);
+    lv_obj_set_style_text_color(label, lv_color_hex(kStaleTextRgb), 0);
     lv_obj_set_style_text_font(label, font, 0);
-    char initBuf[24];
-    WidgetHelpers::formatValue(initBuf, sizeof(initBuf), cfg.gauge.prefix, 0, 0.0f, nullptr);
-    lv_label_set_text(label, initBuf);
+    lv_label_set_text(label, kStalePlaceholder);
     return label;
 }
 
@@ -384,8 +382,8 @@ static void initGaugeTag(GaugeTag *tag, const CfgWidget &cfg, const GaugeBuildSt
     tag->dangerAngle = built.dangerAngle;
     tag->hasDanger = built.hasDanger;
     tag->gradientMode = built.gradientMode;
-    tag->lastValid = true;
-    tag->lastLabelRgb = 0xFFFFFFFFu;
+    tag->lastValid = false;
+    tag->lastLabelRgb = kStaleTextRgb;
     tag->lastFillRgb = 0xFFFFFFFFu;
     tag->lastAngle = 0xFFFFu;
     tag->lastDisplayScaled = INT32_MIN;
