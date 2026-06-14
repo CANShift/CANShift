@@ -4,7 +4,7 @@ import {
   SIZE_TOKENS,
   gaugeTokenIds,
   tokenFromDimensions,
-} from '../../../utils/sizeTokens'
+} from '../../../utils/size-tokens'
 import { ConfigFieldsProps, Field, GAUGE_STYLES, Row, numberInputStyle } from './shared'
 
 export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) => {

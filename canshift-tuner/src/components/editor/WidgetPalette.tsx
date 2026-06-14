@@ -2,7 +2,7 @@ import { HexColorSchema } from '@tmbk/canshift-core'
 import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
-import { SIZE_TOKENS } from '../../utils/sizeTokens'
+import { SIZE_TOKENS } from '../../utils/size-tokens'
 
 const DEFAULT_WIDGET_STYLE = {
   primaryColor: HexColorSchema.parse('#FF4444'),
