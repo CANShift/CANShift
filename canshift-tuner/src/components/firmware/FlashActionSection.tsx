@@ -30,22 +30,38 @@ export const FlashActionSection = () => {
 
   return (
     <FlashSection step={3} title="Flash" status={status}>
-      <p>
-        Pick the dash's serial port when the browser prompts. The flasher resets the chip into ROM
-        bootloader, writes the firmware, verifies the checksum and reboots. The dash is unreachable
-        for ~30 seconds during the flow.
-      </p>
+      <ol style={instructionsStyle}>
+        <li>
+          <strong>Press and hold the BOOT button</strong> on the back of the dash. Keep it held —
+          do not release.
+        </li>
+        <li>Click the Flash button below while still holding BOOT.</li>
+        <li>
+          Pick the dash's serial port in the browser prompt (it appears as <code>USB-SERIAL CH340</code>).
+        </li>
+        <li>
+          Keep BOOT held until the progress bar starts moving (around <em>Writing at 2%</em>), then
+          release. The full flash takes ~30 seconds.
+        </li>
+      </ol>
       {state.kind === 'flashing' && <ProgressBar written={state.written} total={state.total} />}
       {state.kind === 'success' && (
         <div style={successCardStyle}>
           <span style={successLabelStyle}>Flash complete</span>
-          <span>The dash is rebooting into the new firmware.</span>
+          <span>
+            Unplug the dash from USB and plug it back in to boot into the new firmware. The
+            automatic reset from the flasher is unreliable on this board, so the power-cycle is the
+            durable way to restart.
+          </span>
         </div>
       )}
       {state.kind === 'error' && (
         <div style={errorCardStyle}>
           <span style={errorLabelStyle}>Flash failed</span>
           <span>{state.message}</span>
+          <span style={errorHintStyle}>
+            Most common cause: BOOT was not held long enough. Press and hold BOOT, then retry.
+          </span>
         </div>
       )}
       <div style={actionsStyle}>
@@ -135,4 +151,21 @@ const errorLabelStyle: CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
   color: 'hsl(var(--destructive))',
+}
+
+const errorHintStyle: CSSProperties = {
+  marginTop: 4,
+  fontSize: 11,
+  color: 'hsl(var(--text-dim))',
+}
+
+const instructionsStyle: CSSProperties = {
+  margin: '0 0 4px 0',
+  paddingLeft: 18,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+  fontSize: 12,
+  lineHeight: 1.45,
+  color: 'hsl(var(--text-dim))',
 }
