@@ -51,13 +51,69 @@ lv_obj_t *createRoot() {
     lv_obj_set_size(root, LV_HOR_RES, LV_VER_RES);
     lv_obj_set_pos(root, 0, 0);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_bg_color(root, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(root, lv_color_hex(0x0D0D0D), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(root, 0, LV_PART_MAIN);
     lv_obj_set_style_radius(root, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(root, 0, LV_PART_MAIN);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_CLICKABLE);
     return root;
+}
+
+void usbBreathCb(void *obj, int32_t v) {
+    lv_obj_set_style_opa(static_cast<lv_obj_t *>(obj), static_cast<lv_opa_t>(v), 0);
+}
+
+lv_obj_t *buildUsbIcon(lv_obj_t *parent, uint32_t color) {
+    constexpr int16_t SLEEVE_W = 18;
+    constexpr int16_t SLEEVE_H = 24;
+    constexpr int16_t CABLE_W = 4;
+    constexpr int16_t CABLE_H = 6;
+    constexpr int16_t CONTACT_W = 10;
+    constexpr int16_t CONTACT_H = 4;
+    constexpr int16_t CONTACT_TOP_PAD = 4;
+    constexpr int16_t ICON_W = SLEEVE_W;
+    constexpr int16_t ICON_H = SLEEVE_H + CABLE_H;
+
+    lv_obj_t *icon = lv_obj_create(parent);
+    lv_obj_set_size(icon, ICON_W, ICON_H);
+    lv_obj_set_style_bg_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(icon, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(icon, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(icon, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t *sleeve = lv_obj_create(icon);
+    lv_obj_set_size(sleeve, SLEEVE_W, SLEEVE_H);
+    lv_obj_set_style_radius(sleeve, 2, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(sleeve, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(sleeve, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(sleeve, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(sleeve, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(sleeve, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(sleeve, LV_ALIGN_TOP_MID, 0, 0);
+
+    lv_obj_t *contact = lv_obj_create(sleeve);
+    lv_obj_set_size(contact, CONTACT_W, CONTACT_H);
+    lv_obj_set_style_radius(contact, 1, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(contact, lv_color_hex(0x0D0D0D), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(contact, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(contact, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(contact, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(contact, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(contact, LV_ALIGN_TOP_MID, 0, CONTACT_TOP_PAD);
+
+    lv_obj_t *cable = lv_obj_create(icon);
+    lv_obj_set_size(cable, CABLE_W, CABLE_H);
+    lv_obj_set_style_radius(cable, 1, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(cable, lv_color_hex(color), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(cable, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(cable, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(cable, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(cable, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(cable, LV_ALIGN_BOTTOM_MID, 0, 0);
+
+    return icon;
 }
 
 const char *errorTitleFor(BurnOverlay::ErrorReason reason) {
@@ -95,17 +151,17 @@ void BurnOverlay::show() {
 
     lv_obj_t *root = createRoot();
 
-    static constexpr int16_t kArcSize = 56;
+    static constexpr int16_t kArcSize = 64;
     lv_obj_t *arc = lv_arc_create(root);
     lv_obj_set_size(arc, kArcSize, kArcSize);
-    lv_obj_align(arc, LV_ALIGN_CENTER, 0, -16);
+    lv_obj_align(arc, LV_ALIGN_CENTER, 0, -20);
     lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
     lv_arc_set_bg_angles(arc, 0, 360);
     lv_arc_set_angles(arc, 0, kArcSpan);
     lv_arc_set_rotation(arc, 0);
-    lv_obj_set_style_arc_color(arc, lv_color_hex(0x222222), LV_PART_MAIN);
+    lv_obj_set_style_arc_color(arc, lv_color_hex(0x2A2A2A), LV_PART_MAIN);
     lv_obj_set_style_arc_width(arc, 4, LV_PART_MAIN);
-    lv_obj_set_style_arc_color(arc, lv_color_hex(0xE08030), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(arc, lv_color_hex(0xFF4444), LV_PART_INDICATOR);
     lv_obj_set_style_arc_width(arc, 4, LV_PART_INDICATOR);
     lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
 
@@ -127,9 +183,22 @@ void BurnOverlay::show() {
 
     lv_obj_t *sub = lv_label_create(root);
     lv_label_set_text(sub, "Writing to storage…");
-    lv_obj_set_style_text_color(sub, lv_color_hex(0x888888), 0);
+    lv_obj_set_style_text_color(sub, lv_color_hex(0x666666), 0);
     lv_obj_set_style_text_font(sub, FontManager::label(12), 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 60);
+
+    lv_obj_t *usbIcon = buildUsbIcon(root, 0xFF3030);
+    lv_obj_align(usbIcon, LV_ALIGN_BOTTOM_MID, 0, -16);
+
+    lv_anim_t breath;
+    lv_anim_init(&breath);
+    lv_anim_set_exec_cb(&breath, usbBreathCb);
+    lv_anim_set_var(&breath, usbIcon);
+    lv_anim_set_values(&breath, LV_OPA_20, LV_OPA_COVER);
+    lv_anim_set_time(&breath, 900);
+    lv_anim_set_playback_time(&breath, 900);
+    lv_anim_set_repeat_count(&breath, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_start(&breath);
 
     s_overlay = root;
     s_arc = arc;
