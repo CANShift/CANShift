@@ -35,27 +35,34 @@ const useSerialActivityPulse = (active: boolean): boolean => {
   const offTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    const clearOffTimer = () => {
+      if (offTimerRef.current !== null) {
+        clearTimeout(offTimerRef.current)
+        offTimerRef.current = null
+      }
+    }
+
     if (!active) {
       setPulsing(false)
-      return
+      clearOffTimer()
+      return () => {}
     }
+
     const unsubscribe = deviceEvents.onActivity(() => {
       const now = performance.now()
       if (now - lastTickRef.current < PULSE_THROTTLE_MS) return
       lastTickRef.current = now
       setPulsing(true)
-      if (offTimerRef.current !== null) clearTimeout(offTimerRef.current)
+      clearOffTimer()
       offTimerRef.current = setTimeout(() => {
         setPulsing(false)
         offTimerRef.current = null
       }, PULSE_HOLD_MS)
     })
+
     return () => {
       unsubscribe()
-      if (offTimerRef.current !== null) {
-        clearTimeout(offTimerRef.current)
-        offTimerRef.current = null
-      }
+      clearOffTimer()
       setPulsing(false)
     }
   }, [active])
