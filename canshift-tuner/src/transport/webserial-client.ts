@@ -295,9 +295,14 @@ export class SerialClient {
       const writerSnapshot = this.writer
       if (writerSnapshot) {
         try {
+          await writerSnapshot.abort()
+        } catch (err) {
+          console.warn('[serial] writer.abort after readLoop failed', err)
+        }
+        try {
           writerSnapshot.releaseLock()
         } catch (err) {
-          console.warn('[serial] writer.releaseLock after readLoop failed', err)
+          console.warn('[serial] writer.releaseLock after abort failed', err)
         }
       }
       if (this.port === ownPort || this.port === null) {
