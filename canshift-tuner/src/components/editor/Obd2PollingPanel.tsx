@@ -221,7 +221,7 @@ const SignalRow = ({ signal, index }: RowProps) => {
   )
 }
 
-export default function Obd2PollingPanel() {
+const Obd2PollingPanel = () => {
   const signals = useSignalStore((s) => s.signals)
   const pollingCount = useMemo(() => signals.filter((s) => s.polling).length, [signals])
 
@@ -260,3 +260,5 @@ export default function Obd2PollingPanel() {
     </div>
   )
 }
+
+export default Obd2PollingPanel

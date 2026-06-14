@@ -43,7 +43,7 @@ interface PropertyPanelProps {
 
 const CRUISE_CONTROL_PAGE_ID = 'cruise_control'
 
-export default function PropertyPanel({ pageId }: PropertyPanelProps) {
+const PropertyPanel = ({ pageId }: PropertyPanelProps) => {
   const {
     config,
     selectedWidgetId,
@@ -476,3 +476,5 @@ export default function PropertyPanel({ pageId }: PropertyPanelProps) {
     </div>
   )
 }
+
+export default PropertyPanel

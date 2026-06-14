@@ -265,7 +265,7 @@ const DisconnectedGuard = ({ children }: { children: ReactNode }) => {
   return <>{children}</>
 }
 
-export default function App() {
+const App = () => {
   useAutoReconnect()
   useSimulationBootstrap()
   useVersionHandshake()
@@ -336,3 +336,5 @@ const mainStyle: CSSProperties = {
   flexDirection: 'column',
   overflow: 'hidden',
 }
+
+export default App

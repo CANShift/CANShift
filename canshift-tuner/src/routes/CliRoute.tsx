@@ -9,7 +9,7 @@ import type { CliEntry } from '../components/cli/CliOutput'
 const HISTORY_CAP = 50
 const ENTRIES_CAP = 200
 
-export default function CliRoute() {
+const CliRoute = () => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const [entries, setEntries] = useState<CliEntry[]>([])
@@ -155,3 +155,5 @@ const hintStyle: CSSProperties = {
   border: '1px solid hsl(var(--border))',
   borderRadius: 6,
 }
+
+export default CliRoute

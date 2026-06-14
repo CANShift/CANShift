@@ -62,7 +62,7 @@ interface WidgetPaletteProps {
   pageId: string
 }
 
-export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
+const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
   const addWidget = useDashboardStore((s) => s.addWidget)
   const page = useDashboardStore((s) => s.config?.pages.find((p) => p.id === pageId))
   const templateLocked = (page?.template ?? 'custom') !== 'custom'
@@ -181,3 +181,5 @@ export default function WidgetPalette({ pageId }: WidgetPaletteProps) {
     </div>
   )
 }
+
+export default WidgetPalette

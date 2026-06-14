@@ -32,7 +32,7 @@ const buildSupportMailto = (lastError: string | null): string => {
   return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`
 }
 
-export default function WelcomeRoute() {
+const WelcomeRoute = () => {
   const status = useConnectionStore((s) => s.status)
   const lastError = useConnectionStore((s) => s.lastError)
   const connect = useConnectionStore((s) => s.connect)
@@ -87,3 +87,5 @@ const dotSeparatorStyle: CSSProperties = {
   color: 'hsl(var(--text-muted))',
   fontSize: 12,
 }
+
+export default WelcomeRoute
