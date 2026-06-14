@@ -3,13 +3,12 @@ import type { CSSProperties } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { useCanScanner } from '../hooks/useCanScanner'
 import type { CanFrameStats } from '../hooks/useCanScanner'
-import { CanScanToolbar } from '../components/can-bus/CanScanToolbar'
 import { CanFrameTable } from '../components/can-bus/CanFrameTable'
+import { CanScanToolbar } from '../components/can-bus/CanScanToolbar'
+import { SortBar, type SortKey } from '../components/can-bus/SortBar'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
-
-type SortKey = 'id' | 'lastSeen' | 'rate' | 'count'
 
 const NOW_TICK_MS = 250
 
@@ -88,40 +87,6 @@ const CanBusRoute = () => {
   )
 }
 
-interface SortBarProps {
-  sortKey: SortKey
-  onChange: (key: SortKey) => void
-}
-
-const SortBar = ({ sortKey, onChange }: SortBarProps) => {
-  const options: ReadonlyArray<{ key: SortKey; label: string }> = [
-    { key: 'id', label: 'ID' },
-    { key: 'lastSeen', label: 'Last seen' },
-    { key: 'rate', label: 'Rate' },
-    { key: 'count', label: 'Count' },
-  ]
-  return (
-    <div style={sortBarStyle}>
-      <span style={sortLabelStyle}>Sort by</span>
-      {options.map((o) => {
-        const active = o.key === sortKey
-        return (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => {
-              onChange(o.key)
-            }}
-            style={sortPillStyle(active)}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 const sortFrames = (frames: CanFrameStats[], key: SortKey): CanFrameStats[] => {
   const sorted = frames.slice()
   switch (key) {
@@ -177,34 +142,5 @@ const containerStyle: CSSProperties = {
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
 }
-
-const sortBarStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '8px 20px',
-  borderBottom: '1px solid hsl(var(--border))',
-  background: 'hsl(var(--surface))',
-}
-
-const sortLabelStyle: CSSProperties = {
-  fontSize: 10,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: 'hsl(var(--text-muted))',
-  marginRight: 4,
-}
-
-const sortPillStyle = (active: boolean): CSSProperties => ({
-  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
-  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-  borderRadius: 999,
-  padding: '3px 12px',
-  fontSize: 11,
-  cursor: 'pointer',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-})
 
 export default CanBusRoute
