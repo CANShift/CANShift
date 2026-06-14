@@ -3,6 +3,38 @@ const MERGED_FLASH_OFFSET = 0x0
 
 const SUPPORTED_CHIPS: readonly string[] = ['ESP32']
 
+const PRE_RESET_HOLD_MS = 250
+const PRE_RESET_SETTLE_MS = 600
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+interface SignalCapablePort {
+  setSignals?: (signals: {
+    dataTerminalReady?: boolean
+    requestToSend?: boolean
+  }) => Promise<void>
+}
+
+const forceRomBootloader = async (port: SerialPort, onLog: FlashLog): Promise<boolean> => {
+  const setSignals = (port as SignalCapablePort).setSignals
+  if (typeof setSignals !== 'function') return false
+  const send = (signals: { dataTerminalReady?: boolean; requestToSend?: boolean }) =>
+    setSignals.call(port, signals)
+  try {
+    onLog('Pre-reset: pulling EN low, IO0 low')
+    await send({ dataTerminalReady: false, requestToSend: true })
+    await sleep(PRE_RESET_HOLD_MS)
+    await send({ dataTerminalReady: true, requestToSend: false })
+    await sleep(PRE_RESET_SETTLE_MS)
+    await send({ dataTerminalReady: false, requestToSend: false })
+    onLog('Pre-reset complete — chip should be in ROM bootloader')
+    return true
+  } catch (err) {
+    onLog(`Pre-reset failed: ${err instanceof Error ? err.message : String(err)}`)
+    return false
+  }
+}
+
 let esptoolModulePromise: Promise<typeof import('esptool-js')> | null = null
 
 const loadEsptool = (): Promise<typeof import('esptool-js')> => {
@@ -56,6 +88,22 @@ export const flashFirmware = async ({
   onProgress,
   onLog,
 }: FlashOptions): Promise<void> => {
+  let preResetSucceeded = false
+  try {
+    await port.open({ baudRate: 115_200 })
+    preResetSucceeded = await forceRomBootloader(port, onLog)
+  } catch (err) {
+    onLog(`Pre-reset port open failed: ${err instanceof Error ? err.message : String(err)}`)
+  } finally {
+    try {
+      await port.close()
+    } catch (err) {
+      onLog(`Pre-reset port close failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  const connectMode = preResetSucceeded ? 'no_reset' : 'default_reset'
+
   const { ESPLoader, Transport } = await loadEsptool()
   const transport = new Transport(port, false)
   try {
@@ -68,13 +116,13 @@ export const flashFirmware = async ({
 
     const originalConnect = loader.connect.bind(loader)
     loader.connect = (
-      mode = 'default_reset',
+      mode = connectMode,
       _attempts = ROM_BOOTLOADER_CONNECT_ATTEMPTS,
       detecting = true
     ) => originalConnect(mode, ROM_BOOTLOADER_CONNECT_ATTEMPTS, detecting)
 
     try {
-      await loader.main()
+      await loader.main(connectMode)
     } catch (err) {
       throw new FlashError(
         `Could not enter ESP32 ROM bootloader after ${String(ROM_BOOTLOADER_CONNECT_ATTEMPTS)} attempts. Hold BOOT, tap RESET (or unplug/replug while holding BOOT), then retry.`,
