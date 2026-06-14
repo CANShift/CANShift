@@ -288,6 +288,11 @@ export class SerialClient {
       if (tail) this.rxBuffer += tail
       this.drainFrames()
       try {
+        await reader.cancel()
+      } catch (err) {
+        console.warn('[serial] reader.cancel after readLoop failed', err)
+      }
+      try {
         reader.releaseLock()
       } catch (err) {
         console.warn('[serial] reader.releaseLock after readLoop failed', err)
