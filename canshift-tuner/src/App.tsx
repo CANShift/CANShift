@@ -255,11 +255,17 @@ const useBurnShortcut = (): void => {
   }, [canBurn, burn])
 }
 
+const DISCONNECTED_ALLOWED_PATHS = new Set(['/', '/firmware', '/about'])
+
 const DisconnectedGuard = ({ children }: { children: ReactNode }) => {
   const status = useConnectionStore((s) => s.status)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const location = useLocation()
-  if (status !== 'connected' && !simulationMode && location.pathname !== '/') {
+  if (
+    status !== 'connected' &&
+    !simulationMode &&
+    !DISCONNECTED_ALLOWED_PATHS.has(location.pathname)
+  ) {
     return <Navigate to="/" replace />
   }
   return <>{children}</>
