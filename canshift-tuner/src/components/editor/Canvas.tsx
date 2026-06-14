@@ -27,7 +27,7 @@ interface CanvasProps {
   topBar: TopBarConfig
 }
 
-export default function Canvas({ page, topBar }: CanvasProps) {
+const Canvas = ({ page, topBar }: CanvasProps) => {
   const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
   const screenProfile = useMemo(() => resolveScreenProfile(targetProfileId), [targetProfileId])
   const CANVAS_W = screenProfile.width * SCALE
@@ -625,3 +625,5 @@ export default function Canvas({ page, topBar }: CanvasProps) {
     </div>
   )
 }
+
+export default Canvas

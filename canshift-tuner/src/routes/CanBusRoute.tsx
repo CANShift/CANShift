@@ -13,7 +13,7 @@ type SortKey = 'id' | 'lastSeen' | 'rate' | 'count'
 
 const NOW_TICK_MS = 250
 
-export default function CanBusRoute() {
+const CanBusRoute = () => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const signals = useSignalStore((s) => s.signals)
@@ -202,3 +202,5 @@ const sortPillStyle = (active: boolean): CSSProperties => ({
   fontWeight: 600,
   letterSpacing: '0.04em',
 })
+
+export default CanBusRoute

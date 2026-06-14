@@ -14,7 +14,7 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
 
 const STICK_THRESHOLD_PX = 32
 
-export default function LogsRoute() {
+const LogsRoute = () => {
   const entries = useLogStore((s) => s.entries)
   const verbose = useLogStore((s) => s.verbose)
   const setVerbose = useLogStore((s) => s.setVerbose)
@@ -337,3 +337,5 @@ const jumpStyle: CSSProperties = {
   cursor: 'pointer',
   boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
 }
+
+export default LogsRoute

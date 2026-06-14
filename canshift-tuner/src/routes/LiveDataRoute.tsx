@@ -6,7 +6,7 @@ import { useDeviceStore } from '../stores/device.store'
 
 const AGE_TICK_MS = 500
 
-export default function LiveDataRoute() {
+const LiveDataRoute = () => {
   const signals = useSignalStore((s) => s.signals)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -349,3 +349,5 @@ const rangeLabelStyle: CSSProperties = {
   minWidth: 60,
   textAlign: 'right',
 }
+
+export default LiveDataRoute

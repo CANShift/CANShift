@@ -192,7 +192,7 @@ const PaletteFallback = () => {
   return <div style={{ minHeight: 40 }} />
 }
 
-export default function EditorRoute() {
+const EditorRoute = () => {
   const pages = useDashboardStore((s) => s.config?.pages)
   const topBar = useDashboardStore((s) => s.config?.topBar)
   const defaultPageId = useDashboardStore((s) => s.config?.defaultPageId)
@@ -465,3 +465,5 @@ export default function EditorRoute() {
     </div>
   )
 }
+
+export default EditorRoute

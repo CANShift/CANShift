@@ -131,7 +131,7 @@ const SignalRowImpl = ({
 
 const SignalRow = memo(SignalRowImpl)
 
-export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
+const DiagnosticsPanel = ({ scale }: DiagnosticsPanelProps) => {
   const signals = useSignalStore((s) => s.signals)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
@@ -232,3 +232,5 @@ export default function DiagnosticsPanel({ scale }: DiagnosticsPanelProps) {
     </div>
   )
 }
+
+export default DiagnosticsPanel

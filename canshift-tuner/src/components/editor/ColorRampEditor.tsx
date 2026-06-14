@@ -44,13 +44,13 @@ const clampHex = (value: string): HexColor => {
   return parsed.success ? parsed.data : RAMP_FALLBACK_BLACK
 }
 
-export default function ColorRampEditor({
+const ColorRampEditor = ({
   ramp,
   sensorKind,
   min,
   max,
   onChange,
-}: ColorRampEditorProps): React.ReactElement {
+}: ColorRampEditorProps): React.ReactElement => {
   const effective = ramp ?? fallbackRamp(min, max)
 
   const update = useCallback(
@@ -255,3 +255,5 @@ export default function ColorRampEditor({
     </div>
   )
 }
+
+export default ColorRampEditor
