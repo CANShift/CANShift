@@ -1,5 +1,4 @@
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
-import { useShallow } from 'zustand/react/shallow'
 import type { PageConfig, PagePalette, TopBarConfig } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -33,42 +32,21 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const CANVAS_W = screenProfile.width * SCALE
   const CANVAS_H = screenProfile.height * SCALE
 
-  const { selectedWidgetId, selectedWidgetIds } = useDashboardStore(
-    useShallow((s) => ({
-      selectedWidgetId: s.selectedWidgetId,
-      selectedWidgetIds: s.selectedWidgetIds,
-    }))
-  )
+  const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
+  const selectedWidgetIds = useDashboardStore((s) => s.selectedWidgetIds)
 
-  const {
-    selectWidget,
-    selectWidgets,
-    toggleWidgetSelection,
-    removeWidgets,
-    copyWidgets,
-    pasteWidgets,
-    nudgeWidgets,
-    selectPage,
-  } = useDashboardStore(
-    useShallow((s) => ({
-      selectWidget: s.selectWidget,
-      selectWidgets: s.selectWidgets,
-      toggleWidgetSelection: s.toggleWidgetSelection,
-      removeWidgets: s.removeWidgets,
-      copyWidgets: s.copyWidgets,
-      pasteWidgets: s.pasteWidgets,
-      nudgeWidgets: s.nudgeWidgets,
-      selectPage: s.selectPage,
-    }))
-  )
+  const selectWidget = useDashboardStore((s) => s.selectWidget)
+  const selectWidgets = useDashboardStore((s) => s.selectWidgets)
+  const toggleWidgetSelection = useDashboardStore((s) => s.toggleWidgetSelection)
+  const removeWidgets = useDashboardStore((s) => s.removeWidgets)
+  const copyWidgets = useDashboardStore((s) => s.copyWidgets)
+  const pasteWidgets = useDashboardStore((s) => s.pasteWidgets)
+  const nudgeWidgets = useDashboardStore((s) => s.nudgeWidgets)
+  const selectPage = useDashboardStore((s) => s.selectPage)
 
-  const { dayTheme, nightTheme, pages } = useDashboardStore(
-    useShallow((s) => ({
-      dayTheme: s.config?.dayTheme,
-      nightTheme: s.config?.nightTheme,
-      pages: s.config?.pages ?? EMPTY_PAGES,
-    }))
-  )
+  const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
+  const nightTheme = useDashboardStore((s) => s.config?.nightTheme)
+  const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
 
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
   const containerRef = useRef<HTMLDivElement>(null)
