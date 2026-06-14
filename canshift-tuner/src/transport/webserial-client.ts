@@ -287,6 +287,24 @@ export class SerialClient {
       const tail = this.decoder.decode()
       if (tail) this.rxBuffer += tail
       this.drainFrames()
+      try {
+        reader.releaseLock()
+      } catch (err) {
+        console.warn('[serial] reader.releaseLock after readLoop failed', err)
+      }
+      const writerSnapshot = this.writer
+      if (writerSnapshot) {
+        try {
+          await writerSnapshot.abort()
+        } catch (err) {
+          console.warn('[serial] writer.abort after readLoop failed', err)
+        }
+        try {
+          writerSnapshot.releaseLock()
+        } catch (err) {
+          console.warn('[serial] writer.releaseLock after abort failed', err)
+        }
+      }
       if (this.port === ownPort || this.port === null) {
         this.handleClose(ownPort)
       }
@@ -401,6 +419,22 @@ export class SerialClient {
   }
 
   private handleClose(ownPort: SerialPort): void {
+    const reader = this.reader
+    if (reader) {
+      try {
+        reader.releaseLock()
+      } catch (err) {
+        console.warn('[serial] reader.releaseLock failed', err)
+      }
+    }
+    const writer = this.writer
+    if (writer) {
+      try {
+        writer.releaseLock()
+      } catch (err) {
+        console.warn('[serial] writer.releaseLock failed', err)
+      }
+    }
     void this.safeClose(ownPort)
 
     if (this.suppressNextReconnect || (this.port !== null && this.port !== ownPort)) {

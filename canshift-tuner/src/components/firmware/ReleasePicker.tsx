@@ -41,6 +41,7 @@ export const ReleasePicker = () => {
   const [pickedTag, setPickedTag] = useState<string | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
+  const [loadedBytes, setLoadedBytes] = useState(0)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
   const filtered = useMemo(
@@ -66,9 +67,11 @@ export const ReleasePicker = () => {
     const asset = pickedAsset
     setDownloading(release.tag)
     setProgress(0)
+    setLoadedBytes(0)
     setDownloadError(null)
     log('info', `Downloading ${asset.name} (${formatBytes(asset.sizeBytes)})`)
     void downloadFirmwareAsset(asset, (loaded, total) => {
+      setLoadedBytes(loaded)
       setProgress(total > 0 ? loaded / total : 0)
     })
       .then((firmware) => {
@@ -86,6 +89,7 @@ export const ReleasePicker = () => {
       .finally(() => {
         setDownloading(null)
         setProgress(0)
+        setLoadedBytes(0)
       })
   }
 
@@ -131,7 +135,7 @@ export const ReleasePicker = () => {
       {state.kind === 'ok' && filtered.length > 0 && (
         <>
           <Select
-            {...(effectiveTag !== null ? { value: effectiveTag } : {})}
+            value={effectiveTag ?? ''}
             onValueChange={(tag) => {
               const release = filtered.find((r) => r.tag === tag)
               if (release) handlePick(release)
@@ -158,29 +162,46 @@ export const ReleasePicker = () => {
 
           {pickedRelease && (
             <div style={detailCardStyle}>
-              <div style={detailMetaRowStyle}>
-                <span style={tagStyle}>{pickedRelease.tag}</span>
-                <span style={dateStyle}>{formatDate(pickedRelease.publishedAt)}</span>
-                {pickedRelease.prerelease && (
-                  <span style={preReleaseBadgeStyle}>pre-release</span>
-                )}
-                {pickedAsset && <span style={sizeStyle}>{formatBytes(pickedAsset.sizeBytes)}</span>}
+              <div style={detailHeaderStyle}>
+                <div style={detailMetaRowStyle}>
+                  <span style={tagStyle}>{pickedRelease.tag}</span>
+                  <span style={dateStyle}>{formatDate(pickedRelease.publishedAt)}</span>
+                  {pickedRelease.prerelease && (
+                    <span style={preReleaseBadgeStyle}>pre-release</span>
+                  )}
+                  {pickedAsset && (
+                    <span style={sizeStyle}>{formatBytes(pickedAsset.sizeBytes)}</span>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant={isPickedSelected ? 'default' : 'outline'}
+                  size="sm"
+                  disabled={isPickedDownloading || pickedAsset === null || isPickedSelected}
+                  onClick={handleDownload}
+                >
+                  {isPickedDownloading
+                    ? 'Downloading…'
+                    : isPickedSelected
+                      ? 'Selected'
+                      : pickedAsset === null
+                        ? 'No build'
+                        : 'Download'}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant={isPickedSelected ? 'default' : 'outline'}
-                size="sm"
-                disabled={isPickedDownloading || pickedAsset === null || isPickedSelected}
-                onClick={handleDownload}
-              >
-                {isPickedDownloading
-                  ? `Downloading… ${(progress * 100).toFixed(0)}%`
-                  : isPickedSelected
-                    ? 'Selected'
-                    : pickedAsset === null
-                      ? 'No build'
-                      : 'Download'}
-              </Button>
+              {isPickedDownloading && pickedAsset && (
+                <div style={progressGroupStyle}>
+                  <div style={progressTrackStyle}>
+                    <div style={progressFillStyle(progress * 100)} />
+                  </div>
+                  <div style={progressMetaStyle}>
+                    <span>
+                      {formatBytes(loadedBytes)} / {formatBytes(pickedAsset.sizeBytes)}
+                    </span>
+                    <span>{(progress * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -223,12 +244,18 @@ const channelButtonStyle = (active: boolean): CSSProperties => ({
 
 const detailCardStyle: CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  gap: 12,
+  flexDirection: 'column',
+  gap: 10,
   padding: '8px 12px',
   borderRadius: 6,
   border: '1px solid hsl(var(--border))',
   background: 'hsl(var(--bg-inset))',
+}
+
+const detailHeaderStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
 }
 
 const detailMetaRowStyle: CSSProperties = {
@@ -237,6 +264,35 @@ const detailMetaRowStyle: CSSProperties = {
   gap: 10,
   flex: 1,
   flexWrap: 'wrap',
+}
+
+const progressGroupStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+}
+
+const progressTrackStyle: CSSProperties = {
+  width: '100%',
+  height: 6,
+  borderRadius: 3,
+  background: 'hsl(var(--bg))',
+  overflow: 'hidden',
+}
+
+const progressFillStyle = (pct: number): CSSProperties => ({
+  width: `${pct.toFixed(1)}%`,
+  height: '100%',
+  background: 'hsl(var(--primary))',
+  transition: 'width 120ms ease',
+})
+
+const progressMetaStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  fontSize: 10,
+  color: 'hsl(var(--text-muted))',
+  fontFamily: 'monospace',
 }
 
 const tagStyle: CSSProperties = {

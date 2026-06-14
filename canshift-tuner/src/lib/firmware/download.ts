@@ -9,6 +9,20 @@ const FETCH_TIMEOUT_MS = 30_000
 
 export type DownloadProgress = (loaded: number, total: number) => void
 
+const PROXY_PATH = '/api/firmware-download'
+
+const buildProxyUrl = (downloadUrl: string): string => {
+  const u = new URL(downloadUrl)
+  const parts = u.pathname.split('/').filter(Boolean)
+  const tag = parts[4]
+  const asset = parts[5]
+  if (!tag || !asset) {
+    throw new Error(`Unrecognised release URL shape: ${downloadUrl}`)
+  }
+  const params = new URLSearchParams({ tag, asset })
+  return `${PROXY_PATH}?${params.toString()}`
+}
+
 export const downloadFirmwareAsset = async (
   asset: ReleaseAsset,
   onProgress?: DownloadProgress
@@ -20,6 +34,8 @@ export const downloadFirmwareAsset = async (
     )
   }
 
+  const proxyUrl = buildProxyUrl(asset.downloadUrl)
+
   const controller = new AbortController()
   const timer = setTimeout(() => {
     controller.abort()
@@ -27,7 +43,7 @@ export const downloadFirmwareAsset = async (
 
   let response: Response
   try {
-    response = await fetch(asset.downloadUrl, { signal: controller.signal })
+    response = await fetch(proxyUrl, { signal: controller.signal })
   } finally {
     clearTimeout(timer)
   }
