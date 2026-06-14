@@ -2,6 +2,13 @@ import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import type { ReleaseInfo } from '@tmbk/canshift-core'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useFirmwareReleases } from '../../hooks/useFirmwareReleases'
 import { useFirmwareSelectionStore } from '../../stores/firmware-selection.store'
 import { useLogStore } from '../../stores/log.store'
@@ -31,6 +38,7 @@ export const ReleasePicker = () => {
   const setReleaseFirmware = useFirmwareSelectionStore((s) => s.setReleaseFirmware)
   const log = useLogStore((s) => s.push)
   const [channel, setChannel] = useState<Channel>('prerelease')
+  const [pickedTag, setPickedTag] = useState<string | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [downloadError, setDownloadError] = useState<string | null>(null)
@@ -41,14 +49,21 @@ export const ReleasePicker = () => {
   )
 
   const selectedTag = selection.kind === 'release' ? selection.release.tag : null
+  const effectiveTag = pickedTag ?? selectedTag
+  const pickedRelease = filtered.find((r) => r.tag === effectiveTag) ?? null
+  const pickedAsset = pickedRelease ? findMergedAsset(pickedRelease) : null
+  const isPickedSelected = effectiveTag !== null && effectiveTag === selectedTag
+  const isPickedDownloading = effectiveTag !== null && downloading === effectiveTag
 
   const handlePick = (release: ReleaseInfo) => {
-    const asset = findMergedAsset(release)
-    if (!asset) {
-      setDownloadError(`${release.tag} has no -merged.bin asset.`)
-      log('warn', `Release ${release.tag} skipped — no merged.bin in assets`)
-      return
-    }
+    setPickedTag(release.tag)
+    setDownloadError(null)
+  }
+
+  const handleDownload = () => {
+    if (!pickedRelease || !pickedAsset) return
+    const release = pickedRelease
+    const asset = pickedAsset
     setDownloading(release.tag)
     setProgress(0)
     setDownloadError(null)
@@ -85,6 +100,7 @@ export const ReleasePicker = () => {
               type="button"
               onClick={() => {
                 setChannel(opt.value)
+                setPickedTag(null)
               }}
               style={channelButtonStyle(active)}
             >
@@ -113,40 +129,61 @@ export const ReleasePicker = () => {
       )}
 
       {state.kind === 'ok' && filtered.length > 0 && (
-        <ul style={listStyle}>
-          {filtered.map((release) => {
-            const merged = findMergedAsset(release)
-            const isSelected = release.tag === selectedTag
-            const isBusy = downloading === release.tag
-            return (
-              <li key={release.tag} style={rowStyle(isSelected)}>
-                <div style={rowMetaStyle}>
-                  <span style={tagStyle}>{release.tag}</span>
-                  <span style={dateStyle}>{formatDate(release.publishedAt)}</span>
-                  {release.prerelease && <span style={preReleaseBadgeStyle}>pre-release</span>}
-                  {merged && <span style={sizeStyle}>{formatBytes(merged.sizeBytes)}</span>}
-                </div>
-                <Button
-                  type="button"
-                  variant={isSelected ? 'default' : 'outline'}
-                  size="sm"
-                  disabled={isBusy || merged === null}
-                  onClick={() => {
-                    handlePick(release)
-                  }}
-                >
-                  {isBusy
-                    ? `Downloading… ${(progress * 100).toFixed(0)}%`
-                    : isSelected
-                      ? 'Selected'
-                      : merged === null
-                        ? 'No build'
-                        : 'Use this'}
-                </Button>
-              </li>
-            )
-          })}
-        </ul>
+        <>
+          <Select
+            {...(effectiveTag !== null ? { value: effectiveTag } : {})}
+            onValueChange={(tag) => {
+              const release = filtered.find((r) => r.tag === tag)
+              if (release) handlePick(release)
+            }}
+          >
+            <SelectTrigger aria-label="Firmware release">
+              <SelectValue placeholder="Select a release…" />
+            </SelectTrigger>
+            <SelectContent>
+              {filtered.map((release) => {
+                const merged = findMergedAsset(release)
+                const sizeLabel = merged ? ` · ${formatBytes(merged.sizeBytes)}` : ' · no build'
+                const prefix = release.prerelease ? '[pre] ' : ''
+                return (
+                  <SelectItem key={release.tag} value={release.tag} disabled={merged === null}>
+                    {prefix}
+                    {release.tag} · {formatDate(release.publishedAt)}
+                    {sizeLabel}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+
+          {pickedRelease && (
+            <div style={detailCardStyle}>
+              <div style={detailMetaRowStyle}>
+                <span style={tagStyle}>{pickedRelease.tag}</span>
+                <span style={dateStyle}>{formatDate(pickedRelease.publishedAt)}</span>
+                {pickedRelease.prerelease && (
+                  <span style={preReleaseBadgeStyle}>pre-release</span>
+                )}
+                {pickedAsset && <span style={sizeStyle}>{formatBytes(pickedAsset.sizeBytes)}</span>}
+              </div>
+              <Button
+                type="button"
+                variant={isPickedSelected ? 'default' : 'outline'}
+                size="sm"
+                disabled={isPickedDownloading || pickedAsset === null || isPickedSelected}
+                onClick={handleDownload}
+              >
+                {isPickedDownloading
+                  ? `Downloading… ${(progress * 100).toFixed(0)}%`
+                  : isPickedSelected
+                    ? 'Selected'
+                    : pickedAsset === null
+                      ? 'No build'
+                      : 'Download'}
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {downloadError && (
@@ -184,30 +221,22 @@ const channelButtonStyle = (active: boolean): CSSProperties => ({
   textTransform: 'uppercase',
 })
 
-const listStyle: CSSProperties = {
-  margin: 0,
-  padding: 0,
-  listStyle: 'none',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-}
-
-const rowStyle = (selected: boolean): CSSProperties => ({
+const detailCardStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
   padding: '8px 12px',
   borderRadius: 6,
-  border: `1px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-  background: selected ? 'hsl(var(--primary) / 0.08)' : 'hsl(var(--bg-inset))',
-})
+  border: '1px solid hsl(var(--border))',
+  background: 'hsl(var(--bg-inset))',
+}
 
-const rowMetaStyle: CSSProperties = {
+const detailMetaRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
   flex: 1,
+  flexWrap: 'wrap',
 }
 
 const tagStyle: CSSProperties = {
