@@ -1,4 +1,4 @@
-const FLASH_BAUD = 921_600
+const FLASH_BAUD = 460_800
 const MERGED_FLASH_OFFSET = 0x0
 
 const SUPPORTED_CHIPS: readonly string[] = ['ESP32']
@@ -124,8 +124,9 @@ export const flashFirmware = async ({
     try {
       await loader.main(connectMode)
     } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
       throw new FlashError(
-        `Could not enter ESP32 ROM bootloader after ${String(ROM_BOOTLOADER_CONNECT_ATTEMPTS)} attempts. Hold BOOT, tap RESET (or unplug/replug while holding BOOT), then retry.`,
+        `ESP32 bootloader handshake failed (${detail}). If the chip was detected and the failure happened after baud change, try a lower FLASH_BAUD. Otherwise hold BOOT, tap RESET, and retry.`,
         err
       )
     }
