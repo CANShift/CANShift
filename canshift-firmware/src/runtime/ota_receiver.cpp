@@ -113,13 +113,13 @@ WriteResult writeChunk(uint32_t offset, const uint8_t *data, size_t len) {
 
 CommitResult commit() {
     if (s_state != State::Receiving)
-        return {false, "not_receiving"};
+        return {false, "not_receiving", 0};
     if (s_writtenSize != s_expectedSize) {
         LOG_ERROR("OTA", "commit while incomplete: written=%u expected=%u",
                   static_cast<unsigned>(s_writtenSize), static_cast<unsigned>(s_expectedSize));
         teardownOtaHandle();
         s_state = State::Failed;
-        return {false, "incomplete"};
+        return {false, "incomplete", 0};
     }
 
     uint8_t actualSha[32] = {0};
@@ -128,31 +128,33 @@ CommitResult commit() {
         LOG_ERROR("OTA", "sha256 mismatch — aborting");
         teardownOtaHandle();
         s_state = State::Failed;
-        return {false, "sha256_mismatch"};
+        return {false, "sha256_mismatch", 0};
     }
 
     const esp_err_t endErr = esp_ota_end(s_otaHandle);
     s_otaHandle = 0;
     if (endErr != ESP_OK) {
-        LOG_ERROR("OTA", "esp_ota_end failed: %s", esp_err_to_name(endErr));
+        LOG_ERROR("OTA", "esp_ota_end failed: %s (0x%x)", esp_err_to_name(endErr),
+                  static_cast<unsigned>(endErr));
         s_targetPartition = nullptr;
         s_state = State::Failed;
-        return {false, "ota_end_failed"};
+        return {false, "ota_end_failed", static_cast<int>(endErr)};
     }
 
     const esp_err_t setErr = esp_ota_set_boot_partition(s_targetPartition);
     if (setErr != ESP_OK) {
-        LOG_ERROR("OTA", "esp_ota_set_boot_partition failed: %s", esp_err_to_name(setErr));
+        LOG_ERROR("OTA", "esp_ota_set_boot_partition failed: %s (0x%x)", esp_err_to_name(setErr),
+                  static_cast<unsigned>(setErr));
         s_targetPartition = nullptr;
         s_state = State::Failed;
-        return {false, "set_boot_failed"};
+        return {false, "set_boot_failed", static_cast<int>(setErr)};
     }
 
     LOG_INFO("OTA", "commit: new boot partition='%s' — restart will load it",
              s_targetPartition->label);
     s_targetPartition = nullptr;
     s_state = State::Committed;
-    return {true, nullptr};
+    return {true, nullptr, 0};
 }
 
 void abort(const char *reason) {

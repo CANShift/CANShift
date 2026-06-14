@@ -26,6 +26,7 @@ struct WriteResult {
 struct CommitResult {
     bool ok;
     const char *error;
+    int detailCode;
 };
 
 [[nodiscard]] State state();

@@ -175,9 +175,11 @@ void handleOtaEnd(const JsonObjectConst &obj) {
     if (strcmp(action, "commit") == 0) {
         const OtaReceiver::CommitResult result = OtaReceiver::commit();
         if (!result.ok) {
-            char resp[96];
-            snprintf(resp, sizeof(resp), "{\"status\":\"error\",\"message\":\"%s\"}",
-                     result.error != nullptr ? result.error : "commit_failed");
+            char resp[128];
+            snprintf(resp, sizeof(resp),
+                     "{\"status\":\"error\",\"message\":\"%s\",\"detail\":\"0x%x\"}",
+                     result.error != nullptr ? result.error : "commit_failed",
+                     static_cast<unsigned>(result.detailCode));
             UsbComm::sendLine(resp);
             return;
         }

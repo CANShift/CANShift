@@ -79,6 +79,13 @@ export const flashFirmwareOta = async ({
     { timeoutMs: COMMIT_TIMEOUT_MS }
   )
   if (!commitAck.ok) {
-    throw new OtaError(`OTA_END commit rejected: ${commitAck.error ?? 'unknown'}`, commitAck)
+    const detail =
+      commitAck.data && typeof commitAck.data === 'object' && 'detail' in commitAck.data
+        ? ` (esp_err=${String((commitAck.data as { detail?: unknown }).detail)})`
+        : ''
+    throw new OtaError(
+      `OTA_END commit rejected: ${commitAck.error ?? 'unknown'}${detail}`,
+      commitAck
+    )
   }
 }
