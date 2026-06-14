@@ -182,7 +182,12 @@ export class SerialClient {
     this.cancelReconnect()
     this.failPendingAck('disconnected')
     this.drainQueueWithError('disconnected')
-    void this.teardownPort().finally(() => {
+    const reader = this.reader
+    const readLoopPromise = this.readLoop
+    if (reader) {
+      reader.cancel().catch(() => undefined)
+    }
+    void (readLoopPromise ?? Promise.resolve()).finally(() => {
       this.setStatus('disconnected')
     })
   }
