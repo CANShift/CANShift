@@ -135,7 +135,7 @@ export const ReleasePicker = () => {
       {state.kind === 'ok' && filtered.length > 0 && (
         <>
           <Select
-            {...(effectiveTag !== null ? { value: effectiveTag } : {})}
+            value={effectiveTag ?? ''}
             onValueChange={(tag) => {
               const release = filtered.find((r) => r.tag === tag)
               if (release) handlePick(release)
