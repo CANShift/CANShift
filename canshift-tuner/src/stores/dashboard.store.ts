@@ -11,32 +11,14 @@ import type {
   Widget,
   WidgetLayout,
 } from '@tmbk/canshift-core'
-import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions, rectsOverlap, snapToGrid, LAYOUT_GAP } from '../utils/layout'
 import { DEFAULT_SIM_CONFIG } from '../config/default-sim-config'
 import { DAY_THEME_PRESET } from '../constants/theme'
+import { HISTORY_LIMIT, canvasDims, pushHistory, toLayoutRect, widgetAreaHeight } from './dashboard/helpers'
 
 export type LoadFromDeviceOrDemoResult = 'device' | 'demo' | 'kept-edits'
 
-const HISTORY_LIMIT = 50
-
 export type AlignDirection = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v'
-
-const canvasDims = (config: DashboardConfig): { w: number; h: number } => {
-  const profile = resolveScreenProfile(config.targetProfile)
-  return { w: profile.width, h: profile.height }
-}
-
-const widgetAreaHeight = (page: PageConfig, topBarHeight: number, canvasH: number): number =>
-  page.showTopBar ? canvasH - topBarHeight : canvasH
-
-const toLayoutRect = (w: Widget): { id: string; x: number; y: number; w: number; h: number } => ({
-  id: w.id,
-  x: w.layout.x,
-  y: w.layout.y,
-  w: w.layout.w,
-  h: w.layout.h,
-})
 
 interface DashboardState {
   config: DashboardConfig | null
@@ -150,9 +132,7 @@ export const useDashboardStore = create<DashboardState>()(
       set((s) => {
         if (!s.config) return
         if (s.config.targetProfile === id) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         s.config.targetProfile = id
         s.isDirty = true
       })
@@ -302,9 +282,7 @@ export const useDashboardStore = create<DashboardState>()(
     addPage: (page) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         s.config.pages.push(page)
         s.selectedPageId = page.id
         s.isDirty = true
@@ -314,9 +292,7 @@ export const useDashboardStore = create<DashboardState>()(
     removePage: (pageId) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         s.config.pages = s.config.pages.filter((p) => p.id !== pageId)
         if (s.selectedPageId === pageId) {
           s.selectedPageId = s.config.pages[0]?.id ?? null
@@ -328,9 +304,7 @@ export const useDashboardStore = create<DashboardState>()(
     setDefaultPage: (pageId) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         s.config.defaultPageId = pageId
         s.isDirty = true
       })
@@ -339,9 +313,7 @@ export const useDashboardStore = create<DashboardState>()(
     updatePage: (pageId, patch) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const idx = s.config.pages.findIndex((p) => p.id === pageId)
         if (idx === -1) return
         const existing = s.config.pages[idx]
@@ -354,9 +326,7 @@ export const useDashboardStore = create<DashboardState>()(
     setPageTemplate: (pageId, template) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const idx = s.config.pages.findIndex((p) => p.id === pageId)
         if (idx === -1) return
         const existing = s.config.pages[idx]
@@ -380,9 +350,7 @@ export const useDashboardStore = create<DashboardState>()(
     setDayTheme: (theme) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         if (theme === null) {
           delete s.config.dayTheme
         } else {
@@ -395,9 +363,7 @@ export const useDashboardStore = create<DashboardState>()(
     setNightTheme: (theme) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         if (theme === null) {
           delete s.config.nightTheme
         } else {
@@ -410,9 +376,7 @@ export const useDashboardStore = create<DashboardState>()(
     movePage: (fromIndex, toIndex) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const pages = s.config.pages
         if (fromIndex < 0 || fromIndex >= pages.length) return
         if (toIndex < 0 || toIndex >= pages.length) return
@@ -425,9 +389,7 @@ export const useDashboardStore = create<DashboardState>()(
     updateTopBar: (patch) => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         s.config.topBar = { ...s.config.topBar, ...patch }
         s.isDirty = true
       })
@@ -466,9 +428,7 @@ export const useDashboardStore = create<DashboardState>()(
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
 
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
 
         const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
         const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
@@ -527,9 +487,7 @@ export const useDashboardStore = create<DashboardState>()(
           .filter((w): w is Widget => w !== undefined)
         if (sources.length === 0) return
 
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
 
         const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
         const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
@@ -584,9 +542,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (!s.config) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         page.widgets = page.widgets.filter((w) => w.id !== widgetId)
         if (s.selectedWidgetId === widgetId) s.selectedWidgetId = null
         s.selectedWidgetIds = s.selectedWidgetIds.filter((id) => id !== widgetId)
@@ -601,9 +557,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (!page) return
         const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
         if (widgetIdx === -1) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const existing = page.widgets[widgetIdx]
         if (!existing) return
         const merged = { ...existing, ...patch }
@@ -640,9 +594,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (!page) return
         const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
         if (widgetIdx === -1) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const w = page.widgets[widgetIdx]
         if (!w) return
         page.widgets[widgetIdx] = { ...w, layout: { ...w.layout, ...layout } }
@@ -674,9 +626,7 @@ export const useDashboardStore = create<DashboardState>()(
         const widget = page.widgets.find((w) => w.id === widgetId)
         if (!widget) return
 
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
 
         const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
         const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
@@ -723,9 +673,7 @@ export const useDashboardStore = create<DashboardState>()(
     commitDrag: () => {
       set((s) => {
         if (!s.config) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         s.isDirty = true
       })
     },
@@ -738,9 +686,7 @@ export const useDashboardStore = create<DashboardState>()(
         const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
         if (targets.length < 2) return
 
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
 
         const minX = Math.min(...targets.map((w) => w.layout.x))
         const maxX = Math.max(...targets.map((w) => w.layout.x + w.layout.w))
@@ -781,9 +727,7 @@ export const useDashboardStore = create<DashboardState>()(
         const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
         if (targets.length < 3) return
 
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
 
         if (axis === 'h') {
           const sorted = [...targets].sort((a, b) => a.layout.x - b.layout.x)
@@ -832,9 +776,7 @@ export const useDashboardStore = create<DashboardState>()(
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
 
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
 
         const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
         const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
@@ -890,9 +832,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (!s.config || widgetIds.length === 0) return
         const page = s.config.pages.find((p) => p.id === pageId)
         if (!page) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const idSet = new Set(widgetIds)
         page.widgets = page.widgets.filter((w) => !idSet.has(w.id))
         if (s.selectedWidgetId && idSet.has(s.selectedWidgetId)) s.selectedWidgetId = null
@@ -908,9 +848,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (!page) return
         const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
         if (targets.length === 0) return
-        s.past.push(current(s.config))
-        if (s.past.length > HISTORY_LIMIT) s.past.shift()
-        s.future = []
+        pushHistory(s)
         const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
         const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
         for (const w of targets) {
