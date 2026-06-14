@@ -202,6 +202,9 @@ void LabelWidget::reapplyTheme(lv_obj_t *obj, const CfgWidget &cfg) {
     }
 }
 
+static constexpr uint32_t kStaleTextRgb = 0x555555;
+static constexpr const char *kStalePlaceholder = "--";
+
 void LabelWidget::update(lv_obj_t *obj, float value, bool valid, const CfgWidget &cfg) {
     if (!obj)
         return;
@@ -210,6 +213,26 @@ void LabelWidget::update(lv_obj_t *obj, float value, bool valid, const CfgWidget
         return;
 
     const float displayValue = valid ? value : 0.0f;
+
+    if (!valid) {
+        if (tag->lastValid) {
+            WidgetHelpers::setLabelTextIfChanged(tag->valueLabel, kStalePlaceholder);
+            if (tag->fracLabel) {
+                WidgetHelpers::setLabelTextIfChanged(tag->fracLabel, "");
+            }
+            tag->lastValue = NAN;
+            tag->lastValid = false;
+        }
+        if (!tag->alert.active) {
+            WidgetStyles::setTextColorIfChanged(tag->valueLabel, tag->lastTintRgb, kStaleTextRgb);
+            if (tag->fracLabel) {
+                uint32_t fracLast = tag->lastTintRgb;
+                WidgetStyles::setTextColorIfChanged(tag->fracLabel, fracLast, kStaleTextRgb);
+            }
+        }
+        AlertFlash::update(tag->alert, displayValue, tag->alertThreshold);
+        return;
+    }
 
     const bool unchanged =
         tag->lastValid == valid && !std::isnan(tag->lastValue) && displayValue == tag->lastValue;
@@ -230,8 +253,8 @@ void LabelWidget::update(lv_obj_t *obj, float value, bool valid, const CfgWidget
         tag->lastValid = valid;
     }
 
-    if (tag->ramp && !tag->alert.active) {
-        const uint32_t tint = valid ? colorAtValue(*tag->ramp, value) : tag->baseTextRgb;
+    if (!tag->alert.active) {
+        const uint32_t tint = tag->ramp ? colorAtValue(*tag->ramp, value) : tag->baseTextRgb;
         WidgetStyles::setTextColorIfChanged(tag->valueLabel, tag->lastTintRgb, tint);
         if (tag->fracLabel) {
             uint32_t fracLast = tag->lastTintRgb;
