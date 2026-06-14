@@ -287,6 +287,11 @@ export class SerialClient {
       const tail = this.decoder.decode()
       if (tail) this.rxBuffer += tail
       this.drainFrames()
+      try {
+        reader.releaseLock()
+      } catch (err) {
+        console.warn('[serial] reader.releaseLock after readLoop failed', err)
+      }
       if (this.port === ownPort || this.port === null) {
         this.handleClose(ownPort)
       }
