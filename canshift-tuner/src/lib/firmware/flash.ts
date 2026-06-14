@@ -48,6 +48,8 @@ const makeTerminal = (onLog: FlashLog) => ({
   write: (_data: string) => undefined,
 })
 
+const ROM_BOOTLOADER_CONNECT_ATTEMPTS = 15
+
 export const flashFirmware = async ({
   port,
   bytes,
@@ -64,11 +66,18 @@ export const flashFirmware = async ({
       debugLogging: false,
     })
 
+    const originalConnect = loader.connect.bind(loader)
+    loader.connect = (
+      mode = 'default_reset',
+      _attempts = ROM_BOOTLOADER_CONNECT_ATTEMPTS,
+      detecting = true
+    ) => originalConnect(mode, ROM_BOOTLOADER_CONNECT_ATTEMPTS, detecting)
+
     try {
       await loader.main()
     } catch (err) {
       throw new FlashError(
-        'Could not enter ESP32 ROM bootloader. Hold BOOT, tap RESET (or unplug/replug while holding BOOT), then retry.',
+        `Could not enter ESP32 ROM bootloader after ${String(ROM_BOOTLOADER_CONNECT_ATTEMPTS)} attempts. Hold BOOT, tap RESET (or unplug/replug while holding BOOT), then retry.`,
         err
       )
     }
