@@ -1,6 +1,9 @@
 import type { CSSProperties } from 'react'
 import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
+import { AboutLinkRow } from '../components/about/AboutLinkRow'
+import { AboutRow } from '../components/about/AboutRow'
+import { AboutSection } from '../components/about/AboutSection'
 import { HeapStatsPanel } from '../components/about/HeapStatsPanel'
 
 const REPO_URL = 'https://github.com/tburkhalterr/CANShift'
@@ -38,25 +41,25 @@ const AboutRoute = () => {
           </p>
         </header>
 
-        <Section title="Versions">
-          <Row label="Tuner" value={`v${tunerVersion}`} mono />
-          <Row label="Firmware" value={firmwareVersion ? `v${firmwareVersion}` : '—'} mono />
-        </Section>
+        <AboutSection title="Versions">
+          <AboutRow label="Tuner" value={`v${tunerVersion}`} mono />
+          <AboutRow label="Firmware" value={firmwareVersion ? `v${firmwareVersion}` : '—'} mono />
+        </AboutSection>
 
-        <Section title="Device">
-          <Row label="Status" value={prettyStatus(status, simulationMode)} />
-          <Row label="Link" value={linkLabel} />
-        </Section>
+        <AboutSection title="Device">
+          <AboutRow label="Status" value={prettyStatus(status, simulationMode)} />
+          <AboutRow label="Link" value={linkLabel} />
+        </AboutSection>
 
-        <Section title="Diagnostics">
+        <AboutSection title="Diagnostics">
           <HeapStatsPanel history={heapStats} />
-        </Section>
+        </AboutSection>
 
-        <Section title="Resources">
-          <LinkRow href={REPO_URL} label="GitHub repository" />
-          <LinkRow href={DOCS_URL} label="Documentation" />
-          <LinkRow href={LICENSE_URL} label="License" />
-        </Section>
+        <AboutSection title="Resources">
+          <AboutLinkRow href={REPO_URL} label="GitHub repository" />
+          <AboutLinkRow href={DOCS_URL} label="Documentation" />
+          <AboutLinkRow href={LICENSE_URL} label="License" />
+        </AboutSection>
       </div>
     </div>
   )
@@ -79,46 +82,6 @@ const prettyStatus = (
     default:
       return status
   }
-}
-
-interface SectionProps {
-  title: string
-  children: React.ReactNode
-}
-
-const Section = ({ title, children }: SectionProps) => {
-  return (
-    <section style={sectionStyle}>
-      <div style={sectionTitleStyle}>{title}</div>
-      <div style={sectionBodyStyle}>{children}</div>
-    </section>
-  )
-}
-
-interface RowProps {
-  label: string
-  value: string
-  mono?: boolean
-}
-
-const Row = ({ label, value, mono }: RowProps) => {
-  return (
-    <div style={rowStyle}>
-      <span style={rowLabelStyle}>{label}</span>
-      <span style={mono ? rowValueMonoStyle : rowValueStyle}>{value}</span>
-    </div>
-  )
-}
-
-const LinkRow = ({ href, label }: { href: string; label: string }) => {
-  return (
-    <a href={href} target="_blank" rel="noreferrer" style={linkRowStyle}>
-      <span>{label}</span>
-      <span aria-hidden="true" style={{ color: 'hsl(var(--text-muted))' }}>
-        ↗
-      </span>
-    </a>
-  )
 }
 
 const containerStyle: CSSProperties = {
@@ -175,66 +138,6 @@ const taglineStyle: CSSProperties = {
   lineHeight: 1.55,
   margin: 0,
   maxWidth: 440,
-}
-
-const sectionStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-}
-
-const sectionTitleStyle: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase',
-  color: 'hsl(var(--text-muted))',
-  paddingLeft: 2,
-}
-
-const sectionBodyStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  background: 'hsl(var(--surface))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
-  overflow: 'hidden',
-}
-
-const rowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '11px 14px',
-  borderBottom: '1px solid hsl(var(--border))',
-  fontSize: 13,
-}
-
-const rowLabelStyle: CSSProperties = {
-  color: 'hsl(var(--text-dim))',
-}
-
-const rowValueStyle: CSSProperties = {
-  color: 'hsl(var(--text))',
-  fontWeight: 500,
-}
-
-const rowValueMonoStyle: CSSProperties = {
-  color: 'hsl(var(--text))',
-  fontWeight: 500,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-  fontVariantNumeric: 'tabular-nums',
-}
-
-const linkRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '11px 14px',
-  borderBottom: '1px solid hsl(var(--border))',
-  fontSize: 13,
-  color: 'hsl(var(--text))',
-  textDecoration: 'none',
 }
 
 export default AboutRoute

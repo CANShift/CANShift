@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { SourceBadge, type SignalSource } from '../components/live-data/SourceBadge'
 import { useLiveSignals } from '../hooks/useLiveSignals'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
@@ -36,7 +37,7 @@ const LiveDataRoute = () => {
   }, [values])
 
   const isLive = connected && !simulationMode
-  const source: 'live' | 'sim' | 'none' = isLive ? 'live' : simulationMode ? 'sim' : 'none'
+  const source: SignalSource = isLive ? 'live' : simulationMode ? 'sim' : 'none'
 
   const filteredSignals = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -158,18 +159,7 @@ const LiveDataRoute = () => {
   )
 }
 
-const SourceBadge = ({ source }: { source: 'live' | 'sim' | 'none' }) => {
-  const label = source === 'live' ? 'Live' : source === 'sim' ? 'Simulation' : 'No data'
-  const color =
-    source === 'live'
-      ? 'hsl(var(--success))'
-      : source === 'sim'
-        ? 'hsl(var(--accent))'
-        : 'hsl(var(--text-muted))'
-  return <span style={{ color, fontWeight: 600 }}>{label}</span>
-}
-
-const formatAge = (ageMs: number | null, source: 'live' | 'sim' | 'none'): string => {
+const formatAge = (ageMs: number | null, source: SignalSource): string => {
   if (source === 'none') return '—'
   if (ageMs === null) return 'never'
   if (ageMs < 1000) return '<1s'
