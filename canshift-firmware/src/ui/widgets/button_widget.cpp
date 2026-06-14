@@ -224,10 +224,18 @@ void btnClickHandler(lv_event_t *e) {
     if (!tag || !tag->params)
         return;
 
+    const char *btnId = tag->cfg ? tag->cfg->id : "?";
+
     if (tag->params->mode == CfgButtonMode::CYCLE) {
-        if (tag->params->statesCount == 0)
+        if (tag->params->statesCount == 0) {
+            LOG_DEBUG("BTN", "click id=%s mode=cycle dropped (statesCount=0)", btnId);
             return;
+        }
+        const uint8_t oldIdx = tag->cycleIndex;
         tag->cycleIndex = static_cast<uint8_t>((tag->cycleIndex + 1) % tag->params->statesCount);
+        LOG_DEBUG("BTN", "click id=%s mode=cycle %u->%u action.type=%u", btnId,
+                  static_cast<unsigned>(oldIdx), static_cast<unsigned>(tag->cycleIndex),
+                  static_cast<unsigned>(tag->params->states[tag->cycleIndex].action.type));
         applyCycleVisualState(btn, *tag);
         ActionDispatcher::dispatchAction(tag->params->states[tag->cycleIndex].action, true);
         return;
@@ -235,6 +243,9 @@ void btnClickHandler(lv_event_t *e) {
 
     if (tag->params->isToggle) {
         tag->toggleActive = !tag->toggleActive;
+        LOG_DEBUG("BTN", "click id=%s mode=toggle %s signal=%s", btnId,
+                  tag->toggleActive ? "on" : "off",
+                  tag->signalId[0] != '\0' ? tag->signalId : "(none)");
         applyToggleVisualState(btn, *tag);
         tag->signalSyncIgnoreUntilMs = millis() + BUTTON_SIGNAL_SYNC_GRACE_MS;
 
@@ -244,6 +255,9 @@ void btnClickHandler(lv_event_t *e) {
                 SignalStore::update(sid, tag->toggleActive ? 1.0f : 0.0f);
             }
         }
+    } else {
+        LOG_DEBUG("BTN", "click id=%s mode=single actions=%u", btnId,
+                  static_cast<unsigned>(tag->params->actionsCount));
     }
 
     for (uint8_t i = 0; i < tag->params->actionsCount; ++i) {
@@ -391,12 +405,17 @@ void ButtonWidget::update(lv_obj_t *btn) {
     if (!tag)
         return;
 
+    const char *btnId = tag->cfg ? tag->cfg->id : "?";
+
     const int32_t graceDelta = static_cast<int32_t>(millis() - tag->signalSyncIgnoreUntilMs);
     if (tag->params && tag->params->isToggle && tag->signalId[0] != '\0' && graceDelta >= 0) {
         const SignalId sid = signalIdFromName(tag->signalId);
         if (sid < SignalIds::SIGNAL_COUNT && SignalStore::isValid(sid)) {
             const bool active = SignalStore::read(sid, 0.0f) != 0.0f;
             if (active != tag->toggleActive) {
+                LOG_DEBUG("BTN", "sync id=%s toggle %s->%s (signal=%s)", btnId,
+                          tag->toggleActive ? "on" : "off", active ? "on" : "off",
+                          tag->signalId);
                 tag->toggleActive = active;
                 applyToggleVisualState(btn, *tag);
             }
@@ -410,9 +429,14 @@ void ButtonWidget::update(lv_obj_t *btn) {
         SignalStore::isValid(SignalIds::MAP_NUMBER) &&
         static_cast<uint8_t>(SignalStore::read(SignalIds::MAP_NUMBER)) == tag->mapSwitchIndex;
 
-    if (active) {
+    const bool wasHidden = lv_obj_has_flag(tag->activeBadge, LV_OBJ_FLAG_HIDDEN);
+    if (active && wasHidden) {
+        LOG_DEBUG("BTN", "badge SHOW id=%s mapIdx=%u", btnId,
+                  static_cast<unsigned>(tag->mapSwitchIndex));
         lv_obj_clear_flag(tag->activeBadge, LV_OBJ_FLAG_HIDDEN);
-    } else {
+    } else if (!active && !wasHidden) {
+        LOG_DEBUG("BTN", "badge HIDE id=%s mapIdx=%u", btnId,
+                  static_cast<unsigned>(tag->mapSwitchIndex));
         lv_obj_add_flag(tag->activeBadge, LV_OBJ_FLAG_HIDDEN);
     }
 }
