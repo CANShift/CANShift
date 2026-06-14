@@ -13,6 +13,11 @@ namespace {
 lv_obj_t *s_overlay = nullptr;
 lv_obj_t *s_arc = nullptr;
 lv_timer_t *s_errorTimer = nullptr;
+lv_timer_t *s_arcTimer = nullptr;
+lv_obj_t *s_breathAnimObj = nullptr;
+uint16_t s_arcAngle = 0;
+constexpr uint32_t kArcTickMs = 16;
+constexpr uint16_t kArcAdvanceDeg = 6;
 
 inline void assertUiThreadHoldsLvglMutex() {
     configASSERT(xPortGetCoreID() == TASK_CORE_UI);
@@ -24,6 +29,10 @@ inline void assertUiThreadHoldsLvglMutex() {
 constexpr uint16_t kArcSpan = 80;
 constexpr uint16_t kArcPeriod = 1100;
 
+void usbBreathCb(void *obj, int32_t v) {
+    lv_obj_set_style_opa(static_cast<lv_obj_t *>(obj), static_cast<lv_opa_t>(v), 0);
+}
+
 void arcAnimCb(void *var, int32_t value) {
     auto *arc = static_cast<lv_obj_t *>(var);
     const auto start = static_cast<uint16_t>(value % 360);
@@ -31,10 +40,25 @@ void arcAnimCb(void *var, int32_t value) {
     lv_arc_set_angles(arc, start, end);
 }
 
+void arcTimerCb(lv_timer_t *timer) {
+    auto *arc = static_cast<lv_obj_t *>(timer->user_data);
+    s_arcAngle = static_cast<uint16_t>((s_arcAngle + kArcAdvanceDeg) % 360);
+    const auto end = static_cast<uint16_t>((s_arcAngle + kArcSpan) % 360);
+    lv_arc_set_angles(arc, s_arcAngle, end);
+}
+
 void teardownOverlay() {
     if (s_errorTimer) {
         lv_timer_del(s_errorTimer);
         s_errorTimer = nullptr;
+    }
+    if (s_arcTimer) {
+        lv_timer_del(s_arcTimer);
+        s_arcTimer = nullptr;
+    }
+    if (s_breathAnimObj) {
+        lv_anim_del(s_breathAnimObj, usbBreathCb);
+        s_breathAnimObj = nullptr;
     }
     if (s_arc) {
         lv_anim_del(s_arc, arcAnimCb);
@@ -58,10 +82,6 @@ lv_obj_t *createRoot() {
     lv_obj_set_style_pad_all(root, 0, LV_PART_MAIN);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_CLICKABLE);
     return root;
-}
-
-void usbBreathCb(void *obj, int32_t v) {
-    lv_obj_set_style_opa(static_cast<lv_obj_t *>(obj), static_cast<lv_opa_t>(v), 0);
 }
 
 lv_obj_t *buildUsbIcon(lv_obj_t *parent, uint32_t color) {
@@ -151,10 +171,21 @@ void BurnOverlay::show() {
 
     lv_obj_t *root = createRoot();
 
+    lv_obj_t *col = lv_obj_create(root);
+    lv_obj_set_size(col, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_align(col, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_opa(col, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(col, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(col, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(col, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(col, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_flex_flow(col, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(col, 14, LV_PART_MAIN);
+
     static constexpr int16_t kArcSize = 64;
-    lv_obj_t *arc = lv_arc_create(root);
+    lv_obj_t *arc = lv_arc_create(col);
     lv_obj_set_size(arc, kArcSize, kArcSize);
-    lv_obj_align(arc, LV_ALIGN_CENTER, 0, -20);
     lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
     lv_arc_set_bg_angles(arc, 0, 360);
     lv_arc_set_angles(arc, 0, kArcSpan);
@@ -165,31 +196,22 @@ void BurnOverlay::show() {
     lv_obj_set_style_arc_width(arc, 4, LV_PART_INDICATOR);
     lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
 
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, arc);
-    lv_anim_set_values(&a, 0, 360);
-    lv_anim_set_time(&a, kArcPeriod);
-    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_path_cb(&a, lv_anim_path_linear);
-    lv_anim_set_exec_cb(&a, arcAnimCb);
-    lv_anim_start(&a);
+    s_arcAngle = 0;
+    s_arcTimer = lv_timer_create(arcTimerCb, kArcTickMs, arc);
 
-    lv_obj_t *title = lv_label_create(root);
-    lv_label_set_text(title, "Saving config…");
+    lv_obj_t *title = lv_label_create(col);
+    lv_label_set_text(title, "Saving config...");
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(title, FontManager::label(16), 0);
-    lv_obj_align(title, LV_ALIGN_CENTER, 0, 36);
 
-    lv_obj_t *sub = lv_label_create(root);
-    lv_label_set_text(sub, "Writing to storage…");
+    lv_obj_t *sub = lv_label_create(col);
+    lv_label_set_text(sub, "Writing to storage...");
     lv_obj_set_style_text_color(sub, lv_color_hex(0x666666), 0);
     lv_obj_set_style_text_font(sub, FontManager::label(12), 0);
-    lv_obj_align(sub, LV_ALIGN_CENTER, 0, 60);
 
-    lv_obj_t *usbIcon = buildUsbIcon(root, 0xFF3030);
-    lv_obj_align(usbIcon, LV_ALIGN_BOTTOM_MID, 0, -16);
+    lv_obj_t *usbIcon = buildUsbIcon(col, 0xFF3030);
 
+    s_breathAnimObj = usbIcon;
     lv_anim_t breath;
     lv_anim_init(&breath);
     lv_anim_set_exec_cb(&breath, usbBreathCb);
