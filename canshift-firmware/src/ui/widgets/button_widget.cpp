@@ -243,18 +243,11 @@ void btnClickHandler(lv_event_t *e) {
 
     if (tag->params->isToggle) {
         tag->toggleActive = !tag->toggleActive;
-        LOG_DEBUG("BTN", "click id=%s mode=toggle %s signal=%s", btnId,
+        LOG_DEBUG("BTN", "click id=%s mode=toggle visual=%s signal=%s", btnId,
                   tag->toggleActive ? "on" : "off",
                   tag->signalId[0] != '\0' ? tag->signalId : "(none)");
         applyToggleVisualState(btn, *tag);
         tag->signalSyncIgnoreUntilMs = millis() + BUTTON_SIGNAL_SYNC_GRACE_MS;
-
-        if (tag->signalId[0] != '\0') {
-            const SignalId sid = signalIdFromName(tag->signalId);
-            if (sid < SignalIds::SIGNAL_COUNT) {
-                SignalStore::update(sid, tag->toggleActive ? 1.0f : 0.0f);
-            }
-        }
     } else {
         LOG_DEBUG("BTN", "click id=%s mode=single actions=%u", btnId,
                   static_cast<unsigned>(tag->params->actionsCount));
@@ -410,15 +403,14 @@ void ButtonWidget::update(lv_obj_t *btn) {
     const int32_t graceDelta = static_cast<int32_t>(millis() - tag->signalSyncIgnoreUntilMs);
     if (tag->params && tag->params->isToggle && tag->signalId[0] != '\0' && graceDelta >= 0) {
         const SignalId sid = signalIdFromName(tag->signalId);
-        if (sid < SignalIds::SIGNAL_COUNT && SignalStore::isValid(sid)) {
-            const bool active = SignalStore::read(sid, 0.0f) != 0.0f;
-            if (active != tag->toggleActive) {
-                LOG_DEBUG("BTN", "sync id=%s toggle %s->%s (signal=%s)", btnId,
-                          tag->toggleActive ? "on" : "off", active ? "on" : "off",
-                          tag->signalId);
-                tag->toggleActive = active;
-                applyToggleVisualState(btn, *tag);
-            }
+        const bool sigValid = sid < SignalIds::SIGNAL_COUNT && SignalStore::isValid(sid);
+        const bool desiredActive = sigValid && SignalStore::read(sid, 0.0f) != 0.0f;
+        if (desiredActive != tag->toggleActive) {
+            LOG_DEBUG("BTN", "sync id=%s toggle %s->%s (signal=%s valid=%d)", btnId,
+                      tag->toggleActive ? "on" : "off", desiredActive ? "on" : "off",
+                      tag->signalId, sigValid ? 1 : 0);
+            tag->toggleActive = desiredActive;
+            applyToggleVisualState(btn, *tag);
         }
     }
 
