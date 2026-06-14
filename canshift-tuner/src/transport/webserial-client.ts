@@ -401,6 +401,22 @@ export class SerialClient {
   }
 
   private handleClose(ownPort: SerialPort): void {
+    const reader = this.reader
+    if (reader) {
+      try {
+        reader.releaseLock()
+      } catch (err) {
+        console.warn('[serial] reader.releaseLock failed', err)
+      }
+    }
+    const writer = this.writer
+    if (writer) {
+      try {
+        writer.releaseLock()
+      } catch (err) {
+        console.warn('[serial] writer.releaseLock failed', err)
+      }
+    }
     void this.safeClose(ownPort)
 
     if (this.suppressNextReconnect || (this.port !== null && this.port !== ownPort)) {
