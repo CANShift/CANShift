@@ -22,6 +22,7 @@ import { useConnectionStore } from './stores/connection.store'
 import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
 import { useLogStore } from './stores/log.store'
+import { useFlasherStore } from './stores/flasher.store'
 import { DEFAULT_SIM_CONFIG } from './config/default-sim-config'
 import { deviceEvents, deviceIpc, usbService } from './transport'
 
@@ -58,14 +59,16 @@ const useSimulationBootstrap = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const enterSimulation = useDeviceStore((s) => s.enterSimulation)
+  const flasherKind = useFlasherStore((s) => s.state.kind)
   const hasConfig = useDashboardStore((s) => s.config !== null)
   const setConfig = useDashboardStore((s) => s.setConfig)
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
     if (connected || simulationMode) return
+    if (flasherKind === 'flashing') return
     enterSimulation()
-  }, [connected, simulationMode, enterSimulation])
+  }, [connected, simulationMode, flasherKind, enterSimulation])
 
   useEffect(() => {
     if (simulationMode && !hasConfig) {

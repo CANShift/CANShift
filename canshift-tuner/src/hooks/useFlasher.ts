@@ -1,14 +1,11 @@
-import { useState } from 'react'
 import { flashFirmware, FlashError } from '../lib/firmware/flash'
 import { useConnectionStore } from '../stores/connection.store'
 import { useFirmwareSelectionStore } from '../stores/firmware-selection.store'
 import { useLogStore } from '../stores/log.store'
+import { useFlasherStore } from '../stores/flasher.store'
+import type { FlasherState } from '../stores/flasher.store'
 
-export type FlasherState =
-  | { kind: 'idle' }
-  | { kind: 'flashing'; written: number; total: number }
-  | { kind: 'success' }
-  | { kind: 'error'; message: string }
+export type { FlasherState }
 
 const isWebSerialAvailable = (): boolean =>
   typeof navigator !== 'undefined' && 'serial' in navigator
@@ -48,7 +45,8 @@ export interface UseFlasher {
 export const useFlasher = (): UseFlasher => {
   const selection = useFirmwareSelectionStore((s) => s.selection)
   const log = useLogStore((s) => s.push)
-  const [state, setState] = useState<FlasherState>({ kind: 'idle' })
+  const state = useFlasherStore((s) => s.state)
+  const setState = useFlasherStore((s) => s.setState)
 
   const canFlash = selection.kind !== 'none' && state.kind !== 'flashing' && isWebSerialAvailable()
 
