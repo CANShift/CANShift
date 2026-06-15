@@ -88,8 +88,8 @@ bool loadDashboard() {
             strlcpy(out.text, txt, sizeof(out.text));
             out.format[0] = '\0';
         };
-        addItem(TopBarItemKind::STATUS_DOT, TopBarItemPos::LEFT, "any", "");
         addItem(TopBarItemKind::LABEL, TopBarItemPos::LEFT, "", "CAN");
+        addItem(TopBarItemKind::STATUS_DOT, TopBarItemPos::LEFT, "any", "");
         addItem(TopBarItemKind::BLE_ICON, TopBarItemPos::RIGHT, "", "");
         addItem(TopBarItemKind::THEME_TOGGLE, TopBarItemPos::RIGHT, "", "");
     }
