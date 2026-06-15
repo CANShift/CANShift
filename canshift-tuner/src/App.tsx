@@ -22,6 +22,7 @@ import { useConnectionStore } from './stores/connection.store'
 import { useDeviceStore } from './stores/device.store'
 import { useDashboardStore } from './stores/dashboard.store'
 import { useLogStore } from './stores/log.store'
+import type { LogLevel } from './stores/log.store'
 import { useFlasherStore } from './stores/flasher.store'
 import { DEFAULT_SIM_CONFIG } from './config/default-sim-config'
 import { deviceEvents, deviceIpc, usbService } from './transport'
@@ -239,6 +240,30 @@ const useHeapStatsSubscription = (): void => {
   }, [connected, simulationMode, transport, pushHeapStats, clearHeapStats])
 }
 
+const FIRMWARE_LEVEL_MAP: Record<string, LogLevel> = {
+  E: 'error',
+  W: 'warn',
+  I: 'info',
+  D: 'debug',
+  V: 'debug',
+}
+
+const useFirmwareLogBridge = (): void => {
+  const connected = useDeviceStore((s) => s.connected)
+  const transport = useDeviceStore((s) => s.transport)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+
+  useEffect(() => {
+    if (!connected || simulationMode || transport !== 'usb') return
+    const push = useLogStore.getState().push
+    const unsubscribe = deviceEvents.onLogLine(({ level, tag, message }) => {
+      const mapped = FIRMWARE_LEVEL_MAP[level] ?? 'info'
+      push(mapped, message, tag)
+    })
+    return unsubscribe
+  }, [connected, simulationMode, transport])
+}
+
 const useBurnShortcut = (): void => {
   const { canBurn, burn } = useBurnDashboard()
   useEffect(() => {
@@ -280,6 +305,7 @@ const App = () => {
   useVersionHandshake()
   useHeartbeat()
   useHeapStatsSubscription()
+  useFirmwareLogBridge()
   useDeviceConfigBootstrap()
   useBurnShortcut()
 
