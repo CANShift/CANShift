@@ -283,7 +283,13 @@ const useBurnShortcut = (): void => {
   }, [canBurn, burn])
 }
 
-const DISCONNECTED_ALLOWED_PATHS = new Set(['/', '/firmware', '/about'])
+const DISCONNECTED_ALLOWED_PATHS = new Set([
+  '/',
+  '/firmware',
+  '/about',
+  '/logs',
+  '/themes',
+])
 
 const DisconnectedGuard = ({ children }: { children: ReactNode }) => {
   const status = useConnectionStore((s) => s.status)
