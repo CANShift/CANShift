@@ -15,6 +15,7 @@ export interface HeaderViewProps {
   activityPulse?: boolean
   firmwareSlot?: ReactNode
   burnButton?: ReactNode
+  onDisconnect?: () => void
 }
 
 const HEADER_HEIGHT = 40
@@ -48,6 +49,7 @@ export const HeaderView = ({
   activityPulse = false,
   firmwareSlot,
   burnButton,
+  onDisconnect,
 }: HeaderViewProps) => {
   const visual = statusVisual(status)
   return (
@@ -99,12 +101,35 @@ export const HeaderView = ({
             {portLabel}
           </span>
         ) : null}
+        {onDisconnect && (status === 'connected' || status === 'simulation') ? (
+          <button
+            type="button"
+            onClick={onDisconnect}
+            title="Disconnect from dash"
+            aria-label="Disconnect"
+            style={disconnectButtonStyle}
+          >
+            ✕
+          </button>
+        ) : null}
       </div>
 
       {firmwareSlot}
       {burnButton}
     </header>
   )
+}
+
+const disconnectButtonStyle: CSSProperties = {
+  background: 'transparent',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 4,
+  color: 'hsl(var(--text-dim))',
+  cursor: 'pointer',
+  fontSize: 10,
+  lineHeight: 1,
+  marginLeft: 4,
+  padding: '2px 6px',
 }
 
 const versionStyle: CSSProperties = {
