@@ -12,6 +12,7 @@
 #include "hal/storage/storage_driver.h"
 #include "runtime/ota_receiver.h"
 #include "runtime/pending_actions.h"
+#include "ui/ota_overlay.h"
 #include "ui/settings_page.h"
 #include "ui/theme_manager.h"
 
@@ -134,6 +135,7 @@ void handleOtaBegin(const JsonObjectConst &obj) {
         UsbComm::sendLine(resp);
         return;
     }
+    PendingActions::otaOverlayShowSize.store(total, std::memory_order_relaxed);
     UsbComm::sendLine("{\"status\":\"ok\"}");
 }
 
@@ -163,6 +165,7 @@ void handleOtaWrite(const JsonObjectConst &obj) {
         UsbComm::sendLine(resp);
         return;
     }
+    OtaOverlay::setProgress(result.writtenTotal);
     char resp[64];
     snprintf(resp, sizeof(resp), "{\"status\":\"ok\",\"written\":%u}",
              static_cast<unsigned>(result.writtenTotal));
@@ -180,6 +183,7 @@ void handleOtaEnd(const JsonObjectConst &obj) {
                      result.error != nullptr ? result.error : "commit_failed",
                      static_cast<unsigned>(result.detailCode));
             UsbComm::sendLine(resp);
+            PendingActions::otaOverlayHide.store(true, std::memory_order_relaxed);
             return;
         }
         UsbComm::sendLine("{\"status\":\"ok\",\"restart\":true}");
@@ -188,6 +192,7 @@ void handleOtaEnd(const JsonObjectConst &obj) {
         return;
     }
     OtaReceiver::abort("host_requested");
+    PendingActions::otaOverlayHide.store(true, std::memory_order_relaxed);
     UsbComm::sendLine("{\"status\":\"ok\"}");
 }
 

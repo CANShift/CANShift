@@ -25,6 +25,7 @@
 #include "runtime/input_buttons.h"
 #include "runtime/pending_actions.h"
 #include "ui/burn_overlay.h"
+#include "ui/ota_overlay.h"
 #include "ui/page_manager.h"
 #include "ui/passkey_overlay.h"
 #include "ui/theme_manager.h"
@@ -267,6 +268,17 @@ inline void uiDrainBurnOverlayActions() {
     }
 }
 
+inline void uiDrainOtaOverlayActions() {
+    const uint32_t showSize = PendingActions::takeOtaOverlayShowSize();
+    if (showSize > 0) {
+        OtaOverlay::show(showSize);
+    }
+    if (PendingActions::takeOtaOverlayHide()) {
+        OtaOverlay::hide();
+    }
+    OtaOverlay::Detail::tick();
+}
+
 inline void uiRunLvTaskHandler() {
     PERF_SCOPE(::PerfCounters::LV_HANDLER);
 #if APP_LV_TASK_LOG
@@ -288,6 +300,7 @@ inline bool uiRunMutexBody() {
     const bool didDayNightChange = uiDrainDayNightActions();
     uiDrainPasskeyActions();
     uiDrainBurnOverlayActions();
+    uiDrainOtaOverlayActions();
     PageManager::updateWidgets();
     uiRunLvTaskHandler();
     xSemaphoreGive(g_lvglMutex);
