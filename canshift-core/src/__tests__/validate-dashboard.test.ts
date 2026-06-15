@@ -196,7 +196,7 @@ describe('validateDashboard — firmware caps', () => {
 
   it('rejects topBar.layout exceeding MAX_TOPBAR_ITEMS', () => {
     const layout = Array.from({ length: FIRMWARE_CAPS.MAX_TOPBAR_ITEMS + 1 }, () => ({
-      type: 'usbIcon',
+      type: 'bleIcon',
       position: 'right',
     }))
     const result = validateDashboard(validConfig({ topBar: { ...VALID_TOPBAR, layout } }))

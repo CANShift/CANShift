@@ -131,7 +131,6 @@ export const TopBarItemSchema = z.discriminatedUnion('type', [
   signalBoundTopBarItemShape
     .extend({ type: z.literal('signal'), format: z.string().optional() })
     .strict(),
-  iconOnlyTopBarItemShape.extend({ type: z.literal('usbIcon') }).strict(),
   iconOnlyTopBarItemShape.extend({ type: z.literal('bleIcon') }).strict(),
   iconOnlyTopBarItemShape.extend({ type: z.literal('themeToggle') }).strict(),
   signalBoundTopBarItemShape.extend({ type: z.literal('modeFlag'), text: z.string() }).strict(),
@@ -157,8 +156,6 @@ export const DEFAULT_TOP_BAR_LAYOUT = [
   { type: 'statusDot', signal: 'any', position: 'left' },
   { type: 'label', text: 'CAN', position: 'left' },
   { type: 'bleIcon', position: 'right' },
-  { type: 'usbIcon', position: 'right' },
-  { type: 'separator', position: 'right' },
   { type: 'themeToggle', position: 'right' },
 ] as const satisfies readonly z.infer<typeof TopBarItemSchema>[]
 

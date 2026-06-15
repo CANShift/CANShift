@@ -91,8 +91,6 @@ bool loadDashboard() {
         addItem(TopBarItemKind::STATUS_DOT, TopBarItemPos::LEFT, "any", "");
         addItem(TopBarItemKind::LABEL, TopBarItemPos::LEFT, "", "CAN");
         addItem(TopBarItemKind::BLE_ICON, TopBarItemPos::RIGHT, "", "");
-        addItem(TopBarItemKind::USB_ICON, TopBarItemPos::RIGHT, "", "");
-        addItem(TopBarItemKind::SEPARATOR, TopBarItemPos::RIGHT, "", "");
         addItem(TopBarItemKind::THEME_TOGGLE, TopBarItemPos::RIGHT, "", "");
     }
 

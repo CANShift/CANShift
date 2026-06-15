@@ -115,8 +115,6 @@ export const DashTopBar = ({
             BLE
           </span>
         )
-      case 'usbIcon':
-        return null
       case 'themeToggle':
         return (
           <span
