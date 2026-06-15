@@ -154,9 +154,11 @@ export const TopBarConfigSchema = z
   .strict()
 
 export const DEFAULT_TOP_BAR_LAYOUT = [
-  { type: 'label', text: 'CAN', position: 'left' },
   { type: 'statusDot', signal: 'any', position: 'left' },
+  { type: 'label', text: 'CAN', position: 'left' },
   { type: 'bleIcon', position: 'right' },
+  { type: 'usbIcon', position: 'right' },
+  { type: 'separator', position: 'right' },
   { type: 'themeToggle', position: 'right' },
 ] as const satisfies readonly z.infer<typeof TopBarItemSchema>[]
 
