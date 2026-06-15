@@ -165,6 +165,7 @@ static void createAllTasks() {
 }
 
 void setup() {
+    Serial.setRxBufferSize(2048);
     Serial.begin(USB_SERIAL_BAUD);
     delay(200);
 
