@@ -73,13 +73,23 @@ const useSerialActivityPulse = (active: boolean): boolean => {
 const Header = () => {
   const status = useConnectionStore((s) => s.status)
   const port = useConnectionStore((s) => s.port)
+  const disconnect = useConnectionStore((s) => s.disconnect)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const exitSimulation = useDeviceStore((s) => s.exitSimulation)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
   const portLabel = !simulationMode && status === 'connected' ? readPortLabel(port) : null
 
   const resolvedStatus: HeaderStatus = simulationMode ? 'simulation' : status
+
+  const handleDisconnect = () => {
+    if (simulationMode) {
+      exitSimulation()
+    } else {
+      disconnect()
+    }
+  }
 
   return (
     <HeaderView
@@ -89,6 +99,7 @@ const Header = () => {
       activityPulse={pulsing}
       firmwareSlot={<UiFirmwareSlot version={firmwareVersion} compat={firmwareCompat} />}
       burnButton={<BurnButton />}
+      onDisconnect={handleDisconnect}
     />
   )
 }
