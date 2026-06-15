@@ -3,7 +3,7 @@ import type { DashboardConfig } from '@tmbk/canshift-core'
 
 export type ConnectionStatus = 'disconnected' | 'connected' | 'burning' | 'error'
 
-export type Transport = 'usb' | 'wifi'
+export type Transport = 'usb'
 
 export type BurnPhase = 'idle' | 'pushing' | 'rebooting' | 'done'
 
@@ -40,7 +40,6 @@ interface DeviceState {
   status: ConnectionStatus
   portPath: string | null
   transport: Transport | null
-  wifiHost: string | null
   firmwareVersion: string | null
   lastSyncAt: Date | null
   errorMessage: string | null
@@ -63,7 +62,6 @@ interface DeviceState {
   isDayMode: boolean | null
 
   setConnected: (portPath: string) => void
-  setConnectedWifi: (host: string) => void
   setDisconnected: () => void
   setSyncing: (syncing: boolean) => void
   setSyncComplete: (at: Date) => void
@@ -117,7 +115,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   status: 'disconnected',
   portPath: null,
   transport: null,
-  wifiHost: null,
   firmwareVersion: null,
   lastSyncAt: null,
   errorMessage: null,
@@ -140,20 +137,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       status: 'connected',
       portPath,
       transport: 'usb',
-      wifiHost: null,
-      connected: true,
-      simulationMode: false,
-      syncing: false,
-      errorMessage: null,
-    })
-  },
-
-  setConnectedWifi: (host) => {
-    set({
-      status: 'connected',
-      portPath: null,
-      transport: 'wifi',
-      wifiHost: host,
       connected: true,
       simulationMode: false,
       syncing: false,
@@ -166,7 +149,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       status: 'disconnected',
       portPath: null,
       transport: null,
-      wifiHost: null,
       connected: false,
       syncing: false,
       isDayMode: null,
@@ -246,7 +228,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       connected: true,
       portPath: null,
       transport: null,
-      wifiHost: null,
     })
   },
 
@@ -257,7 +238,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       connected: false,
       portPath: null,
       transport: null,
-      wifiHost: null,
     })
   },
 

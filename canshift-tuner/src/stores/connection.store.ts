@@ -28,7 +28,6 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => {
           status: error ? 'error' : 'disconnected',
           portPath: null,
           transport: null,
-          wifiHost: null,
           connected: false,
           syncing: false,
           isDayMode: null,
