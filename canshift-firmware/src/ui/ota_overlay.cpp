@@ -206,6 +206,10 @@ void hide() {
     s_written.store(0, std::memory_order_relaxed);
 }
 
+bool isActive() {
+    return s_overlay != nullptr;
+}
+
 namespace Detail {
 
 void tick() {

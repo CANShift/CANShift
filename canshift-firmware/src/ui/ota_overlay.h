@@ -10,6 +10,8 @@ void setProgress(size_t writtenBytes);
 
 void hide();
 
+[[nodiscard]] bool isActive();
+
 namespace Detail {
 void tick();
 }
