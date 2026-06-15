@@ -73,6 +73,11 @@ export const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   twaiTxPin: 22,
   twaiRxPin: 21,
 }
+export const TWAI_DEFAULT_PIN_RATIONALE =
+  'GPIO 22/21 are dual-use as I2C SDA/SCL and TWAI tx/rx on the CrowPanel-28; ' +
+  'verified empirically against the SN65HVD230 transceiver. The 25/32 pins on the ' +
+  'expansion header silkscreen are an alternate routing — use a per-device override ' +
+  'when wiring there.'
 
 export const deviceConfigFromWire = (wire: DeviceConfigWire): DeviceConfig =>
   mapObjectKeys(wire, DEVICE_WIRE_TO_DOMAIN) as DeviceConfig

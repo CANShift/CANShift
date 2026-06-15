@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const BRIGHTNESS_MIN_PCT = 0
+const BRIGHTNESS_MIN_PCT = 10
 const BRIGHTNESS_MAX_PCT = 100
 
 const SLEEP_MIN_S = 0
