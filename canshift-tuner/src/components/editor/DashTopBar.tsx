@@ -60,10 +60,13 @@ export const DashTopBar = ({
     else if (dy < -SWIPE_DOWN_THRESHOLD && settingsOpen) onOpenSettings()
   }
 
+  const dropStaleSeparators = (items: readonly TopBarItem[]): readonly TopBarItem[] =>
+    items.filter((it, i) => it.type !== 'separator' || items[i - 1]?.type === 'modeFlag')
+
   const layout: readonly TopBarItem[] = topBar.layout ?? DEFAULT_TOP_BAR_LAYOUT
-  const leftItems = layout.filter((it) => it.position === 'left')
-  const centerItems = layout.filter((it) => it.position === 'center')
-  const rightItems = layout.filter((it) => it.position === 'right')
+  const leftItems = dropStaleSeparators(layout.filter((it) => it.position === 'left'))
+  const centerItems = dropStaleSeparators(layout.filter((it) => it.position === 'center'))
+  const rightItems = dropStaleSeparators(layout.filter((it) => it.position === 'right'))
 
   const renderItem = (item: TopBarItem, key: number) => {
     switch (item.type) {
@@ -115,8 +118,6 @@ export const DashTopBar = ({
             BLE
           </span>
         )
-      case 'usbIcon':
-        return null
       case 'themeToggle':
         return (
           <span
