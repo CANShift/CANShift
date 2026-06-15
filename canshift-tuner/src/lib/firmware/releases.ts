@@ -5,6 +5,7 @@ const GITHUB_REPO = 'CANShift'
 const RELEASES_PAGE_SIZE = 10
 const FETCH_TIMEOUT_MS = 8_000
 const MERGED_ASSET_SUFFIX = '-merged.bin'
+const FIRMWARE_ASSET_SUFFIX = '-firmware.bin'
 
 interface GitHubAsset {
   name: string
@@ -142,3 +143,8 @@ export const fetchReleases = async (): Promise<ReleaseInfo[]> => {
 
 export const findMergedAsset = (release: ReleaseInfo): ReleaseAsset | null =>
   release.assets.find((a) => a.name.endsWith(MERGED_ASSET_SUFFIX)) ?? null
+
+export const findFirmwareAsset = (release: ReleaseInfo): ReleaseAsset | null =>
+  release.assets.find(
+    (a) => a.name.endsWith(FIRMWARE_ASSET_SUFFIX) && !a.name.endsWith(MERGED_ASSET_SUFFIX)
+  ) ?? null
