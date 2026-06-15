@@ -10,8 +10,8 @@
     "bgColor": "#0D0D0D",
     "textColor": "#AAAAAA",
     "layout": [
-      { "type": "label", "text": "CAN", "position": "left" },
       { "type": "statusDot", "signal": "any", "position": "left" },
+      { "type": "label", "text": "CAN", "position": "left" },
       { "type": "modeFlag", "signal": "flag_anti_lag", "text": "ALS", "position": "center" },
       { "type": "separator", "position": "center" },
       { "type": "modeFlag", "signal": "flag_launch_ctrl", "text": "LC", "position": "center" },
