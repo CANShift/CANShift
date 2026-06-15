@@ -15,16 +15,12 @@ const AboutRoute = () => {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
-  const transport = useDeviceStore((s) => s.transport)
   const portPath = useDeviceStore((s) => s.portPath)
-  const wifiHost = useDeviceStore((s) => s.wifiHost)
   const status = useConnectionStore((s) => s.status)
   const heapStats = useDeviceStore((s) => s.heapStats)
 
   const linkLabel = connected
-    ? transport === 'wifi'
-      ? `Wi-Fi · ${wifiHost ?? 'unknown host'}`
-      : `USB · ${portPath ?? 'unknown port'}`
+    ? `USB · ${portPath ?? 'unknown port'}`
     : simulationMode
       ? 'Simulation'
       : 'Disconnected'
