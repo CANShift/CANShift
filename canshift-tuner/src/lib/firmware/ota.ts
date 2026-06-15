@@ -1,7 +1,7 @@
 import { getSerialClient } from '../../transport/webserial-client'
 import { CMD_OTA_BEGIN, CMD_OTA_END, CMD_OTA_WRITE } from '../../transport/opcodes'
 
-const CHUNK_SIZE = 1024
+const CHUNK_SIZE = 512
 const ACK_TIMEOUT_MS = 8_000
 const COMMIT_TIMEOUT_MS = 5_000
 
@@ -66,7 +66,16 @@ export const flashFirmwareOta = async ({
       { timeoutMs: ACK_TIMEOUT_MS, scaleWithPayload: true }
     )
     if (!ack.ok) {
-      throw new OtaError(`OTA_WRITE rejected at offset ${String(offset)}: ${ack.error ?? 'unknown'}`, ack)
+      const written =
+        ack.data && typeof ack.data === 'object' && 'written' in ack.data
+          ? (ack.data as { written?: unknown }).written
+          : undefined
+      const writtenSuffix =
+        written !== undefined ? ` (firmware reports written=${String(written)})` : ''
+      throw new OtaError(
+        `OTA_WRITE rejected at offset ${String(offset)}: ${ack.error ?? 'unknown'}${writtenSuffix}`,
+        ack
+      )
     }
     offset = end
     onProgress(offset, bytes.byteLength)
