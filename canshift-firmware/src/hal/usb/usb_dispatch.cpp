@@ -139,17 +139,41 @@ void handleOtaBegin(const JsonObjectConst &obj) {
     UsbComm::sendLine("{\"status\":\"ok\"}");
 }
 
-void handleOtaWrite(const JsonObjectConst &obj) {
-    const uint32_t offset = obj["offset"] | 0u;
-    const char *b64 = obj["data"];
-    if (b64 == nullptr) {
+bool parseOtaWriteFields(const char *jsonLine, uint32_t *offsetOut, const char **b64Out,
+                         size_t *b64LenOut) {
+    const char *offsetKey = strstr(jsonLine, "\"offset\":");
+    if (offsetKey == nullptr)
+        return false;
+    char *endPtr = nullptr;
+    const long parsed = strtol(offsetKey + 9, &endPtr, 10);
+    if (endPtr == offsetKey + 9 || parsed < 0)
+        return false;
+    *offsetOut = static_cast<uint32_t>(parsed);
+
+    const char *dataKey = strstr(jsonLine, "\"data\":\"");
+    if (dataKey == nullptr)
+        return false;
+    const char *start = dataKey + 8;
+    const char *end = strchr(start, '"');
+    if (end == nullptr || end <= start)
+        return false;
+    *b64Out = start;
+    *b64LenOut = static_cast<size_t>(end - start);
+    return true;
+}
+
+void handleOtaWriteRaw(const char *jsonLine) {
+    uint32_t offset = 0;
+    const char *b64 = nullptr;
+    size_t b64Len = 0;
+    if (!parseOtaWriteFields(jsonLine, &offset, &b64, &b64Len)) {
         UsbComm::sendLine("{\"status\":\"error\",\"message\":\"bad_args\"}");
         return;
     }
     size_t decoded = 0;
     const int rc = mbedtls_base64_decode(
         reinterpret_cast<unsigned char *>(UsbCommInternal::s_rxBuf), USB_RX_BUF_SIZE, &decoded,
-        reinterpret_cast<const unsigned char *>(b64), strlen(b64));
+        reinterpret_cast<const unsigned char *>(b64), b64Len);
     if (rc != 0 || decoded == 0) {
         UsbComm::sendLine("{\"status\":\"error\",\"message\":\"b64_decode\"}");
         OtaReceiver::abort("b64_decode");
@@ -481,15 +505,7 @@ void handleCommand(const char *jsonLine) {
     }
 
     if (cmd == UsbComm::CMD_OTA_WRITE) {
-        JsonDocument doc;
-        DeserializationError err = JsonReader::parse(doc, jsonLine, jsonLen);
-        if (err) {
-            LOG_WARN("USB", "OTA_WRITE parse error: %s", err.c_str());
-            UsbComm::sendLine("{\"status\":\"error\",\"message\":\"parse_error\"}");
-            OtaReceiver::abort("parse_error");
-            return;
-        }
-        handleOtaWrite(doc.as<JsonObjectConst>());
+        handleOtaWriteRaw(jsonLine);
         return;
     }
 
