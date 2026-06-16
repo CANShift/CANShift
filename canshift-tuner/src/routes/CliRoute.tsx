@@ -5,6 +5,7 @@ import { usbService, KNOWN_OPCODES } from '../transport'
 import { CommandForm } from '../components/cli/CommandForm'
 import { CliOutput } from '../components/cli/CliOutput'
 import type { CliEntry } from '../components/cli/CliOutput'
+import { CliOfflineState } from '../components/cli/CliOfflineState'
 
 const HISTORY_CAP = 50
 const ENTRIES_CAP = 200
@@ -89,19 +90,20 @@ const CliRoute = () => {
       </header>
 
       <div style={bodyStyle}>
-        <CommandForm
-          disabled={!canControl}
-          busy={busy}
-          onSubmit={onSubmit}
-          onHistoryUp={onHistoryUp}
-          onHistoryDown={onHistoryDown}
-        />
-        {!canControl && (
-          <div style={hintStyle}>
-            CLI commands are sent over USB. Connect a device to enable sends.
-          </div>
+        {canControl ? (
+          <>
+            <CommandForm
+              disabled={false}
+              busy={busy}
+              onSubmit={onSubmit}
+              onHistoryUp={onHistoryUp}
+              onHistoryDown={onHistoryDown}
+            />
+            <CliOutput entries={entries} onClear={onClear} />
+          </>
+        ) : (
+          <CliOfflineState />
         )}
-        <CliOutput entries={entries} onClear={onClear} />
       </div>
     </div>
   )
@@ -145,15 +147,6 @@ const bodyStyle: CSSProperties = {
   gap: 14,
   padding: '18px 28px 24px',
   minHeight: 0,
-}
-
-const hintStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'hsl(var(--text-muted))',
-  padding: '10px 14px',
-  background: 'hsl(var(--bg-inset))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
 }
 
 export default CliRoute
