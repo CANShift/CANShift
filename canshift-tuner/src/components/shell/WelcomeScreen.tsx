@@ -23,6 +23,7 @@ export interface WelcomeScreenProps {
   reconnecting?: boolean
   lastError?: string | null
   onConnect?: () => void
+  onExploreSimulation?: () => void
   footerLinks?: ReactNode
 }
 
@@ -32,6 +33,7 @@ export const WelcomeScreen = ({
   reconnecting = false,
   lastError = null,
   onConnect,
+  onExploreSimulation,
   footerLinks,
 }: WelcomeScreenProps) => {
   return (
@@ -81,6 +83,20 @@ export const WelcomeScreen = ({
                   'Connect device'
                 )}
               </button>
+              {onExploreSimulation && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onExploreSimulation}
+                  style={{
+                    ...exploreButtonStyle,
+                    cursor: busy ? 'wait' : 'pointer',
+                    opacity: busy ? 0.6 : 1,
+                  }}
+                >
+                  Explore with sample data
+                </button>
+              )}
             </div>
 
             {lastError ? <div style={errorPillStyle}>{lastError}</div> : null}
@@ -241,6 +257,9 @@ const stepBodyStyle: CSSProperties = {
 const ctaRowStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'center',
+  alignItems: 'center',
+  gap: 12,
+  flexWrap: 'wrap',
   marginTop: 4,
 }
 
@@ -258,6 +277,17 @@ const connectButtonStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)',
+}
+
+const exploreButtonStyle: CSSProperties = {
+  background: 'transparent',
+  color: 'hsl(var(--text-dim))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 8,
+  padding: '13px 22px',
+  fontSize: 12,
+  fontWeight: 500,
+  letterSpacing: '0.04em',
 }
 
 const errorPillStyle: CSSProperties = {
