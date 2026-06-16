@@ -410,9 +410,7 @@ static void updateBleIcon(lv_obj_t *obj, DynItem *d) {
 #endif
 
     const char *text = connected ? "BLE+" : advertising ? "BLE." : "BLE";
-    const uint32_t color = connected    ? COLOR_BLE_CONN
-                           : advertising ? COLOR_BLE_ADV
-                                         : COLOR_BLE_OFF;
+    const uint32_t color = connected ? COLOR_BLE_CONN : advertising ? COLOR_BLE_ADV : COLOR_BLE_OFF;
 
     if (d != nullptr && color == d->lastColor && strcmp(d->lastText, text) == 0)
         return;
