@@ -48,6 +48,7 @@ interface DeviceState {
   syncing: boolean
 
   simulationMode: boolean
+  simulationDismissed: boolean
 
   firmwareCheck: FirmwareCheck
 
@@ -121,6 +122,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   connected: false,
   syncing: false,
   simulationMode: false,
+  simulationDismissed: false,
   firmwareCheck: { kind: 'idle' },
   firmwareCheckTick: 0,
   firmwareCompat: { kind: 'unknown' },
@@ -224,6 +226,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   enterSimulation: () => {
     set({
       simulationMode: true,
+      simulationDismissed: false,
       status: 'connected',
       connected: true,
       portPath: null,
@@ -234,6 +237,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   exitSimulation: () => {
     set({
       simulationMode: false,
+      simulationDismissed: true,
       status: 'disconnected',
       connected: false,
       portPath: null,

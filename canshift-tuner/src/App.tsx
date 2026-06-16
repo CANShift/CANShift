@@ -57,6 +57,7 @@ const useAutoReconnect = (): void => {
 const useSimulationBootstrap = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const simulationDismissed = useDeviceStore((s) => s.simulationDismissed)
   const enterSimulation = useDeviceStore((s) => s.enterSimulation)
   const flasherKind = useFlasherStore((s) => s.state.kind)
   const hasConfig = useDashboardStore((s) => s.config !== null)
@@ -64,10 +65,10 @@ const useSimulationBootstrap = (): void => {
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    if (connected || simulationMode) return
+    if (connected || simulationMode || simulationDismissed) return
     if (flasherKind === 'flashing') return
     enterSimulation()
-  }, [connected, simulationMode, flasherKind, enterSimulation])
+  }, [connected, simulationMode, simulationDismissed, flasherKind, enterSimulation])
 
   useEffect(() => {
     if (simulationMode && !hasConfig) {
