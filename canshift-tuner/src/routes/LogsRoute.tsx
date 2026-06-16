@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
+import { RouteHeader } from '../components/shell/RouteHeader'
 
 const ALL_LEVELS: LogLevel[] = ['info', 'success', 'warn', 'error', 'debug']
 const LEVEL_COLOR: Record<LogLevel, string> = {
@@ -85,59 +86,57 @@ const LogsRoute = () => {
 
   return (
     <div style={containerStyle}>
-      <header style={headerStyle}>
-        <div>
-          <div style={titleStyle}>Logs</div>
-          <div style={subtitleStyle}>
-            {filtered.length} entr{filtered.length === 1 ? 'y' : 'ies'} · {entries.length} total
-          </div>
-        </div>
-        <div style={toolbarStyle}>
-          {ALL_LEVELS.map((level) => {
-            if (level === 'debug' && !verbose) return null
-            const active = visibleLevels.has(level)
-            return (
-              <button
-                key={level}
-                type="button"
-                onClick={() => {
-                  toggleLevel(level)
+      <RouteHeader
+        title="Logs"
+        subtitle={`${String(filtered.length)} entr${filtered.length === 1 ? 'y' : 'ies'} · ${String(entries.length)} total`}
+        action={
+          <>
+            {ALL_LEVELS.map((level) => {
+              if (level === 'debug' && !verbose) return null
+              const active = visibleLevels.has(level)
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => {
+                    toggleLevel(level)
+                  }}
+                  style={levelPillStyle(active, LEVEL_COLOR[level])}
+                >
+                  {level}
+                </button>
+              )
+            })}
+            <label style={verboseLabelStyle}>
+              <input
+                type="checkbox"
+                checked={verbose}
+                onChange={(e) => {
+                  setVerbose(e.target.checked)
                 }}
-                style={levelPillStyle(active, LEVEL_COLOR[level])}
-              >
-                {level}
-              </button>
-            )
-          })}
-          <label style={verboseLabelStyle}>
-            <input
-              type="checkbox"
-              checked={verbose}
-              onChange={(e) => {
-                setVerbose(e.target.checked)
-              }}
-            />
-            verbose
-          </label>
-          <div style={dividerStyle} />
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={filtered.length === 0}
-            style={secondaryButtonStyle(filtered.length === 0)}
-          >
-            {copyLabel}
-          </button>
-          <button
-            type="button"
-            onClick={clear}
-            disabled={entries.length === 0}
-            style={secondaryButtonStyle(entries.length === 0)}
-          >
-            Clear
-          </button>
-        </div>
-      </header>
+              />
+              verbose
+            </label>
+            <div style={dividerStyle} />
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={filtered.length === 0}
+              style={secondaryButtonStyle(filtered.length === 0)}
+            >
+              {copyLabel}
+            </button>
+            <button
+              type="button"
+              onClick={clear}
+              disabled={entries.length === 0}
+              style={secondaryButtonStyle(entries.length === 0)}
+            >
+              Clear
+            </button>
+          </>
+        }
+      />
 
       <div ref={scrollRef} onScroll={onScroll} style={streamStyle}>
         {filtered.length === 0 ? (
@@ -198,36 +197,6 @@ const containerStyle: CSSProperties = {
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
   position: 'relative',
-}
-
-const headerStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-end',
-  justifyContent: 'space-between',
-  gap: 16,
-  padding: '20px 28px 16px',
-  borderBottom: '1px solid hsl(var(--border))',
-  flexWrap: 'wrap',
-}
-
-const titleStyle: CSSProperties = {
-  fontSize: 20,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
-}
-
-const subtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'hsl(var(--text-dim))',
-  marginTop: 2,
-}
-
-const toolbarStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  flexWrap: 'wrap',
 }
 
 const levelPillStyle = (active: boolean, color: string): CSSProperties => ({

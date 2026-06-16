@@ -5,6 +5,7 @@ import { useLogStore } from '../stores/log.store'
 import { usbService } from '../transport'
 import { ThemeStatusCard } from '../components/themes/ThemeStatusCard'
 import { ThemeControls } from '../components/themes/ThemeControls'
+import { RouteHeader } from '../components/shell/RouteHeader'
 
 const ThemesRoute = () => {
   const connected = useDeviceStore((s) => s.connected)
@@ -58,46 +59,51 @@ const ThemesRoute = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={contentStyle}>
-        <header style={headerStyle}>
-          <div style={titleStyle}>Themes</div>
-          <div style={subtitleStyle}>
-            Day / night palette state read from the device on connect. The active dashboard config
-            decides per-page colours; this route flips the global mode the firmware uses to pick
-            which palette to render.
-          </div>
-        </header>
+    <div style={pageStyle}>
+      <RouteHeader
+        title="Themes"
+        subtitle="Day / night palette state read from the device on connect. The active dashboard config decides per-page colours; this route flips the global mode the firmware uses to pick which palette to render."
+      />
+      <div style={containerStyle}>
+        <div style={contentStyle}>
+          <ThemeStatusCard
+            isDayMode={isDayMode}
+            connected={connected}
+            simulationMode={simulationMode}
+          />
 
-        <ThemeStatusCard
-          isDayMode={isDayMode}
-          connected={connected}
-          simulationMode={simulationMode}
-        />
+          <ThemeControls
+            isDayMode={isDayMode}
+            disabled={disabled}
+            busy={busy}
+            onToggle={() => {
+              void onToggle()
+            }}
+            onSetDay={() => {
+              void onSetDay()
+            }}
+            onSetNight={() => {
+              void onSetNight()
+            }}
+          />
 
-        <ThemeControls
-          isDayMode={isDayMode}
-          disabled={disabled}
-          busy={busy}
-          onToggle={() => {
-            void onToggle()
-          }}
-          onSetDay={() => {
-            void onSetDay()
-          }}
-          onSetNight={() => {
-            void onSetNight()
-          }}
-        />
-
-        {disabled && (
-          <div style={hintStyle}>
-            Theme commands are sent over USB. Connect a device to enable them.
-          </div>
-        )}
+          {disabled && (
+            <div style={hintStyle}>
+              Theme commands are sent over USB. Connect a device to enable them.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
+}
+
+const pageStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  background: 'hsl(var(--bg))',
+  overflow: 'hidden',
 }
 
 const containerStyle: CSSProperties = {
@@ -105,8 +111,7 @@ const containerStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
   justifyContent: 'center',
-  background: 'hsl(var(--bg))',
-  padding: '32px 28px',
+  padding: '24px 28px',
   overflowY: 'auto',
 }
 
@@ -116,25 +121,6 @@ const contentStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 24,
-}
-
-const headerStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-}
-
-const titleStyle: CSSProperties = {
-  fontSize: 22,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
-}
-
-const subtitleStyle: CSSProperties = {
-  fontSize: 13,
-  color: 'hsl(var(--text-dim))',
-  lineHeight: 1.5,
 }
 
 const hintStyle: CSSProperties = {

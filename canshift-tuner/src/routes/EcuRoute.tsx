@@ -6,6 +6,7 @@ import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
 import { EcuCatalogueList } from '../components/ecu/EcuCatalogueList'
 import type { CatalogueItem } from '../components/ecu/EcuCatalogueList'
+import { RouteHeader } from '../components/shell/RouteHeader'
 import { XmlImportZone } from '../components/ecu/XmlImportZone'
 import { SignalPreviewTable } from '../components/ecu/SignalPreviewTable'
 import { ApplyConfirmDialog } from '../components/ecu/ApplyConfirmDialog'
@@ -130,24 +131,22 @@ const EcuRoute = () => {
 
   return (
     <div style={containerStyle}>
-      <header style={headerStyle}>
-        <div>
-          <div style={titleStyle}>ECU Profile</div>
-          <div style={subtitleStyle}>
-            Replace the active signal map with a catalogue entry or your own XML file.
-          </div>
-        </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={!canApply}
-          onClick={() => {
-            setConfirmOpen(true)
-          }}
-        >
-          Apply
-        </Button>
-      </header>
+      <RouteHeader
+        title="ECU Profile"
+        subtitle="Replace the active signal map with a catalogue entry or your own XML file."
+        action={
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={!canApply}
+            onClick={() => {
+              setConfirmOpen(true)
+            }}
+          >
+            Apply
+          </Button>
+        }
+      />
 
       <div style={bodyStyle}>
         <section style={leftColumnStyle}>
@@ -191,29 +190,6 @@ const containerStyle: CSSProperties = {
   flexDirection: 'column',
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
-}
-
-const headerStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-end',
-  justifyContent: 'space-between',
-  gap: 16,
-  padding: '20px 28px 16px',
-  borderBottom: '1px solid hsl(var(--border))',
-}
-
-const titleStyle: CSSProperties = {
-  fontSize: 20,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
-}
-
-const subtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'hsl(var(--text-dim))',
-  marginTop: 4,
-  maxWidth: 540,
 }
 
 const bodyStyle: CSSProperties = {

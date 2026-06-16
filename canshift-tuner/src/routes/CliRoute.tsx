@@ -6,6 +6,7 @@ import { CommandForm } from '../components/cli/CommandForm'
 import { CliOutput } from '../components/cli/CliOutput'
 import type { CliEntry } from '../components/cli/CliOutput'
 import { CliOfflineState } from '../components/cli/CliOfflineState'
+import { RouteHeader } from '../components/shell/RouteHeader'
 
 const HISTORY_CAP = 50
 const ENTRIES_CAP = 200
@@ -79,15 +80,10 @@ const CliRoute = () => {
 
   return (
     <div style={containerStyle}>
-      <header style={headerStyle}>
-        <div>
-          <div style={titleStyle}>CLI</div>
-          <div style={subtitleStyle}>
-            Issue raw firmware commands. Pick a known opcode or type a hex / decimal value, fill in
-            JSON fields, send.
-          </div>
-        </div>
-      </header>
+      <RouteHeader
+        title="CLI"
+        subtitle="Issue raw firmware commands. Pick a known opcode or type a hex / decimal value, fill in JSON fields, send."
+      />
 
       <div style={bodyStyle}>
         {canControl ? (
@@ -119,25 +115,6 @@ const containerStyle: CSSProperties = {
   flexDirection: 'column',
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
-}
-
-const headerStyle: CSSProperties = {
-  padding: '20px 28px 16px',
-  borderBottom: '1px solid hsl(var(--border))',
-}
-
-const titleStyle: CSSProperties = {
-  fontSize: 20,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
-}
-
-const subtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'hsl(var(--text-dim))',
-  marginTop: 4,
-  maxWidth: 620,
 }
 
 const bodyStyle: CSSProperties = {
