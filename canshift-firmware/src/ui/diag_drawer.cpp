@@ -16,12 +16,17 @@ namespace DiagDrawer {
 
 namespace {
 
-constexpr int16_t PANEL_H = 240;
+constexpr int16_t PANEL_H = 220;
 constexpr int16_t PANEL_PAD = 6;
 constexpr int16_t ROW_H = 18;
 
 constexpr int16_t CLOSE_BTN_SIZE = 36;
 constexpr int16_t CLOSE_BTN_EXT_CLICK_PAD = 12;
+
+constexpr int16_t HANDLE_BAR_W = 64;
+constexpr int16_t HANDLE_BAR_H = 14;
+constexpr int16_t HANDLE_BAR_EXT_CLICK_PAD = 10;
+constexpr int16_t TAP_OUTSIDE_H = 20;
 
 constexpr int16_t FLAGS_COUNT = 5;
 constexpr int16_t SCALARS_COUNT = 4;
@@ -68,6 +73,8 @@ const ScalarRow s_scalars[SCALARS_COUNT] = {
 
 lv_obj_t *s_panel = nullptr;
 lv_obj_t *s_closeBtn = nullptr;
+lv_obj_t *s_handleBar = nullptr;
+lv_obj_t *s_tapOutsideZone = nullptr;
 lv_obj_t *s_flagBadges[FLAGS_COUNT] = {nullptr};
 lv_obj_t *s_scalarValues[SCALARS_COUNT] = {nullptr};
 lv_obj_t *s_errorRows[ERRORS_MAX_ROWS] = {nullptr};
@@ -222,6 +229,16 @@ void onClosePressed(lv_event_t *) {
     LOG_INFO("DIAG_DRAWER", "close press");
 }
 
+void onHandleBarTap(lv_event_t *) {
+    if (!s_open)
+        open();
+}
+
+void onTapOutside(lv_event_t *) {
+    if (s_open)
+        close();
+}
+
 void onVerticalSwipe(lv_dir_t dir) {
     if (dir == LV_DIR_TOP && !s_open) {
         open();
@@ -292,9 +309,35 @@ void init() {
     lv_obj_set_style_text_color(closeLabel, lv_color_hex(COL_VALUE), 0);
     lv_obj_center(closeLabel);
 
+    s_handleBar = lv_btn_create(lv_layer_top());
+    lv_obj_set_size(s_handleBar, HANDLE_BAR_W, HANDLE_BAR_H);
+    lv_obj_align(s_handleBar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(s_handleBar, lv_color_hex(COL_HANDLE_BG), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_handleBar, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(s_handleBar, 0, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(s_handleBar, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(s_handleBar, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(s_handleBar, 0, LV_PART_MAIN);
+    lv_obj_set_ext_click_area(s_handleBar, HANDLE_BAR_EXT_CLICK_PAD);
+    lv_obj_add_event_cb(s_handleBar, onHandleBarTap, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t *handleLabel = lv_label_create(s_handleBar);
+    lv_label_set_text(handleLabel, "DIAG");
+    lv_obj_set_style_text_font(handleLabel, FONT_SM(), 0);
+    lv_obj_set_style_text_color(handleLabel, lv_color_hex(COL_HANDLE_TXT), 0);
+    lv_obj_center(handleLabel);
+
+    s_tapOutsideZone = lv_obj_create(lv_layer_top());
+    lv_obj_set_size(s_tapOutsideZone, LV_HOR_RES, TAP_OUTSIDE_H);
+    lv_obj_align(s_tapOutsideZone, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_bg_opa(s_tapOutsideZone, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(s_tapOutsideZone, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(s_tapOutsideZone, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(s_tapOutsideZone, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(s_tapOutsideZone, onTapOutside, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_flag(s_tapOutsideZone, LV_OBJ_FLAG_HIDDEN);
+
     s_initDone = true;
-    LOG_INFO("DIAG_DRAWER",
-             "init done — close-btn v3: press-lock + ext-click + RELEASED + press/release logs");
+    LOG_INFO("DIAG_DRAWER", "init done — handle + tap-outside + swipe + X");
 }
 
 void open() {
@@ -303,6 +346,10 @@ void open() {
     lv_obj_clear_flag(s_panel, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_move_foreground(s_panel);
+    if (s_tapOutsideZone) {
+        lv_obj_clear_flag(s_tapOutsideZone, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(s_tapOutsideZone);
+    }
     s_open = true;
 
     s_lastErrorVersion = UINT32_MAX;
@@ -313,6 +360,8 @@ void close() {
     if (!s_panel)
         return;
     lv_obj_add_flag(s_panel, LV_OBJ_FLAG_HIDDEN);
+    if (s_tapOutsideZone)
+        lv_obj_add_flag(s_tapOutsideZone, LV_OBJ_FLAG_HIDDEN);
     s_open = false;
 }
 
