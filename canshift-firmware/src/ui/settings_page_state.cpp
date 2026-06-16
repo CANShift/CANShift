@@ -172,26 +172,41 @@ void onDayModeBtn(lv_event_t *e) {
     updateDayModeButtons();
 }
 
-static lv_timer_t *s_rebootHoldTimer = nullptr;
+static lv_timer_t *s_rebootCountdownTimer = nullptr;
 static lv_obj_t *s_rebootBtn = nullptr;
+static uint32_t s_rebootPressStartMs = 0;
 
-static void fireReboot(lv_timer_t *t) {
-    LOG_INFO("Settings", "Reboot requested via settings page long-press");
-    lv_timer_del(t);
-    s_rebootHoldTimer = nullptr;
-    delay(50);
-    esp_restart();
-}
-
-static void resetRebootBtnLabel() {
+static void writeRebootLabel(const char *text, uint32_t color) {
     if (!s_rebootBtn)
         return;
     lv_obj_t *lbl = lv_obj_get_child(s_rebootBtn, 0);
     if (lbl) {
-        lv_label_set_text(lbl, "HOLD 3 s TO REBOOT");
-        lv_obj_set_style_text_color(lbl, lv_color_hex(CLR_MUTED), 0);
+        lv_label_set_text(lbl, text);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(color), 0);
     }
-    lv_obj_set_style_border_color(s_rebootBtn, lv_color_hex(CLR_BTN_BDR), LV_PART_MAIN);
+}
+
+static void resetRebootBtn() {
+    writeRebootLabel("HOLD 3 s TO REBOOT", CLR_MUTED);
+    if (s_rebootBtn)
+        lv_obj_set_style_border_color(s_rebootBtn, lv_color_hex(CLR_BTN_BDR), LV_PART_MAIN);
+}
+
+static void tickRebootCountdown(lv_timer_t *t) {
+    const uint32_t elapsed = millis() - s_rebootPressStartMs;
+    if (elapsed >= REBOOT_LONG_PRESS_MS) {
+        LOG_INFO("Settings", "Reboot requested via settings page long-press");
+        lv_timer_del(t);
+        s_rebootCountdownTimer = nullptr;
+        delay(50);
+        esp_restart();
+        return;
+    }
+    const uint32_t remainingMs = REBOOT_LONG_PRESS_MS - elapsed;
+    const uint32_t remainingS = (remainingMs + 999) / 1000;
+    char buf[24];
+    snprintf(buf, sizeof(buf), "REBOOT IN %us…", static_cast<unsigned>(remainingS));
+    writeRebootLabel(buf, CLR_ACCENT);
 }
 
 void onRebootLongPress(lv_event_t *e) {
@@ -200,27 +215,23 @@ void onRebootLongPress(lv_event_t *e) {
 
     if (code == LV_EVENT_PRESSED) {
         s_rebootBtn = btn;
-        lv_obj_t *lbl = lv_obj_get_child(btn, 0);
-        if (lbl) {
-            lv_label_set_text(lbl, "KEEP HOLDING…");
-            lv_obj_set_style_text_color(lbl, lv_color_hex(CLR_ACCENT), 0);
-        }
+        s_rebootPressStartMs = millis();
         lv_obj_set_style_border_color(btn, lv_color_hex(CLR_ACCENT), LV_PART_MAIN);
-        if (s_rebootHoldTimer) {
-            lv_timer_del(s_rebootHoldTimer);
-            s_rebootHoldTimer = nullptr;
+        writeRebootLabel("REBOOT IN 3s…", CLR_ACCENT);
+        if (s_rebootCountdownTimer) {
+            lv_timer_del(s_rebootCountdownTimer);
+            s_rebootCountdownTimer = nullptr;
         }
-        s_rebootHoldTimer = lv_timer_create(fireReboot, REBOOT_LONG_PRESS_MS, nullptr);
-        lv_timer_set_repeat_count(s_rebootHoldTimer, 1);
+        s_rebootCountdownTimer = lv_timer_create(tickRebootCountdown, 200, nullptr);
         return;
     }
 
     if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
-        if (s_rebootHoldTimer) {
-            lv_timer_del(s_rebootHoldTimer);
-            s_rebootHoldTimer = nullptr;
+        if (s_rebootCountdownTimer) {
+            lv_timer_del(s_rebootCountdownTimer);
+            s_rebootCountdownTimer = nullptr;
         }
-        resetRebootBtnLabel();
+        resetRebootBtn();
     }
 }
 
