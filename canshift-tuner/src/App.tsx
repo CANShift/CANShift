@@ -4,9 +4,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/shell/Header'
 import Sidebar from './components/shell/Sidebar'
 import FeedbackButton from './components/shell/FeedbackButton'
-import { VersionMismatchBanner } from './components/shell/VersionMismatchBanner'
-import { HeapLowBanner } from './components/shell/HeapLowBanner'
-import { FirmwareUnresponsiveBanner } from './components/shell/FirmwareUnresponsiveBanner'
+import { DeviceAlertBar } from './components/shell/DeviceAlertBar'
 import WelcomeRoute from './routes/WelcomeRoute'
 import AboutRoute from './routes/AboutRoute'
 import CanBusRoute from './routes/CanBusRoute'
@@ -318,9 +316,7 @@ const App = () => {
   return (
     <div style={shellStyle}>
       <Header />
-      <FirmwareUnresponsiveBanner />
-      <VersionMismatchBanner />
-      <HeapLowBanner />
+      <DeviceAlertBar />
       <div style={bodyStyle}>
         <Sidebar />
         <main style={mainStyle}>
