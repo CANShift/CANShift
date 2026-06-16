@@ -409,7 +409,7 @@ static void updateBleIcon(lv_obj_t *obj, DynItem *d) {
     const bool advertising = false;
 #endif
 
-    const char *text = connected ? "BLE ON" : advertising ? "BLE ADV" : "BLE";
+    const char *text = connected ? "BLE+" : advertising ? "BLE." : "BLE";
     const uint32_t color = connected    ? COLOR_BLE_CONN
                            : advertising ? COLOR_BLE_ADV
                                          : COLOR_BLE_OFF;
