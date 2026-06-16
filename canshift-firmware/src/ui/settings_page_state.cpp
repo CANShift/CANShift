@@ -152,7 +152,7 @@ void onResetTouchCal(lv_event_t *) {
     if (s_resetTouchCalBtn) {
         lv_obj_t *lbl = lv_obj_get_child(s_resetTouchCalBtn, 0);
         if (lbl) {
-            lv_label_set_text(lbl, "RESET PENDING — REBOOT");
+            lv_label_set_text(lbl, "RESET PENDING - REBOOT");
             lv_obj_set_style_text_color(lbl, lv_color_hex(CLR_ACCENT), 0);
         }
         lv_obj_set_style_border_color(s_resetTouchCalBtn, lv_color_hex(CLR_ACCENT), LV_PART_MAIN);
@@ -205,7 +205,7 @@ static void tickRebootCountdown(lv_timer_t *t) {
     const uint32_t remainingMs = REBOOT_LONG_PRESS_MS - elapsed;
     const uint32_t remainingS = (remainingMs + 999) / 1000;
     char buf[24];
-    snprintf(buf, sizeof(buf), "REBOOT IN %us…", static_cast<unsigned>(remainingS));
+    snprintf(buf, sizeof(buf), "REBOOT IN %us", static_cast<unsigned>(remainingS));
     writeRebootLabel(buf, CLR_ACCENT);
 }
 
@@ -217,7 +217,7 @@ void onRebootLongPress(lv_event_t *e) {
         s_rebootBtn = btn;
         s_rebootPressStartMs = millis();
         lv_obj_set_style_border_color(btn, lv_color_hex(CLR_ACCENT), LV_PART_MAIN);
-        writeRebootLabel("REBOOT IN 3s…", CLR_ACCENT);
+        writeRebootLabel("REBOOT IN 3s", CLR_ACCENT);
         if (s_rebootCountdownTimer) {
             lv_timer_del(s_rebootCountdownTimer);
             s_rebootCountdownTimer = nullptr;
