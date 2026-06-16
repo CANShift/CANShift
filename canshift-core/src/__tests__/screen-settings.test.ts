@@ -17,8 +17,8 @@ describe('ScreenSettingsSchema', () => {
       expect(result.success).toBe(true)
     })
 
-    it('accepts brightness at the lower bound (0)', () => {
-      const result = ScreenSettingsSchema.safeParse({ brightness: 0, sleep: 0 })
+    it('accepts brightness at the lower bound (10)', () => {
+      const result = ScreenSettingsSchema.safeParse({ brightness: 10, sleep: 0 })
       expect(result.success).toBe(true)
     })
 
@@ -34,8 +34,8 @@ describe('ScreenSettingsSchema', () => {
   })
 
   describe('brightness bounds', () => {
-    it('rejects brightness below 0', () => {
-      const result = ScreenSettingsSchema.safeParse({ brightness: -1, sleep: 0 })
+    it('rejects brightness below 10 (firmware floors anything <10 to default)', () => {
+      const result = ScreenSettingsSchema.safeParse({ brightness: 9, sleep: 0 })
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error.issues.some((i) => i.path.includes('brightness'))).toBe(true)
@@ -129,7 +129,7 @@ describe('ScreenSettingsSchema', () => {
 
   describe('SCREEN_SETTINGS_BOUNDS', () => {
     it('matches the schema bounds the studio UI consumes', () => {
-      expect(SCREEN_SETTINGS_BOUNDS.brightnessMinPct).toBe(0)
+      expect(SCREEN_SETTINGS_BOUNDS.brightnessMinPct).toBe(10)
       expect(SCREEN_SETTINGS_BOUNDS.brightnessMaxPct).toBe(100)
       expect(SCREEN_SETTINGS_BOUNDS.sleepMinSeconds).toBe(0)
       expect(SCREEN_SETTINGS_BOUNDS.sleepMaxSeconds).toBe(3600)
