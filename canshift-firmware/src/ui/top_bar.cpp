@@ -185,9 +185,10 @@ void buildItem(const CfgTopBarItem &item, lv_obj_t *prevByPos[3], int8_t lastMod
         }
         case TopBarItemKind::BLE_ICON: {
             obj = lv_label_create(s_bar);
-            lv_label_set_text(obj, "BLE");
-            lv_obj_set_style_text_color(obj, lv_color_hex(COLOR_BLE_OFF), 0);
+            lv_label_set_text(obj, "BLE ADV");
+            lv_obj_set_style_text_color(obj, lv_color_hex(COLOR_BLE_ADV), 0);
             lv_obj_set_style_text_font(obj, FontManager::label(12), 0);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             anchor(obj, gap);
             break;
         }
@@ -402,17 +403,37 @@ static void updateDynSignalLabel(DynItem &d) {
 
 static void updateBleIcon(lv_obj_t *obj, DynItem *d) {
 #if APP_BLE_ENABLED
-    const uint32_t color = BleServer::isConnected() ? COLOR_BLE_CONN
-                           : BleServer::isEnabled() ? COLOR_BLE_ADV
-                                                    : COLOR_BLE_OFF;
+    const bool connected = BleServer::isConnected();
+    const bool advertising = !connected && BleServer::isEnabled();
+    const bool off = !connected && !advertising;
 #else
-    const uint32_t color = COLOR_BLE_OFF;
+    const bool connected = false;
+    const bool advertising = false;
+    const bool off = true;
 #endif
-    if (d != nullptr && color == d->lastColor)
+
+    if (off) {
+        if (!lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN))
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
         return;
+    }
+
+    if (lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN))
+        lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
+
+    const char *text = connected ? "BLE ON" : "BLE ADV";
+    const uint32_t color = connected ? COLOR_BLE_CONN : COLOR_BLE_ADV;
+
+    if (d != nullptr && color == d->lastColor && strcmp(d->lastText, text) == 0)
+        return;
+
+    lv_label_set_text(obj, text);
     lv_obj_set_style_text_color(obj, lv_color_hex(color), 0);
-    if (d != nullptr)
+    if (d != nullptr) {
         d->lastColor = color;
+        strlcpy(d->lastText, text, sizeof(d->lastText));
+    }
+    (void)advertising;
 }
 
 static void updateModeFlag(DynItem &d) {
