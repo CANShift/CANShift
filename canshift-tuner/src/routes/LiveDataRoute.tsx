@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { SourceBadge, type SignalSource } from '../components/live-data/SourceBadge'
+import { RouteHeader } from '../components/shell/RouteHeader'
 import { useLiveSignals } from '../hooks/useLiveSignals'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
@@ -72,34 +73,36 @@ const LiveDataRoute = () => {
 
   return (
     <div style={containerStyle}>
-      <header style={headerStyle}>
-        <div>
-          <div style={titleStyle}>Live Data</div>
-          <div style={subtitleStyle}>
+      <RouteHeader
+        title="Live Data"
+        subtitle={
+          <>
             {signals.length} signal{signals.length === 1 ? '' : 's'} ·{' '}
             <SourceBadge source={source} />
-          </div>
-        </div>
-        <div style={toolbarStyle}>
-          <input
-            type="search"
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value)
-            }}
-            placeholder="Filter by name or unit"
-            style={filterStyle}
-          />
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={signals.length === 0}
-            style={exportButtonStyle(signals.length === 0)}
-          >
-            Export CSV
-          </button>
-        </div>
-      </header>
+          </>
+        }
+        action={
+          <>
+            <input
+              type="search"
+              value={filter}
+              onChange={(e) => {
+                setFilter(e.target.value)
+              }}
+              placeholder="Filter by name or unit"
+              style={filterStyle}
+            />
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={signals.length === 0}
+              style={exportButtonStyle(signals.length === 0)}
+            >
+              Export CSV
+            </button>
+          </>
+        }
+      />
 
       <div style={tableWrapStyle}>
         {filteredSignals.length === 0 ? (
@@ -178,34 +181,6 @@ const containerStyle: CSSProperties = {
   flexDirection: 'column',
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
-}
-
-const headerStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-end',
-  justifyContent: 'space-between',
-  gap: 16,
-  padding: '20px 28px 16px',
-  borderBottom: '1px solid hsl(var(--border))',
-}
-
-const titleStyle: CSSProperties = {
-  fontSize: 20,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
-}
-
-const subtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'hsl(var(--text-dim))',
-  marginTop: 2,
-}
-
-const toolbarStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
 }
 
 const filterStyle: CSSProperties = {
