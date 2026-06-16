@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { WelcomeScreen } from '../components/shell/WelcomeScreen'
 import { useConnectionStore } from '../stores/connection.store'
+import { useDeviceStore } from '../stores/device.store'
 
 const SUPPORT_EMAIL = 'support@canshift.tmbk.ch'
 
@@ -36,8 +37,10 @@ const WelcomeRoute = () => {
   const status = useConnectionStore((s) => s.status)
   const lastError = useConnectionStore((s) => s.lastError)
   const connect = useConnectionStore((s) => s.connect)
+  const simulationMode = useDeviceStore((s) => s.simulationMode)
+  const enterSimulation = useDeviceStore((s) => s.enterSimulation)
 
-  if (status === 'connected') {
+  if (status === 'connected' || simulationMode) {
     return <Navigate to="/dashboard" replace />
   }
 
@@ -52,6 +55,9 @@ const WelcomeRoute = () => {
       lastError={lastError}
       onConnect={() => {
         void connect()
+      }}
+      onExploreSimulation={() => {
+        enterSimulation()
       }}
       footerLinks={
         <>
