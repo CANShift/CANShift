@@ -220,7 +220,12 @@ const tryLinearInV = (expr: string): Conversion | null => {
   const expectedA2 = 2 * scale + offset
   const tolerance = LINEARITY_EPSILON * Math.max(1, Math.abs(a2), Math.abs(expectedA2))
   if (Math.abs(a2 - expectedA2) > tolerance) return null
-  return { kind: 'linear', scale: normaliseZero(scale), offset: normaliseZero(offset), bitShift: null }
+  return {
+    kind: 'linear',
+    scale: normaliseZero(scale),
+    offset: normaliseZero(offset),
+    bitShift: null,
+  }
 }
 
 const normaliseZero = (n: number): number => (Object.is(n, -0) ? 0 : n)
