@@ -72,12 +72,12 @@ describe('validateSignalConfig — canFrameId', () => {
 })
 
 describe('validateSignalConfig — byteLength', () => {
-  it.each([1, 2, 4])('accepts %i', (byteLength) => {
+  it.each([1, 2, 3, 4, 8])('accepts %i', (byteLength) => {
     const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
     expect(result.valid).toBe(true)
   })
 
-  it.each([0, 3, 5, 8, -1, 1.5])('rejects %s', (byteLength) => {
+  it.each([0, 5, 6, 7, 9, -1, 1.5])('rejects %s', (byteLength) => {
     const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
     expect(result.valid).toBe(false)
     expect(result.errors.some((e) => e.includes('byteLength'))).toBe(true)
