@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import Obd2PollingPanel from '../components/editor/Obd2PollingPanel'
+import Obd2PollingPanel from '../components/obd2/Obd2PollingPanel'
 
 const PropertyPanel = lazy(() => import('../components/editor/PropertyPanel'))
 

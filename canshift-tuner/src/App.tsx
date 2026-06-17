@@ -6,15 +6,6 @@ import Sidebar from './components/shell/Sidebar'
 import FeedbackButton from './components/shell/FeedbackButton'
 import { DeviceAlertBar } from './components/shell/DeviceAlertBar'
 import WelcomeRoute from './routes/WelcomeRoute'
-import AboutRoute from './routes/AboutRoute'
-import CanBusRoute from './routes/CanBusRoute'
-import CliRoute from './routes/CliRoute'
-import EcuRoute from './routes/EcuRoute'
-import FirmwareRoute from './routes/FirmwareRoute'
-import LiveDataRoute from './routes/LiveDataRoute'
-import LogsRoute from './routes/LogsRoute'
-import Obd2Route from './routes/Obd2Route'
-import ThemesRoute from './routes/ThemesRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
 import { useDeviceStore } from './stores/device.store'
@@ -30,6 +21,15 @@ const HEARTBEAT_MISS_THRESHOLD = 3
 import { useBurnDashboard } from './hooks/useBurnDashboard'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
+const AboutRoute = lazy(() => import('./routes/AboutRoute'))
+const CanBusRoute = lazy(() => import('./routes/CanBusRoute'))
+const CliRoute = lazy(() => import('./routes/CliRoute'))
+const EcuRoute = lazy(() => import('./routes/EcuRoute'))
+const FirmwareRoute = lazy(() => import('./routes/FirmwareRoute'))
+const LiveDataRoute = lazy(() => import('./routes/LiveDataRoute'))
+const LogsRoute = lazy(() => import('./routes/LogsRoute'))
+const Obd2Route = lazy(() => import('./routes/Obd2Route'))
+const ThemesRoute = lazy(() => import('./routes/ThemesRoute'))
 
 const RouteLoading = () => {
   return (
@@ -322,29 +322,29 @@ const App = () => {
         <Sidebar />
         <main style={mainStyle}>
           <DisconnectedGuard>
-            <Routes>
-              <Route path="/" element={<WelcomeRoute />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ErrorBoundary scope="editor">
-                    <Suspense fallback={<RouteLoading />}>
+            <Suspense fallback={<RouteLoading />}>
+              <Routes>
+                <Route path="/" element={<WelcomeRoute />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ErrorBoundary scope="editor">
                       <EditorRoute />
-                    </Suspense>
-                  </ErrorBoundary>
-                }
-              />
-              <Route path="/can" element={<CanBusRoute />} />
-              <Route path="/ecu" element={<EcuRoute />} />
-              <Route path="/obd2" element={<Obd2Route />} />
-              <Route path="/themes" element={<ThemesRoute />} />
-              <Route path="/live" element={<LiveDataRoute />} />
-              <Route path="/logs" element={<LogsRoute />} />
-              <Route path="/cli" element={<CliRoute />} />
-              <Route path="/firmware" element={<FirmwareRoute />} />
-              <Route path="/about" element={<AboutRoute />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                    </ErrorBoundary>
+                  }
+                />
+                <Route path="/can" element={<CanBusRoute />} />
+                <Route path="/ecu" element={<EcuRoute />} />
+                <Route path="/obd2" element={<Obd2Route />} />
+                <Route path="/themes" element={<ThemesRoute />} />
+                <Route path="/live" element={<LiveDataRoute />} />
+                <Route path="/logs" element={<LogsRoute />} />
+                <Route path="/cli" element={<CliRoute />} />
+                <Route path="/firmware" element={<FirmwareRoute />} />
+                <Route path="/about" element={<AboutRoute />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </DisconnectedGuard>
         </main>
       </div>
