@@ -261,9 +261,7 @@ const CROSS_SIGNAL_REF_RE = /\bID\d+\b/i
 const SAFE_EXPR_VALIDATION_RE = /^[\w\s+\-*/%<>=!&|^().]+$/
 
 const tryEmitExpr = (raw: string): ExprEmission | ParseRejection => {
-  const cleaned = normaliseExpr(raw)
-    .replace(/==/g, '==')
-    .replace(/(?<![<>=!])=(?!=)/g, '==')
+  const cleaned = normaliseExpr(raw).replace(/(?<![<>=!])=(?!=)/g, '==')
   if (CROSS_SIGNAL_REF_RE.test(cleaned)) return { kind: 'cross-signal' }
   if (!SAFE_EXPR_VALIDATION_RE.test(cleaned)) return { kind: 'invalid' }
   const compact = cleaned.replace(/\s+/g, ' ').trim()
