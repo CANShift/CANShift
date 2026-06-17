@@ -202,20 +202,22 @@ describe('conversion parsing', () => {
     expect(signals[0]?.unit).toBe('')
   })
 
-  it('warns and skips complex formula (B0+...)', () => {
+  it('emits expr for multi-byte composite formula (B0+...)', () => {
     const { signals, warnings } = parseCanXml(
       simpleXml('<value name="c" offset="0" length="2" conversion="B0+15*(B1-43)"/>')
     )
-    expect(signals).toHaveLength(0)
-    expect(warnings[0]).toMatch(/Skipped/)
+    expect(signals).toHaveLength(1)
+    expect(signals[0]?.expr).toBe('B0+15*(B1-43)')
+    expect(warnings).toHaveLength(0)
   })
 
-  it('warns and skips V+ID formula', () => {
+  it('rejects V+ID formula with a quieter cross-signal warning', () => {
     const { signals, warnings } = parseCanXml(
       simpleXml('<value name="r" offset="0" length="2" conversion="V+ID200-74.3"/>')
     )
     expect(signals).toHaveLength(0)
     expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/Cross-signal/)
   })
 })
 
@@ -227,12 +229,13 @@ describe('XML entity decoding', () => {
     expect(signals[0]?.bitMask).toBe('0x08')
   })
 
-  it('decodes &amp; in conversion to & (treated as complex and warned)', () => {
+  it('decodes &amp; in conversion to & (emitted as expr)', () => {
     const { signals, warnings } = parseCanXml(
       simpleXml('<value name="mask" offset="0" length="1" conversion="V&amp;15"/>')
     )
-    expect(signals).toHaveLength(0)
-    expect(warnings[0]).toMatch(/Skipped/)
+    expect(signals).toHaveLength(1)
+    expect(signals[0]?.expr).toBe('V&15')
+    expect(warnings).toHaveLength(0)
   })
 })
 
@@ -364,15 +367,15 @@ describe('timeout', () => {
 })
 
 describe('schema validation', () => {
-  it('length=3 is rejected and emits a warning (no silent coercion)', () => {
-    const { signals, warnings } = parseCanXml(
-      simpleXml('<value name="bad" offset="0" length="3"/>')
-    )
-    expect(signals).toHaveLength(0)
-    expect(warnings).toHaveLength(1)
-    expect(warnings[0]).toMatch(/Rejected signal "bad"/)
-    expect(warnings[0]).toMatch(/frame 0x520/)
-    expect(warnings[0]).toMatch(/byteLength/)
+  it('length=3 and length=8 are accepted (wide signals)', () => {
+    for (const len of [3, 8]) {
+      const { signals, warnings } = parseCanXml(
+        simpleXml(`<value name="wide_${String(len)}" offset="0" length="${String(len)}"/>`)
+      )
+      expect(signals).toHaveLength(1)
+      expect(signals[0]?.byteLength).toBe(len)
+      expect(warnings).toHaveLength(0)
+    }
   })
 
   it('length=4 passes through unchanged', () => {
@@ -394,11 +397,11 @@ describe('schema validation', () => {
     expect(warnings).toHaveLength(0)
   })
 
-  it('multiple invalid rows produce multiple warnings and zero signals', () => {
+  it('multiple invalid byteLengths produce multiple warnings and zero signals', () => {
     const { signals, warnings } = parseCanXml(
       simpleXml(
-        '<value name="bad_a" offset="0" length="3"/>' +
-          '<value name="bad_b" offset="3" length="5"/>' +
+        '<value name="bad_a" offset="0" length="5"/>' +
+          '<value name="bad_b" offset="3" length="6"/>' +
           '<value name="bad_c" offset="8" length="7"/>'
       )
     )
@@ -413,7 +416,7 @@ describe('schema validation', () => {
     const { signals, warnings } = parseCanXml(
       simpleXml(
         '<value name="good" offset="0" length="2"/>' +
-          '<value name="bad" offset="2" length="3"/>' +
+          '<value name="bad" offset="2" length="5"/>' +
           '<value name="also_good" offset="4" length="4"/>'
       )
     )
@@ -424,12 +427,12 @@ describe('schema validation', () => {
   })
 
   it('warning string includes the zod path and message', () => {
-    const { warnings } = parseCanXml(simpleXml('<value name="bad" offset="0" length="8"/>'))
+    const { warnings } = parseCanXml(simpleXml('<value name="bad" offset="0" length="5"/>'))
     expect(warnings[0]).toMatch(/byteLength:/)
   })
 
   it('result still satisfies ParseCanXmlResult (string[] warnings)', () => {
-    const result = parseCanXml(simpleXml('<value name="bad" offset="0" length="3"/>'))
+    const result = parseCanXml(simpleXml('<value name="bad" offset="0" length="5"/>'))
     expect(Array.isArray(result.signals)).toBe(true)
     expect(Array.isArray(result.warnings)).toBe(true)
     expect(result.warnings.every((w) => typeof w === 'string')).toBe(true)

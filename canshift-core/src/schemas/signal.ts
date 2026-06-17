@@ -17,6 +17,10 @@ const BIT_MASK_REGEX = /^0[xX][0-9a-fA-F]+$/
 
 const OUTBOUND_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 
+const SAFE_EXPR_REGEX = /^[\w\s+\-*/%<>=!&|^().]+$/
+
+const MAX_EXPR_LENGTH = 128
+
 export const ColorRampStopSchema = z
   .object({
     id: z.string().min(1).optional(),
@@ -62,12 +66,17 @@ export const SignalDefSchema = z
       .int()
       .min(0)
       .max(CAN_FRAME_MAX_BYTES - 1),
-    byteLength: z.union([z.literal(1), z.literal(2), z.literal(4)]),
+    byteLength: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(8)]),
     bigEndian: z.boolean(),
     signed: z.boolean(),
     bitMask: z.string().regex(BIT_MASK_REGEX, 'bitMask must be a hex literal like 0xFF').optional(),
     scale: z.number().finite(),
     offset: z.number().finite(),
+    expr: z
+      .string()
+      .max(MAX_EXPR_LENGTH, `expr cannot exceed ${String(MAX_EXPR_LENGTH)} chars`)
+      .regex(SAFE_EXPR_REGEX, 'expr contains disallowed characters')
+      .optional(),
     unit: z.string().max(STRING_CAPS.SIGNAL_UNIT),
     min: z.number(),
     max: z.number(),

@@ -57,6 +57,7 @@ const resolveEndian = (raw: string | undefined): boolean | null =>
   raw ? raw.toLowerCase() === 'big' : null
 
 interface Conversion {
+  kind: 'linear'
   scale: number
   offset: number
   bitShift: number | null
@@ -219,7 +220,7 @@ const tryLinearInV = (expr: string): Conversion | null => {
   const expectedA2 = 2 * scale + offset
   const tolerance = LINEARITY_EPSILON * Math.max(1, Math.abs(a2), Math.abs(expectedA2))
   if (Math.abs(a2 - expectedA2) > tolerance) return null
-  return { scale: normaliseZero(scale), offset: normaliseZero(offset), bitShift: null }
+  return { kind: 'linear', scale: normaliseZero(scale), offset: normaliseZero(offset), bitShift: null }
 }
 
 const normaliseZero = (n: number): number => (Object.is(n, -0) ? 0 : n)
@@ -227,24 +228,52 @@ const normaliseZero = (n: number): number => (Object.is(n, -0) ? 0 : n)
 const matchBitExtract = (expr: string): Conversion | null => {
   const shiftMatch = BIT_SHIFT_RE.exec(expr) ?? BIT_SHIFT_AND_ONE_RE.exec(expr)
   if (shiftMatch) {
-    return { scale: 1, offset: 0, bitShift: parseInt(shiftMatch[1] ?? '0', 10) }
+    return { kind: 'linear', scale: 1, offset: 0, bitShift: parseInt(shiftMatch[1] ?? '0', 10) }
   }
   const andMatch = BIT_AND_RE.exec(expr)
   if (andMatch) {
     const raw = andMatch[1] ?? '0'
     const mask = raw.toLowerCase().startsWith('0x') ? parseInt(raw.slice(2), 16) : parseInt(raw, 10)
     const bit = log2Int(mask)
-    if (bit !== null) return { scale: 1, offset: 0, bitShift: bit }
+    if (bit !== null) return { kind: 'linear', scale: 1, offset: 0, bitShift: bit }
   }
   return null
 }
 
-const parseConversion = (expr: string | undefined): Conversion | 'complex' => {
-  if (!expr || expr.trim() === '') return { scale: 1, offset: 0, bitShift: null }
+interface ExprEmission {
+  kind: 'expr'
+  expr: string
+}
+
+interface ParseRejection {
+  kind: 'cross-signal' | 'invalid'
+}
+
+type ParseConversionResult = Conversion | ExprEmission | ParseRejection
+
+const CROSS_SIGNAL_REF_RE = /\bID\d+\b/i
+
+const SAFE_EXPR_VALIDATION_RE = /^[\w\s+\-*/%<>=!&|^().]+$/
+
+const tryEmitExpr = (raw: string): ExprEmission | ParseRejection => {
+  const cleaned = normaliseExpr(raw)
+    .replace(/==/g, '==')
+    .replace(/(?<![<>=!])=(?!=)/g, '==')
+  if (CROSS_SIGNAL_REF_RE.test(cleaned)) return { kind: 'cross-signal' }
+  if (!SAFE_EXPR_VALIDATION_RE.test(cleaned)) return { kind: 'invalid' }
+  const compact = cleaned.replace(/\s+/g, ' ').trim()
+  if (compact.length === 0 || compact.length > 128) return { kind: 'invalid' }
+  return { kind: 'expr', expr: compact }
+}
+
+const parseConversion = (expr: string | undefined): ParseConversionResult => {
+  if (!expr || expr.trim() === '') return { kind: 'linear', scale: 1, offset: 0, bitShift: null }
   const stripped = stripOuterParens(expr.trim())
   const bitExtract = matchBitExtract(stripped)
   if (bitExtract) return bitExtract
-  return tryLinearInV(normaliseExpr(stripped)) ?? 'complex'
+  const linear = tryLinearInV(normaliseExpr(stripped))
+  if (linear) return linear
+  return tryEmitExpr(stripped)
 }
 
 const computeRange = (
@@ -332,7 +361,14 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
       const unit = va.units ?? ''
 
       const conv = parseConversion(va.conversion)
-      if (conv === 'complex') {
+      if (conv.kind === 'cross-signal') {
+        warnings.push(
+          `Cross-signal expression "${va.conversion ?? ''}" on "${name}" (frame ${canFrameId}) — deferred to v2`
+        )
+        valueIndex++
+        continue
+      }
+      if (conv.kind === 'invalid') {
         warnings.push(
           `Skipped unsupported conversion "${va.conversion ?? ''}" on "${name}" (frame ${canFrameId})`
         )
@@ -340,7 +376,10 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
         continue
       }
 
-      const { scale, offset, bitShift } = conv
+      const scale = conv.kind === 'linear' ? conv.scale : 1
+      const offset = conv.kind === 'linear' ? conv.offset : 0
+      const bitShift = conv.kind === 'linear' ? conv.bitShift : null
+      const exprText = conv.kind === 'expr' ? conv.expr : undefined
 
       const bitMask =
         bitShift !== null
@@ -373,6 +412,7 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
         max,
         timeoutMs,
         ...(bitMask !== undefined ? { bitMask } : {}),
+        ...(exprText !== undefined ? { expr: exprText } : {}),
       }
 
       const parsed = SignalDefSchema.safeParse(candidate)

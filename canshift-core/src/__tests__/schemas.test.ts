@@ -308,10 +308,21 @@ describe('SignalConfigSchema', () => {
     }
   })
 
-  it('rejects an invalid byteLength (3)', () => {
+  it('accepts byteLength 3 and 8 (wide signals)', () => {
+    for (const len of [3, 8]) {
+      const candidate = {
+        ...validSignals,
+        signals: [{ ...validSignals.signals[0], byteLength: len }],
+      }
+      const result = SignalConfigSchema.safeParse(candidate)
+      expect(result.success).toBe(true)
+    }
+  })
+
+  it('rejects an invalid byteLength (5)', () => {
     const broken = {
       ...validSignals,
-      signals: [{ ...validSignals.signals[0], byteLength: 3 }],
+      signals: [{ ...validSignals.signals[0], byteLength: 5 }],
     }
     const result = SignalConfigSchema.safeParse(broken)
     expect(result.success).toBe(false)
