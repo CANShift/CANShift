@@ -7,6 +7,7 @@ import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { Button } from '@/components/ui/button'
 
 const Canvas = lazy(() => import('../components/editor/Canvas'))
 const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
@@ -77,10 +78,10 @@ const PageListItemImpl = ({
     >
       <div
         style={{
-          border: `2px solid ${isSelected ? '#FFFFFF' : '#2A2A2A'}`,
+          border: `2px solid ${isSelected ? 'hsl(var(--text))' : 'hsl(var(--border))'}`,
           borderRadius: 4,
           overflow: 'hidden',
-          boxShadow: isSelected ? '0 0 0 1px #FFFFFF22' : 'none',
+          boxShadow: isSelected ? '0 0 0 1px hsl(var(--text) / 0.13)' : 'none',
           transition: 'border-color 0.1s',
           position: 'relative',
         }}
@@ -101,14 +102,14 @@ const PageListItemImpl = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: isDefault ? '#000000AA' : '#00000055',
+            background: isDefault ? 'rgba(0, 0, 0, 0.67)' : 'rgba(0, 0, 0, 0.33)',
             border: 'none',
             borderRadius: 3,
             padding: 0,
             cursor: 'pointer',
             fontSize: 12,
             lineHeight: 1,
-            color: isDefault ? '#FFAA00' : '#666666',
+            color: isDefault ? 'hsl(var(--accent))' : 'hsl(var(--text-muted))',
           }}
         >
           {isDefault ? DEFAULT_PAGE_GLYPH : NON_DEFAULT_PAGE_GLYPH}
@@ -129,20 +130,20 @@ const PageListItemImpl = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: '#00000055',
+              background: 'rgba(0, 0, 0, 0.33)',
               border: 'none',
               borderRadius: 3,
               padding: 0,
-              color: '#888888',
+              color: 'hsl(var(--text-dim))',
               cursor: 'pointer',
               fontSize: 14,
               lineHeight: 1,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#FF6666'
+              e.currentTarget.style.color = 'hsl(var(--destructive))'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#888888'
+              e.currentTarget.style.color = 'hsl(var(--text-dim))'
             }}
           >
             ×
@@ -156,9 +157,9 @@ const PageListItemImpl = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: '#00000055',
+              background: 'rgba(0, 0, 0, 0.33)',
               fontSize: 16,
-              color: '#888888',
+              color: 'hsl(var(--text-dim))',
             }}
           >
             ◌
@@ -179,7 +180,7 @@ const CanvasFallback = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#3A3A3A',
+        color: 'hsl(var(--text-muted))',
         fontSize: 12,
       }}
     >
@@ -263,12 +264,14 @@ const EditorRoute = () => {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          color: '#AAAAAA',
+          color: 'hsl(var(--text-dim))',
         }}
       >
         <div style={{ fontSize: 32, opacity: 0.2 }}>◫</div>
-        <p style={{ fontSize: 14, color: '#3A3A3A' }}>No config loaded</p>
-        <p style={{ fontSize: 11, color: '#2E2E2E' }}>Use the Load button in the toolbar</p>
+        <p style={{ fontSize: 14, color: 'hsl(var(--text))' }}>No config loaded</p>
+        <p style={{ fontSize: 11, color: 'hsl(var(--text-muted))', maxWidth: 360, textAlign: 'center' }}>
+          Open the ECU Profile route, load a catalogue entry, then return here.
+        </p>
       </div>
     )
   }
@@ -296,8 +299,8 @@ const EditorRoute = () => {
       <aside
         style={{
           width: 152,
-          background: '#161616',
-          borderRight: '1px solid #222222',
+          background: 'hsl(var(--surface))',
+          borderRight: '1px solid hsl(var(--border))',
           display: 'flex',
           flexDirection: 'column',
           overflowY: 'auto',
@@ -316,7 +319,7 @@ const EditorRoute = () => {
             <span
               style={{
                 fontSize: 10,
-                color: '#AAAAAA',
+                color: 'hsl(var(--text-dim))',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
               }}
@@ -326,7 +329,10 @@ const EditorRoute = () => {
             <span
               style={{
                 fontSize: 10,
-                color: pages.length >= FIRMWARE_CAPS.MAX_PAGES ? '#E08030' : '#666666',
+                color:
+                  pages.length >= FIRMWARE_CAPS.MAX_PAGES
+                    ? 'hsl(var(--destructive))'
+                    : 'hsl(var(--text-muted))',
                 fontFamily: 'monospace',
               }}
               title={`Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages`}
@@ -356,7 +362,10 @@ const EditorRoute = () => {
           {(() => {
             const atCap = pages.length >= FIRMWARE_CAPS.MAX_PAGES
             return (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mb-2 h-7 text-xs"
                 disabled={atCap}
                 onClick={() => {
                   if (atCap) return
@@ -375,35 +384,14 @@ const EditorRoute = () => {
                     ? `Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages — remove one to add another`
                     : 'Add a new page'
                 }
-                style={{
-                  width: '100%',
-                  padding: '5px 0',
-                  marginBottom: 8,
-                  background: 'transparent',
-                  border: '1px dashed #2A2A2A',
-                  borderRadius: 4,
-                  color: atCap ? '#444444' : '#AAAAAA',
-                  cursor: atCap ? 'not-allowed' : 'pointer',
-                  fontSize: 11,
-                }}
-                onMouseEnter={(e) => {
-                  if (atCap) return
-                  e.currentTarget.style.borderColor = '#AAAAAA'
-                  e.currentTarget.style.color = '#888888'
-                }}
-                onMouseLeave={(e) => {
-                  if (atCap) return
-                  e.currentTarget.style.borderColor = '#2A2A2A'
-                  e.currentTarget.style.color = '#AAAAAA'
-                }}
               >
                 + Page
-              </button>
+              </Button>
             )
           })()}
         </div>
 
-        <div style={{ height: 1, background: '#222222', flexShrink: 0 }} />
+        <div style={{ height: 1, background: 'hsl(var(--border))', flexShrink: 0 }} />
 
         <div style={{ padding: '4px 0' }}>
           {currentPage && (
@@ -427,7 +415,7 @@ const EditorRoute = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#333333',
+            color: 'hsl(var(--text-muted))',
           }}
         >
           No page selected
