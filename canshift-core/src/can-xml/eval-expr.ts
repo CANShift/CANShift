@@ -1,6 +1,6 @@
 export interface EvalContext {
   v: number
-  bytes: ReadonlyArray<number>
+  bytes: readonly number[]
 }
 
 interface Token {

@@ -13,9 +13,9 @@ interface Fixture {
   expected: number
 }
 
-const fixtures: Fixture[] = JSON.parse(
+const fixtures = JSON.parse(
   readFileSync(join(here, '__fixtures__/expr-parity.json'), 'utf8')
-)
+) as Fixture[]
 
 describe('eval-expr parity fixtures (TS side)', () => {
   for (const fx of fixtures) {
