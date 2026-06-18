@@ -19,6 +19,7 @@ import { deviceEvents, deviceIpc, usbService } from './transport'
 const HEARTBEAT_INTERVAL_MS = 5_000
 const HEARTBEAT_MISS_THRESHOLD = 3
 import { useBurnDashboard } from './hooks/useBurnDashboard'
+import { useWidgetOverflowWarnings } from './hooks/useWidgetOverflowWarnings'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 const AboutRoute = lazy(() => import('./routes/AboutRoute'))
@@ -313,6 +314,7 @@ const App = () => {
   useFirmwareLogBridge()
   useDeviceConfigBootstrap()
   useBurnShortcut()
+  useWidgetOverflowWarnings()
 
   return (
     <div style={shellStyle}>
