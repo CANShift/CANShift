@@ -4,6 +4,7 @@ import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
 import { useLogStore } from '../stores/log.store'
 import { usbService } from '../transport'
+import { verifyBurnedConfig } from './verifyBurnedConfig'
 
 interface UseBurnDashboard {
   canBurn: boolean
@@ -37,11 +38,29 @@ export const useBurnDashboard = (): UseBurnDashboard => {
     setIsBurning(true)
     try {
       const result = await usbService.pushConfig(config)
-      if (result.success) {
-        markPushed()
-        log('success', 'Dashboard burned to device')
-      } else {
+      if (!result.success) {
         log('error', `Burn failed: ${result.error ?? 'unknown_error'}`)
+        return
+      }
+      log('info', 'Burn acked — verifying after reboot…')
+      const verify = await verifyBurnedConfig(config)
+      switch (verify.kind) {
+        case 'ok':
+          markPushed()
+          log('success', 'Dashboard burned + verified on device')
+          break
+        case 'no_reboot':
+          log(
+            'error',
+            'Burn verify failed: device did not come back after reboot — try unplug/replug'
+          )
+          break
+        case 'fetch_failed':
+          log('error', `Burn verify failed: could not read back config (${verify.error})`)
+          break
+        case 'mismatch':
+          log('error', 'Burn verify failed: device persisted a different config — retry the burn')
+          break
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
