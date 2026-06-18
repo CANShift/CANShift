@@ -2,6 +2,7 @@ import type { DashboardConfig, ScreenSettings } from '@tmbk/canshift-core'
 
 import {
   CMD_CALIBRATE_TOUCH,
+  CMD_GET_CONFIG,
   CMD_PING,
   CMD_PUSH_CONFIG,
   CMD_QUERY_VERSION,
@@ -35,6 +36,20 @@ export const usbService = {
       { scaleWithPayload: true }
     )
     return toUsbResult(result)
+  },
+
+  getConfig: async (): Promise<
+    { kind: 'ok'; config: unknown } | { kind: 'error'; error: string }
+  > => {
+    const result = await getSerialClient().send(CMD_GET_CONFIG, {}, { timeoutMs: 5_000 })
+    if (!result.ok) {
+      return { kind: 'error', error: result.error ?? 'unknown_error' }
+    }
+    const config = result.data?.config
+    if (config === undefined || config === null) {
+      return { kind: 'error', error: 'no_config_in_response' }
+    }
+    return { kind: 'ok', config }
   },
 
   pushScreenSettings: async (settings: ScreenSettings): Promise<UsbResult> => {
