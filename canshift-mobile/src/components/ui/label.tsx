@@ -6,7 +6,7 @@ export interface LabelProps extends TextProps {
   className?: string
 }
 
-export const Label = React.forwardRef<React.ElementRef<typeof Text>, LabelProps>(
+export const Label = React.forwardRef<React.ComponentRef<typeof Text>, LabelProps>(
   ({ className, children, ...props }, ref) => (
     <Text
       ref={ref}

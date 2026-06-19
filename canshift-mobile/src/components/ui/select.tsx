@@ -82,7 +82,7 @@ export interface SelectTriggerProps extends Omit<PressableProps, 'onPress' | 'st
 }
 
 export const SelectTrigger = React.forwardRef<
-  React.ElementRef<typeof Pressable>,
+  React.ComponentRef<typeof Pressable>,
   SelectTriggerProps
 >(({ children, className, disabled, ...props }, ref) => {
   const ctx = useSelectContext()
@@ -201,7 +201,7 @@ export interface SelectItemProps extends Omit<PressableProps, 'onPress' | 'style
   textClassName?: string
 }
 
-export const SelectItem = React.forwardRef<React.ElementRef<typeof Pressable>, SelectItemProps>(
+export const SelectItem = React.forwardRef<React.ComponentRef<typeof Pressable>, SelectItemProps>(
   ({ value, children, className, textClassName, disabled, ...props }, ref) => {
     const ctx = useSelectContext()
     const selected = ctx.value === value
