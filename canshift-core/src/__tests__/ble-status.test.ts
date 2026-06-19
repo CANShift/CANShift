@@ -10,8 +10,6 @@ describe('BleStatusWireSchema', () => {
     const wire = {
       ver: '0.8.3',
       can: 1,
-      ap_ssid: 'CANShift-AP',
-      ap_password: 'abcDEF12',
       is_day: 0,
     }
     expect(BleStatusWireSchema.parse(wire)).toEqual(wire)
@@ -49,15 +47,11 @@ describe('bleStatusFromWire', () => {
     const wire: BleStatusWire = {
       ver: '0.8.3',
       can: 1,
-      ap_ssid: 'CANShift-AP',
-      ap_password: 'abcDEF12',
       is_day: 0,
     }
     expect(bleStatusFromWire(wire)).toEqual({
       firmwareVersion: '0.8.3',
       canHealthy: true,
-      apSsid: 'CANShift-AP',
-      apPassword: 'abcDEF12',
       isDay: false,
     })
   })
@@ -77,15 +71,13 @@ describe('bleStatusFromWire', () => {
 
 describe('parseBleStatus', () => {
   it('returns kind="ok" with the domain shape for a valid payload', () => {
-    const raw = '{"ver":"1.0","can":1,"ap_ssid":"X","ap_password":"y","is_day":1}'
+    const raw = '{"ver":"1.0","can":1,"is_day":1}'
     const result = parseBleStatus(raw)
     expect(result).toEqual({
       kind: 'ok',
       status: {
         firmwareVersion: '1.0',
         canHealthy: true,
-        apSsid: 'X',
-        apPassword: 'y',
         isDay: true,
       },
     })
