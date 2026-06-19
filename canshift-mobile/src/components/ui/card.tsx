@@ -31,7 +31,7 @@ export interface CardProps extends ViewProps, CardVariantProps {
   className?: string
 }
 
-export const Card = React.forwardRef<React.ElementRef<typeof View>, CardProps>(
+export const Card = React.forwardRef<React.ComponentRef<typeof View>, CardProps>(
   ({ className, variant, radius, padding, ...props }, ref) => (
     <View
       ref={ref}
@@ -46,7 +46,7 @@ export interface CardHeaderProps extends ViewProps {
   className?: string
 }
 
-export const CardHeader = React.forwardRef<React.ElementRef<typeof View>, CardHeaderProps>(
+export const CardHeader = React.forwardRef<React.ComponentRef<typeof View>, CardHeaderProps>(
   ({ className, ...props }, ref) => (
     <View ref={ref} className={cn('flex-row items-center justify-between', className)} {...props} />
   )
@@ -57,7 +57,7 @@ export interface CardTitleProps extends TextProps {
   className?: string
 }
 
-export const CardTitle = React.forwardRef<React.ElementRef<typeof Text>, CardTitleProps>(
+export const CardTitle = React.forwardRef<React.ComponentRef<typeof Text>, CardTitleProps>(
   ({ className, ...props }, ref) => (
     <Text ref={ref} className={cn('text-base font-semibold text-text', className)} {...props} />
   )
@@ -68,7 +68,7 @@ export interface CardContentProps extends ViewProps {
   className?: string
 }
 
-export const CardContent = React.forwardRef<React.ElementRef<typeof View>, CardContentProps>(
+export const CardContent = React.forwardRef<React.ComponentRef<typeof View>, CardContentProps>(
   ({ className, ...props }, ref) => <View ref={ref} className={cn(className)} {...props} />
 )
 CardContent.displayName = 'CardContent'
