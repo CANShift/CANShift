@@ -134,16 +134,6 @@ export default function DashTopBar() {
               style={styles.menuItem}
               onPress={() => {
                 setMenuVisible(false)
-                rootNav.navigate('Update')
-              }}
-            >
-              <Text style={styles.menuItemText}>Firmware Update</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false)
                 rootNav.navigate('About')
               }}
             >

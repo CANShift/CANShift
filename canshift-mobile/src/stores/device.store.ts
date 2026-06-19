@@ -12,7 +12,6 @@ interface DeviceState {
   deviceName: string | null
   firmwareVersion: string | null
   canHealthy: boolean
-  wifiApSsid: string | null
   isDayMode: boolean | null
   error: BleConnectionError | null
 
@@ -20,7 +19,6 @@ interface DeviceState {
   setMode: (m: DeviceMode) => void
   setDevice: (id: string, name: string) => void
   setFirmwareStatus: (version: string, canHealthy: boolean) => void
-  setWifiApSsid: (ssid: string | null) => void
   setIsDayMode: (v: boolean) => void
   setError: (err: BleConnectionError | null) => void
   disconnect: () => void
@@ -33,7 +31,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   deviceName: null,
   firmwareVersion: null,
   canHealthy: false,
-  wifiApSsid: null,
   isDayMode: null,
   error: null,
 
@@ -53,10 +50,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
     set({ firmwareVersion, canHealthy })
   },
 
-  setWifiApSsid: (wifiApSsid) => {
-    set({ wifiApSsid })
-  },
-
   setIsDayMode: (isDayMode) => {
     set({ isDayMode })
   },
@@ -73,7 +66,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       deviceName: null,
       firmwareVersion: null,
       canHealthy: false,
-      wifiApSsid: null,
       isDayMode: null,
       error: null,
     })

@@ -16,7 +16,6 @@ describe('useDeviceStore', () => {
     expect(state.deviceName).toBeNull()
     expect(state.firmwareVersion).toBeNull()
     expect(state.canHealthy).toBe(false)
-    expect(state.wifiApSsid).toBeNull()
     expect(state.isDayMode).toBeNull()
     expect(state.error).toBeNull()
   })
@@ -62,14 +61,6 @@ describe('useDeviceStore', () => {
     expect(state.canHealthy).toBe(false)
   })
 
-  it('setWifiApSsid sets and clears the SSID — password is owned by SecureStore (#890)', () => {
-    useDeviceStore.getState().setWifiApSsid('CANShift-AP')
-    expect(useDeviceStore.getState().wifiApSsid).toBe('CANShift-AP')
-
-    useDeviceStore.getState().setWifiApSsid(null)
-    expect(useDeviceStore.getState().wifiApSsid).toBeNull()
-  })
-
   it('setIsDayMode toggles day/night flag', () => {
     useDeviceStore.getState().setIsDayMode(true)
     expect(useDeviceStore.getState().isDayMode).toBe(true)
@@ -98,7 +89,6 @@ describe('useDeviceStore', () => {
     useDeviceStore.getState().setDevice('AA:BB:CC', 'CANShift-01')
     useDeviceStore.getState().setMode('ble')
     useDeviceStore.getState().setFirmwareStatus('1.2.3', true)
-    useDeviceStore.getState().setWifiApSsid('CANShift-AP')
     useDeviceStore.getState().setIsDayMode(true)
     useDeviceStore.getState().setError({ kind: 'unknown', message: 'boom' })
 
@@ -111,7 +101,6 @@ describe('useDeviceStore', () => {
     expect(state.deviceName).toBeNull()
     expect(state.firmwareVersion).toBeNull()
     expect(state.canHealthy).toBe(false)
-    expect(state.wifiApSsid).toBeNull()
     expect(state.isDayMode).toBeNull()
     expect(state.error).toBeNull()
   })

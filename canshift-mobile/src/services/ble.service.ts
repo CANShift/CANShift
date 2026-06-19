@@ -24,7 +24,6 @@ import { parseTelemetry } from './ble.validators'
 import { parseBleStatus } from '@tmbk/canshift-core'
 import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
-import { setWifiApPassword, clearWifiApPassword } from './wifi-ap-password'
 import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
 import { mapBleError, describeBleError } from './ble.errors'
 import { withGattRetry } from './ble.retry'
@@ -232,7 +231,6 @@ export class BleService {
     clearBuffer()
     useDeviceStore.getState().disconnect()
     await forgetDevice()
-    await clearWifiApPassword()
   }
 
   async pushSettings(settings: { brightness: number; sleep: number }): Promise<void> {
@@ -474,8 +472,6 @@ export class BleService {
         const s = result.status
         const store = useDeviceStore.getState()
         store.setFirmwareStatus(s.firmwareVersion ?? '?', s.canHealthy ?? false)
-        store.setWifiApSsid(s.apSsid ?? null)
-        void setWifiApPassword(s.apPassword ?? null)
         if (s.isDay !== undefined) store.setIsDayMode(s.isDay)
       }
     )
@@ -547,8 +543,6 @@ export class BleService {
       const status = result.status
       setFirmwareStatus(status.firmwareVersion ?? '?', status.canHealthy ?? false)
       const store = useDeviceStore.getState()
-      store.setWifiApSsid(status.apSsid ?? null)
-      void setWifiApPassword(status.apPassword ?? null)
       if (status.isDay !== undefined) {
         store.setIsDayMode(status.isDay)
       }
