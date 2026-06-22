@@ -41,7 +41,7 @@ jobs:
       run:
         working-directory: canshift-tuner
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
@@ -87,7 +87,7 @@ jobs:
       run:
         working-directory: canshift-docs
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
