@@ -1,5 +1,32 @@
 import { HEX_REGEX } from '../colors/hex.js'
 
+type Config = Record<string, unknown>
+
+export const asObject = (value: unknown): Config | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Config)
+    : undefined
+
+export const asObjectArray = (value: unknown): Config[] | undefined =>
+  Array.isArray(value) ? (value as Config[]) : undefined
+
+export const mapPages = (config: Config, version: string, fn: (page: Config) => Config): Config => {
+  const pages = asObjectArray(config.pages)
+  if (!pages) return { ...config, version }
+  return { ...config, version, pages: pages.map(fn) }
+}
+
+export const mapWidgets = (
+  config: Config,
+  version: string,
+  fn: (widget: Config) => Config
+): Config =>
+  mapPages(config, version, (page) => {
+    const widgets = asObjectArray(page.widgets)
+    if (!widgets) return page
+    return { ...page, widgets: widgets.map(fn) }
+  })
+
 export const deepClone = (value: Record<string, unknown>): Record<string, unknown> => {
   try {
     return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
