@@ -1,3 +1,5 @@
+export const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/
+
 export const SAFE_EXPR_REGEX = /^[\w\s+\-*/%<>=!&|^().]+$/
 
 export const MAX_EXPR_LENGTH = 128

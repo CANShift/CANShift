@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { HEX_REGEX } from '../colors/hex.js'
 import { CANVAS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps.js'
-import { SEMVER_PATTERN } from '../migrations/semver.js'
+import { SEMVER_PATTERN } from '../constants/validation.js'
 
 export const HexColorSchema = z
   .string()
