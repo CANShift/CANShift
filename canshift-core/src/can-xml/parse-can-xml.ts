@@ -1,3 +1,9 @@
+import {
+  DEFAULT_FRAME_TIMEOUT_MS,
+  MAX_EXPR_LENGTH,
+  SAFE_EXPR_REGEX,
+  isValidShiftCount,
+} from '../constants/validation.js'
 import { SignalDefSchema, type SignalDef } from '../schemas/signal.js'
 
 export interface ParseCanXmlResult {
@@ -94,9 +100,17 @@ const log2Int = (n: number): number | null => {
   return Number.isInteger(lg) ? lg : null
 }
 
-const normaliseExpr = (expr: string): string => {
+const hasOutOfRangeShift = (expr: string): boolean => {
+  for (const match of expr.matchAll(LEFT_SHIFT_RE)) {
+    if (!isValidShiftCount(parseInt(match[1] ?? '', 10))) return true
+  }
+  return false
+}
+
+const normaliseExpr = (expr: string): string | null => {
   const withoutBidi = expr.replace(BIDI_MARKS_RE, '')
   const upperV = withoutBidi.replace(/v/g, 'V')
+  if (hasOutOfRangeShift(upperV)) return null
   const expandedShifts = upperV.replace(
     LEFT_SHIFT_RE,
     (_, n: string) => `V*${String(2 ** parseInt(n, 10))}`
@@ -258,14 +272,14 @@ type ParseConversionResult = Conversion | ExprEmission | ParseRejection
 
 const CROSS_SIGNAL_REF_RE = /\bID\d+\b/i
 
-const SAFE_EXPR_VALIDATION_RE = /^[\w\s+\-*/%<>=!&|^().]+$/
-
 const tryEmitExpr = (raw: string): ExprEmission | ParseRejection => {
-  const cleaned = normaliseExpr(raw).replace(/(?<![<>=!])=(?!=)/g, '==')
+  const normalised = normaliseExpr(raw)
+  if (normalised === null) return { kind: 'invalid' }
+  const cleaned = normalised.replace(/(?<![<>=!])=(?!=)/g, '==')
   if (CROSS_SIGNAL_REF_RE.test(cleaned)) return { kind: 'cross-signal' }
-  if (!SAFE_EXPR_VALIDATION_RE.test(cleaned)) return { kind: 'invalid' }
+  if (!SAFE_EXPR_REGEX.test(cleaned)) return { kind: 'invalid' }
   const compact = cleaned.replace(/\s+/g, ' ').trim()
-  if (compact.length === 0 || compact.length > 128) return { kind: 'invalid' }
+  if (compact.length === 0 || compact.length > MAX_EXPR_LENGTH) return { kind: 'invalid' }
   return { kind: 'expr', expr: compact }
 }
 
@@ -274,7 +288,8 @@ const parseConversion = (expr: string | undefined): ParseConversionResult => {
   const stripped = stripOuterParens(expr.trim())
   const bitExtract = matchBitExtract(stripped)
   if (bitExtract) return bitExtract
-  const linear = tryLinearInV(normaliseExpr(stripped))
+  const normalised = normaliseExpr(stripped)
+  const linear = normalised === null ? null : tryLinearInV(normalised)
   if (linear) return linear
   return tryEmitExpr(stripped)
 }
@@ -334,7 +349,11 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
 
     const frameBigEndian = resolveEndian(frameAttrs.endianess ?? frameAttrs.endianness) ?? false
     const frameSignedDefault = frameAttrs.signed === 'true'
-    const timeoutMs = parseInt(frameAttrs.timeout ?? '2000', 10) || 2000
+    const parsedTimeout = parseInt(frameAttrs.timeout ?? '', 10)
+    const timeoutMs =
+      Number.isFinite(parsedTimeout) && parsedTimeout >= 0
+        ? parsedTimeout
+        : DEFAULT_FRAME_TIMEOUT_MS
 
     const valueRe = /<value\b([^>]*?)(?:\s*\/>|>\s*<\/value>)/g
     let valueMatch: RegExpExecArray | null
@@ -385,8 +404,8 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
       const exprText = conv.kind === 'expr' ? conv.expr : undefined
 
       const bitMask =
-        bitShift !== null
-          ? `0x${(1 << bitShift).toString(16).padStart(2, '0')}`
+        bitShift !== null && isValidShiftCount(bitShift)
+          ? `0x${(2 ** bitShift).toString(16).padStart(2, '0')}`
           : unit === 'bit' && !va.conversion
             ? '0x01'
             : undefined

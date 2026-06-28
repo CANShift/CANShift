@@ -364,6 +364,32 @@ describe('timeout', () => {
     )
     expect(signals[0]?.timeoutMs).toBe(2000)
   })
+
+  it('honours timeout="0" instead of falling back to the default', () => {
+    const { signals } = parseCanXml(
+      `<RealDashCAN version="2"><frames><frame id="0x520" timeout="0"><value name="s" offset="0" length="2"/></frame></frames></RealDashCAN>`
+    )
+    expect(signals[0]?.timeoutMs).toBe(0)
+  })
+})
+
+describe('shift bounds', () => {
+  it('rejects an out-of-range left shift in a conversion expression', () => {
+    const { signals, warnings } = parseCanXml(
+      simpleXml('<value name="x" offset="0" length="2" conversion="V&lt;&lt;99"/>')
+    )
+    expect(signals).toHaveLength(0)
+    expect(warnings.length).toBeGreaterThan(0)
+  })
+
+  it('accepts an in-range left shift (expanded to a linear scale)', () => {
+    const { signals, warnings } = parseCanXml(
+      simpleXml('<value name="x" offset="0" length="2" conversion="V&lt;&lt;3"/>')
+    )
+    expect(signals).toHaveLength(1)
+    expect(signals[0]?.scale).toBe(8)
+    expect(warnings).toHaveLength(0)
+  })
 })
 
 describe('schema validation', () => {

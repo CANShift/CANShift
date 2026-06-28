@@ -407,23 +407,6 @@ export const ECU_PROFILES: EcuProfile[] = [
 
 export const DEFAULT_PROFILE_ID = 'generic-blank' as const
 
-export const MAXXECU_SIGNAL_UNITS: Readonly<Record<string, string>> = {
-  rpm: 'rpm',
-  throttle_pos: '%',
-  map_kpa: 'kPa',
-  iat_c: '°C',
-  speed_kph: 'km/h',
-  lambda_1: 'AFR',
-  gear: '',
-  fuel_press_bar: 'bar',
-  coolant_temp_c: '°C',
-  oil_temp_c: '°C',
-  oil_press_bar: 'bar',
-  battery_volts: 'V',
-  flag_mil: '',
-  flag_launch_ctrl: '',
-  flag_flat_shift: '',
-  flag_anti_lag: '',
-  flag_traction_cut: '',
-  map_number: '',
-}
+export const MAXXECU_SIGNAL_UNITS: Readonly<Record<string, string>> = Object.fromEntries(
+  MAXXECU_SIGNALS.map((s) => [s.name, s.unit])
+)

@@ -1,4 +1,4 @@
-export const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/
+export { SEMVER_PATTERN } from '../constants/validation.js'
 
 const parseSemverTuple = (version: string): [number, number, number] => {
   const parts = version.split('.').map((p) => Number.parseInt(p, 10))
