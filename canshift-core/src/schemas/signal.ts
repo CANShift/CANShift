@@ -10,16 +10,13 @@ import {
   MAX_RAMP_STOPS,
   STRING_CAPS,
 } from '../constants/firmware-caps.js'
+import { MAX_EXPR_LENGTH, SAFE_EXPR_REGEX } from '../constants/validation.js'
 
 const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 
 const BIT_MASK_REGEX = /^0[xX][0-9a-fA-F]+$/
 
 const OUTBOUND_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
-
-const SAFE_EXPR_REGEX = /^[\w\s+\-*/%<>=!&|^().]+$/
-
-const MAX_EXPR_LENGTH = 128
 
 export const ColorRampStopSchema = z
   .object({

@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { HEX_REGEX } from '../colors/hex.js'
 import { CANVAS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps.js'
+import { SEMVER_PATTERN } from '../migrations/semver.js'
 
 export const HexColorSchema = z
   .string()
@@ -47,10 +48,9 @@ export const WidgetStyleSchema = z
   })
   .strict()
 
-const SEMVER_REGEX = /^\d+\.\d+\.\d+$/
 export const SemVerSchema = z
   .string()
-  .regex(SEMVER_REGEX, { message: 'must be a semver string "MAJOR.MINOR.PATCH"' })
+  .regex(SEMVER_PATTERN, { message: 'must be a semver string "MAJOR.MINOR.PATCH"' })
   .brand<'SemVer'>()
 
 export type HexColor = z.infer<typeof HexColorSchema>

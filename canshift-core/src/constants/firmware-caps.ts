@@ -17,7 +17,7 @@ export const CANVAS = {
 export const TOPBAR_HEIGHT = { MIN: 16, MAX: 60 } as const
 export const REV_LIMIT_RPM = { MIN: 1, MAX: 20000 } as const
 export const DECIMAL_PLACES = { MIN: 0, MAX: 4 } as const
-export const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
+export { HEX_REGEX as HEX_COLOR_REGEX } from '../colors/hex.js'
 
 export const CAN_RAW_DATA_MAX_HEX_CHARS = 16
 export const CAN_RAW_DATA_REGEX = /^([0-9a-fA-F]{2})*$/
