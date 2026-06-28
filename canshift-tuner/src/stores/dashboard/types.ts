@@ -43,6 +43,7 @@ export interface HistorySlice {
 
 export interface PagesSlice {
   addPage: (page: PageConfig) => void
+  duplicatePage: (pageId: string) => void
   removePage: (pageId: string) => void
   setDefaultPage: (pageId: string) => void
   updatePage: (pageId: string, patch: Partial<Omit<PageConfig, 'id' | 'widgets'>>) => void
