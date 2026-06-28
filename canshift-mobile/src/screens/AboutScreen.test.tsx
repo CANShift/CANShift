@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { render } from '@testing-library/react-native'
 import Markdown from 'react-native-markdown-display'
-import { classify, formatBytes, formatDate } from './AboutScreen'
+import { classify } from './AboutScreen'
+import { formatBytes, formatDate } from '../lib/format'
 
 const STABLE: import('@tmbk/canshift-core').ReleaseInfo = {
   version: '1.2.0',
