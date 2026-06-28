@@ -7,6 +7,7 @@ import { PageThumbnail } from './PageThumbnail'
 import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { createId } from '../utils/id'
 import { Button } from '@/components/ui/button'
 
 const Canvas = lazy(() => import('../components/editor/Canvas'))
@@ -16,10 +17,6 @@ const NEW_PAGE_BG = HexColorSchema.parse('#000000')
 
 const DEFAULT_PAGE_GLYPH = '★'
 const NON_DEFAULT_PAGE_GLYPH = '☆'
-
-const generateId = (prefix: string): string => {
-  return `${prefix}_${Date.now().toString(36)}`
-}
 
 interface PageListItemProps {
   page: PageConfig
@@ -284,8 +281,8 @@ const EditorRoute = () => {
     const originalIndex = pages.findIndex((p) => p.id === pageId)
     const newPage: PageConfig = {
       ...page,
-      id: generateId('page'),
-      widgets: page.widgets.map((w) => ({ ...w, id: generateId(w.type) })),
+      id: createId('page'),
+      widgets: page.widgets.map((w) => ({ ...w, id: createId(w.type) })),
     }
     const originalLength = pages.length
     addPage(newPage)
@@ -370,7 +367,7 @@ const EditorRoute = () => {
                 onClick={() => {
                   if (atCap) return
                   addPage({
-                    id: generateId('page'),
+                    id: createId('page'),
                     backgroundImage: null,
                     backgroundColor: NEW_PAGE_BG,
                     palette: { ...DEFAULT_PAGE_PALETTE },

@@ -1,6 +1,7 @@
 import type { ButtonAction, SingleActionButtonConfig } from '@tmbk/canshift-core'
 
-import { actionKey, newId } from '../../../../utils/list-keys'
+import { actionKey } from '../../../../utils/list-keys'
+import { newId } from '../../../../utils/id'
 import { Switch } from '@/components/ui/switch'
 import { Field, type ConfigFieldsProps } from '../shared'
 import { ActionRow } from './action-row'
