@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import * as SecureStore from 'expo-secure-store'
 import { readAppVersion } from '../lib/expo-version'
 import { isAllowedExternalUrl } from '../lib/safe-url'
+import { formatBytes, formatDate } from '../lib/format'
+import { ScreenHeader } from '../components/ScreenHeader'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, HitSlop, Radius, Spacing, Typography } from '../theme'
 import { useLatestRelease } from '../hooks/use-latest-release'
@@ -81,18 +83,6 @@ export const classify = (
   if (delta === 0) return { kind: 'up-to-date', current: currentRaw }
   if (delta < 0) return { kind: 'behind', current: currentRaw, latest: release.version }
   return { kind: 'ahead', current: currentRaw, latest: release.version }
-}
-
-export const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${String(bytes)} B`
-}
-
-export const formatDate = (iso: string): string => {
-  const ms = Date.parse(iso)
-  if (Number.isNaN(ms)) return iso
-  return new Date(ms).toLocaleString()
 }
 
 const loadPreReleaseToggle = async (): Promise<boolean> => {
@@ -210,18 +200,12 @@ export default function AboutScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            navigation.goBack()
-          }}
-          hitSlop={HitSlop.default}
-        >
-          <Text style={styles.back}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>ABOUT</Text>
-        <View style={{ width: 48 }} />
-      </View>
+      <ScreenHeader
+        title="ABOUT"
+        onBack={() => {
+          navigation.goBack()
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
@@ -481,22 +465,6 @@ const markdownStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  back: { fontSize: Typography.md, color: Colors.accent, width: 48 },
-  title: {
-    fontSize: Typography.sm,
-    fontWeight: '700',
-    color: Colors.textDim,
-    letterSpacing: 1,
-  },
   scroll: { padding: Spacing.lg, gap: Spacing.xl },
   card: {
     backgroundColor: Colors.surface,

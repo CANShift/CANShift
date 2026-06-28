@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'rea
 import Slider from '@react-native-community/slider'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
+import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
 import { useDeviceStore } from '../stores/device.store'
@@ -25,6 +25,8 @@ import {
   Section,
   Toast,
 } from '@/components/ui'
+import { ScreenHeader } from '../components/ScreenHeader'
+import { SegmentedControl } from '../components/SegmentedControl'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>
@@ -35,6 +37,11 @@ const SLEEP_OPTIONS: { label: string; value: number }[] = [
   { label: '30s', value: 30 },
   { label: '1m', value: 60 },
   { label: '5m', value: 300 },
+]
+
+const THEME_OPTIONS: { label: string; value: boolean }[] = [
+  { label: 'Night', value: false },
+  { label: 'Day', value: true },
 ]
 
 export default function SettingsScreen({ navigation }: Props) {
@@ -126,18 +133,12 @@ export default function SettingsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            navigation.goBack()
-          }}
-          hitSlop={HitSlop.default}
-        >
-          <Text style={styles.back}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>SCREEN SETTINGS</Text>
-        <View style={{ width: 48 }} />
-      </View>
+      <ScreenHeader
+        title="SCREEN SETTINGS"
+        onBack={() => {
+          navigation.goBack()
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <Section>
@@ -159,44 +160,18 @@ export default function SettingsScreen({ navigation }: Props) {
         </Section>
 
         <Section title="SLEEP">
-          <View style={styles.segRow}>
-            {SLEEP_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.segBtn, sleep === opt.value && styles.segBtnActive]}
-                onPress={() => {
-                  setSleep(opt.value)
-                }}
-              >
-                <Text style={[styles.segLabel, sleep === opt.value && styles.segLabelActive]}>
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <SegmentedControl options={SLEEP_OPTIONS} value={sleep} onChange={setSleep} />
         </Section>
 
         <Section title="THEME">
-          <View style={styles.segRow}>
-            <TouchableOpacity
-              style={[styles.segBtn, isDayMode === false && styles.segBtnActive]}
-              onPress={() => void handleSetDayNight(false)}
-              disabled={dayNightPending}
-            >
-              <Text style={[styles.segLabel, isDayMode === false && styles.segLabelActive]}>
-                Night
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.segBtn, isDayMode === true && styles.segBtnActive]}
-              onPress={() => void handleSetDayNight(true)}
-              disabled={dayNightPending}
-            >
-              <Text style={[styles.segLabel, isDayMode === true && styles.segLabelActive]}>
-                Day
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <SegmentedControl<boolean | null>
+            options={THEME_OPTIONS}
+            value={isDayMode}
+            onChange={(v) => {
+              if (v !== null) void handleSetDayNight(v)
+            }}
+            disabled={dayNightPending}
+          />
         </Section>
 
         <Section title="TOUCH">
@@ -251,36 +226,10 @@ export default function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  back: { fontSize: Typography.md, color: Colors.accent, width: 48 },
-  title: { fontSize: Typography.sm, fontWeight: '700', color: Colors.textDim, letterSpacing: 1 },
   scroll: { padding: Spacing.lg, gap: Spacing.xl },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   value: { fontSize: Typography.xs, color: Colors.text },
   slider: { width: '100%', height: 32 },
-  segRow: { flexDirection: 'row', gap: Spacing.sm },
-  segBtn: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    minHeight: 44,
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-  },
-  segBtnActive: { backgroundColor: Colors.accentDim, borderColor: Colors.accent },
-  segLabel: { fontSize: Typography.sm, color: Colors.textMuted },
-  segLabelActive: { color: Colors.accent, fontWeight: '600' },
   actionBtn: {
     paddingVertical: Spacing.sm,
     minHeight: 44,
