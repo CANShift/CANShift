@@ -18,6 +18,11 @@ const walkRegistry = (
   let current = fromVersion
 
   while (current !== toVersion) {
+    if (chain.length > registry.length) {
+      throw new Error(
+        `Migration walk from ${fromVersion} to ${toVersion} exceeded ${String(registry.length)} steps — cyclic or self-referential registry`
+      )
+    }
     const next = registry.find((m) => m.fromVersion === current)
     if (!next) {
       missing.push(`${current}→${toVersion}`)
@@ -28,6 +33,31 @@ const walkRegistry = (
   }
 
   return { chain, missing }
+}
+
+const assertUniqueFromVersions = (registry: MigrationRegistry): void => {
+  const seen = new Set<string>()
+  for (const migration of registry) {
+    if (seen.has(migration.fromVersion)) {
+      throw new Error(
+        `Migration registry has a duplicate fromVersion "${migration.fromVersion}" — ambiguous chain`
+      )
+    }
+    seen.add(migration.fromVersion)
+  }
+}
+
+export const assertVersionBump = (
+  produced: unknown,
+  fromVersion: string,
+  toVersion: string
+): void => {
+  if (produced !== toVersion) {
+    const got = typeof produced === 'string' ? `"${produced}"` : String(produced)
+    throw new Error(
+      `Migration ${fromVersion} → ${toVersion} did not set version to "${toVersion}" (got ${got})`
+    )
+  }
 }
 
 export const validateMigrationChain = (
@@ -42,6 +72,7 @@ export const validateMigrationChain = (
   ) {
     throw new Error(`downgrade not supported: ${fromVersion} → ${toVersion}`)
   }
+  assertUniqueFromVersions(registry)
   return walkRegistry(fromVersion, toVersion, registry).missing
 }
 
@@ -83,6 +114,8 @@ export const migrateConfig = (
     throw new Error(`downgrade not supported: ${currentVersion} → ${targetVersion}`)
   }
 
+  assertUniqueFromVersions(MIGRATIONS)
+
   const { chain, missing } = walkRegistry(currentVersion, targetVersion, MIGRATIONS)
   if (missing.length > 0) {
     throw new Error(`Migration chain incomplete: missing steps [${missing.join(', ')}]`)
@@ -90,6 +123,7 @@ export const migrateConfig = (
 
   for (const migration of chain) {
     current = migration.migrate(current)
+    assertVersionBump(current.version, migration.fromVersion, migration.toVersion)
     applied.push(`${migration.fromVersion} → ${migration.toVersion}`)
   }
 

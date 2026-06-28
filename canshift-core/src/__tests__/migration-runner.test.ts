@@ -4,6 +4,7 @@ import {
   validateMigrationChain,
 } from '../migrations/migration-runner.js'
 import type { MigrationRegistry } from '../migrations/migration-runner.js'
+import { assertVersionBump } from '../migrations/runner.js'
 import { CURRENT_SCHEMA_VERSION } from '../index.js'
 
 const makeButtonWidget = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -1619,5 +1620,47 @@ describe('migrateConfig — input isolation', () => {
     const { config: out } = migrateConfig(config, '1.5.0')
     expect(out).not.toBe(config)
     expect((out as { pages: unknown[] }).pages).not.toBe(config.pages)
+  })
+})
+
+describe('migration walk — malformed registry guards (#1647)', () => {
+  const identity = (c: Record<string, unknown>): Record<string, unknown> => c
+
+  it('rejects a duplicate fromVersion (ambiguous fork)', () => {
+    const registry: MigrationRegistry = [
+      { fromVersion: '1.0.0', toVersion: '1.1.0', migrate: identity },
+      { fromVersion: '1.0.0', toVersion: '1.5.0', migrate: identity },
+    ]
+    expect(() => validateMigrationChain('1.0.0', '1.1.0', registry)).toThrow(
+      /duplicate fromVersion/
+    )
+  })
+
+  it('throws instead of looping forever on a cyclic registry', () => {
+    const registry: MigrationRegistry = [
+      { fromVersion: '1.0.0', toVersion: '2.0.0', migrate: identity },
+      { fromVersion: '2.0.0', toVersion: '1.0.0', migrate: identity },
+    ]
+    expect(() => validateMigrationChain('1.0.0', '3.0.0', registry)).toThrow(/exceeded .* steps/)
+  })
+})
+
+describe('assertVersionBump (#1647)', () => {
+  it('throws when a migration forgets to bump version', () => {
+    expect(() => {
+      assertVersionBump('1.0.0', '1.0.0', '1.1.0')
+    }).toThrow(/did not set version/)
+  })
+
+  it('reports a non-string produced version', () => {
+    expect(() => {
+      assertVersionBump(undefined, '1.0.0', '1.1.0')
+    }).toThrow(/got undefined/)
+  })
+
+  it('passes when the produced version matches toVersion', () => {
+    expect(() => {
+      assertVersionBump('1.1.0', '1.0.0', '1.1.0')
+    }).not.toThrow()
   })
 })
