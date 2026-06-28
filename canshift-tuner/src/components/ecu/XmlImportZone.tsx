@@ -1,5 +1,6 @@
 import type { CSSProperties, DragEvent, ChangeEvent } from 'react'
 import { useRef, useState } from 'react'
+import { formatBytes } from '../../lib/format'
 
 export interface XmlImportZoneProps {
   loadedFileName: string | null
@@ -94,12 +95,6 @@ export const XmlImportZone = ({
       )}
     </div>
   )
-}
-
-const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${String(bytes)} B`
 }
 
 const zoneStyle = (dragging: boolean, hasFile: boolean): CSSProperties => ({
