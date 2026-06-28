@@ -7,6 +7,7 @@ import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
 import { useDeviceStore } from '../stores/device.store'
+import { log } from '../stores/log.store'
 import type { RootStackParamList } from '../navigation'
 import {
   BlePermissionDialog,
@@ -75,8 +76,11 @@ export default function SettingsScreen({ navigation }: Props) {
         setBrightness(current.brightness)
         setSleep(current.sleep)
       })
-      .catch(() => {
-        void 0
+      .catch((err: unknown) => {
+        log(
+          'warn',
+          `Failed to read settings from device — using defaults: ${err instanceof Error ? err.message : String(err)}`
+        )
       })
     return () => {
       cancelled = true
