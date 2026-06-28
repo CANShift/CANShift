@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import { formatBytes } from '../../lib/format'
+import { TogglePill } from '../ui/toggle-pill'
 
 export interface CatalogueItem {
   id: string
@@ -100,15 +102,15 @@ export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalog
           disabled={state.kind !== 'ready'}
         />
         <div style={sortPillsStyle}>
-          <SortPill active={sortKey === 'vendor'} onClick={() => setSortKey('vendor')}>
+          <TogglePill active={sortKey === 'vendor'} onClick={() => setSortKey('vendor')}>
             Vendor
-          </SortPill>
-          <SortPill active={sortKey === 'label'} onClick={() => setSortKey('label')}>
+          </TogglePill>
+          <TogglePill active={sortKey === 'label'} onClick={() => setSortKey('label')}>
             Name
-          </SortPill>
-          <SortPill active={sortKey === 'size'} onClick={() => setSortKey('size')}>
+          </TogglePill>
+          <TogglePill active={sortKey === 'size'} onClick={() => setSortKey('size')}>
             Size
-          </SortPill>
+          </TogglePill>
         </div>
       </div>
 
@@ -170,26 +172,6 @@ export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalog
   )
 }
 
-interface SortPillProps {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}
-
-const SortPill = ({ active, onClick, children }: SortPillProps) => {
-  return (
-    <button type="button" onClick={onClick} style={sortPillStyle(active)}>
-      {children}
-    </button>
-  )
-}
-
-const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${String(bytes)} B`
-}
-
 const wrapperStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -219,19 +201,6 @@ const sortPillsStyle: CSSProperties = {
   display: 'flex',
   gap: 4,
 }
-
-const sortPillStyle = (active: boolean): CSSProperties => ({
-  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
-  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-  borderRadius: 999,
-  padding: '2px 10px',
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-})
 
 const metaStyle: CSSProperties = {
   fontSize: 10,

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { TogglePill } from '../ui/toggle-pill'
 
 export type SortKey = 'id' | 'lastSeen' | 'rate' | 'count'
 
@@ -31,35 +32,19 @@ const sortLabelStyle: CSSProperties = {
   marginRight: 4,
 }
 
-const sortPillStyle = (active: boolean): CSSProperties => ({
-  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
-  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-  borderRadius: 999,
-  padding: '3px 12px',
-  fontSize: 11,
-  cursor: 'pointer',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-})
-
 export const SortBar = ({ sortKey, onChange }: SortBarProps) => (
   <div style={sortBarStyle}>
     <span style={sortLabelStyle}>Sort by</span>
-    {SORT_OPTIONS.map((o) => {
-      const active = o.key === sortKey
-      return (
-        <button
-          key={o.key}
-          type="button"
-          onClick={() => {
-            onChange(o.key)
-          }}
-          style={sortPillStyle(active)}
-        >
-          {o.label}
-        </button>
-      )
-    })}
+    {SORT_OPTIONS.map((o) => (
+      <TogglePill
+        key={o.key}
+        active={o.key === sortKey}
+        onClick={() => {
+          onChange(o.key)
+        }}
+      >
+        {o.label}
+      </TogglePill>
+    ))}
   </div>
 )

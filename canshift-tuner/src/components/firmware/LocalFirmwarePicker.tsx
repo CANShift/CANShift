@@ -4,11 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLogStore } from '../../stores/log.store'
 import { useFirmwareSelectionStore } from '../../stores/firmware-selection.store'
-import {
-  formatBytes,
-  LocalFirmwareError,
-  readFirmwareFile,
-} from '../../lib/firmware/local-firmware'
+import { LocalFirmwareError, readFirmwareFile } from '../../lib/firmware/local-firmware'
+import { formatBytes } from '../../lib/format'
 
 const SHA_PREFIX_CHARS = 12
 

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { HeapStatsEntry } from '../../stores/device.store'
 import { HeapStatsSparkline } from './HeapStatsSparkline'
+import { formatBytes } from '../../lib/format'
 
 export interface HeapStatsPanelProps {
   history: HeapStatsEntry[]
@@ -49,12 +50,6 @@ const Row = ({ label, value }: RowProps) => {
       <span style={valueStyle}>{value}</span>
     </div>
   )
-}
-
-const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${String(bytes)} B`
 }
 
 const formatFragmentationPct = (free: number, largest: number): string => {

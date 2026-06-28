@@ -13,7 +13,8 @@ import { useFirmwareReleases } from '../../hooks/useFirmwareReleases'
 import { useFirmwareSelectionStore } from '../../stores/firmware-selection.store'
 import { useLogStore } from '../../stores/log.store'
 import { downloadFirmwareAsset } from '../../lib/firmware/download'
-import { formatBytes } from '../../lib/firmware/local-firmware'
+import { formatBytes } from '../../lib/format'
+import { TogglePill } from '../ui/toggle-pill'
 import { findMergedAsset } from '../../lib/firmware/releases'
 
 type Channel = 'stable' | 'prerelease'
@@ -96,22 +97,18 @@ export const ReleasePicker = () => {
   return (
     <div style={wrapperStyle}>
       <div style={channelRowStyle}>
-        {CHANNEL_OPTIONS.map((opt) => {
-          const active = channel === opt.value
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                setChannel(opt.value)
-                setPickedTag(null)
-              }}
-              style={channelButtonStyle(active)}
-            >
-              {opt.label}
-            </button>
-          )
-        })}
+        {CHANNEL_OPTIONS.map((opt) => (
+          <TogglePill
+            key={opt.value}
+            active={channel === opt.value}
+            onClick={() => {
+              setChannel(opt.value)
+              setPickedTag(null)
+            }}
+          >
+            {opt.label}
+          </TogglePill>
+        ))}
         <div style={{ flex: 1 }} />
         <Button type="button" variant="ghost" size="sm" onClick={refresh}>
           Refresh
@@ -228,19 +225,6 @@ const channelRowStyle: CSSProperties = {
   alignItems: 'center',
   gap: 6,
 }
-
-const channelButtonStyle = (active: boolean): CSSProperties => ({
-  padding: '4px 12px',
-  fontSize: 11,
-  fontFamily: 'inherit',
-  borderRadius: 999,
-  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
-  cursor: 'pointer',
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-})
 
 const detailCardStyle: CSSProperties = {
   display: 'flex',

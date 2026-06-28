@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useDeviceStore } from '../../stores/device.store'
 import { RebootButton } from './RebootButton'
+import { formatBytes } from '../../lib/format'
 
 type Severity = 'critical' | 'warning'
 
@@ -179,11 +180,6 @@ const formatElapsed = (sec: number): string => {
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return `${String(m)} m ${String(s).padStart(2, '0')} s`
-}
-
-const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${String(bytes)} B`
 }
 
 const containerStyle: CSSProperties = {

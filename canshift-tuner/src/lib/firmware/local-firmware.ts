@@ -1,5 +1,6 @@
 import { computeSha256Hex } from './hash'
 import { verifyImageMagic } from './image'
+import { formatBytes } from '../format'
 
 export interface LocalFirmware {
   name: string
@@ -20,12 +21,6 @@ export class LocalFirmwareError extends Error {
 }
 
 export const FIRMWARE_MAX_BYTES = 16 * 1024 * 1024
-
-export const formatBytes = (size: number): string => {
-  if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MiB`
-  if (size >= 1024) return `${(size / 1024).toFixed(1)} KiB`
-  return `${String(size)} B`
-}
 
 export const readFirmwareFile = async (file: File): Promise<LocalFirmware> => {
   if (file.size === 0) {
