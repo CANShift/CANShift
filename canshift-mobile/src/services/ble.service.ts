@@ -21,7 +21,7 @@ import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
 import { useReconnectStore } from '../stores/reconnect.store'
 import { parseTelemetry } from './ble.validators'
-import { parseBleStatus } from '@tmbk/canshift-core'
+import { parseBleStatus, parseSettings } from '@tmbk/canshift-core'
 import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
@@ -131,8 +131,11 @@ export class BleService {
     if (this.connectedDevice) {
       try {
         await this.connectedDevice.cancelConnection()
-      } catch {
-        void 0
+      } catch (err) {
+        log(
+          'warn',
+          `dispose: cancelConnection failed: ${err instanceof Error ? err.message : String(err)}`
+        )
       }
       this.connectedDevice = null
     }
@@ -255,16 +258,12 @@ export class BleService {
       this.runGatt(() => device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_SETTINGS))
     )
     if (!char.value) return null
-    try {
-      const parsed = JSON.parse(decodeBase64(char.value)) as {
-        brightness?: number
-        sleep?: number
-      }
-      if (typeof parsed.brightness !== 'number' || typeof parsed.sleep !== 'number') return null
-      return { brightness: parsed.brightness, sleep: parsed.sleep }
-    } catch {
+    const result = parseSettings(decodeBase64(char.value))
+    if (result.kind !== 'ok') {
+      log('warn', `Ignoring malformed settings from device (${result.kind}) — using defaults`)
       return null
     }
+    return result.settings
   }
 
   async sendCmd(cmd: string, payload?: CmdPayload): Promise<void> {

@@ -16,6 +16,7 @@ import { readAppVersion } from '../lib/expo-version'
 import { isAllowedExternalUrl } from '../lib/safe-url'
 import { formatBytes, formatDate } from '../lib/format'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { log } from '../stores/log.store'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, HitSlop, Radius, Spacing, Typography } from '../theme'
 import { useLatestRelease } from '../hooks/use-latest-release'
@@ -90,7 +91,11 @@ const loadPreReleaseToggle = async (): Promise<boolean> => {
     const stored = await SecureStore.getItemAsync(PRE_RELEASE_TOGGLE_KEY)
     if (stored === null) return true
     return stored !== 'false'
-  } catch {
+  } catch (err) {
+    log(
+      'warn',
+      `Failed to load pre-release toggle — defaulting to on: ${err instanceof Error ? err.message : String(err)}`
+    )
     return true
   }
 }
@@ -98,8 +103,11 @@ const loadPreReleaseToggle = async (): Promise<boolean> => {
 const savePreReleaseToggle = async (value: boolean): Promise<void> => {
   try {
     await SecureStore.setItemAsync(PRE_RELEASE_TOGGLE_KEY, value ? 'true' : 'false')
-  } catch {
-    void 0
+  } catch (err) {
+    log(
+      'warn',
+      `Failed to persist pre-release toggle: ${err instanceof Error ? err.message : String(err)}`
+    )
   }
 }
 

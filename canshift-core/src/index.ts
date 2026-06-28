@@ -94,6 +94,9 @@ export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-s
 export type { BleStatus, BleStatusResult } from './schemas/ble-status.js'
 export { BLE_STATUS_MAX_STRING_LEN, parseBleStatus } from './schemas/ble-status.js'
 
+export type { Settings, SettingsResult } from './schemas/settings.js'
+export { SettingsWireSchema, parseSettings } from './schemas/settings.js'
+
 export type {
   LogFrame,
   CanFrame,
