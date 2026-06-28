@@ -35,6 +35,35 @@ interface FoundDevice {
   name: string
 }
 
+interface DeviceRowProps {
+  device: FoundDevice
+  connecting: boolean
+  onPress: (device: FoundDevice) => void
+}
+
+const DeviceRow = React.memo(({ device, connecting, onPress }: DeviceRowProps) => (
+  <TouchableOpacity
+    onPress={() => {
+      onPress(device)
+    }}
+    disabled={connecting}
+  >
+    <Card className="flex-row items-center gap-3">
+      <View style={styles.deviceDot} />
+      <View style={styles.deviceInfo}>
+        <Text style={styles.deviceName}>{device.name}</Text>
+        <Text style={styles.deviceId}>{device.id}</Text>
+      </View>
+      {connecting ? (
+        <ActivityIndicator color={Colors.accent} size="small" />
+      ) : (
+        <Text style={styles.arrow}>›</Text>
+      )}
+    </Card>
+  </TouchableOpacity>
+))
+DeviceRow.displayName = 'DeviceRow'
+
 const bleErrorMessage = (err: BleConnectionError): { title: string; body: string } => {
   switch (err.kind) {
     case 'bluetooth-off':
@@ -226,23 +255,11 @@ export default function ScanScreen({ navigation }: Props) {
               contentContainerStyle={styles.list}
               scrollEnabled={devices.length > 3}
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => void connectTo(item)}
-                  disabled={connectionState === 'connecting'}
-                >
-                  <Card className="flex-row items-center gap-3">
-                    <View style={styles.deviceDot} />
-                    <View style={styles.deviceInfo}>
-                      <Text style={styles.deviceName}>{item.name}</Text>
-                      <Text style={styles.deviceId}>{item.id}</Text>
-                    </View>
-                    {connectionState === 'connecting' ? (
-                      <ActivityIndicator color={Colors.accent} size="small" />
-                    ) : (
-                      <Text style={styles.arrow}>›</Text>
-                    )}
-                  </Card>
-                </TouchableOpacity>
+                <DeviceRow
+                  device={item}
+                  connecting={connectionState === 'connecting'}
+                  onPress={connectTo}
+                />
               )}
             />
           </View>

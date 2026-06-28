@@ -83,19 +83,13 @@ const toReleaseInfo = (raw: GitHubRelease): ReleaseInfo => {
   }
 }
 
-interface PersistedPayload {
-  release: ReleaseInfo
-  prerelease: ReleaseInfo | null
-  fetchedAt: number
-}
-
 interface CachedPayload {
   release: ReleaseInfo
   prerelease: ReleaseInfo | null
   fetchedAt: number
 }
 
-const isPersistedPayload = (value: unknown): value is PersistedPayload => {
+const isPersistedPayload = (value: unknown): value is CachedPayload => {
   if (typeof value !== 'object' || value === null) return false
   const p = value as Record<string, unknown>
   if (typeof p.fetchedAt !== 'number' || !Number.isFinite(p.fetchedAt)) return false
@@ -161,12 +155,7 @@ const loadPersistedCache = async (): Promise<CachedPayload | null> => {
 
 const savePersistedCache = async (payload: CachedPayload): Promise<void> => {
   try {
-    const persisted: PersistedPayload = {
-      release: payload.release,
-      prerelease: payload.prerelease,
-      fetchedAt: payload.fetchedAt,
-    }
-    await FileSystem.writeAsStringAsync(PERSISTENT_CACHE_PATH, JSON.stringify(persisted))
+    await FileSystem.writeAsStringAsync(PERSISTENT_CACHE_PATH, JSON.stringify(payload))
   } catch {
     void 0
   }
