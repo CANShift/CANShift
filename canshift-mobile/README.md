@@ -1,7 +1,7 @@
 # CANShift Mobile
 
-Companion app for the CANShift dashboard. Live BLE telemetry, settings push,
-and Wi-Fi OTA firmware updates from your phone. See the
+Companion app for the CANShift dashboard. Live BLE telemetry and settings
+push from your phone. See the
 [monorepo root](../README.md) for the full system overview.
 
 **Stack:** Expo SDK 52 (bare workflow via prebuild) · React Native 0.76.9 ·
@@ -45,7 +45,6 @@ Other scripts: `npm run lint`, `npm run typecheck`.
 | Graph | working | Rolling chart of one selected signal |
 | Log | working | In-app log viewer fed from `log.store` |
 | Settings | working | Day/night theme, brightness, sleep, touch calibration |
-| OTA | working | Wi-Fi firmware push to the dashboard at `192.168.4.1` |
 | Sim | working | `sim.service` generates synthetic telemetry without hardware |
 | Staleness watchdog | working | Marks data stale at 2 s without notification |
 | Android runtime perms | working | API ≥ 31 `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` flow (#296) |
@@ -65,13 +64,13 @@ src/
 ├── lib/               lap-detect, shared utilities
 ├── navigation/        index.tsx, ConnectedNavigator.tsx
 ├── screens/           ScanScreen, DashScreen, GraphScreen, LogScreen,
-│                      SettingsScreen, UpdateScreen, AboutScreen
+│                      SettingsScreen, AboutScreen
 ├── services/          ble.service.ts, ble.validators.ts, ble.errors.ts,
-│                      ble-permissions.ts, last-device.ts, ota.service.ts,
+│                      ble-permissions.ts, last-device.ts,
 │                      releases.service.ts, sim.service.ts,
 │                      track-telemetry-publisher.ts
 ├── stores/            device, signals, telemetry, log, reconnect,
-│                      ota-releases, track-session (Zustand)
+│                      track-session (Zustand)
 └── theme/             tokens consumed by NativeWind + StyleSheet bridges
 ```
 
@@ -99,10 +98,9 @@ Device-name filter on scan: `CANShift`.
 ### Characteristics
 
 - `BLE_CHAR_TELE` — read + notify; compact telemetry JSON pushed at ~10 Hz
-- `BLE_CHAR_STATUS` — read + notify; firmware version, CAN health, day/night, AP SSID
+- `BLE_CHAR_STATUS` — read + notify; firmware version, CAN health, day/night
 - `BLE_CHAR_SETTINGS` — read/write; brightness, sleep, rotation
-- `BLE_CHAR_CMD` — write; command channel (`set_day_night`, `start_calibration`,
-  `start_wifi_ap`, …)
+- `BLE_CHAR_CMD` — write; command channel (`set_day_night`, `start_calibration`, …)
 
 ### Telemetry key map
 
@@ -183,46 +181,12 @@ crosshairs and waits for the user to tap each point.
 
 ---
 
-## OTA over Wi-Fi (`192.168.4.1`)
-
-> Mobile **retains** the WiFi-OTA path as the in-car update flow. The
-> dash-hosted Studio (`canshift-studio-web/`) and the USB flasher
-> ([canshift.tmbk.ch](https://canshift.tmbk.ch), separate repo
-> [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher),
-> #1081) are independent install / update paths and do **not** affect this
-> flow — mobile and dash-hosted Studio coexist on different transports
-> (BLE + `POST /update` for mobile, browser + WS port 81 for the Studio
-> SPA served from the same firmware).
-
-OTA is **Wi-Fi only** — BLE only triggers it. Flow:
-
-1. App fetches `https://api.github.com/repos/tburkhalterr/CANShift/releases`
-   via `fetchReleases()` and lists stable, non-draft releases that ship a
-   `.bin` asset.
-2. User picks a release; binary is downloaded into the
-   `expo-file-system` cache directory (`canshift-<version>.bin`).
-3. App sends a BLE command to put the dashboard into Wi-Fi AP mode.
-4. The phone joins the dashboard's AP, then `pushFirmware()` POSTs the
-   binary to `http://192.168.4.1/ota` via `XMLHttpRequest` so we get
-   `xhr.upload.onprogress` events for the upload bar. Endpoint constant
-   `ESP32_OTA_PATH` lives in `src/constants/ota.ts`; firmware handler in
-   `canshift-firmware/src/hal/wifi/wifi_ap.cpp` (`handleOtaUpload` +
-   `handleOtaComplete`).
-
-The plaintext HTTP exception is scoped to that single host — the ESP32
-softAP has no TLS cert.
-
----
-
 ## iOS notes
 
 `app.json > expo.ios.infoPlist`:
 
 - `NSBluetoothAlwaysUsageDescription` / `NSBluetoothPeripheralUsageDescription`
   — required for BLE scan/connect.
-- `NSLocalNetworkUsageDescription` — required for OTA over the dashboard's AP.
-- `NSAppTransportSecurity > NSExceptionDomains > 192.168.4.1 >
-  NSExceptionAllowsInsecureHTTPLoads = true` — scoped plaintext HTTP for OTA.
 
 Bundle identifier: `ch.tmbk.canshift`. iPad disabled (`supportsTablet: false`).
 
