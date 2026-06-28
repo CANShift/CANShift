@@ -3,6 +3,7 @@ import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/size-tokens'
+import { createId } from '../../utils/id'
 
 const DEFAULT_WIDGET_STYLE = {
   primaryColor: HexColorSchema.parse('#FF4444'),
@@ -54,10 +55,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
   },
 ]
 
-const generateId = (type: string): string => {
-  return `${type}_${Date.now().toString(36)}`
-}
-
 interface WidgetPaletteProps {
   pageId: string
 }
@@ -69,7 +66,7 @@ const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
 
   const handleAdd = (item: PaletteItem) => {
     if (templateLocked) return
-    const id = generateId(item.type)
+    const id = createId(item.type)
 
     const baseConfig = (() => {
       switch (item.type) {

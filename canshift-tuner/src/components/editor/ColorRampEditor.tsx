@@ -9,7 +9,8 @@ import type { ColorRamp, ColorRampStop, HexColor, SensorKind } from '@tmbk/cansh
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { newId, rampStopKey } from '../../utils/list-keys'
+import { rampStopKey } from '../../utils/list-keys'
+import { newId } from '../../utils/id'
 
 const PREVIEW_SAMPLES = 80
 const ROW_LABEL_CLASS =
