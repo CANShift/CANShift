@@ -132,7 +132,10 @@ export class BleService {
       try {
         await this.connectedDevice.cancelConnection()
       } catch (err) {
-        log('warn', `dispose: cancelConnection failed: ${err instanceof Error ? err.message : String(err)}`)
+        log(
+          'warn',
+          `dispose: cancelConnection failed: ${err instanceof Error ? err.message : String(err)}`
+        )
       }
       this.connectedDevice = null
     }
