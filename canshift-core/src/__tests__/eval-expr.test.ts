@@ -126,3 +126,23 @@ describe('evalExpr — error paths', () => {
     expect(evalExpr('B7', ctx(0, []))).toBe(0)
   })
 })
+
+describe('evalExpr — untrusted input hardening (#1654)', () => {
+  it('does not throw on deeply nested parentheses within the 128-char cap', () => {
+    const depth = 60
+    const expr = '('.repeat(depth) + 'V' + ')'.repeat(depth)
+    expect(expr.length).toBeLessThanOrEqual(128)
+    expect(evalExpr(expr, ctx(7))).toBe(7)
+  })
+
+  it('returns 0 for an expression longer than the 128-char cap', () => {
+    const expr = '1+'.repeat(80) + '1'
+    expect(expr.length).toBeGreaterThan(128)
+    expect(evalExpr(expr, ctx(0))).toBe(0)
+  })
+
+  it('returns 0 (no throw) for malformed input', () => {
+    expect(evalExpr('((((', ctx(0))).toBe(0)
+    expect(evalExpr('@#$%', ctx(0))).toBe(0)
+  })
+})
