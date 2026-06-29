@@ -1,13 +1,35 @@
+import type { PageConfig } from '@tmbk/canshift-core'
 import { pushHistory } from './helpers'
+import { createId } from '../../utils/id'
 import type { PagesSlice, SliceCreator } from './types'
 
-export const createPagesSlice: SliceCreator<PagesSlice> = (set) => ({
+export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   addPage: (page) => {
     set((s) => {
       if (!s.config) return
       pushHistory(s)
       s.config.pages.push(page)
       s.selectedPageId = page.id
+      s.isDirty = true
+    })
+  },
+
+  duplicatePage: (pageId) => {
+    const config = get().config
+    if (!config) return
+    const idx = config.pages.findIndex((p) => p.id === pageId)
+    const original = config.pages[idx]
+    if (!original) return
+    const clone: PageConfig = {
+      ...original,
+      id: createId('page'),
+      widgets: original.widgets.map((w) => ({ ...w, id: createId(w.type) })),
+    }
+    set((s) => {
+      if (!s.config) return
+      pushHistory(s)
+      s.config.pages.splice(idx + 1, 0, clone)
+      s.selectedPageId = clone.id
       s.isDirty = true
     })
   },
