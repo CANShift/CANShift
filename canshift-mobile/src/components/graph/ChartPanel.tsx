@@ -1,13 +1,11 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
-import { useGraphTick } from '../../hooks/use-graph-tick'
 import { Colors, Typography, Spacing } from '../../theme'
 import { getSignalColor } from '../../theme/signal-colors'
-import { TelemetrySample, getRange, getWriteIndex } from '../../stores/telemetry.store'
 import { SIGNAL_META } from '../../constants/ble'
-import { ingestIncremental } from '../../screens/graph-buffer'
 import { SIGNAL_RANGE, buildPoints, formatTime, formatValue } from '../../lib/graph-math'
+import { useGraphSeries } from '../../hooks/use-graph-series'
 import { SignalPillRow } from './SignalPillRow'
 import { GraphControls } from './GraphControls'
 
@@ -35,55 +33,23 @@ export const ChartPanel = ({
   compact,
 }: ChartPanelProps) => {
   const [chartSize, setChartSize] = useState({ width: 300, height: 160 })
-  const tick = useGraphTick(paused)
-
-  const rollingRef = useRef<TelemetrySample[]>([])
-  const lastSeenIndexRef = useRef<number>(0)
 
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout
     setChartSize({ width, height })
   }, [])
 
-  const chartData = useMemo(() => {
-    const now = paused ? pausedAt : Date.now()
-    const windowStart = now - windowSecs * 1000
+  const { rolling, windowStart, windowEnd, hasData } = useGraphSeries(windowSecs, paused, pausedAt)
 
-    const currentWriteIndex = getWriteIndex()
-    if (currentWriteIndex < lastSeenIndexRef.current) {
-      rollingRef.current = []
-      lastSeenIndexRef.current = 0
-    }
-    const fresh =
-      currentWriteIndex > lastSeenIndexRef.current
-        ? getRange(lastSeenIndexRef.current, currentWriteIndex)
-        : []
-    lastSeenIndexRef.current = currentWriteIndex
-
-    const rolling = rollingRef.current
-    ingestIncremental(rolling, fresh, windowStart)
-
+  const lines = useMemo(() => {
     const latest: Record<string, number> = rolling[rolling.length - 1]?.v ?? {}
-    const lines = visibleSignals.map((key) => ({
+    return visibleSignals.map((key) => ({
       key,
       color: getSignalColor(key),
-      points: buildPoints(rolling, key, windowStart, now, chartSize.width, chartSize.height),
+      points: buildPoints(rolling, key, windowStart, windowEnd, chartSize.width, chartSize.height),
       latestValue: latest[key],
     }))
-    return {
-      lines,
-      windowStart,
-      windowEnd: now,
-      hasData: rolling.length > 1,
-    }
-  }, [tick, visibleSignals, windowSecs, paused, pausedAt, chartSize])
-
-  useEffect(() => {
-    const writeIdx = getWriteIndex()
-    const fromIdx = Math.max(0, writeIdx - 3000)
-    rollingRef.current = [...getRange(fromIdx, writeIdx)]
-    lastSeenIndexRef.current = writeIdx
-  }, [windowSecs])
+  }, [rolling, windowStart, windowEnd, visibleSignals, chartSize])
 
   const vGap = compact ? 2 : Spacing.xs
 
@@ -101,7 +67,7 @@ export const ChartPanel = ({
       />
 
       <View style={styles.chartContainer} onLayout={onChartLayout}>
-        {!chartData.hasData ? (
+        {!hasData ? (
           <View style={styles.noDataOverlay}>
             <Text style={styles.noDataText}>No telemetry data yet</Text>
           </View>
@@ -118,7 +84,7 @@ export const ChartPanel = ({
                 strokeWidth={1}
               />
             ))}
-            {chartData.lines.map((line) =>
+            {lines.map((line) =>
               line.points ? (
                 <Polyline
                   key={line.key}
@@ -131,7 +97,7 @@ export const ChartPanel = ({
                 />
               ) : null
             )}
-            {chartData.lines.map((line) => {
+            {lines.map((line) => {
               const range = SIGNAL_RANGE[line.key]
               if (!range || line.latestValue === undefined) return null
               const norm = Math.max(
@@ -158,16 +124,14 @@ export const ChartPanel = ({
       </View>
 
       <View style={styles.timeAxis}>
-        <Text style={styles.timeLabel}>{formatTime(chartData.windowStart)}</Text>
-        <Text style={styles.timeLabel}>
-          {formatTime((chartData.windowStart + chartData.windowEnd) / 2)}
-        </Text>
-        <Text style={styles.timeLabel}>{formatTime(chartData.windowEnd)}</Text>
+        <Text style={styles.timeLabel}>{formatTime(windowStart)}</Text>
+        <Text style={styles.timeLabel}>{formatTime((windowStart + windowEnd) / 2)}</Text>
+        <Text style={styles.timeLabel}>{formatTime(windowEnd)}</Text>
       </View>
 
-      {chartData.hasData && (
+      {hasData && (
         <View style={[styles.valuesGrid, { paddingVertical: vGap + 2 }]}>
-          {chartData.lines.map((line) => (
+          {lines.map((line) => (
             <View key={line.key} style={styles.valueChip}>
               <Text style={[styles.valueKey, { color: line.color }]}>
                 {SIGNAL_META[line.key]?.label ?? line.key}
