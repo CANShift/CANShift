@@ -1,26 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native'
-import Markdown from 'react-native-markdown-display'
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as SecureStore from 'expo-secure-store'
 import { readAppVersion } from '../lib/expo-version'
 import { isAllowedExternalUrl } from '../lib/safe-url'
-import { formatBytes, formatDate } from '../lib/format'
-import { classify, comparisonDetail } from '../lib/semver'
+import { classify } from '../lib/semver'
 import type { ComparisonKind } from '../lib/semver'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { ComparisonBadge } from '../components/about/ComparisonBadge'
+import { ErrorBlock } from '../components/about/ErrorBlock'
+import { ReleaseBody } from '../components/about/ReleaseBody'
+import { FooterRow } from '../components/about/FooterRow'
 import { log } from '../stores/log.store'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Colors, HitSlop, Radius, Spacing, Typography } from '../theme'
+import { Colors, Radius, Spacing, Typography } from '../theme'
 import { useLatestRelease } from '../hooks/use-latest-release'
 import type { LatestReleaseResult, ReleaseInfo } from '@tmbk/canshift-core'
 import type { RootStackParamList } from '../navigation'
@@ -54,14 +47,6 @@ const savePreReleaseToggle = async (value: boolean): Promise<void> => {
       `Failed to persist pre-release toggle: ${err instanceof Error ? err.message : String(err)}`
     )
   }
-}
-
-const COMPARISON_COPY: Record<ComparisonKind['kind'], { tone: string; label: string }> = {
-  unknown: { tone: Colors.textMuted, label: 'Version unknown' },
-  'up-to-date': { tone: Colors.success, label: 'Up to date' },
-  behind: { tone: Colors.warning, label: 'Update available' },
-  ahead: { tone: Colors.textDim, label: 'Ahead of latest stable' },
-  'on-prerelease': { tone: Colors.warning, label: 'Running a pre-release build' },
 }
 
 export default function AboutScreen({ navigation }: Props) {
@@ -194,207 +179,6 @@ export default function AboutScreen({ navigation }: Props) {
   )
 }
 
-const ComparisonBadge = ({ comparison }: { comparison: ComparisonKind }) => {
-  const { tone, label } = COMPARISON_COPY[comparison.kind]
-  const detail = comparisonDetail(comparison)
-  return (
-    <View style={[styles.badge, { borderColor: `${tone}55` }]}>
-      <View style={[styles.badgeDot, { backgroundColor: tone }]} />
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.badgeLabel, { color: tone }]}>{label}</Text>
-        {detail !== null && <Text style={styles.badgeDetail}>{detail}</Text>}
-      </View>
-    </View>
-  )
-}
-
-const ErrorBlock = ({ message }: { message: string }) => {
-  return (
-    <View style={styles.errorBlock}>
-      <Text style={styles.errorText}>Couldn&apos;t reach GitHub: {message}</Text>
-    </View>
-  )
-}
-
-const ReleaseBody = ({
-  release,
-  notesOpen,
-  onToggleNotes,
-  onOpenUrl,
-}: {
-  release: ReleaseInfo
-  notesOpen: boolean
-  onToggleNotes: () => void
-  onOpenUrl: (url: string) => void
-}) => {
-  return (
-    <>
-      <View style={styles.metaRow}>
-        <Text style={styles.metaText}>Published {formatDate(release.publishedAt)}</Text>
-        {release.prerelease && (
-          <View style={styles.preBadge}>
-            <Text style={styles.preBadgeText}>PRE-RELEASE</Text>
-          </View>
-        )}
-      </View>
-
-      <TouchableOpacity
-        style={styles.openLink}
-        onPress={() => {
-          onOpenUrl(release.htmlUrl)
-        }}
-        hitSlop={HitSlop.default}
-      >
-        <Text style={styles.openLinkText}>Open on GitHub ↗</Text>
-      </TouchableOpacity>
-
-      {release.notes.length > 0 && (
-        <View style={styles.notesWrap}>
-          <TouchableOpacity
-            style={styles.notesToggle}
-            onPress={onToggleNotes}
-            hitSlop={HitSlop.default}
-          >
-            <Text style={styles.notesToggleText}>
-              {notesOpen ? '▲ Hide release notes' : '▼ Show release notes'}
-            </Text>
-          </TouchableOpacity>
-          {notesOpen && (
-            <View style={styles.notesBlock}>
-              <Markdown
-                style={markdownStyles}
-                onLinkPress={(url) => {
-                  onOpenUrl(url)
-                  return false
-                }}
-              >
-                {release.notes}
-              </Markdown>
-            </View>
-          )}
-        </View>
-      )}
-
-      {release.assets.length > 0 && (
-        <View style={styles.assetsWrap}>
-          <Text style={styles.assetsTitle}>Assets</Text>
-          {release.assets.map((asset) => (
-            <TouchableOpacity
-              key={asset.downloadUrl}
-              style={styles.assetRow}
-              onPress={() => {
-                onOpenUrl(asset.downloadUrl)
-              }}
-              hitSlop={HitSlop.default}
-            >
-              <Text style={styles.assetName} numberOfLines={1}>
-                {asset.name}
-              </Text>
-              <Text style={styles.assetSize}>{formatBytes(asset.sizeBytes)}</Text>
-              <Text style={styles.assetOpen}>Open ↗</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </>
-  )
-}
-
-const FooterRow = ({
-  result,
-  isFetching,
-  onRefresh,
-  showPreRelease,
-  onTogglePreRelease,
-  hasPreRelease,
-}: {
-  result: LatestReleaseResult | null
-  isFetching: boolean
-  onRefresh: () => void
-  showPreRelease: boolean
-  onTogglePreRelease: (next: boolean) => void
-  hasPreRelease: boolean
-}) => {
-  return (
-    <View style={styles.footer}>
-      <TouchableOpacity
-        onPress={() => {
-          onTogglePreRelease(!showPreRelease)
-        }}
-        disabled={!hasPreRelease}
-        hitSlop={HitSlop.default}
-        style={styles.toggleRow}
-      >
-        <View
-          style={[
-            styles.toggleBox,
-            showPreRelease && hasPreRelease && styles.toggleBoxOn,
-            !hasPreRelease && styles.toggleBoxDisabled,
-          ]}
-        >
-          {showPreRelease && hasPreRelease && <Text style={styles.toggleCheck}>✓</Text>}
-        </View>
-        <Text style={[styles.toggleLabel, !hasPreRelease && styles.toggleLabelDisabled]}>
-          Show pre-release builds
-        </Text>
-      </TouchableOpacity>
-
-      {result !== null && (
-        <Text style={styles.lastChecked}>Last checked: {formatDate(result.fetchedAt)}</Text>
-      )}
-
-      <TouchableOpacity
-        style={[styles.refreshBtn, isFetching && styles.refreshBtnDisabled]}
-        onPress={onRefresh}
-        disabled={isFetching}
-        hitSlop={HitSlop.default}
-      >
-        <Text style={styles.refreshBtnText}>{isFetching ? 'Checking…' : 'Check now'}</Text>
-      </TouchableOpacity>
-    </View>
-  )
-}
-
-const markdownStyles = StyleSheet.create({
-  body: { color: Colors.text, fontSize: Typography.xs, lineHeight: 18 },
-  heading1: {
-    color: Colors.text,
-    fontSize: Typography.lg,
-    fontWeight: '700',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  heading2: {
-    color: Colors.text,
-    fontSize: Typography.md,
-    fontWeight: '700',
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  heading3: {
-    color: Colors.textDim,
-    fontSize: Typography.sm,
-    fontWeight: '600',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  bullet_list_icon: { color: Colors.textMuted, marginRight: 6 },
-  ordered_list_icon: { color: Colors.textMuted, marginRight: 6 },
-  code_inline: {
-    backgroundColor: Colors.bg,
-    color: Colors.accent,
-    fontFamily: 'Courier',
-    borderRadius: 3,
-    paddingHorizontal: 3,
-  },
-  fence: { backgroundColor: Colors.bg, borderRadius: 4, padding: 8, marginVertical: 4 },
-  code_block: { color: Colors.text, fontFamily: 'Courier', fontSize: Typography.xs },
-  link: { color: Colors.accent },
-  strong: { fontWeight: '700' },
-  em: { fontStyle: 'italic' },
-  hr: { backgroundColor: Colors.border, height: 1, marginVertical: 8 },
-})
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   scroll: { padding: Spacing.lg, gap: Spacing.xl },
@@ -430,122 +214,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.bg,
-    borderWidth: 1,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  badgeDot: { width: 8, height: 8, borderRadius: 4 },
-  badgeLabel: { fontSize: Typography.sm, fontWeight: '700' },
-  badgeDetail: {
-    fontSize: Typography.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
   placeholder: { alignItems: 'center', paddingVertical: Spacing.lg, gap: Spacing.sm },
   placeholderText: { fontSize: Typography.xs, color: Colors.textMuted },
-  errorBlock: {
-    backgroundColor: Colors.accentDim,
-    borderWidth: 1,
-    borderColor: Colors.accent,
-    borderRadius: Radius.sm,
-    padding: Spacing.md,
-  },
-  errorText: { fontSize: Typography.sm, color: Colors.accent },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
-  },
-  metaText: { fontSize: Typography.xs, color: Colors.textDim },
-  preBadge: {
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  preBadgeText: {
-    fontSize: 9,
-    color: Colors.warning,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  openLink: { alignSelf: 'flex-start' },
-  openLinkText: { fontSize: Typography.sm, color: Colors.accent, fontWeight: '600' },
-  notesWrap: { gap: Spacing.xs },
-  notesToggle: { alignSelf: 'flex-start' },
-  notesToggleText: { fontSize: Typography.xs, color: Colors.textMuted },
-  notesBlock: {
-    backgroundColor: Colors.bg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.sm,
-    padding: Spacing.md,
-  },
-  assetsWrap: { gap: Spacing.xs },
-  assetsTitle: {
-    fontSize: Typography.xs,
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  assetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  assetName: {
-    flex: 1,
-    fontSize: Typography.xs,
-    color: Colors.text,
-    fontFamily: 'Courier',
-  },
-  assetSize: { fontSize: Typography.xs, color: Colors.textMuted },
-  assetOpen: { fontSize: Typography.xs, color: Colors.accent, fontWeight: '600' },
-  footer: {
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  toggleBox: {
-    width: 20,
-    height: 20,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleBoxOn: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  toggleBoxDisabled: { opacity: 0.4 },
-  toggleCheck: { color: Colors.white, fontSize: 12, fontWeight: '700' },
-  toggleLabel: { fontSize: Typography.sm, color: Colors.text },
-  toggleLabelDisabled: { color: Colors.textMuted },
-  lastChecked: { fontSize: 10, color: Colors.textMuted },
-  refreshBtn: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    minHeight: 36,
-    justifyContent: 'center',
-  },
-  refreshBtnDisabled: { opacity: 0.5 },
-  refreshBtnText: { fontSize: Typography.sm, color: Colors.text },
 })
