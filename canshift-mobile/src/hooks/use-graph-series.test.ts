@@ -1,5 +1,5 @@
 import type { TelemetrySample } from '../stores/telemetry.store'
-import { ingestIncremental } from './graph-buffer'
+import { ingestIncremental } from './use-graph-series'
 
 const sample = (t: number, r: number): TelemetrySample => {
   return { t, v: { r } }
