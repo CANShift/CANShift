@@ -1,3 +1,5 @@
+import { MAX_EXPR_LENGTH } from '../constants/validation.js'
+
 export interface EvalContext {
   v: number
   bytes: readonly number[]
@@ -284,6 +286,7 @@ const parsePrimary = (s: ParseState): ExprFn | null => {
 }
 
 export const compileExpr = (expr: string): ExprFn | null => {
+  if (expr.length > MAX_EXPR_LENGTH) return null
   const tokens = tokenise(expr)
   if (!tokens || tokens.length === 0) return null
   const state: ParseState = { tokens, pos: 0 }
@@ -293,8 +296,12 @@ export const compileExpr = (expr: string): ExprFn | null => {
 }
 
 export const evalExpr = (expr: string, ctx: EvalContext): number => {
-  const fn = compileExpr(expr)
-  if (!fn) return 0
-  const result = fn(ctx)
-  return Number.isFinite(result) ? result : 0
+  try {
+    const fn = compileExpr(expr)
+    if (!fn) return 0
+    const result = fn(ctx)
+    return Number.isFinite(result) ? result : 0
+  } catch {
+    return 0
+  }
 }
