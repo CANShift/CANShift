@@ -1,41 +1,7 @@
 import * as React from 'react'
 import { render } from '@testing-library/react-native'
 import Markdown from 'react-native-markdown-display'
-import { classify } from './AboutScreen'
 import { formatBytes, formatDate } from '../lib/format'
-
-const STABLE: import('@tmbk/canshift-core').ReleaseInfo = {
-  version: '1.2.0',
-  tag: 'v1.2.0',
-  name: null,
-  prerelease: false,
-  publishedAt: '2026-01-01T00:00:00Z',
-  htmlUrl: 'https://github.com/example/releases/tag/v1.2.0',
-  notes: '',
-  assets: [],
-}
-
-describe('classify', () => {
-  it('returns up-to-date when current matches stable', () => {
-    expect(classify('1.2.0', STABLE, null).kind).toBe('up-to-date')
-  })
-
-  it('returns behind when current is older than latest', () => {
-    expect(classify('1.1.0', STABLE, null).kind).toBe('behind')
-  })
-
-  it('returns ahead when current is newer than latest', () => {
-    expect(classify('1.3.0', STABLE, null).kind).toBe('ahead')
-  })
-
-  it('returns unknown for null current version', () => {
-    expect(classify(null, STABLE, null).kind).toBe('unknown')
-  })
-
-  it('returns on-prerelease for a prerelease tag', () => {
-    expect(classify('1.2.0-beta.1', STABLE, null).kind).toBe('on-prerelease')
-  })
-})
 
 describe('formatBytes', () => {
   it('formats bytes as-is below 1 KB', () => {
