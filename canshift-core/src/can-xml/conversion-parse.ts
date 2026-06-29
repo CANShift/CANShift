@@ -1,4 +1,5 @@
 import { MAX_EXPR_LENGTH, SAFE_EXPR_REGEX, isValidShiftCount } from '../constants/validation.js'
+import { compileExpr } from './eval-expr.js'
 
 interface Conversion {
   kind: 'linear'
@@ -89,83 +90,16 @@ const tokeniseArith = (expr: string): string[] | null => {
   return tokens
 }
 
-type Evaluator = (v: number) => number
-
-const buildEvaluator = (tokens: string[]): Evaluator | null => {
-  let pos = 0
-
-  const parsePrimary = (): Evaluator | null => {
-    const t = tokens[pos]
-    if (t === undefined) return null
-    if (t === '(') {
-      pos++
-      const inner = parseAddSub()
-      if (inner === null || tokens[pos] !== ')') return null
-      pos++
-      return inner
-    }
-    if (t === '+') {
-      pos++
-      return parsePrimary()
-    }
-    if (t === '-') {
-      pos++
-      const inner = parsePrimary()
-      return inner === null ? null : (v) => -inner(v)
-    }
-    if (t === 'V') {
-      pos++
-      return (v) => v
-    }
-    const n = parseFloat(t)
-    if (!Number.isFinite(n)) return null
-    pos++
-    return () => n
-  }
-
-  const parseMulDiv = (): Evaluator | null => {
-    let left = parsePrimary()
-    while (left !== null && (tokens[pos] === '*' || tokens[pos] === '/')) {
-      const op = tokens[pos]
-      pos++
-      const right = parsePrimary()
-      if (right === null) return null
-      const L = left
-      const R = right
-      left = op === '*' ? (v) => L(v) * R(v) : (v) => L(v) / R(v)
-    }
-    return left
-  }
-
-  const parseAddSub = (): Evaluator | null => {
-    let left = parseMulDiv()
-    while (left !== null && (tokens[pos] === '+' || tokens[pos] === '-')) {
-      const op = tokens[pos]
-      pos++
-      const right = parseMulDiv()
-      if (right === null) return null
-      const L = left
-      const R = right
-      left = op === '+' ? (v) => L(v) + R(v) : (v) => L(v) - R(v)
-    }
-    return left
-  }
-
-  const root = parseAddSub()
-  if (root === null || pos !== tokens.length) return null
-  return root
-}
-
 const LINEARITY_EPSILON = 1e-9
 
 const tryLinearInV = (expr: string): Conversion | null => {
   const tokens = tokeniseArith(expr)
   if (!tokens || tokens.length === 0) return null
-  const evaluator = buildEvaluator(tokens)
-  if (!evaluator) return null
-  const a0 = evaluator(0)
-  const a1 = evaluator(1)
-  const a2 = evaluator(2)
+  const fn = compileExpr(expr)
+  if (!fn) return null
+  const a0 = fn({ v: 0, bytes: [] })
+  const a1 = fn({ v: 1, bytes: [] })
+  const a2 = fn({ v: 2, bytes: [] })
   if (!Number.isFinite(a0) || !Number.isFinite(a1) || !Number.isFinite(a2)) return null
   const scale = a1 - a0
   const offset = a0
