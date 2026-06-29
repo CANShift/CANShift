@@ -1,28 +1,15 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  LayoutChangeEvent,
-} from 'react-native'
+import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import { useGraphTick } from '../../hooks/use-graph-tick'
-import { Colors, Typography, Spacing, Radius, HitSlop } from '../../theme'
+import { Colors, Typography, Spacing } from '../../theme'
 import { getSignalColor } from '../../theme/signal-colors'
 import { TelemetrySample, getRange, getWriteIndex } from '../../stores/telemetry.store'
 import { SIGNAL_META } from '../../constants/ble'
 import { ingestIncremental } from '../../screens/graph-buffer'
 import { SIGNAL_RANGE, buildPoints, formatTime, formatValue } from '../../lib/graph-math'
-
-const WINDOW_OPTIONS = [
-  { label: '30s', value: 30 },
-  { label: '1m', value: 60 },
-  { label: '2m', value: 120 },
-]
-
-const ALL_SIGNALS = Object.keys(SIGNAL_META)
+import { SignalPillRow } from './SignalPillRow'
+import { GraphControls } from './GraphControls'
 
 export interface ChartPanelProps {
   visibleSignals: string[]
@@ -102,68 +89,16 @@ export const ChartPanel = ({
 
   return (
     <>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.pillRow, { paddingVertical: vGap }]}
-        style={styles.pillBar}
-      >
-        {ALL_SIGNALS.map((key) => {
-          const active = visibleSignals.includes(key)
-          const color = getSignalColor(key)
-          return (
-            <TouchableOpacity
-              key={key}
-              style={[styles.pill, active && { borderColor: color, backgroundColor: `${color}22` }]}
-              onPress={() => {
-                onToggleSignal(key)
-              }}
-              hitSlop={HitSlop.default}
-            >
-              <View
-                style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]}
-              />
-              <Text style={[styles.pillLabel, active && { color }]}>
-                {SIGNAL_META[key]?.label ?? key}
-              </Text>
-            </TouchableOpacity>
-          )
-        })}
-      </ScrollView>
+      <SignalPillRow visibleSignals={visibleSignals} onToggleSignal={onToggleSignal} vGap={vGap} />
 
-      <View style={[styles.controls, { paddingVertical: vGap }]}>
-        <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause} hitSlop={HitSlop.default}>
-          <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
-        </TouchableOpacity>
-        <View style={styles.windowRow}>
-          {WINDOW_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.windowBtn, windowSecs === opt.value && styles.windowBtnActive]}
-              onPress={() => {
-                onSetWindow(opt.value)
-              }}
-              hitSlop={HitSlop.default}
-            >
-              <Text
-                style={[
-                  styles.windowBtnText,
-                  windowSecs === opt.value && styles.windowBtnTextActive,
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TouchableOpacity
-          style={{ marginLeft: 'auto' }}
-          onPress={onClear}
-          hitSlop={HitSlop.default}
-        >
-          <Text style={styles.clearText}>Clear</Text>
-        </TouchableOpacity>
-      </View>
+      <GraphControls
+        paused={paused}
+        windowSecs={windowSecs}
+        onTogglePause={onTogglePause}
+        onSetWindow={onSetWindow}
+        onClear={onClear}
+        vGap={vGap}
+      />
 
       <View style={styles.chartContainer} onLayout={onChartLayout}>
         {!chartData.hasData ? (
@@ -249,56 +184,6 @@ export const ChartPanel = ({
 }
 
 const styles = StyleSheet.create({
-  pillBar: { borderBottomWidth: 1, borderBottomColor: Colors.border, maxHeight: 46 },
-  pillRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  pillDot: { width: 6, height: 6, borderRadius: 3 },
-  pillLabel: { fontSize: Typography.xs, color: Colors.textMuted },
-
-  controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  pauseBtn: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  pauseBtnText: { fontSize: Typography.xs, color: Colors.textDim },
-  windowRow: { flexDirection: 'row', gap: 2 },
-  windowBtn: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  windowBtnActive: { borderColor: Colors.accent, backgroundColor: Colors.accentDim },
-  windowBtnText: { fontSize: Typography.xs, color: Colors.textMuted },
-  windowBtnTextActive: { color: Colors.accent, fontWeight: '700' },
-  clearText: { fontSize: Typography.xs, color: Colors.textMuted },
-
   chartContainer: {
     flex: 1,
     backgroundColor: Colors.bgInset,
