@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as SecureStore from 'expo-secure-store'
 import { readAppVersion } from '../lib/expo-version'

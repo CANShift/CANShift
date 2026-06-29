@@ -35,7 +35,11 @@ export const ReleaseBody = ({ release, notesOpen, onToggleNotes, onOpenUrl }: Re
 
       {release.notes.length > 0 && (
         <View style={styles.notesWrap}>
-          <TouchableOpacity style={styles.notesToggle} onPress={onToggleNotes} hitSlop={HitSlop.default}>
+          <TouchableOpacity
+            style={styles.notesToggle}
+            onPress={onToggleNotes}
+            hitSlop={HitSlop.default}
+          >
             <Text style={styles.notesToggleText}>
               {notesOpen ? '▲ Hide release notes' : '▼ Show release notes'}
             </Text>
