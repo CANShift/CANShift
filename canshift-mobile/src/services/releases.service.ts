@@ -1,4 +1,6 @@
 import { File, Paths } from 'expo-file-system'
+import { z } from 'zod'
+import { ReleaseInfoSchema } from '@tmbk/canshift-core'
 import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 
 const GITHUB_OWNER = 'tburkhalterr'
@@ -16,60 +18,40 @@ const MAX_RETRY_AFTER_MS = 60_000
 
 const RETRY_BACKOFF_MS = 500
 
-interface GitHubAsset {
-  name: string
-  browser_download_url: string
-  size: number
-  content_type?: string
-  digest?: string | null
-}
+const GitHubAssetSchema = z.object({
+  name: z.string(),
+  browser_download_url: z.string(),
+  size: z.number().finite(),
+  content_type: z.string().optional(),
+  digest: z.string().nullable().optional(),
+})
 
-interface GitHubRelease {
-  tag_name: string
-  name: string | null
-  prerelease: boolean
-  published_at: string
-  body: string | null
-  html_url: string
-  assets: GitHubAsset[]
-}
+const GitHubReleaseSchema = z.object({
+  tag_name: z.string(),
+  name: z.string().nullable(),
+  prerelease: z.boolean(),
+  published_at: z.string(),
+  body: z.string().nullable(),
+  html_url: z.string(),
+  assets: z.array(z.unknown()),
+})
 
-const isAsset = (value: unknown): value is GitHubAsset => {
-  if (typeof value !== 'object' || value === null) return false
-  const a = value as Record<string, unknown>
-  if (typeof a.name !== 'string') return false
-  if (typeof a.browser_download_url !== 'string') return false
-  if (typeof a.size !== 'number' || !Number.isFinite(a.size)) return false
-  if (a.content_type !== undefined && typeof a.content_type !== 'string') return false
-  if (a.digest !== undefined && a.digest !== null && typeof a.digest !== 'string') return false
-  return true
-}
-
-const isRelease = (value: unknown): value is GitHubRelease => {
-  if (typeof value !== 'object' || value === null) return false
-  const r = value as Record<string, unknown>
-  if (typeof r.tag_name !== 'string') return false
-  if (r.name !== null && typeof r.name !== 'string') return false
-  if (typeof r.prerelease !== 'boolean') return false
-  if (typeof r.published_at !== 'string') return false
-  if (r.body !== null && typeof r.body !== 'string') return false
-  if (typeof r.html_url !== 'string') return false
-  if (!Array.isArray(r.assets)) return false
-  return true
-}
+type GitHubRelease = z.infer<typeof GitHubReleaseSchema>
 
 const toReleaseInfo = (raw: GitHubRelease): ReleaseInfo => {
-  const assets: ReleaseAsset[] = raw.assets.filter(isAsset).map((a) => {
-    const base = {
-      name: a.name,
-      downloadUrl: a.browser_download_url,
-      sizeBytes: a.size,
-    }
-    return {
-      ...base,
-      ...(a.content_type !== undefined ? { contentType: a.content_type } : {}),
-      ...(a.digest !== undefined ? { digest: a.digest } : {}),
-    }
+  const assets: ReleaseAsset[] = raw.assets.flatMap((value) => {
+    const parsed = GitHubAssetSchema.safeParse(value)
+    if (!parsed.success) return []
+    const a = parsed.data
+    return [
+      {
+        name: a.name,
+        downloadUrl: a.browser_download_url,
+        sizeBytes: a.size,
+        ...(a.content_type !== undefined ? { contentType: a.content_type } : {}),
+        ...(a.digest !== undefined ? { digest: a.digest } : {}),
+      },
+    ]
   })
   return {
     version: raw.tag_name.replace(/^v/, ''),
@@ -83,34 +65,13 @@ const toReleaseInfo = (raw: GitHubRelease): ReleaseInfo => {
   }
 }
 
-interface CachedPayload {
-  release: ReleaseInfo
-  prerelease: ReleaseInfo | null
-  fetchedAt: number
-}
+const CachedPayloadSchema = z.object({
+  release: ReleaseInfoSchema,
+  prerelease: ReleaseInfoSchema.nullable(),
+  fetchedAt: z.number().finite(),
+})
 
-const isPersistedPayload = (value: unknown): value is CachedPayload => {
-  if (typeof value !== 'object' || value === null) return false
-  const p = value as Record<string, unknown>
-  if (typeof p.fetchedAt !== 'number' || !Number.isFinite(p.fetchedAt)) return false
-  if (!isReleaseInfo(p.release)) return false
-  if (p.prerelease !== null && !isReleaseInfo(p.prerelease)) return false
-  return true
-}
-
-const isReleaseInfo = (value: unknown): value is ReleaseInfo => {
-  if (typeof value !== 'object' || value === null) return false
-  const r = value as Record<string, unknown>
-  if (typeof r.version !== 'string') return false
-  if (typeof r.tag !== 'string') return false
-  if (r.name !== null && typeof r.name !== 'string') return false
-  if (typeof r.notes !== 'string') return false
-  if (typeof r.publishedAt !== 'string') return false
-  if (typeof r.prerelease !== 'boolean') return false
-  if (typeof r.htmlUrl !== 'string') return false
-  if (!Array.isArray(r.assets)) return false
-  return true
-}
+type CachedPayload = z.infer<typeof CachedPayloadSchema>
 
 const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -142,13 +103,9 @@ const loadPersistedCache = async (): Promise<CachedPayload | null> => {
   try {
     const file = new File(Paths.document, PERSISTENT_CACHE_FILENAME)
     if (!file.exists) return null
-    const parsed: unknown = JSON.parse(await file.text())
-    if (!isPersistedPayload(parsed)) return null
-    return {
-      release: parsed.release,
-      prerelease: parsed.prerelease,
-      fetchedAt: parsed.fetchedAt,
-    }
+    const parsed = CachedPayloadSchema.safeParse(JSON.parse(await file.text()))
+    if (!parsed.success) return null
+    return parsed.data
   } catch {
     return null
   }
@@ -223,7 +180,10 @@ const fetchReleasesOnce = async (): Promise<FetchOutcome> => {
   if (!Array.isArray(payload)) {
     return { kind: 'invalid', message: 'GitHub response was not an array' }
   }
-  const releases = payload.filter(isRelease)
+  const releases = payload.flatMap((value): GitHubRelease[] => {
+    const parsed = GitHubReleaseSchema.safeParse(value)
+    return parsed.success ? [parsed.data] : []
+  })
   return { kind: 'ok', releases }
 }
 

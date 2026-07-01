@@ -13,16 +13,12 @@ export default function GraphScreen() {
   const { width, height } = useWindowDimensions()
   const isLandscape = width > height
 
-  const [paused, setPaused] = useState(false)
-  const [pausedAt, setPausedAt] = useState(0)
+  const [pausedAt, setPausedAt] = useState<number | null>(null)
   const [windowSecs, setWindowSecs] = useState(30)
   const [visibleSignals, setVisibleSignals] = useState<SignalKey[]>(DEFAULT_SIGNALS)
 
   const handleTogglePause = useCallback(() => {
-    setPaused((p) => {
-      if (!p) setPausedAt(Date.now())
-      return !p
-    })
+    setPausedAt((current) => (current === null ? Date.now() : null))
   }, [])
 
   const handleToggleSignal = useCallback((key: SignalKey) => {
@@ -34,8 +30,8 @@ export default function GraphScreen() {
   const panelProps: ChartPanelProps = {
     visibleSignals,
     windowSecs,
-    paused,
-    pausedAt,
+    paused: pausedAt !== null,
+    pausedAt: pausedAt ?? 0,
     onTogglePause: handleTogglePause,
     onSetWindow: setWindowSecs,
     onClear: clearBuffer,

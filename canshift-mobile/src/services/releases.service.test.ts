@@ -261,6 +261,45 @@ describe('ReleasesService', () => {
     expect(result.fromCache).toBe(true)
   })
 
+  it('rejects a persisted cache whose assets contain a malformed element and refetches', async () => {
+    mockFs.set(
+      `${MOCK_DOCUMENT_DIR}releases-cache.json`,
+      JSON.stringify({
+        release: {
+          version: '0.8.2',
+          tag: 'v0.8.2',
+          name: 'cached',
+          notes: '',
+          publishedAt: '2026-05-08T10:00:00Z',
+          prerelease: false,
+          htmlUrl: 'https://example.com',
+          assets: [{ name: 'firmware.bin' }],
+        },
+        prerelease: null,
+        fetchedAt: nowMs - 1000,
+      })
+    )
+    const fetchMock = makeFetchMock({ body: [makeRelease()] })
+    global.fetch = fetchMock
+    const svc = makeService()
+    const result = await svc.getLatest()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.release.version).toBe('0.8.3')
+    expect(result.fromCache).toBe(false)
+  })
+
+  it('rejects a persisted cache with a wrong top-level shape', async () => {
+    mockFs.set(`${MOCK_DOCUMENT_DIR}releases-cache.json`, JSON.stringify({ release: 'nope' }))
+    const fetchMock = makeFetchMock({ body: [makeRelease()] })
+    global.fetch = fetchMock
+    const svc = makeService()
+    const result = await svc.getLatest()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result.ok).toBe(true)
+  })
+
   it('keeps the cached payload alongside a failure result', async () => {
     global.fetch = makeFetchMock({ body: [makeRelease()] })
     const svc = makeService()

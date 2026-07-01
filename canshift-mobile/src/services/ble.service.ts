@@ -27,6 +27,7 @@ import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
 import { mapBleError, describeBleError } from './ble.errors'
 import { withGattRetry } from './ble.retry'
+import { BleReconnector } from './ble-reconnect'
 
 export interface ScanResult {
   id: string
@@ -62,44 +63,8 @@ export type BlePermissionState =
 
 const BLE_RESTORE_STATE_IDENTIFIER = 'canshift.ble.central'
 
-const RECONNECT_INITIAL_DELAY_MS = 1_000
-const RECONNECT_MAX_DELAY_MS = 30_000
-const RECONNECT_BACKOFF_FACTOR = 2
-const RECONNECT_JITTER_RATIO = 0.2
-const RECONNECT_MAX_ATTEMPTS = 6
-const RECONNECT_SCAN_TIMEOUT_MS = 5_000
 const STALENESS_CHECK_INTERVAL_MS = 500
 const STALENESS_THRESHOLD_MS = 2_000
-
-const isAborted = (signal: AbortSignal): boolean => {
-  return signal.aborted
-}
-
-const computeBackoffDelay = (attempt: number): number => {
-  const exponential = RECONNECT_INITIAL_DELAY_MS * Math.pow(RECONNECT_BACKOFF_FACTOR, attempt)
-  const capped = Math.min(exponential, RECONNECT_MAX_DELAY_MS)
-  const jitter = capped * RECONNECT_JITTER_RATIO * (Math.random() * 2 - 1)
-  return Math.max(0, Math.round(capped + jitter))
-}
-
-const sleepWithAbort = (ms: number, signal: AbortSignal): Promise<void> => {
-  return new Promise((resolve) => {
-    if (signal.aborted) {
-      resolve()
-      return
-    }
-    const handle = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-    const onAbort = () => {
-      clearTimeout(handle)
-      signal.removeEventListener('abort', onAbort)
-      resolve()
-    }
-    signal.addEventListener('abort', onAbort)
-  })
-}
 
 export interface BleServiceDeps {
   managerFactory?: () => BleManager
@@ -115,7 +80,7 @@ export class BleService {
   private teleSub: Subscription | null = null
   private statusSub: Subscription | null = null
   private disconnectSub: Subscription | null = null
-  private reconnectController: AbortController | null = null
+  private readonly reconnector: BleReconnector
 
   private userInitiatedDisconnect = false
 
@@ -131,6 +96,21 @@ export class BleService {
     const factory = deps.managerFactory ?? (() => this.createManager())
     this.manager = factory()
     this.requestAndroidPermissions = deps.requestAndroidPermissions ?? requestAndroidBlePermissions
+    this.reconnector = new BleReconnector({
+      connect: (deviceId) => this.connectInternal(deviceId),
+      startScan: (onResult) => {
+        void this.manager.startDeviceScan(
+          [BLE_SERVICE_UUID],
+          { allowDuplicates: false },
+          (error, device) => {
+            onResult(error, device?.id ?? null)
+          }
+        )
+      },
+      stopScan: () => {
+        void this.manager.stopDeviceScan()
+      },
+    })
   }
 
   private createManager(): BleManager {
@@ -353,129 +333,15 @@ export class BleService {
   }
 
   cancelReconnect(): void {
-    if (this.reconnectController) {
-      this.reconnectController.abort()
-      this.reconnectController = null
-    }
-    void this.manager.stopDeviceScan()
-    useReconnectStore.getState().stop()
+    this.reconnector.cancel()
   }
 
   async tryReconnectLastDevice(): Promise<boolean> {
     if (!(await this.isBlePowered())) return false
     const lastId = await getLastDevice()
     if (!lastId) return false
-    void this.runReconnectLoop(lastId)
+    void this.reconnector.run(lastId)
     return true
-  }
-
-  private async tryConnectAttempt(
-    deviceId: string,
-    attempt: number,
-    signal: AbortSignal
-  ): Promise<'aborted' | 'connected' | 'failed'> {
-    try {
-      await this.connectInternal(deviceId)
-      if (isAborted(signal)) return 'aborted'
-      log('info', `Auto-reconnect: succeeded on attempt ${String(attempt)}`)
-      return 'connected'
-    } catch (err) {
-      if (isAborted(signal)) return 'aborted'
-      const msg = err instanceof Error ? err.message : 'unknown error'
-      log('warn', `Auto-reconnect: connect failed on attempt ${String(attempt)}: ${msg}`)
-      return 'failed'
-    }
-  }
-
-  private async runReconnectLoop(deviceId: string): Promise<void> {
-    if (this.reconnectController) {
-      log('warn', 'Reconnect loop already running — ignoring duplicate trigger')
-      return
-    }
-
-    const controller = new AbortController()
-    this.reconnectController = controller
-    const { signal } = controller
-    const reconnectStore = useReconnectStore.getState()
-    reconnectStore.start(deviceId, RECONNECT_MAX_ATTEMPTS)
-
-    log('info', `Auto-reconnect: starting for ${deviceId}`)
-
-    try {
-      for (let attempt = 1; attempt <= RECONNECT_MAX_ATTEMPTS; attempt++) {
-        if (isAborted(signal)) return
-
-        const delay = computeBackoffDelay(attempt - 1)
-        useReconnectStore.getState().setAttempt(attempt)
-        log(
-          'info',
-          `Auto-reconnect: attempt ${String(attempt)}/${String(RECONNECT_MAX_ATTEMPTS)} in ${String(delay)}ms`
-        )
-        await sleepWithAbort(delay, signal)
-        if (isAborted(signal)) return
-
-        const found = await this.scanForDevice(deviceId, signal)
-        if (isAborted(signal)) return
-        if (!found) {
-          log('warn', `Auto-reconnect: device ${deviceId} not seen on attempt ${String(attempt)}`)
-          continue
-        }
-
-        const outcome = await this.tryConnectAttempt(deviceId, attempt, signal)
-        if (outcome === 'aborted' || outcome === 'connected') return
-      }
-
-      if (!isAborted(signal)) {
-        log('error', 'Auto-reconnect: max attempts reached, giving up')
-        useDeviceStore.getState().setError({ kind: 'not-in-range' })
-      }
-    } finally {
-      if (this.reconnectController === controller) {
-        this.reconnectController = null
-      }
-      useReconnectStore.getState().stop()
-    }
-  }
-
-  private scanForDevice(deviceId: string, signal: AbortSignal): Promise<boolean> {
-    return new Promise((resolve) => {
-      if (signal.aborted) {
-        resolve(false)
-        return
-      }
-
-      let settled = false
-      const finish = (found: boolean) => {
-        if (settled) return
-        settled = true
-        void this.manager.stopDeviceScan()
-        signal.removeEventListener('abort', onAbort)
-        clearTimeout(timer)
-        resolve(found)
-      }
-      const onAbort = () => {
-        finish(false)
-      }
-      signal.addEventListener('abort', onAbort)
-
-      const timer = setTimeout(() => {
-        finish(false)
-      }, RECONNECT_SCAN_TIMEOUT_MS)
-
-      void this.manager.startDeviceScan(
-        [BLE_SERVICE_UUID],
-        { allowDuplicates: false },
-        (error, device) => {
-          if (error) {
-            finish(false)
-            return
-          }
-          if (device?.id === deviceId) {
-            finish(true)
-          }
-        }
-      )
-    })
   }
 
   private bindDeviceSubscriptions(device: Device): void {
@@ -532,7 +398,7 @@ export class BleService {
         return
       }
       log('warn', `Device ${device.id} disconnected unexpectedly`)
-      void this.runReconnectLoop(device.id)
+      void this.reconnector.run(device.id)
     })
   }
 
@@ -565,7 +431,7 @@ export class BleService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       log('warn', `BLE restore: service discovery failed — falling back to reconnect: ${msg}`)
-      void this.runReconnectLoop(device.id)
+      void this.reconnector.run(device.id)
       return
     }
 

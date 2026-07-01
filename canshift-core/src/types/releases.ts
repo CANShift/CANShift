@@ -1,21 +1,27 @@
-export interface ReleaseAsset {
-  name: string
-  downloadUrl: string
-  sizeBytes: number
-  contentType?: string
-  digest?: string | null
-}
+import { z } from 'zod'
 
-export interface ReleaseInfo {
-  version: string
-  tag: string
-  name: string | null
-  notes: string
-  publishedAt: string
-  prerelease: boolean
-  htmlUrl: string
-  assets: ReleaseAsset[]
-}
+export const ReleaseAssetSchema = z.object({
+  name: z.string(),
+  downloadUrl: z.string(),
+  sizeBytes: z.number().finite(),
+  contentType: z.string().optional(),
+  digest: z.string().nullable().optional(),
+})
+
+export type ReleaseAsset = z.infer<typeof ReleaseAssetSchema>
+
+export const ReleaseInfoSchema = z.object({
+  version: z.string(),
+  tag: z.string(),
+  name: z.string().nullable(),
+  notes: z.string(),
+  publishedAt: z.string(),
+  prerelease: z.boolean(),
+  htmlUrl: z.string(),
+  assets: z.array(ReleaseAssetSchema),
+})
+
+export type ReleaseInfo = z.infer<typeof ReleaseInfoSchema>
 
 export type LatestReleaseResult =
   | {
