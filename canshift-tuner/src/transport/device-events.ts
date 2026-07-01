@@ -47,13 +47,8 @@ export const deviceEvents = {
         warnFrameDrop('can', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
         return
       }
-      if (!isRecord(frame)) return
-      const id = typeof frame.id === 'number' ? frame.id : null
-      const len = typeof frame.len === 'number' ? frame.len : null
-      const raw = Array.isArray(frame.d) ? frame.d : null
-      if (id === null || len === null || raw === null) return
-      const data = raw.filter((b): b is number => typeof b === 'number')
-      handler({ id, len, data })
+      const { id, len, d } = parsed.data
+      handler({ id, len, data: d })
     })
   },
 
@@ -64,11 +59,7 @@ export const deviceEvents = {
         warnFrameDrop('tele', parsed.error.issues[0]?.code ?? 'unknown', JSON.stringify(frame))
         return
       }
-      const flat: Record<string, number> = {}
-      for (const [k, v] of Object.entries(parsed.data.v)) {
-        if (typeof v === 'number') flat[k] = v
-      }
-      handler(flat)
+      handler(parsed.data.v)
     })
   },
 

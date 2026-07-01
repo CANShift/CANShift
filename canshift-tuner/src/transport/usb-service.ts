@@ -11,24 +11,13 @@ import {
   CMD_SET_DAY_NIGHT,
   CMD_TOGGLE_DAY_NIGHT,
 } from './opcodes'
-import type {
-  ConnectionStatus,
-  FirmwareIdentityResult,
-  PingResult,
-  PortInfo,
-  RawAck,
-  UsbResult,
-} from './types'
+import type { FirmwareIdentityResult, PingResult, RawAck, UsbResult } from './types'
 import { toUsbResult } from './types'
 import { getSerialClient } from './webserial-client'
 
 const OK: UsbResult = { success: true }
 
 export const usbService = {
-  listPorts: (): Promise<PortInfo[]> => Promise.resolve([]),
-  connect: (_portPath: string): Promise<UsbResult> => Promise.resolve(OK),
-  disconnect: (): Promise<UsbResult> => Promise.resolve(OK),
-
   pushConfig: async (config: DashboardConfig): Promise<UsbResult> => {
     const result = await getSerialClient().send(
       CMD_PUSH_CONFIG,
@@ -55,15 +44,6 @@ export const usbService = {
   pushScreenSettings: async (settings: ScreenSettings): Promise<UsbResult> => {
     const result = await getSerialClient().send(CMD_SCREEN_SETTINGS, { ...settings })
     return toUsbResult(result)
-  },
-
-  getStatus: (): Promise<ConnectionStatus> => {
-    const client = getSerialClient()
-    return Promise.resolve({
-      connected: client.getStatus() === 'connected',
-      portPath: null,
-      firmwareVersion: null,
-    })
   },
 
   ping: async (timeoutMs = 1_500): Promise<PingResult> => {

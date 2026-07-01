@@ -16,21 +16,11 @@ export type AlignDirection = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 
 
 export interface LifecycleSlice {
   config: DashboardConfig | null
-  filePath: string | null
   isDirty: boolean
-  loadedFromDemoFallback: boolean
-  pendingDeviceConfig: DashboardConfig | null
 
-  setConfig: (config: DashboardConfig, filePath?: string) => void
-  setEcuProfileKey: (key: string) => void
+  setConfig: (config: DashboardConfig) => void
   setTargetProfile: (id: ScreenProfileId) => void
-  loadImported: (config: DashboardConfig) => void
   loadFromDeviceOrDemo: (deviceConfig: DashboardConfig | null) => LoadFromDeviceOrDemoResult
-  stagePendingDeviceConfig: (deviceConfig: DashboardConfig) => void
-  acceptPendingDeviceConfig: () => void
-  dismissPendingDeviceConfig: () => void
-  clearDemoFallback: () => void
-  markSaved: (filePath: string) => void
   markPushed: () => void
 }
 

@@ -43,16 +43,11 @@ export const useLiveSignals = (): Record<string, number> => {
     if (!connected || simulationMode) return
     setValues({})
     lastSignalCommitRef.current = 0
-    const unsubscribe = deviceEvents.onSignal((payload: unknown) => {
-      if (typeof payload !== 'object' || payload === null) return
+    const unsubscribe = deviceEvents.onSignal((payload) => {
       const now = performance.now()
       if (now - lastSignalCommitRef.current < LIVE_SIGNAL_THROTTLE_MS) return
       lastSignalCommitRef.current = now
-      const flat: Record<string, number> = {}
-      for (const [k, v] of Object.entries(payload as Record<string, unknown>)) {
-        if (typeof v === 'number') flat[k] = v
-      }
-      setValues(flat)
+      setValues(payload)
     })
     return unsubscribe
   }, [connected, simulationMode])

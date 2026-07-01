@@ -7,14 +7,6 @@ export type Transport = 'usb'
 
 export type BurnPhase = 'idle' | 'pushing' | 'rebooting' | 'done'
 
-export type FirmwareCheck =
-  | { kind: 'idle' }
-  | { kind: 'probing' }
-  | { kind: 'no_firmware' }
-  | { kind: 'up_to_date'; version: string; checkedAt: number }
-  | { kind: 'update_available'; version: string; latestVersion: string; checkedAt: number }
-  | { kind: 'check_failed'; version: string; checkedAt: number }
-
 export type FirmwareCompat =
   | { kind: 'unknown' }
   | { kind: 'compatible'; protocol: number }
@@ -50,15 +42,11 @@ interface DeviceState {
   simulationMode: boolean
   simulationDismissed: boolean
 
-  firmwareCheck: FirmwareCheck
-
   firmwareCompat: FirmwareCompat
 
   firmwareLiveness: FirmwareLiveness
 
   heapStats: HeapStatsEntry[]
-
-  firmwareCheckTick: number
 
   isDayMode: boolean | null
 
@@ -69,12 +57,10 @@ interface DeviceState {
   setError: (message: string) => void
   clearError: () => void
   setFirmwareVersion: (version: string | null) => void
-  setFirmwareCheck: (check: FirmwareCheck) => void
   setFirmwareCompat: (compat: FirmwareCompat) => void
   setFirmwareLiveness: (liveness: FirmwareLiveness) => void
   pushHeapStats: (entry: Omit<HeapStatsEntry, 'receivedAt'>) => void
   clearHeapStats: () => void
-  requestFirmwareRecheck: () => void
   setIsDayMode: (isDay: boolean | null) => void
   enterSimulation: () => void
   exitSimulation: () => void
@@ -84,32 +70,6 @@ interface DeviceState {
 
   burnPhase: BurnPhase
   setBurnPhase: (phase: BurnPhase) => void
-
-  flashing: boolean
-  setFlashing: (flashing: boolean) => void
-
-  manualDisconnect: boolean
-  setManualDisconnect: (manual: boolean) => void
-}
-
-const MANUAL_DISCONNECT_KEY = 'canshift:manual-disconnect'
-
-const readManualDisconnect = (): boolean => {
-  try {
-    return sessionStorage.getItem(MANUAL_DISCONNECT_KEY) === '1'
-  } catch (err) {
-    console.warn('[device.store] sessionStorage read failed', err)
-    return false
-  }
-}
-
-const writeManualDisconnect = (flag: boolean): void => {
-  try {
-    if (flag) sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1')
-    else sessionStorage.removeItem(MANUAL_DISCONNECT_KEY)
-  } catch (err) {
-    console.warn('[device.store] sessionStorage write failed', err)
-  }
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -123,16 +83,12 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   syncing: false,
   simulationMode: false,
   simulationDismissed: false,
-  firmwareCheck: { kind: 'idle' },
-  firmwareCheckTick: 0,
   firmwareCompat: { kind: 'unknown' },
   firmwareLiveness: { kind: 'unknown' },
   heapStats: [],
   isDayMode: null,
   lastPushedConfig: null,
   burnPhase: 'idle',
-  flashing: false,
-  manualDisconnect: readManualDisconnect(),
 
   setConnected: (portPath) => {
     set({
@@ -155,8 +111,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       syncing: false,
       isDayMode: null,
       firmwareVersion: null,
-      firmwareCheck: { kind: 'idle' },
-      firmwareCheckTick: 0,
       firmwareCompat: { kind: 'unknown' },
       firmwareLiveness: { kind: 'unknown' },
       heapStats: [],
@@ -192,10 +146,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
     set({ firmwareVersion: version })
   },
 
-  setFirmwareCheck: (check) => {
-    set({ firmwareCheck: check })
-  },
-
   setFirmwareCompat: (compat) => {
     set({ firmwareCompat: compat })
   },
@@ -216,10 +166,6 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   clearHeapStats: () => {
     set({ heapStats: [] })
-  },
-
-  requestFirmwareRecheck: () => {
-    set((s) => ({ firmwareCheckTick: s.firmwareCheckTick + 1 }))
   },
 
   setIsDayMode: (isDay) => {
@@ -254,14 +200,5 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setBurnPhase: (phase) => {
     set({ burnPhase: phase })
-  },
-
-  setFlashing: (flashing) => {
-    set({ flashing })
-  },
-
-  setManualDisconnect: (manual) => {
-    writeManualDisconnect(manual)
-    set({ manualDisconnect: manual })
   },
 }))
