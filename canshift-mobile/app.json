@@ -3,6 +3,7 @@
     "name": "CANShift",
     "slug": "canshift-mobile",
     "version": "0.1.0",
+    "scheme": "canshift",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
