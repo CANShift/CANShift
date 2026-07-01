@@ -33,6 +33,23 @@ export interface ScanResult {
   name: string
 }
 
+let s_bleNativeAvailable = true
+
+export const isBleAvailable = (): boolean => s_bleNativeAvailable
+
+const createInertBleManager = (): BleManager => {
+  const unavailable = (): Promise<never> =>
+    Promise.reject(new Error('Bluetooth is unavailable in this build — use a development build.'))
+  const inert = {
+    state: () => Promise.resolve(State.PoweredOff),
+    startDeviceScan: () => undefined,
+    stopDeviceScan: () => undefined,
+    connectToDevice: () => unavailable(),
+    destroy: () => Promise.resolve(),
+  }
+  return inert as unknown as BleManager
+}
+
 export type CmdPayload = Record<string, boolean | number | string>
 
 export type BlePermissionState =
@@ -111,17 +128,27 @@ export class BleService {
   }
 
   constructor(deps: BleServiceDeps = {}) {
-    const factory =
-      deps.managerFactory ??
-      (() =>
-        new BleManager({
-          restoreStateIdentifier: BLE_RESTORE_STATE_IDENTIFIER,
-          restoreStateFunction: (restoredState) => {
-            this.handleRestoredState(restoredState)
-          },
-        }))
+    const factory = deps.managerFactory ?? (() => this.createManager())
     this.manager = factory()
     this.requestAndroidPermissions = deps.requestAndroidPermissions ?? requestAndroidBlePermissions
+  }
+
+  private createManager(): BleManager {
+    try {
+      return new BleManager({
+        restoreStateIdentifier: BLE_RESTORE_STATE_IDENTIFIER,
+        restoreStateFunction: (restoredState) => {
+          this.handleRestoredState(restoredState)
+        },
+      })
+    } catch (err) {
+      s_bleNativeAvailable = false
+      log(
+        'warn',
+        `BLE native module unavailable (Expo Go?) — Bluetooth disabled: ${err instanceof Error ? err.message : String(err)}`
+      )
+      return createInertBleManager()
+    }
   }
 
   async dispose(): Promise<void> {
