@@ -15,8 +15,9 @@ describe('BleStatusWireSchema', () => {
     expect(BleStatusWireSchema.parse(wire)).toEqual(wire)
   })
 
-  it('rejects extra wire fields (strict)', () => {
-    expect(() => BleStatusWireSchema.parse({ ver: '1.0.0', unexpected: 'x' })).toThrow()
+  it('tolerates unknown wire fields (passthrough)', () => {
+    const parsed = BleStatusWireSchema.parse({ ver: '1.0.0', unexpected: 'x' })
+    expect(parsed.ver).toBe('1.0.0')
   })
 
   it('rejects strings longer than the cap', () => {
@@ -119,26 +120,28 @@ describe('parseBleStatus', () => {
     }
   })
 
-  it('returns kind="wrong_shape" with Zod issues when the object fails strict schema', () => {
+  it('accepts payloads carrying unknown fields from newer firmware', () => {
     const extra = parseBleStatus('{"ver":"1.0","junk":1}')
-    expect(extra.kind).toBe('wrong_shape')
-    if (extra.kind === 'wrong_shape') {
-      expect(extra.issues.length).toBeGreaterThan(0)
-      expect(extra.issues[0]).toHaveProperty('code')
-      expect(extra.issues[0]).toHaveProperty('path')
+    expect(extra.kind).toBe('ok')
+    if (extra.kind === 'ok') {
+      expect(extra.status).toEqual({ firmwareVersion: '1.0' })
     }
+  })
 
+  it('returns kind="wrong_shape" with Zod issues when a known field has the wrong type', () => {
     const badType = parseBleStatus('{"can":"not a number"}')
     expect(badType.kind).toBe('wrong_shape')
     if (badType.kind === 'wrong_shape') {
       expect(badType.issues.length).toBeGreaterThan(0)
+      expect(badType.issues[0]).toHaveProperty('code')
+      expect(badType.issues[0]).toHaveProperty('path')
     }
   })
 
   it('discriminates the three failure cases the old null-return collapsed', () => {
     const malformed = parseBleStatus('{not-json')
     const wrongType = parseBleStatus('123')
-    const wrongShape = parseBleStatus('{"unknown":"x"}')
+    const wrongShape = parseBleStatus('{"can":2}')
     expect(malformed.kind).toBe('invalid_json')
     expect(wrongType.kind).toBe('not_an_object')
     expect(wrongShape.kind).toBe('wrong_shape')

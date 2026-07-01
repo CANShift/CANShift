@@ -12,7 +12,7 @@ export const BleStatusWireSchema = z
     can: ZeroOrOneSchema.optional(),
     is_day: ZeroOrOneSchema.optional(),
   })
-  .strict()
+  .passthrough()
 
 export type BleStatusWire = z.infer<typeof BleStatusWireSchema>
 

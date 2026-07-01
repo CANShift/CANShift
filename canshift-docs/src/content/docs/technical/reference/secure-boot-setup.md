@@ -34,7 +34,7 @@ by an operator, in a controlled environment.
 | CI build of `[env:secure]` | Non-blocking job `firmware-secure-build` in `.github/workflows/ci.yml`, gated on `SECURE_BOOT_SIGNING_KEY_TEST` repo secret being present (otherwise skips with a notice) |
 | Project signing key | **Not yet generated.** Run `scripts/generate_keys.sh` on a controlled workstation |
 | First-flash on a real chip | **Not yet performed.** Gated on sacrificial-board QA |
-| `canshift-flasher` signed-build support | **Not yet.** Browser flasher writes raw bytes — signed flashing is out of scope for the standalone flasher today |
+| Tuner USB-flasher signed-build support | **Not yet.** The built-in browser flasher writes raw bytes — signed flashing is out of scope for it today |
 
 Everything below this point is the operational reference for when those
 remaining items are picked up.
@@ -531,15 +531,13 @@ follow-up that runs on a dedicated, known-disposable chip.
   if a release labelled `security:remote-exploit-fix` ships without
   bumping the floor, so the per-release ratchet does not depend on
   reviewer memory.
-- **`canshift-flasher` signed-build support.** The standalone browser
-  flasher writes raw bytes via esptool — it has no `write_flash --encrypt`
-  path, no signed-bootloader awareness, and no `nvs_keys` partition
-  handling. Signed builds today are flashable only via
+- **Tuner USB-flasher signed-build support.** The built-in browser
+  flasher writes raw bytes via `esptool-js` — it has no `write_flash
+  --encrypt` path, no signed-bootloader awareness, and no `nvs_keys`
+  partition handling. Signed builds today are flashable only via
   `scripts/secure_boot_first_flash.sh` on a controlled workstation. A
-  v2 of the flasher would need to pre-encrypt payloads on the host side
-  before pushing them through Web Serial. Tracked as a separate-repo
-  follow-up; file an issue in
-  [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher)
+  future version of the flasher would need to pre-encrypt payloads on
+  the host side before pushing them through Web Serial; file an issue
   when the project commits to the secure-boot rollout on real chips.
 - **HSM-backed signing.** `espsecure.py` 4.x does not natively support
   HSM. The wrapper that pre-computes the digest and splices the

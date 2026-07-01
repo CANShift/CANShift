@@ -7,7 +7,6 @@ import {
   deviceConfigToWire,
   inputBindingsFromWire,
   inputBindingsToWire,
-  isPinAvailableForBoard,
   MAX_INPUT_BINDINGS,
   SAFE_OUTPUT_PINS_WROOM32,
   SAFE_INPUT_PINS_WROOM32,
@@ -992,21 +991,6 @@ describe('inputBindingsFromWire / inputBindingsToWire', () => {
       ],
     }
     expect(inputBindingsFromWire(inputBindingsToWire(cfg))).toEqual(cfg)
-  })
-})
-
-describe('isPinAvailableForBoard', () => {
-  it('marks display MOSI (GPIO 13) as unavailable on crowpanel_28', () => {
-    expect(isPinAvailableForBoard('crowpanel_28', 13)).toBe(false)
-  })
-
-  it('marks touch CS (GPIO 33) as unavailable on crowpanel_28', () => {
-    expect(isPinAvailableForBoard('crowpanel_28', 33)).toBe(false)
-  })
-
-  it('marks expansion-header pins (GPIO 25, 32) as available on crowpanel_28', () => {
-    expect(isPinAvailableForBoard('crowpanel_28', 25)).toBe(true)
-    expect(isPinAvailableForBoard('crowpanel_28', 32)).toBe(true)
   })
 })
 

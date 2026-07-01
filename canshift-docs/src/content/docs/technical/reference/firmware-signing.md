@@ -6,12 +6,12 @@ sidebar:
 ---
 
 The release workflow (`.github/workflows/release.yml`) signs every shipped
-firmware binary with an Ed25519 private key whose public counterpart is
-embedded in the [`canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher)
-build via the `VITE_FIRMWARE_PUBLIC_KEY` env. The flasher verifies the
-detached `.sig` sidecar before calling `writeFlash`, defending against a
-hosting-origin compromise that swaps both the binary and its SHA-256
-sidecar from the same source. See issue
+firmware binary with an Ed25519 private key. The public counterpart is
+meant to be embedded in the Tuner's built-in USB flasher build via a Vite
+env var, so the flasher can verify the detached `.sig` sidecar before
+calling `writeFlash`, defending against a hosting-origin compromise that
+swaps both the binary and its SHA-256 sidecar from the same source.
+Flasher-side verification is not wired up yet. See issue
 [#1259](https://github.com/tburkhalterr/CANShift/issues/1259).
 
 ## Released assets
@@ -48,20 +48,20 @@ base64 -i firmware-signing-private.pem
 The release workflow's `Sign firmware artifacts with Ed25519` step:
 
 - Exits non-zero if the secret is set but malformed.
-- Exits `0` with a warning when the secret is missing — the release still ships, just without `.sig` files. Keeps the workflow green during the rollout window while the flasher's verification stays no-op (per canshift-flasher#61).
+- Exits `0` with a warning when the secret is missing — the release still ships, just without `.sig` files. Keeps the workflow green during the rollout window while the flasher's verification stays no-op (see #1259).
 
 ## Distributing the public key to the flasher
 
-Provide the **public** PEM (`firmware-signing-public.pem`) to the flasher build pipeline. The current contract is single-key, embedded at build time via `VITE_FIRMWARE_PUBLIC_KEY` (raw PEM, not base64).
+Provide the **public** PEM (`firmware-signing-public.pem`) to the Tuner build pipeline. The current contract is single-key, embedded at build time via a Vite env var (raw PEM, not base64).
 
 ## Rotation runbook
 
 The simplest model is **single-key, manual rotation** — minimises operational complexity at the cost of a flasher rebuild + redeploy for any rotation.
 
 1. Generate a new keypair via the steps above.
-2. Update `VITE_FIRMWARE_PUBLIC_KEY` in the flasher repo and ship a new flasher build. Users automatically pick it up on the next visit to `canshift.tmbk.ch`.
+2. Update the embedded public key in the Tuner and ship a new build. Users automatically pick it up on their next visit.
 3. Once telemetry confirms the new flasher build has reached its install base (≥ 99 % visitors over a 7-day window), rotate `FIRMWARE_SIGNING_PRIVATE_KEY` in this repo's CI secret to the new private key.
-4. Releases shipped between step 2 and step 3 will still verify against the old key. The flasher PR that introduces verification (canshift-flasher#61) keeps the old key around as a transition fallback for one release cycle.
+4. Releases shipped between step 2 and step 3 will still verify against the old key. The change that introduces flasher-side verification should keep the old key around as a transition fallback for one release cycle.
 
 For an emergency rotation (private key suspected to be exposed), skip the gradual rollout: rotate the CI secret immediately, force-push a new flasher build, accept the user friction.
 
@@ -70,6 +70,5 @@ A multi-key variant (flasher embeds a key set, verifies against any one of N) is
 ## References
 
 - Issue [#1259](https://github.com/tburkhalterr/CANShift/issues/1259) — this feature.
-- [canshift-flasher#61](https://github.com/tburkhalterr/canshift-flasher/issues/61) — flasher-side verification.
 - `.github/workflows/release.yml` — CI step.
 - `scripts/sign_release_artifacts.py` — signing helper.
