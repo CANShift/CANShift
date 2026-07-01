@@ -109,8 +109,7 @@ export const ChartPanel = ({
               return (
                 <SvgText
                   key={line.key}
-                  x={chartSize.width - 4}
-                  y={y}
+                  transform={`translate(${String(chartSize.width - 4)}, ${String(y)})`}
                   fill={line.color}
                   fontSize={9}
                   textAnchor="end"

@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system'
+import { File, Paths } from 'expo-file-system'
 import type { LatestReleaseResult, ReleaseAsset, ReleaseInfo } from '@tmbk/canshift-core'
 
 const GITHUB_OWNER = 'tburkhalterr'
@@ -10,7 +10,7 @@ const RELEASES_PAGE_SIZE = 20
 
 const FETCH_TIMEOUT_MS = 8_000
 
-const PERSISTENT_CACHE_PATH = `${FileSystem.documentDirectory ?? ''}releases-cache.json`
+const PERSISTENT_CACHE_FILENAME = 'releases-cache.json'
 
 const MAX_RETRY_AFTER_MS = 60_000
 
@@ -140,8 +140,9 @@ const parseRetryAfterMs = (header: string | null): number => {
 
 const loadPersistedCache = async (): Promise<CachedPayload | null> => {
   try {
-    const raw = await FileSystem.readAsStringAsync(PERSISTENT_CACHE_PATH)
-    const parsed: unknown = JSON.parse(raw)
+    const file = new File(Paths.document, PERSISTENT_CACHE_FILENAME)
+    if (!file.exists) return null
+    const parsed: unknown = JSON.parse(await file.text())
     if (!isPersistedPayload(parsed)) return null
     return {
       release: parsed.release,
@@ -153,9 +154,10 @@ const loadPersistedCache = async (): Promise<CachedPayload | null> => {
   }
 }
 
-const savePersistedCache = async (payload: CachedPayload): Promise<void> => {
+const savePersistedCache = (payload: CachedPayload): void => {
   try {
-    await FileSystem.writeAsStringAsync(PERSISTENT_CACHE_PATH, JSON.stringify(payload))
+    const file = new File(Paths.document, PERSISTENT_CACHE_FILENAME)
+    file.write(JSON.stringify(payload))
   } catch {
     void 0
   }
@@ -411,7 +413,7 @@ export class ReleasesService {
           fetchedAt: nowMs,
         }
         this.cache = payload
-        void savePersistedCache(payload)
+        savePersistedCache(payload)
         return {
           ok: true,
           release: payload.release,
