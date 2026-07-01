@@ -72,6 +72,13 @@ export const STANDARD_WIDGET_TYPES = new Set(['button', 'warning', 'gear', 'time
 export const upgradeLegacySize = (w: number, h: number): { w: number; h: number } | null =>
   w === 80 && (h === 28 || h === 56 || h === 112) ? { w: 160, h: 56 } : null
 
+export const clipField = (obj: Config, key: string, max: number): Config => {
+  const value = obj[key]
+  return typeof value === 'string' && value.length > max
+    ? { ...obj, [key]: value.slice(0, max) }
+    : obj
+}
+
 export const brightenHex = (hex: string, delta = 0x33): string => {
   const m = HEX_REGEX.exec(hex)
   if (!m) return hex

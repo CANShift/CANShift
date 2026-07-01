@@ -2,7 +2,9 @@ import {
   DEFAULT_PALETTE,
   STANDARD_WIDGET_TYPES,
   asObject,
+  asObjectArray,
   brightenHex,
+  clipField,
   flatMapWidgets,
   mapPages,
   mapWidgets,
@@ -11,7 +13,59 @@ import {
 } from './helpers.js'
 import type { Migration } from './types.js'
 
+const CAPS_1_24 = {
+  widgetLabel: 31,
+  gaugePrefix: 7,
+  prefixSuffix: 15,
+  path: 63,
+  protocol: 31,
+} as const
+
 export const MIGRATIONS: Migration[] = [
+  {
+    fromVersion: '1.23.0',
+    toVersion: '1.24.0',
+    migrate: (config) => {
+      const migrated = mapWidgets(config, '1.24.0', (widget) => {
+        const cfg = asObject(widget.config)
+        if (!cfg) return widget
+        switch (widget.type) {
+          case 'gauge': {
+            let next = { ...cfg }
+            delete next.showNeedle
+            next = clipField(next, 'prefix', CAPS_1_24.gaugePrefix)
+            next = clipField(next, 'suffix', CAPS_1_24.prefixSuffix)
+            return { ...widget, config: next }
+          }
+          case 'gear': {
+            let next = clipField(cfg, 'prefix', CAPS_1_24.prefixSuffix)
+            next = clipField(next, 'suffix', CAPS_1_24.prefixSuffix)
+            return { ...widget, config: next }
+          }
+          case 'button': {
+            let next = clipField(cfg, 'label', CAPS_1_24.widgetLabel)
+            next = clipField(next, 'iconPath', CAPS_1_24.path)
+            const states = asObjectArray(next.states)
+            if (states) {
+              next = {
+                ...next,
+                states: states.map((state) => clipField(state, 'label', CAPS_1_24.widgetLabel)),
+              }
+            }
+            return { ...widget, config: next }
+          }
+          case 'image': {
+            return { ...widget, config: clipField(cfg, 'imagePath', CAPS_1_24.path) }
+          }
+          default:
+            return widget
+        }
+      })
+      return typeof migrated.protocol === 'string'
+        ? { ...migrated, protocol: migrated.protocol.slice(0, CAPS_1_24.protocol) }
+        : migrated
+    },
+  },
   {
     fromVersion: '1.22.0',
     toVersion: '1.23.0',

@@ -161,24 +161,14 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
             </Field>
           </Row>
           {style === 'arc' && (
-            <>
-              <Field label="Needle">
-                <Checkbox
-                  checked={cfg.showNeedle ?? false}
-                  onCheckedChange={(checked) => {
-                    onChange({ config: { ...cfg, showNeedle: checked === true } })
-                  }}
-                />
-              </Field>
-              <Field label="Rev flash">
-                <Checkbox
-                  checked={cfg.revFlash ?? false}
-                  onCheckedChange={(checked) => {
-                    onChange({ config: { ...cfg, revFlash: checked === true } })
-                  }}
-                />
-              </Field>
-            </>
+            <Field label="Rev flash">
+              <Checkbox
+                checked={cfg.revFlash ?? false}
+                onCheckedChange={(checked) => {
+                  onChange({ config: { ...cfg, revFlash: checked === true } })
+                }}
+              />
+            </Field>
           )}
           <Row>
             <Field
