@@ -46,7 +46,7 @@ describe('validateSignalConfig — envelope', () => {
 })
 
 describe('validateSignalConfig — canFrameId', () => {
-  it.each(['0x0', '0x1', '0xFF', '0x7FF', '0X123', '0xabc', '0x1234', '0x1E005000', '0xFFFFFFFF'])(
+  it.each(['0x0', '0x1', '0xFF', '0x7FF', '0X123', '0xabc', '0x1234', '0x1E005000', '0x1FFFFFFF'])(
     'accepts valid hex form %s',
     (canFrameId) => {
       const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
@@ -54,7 +54,7 @@ describe('validateSignalConfig — canFrameId', () => {
     }
   )
 
-  it.each(['370', '#370', '0x', '0xGGG', '0x123456789', ''])(
+  it.each(['370', '#370', '0x', '0xGGG', '0x123456789', '', '0x20000000', '0xFFFFFFFF'])(
     'rejects invalid form %s',
     (canFrameId) => {
       const result = validateSignalConfig(validConfig({ signals: [validSignal({ canFrameId })] }))
@@ -71,16 +71,31 @@ describe('validateSignalConfig — canFrameId', () => {
   })
 })
 
-describe('validateSignalConfig — byteLength', () => {
-  it.each([1, 2, 3, 4, 8])('accepts %i', (byteLength) => {
+describe('validateSignalConfig — byteLength (firmware decodes only 1/2/4)', () => {
+  it.each([1, 2, 4])('accepts %i', (byteLength) => {
     const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
     expect(result.valid).toBe(true)
   })
 
-  it.each([0, 5, 6, 7, 9, -1, 1.5])('rejects %s', (byteLength) => {
+  it.each([0, 3, 5, 6, 7, 8, 9, -1, 1.5])('rejects %s', (byteLength) => {
     const result = validateSignalConfig(validConfig({ signals: [validSignal({ byteLength })] }))
     expect(result.valid).toBe(false)
     expect(result.errors.some((e) => e.includes('byteLength'))).toBe(true)
+  })
+
+  it('rejects startByte + byteLength past the frame end', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ startByte: 5, byteLength: 4 })] })
+    )
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.includes('byteLength'))).toBe(true)
+  })
+
+  it('accepts startByte + byteLength exactly at the frame end', () => {
+    const result = validateSignalConfig(
+      validConfig({ signals: [validSignal({ startByte: 4, byteLength: 4 })] })
+    )
+    expect(result.valid).toBe(true)
   })
 })
 
@@ -126,16 +141,19 @@ describe('validateSignalConfig — bitMask', () => {
     expect(result.valid).toBe(true)
   })
 
-  it.each(['0x1', '0x01', '0xFF', '0xFF00', '0Xabcdef'])('accepts %s', (bitMask) => {
+  it.each(['0x1', '0x01', '0xFF', '0X80', '0x00ff'])('accepts %s', (bitMask) => {
     const result = validateSignalConfig(validConfig({ signals: [validSignal({ bitMask })] }))
     expect(result.valid).toBe(true)
   })
 
-  it.each(['1', '0xGG', '0x', 'FF', '#FF'])('rejects %s', (bitMask) => {
-    const result = validateSignalConfig(validConfig({ signals: [validSignal({ bitMask })] }))
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('bitMask'))).toBe(true)
-  })
+  it.each(['1', '0xGG', '0x', 'FF', '#FF', '0x100', '0xFF00', '0Xabcdef'])(
+    'rejects %s',
+    (bitMask) => {
+      const result = validateSignalConfig(validConfig({ signals: [validSignal({ bitMask })] }))
+      expect(result.valid).toBe(false)
+      expect(result.errors.some((e) => e.includes('bitMask'))).toBe(true)
+    }
+  )
 })
 
 describe('validateSignalConfig — canSpeedKbps', () => {

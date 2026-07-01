@@ -10,11 +10,13 @@ import {
   MAX_RAMP_STOPS,
   STRING_CAPS,
 } from '../constants/firmware-caps.js'
-import { MAX_EXPR_LENGTH, SAFE_EXPR_REGEX } from '../constants/validation.js'
+import { MAX_EXPR_LENGTH, MAX_SIGNAL_TIMEOUT_MS, SAFE_EXPR_REGEX } from '../constants/validation.js'
 
 const CAN_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 
 const BIT_MASK_REGEX = /^0[xX][0-9a-fA-F]+$/
+
+const BIT_MASK_MAX = 0xff
 
 const OUTBOUND_FRAME_ID_REGEX = /^0[xX][0-9a-fA-F]{1,8}$/
 
@@ -50,6 +52,14 @@ export const ColorRampSchema = z
   })
   .strict()
 
+export const SignalByteLengthSchema = z.union([z.literal(1), z.literal(2), z.literal(4)])
+
+export type SignalByteLength = z.infer<typeof SignalByteLengthSchema>
+
+export const SIGNAL_BYTE_LENGTHS: readonly SignalByteLength[] = SignalByteLengthSchema.options.map(
+  (o) => o.value
+)
+
 export const SignalDefSchema = z
   .object({
     _comment: z.string().optional(),
@@ -57,16 +67,27 @@ export const SignalDefSchema = z
     name: z.string().max(STRING_CAPS.SIGNAL_NAME),
     canFrameId: z
       .string()
-      .regex(CAN_FRAME_ID_REGEX, 'canFrameId must be hex like 0x123 or 0x1E005000 (1-8 hex chars)'),
+      .regex(CAN_FRAME_ID_REGEX, 'canFrameId must be hex like 0x123 or 0x1E005000 (1-8 hex chars)')
+      .refine(
+        (s) => Number.parseInt(s, 16) <= CAN_29BIT_MAX,
+        `canFrameId must fit in 29 bits (≤ 0x${CAN_29BIT_MAX.toString(16).toUpperCase()})`
+      ),
     startByte: z
       .number()
       .int()
       .min(0)
       .max(CAN_FRAME_MAX_BYTES - 1),
-    byteLength: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(8)]),
+    byteLength: SignalByteLengthSchema,
     bigEndian: z.boolean(),
     signed: z.boolean(),
-    bitMask: z.string().regex(BIT_MASK_REGEX, 'bitMask must be a hex literal like 0xFF').optional(),
+    bitMask: z
+      .string()
+      .regex(BIT_MASK_REGEX, 'bitMask must be a hex literal like 0xFF')
+      .refine(
+        (s) => Number.parseInt(s, 16) <= BIT_MASK_MAX,
+        'bitMask must fit in 8 bits (≤ 0xFF, firmware stores uint8_t)'
+      )
+      .optional(),
     scale: z.number().finite(),
     offset: z.number().finite(),
     expr: z
@@ -81,12 +102,16 @@ export const SignalDefSchema = z
     dangerLevel: z.number().optional(),
     highWarningLevel: z.number().optional(),
     highDangerLevel: z.number().optional(),
-    timeoutMs: z.number(),
+    timeoutMs: z.number().int().min(0).max(MAX_SIGNAL_TIMEOUT_MS),
     type: SignalTypeSchema.optional(),
     colorRamp: ColorRampSchema.optional(),
     polling: Obd2PollingSchema.optional(),
   })
   .strict()
+  .refine((s) => s.startByte + s.byteLength <= CAN_FRAME_MAX_BYTES, {
+    message: `startByte + byteLength must fit within a ${CAN_FRAME_MAX_BYTES.toString()}-byte CAN frame`,
+    path: ['byteLength'],
+  })
   .refine((s) => s.min < s.max, {
     message: 'min must be less than max',
     path: ['min'],

@@ -1,4 +1,8 @@
-import { DEFAULT_FRAME_TIMEOUT_MS, isValidShiftCount } from '../constants/validation.js'
+import {
+  DEFAULT_FRAME_TIMEOUT_MS,
+  MAX_BITMASK_SHIFT_BITS,
+  MAX_SIGNAL_TIMEOUT_MS,
+} from '../constants/validation.js'
 import { SignalDefSchema, type SignalDef } from '../schemas/signal.js'
 import { escapeAttribGT, getAttrs, toSnakeCase, parseHexOrDec, resolveEndian } from './xml-lex.js'
 import { parseConversion, computeRange } from './conversion-parse.js'
@@ -51,7 +55,7 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
     const frameSignedDefault = frameAttrs.signed === 'true'
     const parsedTimeout = parseInt(frameAttrs.timeout ?? '', 10)
     const timeoutMs =
-      Number.isFinite(parsedTimeout) && parsedTimeout >= 0
+      Number.isFinite(parsedTimeout) && parsedTimeout >= 0 && parsedTimeout <= MAX_SIGNAL_TIMEOUT_MS
         ? parsedTimeout
         : DEFAULT_FRAME_TIMEOUT_MS
 
@@ -103,8 +107,17 @@ export const parseCanXml = (xml: string): ParseCanXmlResult => {
       const bitShift = conv.kind === 'linear' ? conv.bitShift : null
       const exprText = conv.kind === 'expr' ? conv.expr : undefined
 
+      if (bitShift !== null && bitShift > MAX_BITMASK_SHIFT_BITS) {
+        warnings.push(
+          `Rejected signal "${name}" (frame ${canFrameId}): bit index ${String(bitShift)} exceeds ` +
+            `${String(MAX_BITMASK_SHIFT_BITS)} — bitMask must fit in 8 bits (firmware stores uint8_t)`
+        )
+        valueIndex++
+        continue
+      }
+
       const bitMask =
-        bitShift !== null && isValidShiftCount(bitShift)
+        bitShift !== null
           ? `0x${(2 ** bitShift).toString(16).padStart(2, '0')}`
           : unit === 'bit' && !va.conversion
             ? '0x01'

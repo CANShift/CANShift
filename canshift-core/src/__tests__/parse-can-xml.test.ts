@@ -194,6 +194,25 @@ describe('conversion parsing', () => {
     expect(singleSignal('V>>7')?.bitMask).toBe('0x80')
   })
 
+  it('V>>8 → rejected (mask would not fit firmware uint8_t)', () => {
+    const { signals, warnings } = parseCanXml(
+      simpleXml('<value name="hi_bit" offset="0" length="2" conversion="V&gt;&gt;8"/>')
+    )
+    expect(signals).toHaveLength(0)
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/Rejected signal "hi_bit"/)
+    expect(warnings[0]).toMatch(/8 bits/)
+  })
+
+  it('V & 0x100 → rejected (bit index 8 exceeds 8-bit mask range)', () => {
+    const { signals, warnings } = parseCanXml(
+      simpleXml('<value name="wide_mask" offset="0" length="2" conversion="V&amp;0x100"/>')
+    )
+    expect(signals).toHaveLength(0)
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/Rejected signal "wide_mask"/)
+  })
+
   it('no conversion + units="bit" → bitMask 0x01', () => {
     const { signals } = parseCanXml(
       simpleXml('<value name="flag" offset="0" length="1" units="bit"/>')
@@ -393,14 +412,14 @@ describe('shift bounds', () => {
 })
 
 describe('schema validation', () => {
-  it('length=3 and length=8 are accepted (wide signals)', () => {
+  it('length=3 and length=8 are rejected (firmware decodes only 1/2/4)', () => {
     for (const len of [3, 8]) {
       const { signals, warnings } = parseCanXml(
         simpleXml(`<value name="wide_${String(len)}" offset="0" length="${String(len)}"/>`)
       )
-      expect(signals).toHaveLength(1)
-      expect(signals[0]?.byteLength).toBe(len)
-      expect(warnings).toHaveLength(0)
+      expect(signals).toHaveLength(0)
+      expect(warnings).toHaveLength(1)
+      expect(warnings[0]).toMatch(/byteLength/)
     }
   })
 
