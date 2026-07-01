@@ -10,6 +10,8 @@ const RECONNECT_INITIAL_MS = 500
 const RECONNECT_MAX_MS = 30_000
 const RECONNECT_FACTOR = 2
 
+const STALE_ACK_FLUSH_MS = 1_000
+
 const STABLE_UPTIME_MS = 10_000
 
 const SEND_QUEUE_CAPACITY = 8
@@ -112,6 +114,8 @@ export class SerialClient {
   private activityListeners: ActivityListener[] = []
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private reconnectDelay = RECONNECT_INITIAL_MS
+  private staleAckDiscards = 0
+  private staleAckFlushTimer: ReturnType<typeof setTimeout> | null = null
   private successUptimeStartedAt: number | null = null
   private lastError: string | undefined
   private readonly autoReconnect: boolean
@@ -181,6 +185,7 @@ export class SerialClient {
     this.intentionalDisconnect = true
     this.cancelReconnect()
     this.failPendingAck('disconnected')
+    this.clearStaleAckFlush()
     this.drainQueueWithError('disconnected')
     const reader = this.reader
     const readLoopPromise = this.readLoop
@@ -200,7 +205,7 @@ export class SerialClient {
     if (!this.writer || this.status !== 'connected') {
       return Promise.resolve({ ok: false, error: 'not_connected' })
     }
-    if (this.pendingAck) {
+    if (this.pendingAck || this.staleAckDiscards > 0) {
       if (this.pendingSends.length >= SEND_QUEUE_CAPACITY) {
         return Promise.resolve({ ok: false, error: 'queue_full' })
       }
@@ -266,6 +271,7 @@ export class SerialClient {
     this.reader = reader
     this.writer = writer
     this.rxBuffer = ''
+    this.clearStaleAckFlush()
     this.successUptimeStartedAt = Date.now()
     this.lastError = undefined
     this.setStatus('connected')
@@ -336,19 +342,26 @@ export class SerialClient {
     if (!isRecord(parsed)) return
     this.emitActivity('rx')
 
-    if ('status' in parsed && this.pendingAck) {
-      const ack = this.pendingAck
-      this.pendingAck = null
-      clearTimeout(ack.timer)
-      const status = parsed.status
-      if (status === 'ok') {
-        ack.resolve({ ok: true, data: parsed })
-      } else {
-        const msg = typeof parsed.message === 'string' ? parsed.message : 'device_error'
-        ack.resolve({ ok: false, error: msg, data: parsed })
+    if ('status' in parsed) {
+      if (this.staleAckDiscards > 0) {
+        console.warn('[serial] discarded stale status frame after ack_timeout')
+        this.consumeStaleAck()
+        return
       }
-      this.drainPendingSends()
-      return
+      if (this.pendingAck) {
+        const ack = this.pendingAck
+        this.pendingAck = null
+        clearTimeout(ack.timer)
+        const status = parsed.status
+        if (status === 'ok') {
+          ack.resolve({ ok: true, data: parsed })
+        } else {
+          const msg = typeof parsed.message === 'string' ? parsed.message : 'device_error'
+          ack.resolve({ ok: false, error: msg, data: parsed })
+        }
+        this.drainPendingSends()
+        return
+      }
     }
 
     for (const sub of this.subscriptions) {
@@ -372,8 +385,8 @@ export class SerialClient {
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
         this.pendingAck = null
+        this.beginStaleAckFlush()
         resolve({ ok: false, error: 'ack_timeout' })
-        this.drainPendingSends()
       }, timeoutMs)
 
       this.pendingAck = { resolve, timer }
@@ -403,7 +416,7 @@ export class SerialClient {
   }
 
   private drainPendingSends(): void {
-    if (this.pendingAck) return
+    if (this.pendingAck || this.staleAckDiscards > 0) return
     const next = this.pendingSends.shift()
     if (!next) return
     if (!this.writer || this.status !== 'connected') {
@@ -418,6 +431,31 @@ export class SerialClient {
     const pending = this.pendingSends
     this.pendingSends = []
     for (const entry of pending) entry.resolve({ ok: false, error: reason })
+  }
+
+  private beginStaleAckFlush(): void {
+    this.staleAckDiscards += 1
+    if (this.staleAckFlushTimer) clearTimeout(this.staleAckFlushTimer)
+    this.staleAckFlushTimer = setTimeout(() => {
+      this.staleAckFlushTimer = null
+      this.staleAckDiscards = 0
+      this.drainPendingSends()
+    }, STALE_ACK_FLUSH_MS)
+  }
+
+  private consumeStaleAck(): void {
+    this.staleAckDiscards -= 1
+    if (this.staleAckDiscards > 0) return
+    this.clearStaleAckFlush()
+    this.drainPendingSends()
+  }
+
+  private clearStaleAckFlush(): void {
+    this.staleAckDiscards = 0
+    if (this.staleAckFlushTimer) {
+      clearTimeout(this.staleAckFlushTimer)
+      this.staleAckFlushTimer = null
+    }
   }
 
   private failPendingAck(reason: string): void {
@@ -453,6 +491,7 @@ export class SerialClient {
     }
 
     this.failPendingAck('connection_closed')
+    this.clearStaleAckFlush()
     this.drainQueueWithError('connection_closed')
     const wasConnected = this.status === 'connected'
     const openedAt = this.successUptimeStartedAt
@@ -485,7 +524,9 @@ export class SerialClient {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       this.reconnectDelay = Math.min(this.reconnectDelay * RECONNECT_FACTOR, RECONNECT_MAX_MS)
-      void this.openPort(port).catch(() => undefined)
+      void this.openPort(port).catch(() => {
+        this.scheduleReconnect(port)
+      })
     }, this.reconnectDelay)
   }
 

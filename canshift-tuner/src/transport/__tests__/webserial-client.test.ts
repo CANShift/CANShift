@@ -283,6 +283,173 @@ describe('SerialClient — send queue', () => {
   })
 })
 
+const makeReopenablePort = (): { port: SerialPort; dropConnection: () => void } => {
+  let controller: ReadableStreamDefaultController<Uint8Array> | null = null
+  let readable = new ReadableStream<Uint8Array>({
+    start(c) {
+      controller = c
+    },
+  })
+  let writable = new WritableStream<Uint8Array>()
+  const arm = (): void => {
+    readable = new ReadableStream<Uint8Array>({
+      start(c) {
+        controller = c
+      },
+    })
+    writable = new WritableStream<Uint8Array>()
+  }
+  const port = {
+    open: vi.fn(async () => {
+      arm()
+    }),
+    close: vi.fn(async () => {
+      try {
+        controller?.close()
+      } catch {}
+    }),
+    get readable() {
+      return readable
+    },
+    get writable() {
+      return writable
+    },
+  } as unknown as SerialPort
+  return {
+    port,
+    dropConnection: () => {
+      try {
+        controller?.close()
+      } catch {}
+    },
+  }
+}
+
+describe('SerialClient — reconnect retry', () => {
+  it('keeps retrying with exponential backoff when reopen rejects', async () => {
+    vi.useFakeTimers()
+    const fake = makeFakePort()
+    const client = new SerialClient()
+    await client.connect(fake.port)
+    const openMock = vi.mocked(fake.port.open)
+    openMock.mockRejectedValue(new Error('failed to open'))
+
+    fake.closeReader()
+    await flush()
+    await flush()
+    expect(client.getStatus()).toBe('reconnecting')
+    expect(openMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(openMock).toHaveBeenCalledTimes(2)
+    expect(client.getStatus()).toBe('reconnecting')
+
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(openMock).toHaveBeenCalledTimes(3)
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(openMock).toHaveBeenCalledTimes(4)
+
+    client.disconnect()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(openMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('recovers on a later attempt and resets backoff after a stable connection', async () => {
+    vi.useFakeTimers()
+    const fake = makeReopenablePort()
+    const client = new SerialClient()
+    await client.connect(fake.port)
+    const openMock = vi.mocked(fake.port.open)
+
+    openMock.mockRejectedValueOnce(new Error('failed to open'))
+    fake.dropConnection()
+    await flush()
+    await flush()
+    expect(client.getStatus()).toBe('reconnecting')
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(client.getStatus()).toBe('reconnecting')
+
+    await vi.advanceTimersByTimeAsync(1000)
+    await flush()
+    expect(client.getStatus()).toBe('connected')
+    expect(openMock).toHaveBeenCalledTimes(3)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+    fake.dropConnection()
+    await flush()
+    await flush()
+    expect(client.getStatus()).toBe('reconnecting')
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(openMock).toHaveBeenCalledTimes(4)
+
+    client.disconnect()
+  })
+})
+
+describe('SerialClient — stale ack discard after timeout', () => {
+  it('discards a late ack for a timed-out command instead of resolving the next send', async () => {
+    vi.useFakeTimers()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const fake = makeFakePort()
+    const client = new SerialClient({ disableReconnect: true })
+    await client.connect(fake.port)
+
+    const first = client.send(0x01)
+    const second = client.send(0x02)
+    await flush()
+    expect(fake.written.join('')).toBe('{"cmd":1}\n')
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(await first).toEqual({ ok: false, error: 'ack_timeout' })
+    expect(fake.written.join('')).toBe('{"cmd":1}\n')
+
+    fake.pushBytes('{"status":"ok","uptime_ms":1}\n')
+    await flush()
+    expect(fake.written.join('')).toBe('{"cmd":1}\n{"cmd":2}\n')
+
+    let secondResolved = false
+    void second.then(() => {
+      secondResolved = true
+    })
+    await flush()
+    expect(secondResolved).toBe(false)
+
+    fake.pushBytes('{"status":"ok"}\n')
+    const ack = await second
+    expect(ack.ok).toBe(true)
+    warn.mockRestore()
+    client.disconnect()
+  })
+
+  it('dispatches the next send after the flush window when no late ack arrives', async () => {
+    vi.useFakeTimers()
+    const fake = makeFakePort()
+    const client = new SerialClient({ disableReconnect: true })
+    await client.connect(fake.port)
+
+    const first = client.send(0x01)
+    await flush()
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect((await first).error).toBe('ack_timeout')
+
+    const second = client.send(0x02)
+    await flush()
+    expect(fake.written.join('')).toBe('{"cmd":1}\n')
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    await flush()
+    expect(fake.written.join('')).toBe('{"cmd":1}\n{"cmd":2}\n')
+
+    fake.pushBytes('{"status":"ok"}\n')
+    const ack = await second
+    expect(ack.ok).toBe(true)
+    client.disconnect()
+  })
+})
+
 describe('getSerialClient singleton', () => {
   it('returns the same instance across calls', () => {
     const a = getSerialClient()
