@@ -1,20 +1,28 @@
 import { ReleasesService } from './releases.service'
-import * as FileSystem from 'expo-file-system'
 
 const mockFs = new Map<string, string>()
+const MOCK_DOCUMENT_DIR = '/mock-document-dir/'
 
 jest.mock('expo-file-system', () => ({
   __esModule: true,
-  documentDirectory: '/mock-document-dir/',
-  readAsStringAsync: jest.fn((path: string) => {
-    const content = mockFs.get(path)
-    if (content === undefined) return Promise.reject(new Error(`File not found: ${path}`))
-    return Promise.resolve(content)
-  }),
-  writeAsStringAsync: jest.fn((path: string, content: string) => {
-    mockFs.set(path, content)
-    return Promise.resolve()
-  }),
+  Paths: { document: '/mock-document-dir/' },
+  File: class {
+    private path: string
+    constructor(dir: string, name: string) {
+      this.path = `${dir}${name}`
+    }
+    get exists(): boolean {
+      return mockFs.has(this.path)
+    }
+    text(): Promise<string> {
+      const content = mockFs.get(this.path)
+      if (content === undefined) return Promise.reject(new Error(`File not found: ${this.path}`))
+      return Promise.resolve(content)
+    }
+    write(content: string): void {
+      mockFs.set(this.path, content)
+    }
+  },
 }))
 
 interface MockResponseShape {
@@ -226,7 +234,7 @@ describe('ReleasesService', () => {
 
   it('hydrates from the persistent cache when available', async () => {
     mockFs.set(
-      `${FileSystem.documentDirectory ?? ''}releases-cache.json`,
+      `${MOCK_DOCUMENT_DIR}releases-cache.json`,
       JSON.stringify({
         release: {
           version: '0.8.2',
