@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SCREEN_SETTINGS_BOUNDS } from '@tmbk/canshift-core'
 import { useScreenSettingsStore } from '../../stores/screen-settings.store'
 import { useLogStore } from '../../stores/log.store'
 import { useDeviceState } from '../../hooks/useDeviceState'
@@ -32,6 +33,7 @@ interface ScreenSettingsPanelProps {
 
 const ScreenSettingsPanel = ({ scale }: ScreenSettingsPanelProps) => {
   const brightness = useScreenSettingsStore((s) => s.brightness)
+  const sleep = useScreenSettingsStore((s) => s.sleep)
   const rotation = useScreenSettingsStore((s) => s.rotation)
   const updateScreenSettings = useScreenSettingsStore((s) => s.update)
   const { connected, simulationMode, isDayMode, setIsDayMode } = useDeviceState()
@@ -49,7 +51,7 @@ const ScreenSettingsPanel = ({ scale }: ScreenSettingsPanelProps) => {
     if (simulationMode || !connected) return
     const result = await usbService.pushScreenSettings({
       brightness,
-      sleep: 0,
+      sleep,
       rotation: nextRotation,
     })
     if (result.success) {
@@ -149,8 +151,8 @@ const ScreenSettingsPanel = ({ scale }: ScreenSettingsPanelProps) => {
         <SettingRow label="BRIGHTNESS" value={`${String(brightness)}%`} scale={scale}>
           <input
             type="range"
-            min={10}
-            max={100}
+            min={SCREEN_SETTINGS_BOUNDS.brightnessMinPct}
+            max={SCREEN_SETTINGS_BOUNDS.brightnessMaxPct}
             value={brightness}
             onChange={(e) => {
               updateScreenSettings({ brightness: Number(e.target.value) })

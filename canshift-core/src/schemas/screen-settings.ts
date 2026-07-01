@@ -39,3 +39,26 @@ export const SCREEN_SETTINGS_BOUNDS = {
   sleepMaxSeconds: SLEEP_MAX_S,
   allowedRotations: ALLOWED_ROTATIONS,
 } as const
+
+export type ScreenSettingsResult =
+  | { kind: 'ok'; settings: ScreenSettings }
+  | { kind: 'invalid_json'; raw: string }
+  | { kind: 'not_an_object'; payload: unknown }
+  | { kind: 'wrong_shape'; issues: z.ZodIssue[] }
+
+export const parseSettings = (raw: string): ScreenSettingsResult => {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return { kind: 'invalid_json', raw }
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { kind: 'not_an_object', payload: parsed }
+  }
+  const result = ScreenSettingsSchema.safeParse(parsed)
+  if (!result.success) {
+    return { kind: 'wrong_shape', issues: result.error.issues }
+  }
+  return { kind: 'ok', settings: result.data }
+}
