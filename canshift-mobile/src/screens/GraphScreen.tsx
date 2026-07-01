@@ -5,8 +5,9 @@ import { Colors } from '../theme'
 import { clearBuffer } from '../stores/telemetry.store'
 import DashTopBar from '../components/DashTopBar'
 import { ChartPanel, type ChartPanelProps } from '../components/graph/ChartPanel'
+import type { SignalKey } from '../constants/ble'
 
-const DEFAULT_SIGNALS = ['r', 'lam']
+const DEFAULT_SIGNALS: SignalKey[] = ['r', 'lam']
 
 export default function GraphScreen() {
   const { width, height } = useWindowDimensions()
@@ -15,7 +16,7 @@ export default function GraphScreen() {
   const [paused, setPaused] = useState(false)
   const [pausedAt, setPausedAt] = useState(0)
   const [windowSecs, setWindowSecs] = useState(30)
-  const [visibleSignals, setVisibleSignals] = useState<string[]>(DEFAULT_SIGNALS)
+  const [visibleSignals, setVisibleSignals] = useState<SignalKey[]>(DEFAULT_SIGNALS)
 
   const handleTogglePause = useCallback(() => {
     setPaused((p) => {
@@ -24,7 +25,7 @@ export default function GraphScreen() {
     })
   }, [])
 
-  const handleToggleSignal = useCallback((key: string) => {
+  const handleToggleSignal = useCallback((key: SignalKey) => {
     setVisibleSignals((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     )

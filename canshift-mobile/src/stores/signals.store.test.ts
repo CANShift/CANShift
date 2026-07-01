@@ -1,5 +1,5 @@
 import { clearBuffer, getRange, getWriteIndex } from './telemetry.store'
-import { useSignalsStore } from './signals.store'
+import { useSignalsStore, type TelemetryPayload } from './signals.store'
 
 const initialState = useSignalsStore.getState()
 
@@ -60,7 +60,9 @@ describe('useSignalsStore', () => {
   })
 
   it('update() strips undefined entries before pushing to the ring buffer', () => {
-    useSignalsStore.getState().update({ r: 2000, tps: undefined, ect: 90 })
+    useSignalsStore
+      .getState()
+      .update({ r: 2000, tps: undefined, ect: 90 } as unknown as TelemetryPayload)
     const buffer = getRange(0, getWriteIndex())
     expect(buffer).toHaveLength(1)
     expect(buffer[0]?.v).toEqual({ r: 2000, ect: 90 })

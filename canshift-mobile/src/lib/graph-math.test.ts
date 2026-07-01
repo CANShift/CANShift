@@ -1,4 +1,4 @@
-import type { TelemetrySample } from '../stores/telemetry.store'
+import type { SignalValues, TelemetrySample } from '../stores/telemetry.store'
 import { SIGNAL_RANGE, buildPoints, formatTime, formatValue } from './graph-math'
 
 describe('formatValue', () => {
@@ -17,18 +17,10 @@ describe('formatValue', () => {
   it('uses the signal decimal count for fractional signals', () => {
     expect(formatValue('lam', 0.923)).toBe('0.92λ')
   })
-
-  it('falls back to the raw number for an unknown key', () => {
-    expect(formatValue('nope', 42)).toBe('42')
-  })
 })
 
 describe('buildPoints', () => {
-  const sample = (t: number, v: Record<string, number>): TelemetrySample => ({ t, v })
-
-  it('returns empty string for a signal without a configured range', () => {
-    expect(buildPoints([sample(0, { nope: 1 })], 'nope', 0, 100, 100, 100)).toBe('')
-  })
+  const sample = (t: number, v: SignalValues): TelemetrySample => ({ t, v })
 
   it('projects sample time to x across the window and inverts y for value', () => {
     const pts = buildPoints([sample(50, { r: 4000 })], 'r', 0, 100, 200, 100)

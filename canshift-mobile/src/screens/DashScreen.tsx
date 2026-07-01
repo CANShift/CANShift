@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
-import { SIGNAL_META, type SignalMeta } from '../constants/ble'
+import { SIGNAL_META, type SignalMeta, type SignalKey } from '../constants/ble'
 import SignalCard from '../components/SignalCard'
 import DashTopBar from '../components/DashTopBar'
 import type { RootStackParamList } from '../navigation'
@@ -13,15 +13,15 @@ interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connected'>
 }
 
-const PRIMARY_SIGNALS = ['r', 's', 'g']
-const GRID_SIGNALS = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
+const PRIMARY_SIGNALS: SignalKey[] = ['r', 's', 'g']
+const GRID_SIGNALS: SignalKey[] = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
 
 const formatValue = (value: number | undefined, meta: SignalMeta): string => {
   if (value === undefined) return '---'
   return meta.decimals === 0 ? Math.round(value).toString() : value.toFixed(meta.decimals)
 }
 
-const PrimaryCellPortrait = ({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) => {
+const PrimaryCellPortrait = ({ signalKey, meta }: { signalKey: SignalKey; meta: SignalMeta }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
   return (
@@ -33,7 +33,7 @@ const PrimaryCellPortrait = ({ signalKey, meta }: { signalKey: string; meta: Sig
   )
 }
 
-const PrimaryCellLandscape = ({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) => {
+const PrimaryCellLandscape = ({ signalKey, meta }: { signalKey: SignalKey; meta: SignalMeta }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
   return (
@@ -47,7 +47,7 @@ const PrimaryCellLandscape = ({ signalKey, meta }: { signalKey: string; meta: Si
   )
 }
 
-const LiveSignalCard = ({ signalKey, meta }: { signalKey: string; meta: SignalMeta }) => {
+const LiveSignalCard = ({ signalKey, meta }: { signalKey: SignalKey; meta: SignalMeta }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
   return <SignalCard meta={meta} value={isLive ? value : undefined} compact />
@@ -64,39 +64,31 @@ export default function DashScreen(_: Props) {
       {isLandscape ? (
         <View style={styles.landscapeBody}>
           <View style={styles.landscapeLeft}>
-            {PRIMARY_SIGNALS.map((key) => {
-              const meta = SIGNAL_META[key]
-              if (!meta) return null
-              return <PrimaryCellLandscape key={key} signalKey={key} meta={meta} />
-            })}
+            {PRIMARY_SIGNALS.map((key) => (
+              <PrimaryCellLandscape key={key} signalKey={key} meta={SIGNAL_META[key]} />
+            ))}
           </View>
           <ScrollView
             style={styles.landscapeRight}
             contentContainerStyle={styles.landscapeGrid}
             showsVerticalScrollIndicator={false}
           >
-            {GRID_SIGNALS.map((key) => {
-              const meta = SIGNAL_META[key]
-              if (!meta) return null
-              return <LiveSignalCard key={key} signalKey={key} meta={meta} />
-            })}
+            {GRID_SIGNALS.map((key) => (
+              <LiveSignalCard key={key} signalKey={key} meta={SIGNAL_META[key]} />
+            ))}
           </ScrollView>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.primaryRow}>
-            {PRIMARY_SIGNALS.map((key) => {
-              const meta = SIGNAL_META[key]
-              if (!meta) return null
-              return <PrimaryCellPortrait key={key} signalKey={key} meta={meta} />
-            })}
+            {PRIMARY_SIGNALS.map((key) => (
+              <PrimaryCellPortrait key={key} signalKey={key} meta={SIGNAL_META[key]} />
+            ))}
           </View>
           <View style={styles.grid}>
-            {GRID_SIGNALS.map((key) => {
-              const meta = SIGNAL_META[key]
-              if (!meta) return null
-              return <LiveSignalCard key={key} signalKey={key} meta={meta} />
-            })}
+            {GRID_SIGNALS.map((key) => (
+              <LiveSignalCard key={key} signalKey={key} meta={SIGNAL_META[key]} />
+            ))}
           </View>
         </ScrollView>
       )}

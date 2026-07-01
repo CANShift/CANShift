@@ -1,9 +1,9 @@
-import { SIGNAL_META } from '../constants/ble'
+import { SIGNAL_META, type SignalKey } from '../constants/ble'
 import { log } from '../stores/log.store'
 
 const MAX_TELEMETRY_KEYS = 32
 
-export type TelemetrySample = Partial<Record<keyof typeof SIGNAL_META, number>>
+export type TelemetrySample = Partial<Record<SignalKey, number>>
 
 const warnedUnknownKeys = new Set<string>()
 
@@ -36,7 +36,7 @@ export const parseTelemetry = (raw: string): TelemetrySample | null => {
       continue
     }
     if (typeof value !== 'number' || !Number.isFinite(value)) continue
-    result[key] = value
+    result[key as SignalKey] = value
   }
   return result
 }

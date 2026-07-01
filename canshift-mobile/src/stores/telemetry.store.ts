@@ -1,8 +1,12 @@
+import type { SignalKey } from '../constants/ble'
+
 const MAX_SAMPLES = 3000
+
+export type SignalValues = Partial<Record<SignalKey, number>>
 
 export interface TelemetrySample {
   t: number
-  v: Record<string, number>
+  v: SignalValues
 }
 
 const buffer: (TelemetrySample | undefined)[] = new Array<TelemetrySample | undefined>(MAX_SAMPLES)
@@ -10,7 +14,7 @@ let head = 0
 let size = 0
 let writeIndex = 0
 
-export const pushSample = (values: Record<string, number>): void => {
+export const pushSample = (values: SignalValues): void => {
   buffer[head] = { t: Date.now(), v: { ...values } }
   head = (head + 1) % MAX_SAMPLES
   if (size < MAX_SAMPLES) size++

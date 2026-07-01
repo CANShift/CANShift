@@ -3,21 +3,22 @@ import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import { Colors, Typography, Spacing } from '../../theme'
 import { getSignalColor } from '../../theme/signal-colors'
-import { SIGNAL_META } from '../../constants/ble'
+import { SIGNAL_META, type SignalKey } from '../../constants/ble'
 import { SIGNAL_RANGE, buildPoints, formatTime, formatValue } from '../../lib/graph-math'
+import type { SignalValues } from '../../stores/telemetry.store'
 import { useGraphSeries } from '../../hooks/use-graph-series'
 import { SignalPillRow } from './SignalPillRow'
 import { GraphControls } from './GraphControls'
 
 export interface ChartPanelProps {
-  visibleSignals: string[]
+  visibleSignals: SignalKey[]
   windowSecs: number
   paused: boolean
   pausedAt: number
   onTogglePause: () => void
   onSetWindow: (s: number) => void
   onClear: () => void
-  onToggleSignal: (key: string) => void
+  onToggleSignal: (key: SignalKey) => void
   compact: boolean
 }
 
@@ -42,7 +43,7 @@ export const ChartPanel = ({
   const { rolling, windowStart, windowEnd, hasData } = useGraphSeries(windowSecs, paused, pausedAt)
 
   const lines = useMemo(() => {
-    const latest: Record<string, number> = rolling[rolling.length - 1]?.v ?? {}
+    const latest: SignalValues = rolling[rolling.length - 1]?.v ?? {}
     return visibleSignals.map((key) => ({
       key,
       color: getSignalColor(key),
@@ -99,7 +100,7 @@ export const ChartPanel = ({
             )}
             {lines.map((line) => {
               const range = SIGNAL_RANGE[line.key]
-              if (!range || line.latestValue === undefined) return null
+              if (line.latestValue === undefined) return null
               const norm = Math.max(
                 0,
                 Math.min(1, (line.latestValue - range.min) / (range.max - range.min))
@@ -115,7 +116,7 @@ export const ChartPanel = ({
                   textAnchor="end"
                   fontWeight="600"
                 >
-                  {SIGNAL_META[line.key]?.label} {formatValue(line.key, line.latestValue)}
+                  {SIGNAL_META[line.key].label} {formatValue(line.key, line.latestValue)}
                 </SvgText>
               )
             })}
@@ -134,7 +135,7 @@ export const ChartPanel = ({
           {lines.map((line) => (
             <View key={line.key} style={styles.valueChip}>
               <Text style={[styles.valueKey, { color: line.color }]}>
-                {SIGNAL_META[line.key]?.label ?? line.key}
+                {SIGNAL_META[line.key].label}
               </Text>
               <Text style={[styles.valueNum, { color: line.color }]}>
                 {formatValue(line.key, line.latestValue)}
