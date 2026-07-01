@@ -120,16 +120,20 @@ export default function DashTopBar() {
       <Sheet open={menuVisible} onOpenChange={setMenuVisible}>
         <SheetContent side="bottom" className="p-0">
           <View style={styles.menuSheet}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false)
-                rootNav.navigate('Settings')
-              }}
-            >
-              <Text style={styles.menuItemText}>Settings</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
+            {!isSim && (
+              <>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setMenuVisible(false)
+                    rootNav.navigate('Settings')
+                  }}
+                >
+                  <Text style={styles.menuItemText}>Settings</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+              </>
+            )}
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
