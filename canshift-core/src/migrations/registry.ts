@@ -2,10 +2,11 @@ import {
   DEFAULT_PALETTE,
   STANDARD_WIDGET_TYPES,
   asObject,
-  asObjectArray,
   brightenHex,
+  flatMapWidgets,
   mapPages,
   mapWidgets,
+  resizeWithinCanvas,
   upgradeLegacySize,
 } from './helpers.js'
 import type { Migration } from './types.js'
@@ -15,12 +16,14 @@ export const MIGRATIONS: Migration[] = [
     fromVersion: '1.22.0',
     toVersion: '1.23.0',
     migrate: (config) =>
-      mapWidgets(config, '1.23.0', (widget) => {
-        if (widget.type !== 'button') return widget
+      flatMapWidgets(config, '1.23.0', (widget) => {
+        if (widget.type !== 'button') return [widget]
         const cfg = asObject(widget.config)
-        if (!cfg) return widget
-        if ('mode' in cfg) return widget
-        return { ...widget, config: { ...cfg, mode: 'single' } }
+        if (!cfg) return [widget]
+        if (cfg.mode === 'cycle') return [widget]
+        if (Array.isArray(cfg.actions) && cfg.actions.length === 0) return []
+        if ('mode' in cfg) return [widget]
+        return [{ ...widget, config: { ...cfg, mode: 'single' } }]
       }),
   },
   {
@@ -42,20 +45,17 @@ export const MIGRATIONS: Migration[] = [
     fromVersion: '1.20.0',
     toVersion: '1.21.0',
     migrate: (config) =>
-      mapPages(config, '1.21.0', (page) => {
-        const widgets = asObjectArray(page.widgets)
-        if (!widgets) return page
-        const filtered = widgets
-          .filter((w) => w.type !== 'bar')
-          .map((widget) => {
-            if (widget.type !== 'gauge') return widget
-            const cfg = asObject(widget.config)
-            if (!cfg || !('barOrientation' in cfg)) return widget
-            const rest = { ...cfg }
-            delete rest.barOrientation
-            return { ...widget, config: rest }
-          })
-        return { ...page, widgets: filtered }
+      flatMapWidgets(config, '1.21.0', (widget) => {
+        if (widget.type === 'bar') return []
+        if (widget.type !== 'gauge') return [widget]
+        const cfg = asObject(widget.config)
+        if (!cfg) return [widget]
+        const hadBarStyle = cfg.displayStyle === 'bar'
+        if (!hadBarStyle && !('barOrientation' in cfg)) return [widget]
+        const rest = { ...cfg }
+        delete rest.barOrientation
+        if (hadBarStyle) rest.displayStyle = 'numeric'
+        return [{ ...widget, config: rest }]
       }),
   },
   {
@@ -153,7 +153,7 @@ export const MIGRATIONS: Migration[] = [
         if (cfg.displayStyle !== 'bar') return widget
         if (cfg.barOrientation !== 'horizontal') return widget
         if (layout.w !== 320 || layout.h !== 28) return widget
-        return { ...widget, layout: { ...layout, h: 56 } }
+        return { ...widget, layout: resizeWithinCanvas(layout, 320, 56) }
       }),
   },
   {
@@ -209,14 +209,15 @@ export const MIGRATIONS: Migration[] = [
         if (typeof type !== 'string' || !STANDARD_WIDGET_TYPES.has(type)) return widget
 
         const layout = asObject(widget.layout)
-        const w = layout?.w
-        const h = layout?.h
+        if (!layout) return widget
+        const w = layout.w
+        const h = layout.h
         if (typeof w !== 'number' || typeof h !== 'number') return widget
 
         const upgraded = upgradeLegacySize(w, h)
         if (!upgraded) return widget
 
-        return { ...widget, layout: { ...layout, w: upgraded.w, h: upgraded.h } }
+        return { ...widget, layout: resizeWithinCanvas(layout, upgraded.w, upgraded.h) }
       }),
   },
   {
@@ -285,20 +286,26 @@ export const MIGRATIONS: Migration[] = [
     fromVersion: '1.0.0',
     toVersion: '1.1.0',
     migrate: (config) =>
-      mapWidgets(config, '1.1.0', (widget) => {
-        if (widget.type !== 'button') return widget
+      flatMapWidgets(config, '1.1.0', (widget) => {
+        if (widget.type !== 'button') return [widget]
         const cfg = asObject(widget.config)
-        if (!cfg) return widget
-        if (Array.isArray(cfg.actions)) return widget
+        if (!cfg) return [widget]
+        if (Array.isArray(cfg.actions)) return cfg.actions.length > 0 ? [widget] : []
 
-        const targetPageId = cfg.targetPageId as string | undefined
-        const actions = targetPageId
-          ? [{ category: 'dashboard', type: 'navigate', pageId: targetPageId }]
-          : []
+        const targetPageId = cfg.targetPageId
+        if (typeof targetPageId !== 'string' || targetPageId.length === 0) return []
 
         const rest = { ...cfg }
         delete rest.targetPageId
-        return { ...widget, config: { ...rest, actions } }
+        return [
+          {
+            ...widget,
+            config: {
+              ...rest,
+              actions: [{ category: 'dashboard', type: 'navigate', pageId: targetPageId }],
+            },
+          },
+        ]
       }),
   },
 ]
