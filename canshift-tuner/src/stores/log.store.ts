@@ -40,6 +40,16 @@ const writeVerboseFlag = (verbose: boolean): void => {
   }
 }
 
+export const LOG_RING_CAP = 2000
+
+const appendCapped = (entries: LogEntry[], entry: LogEntry): LogEntry[] => {
+  const next = entries.concat(entry)
+  if (next.length > LOG_RING_CAP) {
+    next.splice(0, next.length - LOG_RING_CAP)
+  }
+  return next
+}
+
 let nextId = 1
 
 export const useLogStore = create<LogState>()((set, get) => ({
@@ -53,7 +63,7 @@ export const useLogStore = create<LogState>()((set, get) => ({
         ? { id: nextId++, level, message, timestamp: new Date(), scope }
         : { id: nextId++, level, message, timestamp: new Date() }
     set((s) => ({
-      entries: [...s.entries, entry],
+      entries: appendCapped(s.entries, entry),
     }))
   },
 
@@ -68,7 +78,7 @@ export const useLogStore = create<LogState>()((set, get) => ({
     }
     const local: LogEntry = entry.scope !== undefined ? { ...base, scope: entry.scope } : base
     set((s) => ({
-      entries: [...s.entries, local],
+      entries: appendCapped(s.entries, local),
     }))
   },
 

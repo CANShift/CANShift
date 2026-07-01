@@ -24,18 +24,7 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => {
     } else if (status === 'disconnected') {
       const device = useDeviceStore.getState()
       if (device.connected || error) {
-        useDeviceStore.setState({
-          status: error ? 'error' : 'disconnected',
-          portPath: null,
-          transport: null,
-          connected: false,
-          syncing: false,
-          isDayMode: null,
-          firmwareCheck: { kind: 'idle' },
-          firmwareCheckTick: 0,
-          lastPushedConfig: null,
-          errorMessage: error ?? null,
-        })
+        device.setDisconnected(error ?? null)
       }
     }
   })
@@ -52,8 +41,13 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => {
     lastError: null,
 
     connect: async (port) => {
-      await client.connect(port)
-      set({ port: client.getPort() })
+      try {
+        await client.connect(port)
+        set({ port: client.getPort() })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'connect_failed'
+        set({ lastError: msg })
+      }
     },
 
     disconnect: () => {

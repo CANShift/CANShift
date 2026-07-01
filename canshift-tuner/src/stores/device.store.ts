@@ -63,7 +63,7 @@ interface DeviceState {
   isDayMode: boolean | null
 
   setConnected: (portPath: string) => void
-  setDisconnected: () => void
+  setDisconnected: (error?: string | null) => void
   setSyncing: (syncing: boolean) => void
   setSyncComplete: (at: Date) => void
   setError: (message: string) => void
@@ -146,20 +146,23 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
     })
   },
 
-  setDisconnected: () => {
+  setDisconnected: (error) => {
     set({
-      status: 'disconnected',
+      status: error ? 'error' : 'disconnected',
       portPath: null,
       transport: null,
       connected: false,
       syncing: false,
       isDayMode: null,
+      firmwareVersion: null,
       firmwareCheck: { kind: 'idle' },
       firmwareCheckTick: 0,
       firmwareCompat: { kind: 'unknown' },
       firmwareLiveness: { kind: 'unknown' },
       heapStats: [],
       lastPushedConfig: null,
+      burnPhase: 'idle',
+      errorMessage: error ?? null,
     })
   },
 
