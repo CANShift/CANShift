@@ -34,9 +34,7 @@ export const SignalPillRow = ({ visibleSignals, onToggleSignal, vGap }: SignalPi
             <View
               style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]}
             />
-            <Text style={[styles.pillLabel, active && { color }]}>
-              {SIGNAL_META[key].label}
-            </Text>
+            <Text style={[styles.pillLabel, active && { color }]}>{SIGNAL_META[key].label}</Text>
           </TouchableOpacity>
         )
       })}
