@@ -1,11 +1,12 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { FIRMWARE_CAPS } from '../constants/firmware-caps.js'
+import { FIRMWARE_CAPS, STRING_CAPS } from '../constants/firmware-caps.js'
 import { SIGNAL_BYTE_LENGTHS } from '../schemas/signal.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const APP_CONFIG = resolve(here, '../../../canshift-firmware/include/app_config.h')
+const CONFIG_TYPES = resolve(here, '../../../canshift-firmware/src/config/config_types.h')
 const CONFIG_FILE_LOADERS = resolve(
   here,
   '../../../canshift-firmware/src/config/config_file_loaders.inc'
@@ -26,6 +27,44 @@ describeIfFirmware('firmware-caps parity', () => {
     const firmware = extractDefine(source, 'CONFIG_MAX_PAGES')
     expect(firmware).not.toBeNull()
     expect(FIRMWARE_CAPS.MAX_PAGES).toBe(firmware)
+  })
+})
+
+const describeIfTypes = existsSync(CONFIG_TYPES) ? describe : describe.skip
+
+describeIfTypes('string caps firmware parity (config_types.h buffers minus NUL)', () => {
+  const source = readFileSync(CONFIG_TYPES, 'utf8')
+
+  const extractStructArrayLen = (structName: string, fieldName: string): number | null => {
+    const structMatch = new RegExp(`struct\\s+${structName}\\s*\\{([\\s\\S]*?)\\n\\};`).exec(source)
+    if (!structMatch) return null
+    const fieldPattern = new RegExp(`char\\s+${fieldName}\\[(\\w+)\\]`)
+    const fieldMatch = fieldPattern.exec(structMatch[1] ?? '')
+    if (!fieldMatch) return null
+    const size = fieldMatch[1] ?? ''
+    if (/^\d+$/.test(size)) return Number.parseInt(size, 10)
+    return extractDefine(source, size)
+  }
+
+  const cases: [keyof typeof STRING_CAPS, string, string][] = [
+    ['SIGNAL_NAME', 'CfgSignalDef', 'name'],
+    ['SIGNAL_UNIT', 'CfgSignalDef', 'unit'],
+    ['WIDGET_LABEL', 'CfgButtonParams', 'label'],
+    ['WIDGET_LABEL', 'CfgButtonState', 'label'],
+    ['GAUGE_PREFIX', 'CfgGaugeParams', 'prefix'],
+    ['WIDGET_PREFIX_SUFFIX', 'CfgGaugeParams', 'suffix'],
+    ['WIDGET_PREFIX_SUFFIX', 'CfgLabelParams', 'prefix'],
+    ['WIDGET_PREFIX_SUFFIX', 'CfgLabelParams', 'suffix'],
+    ['ICON_PATH', 'CfgButtonParams', 'iconPath'],
+    ['IMAGE_PATH', 'CfgImageParams', 'imagePath'],
+    ['PROTOCOL', 'CfgSignalConfig', 'protocol'],
+    ['BINDING_SIGNAL', 'CfgInputBinding', 'signal'],
+  ]
+
+  it.each(cases)('%s fits firmware %s.%s', (cap, structName, fieldName) => {
+    const bufferSize = extractStructArrayLen(structName, fieldName)
+    expect(bufferSize).not.toBeNull()
+    expect(STRING_CAPS[cap]).toBe((bufferSize ?? 0) - 1)
   })
 })
 

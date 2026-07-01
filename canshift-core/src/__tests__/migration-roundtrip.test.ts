@@ -246,6 +246,79 @@ const lateDashboard1110: Record<string, unknown> = {
   ],
 }
 
+const preCapsDashboard1230: Record<string, unknown> = {
+  version: '1.23.0',
+  name: 'Pre-caps Dash',
+  defaultPageId: 'p1',
+  revLimitRpm: 7500,
+  topBar: { height: 30, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+  pages: [
+    {
+      id: 'p1',
+      backgroundImage: null,
+      backgroundColor: '#000000',
+      palette: fullPalette,
+      showTopBar: true,
+      widgets: [
+        {
+          id: 'boost_arc',
+          type: 'gauge',
+          signal: 'boost',
+          layout: { x: 0, y: 0, w: 160, h: 56, zOrder: 0 },
+          style: fullStyle,
+          config: {
+            type: 'gauge',
+            displayStyle: 'arc',
+            minValue: 0,
+            maxValue: 2,
+            dangerLevel: 1.8,
+            decimalPlaces: 1,
+            showNeedle: true,
+            prefix: 'BOOST PRESSURE ',
+            suffix: ' bar (manifold, absolute)',
+          },
+        },
+        {
+          id: 'gear1',
+          type: 'gear',
+          signal: 'gear',
+          layout: { x: 160, y: 0, w: 80, h: 112, zOrder: 0 },
+          style: fullStyle,
+          config: {
+            type: 'gear',
+            decimalPlaces: 0,
+            prefix: 'currently in gear ',
+            suffix: ' of six forward gears',
+          },
+        },
+        {
+          id: 'btn_long',
+          type: 'button',
+          signal: '',
+          layout: { x: 0, y: 56, w: 160, h: 56, zOrder: 0 },
+          style: fullStyle,
+          config: {
+            type: 'button',
+            mode: 'single',
+            label: 'An exceedingly verbose button label well past thirty-one chars',
+            iconPath: `/icons/${'x'.repeat(80)}.png`,
+            colors: { normal: '#FF4444', active: '#FF7777' },
+            actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p1' }],
+          },
+        },
+        {
+          id: 'img_long',
+          type: 'image',
+          signal: '',
+          layout: { x: 160, y: 112, w: 160, h: 56, zOrder: 0 },
+          style: fullStyle,
+          config: { type: 'image', imagePath: `/images/${'y'.repeat(80)}.png` },
+        },
+      ],
+    },
+  ],
+}
+
 const migrateToCurrent = (fixture: Record<string, unknown>): Record<string, unknown> => {
   const { config: migrated } = migrateConfig(fixture, CURRENT_SCHEMA_VERSION)
   return migrated
@@ -295,6 +368,30 @@ describe('migration round-trip — old fixtures validate against the current sch
     const migrated = migrateToCurrent(lateDashboard1110)
     expect(migrated.version).toBe(CURRENT_SCHEMA_VERSION)
     expectValid(migrated)
+  })
+
+  it('migrates a representative 1.23.0 config into a valid current config', () => {
+    const migrated = migrateToCurrent(preCapsDashboard1230)
+    expect(migrated.version).toBe(CURRENT_SCHEMA_VERSION)
+    expectValid(migrated)
+  })
+
+  it('1.23.0 → 1.24.0 drops showNeedle and truncates strings to firmware caps', () => {
+    const migrated = migrateToCurrent(preCapsDashboard1230)
+    const pages = migrated.pages as { widgets: { config: Record<string, unknown> }[] }[]
+    const [gauge, gear, button, image] = pages[0]!.widgets.map((w) => w.config)
+
+    expect(gauge).not.toHaveProperty('showNeedle')
+    expect(gauge!.prefix).toBe('BOOST P')
+    expect(gauge!.suffix).toBe(' bar (manifold,')
+
+    expect(gear!.prefix).toBe('currently in ge')
+    expect(gear!.suffix).toBe(' of six forward')
+
+    expect(button!.label).toBe('An exceedingly verbose button l')
+    expect((button!.iconPath as string).length).toBe(63)
+
+    expect((image!.imagePath as string).length).toBe(63)
   })
 
   it('a config already at the current version passes validation unchanged', () => {
