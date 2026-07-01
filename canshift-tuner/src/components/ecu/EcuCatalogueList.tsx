@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { formatBytes } from '../../lib/format'
+import { Input } from '../ui/input'
 import { TogglePill } from '../ui/toggle-pill'
 
 export interface CatalogueItem {
@@ -91,14 +92,14 @@ export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalog
   return (
     <div style={wrapperStyle}>
       <div style={toolbarStyle}>
-        <input
+        <Input
           type="search"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
           }}
           placeholder="Search vendor or model"
-          style={searchStyle}
+          className="h-9 text-xs"
           disabled={state.kind !== 'ready'}
         />
         <div style={sortPillsStyle}>
@@ -184,17 +185,6 @@ const toolbarStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
-}
-
-const searchStyle: CSSProperties = {
-  width: '100%',
-  background: 'hsl(var(--bg))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
-  padding: '7px 10px',
-  fontSize: 12,
-  color: 'hsl(var(--text))',
-  outline: 'none',
 }
 
 const sortPillsStyle: CSSProperties = {

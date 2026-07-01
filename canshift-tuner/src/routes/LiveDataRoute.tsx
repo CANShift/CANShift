@@ -5,6 +5,7 @@ import { RouteHeader } from '../components/shell/RouteHeader'
 import { useLiveSignals } from '../hooks/useLiveSignals'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
+import { Input } from '../components/ui/input'
 
 const AGE_TICK_MS = 500
 
@@ -83,14 +84,14 @@ const LiveDataRoute = () => {
         }
         action={
           <>
-            <input
+            <Input
               type="search"
               value={filter}
               onChange={(e) => {
                 setFilter(e.target.value)
               }}
               placeholder="Filter by name or unit"
-              style={filterStyle}
+              className="h-9 w-[220px] text-xs"
             />
             <button
               type="button"
@@ -181,17 +182,6 @@ const containerStyle: CSSProperties = {
   flexDirection: 'column',
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
-}
-
-const filterStyle: CSSProperties = {
-  background: 'hsl(var(--surface))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
-  padding: '8px 12px',
-  fontSize: 12,
-  color: 'hsl(var(--text))',
-  width: 220,
-  outline: 'none',
 }
 
 const exportButtonStyle = (disabled: boolean): CSSProperties => ({
