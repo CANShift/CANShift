@@ -10,17 +10,20 @@ import type {
   WidgetLayout,
 } from '@tmbk/canshift-core'
 
-export type LoadFromDeviceOrDemoResult = 'device' | 'demo' | 'kept-edits'
+export type LoadFromDeviceOrDemoResult = 'device' | 'demo' | 'kept-edits' | 'staged'
 
 export type AlignDirection = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v'
 
 export interface LifecycleSlice {
   config: DashboardConfig | null
   isDirty: boolean
+  pendingDeviceConfig: DashboardConfig | null
 
   setConfig: (config: DashboardConfig) => void
   setTargetProfile: (id: ScreenProfileId) => void
   loadFromDeviceOrDemo: (deviceConfig: DashboardConfig | null) => LoadFromDeviceOrDemoResult
+  acceptPendingDeviceConfig: () => void
+  dismissPendingDeviceConfig: () => void
   markPushed: () => void
   markDirty: () => void
 }
