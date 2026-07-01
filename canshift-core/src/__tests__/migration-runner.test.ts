@@ -69,16 +69,34 @@ describe('migrateConfig — 1.0.0 → 1.1.0', () => {
     expect('targetPageId' in btn).toBe(false)
   })
 
-  it('leaves buttons with no targetPageId with an empty actions array', () => {
+  it('drops buttons with no targetPageId — no neutral action exists to synthesize (#1709)', () => {
     const config = {
       version: '1.0.0',
-      pages: wrapInPages([{ id: 'btn2', type: 'button', config: { label: 'Noop' } }]),
+      pages: wrapInPages([
+        { id: 'btn2', type: 'button', config: { label: 'Noop' } },
+        makeGaugeWidget(),
+      ]),
     }
     const { config: out } = migrateConfig(config, '1.1.0')
-    const btn = (
-      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
-    )[0]!.config as Record<string, unknown>
-    expect(btn['actions']).toEqual([])
+    const widgets = (out.pages as Record<string, unknown>[])[0]!.widgets as Record<
+      string,
+      unknown
+    >[]
+    expect(widgets).toHaveLength(1)
+    expect(widgets[0]!.id).toBe('g1')
+  })
+
+  it('drops buttons carrying an explicit empty actions array (#1709)', () => {
+    const config = {
+      version: '1.0.0',
+      pages: wrapInPages([{ id: 'btn2', type: 'button', config: { label: 'Noop', actions: [] } }]),
+    }
+    const { config: out } = migrateConfig(config, '1.1.0')
+    const widgets = (out.pages as Record<string, unknown>[])[0]!.widgets as Record<
+      string,
+      unknown
+    >[]
+    expect(widgets).toHaveLength(0)
   })
 
   it('does not touch buttons that already have actions', () => {
@@ -316,6 +334,19 @@ describe('migrateConfig — 1.5.0 → 1.6.0', () => {
     expect((widgets[1]!.layout as Record<string, number>).h).toBe(56)
   })
 
+  it('clamps x/y so upgraded widgets stay inside the 320×240 canvas (#1709)', () => {
+    const widget = {
+      ...makeStandardWidget('warning', { w: 80, h: 56 }),
+      layout: { x: 240, y: 200, zOrder: 0, w: 80, h: 56 },
+    }
+    const config = { version: '1.5.0', pages: wrapInPages([widget]) }
+    const { config: out } = migrateConfig(config, '1.6.0')
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, number>
+    expect(layout).toEqual({ x: 160, y: 184, zOrder: 0, w: 160, h: 56 })
+  })
+
   it('handles config with no pages', () => {
     const config = { version: '1.5.0' }
     const { config: out } = migrateConfig(config, '1.6.0')
@@ -520,6 +551,19 @@ describe('migrateConfig — 1.8.0 → 1.9.0', () => {
     )[0]!.layout as Record<string, unknown>
     expect(layout.h).toBe(56)
     expect(layout.w).toBe(320)
+  })
+
+  it('clamps y so grown bars stay inside the 240px canvas (#1709)', () => {
+    const config = {
+      version: '1.8.0',
+      pages: wrapInPages([makeHorizontalBar({ x: 0, y: 196, w: 320, h: 28, zOrder: 0 })]),
+    }
+    const { config: out } = migrateConfig(config, '1.9.0')
+    const layout = (
+      (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+    )[0]!.layout as Record<string, unknown>
+    expect(layout.h).toBe(56)
+    expect(layout.y).toBe(184)
   })
 
   it('leaves bars at the new height untouched', () => {
@@ -794,9 +838,12 @@ describe('migrateConfig — full chain to current', () => {
     const tpsLayout = tps.layout as Record<string, unknown>
     expect(tpsLayout.w).toBe(320)
     expect(tpsLayout.h).toBe(56)
+    expect(tpsLayout.y).toBe(184)
     const tpsCfg = tps.config as Record<string, unknown>
     expect('warningLevel' in tpsCfg).toBe(false)
     expect(tpsCfg.dangerLevel).toBe(90)
+    expect(tpsCfg.displayStyle).toBe('numeric')
+    expect('barOrientation' in tpsCfg).toBe(false)
   })
 
   it(`a fresh ${CURRENT_SCHEMA_VERSION} config is a no-op through the runner`, () => {
@@ -1295,6 +1342,43 @@ describe('migrateConfig — 1.20.0 → 1.21.0', () => {
     expect(widgets[0]!.type).toBe('gauge')
   })
 
+  it('converts displayStyle:"bar" gauges to numeric — "bar" left the enum with the widget (#1709)', () => {
+    const config = {
+      version: '1.20.0',
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          widgets: [
+            {
+              id: 'g1',
+              type: 'gauge',
+              signal: 'tps',
+              layout: { x: 0, y: 184, w: 320, h: 56 },
+              style: { primaryColor: '#FF4444', textColor: '#FFFFFF' },
+              config: {
+                type: 'gauge',
+                displayStyle: 'bar',
+                barOrientation: 'horizontal',
+                minValue: 0,
+                maxValue: 100,
+                dangerLevel: 90,
+                decimalPlaces: 0,
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const { config: out } = migrateConfig(config, '1.21.0')
+    const cfg = (out.pages as { widgets: { config: Record<string, unknown> }[] }[])[0]!.widgets[0]!
+      .config
+    expect(cfg.displayStyle).toBe('numeric')
+    expect('barOrientation' in cfg).toBe(false)
+    expect(cfg.dangerLevel).toBe(90)
+  })
+
   it('is a no-op when no bar widget is present', () => {
     const config = {
       version: '1.20.0',
@@ -1463,6 +1547,82 @@ describe('migrateConfig — 1.21.0 → 1.22.0', () => {
     const { config: out } = migrateConfig(config, '1.22.0')
     expect(out.version).toBe('1.22.0')
     expect((out.pages as unknown[])[0]).toEqual(config.pages[0])
+  })
+})
+
+describe('migrateConfig — 1.22.0 → 1.23.0', () => {
+  const wrap = (widgets: Record<string, unknown>[]): Record<string, unknown> => ({
+    version: '1.22.0',
+    pages: [{ id: 'p1', widgets }],
+  })
+  const outWidgets = (config: Record<string, unknown>): Record<string, unknown>[] => {
+    const { config: out } = migrateConfig(config, '1.23.0')
+    return (out.pages as Record<string, unknown>[])[0]!.widgets as Record<string, unknown>[]
+  }
+
+  it('adds mode:"single" to legacy single-action buttons', () => {
+    const widgets = outWidgets(
+      wrap([
+        {
+          id: 'b1',
+          type: 'button',
+          config: {
+            type: 'button',
+            label: 'Go',
+            actions: [{ category: 'dashboard', type: 'navigate', pageId: 'p2' }],
+          },
+        },
+      ])
+    )
+    expect(widgets).toHaveLength(1)
+    expect((widgets[0]!.config as Record<string, unknown>).mode).toBe('single')
+  })
+
+  it('drops buttons with an empty actions array — schema requires min(1) (#1709)', () => {
+    const widgets = outWidgets(
+      wrap([
+        { id: 'b1', type: 'button', config: { type: 'button', label: 'Dead', actions: [] } },
+        {
+          id: 'b2',
+          type: 'button',
+          config: {
+            type: 'button',
+            label: 'Live',
+            actions: [{ category: 'ecu', type: 'map_switch', mapIndex: 1 }],
+          },
+        },
+      ])
+    )
+    expect(widgets.map((w) => w.id)).toEqual(['b2'])
+  })
+
+  it('drops mode:"single" buttons with an empty actions array (#1709)', () => {
+    const widgets = outWidgets(
+      wrap([
+        {
+          id: 'b1',
+          type: 'button',
+          config: { type: 'button', label: 'Dead', mode: 'single', actions: [] },
+        },
+      ])
+    )
+    expect(widgets).toHaveLength(0)
+  })
+
+  it('leaves cycle buttons untouched', () => {
+    const cycle = {
+      id: 'b1',
+      type: 'button',
+      config: {
+        type: 'button',
+        label: 'Cycle',
+        mode: 'cycle',
+        states: [],
+        initialActiveIndex: 0,
+      },
+    }
+    const widgets = outWidgets(wrap([cycle]))
+    expect(widgets).toEqual([cycle])
   })
 })
 

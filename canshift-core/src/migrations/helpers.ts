@@ -1,4 +1,5 @@
 import { HEX_REGEX } from '../colors/hex.js'
+import { CANVAS } from '../constants/firmware-caps.js'
 
 type Config = Record<string, unknown>
 
@@ -26,6 +27,25 @@ export const mapWidgets = (
     if (!widgets) return page
     return { ...page, widgets: widgets.map(fn) }
   })
+
+export const flatMapWidgets = (
+  config: Config,
+  version: string,
+  fn: (widget: Config) => Config[]
+): Config =>
+  mapPages(config, version, (page) => {
+    const widgets = asObjectArray(page.widgets)
+    if (!widgets) return page
+    return { ...page, widgets: widgets.flatMap(fn) }
+  })
+
+export const resizeWithinCanvas = (layout: Config, w: number, h: number): Config => {
+  const x =
+    typeof layout.x === 'number' ? Math.max(0, Math.min(layout.x, CANVAS.WIDTH - w)) : layout.x
+  const y =
+    typeof layout.y === 'number' ? Math.max(0, Math.min(layout.y, CANVAS.HEIGHT - h)) : layout.y
+  return { ...layout, x, y, w, h }
+}
 
 export const deepClone = (value: Record<string, unknown>): Record<string, unknown> => {
   try {
