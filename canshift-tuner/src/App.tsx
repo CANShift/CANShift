@@ -18,6 +18,8 @@ import { useHeapStatsSubscription } from './hooks/useHeapStatsSubscription'
 import { useFirmwareLogBridge } from './hooks/useFirmwareLogBridge'
 import { useBurnShortcut } from './hooks/useBurnShortcut'
 import { useWidgetOverflowWarnings } from './hooks/useWidgetOverflowWarnings'
+import { useUnsavedChangesGuard } from './hooks/useUnsavedChangesGuard'
+import { DeviceConfigConflictDialog } from './components/shell/DeviceConfigConflictDialog'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 const AboutRoute = lazy(() => import('./routes/AboutRoute'))
@@ -55,6 +57,7 @@ const DisconnectedGuard = ({ children }: { children: ReactNode }) => {
   const location = useLocation()
   if (
     status !== 'connected' &&
+    status !== 'reconnecting' &&
     !simulationMode &&
     !DISCONNECTED_ALLOWED_PATHS.has(location.pathname)
   ) {
@@ -73,6 +76,7 @@ const App = () => {
   useDeviceConfigBootstrap()
   useBurnShortcut()
   useWidgetOverflowWarnings()
+  useUnsavedChangesGuard()
 
   return (
     <div style={shellStyle}>
@@ -109,6 +113,7 @@ const App = () => {
         </main>
       </div>
       <FeedbackButton />
+      <DeviceConfigConflictDialog />
     </div>
   )
 }

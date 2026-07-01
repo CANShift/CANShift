@@ -20,7 +20,9 @@ export const useDeviceConfigBootstrap = (): void => {
         if (cancelled) return
         if (result.kind === 'ok') {
           const outcome = loadFromDeviceOrDemo(result.config)
-          if (outcome === 'device') {
+          if (outcome === 'staged') {
+            log('warn', 'Device config differs from your unsaved edits — choose which to keep')
+          } else if (outcome === 'device') {
             log('success', 'Loaded config from device')
             if (result.migrationsApplied.length > 0) {
               markDirty()
