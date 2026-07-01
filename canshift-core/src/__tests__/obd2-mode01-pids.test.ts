@@ -1,18 +1,11 @@
 import {
   OBD2_DEFAULT_INTERVAL_MS,
   OBD2_MODE01_PIDS,
-  OBD2_REQUEST_FRAME_ID,
-  OBD2_RESPONSE_FRAME_ID,
   Obd2PollingSchema,
   obd2PidLookup,
 } from '../index.js'
 
 describe('OBD2_MODE01_PIDS catalog', () => {
-  it('exposes the J1979 request/response frame IDs', () => {
-    expect(OBD2_REQUEST_FRAME_ID).toBe(0x7df)
-    expect(OBD2_RESPONSE_FRAME_ID).toBe(0x7e8)
-  })
-
   it('is non-empty and ordered by PID hex', () => {
     expect(OBD2_MODE01_PIDS.length).toBeGreaterThan(0)
     for (let i = 1; i < OBD2_MODE01_PIDS.length; i++) {

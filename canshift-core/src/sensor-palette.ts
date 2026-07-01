@@ -1,7 +1,6 @@
 import { HexColorSchema } from './schemas/common.js'
 import type { HexColor } from './schemas/common.js'
 import type { SensorIconName } from './schemas/dashboard.js'
-import type { SignalType } from './schemas/signal-type.js'
 
 export interface SensorPaletteEntry {
   ok: HexColor
@@ -44,14 +43,3 @@ export const sensorOkColor = (iconName: SensorIconName | undefined): HexColor | 
 
 export const sensorWarningColor = (iconName: SensorIconName | undefined): HexColor | undefined =>
   iconName ? SENSOR_PALETTE[iconName].warning : undefined
-
-const paletteEntry = (type: SignalType | undefined): SensorPaletteEntry | undefined => {
-  if (!type || type === 'generic' || !(type in SENSOR_PALETTE)) return undefined
-  return SENSOR_PALETTE[type as SensorIconName]
-}
-
-export const signalTypeOkColor = (type: SignalType | undefined): HexColor | undefined =>
-  paletteEntry(type)?.ok
-
-export const signalTypeWarningColor = (type: SignalType | undefined): HexColor | undefined =>
-  paletteEntry(type)?.warning

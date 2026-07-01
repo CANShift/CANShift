@@ -47,7 +47,7 @@ First release after the firmware-only pipeline cutover (#1077). The Electron Stu
 CANShift is a custom instrument cluster you design yourself. The ESP32 reads CAN frames from your ECU and renders live gauges, bars, and warnings on a small touchscreen. Three companion surfaces let you configure, update, and inspect the dash without recompiling firmware:
 
 - **Tuner** (`canshift-tuner/`) — Vercel-hosted Betaflight-style configurator. Talks to the dash over **WebSerial** via the CH340 UART. Open the Vercel URL in Chrome / Edge / Brave / Opera, click `Connect device`, edit pages and bind signals live. No install, no on-device WiFi (#1351).
-- **USB flasher** ([canshift.tmbk.ch](https://canshift.tmbk.ch), separate repo [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — see #1081) — browser-based esptool that flashes the merged firmware image over Web Serial. Used for first-flash, recovery, and partition-layout migration. Being absorbed into the Tuner per #1351.
+- **USB flasher** (Tuner → **Firmware** tab) — built-in browser-based esptool (`esptool-js`) that flashes the merged firmware image over Web Serial. Used for first-flash, recovery, and partition-layout migration (#1351).
 - **Mobile app** (`canshift-mobile/`) — iPhone-first, BLE telemetry + settings. Independent of the Tuner; pairs directly with the dash over BLE.
 
 ```
@@ -67,7 +67,7 @@ CANShift is a custom instrument cluster you design yourself. The ESP32 reads CAN
                   on WS port 81)
 ```
 
-Plus, for first-flash / recovery: the standalone [canshift.tmbk.ch](https://canshift.tmbk.ch) flasher SPA writes the merged firmware + SPIFFS image over Web Serial.
+Plus, for first-flash / recovery: the Tuner's **Firmware** tab writes the merged firmware + SPIFFS image over Web Serial.
 
 The firmware is **autonomous** — it runs without any app connected. The surfaces above are used to configure and update it.
 
@@ -98,7 +98,7 @@ Check your ECU's datasheet for CAN termination — some ECUs have internal termi
 
 ## Quickstart — First flash + connect
 
-1. **Flash the firmware over USB.** Open [canshift.tmbk.ch](https://canshift.tmbk.ch) in a Chromium-based browser, plug in the CrowPanel, hit "Flash latest." The flasher reads the merged firmware + SPIFFS images from the latest GitHub release and writes them via Web Serial (`esptool-js`). No installer to download. Source repo: [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) (#1081).
+1. **Flash the firmware over USB.** Open the Tuner at [canshift.tmbk.ch](https://canshift.tmbk.ch) in a Chromium-based browser, plug in the CrowPanel, and use the **Firmware** tab to flash the latest release. The flasher reads the merged firmware + SPIFFS images from the latest GitHub release and writes them via Web Serial (`esptool-js`). No installer to download.
 2. **Bring the dash's WiFi AP up.** On a fresh device the AP is dormant. Swipe the on-screen top bar down, open Settings, toggle **WIFI AP → ON**. The setting persists in NVS so subsequent boots auto-start the AP. The mobile app can also trigger the AP via BLE.
 3. **Connect to the dash-hosted Studio.** Join the `CANShift-XXXX` SSID with the password shown on the dash, then navigate any browser to `http://canshift.local` (or the AP IP). The dash serves the Studio SPA from port 80; live data flows over WebSocket on port 81 (#1108).
 
@@ -106,7 +106,7 @@ Check your ECU's datasheet for CAN termination — some ECUs have internal termi
 
 ## Quickstart — Flash Firmware Manually
 
-If the browser-based USB flasher at [canshift.tmbk.ch](https://canshift.tmbk.ch) is unavailable, flash the release artifacts directly with `esptool`:
+If the Tuner's built-in USB flasher is unavailable, flash the release artifacts directly with `esptool`:
 
 ```bash
 pip install esptool
@@ -176,7 +176,6 @@ docs/                 Architecture documentation
 | Mobile | [canshift-mobile/README.md](canshift-mobile/README.md) — Expo setup, BLE service |
 | Core | [canshift-core/README.md](canshift-core/README.md) — config schema, validation, migrations, design tokens |
 | Docs | [docs/README.md](docs/README.md) — architecture documentation index |
-| Flasher (being absorbed into Tuner) | [`tburkhalterr/canshift-flasher`](https://github.com/tburkhalterr/canshift-flasher) — browser-based esptool, hosted at [canshift.tmbk.ch](https://canshift.tmbk.ch) (#1081) — being absorbed into canshift-tuner per #1351 |
 
 ---
 
@@ -259,7 +258,7 @@ To ship a release:
    - `canshift-firmware-vX.Y.Z-crowpanel_28-merged.bin` (merged firmware — includes bootloader, partition table, the embedded dash-hosted Studio SPA, and OTA HMAC trailer)
    - `canshift-spiffs-vX.Y.Z-crowpanel_28.bin` (SPIFFS image — default configs, fonts, sensor icons)
 
-Studio installer artifacts (DMG / NSIS / AppImage) and mobile binaries are **no longer published** — the dash-hosted Studio ships inside the firmware payload, the USB flasher is hosted at [canshift.tmbk.ch](https://canshift.tmbk.ch), and mobile distributes through TestFlight / Play Store separately.
+Studio installer artifacts (DMG / NSIS / AppImage) and mobile binaries are **no longer published** — the dash-hosted Studio ships inside the firmware payload, the USB flasher is built into the Tuner, and mobile distributes through TestFlight / Play Store separately.
 
 ---
 

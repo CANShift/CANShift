@@ -20,5 +20,3 @@ export const SIGNAL_TYPES = [
 export const SignalTypeSchema = z.enum(SIGNAL_TYPES)
 
 export type SignalType = z.infer<typeof SignalTypeSchema>
-
-export const DEFAULT_SIGNAL_TYPE: SignalType = 'generic'

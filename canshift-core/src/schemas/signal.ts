@@ -187,10 +187,6 @@ export const CanSpeedKbpsSchema = z.union([
 
 export type CanSpeedKbps = z.infer<typeof CanSpeedKbpsSchema>
 
-export const CAN_SPEED_OPTIONS: readonly CanSpeedKbps[] = CanSpeedKbpsSchema.options.map(
-  (o) => o.value
-)
-
 export const OutboundCanSignalSchema = z
   .object({
     id: z

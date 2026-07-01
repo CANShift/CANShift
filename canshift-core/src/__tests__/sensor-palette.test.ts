@@ -1,6 +1,6 @@
 import { SENSOR_PALETTE, sensorOkColor, sensorWarningColor } from '../sensor-palette.js'
 import { SensorIconNameSchema } from '../schemas/dashboard.js'
-import { HEX_COLOR_REGEX } from '../constants/firmware-caps.js'
+import { HEX_REGEX } from '../colors/hex.js'
 
 describe('SENSOR_PALETTE', () => {
   const entries = Object.entries(SENSOR_PALETTE)
@@ -12,9 +12,9 @@ describe('SENSOR_PALETTE', () => {
   })
 
   it.each(entries)('%s has valid hex colours', (_name, entry) => {
-    expect(entry.ok).toMatch(HEX_COLOR_REGEX)
+    expect(entry.ok).toMatch(HEX_REGEX)
     if (entry.warning !== undefined) {
-      expect(entry.warning).toMatch(HEX_COLOR_REGEX)
+      expect(entry.warning).toMatch(HEX_REGEX)
     }
   })
 })

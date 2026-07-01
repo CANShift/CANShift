@@ -1,8 +1,5 @@
 import type { Obd2Pid } from '../schemas/obd2.js'
 
-export const OBD2_REQUEST_FRAME_ID = 0x7df
-export const OBD2_RESPONSE_FRAME_ID = 0x7e8
-
 export interface Obd2Mode01PidEntry {
   pid: Obd2Pid
   signal: string

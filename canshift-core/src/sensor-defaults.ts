@@ -2,19 +2,35 @@ import { HEX_REGEX } from './colors/hex.js'
 import { HexColorSchema } from './schemas/common.js'
 import type { HexColor } from './schemas/common.js'
 import type { ColorRamp } from './schemas/signal.js'
+import type { SensorIconName } from './schemas/widgets/sensor-icon.js'
 
 const hex = (value: string): HexColor => HexColorSchema.parse(value)
 
-export type SensorKind =
-  | 'coolant_temp'
-  | 'oil_temp'
-  | 'oil_press'
-  | 'battery_volts'
-  | 'rpm'
-  | 'afr'
-  | 'boost'
-  | 'intake_temp'
-  | 'egt'
+export const SENSOR_KINDS = [
+  'coolant_temp',
+  'oil_temp',
+  'oil_press',
+  'battery_volts',
+  'rpm',
+  'afr',
+  'boost',
+  'intake_temp',
+  'egt',
+] as const
+
+export type SensorKind = (typeof SENSOR_KINDS)[number]
+
+export const SENSOR_KIND_TO_ICON: Record<SensorKind, SensorIconName> = {
+  coolant_temp: 'coolant',
+  oil_temp: 'oil_temp',
+  oil_press: 'oil_pressure',
+  battery_volts: 'battery',
+  rpm: 'rpm',
+  afr: 'afr',
+  boost: 'boost',
+  intake_temp: 'iat',
+  egt: 'exhaust',
+}
 
 export const SENSOR_DEFAULT_RAMPS: Record<SensorKind, ColorRamp> = {
   coolant_temp: {
@@ -98,40 +114,6 @@ export const SENSOR_DEFAULT_RAMPS: Record<SensorKind, ColorRamp> = {
       { value: 950, color: hex('#CC3333') },
     ],
   },
-}
-
-const NAME_HEURISTICS: readonly { pattern: string; kind: SensorKind }[] = [
-  { pattern: 'coolant', kind: 'coolant_temp' },
-  { pattern: 'oil_press', kind: 'oil_press' },
-  { pattern: 'oil_pressure', kind: 'oil_press' },
-  { pattern: 'oil_temp', kind: 'oil_temp' },
-  { pattern: 'oil', kind: 'oil_temp' },
-  { pattern: 'battery', kind: 'battery_volts' },
-  { pattern: 'batt_v', kind: 'battery_volts' },
-  { pattern: 'rpm', kind: 'rpm' },
-  { pattern: 'afr', kind: 'afr' },
-  { pattern: 'lambda', kind: 'afr' },
-  { pattern: 'boost', kind: 'boost' },
-  { pattern: 'manifold_press', kind: 'boost' },
-  { pattern: 'map_press', kind: 'boost' },
-  { pattern: 'intake_temp', kind: 'intake_temp' },
-  { pattern: 'iat', kind: 'intake_temp' },
-  { pattern: 'mat', kind: 'intake_temp' },
-  { pattern: 'egt', kind: 'egt' },
-  { pattern: 'exhaust_temp', kind: 'egt' },
-]
-
-export const resolveSensorKind = (signalName: string): SensorKind | undefined => {
-  const lowered = signalName.toLowerCase()
-  for (const { pattern, kind } of NAME_HEURISTICS) {
-    if (lowered.includes(pattern)) return kind
-  }
-  return undefined
-}
-
-export const resolveDefaultRamp = (signalName: string): ColorRamp | undefined => {
-  const kind = resolveSensorKind(signalName)
-  return kind ? SENSOR_DEFAULT_RAMPS[kind] : undefined
 }
 
 interface RgbChannels {

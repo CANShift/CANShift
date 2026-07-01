@@ -1,4 +1,5 @@
 import { SENSOR_DEFAULT_RAMPS, colorAtValue, type SensorKind } from '@tmbk/canshift-core'
+import type { SignalKey } from '../constants/ble'
 
 const KEY_TO_SENSOR_KIND: Record<string, SensorKind> = {
   r: 'rpm',
@@ -8,7 +9,7 @@ const KEY_TO_SENSOR_KIND: Record<string, SensorKind> = {
   iat: 'intake_temp',
   bst: 'boost',
   lam: 'afr',
-}
+} satisfies Partial<Record<SignalKey, SensorKind>>
 
 const FALLBACK_COLOR: Record<string, string> = {
   tps: '#FFD700',

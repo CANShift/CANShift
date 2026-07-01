@@ -1,11 +1,13 @@
 import {
   SENSOR_DEFAULT_RAMPS,
+  SENSOR_KINDS,
+  SENSOR_KIND_TO_ICON,
   colorAtValue,
-  resolveDefaultRamp,
-  resolveSensorKind,
 } from '../sensor-defaults.js'
 import type { SensorKind } from '../sensor-defaults.js'
-import { HEX_COLOR_REGEX, MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
+import { SENSOR_PALETTE } from '../sensor-palette.js'
+import { HEX_REGEX } from '../colors/hex.js'
+import { MAX_RAMP_STOPS } from '../constants/firmware-caps.js'
 import { HexColorSchema } from '../schemas/common.js'
 import type { ColorRamp } from '../schemas/signal.js'
 
@@ -26,7 +28,7 @@ describe('SENSOR_DEFAULT_RAMPS', () => {
     }
 
     for (const stop of ramp.stops) {
-      expect(HEX_COLOR_REGEX.test(stop.color)).toBe(true)
+      expect(HEX_REGEX.test(stop.color)).toBe(true)
     }
   })
 
@@ -37,33 +39,16 @@ describe('SENSOR_DEFAULT_RAMPS', () => {
   })
 })
 
-describe('resolveSensorKind / resolveDefaultRamp', () => {
-  it.each([
-    ['coolant_temp_c', 'coolant_temp'],
-    ['coolant_temp', 'coolant_temp'],
-    ['oil_pressure_bar', 'oil_press'],
-    ['oil_press', 'oil_press'],
-    ['oil_temp_c', 'oil_temp'],
-    ['battery_volts', 'battery_volts'],
-    ['rpm', 'rpm'],
-    ['afr', 'afr'],
-    ['lambda', 'afr'],
-    ['boost_bar', 'boost'],
-    ['iat', 'intake_temp'],
-    ['intake_temp_c', 'intake_temp'],
-    ['egt_c', 'egt'],
-  ])('"%s" resolves to %s', (input, expected) => {
-    expect(resolveSensorKind(input)).toBe(expected)
-    expect(resolveDefaultRamp(input)).toBe(SENSOR_DEFAULT_RAMPS[expected as SensorKind])
+describe('SENSOR_KINDS / SENSOR_KIND_TO_ICON', () => {
+  it('covers every kind with a default ramp', () => {
+    expect(Object.keys(SENSOR_DEFAULT_RAMPS).sort()).toEqual([...SENSOR_KINDS].sort())
   })
 
-  it('returns undefined for unknown signal names', () => {
-    expect(resolveSensorKind('throttle_pos_pct')).toBeUndefined()
-    expect(resolveDefaultRamp('throttle_pos_pct')).toBeUndefined()
-  })
-
-  it('is case-insensitive', () => {
-    expect(resolveSensorKind('COOLANT_TEMP_C')).toBe('coolant_temp')
+  it('maps every kind to an icon backed by the sensor palette', () => {
+    for (const kind of SENSOR_KINDS) {
+      const icon = SENSOR_KIND_TO_ICON[kind]
+      expect(SENSOR_PALETTE[icon]).toBeDefined()
+    }
   })
 })
 
