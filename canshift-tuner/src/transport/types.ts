@@ -1,23 +1,8 @@
 import type { DashboardConfig } from '@tmbk/canshift-core'
 
-export interface PortInfo {
-  path: string
-  manufacturer?: string
-  serialNumber?: string
-  productId?: string
-  vendorId?: string
-  description?: string
-}
-
 export interface UsbResult {
   success: boolean
   error?: string
-}
-
-export interface ConnectionStatus {
-  connected: boolean
-  portPath: string | null
-  firmwareVersion?: string | null
 }
 
 export interface FirmwareIdentity {

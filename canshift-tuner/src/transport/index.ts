@@ -2,13 +2,11 @@ export { KNOWN_OPCODES } from './opcodes'
 export type { KnownOpcode } from './opcodes'
 
 export type {
-  ConnectionStatus,
   DeviceConfigResult,
   FirmwareIdentity,
   FirmwareIdentityResult,
   Handler,
   PingResult,
-  PortInfo,
   RawAck,
   Unsubscribe,
   UsbResult,

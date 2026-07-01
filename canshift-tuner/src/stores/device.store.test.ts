@@ -5,7 +5,6 @@ const connectAndPopulate = (): void => {
   const s = useDeviceStore.getState()
   s.setConnected('webserial')
   s.setFirmwareVersion('1.2.3')
-  s.setFirmwareCheck({ kind: 'up_to_date', version: '1.2.3', checkedAt: 1 })
   s.setFirmwareCompat({ kind: 'mismatch', expected: 2, got: 1, version: '1.2.3' })
   s.setFirmwareLiveness({ kind: 'alive', lastPongAt: 1, uptimeMs: 100 })
   s.pushHeapStats({
@@ -32,7 +31,6 @@ describe('device.store setDisconnected (#1704)', () => {
     expect(s.portPath).toBeNull()
     expect(s.transport).toBeNull()
     expect(s.firmwareVersion).toBeNull()
-    expect(s.firmwareCheck).toEqual({ kind: 'idle' })
     expect(s.firmwareCompat).toEqual({ kind: 'unknown' })
     expect(s.firmwareLiveness).toEqual({ kind: 'unknown' })
     expect(s.heapStats).toEqual([])
