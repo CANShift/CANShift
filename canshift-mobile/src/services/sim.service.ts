@@ -19,6 +19,7 @@ const gear = (r: number) => {
 const rand = (base: number, range: number) => base + (Math.random() - 0.5) * range
 
 export const start = () => {
+  if (tickInterval) return
   const { setDevice, setFirmwareStatus, setMode } = useDeviceStore.getState()
   setDevice('SIM', 'CANShift (sim)')
   setFirmwareStatus('sim', true)
