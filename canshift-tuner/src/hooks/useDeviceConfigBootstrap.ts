@@ -8,6 +8,7 @@ export const useDeviceConfigBootstrap = (): void => {
   const connected = useDeviceStore((s) => s.connected)
   const transport = useDeviceStore((s) => s.transport)
   const loadFromDeviceOrDemo = useDashboardStore((s) => s.loadFromDeviceOrDemo)
+  const markDirty = useDashboardStore((s) => s.markDirty)
   const log = useLogStore((s) => s.push)
 
   useEffect(() => {
@@ -19,12 +20,23 @@ export const useDeviceConfigBootstrap = (): void => {
         if (cancelled) return
         if (result.kind === 'ok') {
           const outcome = loadFromDeviceOrDemo(result.config)
-          if (outcome === 'device') log('success', 'Loaded config from device')
+          if (outcome === 'device') {
+            log('success', 'Loaded config from device')
+            if (result.migrationsApplied.length > 0) {
+              markDirty()
+              log(
+                'info',
+                `Device config migrated (${result.migrationsApplied.join(', ')}) — burn to persist the upgrade`
+              )
+            }
+          }
         } else if (result.kind === 'none') {
           const outcome = loadFromDeviceOrDemo(null)
           if (outcome === 'demo') log('info', 'Device has no config — loaded demo')
         } else {
-          log('error', `Failed to read device config: ${result.error}`)
+          log('error', `Device config is unreadable or invalid: ${result.error}`)
+          const outcome = loadFromDeviceOrDemo(null)
+          if (outcome === 'demo') log('info', 'Loaded demo config instead')
         }
       })
       .catch((err: unknown) => {
@@ -35,5 +47,5 @@ export const useDeviceConfigBootstrap = (): void => {
     return () => {
       cancelled = true
     }
-  }, [connected, transport, loadFromDeviceOrDemo, log])
+  }, [connected, transport, loadFromDeviceOrDemo, markDirty, log])
 }

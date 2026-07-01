@@ -22,6 +22,7 @@ export interface LifecycleSlice {
   setTargetProfile: (id: ScreenProfileId) => void
   loadFromDeviceOrDemo: (deviceConfig: DashboardConfig | null) => LoadFromDeviceOrDemoResult
   markPushed: () => void
+  markDirty: () => void
 }
 
 export interface HistorySlice {

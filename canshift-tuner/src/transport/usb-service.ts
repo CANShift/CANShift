@@ -1,4 +1,5 @@
 import type { DashboardConfig, ScreenSettings } from '@tmbk/canshift-core'
+import { validateDashboard } from '@tmbk/canshift-core'
 
 import {
   CMD_CALIBRATE_TOUCH,
@@ -19,6 +20,13 @@ const OK: UsbResult = { success: true }
 
 export const usbService = {
   pushConfig: async (config: DashboardConfig): Promise<UsbResult> => {
+    const validation = validateDashboard(config)
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: `invalid_dashboard_config: ${validation.errors[0] ?? 'unknown_validation_error'}`,
+      }
+    }
     const result = await getSerialClient().send(
       CMD_PUSH_CONFIG,
       { payload: config },

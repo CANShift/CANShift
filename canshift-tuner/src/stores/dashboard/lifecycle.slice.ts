@@ -65,4 +65,10 @@ export const createLifecycleSlice: SliceCreator<LifecycleSlice> = (set) => ({
       s.isDirty = false
     })
   },
+
+  markDirty: () => {
+    set((s) => {
+      if (s.config) s.isDirty = true
+    })
+  },
 })
