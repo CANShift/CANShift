@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { pushSample } from './telemetry.store'
+import type { SignalKey } from '../constants/ble'
+import { pushSample, type SignalValues } from './telemetry.store'
 
-export type TelemetryPayload = Partial<Record<string, number>>
+export type TelemetryPayload = Partial<Record<SignalKey, number>>
 
 interface SignalsState {
   values: TelemetryPayload
@@ -18,9 +19,9 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
   isLive: false,
 
   update: (payload) => {
-    const defined: Record<string, number> = {}
+    const defined: SignalValues = {}
     for (const [k, v] of Object.entries(payload)) {
-      if (typeof v === 'number') defined[k] = v
+      if (typeof v === 'number') defined[k as SignalKey] = v
     }
     pushSample(defined)
     set((s) => ({ values: { ...s.values, ...payload }, lastUpdateMs: Date.now(), isLive: true }))
@@ -31,7 +32,7 @@ export const useSignalsStore = create<SignalsState>()((set) => ({
   },
 }))
 
-export const useSignalValue = (key: string): number | undefined => {
+export const useSignalValue = (key: SignalKey): number | undefined => {
   return useSignalsStore((s) => s.values[key])
 }
 

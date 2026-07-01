@@ -16,10 +16,11 @@ export interface SignalMeta {
   decimals: number
 }
 
-export const SIGNAL_META: Record<string, SignalMeta> = {
+export const SIGNAL_META = {
   r: { label: 'RPM', unit: '', decimals: 0 },
   tps: { label: 'Throttle', unit: '%', decimals: 0 },
   map: { label: 'MAP', unit: 'kPa', decimals: 0 },
+  mi: { label: 'Map', unit: '', decimals: 0 },
   bst: { label: 'Boost', unit: 'bar', decimals: 2 },
   iat: { label: 'Intake Air', unit: '°C', decimals: 0 },
   ct: { label: 'Coolant', unit: '°C', decimals: 0 },
@@ -30,4 +31,6 @@ export const SIGNAL_META: Record<string, SignalMeta> = {
   s: { label: 'Speed', unit: 'kph', decimals: 0 },
   g: { label: 'Gear', unit: '', decimals: 0 },
   bat: { label: 'Battery', unit: 'V', decimals: 1 },
-}
+} satisfies Record<string, SignalMeta>
+
+export type SignalKey = keyof typeof SIGNAL_META

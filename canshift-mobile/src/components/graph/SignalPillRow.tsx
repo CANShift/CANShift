@@ -1,13 +1,13 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../../theme'
 import { getSignalColor } from '../../theme/signal-colors'
-import { SIGNAL_META } from '../../constants/ble'
+import { SIGNAL_META, type SignalKey } from '../../constants/ble'
 
-const ALL_SIGNALS = Object.keys(SIGNAL_META)
+const ALL_SIGNALS = Object.keys(SIGNAL_META) as SignalKey[]
 
 interface SignalPillRowProps {
-  visibleSignals: string[]
-  onToggleSignal: (key: string) => void
+  visibleSignals: SignalKey[]
+  onToggleSignal: (key: SignalKey) => void
   vGap: number
 }
 
@@ -34,9 +34,7 @@ export const SignalPillRow = ({ visibleSignals, onToggleSignal, vGap }: SignalPi
             <View
               style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]}
             />
-            <Text style={[styles.pillLabel, active && { color }]}>
-              {SIGNAL_META[key]?.label ?? key}
-            </Text>
+            <Text style={[styles.pillLabel, active && { color }]}>{SIGNAL_META[key].label}</Text>
           </TouchableOpacity>
         )
       })}
