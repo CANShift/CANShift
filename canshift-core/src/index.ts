@@ -88,14 +88,15 @@ export {
 export type { TrackTelemetry } from './schemas/track-telemetry.js'
 export { TrackTelemetrySchema } from './schemas/track-telemetry.js'
 
-export type { ScreenSettings } from './schemas/screen-settings.js'
-export { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from './schemas/screen-settings.js'
+export type { ScreenSettings, ScreenSettingsResult } from './schemas/screen-settings.js'
+export {
+  ScreenSettingsSchema,
+  SCREEN_SETTINGS_BOUNDS,
+  parseSettings,
+} from './schemas/screen-settings.js'
 
 export type { BleStatus, BleStatusResult } from './schemas/ble-status.js'
 export { BLE_STATUS_MAX_STRING_LEN, parseBleStatus } from './schemas/ble-status.js'
-
-export type { Settings, SettingsResult } from './schemas/settings.js'
-export { SettingsWireSchema, parseSettings } from './schemas/settings.js'
 
 export type {
   LogFrame,

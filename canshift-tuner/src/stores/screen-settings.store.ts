@@ -1,20 +1,17 @@
 import { create } from 'zustand'
+import type { ScreenSettings } from '@tmbk/canshift-core'
 
-export type RotationOffset = 0 | 180
+export type RotationOffset = NonNullable<ScreenSettings['rotation']>
 
-export interface ScreenSettings {
-  brightness: number
-  sleepTimeoutS: number
-  rotation: RotationOffset
+export type StoredScreenSettings = Required<ScreenSettings>
+
+interface ScreenSettingsState extends StoredScreenSettings {
+  update: (patch: Partial<StoredScreenSettings>) => void
 }
 
-interface ScreenSettingsState extends ScreenSettings {
-  update: (patch: Partial<ScreenSettings>) => void
-}
-
-const DEFAULTS: ScreenSettings = {
+const DEFAULTS: StoredScreenSettings = {
   brightness: 80,
-  sleepTimeoutS: 0,
+  sleep: 0,
   rotation: 0,
 }
 

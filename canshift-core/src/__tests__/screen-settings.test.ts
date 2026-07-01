@@ -1,4 +1,4 @@
-import { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS } from '../index.js'
+import { ScreenSettingsSchema, SCREEN_SETTINGS_BOUNDS, parseSettings } from '../index.js'
 
 describe('ScreenSettingsSchema', () => {
   describe('valid payloads', () => {
@@ -135,5 +135,38 @@ describe('ScreenSettingsSchema', () => {
       expect(SCREEN_SETTINGS_BOUNDS.sleepMaxSeconds).toBe(3600)
       expect(SCREEN_SETTINGS_BOUNDS.allowedRotations).toEqual([0, 180])
     })
+  })
+})
+
+describe('parseSettings', () => {
+  it('returns ok for valid JSON within bounds', () => {
+    const result = parseSettings(JSON.stringify({ brightness: 50, sleep: 0 }))
+    expect(result).toEqual({ kind: 'ok', settings: { brightness: 50, sleep: 0 } })
+  })
+
+  it('accepts an optional rotation', () => {
+    const result = parseSettings(JSON.stringify({ brightness: 50, sleep: 30, rotation: 180 }))
+    expect(result).toEqual({ kind: 'ok', settings: { brightness: 50, sleep: 30, rotation: 180 } })
+  })
+
+  it('flags invalid JSON', () => {
+    expect(parseSettings('{not json').kind).toBe('invalid_json')
+  })
+
+  it('flags non-object payloads', () => {
+    expect(parseSettings('42').kind).toBe('not_an_object')
+    expect(parseSettings('[1,2]').kind).toBe('not_an_object')
+  })
+
+  it('flags wrong shapes', () => {
+    expect(parseSettings(JSON.stringify({ brightness: 'x', sleep: 0 })).kind).toBe('wrong_shape')
+    expect(parseSettings(JSON.stringify({ brightness: 80 })).kind).toBe('wrong_shape')
+  })
+
+  it('enforces bounds on the wire', () => {
+    expect(parseSettings(JSON.stringify({ brightness: 5, sleep: 0 })).kind).toBe('wrong_shape')
+    expect(parseSettings(JSON.stringify({ brightness: 80, sleep: 86_400_000 })).kind).toBe(
+      'wrong_shape'
+    )
   })
 })
