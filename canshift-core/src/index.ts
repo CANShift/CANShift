@@ -65,8 +65,8 @@ export {
   obd2PidLookup,
 } from './ecu-profiles/obd2-mode01-pids.js'
 export type { DeviceConfig } from './schemas/device.js'
-export type { CanSpeedKbps } from './schemas/signal.js'
-export { CAN_SPEED_OPTIONS } from './schemas/signal.js'
+export type { CanSpeedKbps, SignalByteLength } from './schemas/signal.js'
+export { CAN_SPEED_OPTIONS, SIGNAL_BYTE_LENGTHS } from './schemas/signal.js'
 export { DEFAULT_DEVICE_CONFIG } from './schemas/device.js'
 export { deviceConfigFromWire, deviceConfigToWire } from './schemas/device.js'
 

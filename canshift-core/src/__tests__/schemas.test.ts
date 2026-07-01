@@ -308,8 +308,8 @@ describe('SignalConfigSchema', () => {
     }
   })
 
-  it('accepts byteLength 3 and 8 (wide signals)', () => {
-    for (const len of [3, 8]) {
+  it('accepts the firmware-decodable byteLengths (1, 2, 4)', () => {
+    for (const len of [1, 2, 4]) {
       const candidate = {
         ...validSignals,
         signals: [{ ...validSignals.signals[0], byteLength: len }],
@@ -319,13 +319,87 @@ describe('SignalConfigSchema', () => {
     }
   })
 
-  it('rejects an invalid byteLength (5)', () => {
+  it('rejects byteLengths the firmware cannot decode (3, 5, 8)', () => {
+    for (const len of [3, 5, 8]) {
+      const broken = {
+        ...validSignals,
+        signals: [{ ...validSignals.signals[0], byteLength: len }],
+      }
+      const result = SignalConfigSchema.safeParse(broken)
+      expect(result.success).toBe(false)
+    }
+  })
+
+  it('accepts a signal that exactly fills the frame (startByte 6 + byteLength 2)', () => {
+    const candidate = {
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], startByte: 6, byteLength: 2 }],
+    }
+    expect(SignalConfigSchema.safeParse(candidate).success).toBe(true)
+  })
+
+  it('rejects a signal overflowing the frame (startByte 7 + byteLength 2)', () => {
     const broken = {
       ...validSignals,
-      signals: [{ ...validSignals.signals[0], byteLength: 5 }],
+      signals: [{ ...validSignals.signals[0], startByte: 7, byteLength: 2 }],
     }
     const result = SignalConfigSchema.safeParse(broken)
     expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('byteLength'))).toBe(true)
+    }
+  })
+
+  it('accepts a bitMask at the uint8_t limit (0xFF)', () => {
+    const candidate = {
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], bitMask: '0xFF' }],
+    }
+    expect(SignalConfigSchema.safeParse(candidate).success).toBe(true)
+  })
+
+  it('rejects a bitMask wider than uint8_t (0x100)', () => {
+    const broken = {
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], bitMask: '0x100' }],
+    }
+    expect(SignalConfigSchema.safeParse(broken).success).toBe(false)
+  })
+
+  it('accepts a canFrameId at the 29-bit limit (0x1FFFFFFF)', () => {
+    const candidate = {
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], canFrameId: '0x1FFFFFFF' }],
+    }
+    expect(SignalConfigSchema.safeParse(candidate).success).toBe(true)
+  })
+
+  it('rejects a canFrameId past the 29-bit limit (0x20000000)', () => {
+    const broken = {
+      ...validSignals,
+      signals: [{ ...validSignals.signals[0], canFrameId: '0x20000000' }],
+    }
+    expect(SignalConfigSchema.safeParse(broken).success).toBe(false)
+  })
+
+  it('accepts timeoutMs at the bounds (0 and 60000)', () => {
+    for (const timeoutMs of [0, 60000]) {
+      const candidate = {
+        ...validSignals,
+        signals: [{ ...validSignals.signals[0], timeoutMs }],
+      }
+      expect(SignalConfigSchema.safeParse(candidate).success).toBe(true)
+    }
+  })
+
+  it('rejects negative, fractional, and oversized timeoutMs', () => {
+    for (const timeoutMs of [-1, 1.5, 60001]) {
+      const broken = {
+        ...validSignals,
+        signals: [{ ...validSignals.signals[0], timeoutMs }],
+      }
+      expect(SignalConfigSchema.safeParse(broken).success).toBe(false)
+    }
   })
 
   it('rejects a non-string protocol field', () => {
@@ -1065,7 +1139,9 @@ describe('schema bounds hardening', () => {
   describe('SignalDef.startByte', () => {
     it('accepts the high boundary (CAN_FRAME_MAX_BYTES - 1)', () => {
       expect(
-        SignalDefSchema.safeParse(validSignal({ startByte: CAN_FRAME_MAX_BYTES - 1 })).success
+        SignalDefSchema.safeParse(
+          validSignal({ startByte: CAN_FRAME_MAX_BYTES - 1, byteLength: 1 })
+        ).success
       ).toBe(true)
     })
 
