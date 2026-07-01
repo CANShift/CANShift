@@ -59,6 +59,7 @@ export const useCanScanner = (): UseCanScanner => {
   const subscriptionRef = useRef<(() => void) | null>(null)
 
   const [status, setStatus] = useState<CanScannerStatus>('idle')
+  const statusRef = useRef<CanScannerStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [snapshot, setSnapshot] = useState<CanScannerSnapshot>({
     startedAt: null,
@@ -186,16 +187,20 @@ export const useCanScanner = (): UseCanScanner => {
   }, [status])
 
   useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
+  useEffect(() => {
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current()
         subscriptionRef.current = null
       }
-      if (status === 'running' || status === 'starting') {
+      if (statusRef.current === 'running' || statusRef.current === 'starting') {
         void canScannerIpc.stop()
       }
     }
-  }, [status])
+  }, [])
 
   useEffect(() => {
     if (!connected || simulationMode) {
