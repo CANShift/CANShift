@@ -210,6 +210,11 @@ export class BleService {
   }
 
   async connect(deviceId: string): Promise<void> {
+    this.cancelReconnect()
+    return this.connectInternal(deviceId)
+  }
+
+  private async connectInternal(deviceId: string): Promise<void> {
     const { setConnectionState, setDevice, setFirmwareStatus, setError } = useDeviceStore.getState()
 
     await this.ensureAndroidBlePermissions()
@@ -254,9 +259,16 @@ export class BleService {
     this.removeSubscriptions()
     if (this.connectedDevice) {
       const id = this.connectedDevice.id
-      await this.connectedDevice.cancelConnection()
+      try {
+        await this.connectedDevice.cancelConnection()
+        log('info', `Disconnected from ${id}`)
+      } catch (err) {
+        log(
+          'warn',
+          `disconnect: cancelConnection failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
       this.connectedDevice = null
-      log('info', `Disconnected from ${id}`)
     }
     clearBuffer()
     useDeviceStore.getState().disconnect()
@@ -363,7 +375,7 @@ export class BleService {
     signal: AbortSignal
   ): Promise<'aborted' | 'connected' | 'failed'> {
     try {
-      await this.connect(deviceId)
+      await this.connectInternal(deviceId)
       if (isAborted(signal)) return 'aborted'
       log('info', `Auto-reconnect: succeeded on attempt ${String(attempt)}`)
       return 'connected'
@@ -473,7 +485,11 @@ export class BleService {
       BLE_SERVICE_UUID,
       BLE_CHAR_TELE,
       (error: Error | null, char: Characteristic | null) => {
-        if (error || !char?.value) return
+        if (error) {
+          log('warn', `BLE: telemetry monitor error — ${error.message}`)
+          return
+        }
+        if (!char?.value) return
         if (!this.connectedDevice) return
         const payload = parseTelemetry(decodeBase64(char.value))
         if (!payload) {
@@ -488,7 +504,11 @@ export class BleService {
       BLE_SERVICE_UUID,
       BLE_CHAR_STATUS,
       (error: Error | null, char: Characteristic | null) => {
-        if (error || !char?.value) return
+        if (error) {
+          log('warn', `BLE: status monitor error — ${error.message}`)
+          return
+        }
+        if (!char?.value) return
         if (!this.connectedDevice) return
         const result = parseBleStatus(decodeBase64(char.value))
         if (result.kind !== 'ok') {
@@ -536,6 +556,19 @@ export class BleService {
 
     log('info', `BLE restore: re-binding to ${device.name ?? BLE_DEVICE_NAME} (${device.id})`)
 
+    void this.resumeRestoredDevice(device)
+  }
+
+  private async resumeRestoredDevice(device: Device): Promise<void> {
+    try {
+      await device.discoverAllServicesAndCharacteristics()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      log('warn', `BLE restore: service discovery failed — falling back to reconnect: ${msg}`)
+      void this.runReconnectLoop(device.id)
+      return
+    }
+
     this.removeSubscriptions()
     this.bindDeviceSubscriptions(device)
 
@@ -579,6 +612,7 @@ export class BleService {
   }
 
   private startStalenessTimer(): void {
+    this.stopStalenessTimer()
     this.stalenessTimer = setInterval(() => {
       const { lastUpdateMs, isLive } = useSignalsStore.getState()
       if (isLive && Date.now() - lastUpdateMs > STALENESS_THRESHOLD_MS) {

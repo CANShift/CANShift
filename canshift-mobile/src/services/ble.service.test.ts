@@ -30,10 +30,18 @@ jest.mock('react-native-ble-plx', () => ({
   },
 }))
 
+jest.mock('./last-device', () => ({
+  rememberDevice: jest.fn(() => Promise.resolve()),
+  forgetDevice: jest.fn(() => Promise.resolve()),
+  getLastDevice: jest.fn(() => Promise.resolve(null)),
+}))
+
 import { BleErrorCode } from 'react-native-ble-plx'
 import type { BleManager, Device } from 'react-native-ble-plx'
 import { BleService } from './ble.service'
 import { mapBleError } from './ble.errors'
+import { forgetDevice } from './last-device'
+import { useDeviceStore } from '../stores/device.store'
 
 interface PendingOp {
   resolve: (value: unknown) => void
@@ -123,6 +131,41 @@ describe('BleService GATT serializer', () => {
     expect(factory.pending).toHaveLength(2)
     factory.pending[1]?.resolve(undefined)
     await expect(second).resolves.toBeUndefined()
+  })
+})
+
+describe('BleService disconnect', () => {
+  it('still clears state and forgets the device when cancelConnection rejects', async () => {
+    const service = makeService()
+    const device = {
+      id: 'test-device',
+      cancelConnection: jest.fn(() => Promise.reject(new Error('gatt busy'))),
+    } as unknown as Device
+    service._test_setConnectedDevice(device)
+
+    await expect(service.disconnect()).resolves.toBeUndefined()
+
+    expect(jest.mocked(forgetDevice)).toHaveBeenCalled()
+    expect(useDeviceStore.getState().connectionState).toBe('idle')
+  })
+})
+
+describe('BleService connect', () => {
+  it('aborts any in-flight reconnect loop before connecting', async () => {
+    const managerStub = {
+      destroy: jest.fn(),
+      stopDeviceScan: jest.fn(),
+      connectToDevice: jest.fn(() => Promise.reject(new Error('unreachable'))),
+    } as unknown as BleManager
+    const service = new BleService({
+      managerFactory: () => managerStub,
+      requestAndroidPermissions: () => Promise.resolve({ kind: 'not_applicable' }),
+    })
+    const cancelSpy = jest.spyOn(service, 'cancelReconnect')
+
+    await expect(service.connect('dev-1')).rejects.toThrow('unreachable')
+
+    expect(cancelSpy).toHaveBeenCalled()
   })
 })
 
