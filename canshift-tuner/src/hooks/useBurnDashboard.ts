@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
@@ -22,7 +22,9 @@ export const useBurnDashboard = (): UseBurnDashboard => {
   const connectionStatus = useConnectionStore((s) => s.status)
   const log = useLogStore((s) => s.push)
 
-  const [isBurning, setIsBurning] = useState(false)
+  const burnPhase = useDeviceStore((s) => s.burnPhase)
+  const setBurnPhase = useDeviceStore((s) => s.setBurnPhase)
+  const isBurning = burnPhase !== 'idle'
 
   const canBurn =
     !isBurning &&
@@ -35,13 +37,15 @@ export const useBurnDashboard = (): UseBurnDashboard => {
 
   const burn = useCallback(async () => {
     if (!canBurn || !config) return
-    setIsBurning(true)
+    if (useDeviceStore.getState().burnPhase !== 'idle') return
+    setBurnPhase('pushing')
     try {
       const result = await usbService.pushConfig(config)
       if (!result.success) {
         log('error', `Burn failed: ${result.error ?? 'unknown_error'}`)
         return
       }
+      setBurnPhase('rebooting')
       log('info', 'Burn acked — verifying after reboot…')
       const verify = await verifyBurnedConfig(config)
       switch (verify.kind) {
@@ -66,9 +70,9 @@ export const useBurnDashboard = (): UseBurnDashboard => {
       const message = err instanceof Error ? err.message : String(err)
       log('error', `Burn failed: ${message}`)
     } finally {
-      setIsBurning(false)
+      setBurnPhase('idle')
     }
-  }, [canBurn, config, markPushed, log])
+  }, [canBurn, config, markPushed, log, setBurnPhase])
 
   return { canBurn, isBurning, burn }
 }
