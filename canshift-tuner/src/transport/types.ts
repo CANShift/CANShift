@@ -22,7 +22,7 @@ export type RawAck =
   | { kind: 'error'; error: string; data: Record<string, unknown> | null }
 
 export type DeviceConfigResult =
-  | { kind: 'ok'; config: DashboardConfig }
+  | { kind: 'ok'; config: DashboardConfig; migrationsApplied: string[] }
   | { kind: 'none' }
   | { kind: 'error'; error: string }
 
