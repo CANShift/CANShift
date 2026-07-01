@@ -128,6 +128,7 @@ export { SIGNAL_TYPES, SignalTypeSchema, DEFAULT_SIGNAL_TYPE } from './schemas/s
 export type { SignalType } from './schemas/signal-type.js'
 
 export type { ReleaseAsset, ReleaseInfo, LatestReleaseResult } from './types/releases.js'
+export { ReleaseAssetSchema, ReleaseInfoSchema } from './types/releases.js'
 
 export { validateDashboard } from './validation/validate-dashboard.js'
 export type { ValidationResult, ValidateDashboardOptions } from './validation/validate-dashboard.js'
