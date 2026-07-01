@@ -245,27 +245,10 @@ const pickLatest = (
   return { stable, prerelease }
 }
 
-export type AllReleasesResult =
-  | { ok: true; releases: ReleaseInfo[]; fetchedAt: string; fromCache: boolean }
-  | {
-      ok: false
-      reason: 'offline' | 'rate-limited' | 'http-error' | 'invalid-response'
-      message: string
-      fetchedAt: string
-      cachedReleases: ReleaseInfo[] | null
-    }
-
-interface CachedAllReleases {
-  releases: ReleaseInfo[]
-  fetchedAt: number
-}
-
 export class ReleasesService {
   private cache: CachedPayload | null = null
-  private allCache: CachedAllReleases | null = null
   private rateLimitedUntil = 0
   private inFlight: Promise<LatestReleaseResult> | null = null
-  private inFlightAll: Promise<AllReleasesResult> | null = null
   private hydrationPromise: Promise<void> | null = null
 
   private readonly now: () => number
@@ -312,86 +295,6 @@ export class ReleasesService {
       return await promise
     } finally {
       this.inFlight = null
-    }
-  }
-
-  async getAllReleases(force = false): Promise<AllReleasesResult> {
-    await this.hydrate()
-
-    const cached = this.allCache
-    const nowMs = this.now()
-
-    if (!force && cached && nowMs - cached.fetchedAt < CACHE_TTL_MS) {
-      return {
-        ok: true,
-        releases: cached.releases,
-        fetchedAt: new Date(cached.fetchedAt).toISOString(),
-        fromCache: true,
-      }
-    }
-
-    if (this.inFlightAll) return this.inFlightAll
-
-    if (nowMs < this.rateLimitedUntil) {
-      return this.makeAllFailure(
-        'rate-limited',
-        'GitHub rate limit cooling down — try again shortly'
-      )
-    }
-
-    const promise = this.runFetchAll()
-    this.inFlightAll = promise
-    try {
-      return await promise
-    } finally {
-      this.inFlightAll = null
-    }
-  }
-
-  private async runFetchAll(): Promise<AllReleasesResult> {
-    const outcome = await fetchReleasesWithRetry()
-    const nowMs = this.now()
-
-    switch (outcome.kind) {
-      case 'ok': {
-        const releases = outcome.releases.filter((r) => !r.prerelease).map(toReleaseInfo)
-        const payload: CachedAllReleases = { releases, fetchedAt: nowMs }
-        this.allCache = payload
-        return {
-          ok: true,
-          releases,
-          fetchedAt: new Date(nowMs).toISOString(),
-          fromCache: false,
-        }
-      }
-      case 'rate-limited': {
-        this.rateLimitedUntil = nowMs + outcome.retryAfterMs
-        return this.makeAllFailure('rate-limited', outcome.message)
-      }
-      case 'http-error':
-        return this.makeAllFailure('http-error', outcome.message)
-      case 'offline':
-        return this.makeAllFailure('offline', outcome.message)
-      case 'invalid':
-        return this.makeAllFailure('invalid-response', outcome.message)
-      default: {
-        const exhaustive: never = outcome
-        return exhaustive
-      }
-    }
-  }
-
-  private makeAllFailure(
-    reason: 'offline' | 'rate-limited' | 'http-error' | 'invalid-response',
-    message: string
-  ): AllReleasesResult {
-    const nowMs = this.now()
-    return {
-      ok: false,
-      reason,
-      message,
-      fetchedAt: new Date(nowMs).toISOString(),
-      cachedReleases: this.allCache?.releases ?? null,
     }
   }
 
