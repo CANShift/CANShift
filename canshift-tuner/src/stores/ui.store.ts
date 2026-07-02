@@ -22,14 +22,20 @@ const writeSidebarCollapsed = (collapsed: boolean): void => {
 
 interface UiState {
   sidebarCollapsed: boolean
+  burnDeniedAt: number | null
   toggleSidebar: () => void
+  signalBurnDenied: () => void
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
   sidebarCollapsed: readSidebarCollapsed(),
+  burnDeniedAt: null,
   toggleSidebar: () => {
     const next = !get().sidebarCollapsed
     writeSidebarCollapsed(next)
     set({ sidebarCollapsed: next })
+  },
+  signalBurnDenied: () => {
+    set({ burnDeniedAt: Date.now() })
   },
 }))

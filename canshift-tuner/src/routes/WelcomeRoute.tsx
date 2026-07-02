@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { WelcomeScreen } from '../components/shell/WelcomeScreen'
 import { useConnectionStore } from '../stores/connection.store'
 import { useDeviceStore } from '../stores/device.store'
+import { humanizeTransportError } from '../transport/humanize-transport-error'
 
 const SUPPORT_EMAIL = 'support@canshift.tmbk.ch'
 
@@ -52,7 +53,7 @@ const WelcomeRoute = () => {
       supported={supported}
       busy={busy}
       reconnecting={status === 'reconnecting'}
-      lastError={lastError}
+      lastError={lastError !== null ? humanizeTransportError(lastError) : null}
       onConnect={() => {
         void connect()
       }}

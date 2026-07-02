@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { HeaderView, type HeaderStatus } from './HeaderView'
-import { BurnButton as UiBurnButton } from './BurnButton'
+import { BurnButton as UiBurnButton, BurnOutcomePill } from './BurnButton'
 import { FirmwareSlot as UiFirmwareSlot } from './FirmwareSlot'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDeviceStore } from '../../stores/device.store'
+import { useUiStore } from '../../stores/ui.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
 
 const PULSE_HOLD_MS = 220
 const PULSE_THROTTLE_MS = 60
+
+const BURN_SUCCESS_FLASH_MS = 2_500
+const BURN_ERROR_AUTO_CLEAR_MS = 8_000
+const BURN_DENIED_SHAKE_MS = 400
 
 interface PortLike {
   getInfo(): { usbVendorId?: number; usbProductId?: number }
@@ -134,22 +139,79 @@ const Header = () => {
   )
 }
 
+const useBurnOutcomeAutoClear = (): void => {
+  const lastBurnResult = useDeviceStore((s) => s.lastBurnResult)
+  const setLastBurnResult = useDeviceStore((s) => s.setLastBurnResult)
+  useEffect(() => {
+    if (lastBurnResult === null) return
+    const delay =
+      lastBurnResult.kind === 'success' ? BURN_SUCCESS_FLASH_MS : BURN_ERROR_AUTO_CLEAR_MS
+    const timer = setTimeout(() => {
+      setLastBurnResult(null)
+    }, delay)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [lastBurnResult, setLastBurnResult])
+}
+
+const useBurnDeniedShake = (): boolean => {
+  const burnDeniedAt = useUiStore((s) => s.burnDeniedAt)
+  const [shaking, setShaking] = useState(false)
+  useEffect(() => {
+    if (burnDeniedAt === null) return
+    setShaking(true)
+    const timer = setTimeout(() => {
+      setShaking(false)
+    }, BURN_DENIED_SHAKE_MS)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [burnDeniedAt])
+  return shaking
+}
+
 const BurnButton = () => {
   const { canBurn, isBurning, burn } = useBurnDashboard()
+  const lastBurnResult = useDeviceStore((s) => s.lastBurnResult)
+  const setLastBurnResult = useDeviceStore((s) => s.setLastBurnResult)
+  useBurnOutcomeAutoClear()
+  const shaking = useBurnDeniedShake()
+
   const title = isBurning
     ? 'Burning dashboard to the device…'
     : canBurn
       ? 'Burn dashboard to device (Cmd/Ctrl+S)'
       : 'Connect a device and edit the dashboard to enable Burn'
   return (
-    <UiBurnButton
-      disabled={!canBurn}
-      busy={isBurning}
-      title={title}
-      onClick={() => {
-        void burn()
-      }}
-    />
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      {lastBurnResult === null ? null : lastBurnResult.kind === 'success' ? (
+        <BurnOutcomePill kind="success" />
+      ) : (
+        <BurnOutcomePill
+          kind="error"
+          message={lastBurnResult.message}
+          onDismiss={() => {
+            setLastBurnResult(null)
+          }}
+        />
+      )}
+      <span
+        style={{
+          display: 'inline-flex',
+          animation: shaking ? `canshift-tuner-shake ${BURN_DENIED_SHAKE_MS}ms ease-in-out` : undefined,
+        }}
+      >
+        <UiBurnButton
+          disabled={!canBurn}
+          busy={isBurning}
+          title={title}
+          onClick={() => {
+            void burn()
+          }}
+        />
+      </span>
+    </span>
   )
 }
 

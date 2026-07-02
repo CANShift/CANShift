@@ -7,6 +7,8 @@ export type Transport = 'usb'
 
 export type BurnPhase = 'idle' | 'pushing' | 'rebooting' | 'done'
 
+export type BurnResult = { kind: 'success' } | { kind: 'error'; message: string }
+
 export type FirmwareCompat =
   | { kind: 'unknown' }
   | { kind: 'compatible'; protocol: number }
@@ -70,6 +72,9 @@ interface DeviceState {
 
   burnPhase: BurnPhase
   setBurnPhase: (phase: BurnPhase) => void
+
+  lastBurnResult: BurnResult | null
+  setLastBurnResult: (result: BurnResult | null) => void
 }
 
 export const useDeviceStore = create<DeviceState>()((set) => ({
@@ -89,6 +94,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
   isDayMode: null,
   lastPushedConfig: null,
   burnPhase: 'idle',
+  lastBurnResult: null,
 
   setConnected: (portPath) => {
     set({
@@ -116,6 +122,7 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
       heapStats: [],
       lastPushedConfig: null,
       burnPhase: 'idle',
+      lastBurnResult: null,
       errorMessage: error ?? null,
     })
   },
@@ -200,5 +207,9 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setBurnPhase: (phase) => {
     set({ burnPhase: phase })
+  },
+
+  setLastBurnResult: (result) => {
+    set({ lastBurnResult: result })
   },
 }))

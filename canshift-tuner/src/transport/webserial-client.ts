@@ -1,3 +1,5 @@
+import { humanizeTransportError } from './humanize-transport-error'
+
 const DEFAULT_BAUD_RATE = 115_200
 
 const ACK_TIMEOUT_MS = 5_000
@@ -17,20 +19,6 @@ const STABLE_UPTIME_MS = 10_000
 const SEND_QUEUE_CAPACITY = 8
 
 export type SerialStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
-
-const humanizeOpenError = (raw: string): string => {
-  const lower = raw.toLowerCase()
-  if (lower.includes('failed to open') || lower.includes('already open')) {
-    return 'Port busy — close other apps using it (PlatformIO Monitor, Arduino IDE, `screen`, another browser tab) and click Connect device again.'
-  }
-  if (lower.includes('notfounderror') || lower.includes('not found')) {
-    return 'Device not found — check the cable and unplug/replug the dash.'
-  }
-  if (lower.includes('access denied') || lower.includes('permission')) {
-    return 'Permission denied — re-grant access via Connect device.'
-  }
-  return raw
-}
 
 export interface SerialClientOptions {
   baudRate?: number
@@ -251,7 +239,7 @@ export class SerialClient {
       await this.deassertResetSignals(port)
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'open_failed'
-      const msg = humanizeOpenError(raw)
+      const msg = humanizeTransportError(raw)
       this.lastError = msg
       this.setStatus('disconnected', msg)
       throw new Error(msg, { cause: err })
