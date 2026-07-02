@@ -150,6 +150,61 @@ describe('BleService disconnect', () => {
   })
 })
 
+describe('BleService scan cancellation', () => {
+  type ScanListener = (
+    error: { message: string } | null,
+    device: { id: string; name: string } | null
+  ) => void
+
+  const makeScanService = () => {
+    const startDeviceScan = jest.fn<undefined, [string[], Record<string, unknown>, ScanListener]>()
+    const stopDeviceScan = jest.fn()
+    const managerStub = {
+      destroy: jest.fn(),
+      startDeviceScan,
+      stopDeviceScan,
+    } as unknown as BleManager
+    const service = new BleService({
+      managerFactory: () => managerStub,
+      requestAndroidPermissions: () => Promise.resolve({ kind: 'not_applicable' }),
+    })
+    return { service, startDeviceScan, stopDeviceScan }
+  }
+
+  it('stopScan settles an in-flight scan before the timeout', async () => {
+    const { service, stopDeviceScan } = makeScanService()
+    const scanPromise = service.scan(jest.fn(), 60_000)
+    await flush()
+
+    service.stopScan()
+
+    await expect(scanPromise).resolves.toBeUndefined()
+    expect(stopDeviceScan).toHaveBeenCalled()
+  })
+
+  it('ignores scan results delivered after stopScan settled the scan', async () => {
+    const { service, startDeviceScan } = makeScanService()
+    const onFound = jest.fn()
+    const scanPromise = service.scan(onFound, 60_000)
+    await flush()
+
+    const listener = startDeviceScan.mock.calls[0]?.[2]
+    expect(listener).toBeDefined()
+
+    service.stopScan()
+    await scanPromise
+
+    listener?.(null, { id: 'dev-1', name: 'CANShift-test' })
+    expect(onFound).not.toHaveBeenCalled()
+  })
+
+  it('stopScan without an active scan still stops native scanning', () => {
+    const { service, stopDeviceScan } = makeScanService()
+    service.stopScan()
+    expect(stopDeviceScan).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('BleService connect', () => {
   it('aborts any in-flight reconnect loop before connecting', async () => {
     const managerStub = {

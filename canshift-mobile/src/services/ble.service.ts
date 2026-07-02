@@ -84,6 +84,8 @@ export class BleService {
 
   private userInitiatedDisconnect = false
 
+  private activeScanStop: (() => void) | null = null
+
   private gattQueue: Promise<unknown> = Promise.resolve()
 
   private runGatt<T>(op: () => Promise<T>): Promise<T> {
@@ -157,6 +159,16 @@ export class BleService {
       let settled = false
       let timer: ReturnType<typeof setTimeout> | null = null
 
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        if (timer !== null) clearTimeout(timer)
+        this.activeScanStop = null
+        void this.manager.stopDeviceScan()
+        resolve()
+      }
+      this.activeScanStop = finish
+
       void this.manager.startDeviceScan(
         [BLE_SERVICE_UUID],
         { allowDuplicates: false },
@@ -165,6 +177,7 @@ export class BleService {
           if (error) {
             settled = true
             if (timer !== null) clearTimeout(timer)
+            this.activeScanStop = null
             void this.manager.stopDeviceScan()
             reject(new Error(error.message))
             return
@@ -176,16 +189,15 @@ export class BleService {
         }
       )
 
-      timer = setTimeout(() => {
-        if (settled) return
-        settled = true
-        void this.manager.stopDeviceScan()
-        resolve()
-      }, timeoutMs)
+      timer = setTimeout(finish, timeoutMs)
     })
   }
 
   stopScan(): void {
+    if (this.activeScanStop) {
+      this.activeScanStop()
+      return
+    }
     void this.manager.stopDeviceScan()
   }
 
