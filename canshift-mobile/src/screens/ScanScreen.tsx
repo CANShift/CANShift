@@ -179,6 +179,18 @@ export default function ScanScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.infoBtn}
+          onPress={() => {
+            navigation.navigate('About')
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="About"
+        >
+          <Text style={styles.infoBtnText}>ⓘ</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.center}>
         <Image
           // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
@@ -284,6 +296,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
     paddingHorizontal: Spacing.lg,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  infoBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBtnText: { fontSize: Typography.lg, color: Colors.textDim },
   center: {
     flex: 1,
     justifyContent: 'center',

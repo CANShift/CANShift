@@ -107,13 +107,15 @@ export default function DashTopBar() {
       <AlertDialog open={disconnectVisible} onOpenChange={setDisconnectVisible}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect</AlertDialogTitle>
-            <AlertDialogDescription>Disconnect from the dashboard?</AlertDialogDescription>
+            <AlertDialogTitle>{isSim ? 'End demo mode?' : 'Disconnect'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isSim ? 'Stop the simulator and return to scan?' : 'Disconnect from the dashboard?'}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onPress={() => void confirmDisconnect()}>
-              Disconnect
+              {isSim ? 'End demo' : 'Disconnect'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
