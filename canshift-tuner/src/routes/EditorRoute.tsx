@@ -7,7 +7,18 @@ import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { createId } from '../utils/id'
+import { isEditableTarget } from '../utils/is-editable-target'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const Canvas = lazy(() => import('../components/editor/Canvas'))
 const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
@@ -60,18 +71,19 @@ const EditorRoute = () => {
     x: number
     y: number
   } | null>(null)
+  const [pendingDeletePageId, setPendingDeletePageId] = useState<string | null>(null)
 
   const dragFromIndex = useRef<number | null>(null)
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
-      if (document.activeElement?.tagName === 'INPUT') return
+      if (isEditableTarget(e.target)) return
       if (selectedWidgetId) return
       if (!selectedPageId || !pages || pages.length <= 1) return
-      removePage(selectedPageId)
+      setPendingDeletePageId(selectedPageId)
     },
-    [selectedPageId, pages, removePage, selectedWidgetId]
+    [selectedPageId, pages, selectedWidgetId]
   )
 
   useEffect(() => {
@@ -121,6 +133,13 @@ const EditorRoute = () => {
 
   const currentPage = pages.find((p) => p.id === selectedPageId) ?? pages[0]
   const atCap = pages.length >= FIRMWARE_CAPS.MAX_PAGES
+
+  const pendingDeleteIndex = pendingDeletePageId
+    ? pages.findIndex((p) => p.id === pendingDeletePageId)
+    : -1
+  const pendingDeleteLabel = pendingDeleteIndex >= 0 ? `Page ${pendingDeleteIndex + 1}` : 'page'
+  const pendingDeleteWidgetCount =
+    pendingDeleteIndex >= 0 ? (pages[pendingDeleteIndex]?.widgets.length ?? 0) : 0
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -182,7 +201,7 @@ const EditorRoute = () => {
               onDragStart={handlePageDragStart}
               onDrop={handlePageDrop}
               onSetDefault={setDefaultPage}
-              onRemove={removePage}
+              onRemove={setPendingDeletePageId}
               onContextMenu={handlePageContextMenu}
             />
           ))}
@@ -269,10 +288,44 @@ const EditorRoute = () => {
             if (page) updatePage(contextMenu.pageId, { visible: !page.visible })
           }}
           onDelete={() => {
-            removePage(contextMenu.pageId)
+            setPendingDeletePageId(contextMenu.pageId)
           }}
         />
       )}
+
+      <AlertDialog
+        open={pendingDeletePageId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeletePageId(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {pendingDeleteLabel}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the page and its {pendingDeleteWidgetCount} widget
+              {pendingDeleteWidgetCount === 1 ? '' : 's'}. You can undo with ⌘Z.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingDeletePageId(null)
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeletePageId) removePage(pendingDeletePageId)
+                setPendingDeletePageId(null)
+              }}
+            >
+              Delete page
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
