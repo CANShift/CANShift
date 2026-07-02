@@ -19,4 +19,5 @@ export type { DesignTokens } from '@tmbk/canshift-core'
 export const HitSlop = {
   default: { top: 8, bottom: 8, left: 8, right: 8 },
   large: { top: 12, bottom: 12, left: 12, right: 12 },
+  vertical: { top: 4, bottom: 4, left: 0, right: 0 },
 } as const

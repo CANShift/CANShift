@@ -43,7 +43,7 @@ export default function ConnectedNavigator({ navigation }: Props) {
             ? {
                 backgroundColor: Colors.surface,
                 borderTopColor: Colors.border,
-                height: 36,
+                height: 44,
                 paddingBottom: 0,
                 paddingTop: 0,
               }

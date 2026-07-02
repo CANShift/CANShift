@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     gap: Spacing.sm,
   },
-  timestamp: { fontSize: Typography.xs, color: Colors.textMuted, width: 66, flexShrink: 0 },
-  level: { fontSize: Typography.xs, fontWeight: '700', width: 38, flexShrink: 0 },
+  timestamp: { fontSize: Typography.xs, color: Colors.textMuted, minWidth: 66, flexShrink: 0 },
+  level: { fontSize: Typography.xs, fontWeight: '700', minWidth: 38, flexShrink: 0 },
   message: { flex: 1, fontSize: Typography.xs, color: Colors.text, lineHeight: 17 },
 })

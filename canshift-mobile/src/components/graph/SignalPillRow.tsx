@@ -29,7 +29,10 @@ export const SignalPillRow = ({ visibleSignals, onToggleSignal, vGap }: SignalPi
             onPress={() => {
               onToggleSignal(key)
             }}
-            hitSlop={HitSlop.default}
+            hitSlop={HitSlop.vertical}
+            accessibilityRole="button"
+            accessibilityLabel={`${SIGNAL_META[key].label} signal`}
+            accessibilityState={{ selected: active }}
           >
             <View
               style={[styles.pillDot, { backgroundColor: active ? color : Colors.textMuted }]}
@@ -43,7 +46,7 @@ export const SignalPillRow = ({ visibleSignals, onToggleSignal, vGap }: SignalPi
 }
 
 const styles = StyleSheet.create({
-  pillBar: { borderBottomWidth: 1, borderBottomColor: Colors.border, maxHeight: 46 },
+  pillBar: { borderBottomWidth: 1, borderBottomColor: Colors.border, maxHeight: 52 },
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -54,8 +57,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    minHeight: 36,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.border,

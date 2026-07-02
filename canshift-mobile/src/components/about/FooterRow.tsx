@@ -29,6 +29,9 @@ export const FooterRow = ({
         disabled={!hasPreRelease}
         hitSlop={HitSlop.default}
         style={styles.toggleRow}
+        accessibilityRole="checkbox"
+        accessibilityLabel="Show pre-release builds"
+        accessibilityState={{ checked: showPreRelease && hasPreRelease, disabled: !hasPreRelease }}
       >
         <View
           style={[
@@ -53,6 +56,9 @@ export const FooterRow = ({
         onPress={onRefresh}
         disabled={isFetching}
         hitSlop={HitSlop.default}
+        accessibilityRole="button"
+        accessibilityLabel="Check for updates now"
+        accessibilityState={{ disabled: isFetching }}
       >
         <Text style={styles.refreshBtnText}>{isFetching ? 'Checking…' : 'Check now'}</Text>
       </TouchableOpacity>
@@ -68,7 +74,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     gap: Spacing.sm,
   },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
   toggleBox: {
     width: 20,
     height: 20,

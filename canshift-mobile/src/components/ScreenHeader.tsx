@@ -9,7 +9,13 @@ interface ScreenHeaderProps {
 export const ScreenHeader = ({ title, onBack }: ScreenHeaderProps) => (
   <View style={styles.header}>
     {onBack ? (
-      <TouchableOpacity onPress={onBack} hitSlop={HitSlop.default}>
+      <TouchableOpacity
+        onPress={onBack}
+        hitSlop={HitSlop.default}
+        style={styles.backBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+      >
         <Text style={styles.back}>‹ Back</Text>
       </TouchableOpacity>
     ) : (
@@ -30,6 +36,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  backBtn: { minHeight: 44, justifyContent: 'center' },
   back: { fontSize: Typography.md, color: Colors.accent, width: 48 },
   title: { fontSize: Typography.sm, fontWeight: '700', color: Colors.textDim, letterSpacing: 1 },
   spacer: { width: 48 },

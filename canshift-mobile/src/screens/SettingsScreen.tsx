@@ -183,6 +183,8 @@ export default function SettingsScreen({ navigation }: Props) {
             style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
             onPress={handleCalibrate}
             disabled={calibrating}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: calibrating }}
           >
             <Text style={styles.actionBtnText}>
               {calibrating ? 'Calibrating…' : 'Calibrate Touch Screen'}
@@ -196,6 +198,8 @@ export default function SettingsScreen({ navigation }: Props) {
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
           onPress={() => void handleSave()}
           disabled={saving}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: saving }}
         >
           <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'SAVE'}</Text>
         </TouchableOpacity>
@@ -251,6 +255,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.5 },
