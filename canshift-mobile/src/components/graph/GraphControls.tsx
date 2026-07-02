@@ -1,5 +1,16 @@
+import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../../theme'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog'
 
 const WINDOW_OPTIONS = [
   { label: '30s', value: 30, accessibilityLabel: '30 second window' },
@@ -24,6 +35,7 @@ export const GraphControls = ({
   onClear,
   vGap,
 }: GraphControlsProps) => {
+  const [confirmVisible, setConfirmVisible] = useState(false)
   return (
     <View style={[styles.controls, { paddingVertical: vGap }]}>
       <TouchableOpacity
@@ -58,13 +70,30 @@ export const GraphControls = ({
       </View>
       <TouchableOpacity
         style={styles.clearBtn}
-        onPress={onClear}
+        onPress={() => {
+          setConfirmVisible(true)
+        }}
         hitSlop={HitSlop.vertical}
         accessibilityRole="button"
         accessibilityLabel="Clear graph data"
       >
         <Text style={styles.clearText}>Clear</Text>
       </TouchableOpacity>
+
+      <AlertDialog open={confirmVisible} onOpenChange={setConfirmVisible}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear graph data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This wipes the telemetry buffer shared with the Dash screen and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onPress={onClear}>Clear</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </View>
   )
 }

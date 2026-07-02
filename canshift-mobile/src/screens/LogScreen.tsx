@@ -1,7 +1,17 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, FlatList, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '../components/ui'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog'
 import { Colors, Typography, Spacing } from '../theme'
 import { useLogStore, type LogEntry, type LogLevel } from '../stores/log.store'
 
@@ -33,13 +43,21 @@ const LogEntryRow = React.memo(function LogEntryRow({ entry }: { entry: LogEntry
 export default function LogScreen() {
   const entries = useLogStore((s) => s.entries)
   const clear = useLogStore((s) => s.clear)
+  const [confirmVisible, setConfirmVisible] = useState(false)
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Log</Text>
         {entries.length > 0 && (
-          <Button variant="ghost" size="sm" onPress={clear} className="px-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setConfirmVisible(true)
+            }}
+            className="px-1"
+          >
             <Text className="text-sm text-primary">Clear</Text>
           </Button>
         )}
@@ -51,6 +69,21 @@ export default function LogScreen() {
         renderItem={({ item }) => <LogEntryRow entry={item} />}
         ListEmptyComponent={<Text style={styles.emptyText}>No events yet</Text>}
       />
+
+      <AlertDialog open={confirmVisible} onOpenChange={setConfirmVisible}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear log?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes all logged events and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onPress={clear}>Clear</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SafeAreaView>
   )
 }
