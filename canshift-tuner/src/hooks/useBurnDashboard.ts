@@ -4,12 +4,24 @@ import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
 import { useLogStore } from '../stores/log.store'
 import { usbService } from '../transport'
-import { verifyBurnedConfig } from './verifyBurnedConfig'
+import { humanizeTransportError } from '../transport/humanize-transport-error'
+import { verifyBurnedConfig, type VerifyResult } from './verifyBurnedConfig'
 
 interface UseBurnDashboard {
   canBurn: boolean
   isBurning: boolean
   burn: () => Promise<void>
+}
+
+const verifyFailureMessage = (verify: Exclude<VerifyResult, { kind: 'ok' }>): string => {
+  switch (verify.kind) {
+    case 'no_reboot':
+      return 'Device did not come back after reboot — try unplug/replug'
+    case 'fetch_failed':
+      return `Could not read back config (${humanizeTransportError(verify.error)})`
+    case 'mismatch':
+      return 'Device persisted a different config — retry the burn'
+  }
 }
 
 export const useBurnDashboard = (): UseBurnDashboard => {
@@ -24,6 +36,7 @@ export const useBurnDashboard = (): UseBurnDashboard => {
 
   const burnPhase = useDeviceStore((s) => s.burnPhase)
   const setBurnPhase = useDeviceStore((s) => s.setBurnPhase)
+  const setLastBurnResult = useDeviceStore((s) => s.setLastBurnResult)
   const isBurning = burnPhase !== 'idle'
 
   const canBurn =
@@ -39,40 +52,35 @@ export const useBurnDashboard = (): UseBurnDashboard => {
     if (!canBurn || !config) return
     if (useDeviceStore.getState().burnPhase !== 'idle') return
     setBurnPhase('pushing')
+    setLastBurnResult(null)
     try {
       const result = await usbService.pushConfig(config)
       if (!result.success) {
-        log('error', `Burn failed: ${result.error ?? 'unknown_error'}`)
+        const code = result.error ?? 'unknown_error'
+        log('error', `Burn failed: ${code}`)
+        setLastBurnResult({ kind: 'error', message: humanizeTransportError(code) })
         return
       }
       setBurnPhase('rebooting')
       log('info', 'Burn acked — verifying after reboot…')
       const verify = await verifyBurnedConfig(config)
-      switch (verify.kind) {
-        case 'ok':
-          markPushed()
-          log('success', 'Dashboard burned + verified on device')
-          break
-        case 'no_reboot':
-          log(
-            'error',
-            'Burn verify failed: device did not come back after reboot — try unplug/replug'
-          )
-          break
-        case 'fetch_failed':
-          log('error', `Burn verify failed: could not read back config (${verify.error})`)
-          break
-        case 'mismatch':
-          log('error', 'Burn verify failed: device persisted a different config — retry the burn')
-          break
+      if (verify.kind === 'ok') {
+        markPushed()
+        log('success', 'Dashboard burned + verified on device')
+        setLastBurnResult({ kind: 'success' })
+      } else {
+        const message = verifyFailureMessage(verify)
+        log('error', `Burn verify failed: ${message}`)
+        setLastBurnResult({ kind: 'error', message })
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       log('error', `Burn failed: ${message}`)
+      setLastBurnResult({ kind: 'error', message: humanizeTransportError(message) })
     } finally {
       setBurnPhase('idle')
     }
-  }, [canBurn, config, markPushed, log, setBurnPhase])
+  }, [canBurn, config, markPushed, log, setBurnPhase, setLastBurnResult])
 
   return { canBurn, isBurning, burn }
 }

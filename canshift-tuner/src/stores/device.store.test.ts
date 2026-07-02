@@ -15,6 +15,7 @@ const connectAndPopulate = (): void => {
     largestPsram: null,
   })
   s.setBurnPhase('pushing')
+  s.setLastBurnResult({ kind: 'error', message: 'boom' })
   s.setIsDayMode(true)
 }
 
@@ -35,6 +36,7 @@ describe('device.store setDisconnected (#1704)', () => {
     expect(s.firmwareLiveness).toEqual({ kind: 'unknown' })
     expect(s.heapStats).toEqual([])
     expect(s.burnPhase).toBe('idle')
+    expect(s.lastBurnResult).toBeNull()
     expect(s.isDayMode).toBeNull()
     expect(s.lastPushedConfig).toBeNull()
     expect(s.errorMessage).toBeNull()
@@ -47,5 +49,31 @@ describe('device.store setDisconnected (#1704)', () => {
     expect(s.errorMessage).toBe('port_gone')
     expect(s.connected).toBe(false)
     expect(s.firmwareVersion).toBeNull()
+  })
+})
+
+describe('device.store lastBurnResult (#1743)', () => {
+  beforeEach(() => {
+    connectAndPopulate()
+  })
+
+  it('stores success and error outcomes', () => {
+    const s = useDeviceStore.getState()
+    s.setLastBurnResult({ kind: 'success' })
+    expect(useDeviceStore.getState().lastBurnResult).toEqual({ kind: 'success' })
+    s.setLastBurnResult({ kind: 'error', message: 'Device did not come back after reboot' })
+    expect(useDeviceStore.getState().lastBurnResult).toEqual({
+      kind: 'error',
+      message: 'Device did not come back after reboot',
+    })
+  })
+
+  it('clears on explicit reset and on disconnect', () => {
+    const s = useDeviceStore.getState()
+    s.setLastBurnResult(null)
+    expect(useDeviceStore.getState().lastBurnResult).toBeNull()
+    s.setLastBurnResult({ kind: 'success' })
+    s.setDisconnected()
+    expect(useDeviceStore.getState().lastBurnResult).toBeNull()
   })
 })

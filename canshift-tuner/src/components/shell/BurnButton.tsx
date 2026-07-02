@@ -40,6 +40,79 @@ const BurnSpinner = () => (
   />
 )
 
+export interface BurnOutcomePillProps {
+  kind: 'success' | 'error'
+  message?: string
+  onDismiss?: () => void
+}
+
+export const BurnOutcomePill = ({ kind, message, onDismiss }: BurnOutcomePillProps) => {
+  if (kind === 'success') {
+    return (
+      <span role="status" style={successPillStyle}>
+        Burned ✓
+      </span>
+    )
+  }
+  return (
+    <span role="alert" title={message} style={errorPillStyle}>
+      <span style={errorMessageStyle}>{message}</span>
+      {onDismiss ? (
+        <button
+          type="button"
+          aria-label="Dismiss burn error"
+          onClick={onDismiss}
+          style={dismissButtonStyle}
+        >
+          ✕
+        </button>
+      ) : null}
+    </span>
+  )
+}
+
+const outcomePillStyleBase: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  borderRadius: 4,
+  padding: '3px 8px',
+  fontSize: 11,
+  fontWeight: 600,
+  maxWidth: 320,
+}
+
+const successPillStyle: CSSProperties = {
+  ...outcomePillStyleBase,
+  background: 'hsl(var(--success) / 0.12)',
+  border: '1px solid hsl(var(--success))',
+  color: 'hsl(var(--success))',
+}
+
+const errorPillStyle: CSSProperties = {
+  ...outcomePillStyleBase,
+  background: 'hsl(var(--destructive) / 0.1)',
+  border: '1px solid hsl(var(--destructive))',
+  color: 'hsl(var(--destructive))',
+}
+
+const errorMessageStyle: CSSProperties = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+const dismissButtonStyle: CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  color: 'inherit',
+  cursor: 'pointer',
+  fontSize: 10,
+  lineHeight: 1,
+  padding: 0,
+  flexShrink: 0,
+}
+
 const burnButtonStyleBase: CSSProperties = {
   borderRadius: 4,
   padding: '5px 14px',

@@ -14,6 +14,7 @@ export type {
 
 export type { ScreenSettings as ScreenSettingsPayload } from '@tmbk/canshift-core'
 
+export { humanizeTransportError } from './humanize-transport-error'
 export { usbService } from './usb-service'
 export { deviceIpc } from './device-ipc'
 export { canScannerIpc } from './can-scanner-ipc'

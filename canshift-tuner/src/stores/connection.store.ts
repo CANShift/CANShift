@@ -4,6 +4,11 @@ import { useDeviceStore } from './device.store'
 
 const USB_LABEL = 'webserial'
 
+const NON_ERROR_CODES = new Set(['no_port_selected'])
+
+const toReportableError = (error: string | null | undefined): string | null =>
+  error !== undefined && error !== null && !NON_ERROR_CODES.has(error) ? error : null
+
 interface ConnectionState {
   port: SerialPort | null
   status: SerialStatus
@@ -18,13 +23,14 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => {
   const client = getSerialClient()
 
   const unsubscribeStatus = client.onStatus((status, error) => {
-    set({ status, lastError: error ?? null })
+    const reportable = toReportableError(error)
+    set({ status, lastError: reportable })
     if (status === 'connected') {
       useDeviceStore.getState().setConnected(USB_LABEL)
     } else if (status === 'disconnected') {
       const device = useDeviceStore.getState()
-      if (device.connected || error) {
-        device.setDisconnected(error ?? null)
+      if (device.connected || reportable) {
+        device.setDisconnected(reportable)
       }
     }
   })
@@ -46,7 +52,7 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => {
         set({ port: client.getPort() })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'connect_failed'
-        set({ lastError: msg })
+        set({ lastError: toReportableError(msg) })
       }
     },
 

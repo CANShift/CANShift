@@ -1,8 +1,12 @@
 import { useEffect } from 'react'
 import { useBurnDashboard } from './useBurnDashboard'
+import { useLogStore } from '../stores/log.store'
+import { useUiStore } from '../stores/ui.store'
 
 export const useBurnShortcut = (): void => {
-  const { canBurn, burn } = useBurnDashboard()
+  const { canBurn, isBurning, burn } = useBurnDashboard()
+  const log = useLogStore((s) => s.push)
+  const signalBurnDenied = useUiStore((s) => s.signalBurnDenied)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
@@ -10,12 +14,18 @@ export const useBurnShortcut = (): void => {
       const tag = (document.activeElement as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       e.preventDefault()
-      if (!canBurn) return
+      if (!canBurn) {
+        if (!isBurning) {
+          signalBurnDenied()
+          log('info', 'Burn shortcut ignored — connect a device and edit the dashboard first')
+        }
+        return
+      }
       void burn()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [canBurn, burn])
+  }, [canBurn, isBurning, burn, log, signalBurnDenied])
 }
