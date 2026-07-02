@@ -11,9 +11,13 @@ export default defineConfig({
       title: "CANShift Docs",
       description:
         "User and technical documentation for the CANShift dashboard.",
-      social: {
-        github: "https://github.com/tburkhalterr/CANShift",
-      },
+      social: [
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/tburkhalterr/CANShift",
+        },
+      ],
       sidebar: [
         {
           label: "Welcome",
@@ -26,19 +30,21 @@ export default defineConfig({
           items: [
             {
               label: "Get started",
-              autogenerate: { directory: "user-guide/getting-started" },
+              items: [
+                { autogenerate: { directory: "user-guide/getting-started" } },
+              ],
             },
             {
               label: "Install",
-              autogenerate: { directory: "user-guide/install" },
+              items: [{ autogenerate: { directory: "user-guide/install" } }],
             },
             {
               label: "Configure",
-              autogenerate: { directory: "user-guide/configure" },
+              items: [{ autogenerate: { directory: "user-guide/configure" } }],
             },
             {
               label: "Use",
-              autogenerate: { directory: "user-guide/usage" },
+              items: [{ autogenerate: { directory: "user-guide/usage" } }],
             },
           ],
         },
@@ -49,15 +55,19 @@ export default defineConfig({
           items: [
             {
               label: "Firmware architecture",
-              autogenerate: { directory: "technical/architecture" },
+              items: [
+                { autogenerate: { directory: "technical/architecture" } },
+              ],
             },
             {
               label: "Reference",
-              autogenerate: { directory: "technical/reference" },
+              items: [{ autogenerate: { directory: "technical/reference" } }],
             },
             {
               label: "Contributing",
-              autogenerate: { directory: "technical/contributing" },
+              items: [
+                { autogenerate: { directory: "technical/contributing" } },
+              ],
             },
           ],
         },
