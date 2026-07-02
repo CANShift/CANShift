@@ -85,6 +85,14 @@ describe('useDeviceStore', () => {
     expect(state.connectionState).toBe('error')
   })
 
+  it('clearError removes the error and returns the connection state to "idle"', () => {
+    useDeviceStore.getState().setError({ kind: 'not-in-range' })
+    useDeviceStore.getState().clearError()
+    const state = useDeviceStore.getState()
+    expect(state.error).toBeNull()
+    expect(state.connectionState).toBe('idle')
+  })
+
   it('disconnect resets every field back to the initial idle state', () => {
     useDeviceStore.getState().setDevice('AA:BB:CC', 'CANShift-01')
     useDeviceStore.getState().setMode('ble')

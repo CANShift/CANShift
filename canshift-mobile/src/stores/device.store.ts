@@ -21,6 +21,7 @@ interface DeviceState {
   setFirmwareStatus: (version: string, canHealthy: boolean) => void
   setIsDayMode: (v: boolean) => void
   setError: (err: BleConnectionError | null) => void
+  clearError: () => void
   disconnect: () => void
 }
 
@@ -56,6 +57,10 @@ export const useDeviceStore = create<DeviceState>()((set) => ({
 
   setError: (error) => {
     set({ error, connectionState: 'error' })
+  },
+
+  clearError: () => {
+    set({ error: null, connectionState: 'idle' })
   },
 
   disconnect: () => {

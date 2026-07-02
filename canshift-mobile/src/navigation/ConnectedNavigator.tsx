@@ -1,10 +1,12 @@
 import React from 'react'
-import { Text, useWindowDimensions } from 'react-native'
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import DashScreen from '../screens/DashScreen'
 import GraphScreen from '../screens/GraphScreen'
 import LogScreen from '../screens/LogScreen'
+import ReconnectBanner from '../components/ReconnectBanner'
+import ReconnectFailedDialog from '../components/ReconnectFailedDialog'
 import { Colors, Typography } from '../theme'
 import type { RootStackParamList } from './index'
 
@@ -32,51 +34,59 @@ export default function ConnectedNavigator({ navigation }: Props) {
   const isLandscape = width > height
 
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: isLandscape
-          ? {
-              backgroundColor: Colors.surface,
-              borderTopColor: Colors.border,
-              height: 36,
-              paddingBottom: 0,
-              paddingTop: 0,
-            }
-          : { backgroundColor: Colors.surface, borderTopColor: Colors.border },
-        tabBarActiveTintColor: Colors.accent,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarLabelStyle: isLandscape
-          ? { fontSize: 9, marginBottom: 2 }
-          : { fontSize: Typography.xs },
-        tabBarIconStyle: isLandscape ? { marginTop: 2 } : undefined,
-      }}
-    >
-      <Tab.Screen
-        name="Dash"
-        options={{
-          tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ focused }) => <TabIcon icon="◉" focused={focused} />,
+    <View style={styles.container}>
+      <ReconnectBanner navigation={navigation} />
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: isLandscape
+            ? {
+                backgroundColor: Colors.surface,
+                borderTopColor: Colors.border,
+                height: 36,
+                paddingBottom: 0,
+                paddingTop: 0,
+              }
+            : { backgroundColor: Colors.surface, borderTopColor: Colors.border },
+          tabBarActiveTintColor: Colors.accent,
+          tabBarInactiveTintColor: Colors.textMuted,
+          tabBarLabelStyle: isLandscape
+            ? { fontSize: 9, marginBottom: 2 }
+            : { fontSize: Typography.xs },
+          tabBarIconStyle: isLandscape ? { marginTop: 2 } : undefined,
         }}
       >
-        {() => <DashScreen navigation={navigation} />}
-      </Tab.Screen>
-      <Tab.Screen
-        name="Graph"
-        component={GraphScreen}
-        options={{
-          tabBarLabel: 'Graph',
-          tabBarIcon: ({ focused }) => <TabIcon icon="∿" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Console"
-        component={LogScreen}
-        options={{
-          tabBarLabel: 'Console',
-          tabBarIcon: ({ focused }) => <TabIcon icon="≡" focused={focused} />,
-        }}
-      />
-    </Tab.Navigator>
+        <Tab.Screen
+          name="Dash"
+          options={{
+            tabBarLabel: 'Dashboard',
+            tabBarIcon: ({ focused }) => <TabIcon icon="◉" focused={focused} />,
+          }}
+        >
+          {() => <DashScreen navigation={navigation} />}
+        </Tab.Screen>
+        <Tab.Screen
+          name="Graph"
+          component={GraphScreen}
+          options={{
+            tabBarLabel: 'Graph',
+            tabBarIcon: ({ focused }) => <TabIcon icon="∿" focused={focused} />,
+          }}
+        />
+        <Tab.Screen
+          name="Console"
+          component={LogScreen}
+          options={{
+            tabBarLabel: 'Console',
+            tabBarIcon: ({ focused }) => <TabIcon icon="≡" focused={focused} />,
+          }}
+        />
+      </Tab.Navigator>
+      <ReconnectFailedDialog navigation={navigation} />
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.bg },
+})
