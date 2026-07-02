@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
+import { Colors, Typography, Spacing, Radius } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
 import * as BleService from '../services/ble.service'
@@ -88,14 +88,16 @@ export default function DashTopBar() {
               setMenuVisible(true)
             }}
             style={styles.iconBtn}
-            hitSlop={HitSlop.default}
+            accessibilityRole="button"
+            accessibilityLabel="Open menu"
           >
             <Text style={styles.iconBtnText}>☰</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleDisconnect}
             style={styles.iconBtn}
-            hitSlop={HitSlop.default}
+            accessibilityRole="button"
+            accessibilityLabel={isSim ? 'End demo' : 'Disconnect'}
           >
             <Text style={[styles.iconBtnText, { color: Colors.accent }]}>⏻</Text>
           </TouchableOpacity>
@@ -124,6 +126,7 @@ export default function DashTopBar() {
               <>
                 <TouchableOpacity
                   style={styles.menuItem}
+                  accessibilityRole="button"
                   onPress={() => {
                     setMenuVisible(false)
                     rootNav.navigate('Settings')
@@ -136,6 +139,7 @@ export default function DashTopBar() {
             )}
             <TouchableOpacity
               style={styles.menuItem}
+              accessibilityRole="button"
               onPress={() => {
                 setMenuVisible(false)
                 rootNav.navigate('About')
@@ -146,6 +150,7 @@ export default function DashTopBar() {
             <View style={styles.menuDivider} />
             <TouchableOpacity
               style={styles.menuItem}
+              accessibilityRole="button"
               onPress={() => {
                 setMenuVisible(false)
               }}
@@ -199,7 +204,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   staleText: { fontSize: Typography.xs, color: Colors.accent, fontWeight: '700' },
-  iconBtn: { padding: Spacing.xs },
+  iconBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconBtnText: { fontSize: Typography.lg, color: Colors.textDim },
   menuSheet: {
     backgroundColor: Colors.surfaceHigh,

@@ -30,6 +30,8 @@ export const SegmentedControl = <T extends string | number | boolean | null>({
             onChange(opt.value)
           }}
           disabled={disabled}
+          accessibilityRole="button"
+          accessibilityState={{ selected: active, disabled }}
         >
           <Text style={[styles.label, active && styles.labelActive]}>{opt.label}</Text>
         </TouchableOpacity>

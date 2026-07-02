@@ -2,9 +2,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../../theme'
 
 const WINDOW_OPTIONS = [
-  { label: '30s', value: 30 },
-  { label: '1m', value: 60 },
-  { label: '2m', value: 120 },
+  { label: '30s', value: 30, accessibilityLabel: '30 second window' },
+  { label: '1m', value: 60, accessibilityLabel: '1 minute window' },
+  { label: '2m', value: 120, accessibilityLabel: '2 minute window' },
 ]
 
 interface GraphControlsProps {
@@ -26,7 +26,13 @@ export const GraphControls = ({
 }: GraphControlsProps) => {
   return (
     <View style={[styles.controls, { paddingVertical: vGap }]}>
-      <TouchableOpacity style={styles.pauseBtn} onPress={onTogglePause} hitSlop={HitSlop.default}>
+      <TouchableOpacity
+        style={styles.pauseBtn}
+        onPress={onTogglePause}
+        hitSlop={HitSlop.vertical}
+        accessibilityRole="button"
+        accessibilityLabel={paused ? 'Resume graph' : 'Pause graph'}
+      >
         <Text style={styles.pauseBtnText}>{paused ? '▶ Resume' : '⏸ Pause'}</Text>
       </TouchableOpacity>
       <View style={styles.windowRow}>
@@ -37,7 +43,10 @@ export const GraphControls = ({
             onPress={() => {
               onSetWindow(opt.value)
             }}
-            hitSlop={HitSlop.default}
+            hitSlop={HitSlop.vertical}
+            accessibilityRole="button"
+            accessibilityLabel={opt.accessibilityLabel}
+            accessibilityState={{ selected: windowSecs === opt.value }}
           >
             <Text
               style={[styles.windowBtnText, windowSecs === opt.value && styles.windowBtnTextActive]}
@@ -47,7 +56,13 @@ export const GraphControls = ({
           </TouchableOpacity>
         ))}
       </View>
-      <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={onClear} hitSlop={HitSlop.default}>
+      <TouchableOpacity
+        style={styles.clearBtn}
+        onPress={onClear}
+        hitSlop={HitSlop.vertical}
+        accessibilityRole="button"
+        accessibilityLabel="Clear graph data"
+      >
         <Text style={styles.clearText}>Clear</Text>
       </TouchableOpacity>
     </View>
@@ -64,17 +79,21 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   pauseBtn: {
+    minHeight: 36,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    justifyContent: 'center',
     borderRadius: Radius.sm,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   pauseBtnText: { fontSize: Typography.xs, color: Colors.textDim },
-  windowRow: { flexDirection: 'row', gap: 2 },
+  windowRow: { flexDirection: 'row', gap: Spacing.xs },
   windowBtn: {
+    minHeight: 36,
+    minWidth: 44,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: Radius.sm,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -82,5 +101,13 @@ const styles = StyleSheet.create({
   windowBtnActive: { borderColor: Colors.accent, backgroundColor: Colors.accentDim },
   windowBtnText: { fontSize: Typography.xs, color: Colors.textMuted },
   windowBtnTextActive: { color: Colors.accent, fontWeight: '700' },
+  clearBtn: {
+    marginLeft: 'auto',
+    minHeight: 36,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.sm,
+  },
   clearText: { fontSize: Typography.xs, color: Colors.textMuted },
 })

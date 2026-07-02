@@ -47,6 +47,9 @@ const DeviceRow = React.memo(({ device, connecting, onPress }: DeviceRowProps) =
       onPress(device)
     }}
     disabled={connecting}
+    accessibilityRole="button"
+    accessibilityLabel={`Connect to ${device.name}`}
+    accessibilityState={{ disabled: connecting }}
   >
     <Card className="flex-row items-center gap-3">
       <View style={styles.deviceDot} />
@@ -235,6 +238,9 @@ export default function ScanScreen({ navigation }: Props) {
           style={[styles.scanBtn, scanning && styles.scanBtnActive]}
           onPress={startScan}
           disabled={scanning || connectionState === 'connecting'}
+          accessibilityRole="button"
+          accessibilityLabel={scanning ? 'Scanning for devices' : 'Scan for devices'}
+          accessibilityState={{ disabled: scanning || connectionState === 'connecting' }}
         >
           {scanning ? (
             <ActivityIndicator color={Colors.accent} size="small" />
@@ -266,7 +272,7 @@ export default function ScanScreen({ navigation }: Props) {
         )}
       </View>
 
-      <TouchableOpacity style={styles.demoBtn} onPress={startDemo}>
+      <TouchableOpacity style={styles.demoBtn} onPress={startDemo} accessibilityRole="button">
         <Text style={styles.demoBtnText}>Demo mode</Text>
       </TouchableOpacity>
 

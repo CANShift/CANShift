@@ -29,6 +29,8 @@ export const ReleaseBody = ({ release, notesOpen, onToggleNotes, onOpenUrl }: Re
           onOpenUrl(release.htmlUrl)
         }}
         hitSlop={HitSlop.default}
+        accessibilityRole="link"
+        accessibilityLabel="Open release on GitHub"
       >
         <Text style={styles.openLinkText}>Open on GitHub ↗</Text>
       </TouchableOpacity>
@@ -39,6 +41,9 @@ export const ReleaseBody = ({ release, notesOpen, onToggleNotes, onOpenUrl }: Re
             style={styles.notesToggle}
             onPress={onToggleNotes}
             hitSlop={HitSlop.default}
+            accessibilityRole="button"
+            accessibilityLabel={notesOpen ? 'Hide release notes' : 'Show release notes'}
+            accessibilityState={{ expanded: notesOpen }}
           >
             <Text style={styles.notesToggleText}>
               {notesOpen ? '▲ Hide release notes' : '▼ Show release notes'}
@@ -71,6 +76,8 @@ export const ReleaseBody = ({ release, notesOpen, onToggleNotes, onOpenUrl }: Re
                 onOpenUrl(asset.downloadUrl)
               }}
               hitSlop={HitSlop.default}
+              accessibilityRole="link"
+              accessibilityLabel={`Download ${asset.name}`}
             >
               <Text style={styles.assetName} numberOfLines={1}>
                 {asset.name}
