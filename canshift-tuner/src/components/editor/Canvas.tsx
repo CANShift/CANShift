@@ -10,6 +10,7 @@ import { WidgetBox } from './WidgetBox'
 import { AlignToolbar } from './AlignToolbar'
 import { DashTopBar } from './DashTopBar'
 import { rectsOverlap } from '../../utils/layout'
+import { isEditableTarget } from '../../utils/is-editable-target'
 import { useDragState } from '../../hooks/useDragState'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
@@ -43,6 +44,10 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const pasteWidgets = useDashboardStore((s) => s.pasteWidgets)
   const nudgeWidgets = useDashboardStore((s) => s.nudgeWidgets)
   const selectPage = useDashboardStore((s) => s.selectPage)
+  const undo = useDashboardStore((s) => s.undo)
+  const redo = useDashboardStore((s) => s.redo)
+  const canUndo = useDashboardStore((s) => s.past.length > 0)
+  const canRedo = useDashboardStore((s) => s.future.length > 0)
 
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
   const nightTheme = useDashboardStore((s) => s.config?.nightTheme)
@@ -155,9 +160,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-        return
+      if (isEditableTarget(e.target)) return
 
       const { selectedWidgetIds: activeIds } = useDashboardStore.getState()
 
@@ -169,6 +172,15 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
       }
 
       const isMod = e.metaKey || e.ctrlKey
+      if (isMod && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+        e.preventDefault()
+        e.stopPropagation()
+        const { undo: doUndo, redo: doRedo } = useDashboardStore.getState()
+        if (e.key.toLowerCase() === 'y' || e.shiftKey) doRedo()
+        else doUndo()
+        return
+      }
+
       if (isMod && e.key === 'a') {
         e.preventDefault()
         e.stopPropagation()
@@ -209,13 +221,8 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   }, [selectWidget, selectWidgets, removeWidgets, nudgeWidgets])
 
   useEffect(() => {
-    const isEditableTarget = (e: Event) => {
-      const t = e.target as HTMLElement
-      return t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable
-    }
-
     const handleCopy = (e: ClipboardEvent) => {
-      if (isEditableTarget(e)) return
+      if (isEditableTarget(e.target)) return
       const { selectedWidgetIds: ids, selectedPageId } = useDashboardStore.getState()
       if (ids.length === 0 || !selectedPageId) return
       e.preventDefault()
@@ -223,7 +230,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
     }
 
     const handleCut = (e: ClipboardEvent) => {
-      if (isEditableTarget(e)) return
+      if (isEditableTarget(e.target)) return
       const { selectedWidgetIds: ids, selectedPageId } = useDashboardStore.getState()
       if (ids.length === 0 || !selectedPageId) return
       e.preventDefault()
@@ -232,7 +239,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
     }
 
     const handlePaste = (e: ClipboardEvent) => {
-      if (isEditableTarget(e)) return
+      if (isEditableTarget(e.target)) return
       const { clipboardWidgets, selectedPageId } = useDashboardStore.getState()
       if (clipboardWidgets.length === 0 || !selectedPageId) return
       e.preventDefault()
@@ -344,6 +351,39 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
           minHeight: 28,
         }}
       >
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          title="Undo (⌘Z)"
+          style={{
+            padding: '2px 8px',
+            fontSize: 12,
+            background: 'transparent',
+            border: '1px solid #333333',
+            borderRadius: 3,
+            color: canUndo ? '#AAAAAA' : '#444444',
+            cursor: canUndo ? 'pointer' : 'default',
+          }}
+        >
+          ↶
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          title="Redo (⇧⌘Z)"
+          style={{
+            padding: '2px 8px',
+            fontSize: 12,
+            background: 'transparent',
+            border: '1px solid #333333',
+            borderRadius: 3,
+            color: canRedo ? '#AAAAAA' : '#444444',
+            cursor: canRedo ? 'pointer' : 'default',
+          }}
+        >
+          ↷
+        </button>
+
         {selectedWidgetIds.length >= 2 ? (
           <AlignToolbar
             pageId={page.id}
