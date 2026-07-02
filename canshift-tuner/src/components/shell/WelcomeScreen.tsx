@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { Button } from '@/components/ui/button'
 
 const SUPPORTED_BROWSERS = ['Chrome 89+', 'Edge 89+', 'Brave', 'Opera']
 
@@ -65,10 +66,11 @@ export const WelcomeScreen = ({
             </ol>
 
             <div style={ctaRowStyle}>
-              <button
+              <Button
                 type="button"
                 disabled={busy}
                 onClick={onConnect}
+                className="h-auto gap-0"
                 style={{
                   ...connectButtonStyle,
                   cursor: busy ? 'wait' : 'pointer',
@@ -82,12 +84,14 @@ export const WelcomeScreen = ({
                 ) : (
                   'Connect device'
                 )}
-              </button>
+              </Button>
               {onExploreSimulation && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   disabled={busy}
                   onClick={onExploreSimulation}
+                  className="h-auto gap-0"
                   style={{
                     ...exploreButtonStyle,
                     cursor: busy ? 'wait' : 'pointer',
@@ -95,7 +99,7 @@ export const WelcomeScreen = ({
                   }}
                 >
                   Explore with sample data
-                </button>
+                </Button>
               )}
             </div>
 

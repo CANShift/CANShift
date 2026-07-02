@@ -62,7 +62,7 @@ export const PageContextMenu = ({
         top: y,
         left: x,
         zIndex: 9999,
-        background: '#1A1A1A',
+        background: 'hsl(var(--surface))',
         border: '1px solid #2A2A2A',
         borderRadius: 5,
         padding: '3px 0',
@@ -80,6 +80,7 @@ export const PageContextMenu = ({
               onClose()
             }
           }}
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           style={{
             display: 'block',
             width: '100%',
@@ -88,7 +89,11 @@ export const PageContextMenu = ({
             background: 'none',
             border: 'none',
             fontSize: 12,
-            color: item.disabled ? '#333333' : item.danger ? '#CC4444' : '#CCCCCC',
+            color: item.disabled
+              ? '#333333'
+              : item.danger
+                ? 'hsl(var(--status-danger))'
+                : '#CCCCCC',
             cursor: item.disabled ? 'default' : 'pointer',
           }}
           onMouseEnter={(e) => {

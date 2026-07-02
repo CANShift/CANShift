@@ -28,6 +28,8 @@ export interface DesignTokens {
     statusDangerDim: string
     scrim: string
     ring: string
+    selection: string
+    selectionBg: string
   }
   radii: { sm: number; md: number; lg: number; full: number }
   spacing: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number }
@@ -71,6 +73,8 @@ export const DARK_TOKENS = {
     statusDangerDim: '#3A1A1A',
     scrim: '#000000',
     ring: '#FF4747',
+    selection: '#6CB6FF',
+    selectionBg: '#1B2030',
   },
   radii: { sm: 4, md: 8, lg: 12, full: 9999 },
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
@@ -151,6 +155,8 @@ export const COLOR_KEY_TO_CSS_VAR: Record<keyof DesignTokens['colors'], string> 
   statusDangerDim: '--status-danger-dim',
   scrim: '--scrim',
   ring: '--ring',
+  selection: '--selection',
+  selectionBg: '--selection-bg',
 }
 
 export const tokensToCssVars = (tokens: DesignTokens): Record<string, string> => {

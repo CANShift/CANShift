@@ -36,6 +36,8 @@ describe('DARK_TOKENS', () => {
         statusDangerDim: '#3A1A1A',
         scrim: '#000000',
         ring: '#FF4747',
+        selection: '#6CB6FF',
+        selectionBg: '#1B2030',
       },
       radii: { sm: 4, md: 8, lg: 12, full: 9999 },
       spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
@@ -91,6 +93,8 @@ describe('tokensToCssVars', () => {
     '--status-danger-dim',
     '--scrim',
     '--ring',
+    '--selection',
+    '--selection-bg',
   ] as const
 
   it('emits exactly the canonical CSS variable names', () => {
