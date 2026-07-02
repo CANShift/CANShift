@@ -91,13 +91,15 @@ export const useDragState = ({
         const effectiveScale = scale * (zoomRef.current ?? 1)
         const dx = Math.round((ev.clientX - drag.startMouseX) / effectiveScale)
         const dy = Math.round((ev.clientY - drag.startMouseY) / effectiveScale)
+        const xSnap = ev.altKey ? 1 : X_SNAP
+        const ySnap = ev.altKey ? 1 : Y_SNAP
 
         if (drag.isMulti) {
           const moves = drag.widgets.map((dw) => {
             const rawX = dw.startX + dx
             const rawY = dw.startY + dy
-            const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
-            const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
+            const snappedX = Math.round(rawX / xSnap) * xSnap
+            const snappedY = Math.round(rawY / ySnap) * ySnap
             return {
               id: dw.id,
               x: Math.max(0, Math.min(canvasW - dw.w, snappedX)),
@@ -110,8 +112,8 @@ export const useDragState = ({
           if (!dw) return
           const rawX = dw.startX + dx
           const rawY = dw.startY + dy
-          const snappedX = Math.round(rawX / X_SNAP) * X_SNAP
-          const snappedY = Math.round(rawY / Y_SNAP) * Y_SNAP
+          const snappedX = Math.round(rawX / xSnap) * xSnap
+          const snappedY = Math.round(rawY / ySnap) * ySnap
           const newX = Math.max(0, Math.min(canvasW - dw.w, snappedX))
           const newY = Math.max(0, Math.min(widgetAreaH - dw.h, snappedY))
           moveWidget(drag.pageId, drag.primaryId, { x: newX, y: newY })

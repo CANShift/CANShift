@@ -38,6 +38,29 @@ export const PageContextMenu = ({
     }
   }, [onClose])
 
+  useEffect(() => {
+    const btns = () =>
+      Array.from(ref.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])
+    btns()[0]?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+      e.preventDefault()
+      const list = btns()
+      const idx = list.indexOf(document.activeElement as HTMLButtonElement)
+      const next = e.key === 'ArrowDown' ? idx + 1 : idx - 1
+      list[(next + list.length) % list.length]?.focus()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
   const items: {
     label: string
     action: () => void
