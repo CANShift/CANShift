@@ -116,6 +116,11 @@ export class BleService {
   }
 
   private createManager(): BleManager {
+    if (process.env.EXPO_PUBLIC_DISABLE_BLE === '1') {
+      s_bleNativeAvailable = false
+      log('warn', 'BLE disabled via EXPO_PUBLIC_DISABLE_BLE — no CoreBluetooth activation')
+      return createInertBleManager()
+    }
     try {
       return new BleManager({
         restoreStateIdentifier: BLE_RESTORE_STATE_IDENTIFIER,
