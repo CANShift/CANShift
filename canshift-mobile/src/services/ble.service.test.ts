@@ -36,9 +36,9 @@ jest.mock('./last-device', () => ({
   getLastDevice: jest.fn(() => Promise.resolve(null)),
 }))
 
-import { BleErrorCode } from 'react-native-ble-plx'
+import { BleErrorCode, BleManager as MockBleManager } from 'react-native-ble-plx'
 import type { BleManager, Device } from 'react-native-ble-plx'
-import { BleService } from './ble.service'
+import { BleService, isBleAvailable } from './ble.service'
 import { mapBleError } from './ble.errors'
 import { forgetDevice } from './last-device'
 import { useDeviceStore } from '../stores/device.store'
@@ -221,6 +221,32 @@ describe('BleService connect', () => {
     await expect(service.connect('dev-1')).rejects.toThrow('unreachable')
 
     expect(cancelSpy).toHaveBeenCalled()
+  })
+})
+
+describe('EXPO_PUBLIC_DISABLE_BLE', () => {
+  const original = process.env.EXPO_PUBLIC_DISABLE_BLE as string | undefined
+
+  beforeEach(() => {
+    ;(MockBleManager as jest.Mock).mockClear()
+  })
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.EXPO_PUBLIC_DISABLE_BLE
+    else process.env.EXPO_PUBLIC_DISABLE_BLE = original
+  })
+
+  it('skips CoreBluetooth activation and reports BLE unavailable when set to "1"', () => {
+    process.env.EXPO_PUBLIC_DISABLE_BLE = '1'
+    new BleService()
+    expect(MockBleManager).not.toHaveBeenCalled()
+    expect(isBleAvailable()).toBe(false)
+  })
+
+  it('constructs the native manager when unset', () => {
+    delete process.env.EXPO_PUBLIC_DISABLE_BLE
+    new BleService()
+    expect(MockBleManager).toHaveBeenCalled()
   })
 })
 

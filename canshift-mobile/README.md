@@ -32,6 +32,20 @@ lives in `app.json`.
 
 Other scripts: `npm run lint`, `npm run typecheck`.
 
+### Disabling Bluetooth in development
+
+Launching on a physical iPhone spins up CoreBluetooth immediately, which
+activates Bluetooth on the device. To suppress that during a dev session, set:
+
+```bash
+EXPO_PUBLIC_DISABLE_BLE=1 npm run ios
+```
+
+The BLE service then uses an inert manager — no CoreBluetooth activation, no
+scanning, no permission prompts. `isBleAvailable()` returns `false` and the app
+behaves as it does when the native module is absent (Expo Go). Unset (the
+default) restores full Bluetooth.
+
 ---
 
 ## Feature matrix
