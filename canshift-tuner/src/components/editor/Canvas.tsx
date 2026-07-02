@@ -20,6 +20,11 @@ const SCALE = 1.5
 
 const RB_THRESHOLD = 4
 
+const REV_LIMIT_FLASH_HZ = 3
+const REV_LIMIT_FLASH_HALF_PERIOD_MS = Math.round(1000 / (REV_LIMIT_FLASH_HZ * 2))
+const REV_LIMIT_BORDER_PX = 8
+const REV_LIMIT_PREVIEW_MS = 5000
+
 const EMPTY_PAGES: readonly PageConfig[] = []
 
 interface CanvasProps {
@@ -110,10 +115,10 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
     }
     const interval = setInterval(() => {
       setFlashPhase((v) => !v)
-    }, 80)
+    }, REV_LIMIT_FLASH_HALF_PERIOD_MS)
     const timeout = setTimeout(() => {
       setRevLimiting(false)
-    }, 5000)
+    }, REV_LIMIT_PREVIEW_MS)
     return () => {
       clearInterval(interval)
       clearTimeout(timeout)
@@ -599,8 +604,9 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      background: flashPhase ? '#FF0000CC' : '#FF000011',
-                      transition: 'background 0.04s',
+                      border: `${Math.round(REV_LIMIT_BORDER_PX * SCALE)}px solid #FF0000`,
+                      opacity: flashPhase ? 1 : 0.5,
+                      transition: 'opacity 0.1s',
                       pointerEvents: 'none',
                       zIndex: 200,
                       display: 'flex',
@@ -608,16 +614,11 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                       justifyContent: 'center',
                     }}
                   >
-                    <svg
-                      width={CANVAS_W * 0.28}
-                      height={CANVAS_W * 0.28}
-                      viewBox="0 0 100 100"
-                      style={{ opacity: flashPhase ? 1 : 0.15, transition: 'opacity 0.04s' }}
-                    >
+                    <svg width={CANVAS_W * 0.28} height={CANVAS_W * 0.28} viewBox="0 0 100 100">
                       <polygon
                         points="50,8 96,90 4,90"
                         fill="none"
-                        stroke="#FFFFFF"
+                        stroke="#FF4444"
                         strokeWidth="7"
                         strokeLinejoin="round"
                       />
@@ -625,7 +626,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                         x="50"
                         y="80"
                         textAnchor="middle"
-                        fill="#FFFFFF"
+                        fill="#FF4444"
                         fontSize="52"
                         fontWeight="900"
                         fontFamily="monospace"
