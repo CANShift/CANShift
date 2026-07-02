@@ -43,7 +43,14 @@ export const WidgetBox = memo(function WidgetBox({
   return (
     <div
       data-widget="true"
+      role="button"
+      tabIndex={0}
+      aria-label={`${widget.type} widget at ${String(layout.x)}, ${String(layout.y)}`}
+      aria-pressed={isSelected}
       title={isOverflowing ? 'Widget extends past the target screen bounds' : undefined}
+      onFocus={() => {
+        if (!isSelected) onSelect(widget.id)
+      }}
       onMouseDown={(e) => {
         e.stopPropagation()
         if (e.shiftKey) {

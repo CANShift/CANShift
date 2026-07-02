@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
@@ -14,10 +14,34 @@ import { isEditableTarget } from '../../utils/is-editable-target'
 import { useDragState } from '../../hooks/useDragState'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 
 const SCALE = 1.5
+const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2] as const
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 2
+
+const SHORTCUTS: readonly (readonly [string, string])[] = [
+  ['Del / ⌫', 'Delete selected widgets'],
+  ['↑ ↓ ← →', 'Nudge 1px (Shift: 10px)'],
+  ['⌘A', 'Select all'],
+  ['⌘C / ⌘X / ⌘V', 'Copy / cut / paste'],
+  ['⌘Z / ⇧⌘Z', 'Undo / redo'],
+  ['⌘S', 'Burn to device'],
+  ['Alt-drag', 'Disable snap (1px)'],
+  ['⌘-scroll', 'Zoom'],
+  ['Esc', 'Deselect / close'],
+  ['?', 'This help'],
+]
 
 const RB_THRESHOLD = 4
 
@@ -36,8 +60,10 @@ interface CanvasProps {
 const Canvas = ({ page, topBar }: CanvasProps) => {
   const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
   const screenProfile = useMemo(() => resolveScreenProfile(targetProfileId), [targetProfileId])
-  const CANVAS_W = screenProfile.width * SCALE
-  const CANVAS_H = screenProfile.height * SCALE
+  const [zoom, setZoom] = useState(1)
+  const effScale = SCALE * zoom
+  const CANVAS_W = screenProfile.width * effScale
+  const CANVAS_H = screenProfile.height * effScale
 
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectedWidgetIds = useDashboardStore((s) => s.selectedWidgetIds)
@@ -62,6 +88,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const deviceIsDayMode = useDeviceStore((s) => s.isDayMode)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<number>(1)
+  zoomRef.current = zoom
   const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
   const rubberBandRef = useRef<{ startFwX: number; startFwY: number } | null>(null)
   const [rubberBand, setRubberBand] = useState<{
@@ -108,6 +135,16 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const [diagOpen, setDiagOpen] = useState(false)
   const [revLimiting, setRevLimiting] = useState(false)
   const [flashPhase, setFlashPhase] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  const stepZoom = useCallback((dir: 1 | -1) => {
+    setZoom((z) => {
+      const idx = ZOOM_STEPS.indexOf(z as (typeof ZOOM_STEPS)[number])
+      const base = idx === -1 ? ZOOM_STEPS.indexOf(1) : idx
+      const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, base + dir))]
+      return next ?? z
+    })
+  }, [])
 
   useEffect(() => {
     if (!revLimiting) {
@@ -173,7 +210,15 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
       if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
+        setShortcutsOpen(false)
         selectWidget(null)
+        return
+      }
+
+      if (e.key === '?') {
+        e.preventDefault()
+        e.stopPropagation()
+        setShortcutsOpen((o) => !o)
         return
       }
 
@@ -268,15 +313,15 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
     (e: React.PointerEvent) => {
       if (!containerRef.current) return
       const cr = containerRef.current.getBoundingClientRect()
-      const startFwX = (e.clientX - cr.left) / SCALE
-      const startFwY = (e.clientY - cr.top) / SCALE
+      const startFwX = (e.clientX - cr.left) / effScale
+      const startFwY = (e.clientY - cr.top) / effScale
       rubberBandRef.current = { startFwX, startFwY }
 
       const handleMove = (ev: MouseEvent) => {
         if (!rubberBandRef.current || !containerRef.current) return
         const r = containerRef.current.getBoundingClientRect()
-        const curFwX = (ev.clientX - r.left) / SCALE
-        const curFwY = (ev.clientY - r.top) / SCALE
+        const curFwX = (ev.clientX - r.left) / effScale
+        const curFwY = (ev.clientY - r.top) / effScale
         const { startFwX: sx, startFwY: sy } = rubberBandRef.current
         setRubberBand({
           x: Math.min(sx, curFwX),
@@ -299,8 +344,8 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
         }
 
         const r = containerRef.current.getBoundingClientRect()
-        const curFwX = (ev.clientX - r.left) / SCALE
-        const curFwY = (ev.clientY - r.top) / SCALE
+        const curFwX = (ev.clientX - r.left) / effScale
+        const curFwY = (ev.clientY - r.top) / effScale
         const { startFwX: sx, startFwY: sy } = rubberBandRef.current
         const rbX = Math.min(sx, curFwX)
         const rbY = Math.min(sy, curFwY)
@@ -333,7 +378,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
       document.addEventListener('mousemove', handleMove)
       document.addEventListener('mouseup', handleUp)
     },
-    [page.id, selectWidgets]
+    [page.id, selectWidgets, effScale]
   )
 
   return (
@@ -432,6 +477,63 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
           </span>
         )}
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              stepZoom(-1)
+            }}
+            disabled={zoom <= ZOOM_MIN}
+            title="Zoom out"
+            className="h-auto disabled:opacity-100"
+            style={{ padding: '2px 8px', fontSize: 12, background: 'transparent' }}
+          >
+            −
+          </Button>
+          <button
+            onClick={() => {
+              setZoom(1)
+            }}
+            title="Reset zoom"
+            style={{
+              minWidth: 44,
+              padding: '2px 4px',
+              fontSize: 10,
+              fontVariantNumeric: 'tabular-nums',
+              background: 'transparent',
+              border: 'none',
+              color: 'hsl(var(--text-muted))',
+              cursor: 'pointer',
+            }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              stepZoom(1)
+            }}
+            disabled={zoom >= ZOOM_MAX}
+            title="Zoom in"
+            className="h-auto disabled:opacity-100"
+            style={{ padding: '2px 8px', fontSize: 12, background: 'transparent' }}
+          >
+            +
+          </Button>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={() => {
+            setShortcutsOpen(true)
+          }}
+          title="Keyboard shortcuts (?)"
+          className="h-auto"
+          style={{ padding: '2px 8px', fontSize: 12, background: 'transparent' }}
+        >
+          ?
+        </Button>
+
         <Button
           variant="outline"
           onClick={() => {
@@ -492,7 +594,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
               {page.showTopBar && (
                 <DashTopBar
                   topBar={topBar}
-                  scale={SCALE}
+                  scale={effScale}
                   settingsOpen={settingsOpen}
                   isDayMode={activeDayMode}
                   onOpenSettings={() => {
@@ -503,6 +605,11 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
 
               <div
                 ref={containerRef}
+                onWheel={(e) => {
+                  if (!e.metaKey && !e.ctrlKey) return
+                  e.preventDefault()
+                  stepZoom(e.deltaY < 0 ? 1 : -1)
+                }}
                 onPointerDown={(e) => {
                   const target = e.target as HTMLElement
                   const isBackground =
@@ -550,16 +657,16 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                   linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
                   linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
                 `,
-                    backgroundSize: `${String(40 * SCALE)}px ${String(28 * SCALE)}px`,
+                    backgroundSize: `${String(40 * effScale)}px ${String(28 * effScale)}px`,
                     pointerEvents: 'none',
                   }}
                 />
 
                 {(page.template ?? 'custom') === 'cruise_control' ? (
                   <CruiseControlPreview
-                    scale={SCALE}
+                    scale={effScale}
                     canvasW={CANVAS_W}
-                    contentH={widgetAreaH * SCALE}
+                    contentH={widgetAreaH * effScale}
                     palette={effectivePalette}
                   />
                 ) : (
@@ -571,7 +678,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                       key={widget.id}
                       widget={widget}
                       palette={effectivePalette}
-                      scale={SCALE}
+                      scale={effScale}
                       isSelected={widget.id === selectedWidgetId}
                       isInMultiSelection={
                         selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
@@ -590,10 +697,10 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                   <div
                     style={{
                       position: 'absolute',
-                      left: rubberBand.x * SCALE,
-                      top: rubberBand.y * SCALE,
-                      width: Math.max(0, rubberBand.w * SCALE),
-                      height: Math.max(0, rubberBand.h * SCALE),
+                      left: rubberBand.x * effScale,
+                      top: rubberBand.y * effScale,
+                      width: Math.max(0, rubberBand.w * effScale),
+                      height: Math.max(0, rubberBand.h * effScale),
                       border: '1px solid #6688FF',
                       background: '#3344FF18',
                       pointerEvents: 'none',
@@ -602,9 +709,9 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                   />
                 )}
 
-                {settingsOpen && <ScreenSettingsPanel scale={SCALE} />}
+                {settingsOpen && <ScreenSettingsPanel scale={effScale} />}
 
-                {diagOpen && <DiagnosticsPanel scale={SCALE} />}
+                {diagOpen && <DiagnosticsPanel scale={effScale} />}
 
                 {revLimiting && (
                   <div
@@ -648,6 +755,38 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Keyboard shortcuts</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              gap: '6px 16px',
+              fontSize: 13,
+            }}
+          >
+            {SHORTCUTS.map(([keys, desc]) => (
+              <Fragment key={keys}>
+                <kbd style={{ fontFamily: 'monospace', color: 'hsl(var(--text))' }}>{keys}</kbd>
+                <span style={{ color: 'hsl(var(--text-muted))' }}>{desc}</span>
+              </Fragment>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShortcutsOpen(false)
+              }}
+            >
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
