@@ -1,11 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native'
 import Slider from '@react-native-community/slider'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius } from '../theme'
 import * as BleService from '../services/ble.service'
 import { mapBleError } from '../services/ble.errors'
+import { bleErrorMessage } from '../services/ble-error-message'
 import { useDeviceStore } from '../stores/device.store'
 import { log } from '../stores/log.store'
 import type { RootStackParamList } from '../navigation'
@@ -45,10 +53,13 @@ const THEME_OPTIONS: { label: string; value: boolean }[] = [
   { label: 'Day', value: true },
 ]
 
+type LoadState = 'loading' | 'ready' | 'error'
+
 export default function SettingsScreen({ navigation }: Props) {
   const isDayMode = useDeviceStore((s) => s.isDayMode)
-  const [brightness, setBrightness] = useState(80)
+  const [brightness, setBrightness] = useState(0)
   const [sleep, setSleep] = useState(0)
+  const [loadState, setLoadState] = useState<LoadState>('loading')
   const [saving, setSaving] = useState(false)
   const [dayNightPending, setDayNightPending] = useState(false)
   const [calibrating, setCalibrating] = useState(false)
@@ -57,35 +68,39 @@ export default function SettingsScreen({ navigation }: Props) {
     null
   )
 
-  const handleBleFailure = useCallback((err: unknown, fallbackTitle: string): boolean => {
+  const handleBleFailure = useCallback((err: unknown): void => {
     const mapped = mapBleError(err)
     if (mapped.kind === 'permission-denied') {
       setUnauthorizedPlatform(mapped.platform)
-      return true
+      return
     }
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    Alert.alert(fallbackTitle, message)
-    return false
+    const { title, body } = bleErrorMessage(mapped)
+    Toast.show({ type: 'error', text1: title, text2: body })
+  }, [])
+
+  const loadSettings = useCallback(async () => {
+    setLoadState('loading')
+    try {
+      const current = await BleService.readSettings()
+      if (!current) {
+        setLoadState('error')
+        return
+      }
+      setBrightness(current.brightness)
+      setSleep(current.sleep)
+      setLoadState('ready')
+    } catch (err) {
+      log(
+        'warn',
+        `Failed to read settings from device: ${err instanceof Error ? err.message : String(err)}`
+      )
+      setLoadState('error')
+    }
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-    void BleService.readSettings()
-      .then((current) => {
-        if (cancelled || !current) return
-        setBrightness(current.brightness)
-        setSleep(current.sleep)
-      })
-      .catch((err: unknown) => {
-        log(
-          'warn',
-          `Failed to read settings from device — using defaults: ${err instanceof Error ? err.message : String(err)}`
-        )
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    void loadSettings()
+  }, [loadSettings])
 
   const handleSave = async () => {
     setSaving(true)
@@ -98,7 +113,7 @@ export default function SettingsScreen({ navigation }: Props) {
       })
       navigation.goBack()
     } catch (err) {
-      handleBleFailure(err, 'Error')
+      handleBleFailure(err)
     } finally {
       setSaving(false)
     }
@@ -114,7 +129,7 @@ export default function SettingsScreen({ navigation }: Props) {
         text1: target ? 'Day mode' : 'Night mode',
       })
     } catch (err) {
-      handleBleFailure(err, 'Error')
+      handleBleFailure(err)
     } finally {
       setDayNightPending(false)
     }
@@ -128,8 +143,13 @@ export default function SettingsScreen({ navigation }: Props) {
     setCalibrating(true)
     try {
       await BleService.sendCmd('start_calibration')
+      Toast.show({
+        type: 'success',
+        text1: 'Calibration started',
+        text2: 'Follow the crosshairs on your dashboard.',
+      })
     } catch (err) {
-      handleBleFailure(err, 'Error')
+      handleBleFailure(err)
     } finally {
       setCalibrating(false)
     }
@@ -144,62 +164,96 @@ export default function SettingsScreen({ navigation }: Props) {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Section>
-          <View style={styles.rowHeader}>
-            <Label>BRIGHTNESS</Label>
-            <Text style={styles.value}>{brightness}%</Text>
-          </View>
-          <Slider
-            style={styles.slider}
-            minimumValue={10}
-            maximumValue={100}
-            step={1}
-            value={brightness}
-            onValueChange={setBrightness}
-            minimumTrackTintColor={Colors.accent}
-            maximumTrackTintColor={Colors.border}
-            thumbTintColor={Colors.text}
-          />
-        </Section>
+      {loadState === 'loading' && (
+        <View
+          style={styles.statusContainer}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          <ActivityIndicator color={Colors.accent} size="small" />
+          <Text style={styles.statusText}>Reading settings from dashboard…</Text>
+        </View>
+      )}
 
-        <Section title="SLEEP">
-          <SegmentedControl options={SLEEP_OPTIONS} value={sleep} onChange={setSleep} />
-        </Section>
-
-        <Section title="THEME">
-          <SegmentedControl<boolean | null>
-            options={THEME_OPTIONS}
-            value={isDayMode}
-            onChange={(v) => {
-              if (v !== null) void handleSetDayNight(v)
-            }}
-            disabled={dayNightPending}
-          />
-        </Section>
-
-        <Section title="TOUCH">
+      {loadState === 'error' && (
+        <View
+          style={styles.statusContainer}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={styles.errorTitle}>Couldn’t read settings</Text>
+          <Text style={styles.errorHint}>
+            The dashboard didn’t return its current settings. Check the connection and try again.
+          </Text>
           <TouchableOpacity
-            style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
-            onPress={handleCalibrate}
-            disabled={calibrating}
+            style={styles.actionBtn}
+            onPress={() => void loadSettings()}
             accessibilityRole="button"
-            accessibilityState={{ disabled: calibrating }}
+            accessibilityLabel="Retry reading settings"
           >
-            <Text style={styles.actionBtnText}>
-              {calibrating ? 'Calibrating…' : 'Calibrate Touch Screen'}
-            </Text>
+            <Text style={styles.actionBtnText}>Retry</Text>
           </TouchableOpacity>
-        </Section>
-      </ScrollView>
+        </View>
+      )}
+
+      {loadState === 'ready' && (
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Section>
+            <View style={styles.rowHeader}>
+              <Label>BRIGHTNESS</Label>
+              <Text style={styles.value}>{brightness}%</Text>
+            </View>
+            <Slider
+              style={styles.slider}
+              minimumValue={10}
+              maximumValue={100}
+              step={1}
+              value={brightness}
+              onValueChange={setBrightness}
+              minimumTrackTintColor={Colors.accent}
+              maximumTrackTintColor={Colors.border}
+              thumbTintColor={Colors.text}
+            />
+          </Section>
+
+          <Section title="SLEEP">
+            <SegmentedControl options={SLEEP_OPTIONS} value={sleep} onChange={setSleep} />
+          </Section>
+
+          <Section title="THEME">
+            <SegmentedControl<boolean | null>
+              options={THEME_OPTIONS}
+              value={isDayMode}
+              onChange={(v) => {
+                if (v !== null) void handleSetDayNight(v)
+              }}
+              disabled={dayNightPending}
+            />
+          </Section>
+
+          <Section title="TOUCH">
+            <TouchableOpacity
+              style={[styles.actionBtn, calibrating && styles.actionBtnDisabled]}
+              onPress={handleCalibrate}
+              disabled={calibrating}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: calibrating }}
+            >
+              <Text style={styles.actionBtnText}>
+                {calibrating ? 'Calibrating…' : 'Calibrate Touch Screen'}
+              </Text>
+            </TouchableOpacity>
+          </Section>
+        </ScrollView>
+      )}
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, (saving || loadState !== 'ready') && styles.saveBtnDisabled]}
           onPress={() => void handleSave()}
-          disabled={saving}
+          disabled={saving || loadState !== 'ready'}
           accessibilityRole="button"
-          accessibilityState={{ disabled: saving }}
+          accessibilityState={{ disabled: saving || loadState !== 'ready' }}
         >
           <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'SAVE'}</Text>
         </TouchableOpacity>
@@ -234,6 +288,21 @@ export default function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
+  statusContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  statusText: { fontSize: Typography.sm, color: Colors.textMuted },
+  errorTitle: { fontSize: Typography.md, color: Colors.text, fontWeight: '600' },
+  errorHint: {
+    fontSize: Typography.sm,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
   scroll: { padding: Spacing.lg, gap: Spacing.xl },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   value: { fontSize: Typography.xs, color: Colors.text },
