@@ -13,6 +13,7 @@ import { rectsOverlap } from '../../utils/layout'
 import { isEditableTarget } from '../../utils/is-editable-target'
 import { useDragState } from '../../hooks/useDragState'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
+import { Button } from '@/components/ui/button'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
 
@@ -342,7 +343,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
         flexDirection: 'column',
         flex: 1,
         overflow: 'hidden',
-        background: '#111111',
+        background: 'hsl(var(--bg))',
       }}
     >
       <div
@@ -350,44 +351,48 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
           display: 'flex',
           alignItems: 'center',
           padding: '4px 10px',
-          borderBottom: '1px solid #1A1A1A',
+          borderBottom: '1px solid hsl(var(--surface))',
           gap: 8,
           flexShrink: 0,
           minHeight: 28,
         }}
       >
-        <button
+        <Button
+          variant="outline"
           onClick={undo}
           disabled={!canUndo}
           title="Undo (⌘Z)"
+          className="h-auto disabled:opacity-100"
           style={{
             padding: '2px 8px',
             fontSize: 12,
             background: 'transparent',
-            border: '1px solid #333333',
+            border: '1px solid hsl(var(--border))',
             borderRadius: 3,
             color: canUndo ? '#AAAAAA' : '#444444',
             cursor: canUndo ? 'pointer' : 'default',
           }}
         >
           ↶
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
           onClick={redo}
           disabled={!canRedo}
           title="Redo (⇧⌘Z)"
+          className="h-auto disabled:opacity-100"
           style={{
             padding: '2px 8px',
             fontSize: 12,
             background: 'transparent',
-            border: '1px solid #333333',
+            border: '1px solid hsl(var(--border))',
             borderRadius: 3,
             color: canRedo ? '#AAAAAA' : '#444444',
             cursor: canRedo ? 'pointer' : 'default',
           }}
         >
           ↷
-        </button>
+        </Button>
 
         {selectedWidgetIds.length >= 2 ? (
           <AlignToolbar
@@ -396,7 +401,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
             canDistribute={selectedWidgetIds.length >= 3}
           />
         ) : (
-          <span style={{ fontSize: 9, color: '#333333', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: 9, color: 'hsl(var(--border))', letterSpacing: '0.05em' }}>
             PREVIEW — {screenProfile.width} × {screenProfile.height}
           </span>
         )}
@@ -427,12 +432,14 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
           </span>
         )}
 
-        <button
+        <Button
+          variant="outline"
           onClick={() => {
             setRevLimiting(true)
           }}
           disabled={revLimiting}
           title="Simulate rev limiter (5s)"
+          className="h-auto disabled:opacity-100"
           style={{
             padding: '3px 10px',
             fontSize: 10,
@@ -446,7 +453,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
           }}
         >
           ⚡ Rev Limit
-        </button>
+        </Button>
       </div>
 
       <div

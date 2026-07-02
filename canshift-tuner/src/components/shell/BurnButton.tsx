@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { Button } from '@/components/ui/button'
 
 export interface BurnButtonProps {
   disabled?: boolean
@@ -10,16 +11,17 @@ export interface BurnButtonProps {
 export const BurnButton = ({ disabled = false, busy = false, title, onClick }: BurnButtonProps) => {
   const isDisabled = disabled && !busy
   return (
-    <button
+    <Button
       type="button"
       disabled={isDisabled}
       onClick={onClick}
       title={title}
+      className="h-auto gap-0"
       style={isDisabled ? burnButtonStyleDisabled : burnButtonStyleEnabled}
     >
       {busy ? <BurnSpinner /> : null}
       {busy ? 'Burning…' : 'Burn'}
-    </button>
+    </Button>
   )
 }
 

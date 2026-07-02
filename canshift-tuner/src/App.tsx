@@ -20,6 +20,7 @@ import { useBurnShortcut } from './hooks/useBurnShortcut'
 import { useWidgetOverflowWarnings } from './hooks/useWidgetOverflowWarnings'
 import { useUnsavedChangesGuard } from './hooks/useUnsavedChangesGuard'
 import { DeviceConfigConflictDialog } from './components/shell/DeviceConfigConflictDialog'
+import { ROUTE_PATHS, type RoutePath } from './constants/routes'
 
 const EditorRoute = lazy(() => import('./routes/EditorRoute'))
 const AboutRoute = lazy(() => import('./routes/AboutRoute'))
@@ -47,6 +48,24 @@ const RouteLoading = () => {
       Loading…
     </div>
   )
+}
+
+const ROUTE_ELEMENTS: Record<RoutePath, ReactNode> = {
+  '/': <WelcomeRoute />,
+  '/dashboard': (
+    <ErrorBoundary scope="editor">
+      <EditorRoute />
+    </ErrorBoundary>
+  ),
+  '/can': <CanBusRoute />,
+  '/ecu': <EcuRoute />,
+  '/obd2': <Obd2Route />,
+  '/themes': <ThemesRoute />,
+  '/live': <LiveDataRoute />,
+  '/logs': <LogsRoute />,
+  '/cli': <CliRoute />,
+  '/firmware': <FirmwareRoute />,
+  '/about': <AboutRoute />,
 }
 
 const DISCONNECTED_ALLOWED_PATHS = new Set(['/', '/firmware', '/about', '/logs', '/themes'])
@@ -88,24 +107,9 @@ const App = () => {
           <DisconnectedGuard>
             <Suspense fallback={<RouteLoading />}>
               <Routes>
-                <Route path="/" element={<WelcomeRoute />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ErrorBoundary scope="editor">
-                      <EditorRoute />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route path="/can" element={<CanBusRoute />} />
-                <Route path="/ecu" element={<EcuRoute />} />
-                <Route path="/obd2" element={<Obd2Route />} />
-                <Route path="/themes" element={<ThemesRoute />} />
-                <Route path="/live" element={<LiveDataRoute />} />
-                <Route path="/logs" element={<LogsRoute />} />
-                <Route path="/cli" element={<CliRoute />} />
-                <Route path="/firmware" element={<FirmwareRoute />} />
-                <Route path="/about" element={<AboutRoute />} />
+                {ROUTE_PATHS.map((path) => (
+                  <Route key={path} path={path} element={ROUTE_ELEMENTS[path]} />
+                ))}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

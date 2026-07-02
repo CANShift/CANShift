@@ -35,7 +35,7 @@ export const WidgetBox = memo(function WidgetBox({
     : isOverflowing
       ? '#2A1A00'
       : isSelected
-        ? '#1B2030'
+        ? 'hsl(var(--selection-bg))'
         : isInMultiSelection
           ? '#0A0A1E'
           : '#000000'
@@ -65,7 +65,7 @@ export const WidgetBox = memo(function WidgetBox({
         cursor: 'move',
         overflow: 'hidden',
         userSelect: 'none',
-        outline: isSelected ? '2px solid #6CB6FF' : undefined,
+        outline: isSelected ? '2px solid hsl(var(--selection))' : undefined,
         outlineOffset: isSelected ? -2 : undefined,
         boxShadow: isOverlapping
           ? '0 0 0 1px #FF222244, 0 0 8px #FF222288'

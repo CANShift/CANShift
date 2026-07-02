@@ -8,6 +8,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useUiStore } from '../../stores/ui.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
+import { ROUTE_PATHS, isRoutePath, type RoutePath } from '../../constants/routes'
 
 const PULSE_HOLD_MS = 220
 const PULSE_THROTTLE_MS = 60
@@ -76,12 +77,12 @@ const useSerialActivityPulse = (active: boolean): boolean => {
   return pulsing
 }
 
-const SECTION_TITLES: Record<string, string> = {
+export const SECTION_TITLES: Record<RoutePath, string> = {
   '/': 'Welcome',
   '/dashboard': 'Dashboard',
-  '/live-data': 'Live Data',
+  '/live': 'Live Data',
   '/ecu': 'ECU Profile',
-  '/can-bus': 'CAN Bus',
+  '/can': 'CAN Bus',
   '/obd2': 'OBD-II',
   '/cli': 'CLI',
   '/logs': 'Logs',
@@ -91,12 +92,9 @@ const SECTION_TITLES: Record<string, string> = {
 }
 
 const sectionTitleFromPath = (pathname: string): string | null => {
-  const exact = SECTION_TITLES[pathname]
-  if (exact !== undefined) return exact
-  const prefixMatch = Object.keys(SECTION_TITLES).find(
-    (path) => path !== '/' && pathname.startsWith(`${path}/`)
-  )
-  return prefixMatch !== undefined ? (SECTION_TITLES[prefixMatch] ?? null) : null
+  if (isRoutePath(pathname)) return SECTION_TITLES[pathname]
+  const prefixMatch = ROUTE_PATHS.find((path) => path !== '/' && pathname.startsWith(`${path}/`))
+  return prefixMatch !== undefined ? SECTION_TITLES[prefixMatch] : null
 }
 
 const Header = () => {
@@ -199,7 +197,9 @@ const BurnButton = () => {
       <span
         style={{
           display: 'inline-flex',
-          animation: shaking ? `canshift-tuner-shake ${BURN_DENIED_SHAKE_MS}ms ease-in-out` : undefined,
+          animation: shaking
+            ? `canshift-tuner-shake ${BURN_DENIED_SHAKE_MS}ms ease-in-out`
+            : undefined,
         }}
       >
         <UiBurnButton
