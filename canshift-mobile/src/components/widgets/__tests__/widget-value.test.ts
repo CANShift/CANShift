@@ -4,6 +4,7 @@ import {
   WIDGET_ZONE_COLORS,
 } from '@tmbk/canshift-core'
 import {
+  formatTimerElapsed,
   formatWidgetValue,
   gaugeFillFraction,
   gearColor,
@@ -119,5 +120,19 @@ describe('warningState', () => {
     expect(warningState(0.8, 1.0, true)).toBe('alarm')
     expect(warningState(1.0, 1.0, true)).toBe('idle')
     expect(warningState(2.5, 1.0, true)).toBe('idle')
+  })
+})
+
+describe('formatTimerElapsed', () => {
+  it('shows SS.mmm below one minute', () => {
+    expect(formatTimerElapsed(0, true)).toBe('00.000')
+    expect(formatTimerElapsed(1234, true)).toBe('01.234')
+    expect(formatTimerElapsed(59_999, true)).toBe('59.999')
+  })
+
+  it('switches to MM:SS at one minute and blinks the colon', () => {
+    expect(formatTimerElapsed(60_000, true)).toBe('01:00')
+    expect(formatTimerElapsed(60_000, false)).toBe('01 00')
+    expect(formatTimerElapsed(600_000, true)).toBe('10:00')
   })
 })

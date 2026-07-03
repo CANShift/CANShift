@@ -1,10 +1,12 @@
 import * as React from 'react'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 import { STALE_PLACEHOLDER } from '@tmbk/canshift-core'
 import GaugeWidget from '../GaugeWidget'
 import LabelWidget from '../LabelWidget'
 import GearWidget from '../GearWidget'
 import WarningWidget from '../WarningWidget'
+import TimerWidget from '../TimerWidget'
+import { useTimerStore } from '../../../stores/timer.store'
 
 describe('GaugeWidget', () => {
   it('renders an arc gauge for a sensor-backed signal', () => {
@@ -81,5 +83,35 @@ describe('WarningWidget', () => {
   it('renders nothing for a signal without a sensor kind', () => {
     const { toJSON } = render(<WarningWidget signalKey="s" value={100} size={48} />)
     expect(toJSON()).toBeNull()
+  })
+})
+
+describe('TimerWidget', () => {
+  const initialState = useTimerStore.getState()
+
+  beforeEach(() => {
+    useTimerStore.setState(initialState, true)
+  })
+
+  it('renders the idle stopwatch face and a start action', () => {
+    const { getByLabelText, getByText } = render(<TimerWidget width={132} height={56} />)
+    expect(getByLabelText('Start timer')).toBeTruthy()
+    expect(getByText('00.000')).toBeTruthy()
+  })
+
+  it('toggles into the running state on press', () => {
+    const { getByLabelText, unmount } = render(<TimerWidget width={132} height={56} />)
+    fireEvent.press(getByLabelText('Start timer'))
+    expect(useTimerStore.getState().status).toBe('running')
+    expect(getByLabelText('Pause timer')).toBeTruthy()
+    unmount()
+  })
+
+  it('resets to idle on a long press', () => {
+    const { getByLabelText, unmount } = render(<TimerWidget width={132} height={56} />)
+    fireEvent.press(getByLabelText('Start timer'))
+    fireEvent(getByLabelText('Pause timer'), 'longPress')
+    expect(useTimerStore.getState().status).toBe('idle')
+    unmount()
   })
 })
