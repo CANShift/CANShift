@@ -1,7 +1,7 @@
 import { SENSOR_DEFAULT_RAMPS, colorAtValue, type SensorKind } from '@tmbk/canshift-core'
 import type { SignalKey } from '../constants/ble'
 
-const KEY_TO_SENSOR_KIND: Record<string, SensorKind> = {
+export const KEY_TO_SENSOR_KIND: Record<string, SensorKind> = {
   r: 'rpm',
   ct: 'coolant_temp',
   ot: 'oil_temp',
@@ -21,6 +21,12 @@ const FALLBACK_COLOR: Record<string, string> = {
 }
 
 const DEFAULT_COLOR = '#888888'
+
+export const signalKeyToSensorKind = (key: string): SensorKind | undefined =>
+  KEY_TO_SENSOR_KIND[key]
+
+export const sensorRampColorAt = (kind: SensorKind, value: number): string =>
+  colorAtValue(SENSOR_DEFAULT_RAMPS[kind], value)
 
 export const getSignalColor = (key: string): string => {
   const kind = KEY_TO_SENSOR_KIND[key]
