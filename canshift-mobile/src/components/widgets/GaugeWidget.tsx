@@ -31,12 +31,7 @@ interface GaugeWidgetProps {
 const DEGREES_TO_RADIANS = Math.PI / 180
 const HALF_CIRCLE_DEG = 180
 
-const polarPoint = (
-  cx: number,
-  cy: number,
-  radius: number,
-  angleDeg: number
-): [number, number] => {
+const polarPoint = (cx: number, cy: number, radius: number, angleDeg: number): [number, number] => {
   const rad = angleDeg * DEGREES_TO_RADIANS
   return [cx + radius * Math.cos(rad), cy + radius * Math.sin(rad)]
 }

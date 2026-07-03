@@ -1,8 +1,4 @@
-import {
-  formatWidgetValue,
-  gaugeFillFraction,
-  splitWidgetValue,
-} from '../widget-value'
+import { formatWidgetValue, gaugeFillFraction, splitWidgetValue } from '../widget-value'
 import { signalKeyToSensorKind } from '../../../theme/signal-colors'
 
 describe('formatWidgetValue', () => {

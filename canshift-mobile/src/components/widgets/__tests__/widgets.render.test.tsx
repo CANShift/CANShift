@@ -17,9 +17,7 @@ describe('GaugeWidget', () => {
   })
 
   it('falls back to a plain value for signals without a sensor kind', () => {
-    const { getByText, queryByText } = render(
-      <GaugeWidget signalKey="s" value={88} size={120} />
-    )
+    const { getByText, queryByText } = render(<GaugeWidget signalKey="s" value={88} size={120} />)
     expect(getByText('88')).toBeTruthy()
     expect(queryByText(STALE_PLACEHOLDER)).toBeNull()
   })
@@ -27,9 +25,7 @@ describe('GaugeWidget', () => {
 
 describe('LabelWidget', () => {
   it('renders the label header, value and unit', () => {
-    const { getByText } = render(
-      <LabelWidget signalKey="ct" value={92} width={140} height={88} />
-    )
+    const { getByText } = render(<LabelWidget signalKey="ct" value={92} width={140} height={88} />)
     expect(getByText('COOLANT')).toBeTruthy()
     expect(getByText('92')).toBeTruthy()
     expect(getByText('°C')).toBeTruthy()
