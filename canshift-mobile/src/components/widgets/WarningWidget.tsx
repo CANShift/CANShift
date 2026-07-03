@@ -68,7 +68,7 @@ const WarningWidget = ({ signalKey, value, size, dayMode = false }: WarningWidge
     }
   }, [state, bgOpacity])
 
-  if (!danger) return null
+  if (!danger || state === 'idle') return null
 
   const meta = SIGNAL_META[signalKey]
   const stale = state === 'stale'
@@ -106,7 +106,12 @@ const WarningWidget = ({ signalKey, value, size, dayMode = false }: WarningWidge
       />
       <TriangleAlert color={iconColor} size={iconSize} />
       {showLabel ? (
-        <Text style={[styles.label, { color: stale ? staleColor : Colors.textMuted }]}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+          style={[styles.label, { color: stale ? staleColor : Colors.textMuted }]}
+        >
           {meta.label.toUpperCase()}
         </Text>
       ) : null}
