@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { ChevronRight } from 'lucide-react-native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../theme'
 import { useDeviceStore } from '../stores/device.store'
@@ -61,7 +62,7 @@ const DeviceRow = React.memo(({ device, connecting, disabled, onPress }: DeviceR
       {connecting ? (
         <ActivityIndicator color={Colors.accent} size="small" />
       ) : (
-        <Text style={styles.arrow}>›</Text>
+        <ChevronRight size={18} color={Colors.textMuted} />
       )}
     </Card>
   </TouchableOpacity>
@@ -380,7 +381,6 @@ const styles = StyleSheet.create({
   deviceInfo: { flex: 1 },
   deviceName: { fontSize: Typography.md, color: Colors.text, fontWeight: '600' },
   deviceId: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
-  arrow: { fontSize: Typography.xl, color: Colors.textMuted },
   demoBtn: { paddingVertical: Spacing.lg, alignItems: 'center' },
   demoBtnText: { fontSize: Typography.sm, color: Colors.textDim },
 })

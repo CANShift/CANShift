@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { ChevronUp, ChevronDown } from 'lucide-react-native'
 import Markdown from 'react-native-markdown-display'
 import type { ReleaseInfo } from '@tmbk/canshift-core'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../../theme'
@@ -45,9 +46,16 @@ export const ReleaseBody = ({ release, notesOpen, onToggleNotes, onOpenUrl }: Re
             accessibilityLabel={notesOpen ? 'Hide release notes' : 'Show release notes'}
             accessibilityState={{ expanded: notesOpen }}
           >
-            <Text style={styles.notesToggleText}>
-              {notesOpen ? '▲ Hide release notes' : '▼ Show release notes'}
-            </Text>
+            <View style={styles.notesToggleRow}>
+              {notesOpen ? (
+                <ChevronUp size={14} color={Colors.textMuted} />
+              ) : (
+                <ChevronDown size={14} color={Colors.textMuted} />
+              )}
+              <Text style={styles.notesToggleText}>
+                {notesOpen ? 'Hide release notes' : 'Show release notes'}
+              </Text>
+            </View>
           </TouchableOpacity>
           {notesOpen && (
             <View style={styles.notesBlock}>
@@ -117,6 +125,7 @@ const styles = StyleSheet.create({
   openLinkText: { fontSize: Typography.sm, color: Colors.accent, fontWeight: '600' },
   notesWrap: { gap: Spacing.xs },
   notesToggle: { alignSelf: 'flex-start' },
+  notesToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   notesToggleText: { fontSize: Typography.xs, color: Colors.textMuted },
   notesBlock: {
     backgroundColor: Colors.bg,

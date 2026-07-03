@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { Menu, Power, Circle, CircleDot } from 'lucide-react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -59,13 +60,19 @@ export default function DashTopBar() {
       <View style={styles.topBar}>
         <View>
           <Text style={styles.deviceName}>{deviceName ?? 'CANShift'}</Text>
-          <Text style={styles.version}>
-            {firmwareVersion ? `v${firmwareVersion}` : ''}
-            {' · '}
-            <Text style={{ color: canHealthy ? Colors.success : Colors.textMuted }}>
-              {canHealthy ? 'CAN ●' : 'CAN ○'}
+          <View style={styles.versionRow}>
+            <Text style={styles.version}>{firmwareVersion ? `v${firmwareVersion} · ` : '· '}</Text>
+            <Text
+              style={[styles.version, { color: canHealthy ? Colors.success : Colors.textMuted }]}
+            >
+              CAN
             </Text>
-          </Text>
+            {canHealthy ? (
+              <CircleDot size={12} color={Colors.success} />
+            ) : (
+              <Circle size={12} color={Colors.textMuted} />
+            )}
+          </View>
         </View>
         <View style={styles.topBarRight}>
           {activeMapIndex !== undefined && (
@@ -91,7 +98,7 @@ export default function DashTopBar() {
             accessibilityRole="button"
             accessibilityLabel="Open menu"
           >
-            <Text style={styles.iconBtnText}>☰</Text>
+            <Menu size={20} color={Colors.textDim} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleDisconnect}
@@ -99,7 +106,7 @@ export default function DashTopBar() {
             accessibilityRole="button"
             accessibilityLabel={isSim ? 'End demo' : 'Disconnect'}
           >
-            <Text style={[styles.iconBtnText, { color: Colors.accent }]}>⏻</Text>
+            <Power size={20} color={Colors.accent} />
           </TouchableOpacity>
         </View>
       </View>
@@ -177,7 +184,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   deviceName: { fontSize: Typography.md, fontWeight: '600', color: Colors.text },
-  version: { fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
+  version: { fontSize: Typography.xs, color: Colors.textMuted },
+  versionRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   mapBadge: {
     backgroundColor: Colors.successBg,
@@ -212,7 +220,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconBtnText: { fontSize: Typography.lg, color: Colors.textDim },
   menuSheet: {
     backgroundColor: Colors.surfaceHigh,
     paddingBottom: Spacing.xl,

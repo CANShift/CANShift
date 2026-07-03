@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { ChevronLeft } from 'lucide-react-native'
 import { Colors, Typography, Spacing, HitSlop } from '../theme'
 
 interface ScreenHeaderProps {
@@ -16,7 +17,8 @@ export const ScreenHeader = ({ title, onBack }: ScreenHeaderProps) => (
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <Text style={styles.back}>‹ Back</Text>
+        <ChevronLeft size={18} color={Colors.accent} />
+        <Text style={styles.back}>Back</Text>
       </TouchableOpacity>
     ) : (
       <View style={styles.spacer} />
@@ -36,8 +38,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: { minHeight: 44, justifyContent: 'center' },
-  back: { fontSize: Typography.md, color: Colors.accent, width: 48 },
+  backBtn: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  back: { fontSize: Typography.md, color: Colors.accent },
   title: { fontSize: Typography.sm, fontWeight: '700', color: Colors.textDim, letterSpacing: 1 },
   spacer: { width: 48 },
 })

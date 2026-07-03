@@ -165,7 +165,7 @@ export const AlertDialogTitle = ({
   return (
     <Text
       accessibilityRole="header"
-      className={cn('text-lg font-semibold text-text', className)}
+      className={cn('text-lg font-semibold tracking-tight text-text', className)}
       {...props}
     />
   )
