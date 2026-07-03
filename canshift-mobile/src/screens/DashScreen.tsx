@@ -6,7 +6,13 @@ import { Colors, Typography, Spacing } from '../theme'
 import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
 import { useDeviceStore } from '../stores/device.store'
 import { SIGNAL_META, type SignalMeta, type SignalKey } from '../constants/ble'
-import { GaugeWidget, GearWidget, LabelWidget, TimerWidget, WarningWidget } from '../components/widgets'
+import {
+  GaugeWidget,
+  GearWidget,
+  LabelWidget,
+  TimerWidget,
+  WarningWidget,
+} from '../components/widgets'
 import DashTopBar from '../components/DashTopBar'
 import type { RootStackParamList } from '../navigation'
 
