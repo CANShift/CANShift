@@ -12,6 +12,7 @@
 
 export * from '../../canshift-core/src/design-tokens'
 export * from '../../canshift-core/src/sensor-defaults'
+export * from '../../canshift-core/src/widget-metrics'
 export * from '../../canshift-core/src/schemas/ble-status'
 export * from '../../canshift-core/src/schemas/track-telemetry'
 export * from '../../canshift-core/src/types/releases'
