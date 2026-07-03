@@ -203,7 +203,10 @@ export {
   formatTimerSsMmm,
   SENSOR_DEFAULT_RANGES,
   sensorDefaultRange,
+  SENSOR_DANGER_COLOR,
+  sensorDefaultDangerThreshold,
 } from './widget-metrics.js'
+export type { SensorDangerThreshold } from './widget-metrics.js'
 
 export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults.js'
 

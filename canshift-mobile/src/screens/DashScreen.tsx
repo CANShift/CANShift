@@ -6,8 +6,7 @@ import { Colors, Typography, Spacing } from '../theme'
 import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
 import { useDeviceStore } from '../stores/device.store'
 import { SIGNAL_META, type SignalMeta, type SignalKey } from '../constants/ble'
-import GaugeWidget from '../components/widgets/GaugeWidget'
-import LabelWidget from '../components/widgets/LabelWidget'
+import { GaugeWidget, GearWidget, LabelWidget, WarningWidget } from '../components/widgets'
 import DashTopBar from '../components/DashTopBar'
 import type { RootStackParamList } from '../navigation'
 
@@ -17,6 +16,7 @@ interface Props {
 
 const PRIMARY_SIGNALS: SignalKey[] = ['r', 's', 'g']
 const GRID_SIGNALS: SignalKey[] = ['ct', 'ot', 'op', 'tps', 'lam', 'bat', 'bst', 'iat']
+const SAFETY_SIGNALS: SignalKey[] = ['op', 'ct']
 
 const GAUGE_SIZE_PORTRAIT = 132
 const GAUGE_SIZE_LANDSCAPE = 116
@@ -24,6 +24,7 @@ const GRID_CELL_HEIGHT = 88
 const GRID_CELL_HEIGHT_LANDSCAPE = 82
 const GRID_CELL_WIDTH_LANDSCAPE = 150
 const PORTRAIT_GRID_COLUMNS = 2
+const WARNING_CELL_SIZE = 48
 
 const PrimaryGauge = ({
   signalKey,
@@ -38,18 +39,39 @@ const PrimaryGauge = ({
 }) => {
   const value = useSignalValue(signalKey)
   const isLive = useSignalsIsLive()
+  const liveValue = isLive ? value : undefined
   return (
     <View style={styles.primaryCard}>
       <Text style={styles.primaryLabel}>{meta.label.toUpperCase()}</Text>
-      <GaugeWidget
-        signalKey={signalKey}
-        value={isLive ? value : undefined}
-        size={size}
-        dayMode={dayMode}
-      />
+      {signalKey === 'g' ? (
+        <GearWidget signalKey={signalKey} value={liveValue} size={size} dayMode={dayMode} />
+      ) : (
+        <GaugeWidget signalKey={signalKey} value={liveValue} size={size} dayMode={dayMode} />
+      )}
     </View>
   )
 }
+
+const WarningCell = ({ signalKey, dayMode }: { signalKey: SignalKey; dayMode: boolean }) => {
+  const value = useSignalValue(signalKey)
+  const isLive = useSignalsIsLive()
+  return (
+    <WarningWidget
+      signalKey={signalKey}
+      value={isLive ? value : undefined}
+      size={WARNING_CELL_SIZE}
+      dayMode={dayMode}
+    />
+  )
+}
+
+const WarningStrip = ({ dayMode }: { dayMode: boolean }) => (
+  <View style={styles.warningStrip}>
+    {SAFETY_SIGNALS.map((key) => (
+      <WarningCell key={key} signalKey={key} dayMode={dayMode} />
+    ))}
+  </View>
+)
 
 const GridLabel = ({
   signalKey,
@@ -141,6 +163,7 @@ export default function DashScreen(_: Props) {
               />
             ))}
           </View>
+          <WarningStrip dayMode={dayMode} />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -163,6 +186,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  warningStrip: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
 
   landscapeBody: { flex: 1, flexDirection: 'row' },
   landscapeLeft: {

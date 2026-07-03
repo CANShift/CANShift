@@ -1,6 +1,6 @@
 import type { HexColor } from './schemas/common.js'
-import type { ColorRamp } from './schemas/signal.js'
-import { colorAtValue } from './sensor-defaults.js'
+import type { ColorRamp, ColorRampStop } from './schemas/signal.js'
+import { SENSOR_DEFAULT_RAMPS, colorAtValue } from './sensor-defaults.js'
 import type { SensorKind } from './sensor-defaults.js'
 
 const asHex = (value: string): HexColor => value as HexColor
@@ -192,3 +192,44 @@ export const SENSOR_DEFAULT_RANGES = {
 
 export const sensorDefaultRange = (kind: SensorKind): { min: number; max: number } =>
   SENSOR_DEFAULT_RANGES[kind]
+
+export const SENSOR_DANGER_COLOR = asHex('#CC3333')
+
+export interface SensorDangerThreshold {
+  threshold: number
+  invertLogic: boolean
+}
+
+const isDanger = (stop: ColorRampStop): boolean => stop.color === SENSOR_DANGER_COLOR
+
+const leadingDangerStops = (stops: readonly ColorRampStop[]): ColorRampStop[] => {
+  const run: ColorRampStop[] = []
+  for (const stop of stops) {
+    if (!isDanger(stop)) break
+    run.push(stop)
+  }
+  return run
+}
+
+const trailingDangerStops = (stops: readonly ColorRampStop[]): ColorRampStop[] => {
+  const run: ColorRampStop[] = []
+  for (let i = stops.length - 1; i >= 0; i--) {
+    const stop = stops[i]
+    if (!stop || !isDanger(stop)) break
+    run.unshift(stop)
+  }
+  return run
+}
+
+export const sensorDefaultDangerThreshold = (kind: SensorKind): SensorDangerThreshold => {
+  const stops = SENSOR_DEFAULT_RAMPS[kind].stops
+  const trailing = trailingDangerStops(stops)
+  if (trailing.length > 0) {
+    const entry = trailing[0]
+    if (entry) return { threshold: entry.value, invertLogic: false }
+  }
+  const leading = leadingDangerStops(stops)
+  const boundary = leading[leading.length - 1]
+  if (boundary) return { threshold: boundary.value, invertLogic: true }
+  return { threshold: SENSOR_DEFAULT_RANGES[kind].max, invertLogic: false }
+}
