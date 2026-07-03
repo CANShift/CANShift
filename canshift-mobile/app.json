@@ -4,7 +4,7 @@
     "slug": "canshift-mobile",
     "version": "0.1.0",
     "scheme": "canshift",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "jsEngine": "hermes",

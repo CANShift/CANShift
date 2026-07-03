@@ -100,10 +100,7 @@ const GaugeWidget = ({ signalKey, value, size, dayMode = false }: GaugeWidgetPro
 
   const parts = stale
     ? { int: STALE_PLACEHOLDER, frac: '' }
-    : splitWidgetValue(
-        formatWidgetValue(value, meta.decimals),
-        range.max >= 1000 || range.min <= -1000
-      )
+    : splitWidgetValue(formatWidgetValue(value, meta.decimals), false)
   const valueColor = stale ? widgetStaleTextColor(dayMode) : fillColor
 
   return (

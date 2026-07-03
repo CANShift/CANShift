@@ -11,7 +11,7 @@ import { useTimerStore } from '../../../stores/timer.store'
 describe('GaugeWidget', () => {
   it('renders an arc gauge for a sensor-backed signal', () => {
     const { getByText, toJSON } = render(<GaugeWidget signalKey="r" value={4000} size={140} />)
-    expect(getByText('4')).toBeTruthy()
+    expect(getByText('4000')).toBeTruthy()
     expect(toJSON()).toBeTruthy()
   })
 
@@ -70,9 +70,9 @@ describe('WarningWidget', () => {
     expect(alert.props.accessibilityLiveRegion).toBe('assertive')
   })
 
-  it('renders an unobtrusive idle state below the danger threshold', () => {
-    const { getByLabelText } = render(<WarningWidget signalKey="ct" value={80} size={48} />)
-    expect(getByLabelText('Coolant normal')).toBeTruthy()
+  it('renders nothing in the idle state below the danger threshold', () => {
+    const { toJSON } = render(<WarningWidget signalKey="ct" value={80} size={48} />)
+    expect(toJSON()).toBeNull()
   })
 
   it('renders a stale state when the value is undefined', () => {
