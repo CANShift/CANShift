@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { View, type ViewProps } from 'react-native'
 import { cn } from '@/lib/utils'
-import { Label } from './label'
+import { SectionLabel } from './section-label'
 
 export interface SectionProps extends ViewProps {
   title?: string
@@ -12,7 +12,7 @@ export interface SectionProps extends ViewProps {
 export const Section = React.forwardRef<React.ComponentRef<typeof View>, SectionProps>(
   ({ title, className, children, ...props }, ref) => (
     <View ref={ref} className={cn('gap-2', className)} {...props}>
-      {title !== undefined ? <Label>{title}</Label> : null}
+      {title !== undefined ? <SectionLabel>{title}</SectionLabel> : null}
       {children}
     </View>
   )

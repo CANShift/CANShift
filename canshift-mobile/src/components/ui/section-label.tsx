@@ -2,11 +2,11 @@ import * as React from 'react'
 import { Text, type TextProps } from 'react-native'
 import { cn } from '@/lib/utils'
 
-export interface LabelProps extends TextProps {
+export interface SectionLabelProps extends TextProps {
   className?: string
 }
 
-export const Label = React.forwardRef<React.ComponentRef<typeof Text>, LabelProps>(
+export const SectionLabel = React.forwardRef<React.ComponentRef<typeof Text>, SectionLabelProps>(
   ({ className, children, ...props }, ref) => (
     <Text
       ref={ref}
@@ -18,4 +18,4 @@ export const Label = React.forwardRef<React.ComponentRef<typeof Text>, LabelProp
     </Text>
   )
 )
-Label.displayName = 'Label'
+SectionLabel.displayName = 'SectionLabel'

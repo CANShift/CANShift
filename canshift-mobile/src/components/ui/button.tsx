@@ -2,14 +2,15 @@ import * as React from 'react'
 import { Pressable, Text, type PressableProps } from 'react-native'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { Colors } from '@/theme'
 
-const buttonVariants = cva('flex-row items-center justify-center rounded-md', {
+const buttonVariants = cva('flex-row items-center justify-center gap-2 rounded-md', {
   variants: {
     variant: {
       default: 'bg-primary',
       destructive: 'bg-destructive',
       outline: 'border border-border bg-transparent',
-      secondary: 'bg-surface-2',
+      secondary: 'bg-secondary',
       ghost: 'bg-transparent',
       link: 'bg-transparent',
     },
@@ -23,13 +24,13 @@ const buttonVariants = cva('flex-row items-center justify-center rounded-md', {
   defaultVariants: { variant: 'default', size: 'default' },
 })
 
-const buttonTextVariants = cva('text-md font-medium', {
+const buttonTextVariants = cva('text-base font-medium', {
   variants: {
     variant: {
       default: 'text-primary-foreground',
       destructive: 'text-destructive-foreground',
       outline: 'text-text',
-      secondary: 'text-text',
+      secondary: 'text-secondary-foreground',
       ghost: 'text-text',
       link: 'text-primary underline',
     },
@@ -43,6 +44,19 @@ const buttonTextVariants = cva('text-md font-medium', {
   defaultVariants: { variant: 'default', size: 'default' },
 })
 
+type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>['variant']>
+
+const ICON_SIZE = 16
+
+const iconColorByVariant: Record<ButtonVariant, string> = {
+  default: Colors.primaryForeground,
+  destructive: Colors.destructiveForeground,
+  outline: Colors.text,
+  secondary: Colors.secondaryForeground,
+  ghost: Colors.text,
+  link: Colors.primary,
+}
+
 type ButtonVariantProps = VariantProps<typeof buttonVariants>
 
 export interface ButtonProps
@@ -50,36 +64,53 @@ export interface ButtonProps
   children?: React.ReactNode
   className?: string
   textClassName?: string
+  leftIcon?: React.ReactElement
+  rightIcon?: React.ReactElement
+}
+
+const renderIcon = (
+  icon: React.ReactElement | undefined,
+  variant: ButtonVariant
+): React.ReactElement | null => {
+  if (icon === undefined) {
+    return null
+  }
+  const props = icon.props as { size?: number; color?: string }
+  return React.cloneElement(icon, {
+    size: props.size ?? ICON_SIZE,
+    color: props.color ?? iconColorByVariant[variant],
+  } as Partial<typeof props>)
 }
 
 export const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProps>(
-  ({ className, textClassName, variant, size, disabled, children, ...props }, ref) => {
+  (
+    { className, textClassName, variant, size, disabled, children, leftIcon, rightIcon, ...props },
+    ref
+  ) => {
+    const resolvedVariant: ButtonVariant = variant ?? 'default'
     return (
       <Pressable
         ref={ref}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled ?? false }}
         disabled={disabled}
-        className={cn(buttonVariants({ variant, size }), disabled && 'opacity-50', className)}
+        className={cn(
+          buttonVariants({ variant, size }),
+          'active:opacity-80',
+          disabled && 'opacity-50',
+          className
+        )}
         {...props}
       >
-        {({ pressed }) => (
-          <>
-            {typeof children === 'string' ? (
-              <Text
-                className={cn(
-                  buttonTextVariants({ variant, size }),
-                  pressed && 'opacity-80',
-                  textClassName
-                )}
-              >
-                {children}
-              </Text>
-            ) : (
-              children
-            )}
-          </>
+        {renderIcon(leftIcon, resolvedVariant)}
+        {typeof children === 'string' ? (
+          <Text className={cn(buttonTextVariants({ variant, size }), textClassName)}>
+            {children}
+          </Text>
+        ) : (
+          children
         )}
+        {renderIcon(rightIcon, resolvedVariant)}
       </Pressable>
     )
   }

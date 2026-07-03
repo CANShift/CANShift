@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { Check } from 'lucide-react-native'
 import type { LatestReleaseResult } from '@tmbk/canshift-core'
 import { Colors, Typography, Spacing, Radius, HitSlop } from '../../theme'
 import { formatDate } from '../../lib/format'
@@ -40,7 +41,7 @@ export const FooterRow = ({
             !hasPreRelease && styles.toggleBoxDisabled,
           ]}
         >
-          {showPreRelease && hasPreRelease && <Text style={styles.toggleCheck}>✓</Text>}
+          {showPreRelease && hasPreRelease && <Check size={14} color={Colors.white} />}
         </View>
         <Text style={[styles.toggleLabel, !hasPreRelease && styles.toggleLabelDisabled]}>
           Show pre-release builds
@@ -87,7 +88,6 @@ const styles = StyleSheet.create({
   },
   toggleBoxOn: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   toggleBoxDisabled: { opacity: 0.4 },
-  toggleCheck: { color: Colors.white, fontSize: 12, fontWeight: '700' },
   toggleLabel: { fontSize: Typography.sm, color: Colors.text },
   toggleLabelDisabled: { color: Colors.textMuted },
   lastChecked: { fontSize: 10, color: Colors.textMuted },

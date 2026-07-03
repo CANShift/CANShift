@@ -24,8 +24,8 @@ export { Button, buttonVariants, buttonTextVariants } from './button'
 export type { ButtonProps } from './button'
 export { Card, CardHeader, CardTitle, CardContent, cardVariants } from './card'
 export type { CardProps, CardHeaderProps, CardTitleProps, CardContentProps } from './card'
-export { Label } from './label'
-export type { LabelProps } from './label'
+export { SectionLabel } from './section-label'
+export type { SectionLabelProps } from './section-label'
 export {
   Sheet,
   SheetTrigger,

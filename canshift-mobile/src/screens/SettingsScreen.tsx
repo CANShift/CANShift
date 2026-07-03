@@ -30,7 +30,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Label,
+  SectionLabel,
   Section,
   Toast,
 } from '@/components/ui'
@@ -200,7 +200,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.scroll}>
           <Section>
             <View style={styles.rowHeader}>
-              <Label>BRIGHTNESS</Label>
+              <SectionLabel>BRIGHTNESS</SectionLabel>
               <Text style={styles.value}>{brightness}%</Text>
             </View>
             <Slider
