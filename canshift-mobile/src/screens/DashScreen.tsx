@@ -6,7 +6,13 @@ import { Colors, Typography, Spacing } from '../theme'
 import { useSignalValue, useSignalsIsLive } from '../stores/signals.store'
 import { useDeviceStore } from '../stores/device.store'
 import { SIGNAL_META, type SignalMeta, type SignalKey } from '../constants/ble'
-import { GaugeWidget, GearWidget, LabelWidget, WarningWidget } from '../components/widgets'
+import {
+  GaugeWidget,
+  GearWidget,
+  LabelWidget,
+  TimerWidget,
+  WarningWidget,
+} from '../components/widgets'
 import DashTopBar from '../components/DashTopBar'
 import type { RootStackParamList } from '../navigation'
 
@@ -25,6 +31,8 @@ const GRID_CELL_HEIGHT_LANDSCAPE = 82
 const GRID_CELL_WIDTH_LANDSCAPE = 150
 const PORTRAIT_GRID_COLUMNS = 2
 const WARNING_CELL_SIZE = 48
+const TIMER_WIDTH = 132
+const TIMER_HEIGHT = 56
 
 const PrimaryGauge = ({
   signalKey,
@@ -122,6 +130,7 @@ export default function DashScreen(_: Props) {
                 dayMode={dayMode}
               />
             ))}
+            <TimerWidget width={TIMER_WIDTH} height={TIMER_HEIGHT} dayMode={dayMode} />
           </View>
           <ScrollView
             style={styles.landscapeRight}
@@ -163,7 +172,10 @@ export default function DashScreen(_: Props) {
               />
             ))}
           </View>
-          <WarningStrip dayMode={dayMode} />
+          <View style={styles.footerRow}>
+            <TimerWidget width={TIMER_WIDTH} height={TIMER_HEIGHT} dayMode={dayMode} />
+            <WarningStrip dayMode={dayMode} />
+          </View>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -187,6 +199,7 @@ const styles = StyleSheet.create({
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   warningStrip: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
   landscapeBody: { flex: 1, flexDirection: 'row' },
   landscapeLeft: {
