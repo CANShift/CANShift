@@ -162,6 +162,49 @@ export {
 export { TopBarMetrics } from './topbar-metrics.js'
 export type { TopBarMetricsRatios } from './topbar-metrics.js'
 
+export {
+  WIDGET_ZONE_COLORS,
+  WIDGET_TEXT_COLORS,
+  WIDGET_STALE_TEXT_COLORS,
+  widgetTextColor,
+  widgetStaleTextColor,
+  WIDGET_FONT_CLAMP,
+  VALUE_FRAC_FONT_RATIO,
+  VALUE_UNIT_FONT_SIZE,
+  STALE_PLACEHOLDER,
+  widgetFracFontSize,
+  GAUGE_ARC,
+  GAUGE_TRACK_COLORS,
+  GAUGE_VALUE_FONT_BREAKPOINTS,
+  gaugeValueFontSize,
+  gaugeArcStrokeWidth,
+  gaugeValueAngle,
+  gaugeGradientColorAt,
+  LABEL_FONT_RATIO,
+  labelFontSize,
+  GEAR_FONT_RATIO,
+  gearFontSize,
+  GEAR_NEUTRAL_GLYPH,
+  GEAR_REVERSE_GLYPH,
+  gearGlyph,
+  WARNING_BLINK_PERIOD_MS,
+  WARNING_BLINK_OPACITY,
+  WARNING_IDLE_BG_OPACITY,
+  WARNING_STALE_BORDER_WIDTH,
+  WARNING_SIGNAL_LABEL_MIN_HEIGHT,
+  isWarningTripped,
+  TIMER_LONG_PRESS_MS,
+  TIMER_BLINK_PERIOD_MS,
+  TIMER_STATE_BORDER_WIDTH,
+  TIMER_BORDER_COLORS,
+  TIMER_FONT_BREAKPOINTS,
+  timerFontSize,
+  formatTimerMmSs,
+  formatTimerSsMmm,
+  SENSOR_DEFAULT_RANGES,
+  sensorDefaultRange,
+} from './widget-metrics.js'
+
 export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults.js'
 
 export {
