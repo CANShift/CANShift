@@ -35,6 +35,8 @@ import {
   formatTimerSsMmm,
   SENSOR_DEFAULT_RANGES,
   sensorDefaultRange,
+  SENSOR_DANGER_COLOR,
+  sensorDefaultDangerThreshold,
 } from '../widget-metrics.js'
 import { SENSOR_DEFAULT_RAMPS, SENSOR_KINDS } from '../sensor-defaults.js'
 import type { SensorKind } from '../sensor-defaults.js'
@@ -247,6 +249,37 @@ describe('SENSOR_DEFAULT_RANGES', () => {
   it('sensorDefaultRange resolves the same record entry', () => {
     for (const kind of SENSOR_KINDS) {
       expect(sensorDefaultRange(kind)).toBe(SENSOR_DEFAULT_RANGES[kind])
+    }
+  })
+})
+
+describe('sensorDefaultDangerThreshold', () => {
+  it('trips high-side sensors at their top danger stop', () => {
+    expect(sensorDefaultDangerThreshold('coolant_temp')).toEqual({
+      threshold: 110,
+      invertLogic: false,
+    })
+    expect(sensorDefaultDangerThreshold('oil_temp')).toEqual({ threshold: 135, invertLogic: false })
+    expect(sensorDefaultDangerThreshold('rpm')).toEqual({ threshold: 7000, invertLogic: false })
+  })
+
+  it('trips low-side sensors below their bottom danger stop', () => {
+    expect(sensorDefaultDangerThreshold('oil_press')).toEqual({ threshold: 1.0, invertLogic: true })
+    expect(sensorDefaultDangerThreshold('afr')).toEqual({ threshold: 10.5, invertLogic: true })
+  })
+
+  it('resolves a threshold that reuses a ramp danger stop for every kind', () => {
+    for (const kind of SENSOR_KINDS) {
+      const { threshold, invertLogic } = sensorDefaultDangerThreshold(kind)
+      const dangerStops = SENSOR_DEFAULT_RAMPS[kind].stops.filter(
+        (s) => s.color === SENSOR_DANGER_COLOR
+      )
+      if (dangerStops.length > 0) {
+        expect(dangerStops.some((s) => s.value === threshold)).toBe(true)
+      } else {
+        expect(threshold).toBe(SENSOR_DEFAULT_RANGES[kind].max)
+        expect(invertLogic).toBe(false)
+      }
     }
   })
 })

@@ -1,4 +1,16 @@
-import { formatWidgetValue, gaugeFillFraction, splitWidgetValue } from '../widget-value'
+import {
+  WIDGET_TEXT_COLORS,
+  WIDGET_STALE_TEXT_COLORS,
+  WIDGET_ZONE_COLORS,
+} from '@tmbk/canshift-core'
+import {
+  formatWidgetValue,
+  gaugeFillFraction,
+  gearColor,
+  gearGlyphFor,
+  splitWidgetValue,
+  warningState,
+} from '../widget-value'
 import { signalKeyToSensorKind } from '../../../theme/signal-colors'
 
 describe('formatWidgetValue', () => {
@@ -60,5 +72,52 @@ describe('signalKeyToSensorKind', () => {
     expect(signalKeyToSensorKind('s')).toBeUndefined()
     expect(signalKeyToSensorKind('g')).toBeUndefined()
     expect(signalKeyToSensorKind('tps')).toBeUndefined()
+  })
+})
+
+describe('gearGlyphFor', () => {
+  it('maps neutral, reverse and forward gears', () => {
+    expect(gearGlyphFor(0)).toBe('N')
+    expect(gearGlyphFor(-1)).toBe('R')
+    expect(gearGlyphFor(3)).toBe('3')
+    expect(gearGlyphFor(3.9)).toBe('3')
+  })
+
+  it('shows the neutral glyph when stale', () => {
+    expect(gearGlyphFor(undefined)).toBe('N')
+  })
+})
+
+describe('gearColor', () => {
+  it('uses stale text color when the value is missing', () => {
+    expect(gearColor(undefined, false)).toBe(WIDGET_STALE_TEXT_COLORS.night)
+    expect(gearColor(undefined, true)).toBe(WIDGET_STALE_TEXT_COLORS.day)
+  })
+
+  it('paints reverse in the warning color', () => {
+    expect(gearColor(-1, false)).toBe(WIDGET_ZONE_COLORS.warning)
+  })
+
+  it('paints neutral and forward gears in the text color', () => {
+    expect(gearColor(0, false)).toBe(WIDGET_TEXT_COLORS.night)
+    expect(gearColor(4, true)).toBe(WIDGET_TEXT_COLORS.day)
+  })
+})
+
+describe('warningState', () => {
+  it('is stale when the value is missing', () => {
+    expect(warningState(undefined, 110, false)).toBe('stale')
+  })
+
+  it('alarms at or above a high-side threshold', () => {
+    expect(warningState(115, 110, false)).toBe('alarm')
+    expect(warningState(110, 110, false)).toBe('alarm')
+    expect(warningState(95, 110, false)).toBe('idle')
+  })
+
+  it('alarms below an inverted low-side threshold', () => {
+    expect(warningState(0.8, 1.0, true)).toBe('alarm')
+    expect(warningState(1.0, 1.0, true)).toBe('idle')
+    expect(warningState(2.5, 1.0, true)).toBe('idle')
   })
 })
