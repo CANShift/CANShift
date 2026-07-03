@@ -119,7 +119,6 @@ describe('gauge geometry', () => {
   })
 
   it('gaugeArcStrokeWidth = min(w*0.48,h*0.49)*0.30 with a floor of 5', () => {
-
     expect(gaugeArcStrokeWidth(100, 100)).toBeCloseTo(14.4, 5)
 
     expect(gaugeArcStrokeWidth(20, 20)).toBe(5)
@@ -146,7 +145,6 @@ describe('gauge geometry', () => {
 
 describe('labelFontSize (label_widget.cpp pickValueFontSize)', () => {
   it('= min(trunc(h*65/100), trunc(w*52/100))', () => {
-
     expect(labelFontSize(100, 100)).toBe(48)
 
     expect(labelFontSize(60, 50)).toBe(31)
@@ -159,7 +157,6 @@ describe('labelFontSize (label_widget.cpp pickValueFontSize)', () => {
 
 describe('gearFontSize (gear_widget.cpp selectFont)', () => {
   it('= min(trunc(h*85/100), trunc(w*72/100))', () => {
-
     expect(gearFontSize(40, 40)).toBe(28)
   })
   it('clamps to 12..48 at the boundaries', () => {

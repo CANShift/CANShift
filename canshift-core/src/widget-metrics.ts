@@ -138,7 +138,7 @@ export const WARNING_SIGNAL_LABEL_MIN_HEIGHT = 28
 export const isWarningTripped = (
   value: number,
   threshold: number,
-  invertLogic: boolean,
+  invertLogic: boolean
 ): boolean => (invertLogic ? value < threshold : value >= threshold)
 
 export const TIMER_LONG_PRESS_MS = 600
