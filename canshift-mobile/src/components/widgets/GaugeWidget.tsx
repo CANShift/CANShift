@@ -88,9 +88,9 @@ const GaugeWidget = ({ signalKey, value, size, dayMode = false }: GaugeWidgetPro
   const fraction = stale ? 0 : gaugeFillFraction(value, range.min, range.max)
   const fillAngle = stale ? 0 : gaugeValueAngle(value, range.min, range.max)
 
-  const diameter = Math.max(size - GAUGE_ARC.containerPadding, GAUGE_ARC.minDiameter)
-  const radius = diameter / 2
   const stroke = gaugeArcStrokeWidth(size, size)
+  const diameter = Math.max(size - stroke - GAUGE_ARC.containerPadding, GAUGE_ARC.minDiameter)
+  const radius = diameter / 2
   const cx = size / 2
   const cy = size / 2 + GAUGE_ARC.yShift
 
