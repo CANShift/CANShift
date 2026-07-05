@@ -120,7 +120,7 @@ export default function DashScreen(_: Props) {
 
       {isLandscape ? (
         <View style={styles.landscapeBody}>
-          <View style={styles.landscapeLeft}>
+          <View style={styles.landscapePrimaryRow}>
             {PRIMARY_SIGNALS.map((key) => (
               <PrimaryGauge
                 key={key}
@@ -201,15 +201,16 @@ const styles = StyleSheet.create({
   warningStrip: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-  landscapeBody: { flex: 1, flexDirection: 'row' },
-  landscapeLeft: {
-    width: 160,
-    borderRightWidth: 1,
-    borderRightColor: Colors.border,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-    justifyContent: 'space-evenly',
+  landscapeBody: { flex: 1, flexDirection: 'column' },
+  landscapePrimaryRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-evenly',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   landscapeRight: { flex: 1 },
   landscapeGrid: {
