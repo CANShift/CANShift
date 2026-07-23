@@ -20,6 +20,7 @@ import { useSignalsStore } from '../stores/signals.store'
 import { clearBuffer } from '../stores/telemetry.store'
 import { log } from '../stores/log.store'
 import { useReconnectStore } from '../stores/reconnect.store'
+import { useAppSettingsStore } from '../stores/app-settings.store'
 import { parseTelemetry } from './ble.validators'
 import { parseBleStatus, parseSettings } from '@tmbk/canshift-core'
 import { decodeBase64, encodeBase64 } from './base64'
@@ -415,6 +416,10 @@ export class BleService {
         return
       }
       log('warn', `Device ${device.id} disconnected unexpectedly`)
+      if (useAppSettingsStore.getState().reconnectBehavior === 'off') {
+        log('info', `Auto-reconnect disabled in settings — not reconnecting ${device.id}`)
+        return
+      }
       void this.reconnector.run(device.id)
     })
   }
