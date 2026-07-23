@@ -124,7 +124,14 @@ const EditorRoute = () => {
       >
         <div style={{ fontSize: 32, opacity: 0.2 }}>◫</div>
         <p style={{ fontSize: 14, color: 'hsl(var(--text))' }}>No config loaded</p>
-        <p style={{ fontSize: 11, color: 'hsl(var(--text-muted))', maxWidth: 360, textAlign: 'center' }}>
+        <p
+          style={{
+            fontSize: 11,
+            color: 'hsl(var(--text-muted))',
+            maxWidth: 360,
+            textAlign: 'center',
+          }}
+        >
           Open the ECU Profile route, load a catalogue entry, then return here.
         </p>
       </div>

@@ -37,11 +37,7 @@ const toBase64 = (chunk: Uint8Array): string => {
   return btoa(binary)
 }
 
-export const flashFirmwareOta = async ({
-  bytes,
-  onProgress,
-  onLog,
-}: OtaOptions): Promise<void> => {
+export const flashFirmwareOta = async ({ bytes, onProgress, onLog }: OtaOptions): Promise<void> => {
   const client = getSerialClient()
 
   const sha = await sha256Hex(bytes)
