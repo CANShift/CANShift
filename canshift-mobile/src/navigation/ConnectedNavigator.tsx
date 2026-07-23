@@ -25,7 +25,9 @@ const Tab = createBottomTabNavigator<ConnectedTabParamList>()
 
 const TabIcon = ({ icon, focused }: { icon: string; focused: boolean }) => {
   return (
-    <Text style={{ fontSize: 18, color: focused ? Colors.accent : Colors.textMuted }}>{icon}</Text>
+    <Text style={[styles.tabIcon, { color: focused ? Colors.accent : Colors.textMuted }]}>
+      {icon}
+    </Text>
   )
 }
 
@@ -89,4 +91,5 @@ export default function ConnectedNavigator({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
+  tabIcon: { fontSize: 18 },
 })

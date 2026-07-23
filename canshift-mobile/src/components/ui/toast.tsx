@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { StyleSheet } from 'react-native'
 import RNToast, {
   BaseToast,
   ErrorToast,
@@ -20,43 +21,41 @@ const baseStyle = {
   paddingVertical: 8,
 } as const
 
-const text1Style = {
-  color: Colors.text,
-  fontSize: 15,
-  fontWeight: '600' as const,
-}
-
-const text2Style = {
-  color: Colors.textDim,
-  fontSize: 13,
-}
+const styles = StyleSheet.create({
+  success: { ...baseStyle, borderLeftColor: Colors.success },
+  error: { ...baseStyle, borderLeftColor: Colors.danger },
+  info: { ...baseStyle, borderLeftColor: Colors.accent },
+  content: { paddingHorizontal: 12 },
+  text1: { color: Colors.text, fontSize: 15, fontWeight: '600' },
+  text2: { color: Colors.textDim, fontSize: 13 },
+})
 
 const toastConfig: ToastConfig = {
   success: (props: BaseToastProps) => (
     <BaseToast
       {...props}
-      style={{ ...baseStyle, borderLeftColor: Colors.success }}
-      contentContainerStyle={{ paddingHorizontal: 12 }}
-      text1Style={text1Style}
-      text2Style={text2Style}
+      style={styles.success}
+      contentContainerStyle={styles.content}
+      text1Style={styles.text1}
+      text2Style={styles.text2}
     />
   ),
   error: (props: BaseToastProps) => (
     <ErrorToast
       {...props}
-      style={{ ...baseStyle, borderLeftColor: Colors.danger }}
-      contentContainerStyle={{ paddingHorizontal: 12 }}
-      text1Style={text1Style}
-      text2Style={text2Style}
+      style={styles.error}
+      contentContainerStyle={styles.content}
+      text1Style={styles.text1}
+      text2Style={styles.text2}
     />
   ),
   info: (props: BaseToastProps) => (
     <BaseToast
       {...props}
-      style={{ ...baseStyle, borderLeftColor: Colors.accent }}
-      contentContainerStyle={{ paddingHorizontal: 12 }}
-      text1Style={text1Style}
-      text2Style={text2Style}
+      style={styles.info}
+      contentContainerStyle={styles.content}
+      text1Style={styles.text1}
+      text2Style={styles.text2}
     />
   ),
 }
