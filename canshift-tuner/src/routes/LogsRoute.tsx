@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
 import { RouteHeader } from '../components/shell/RouteHeader'
+import { TogglePill } from '../components/ui/toggle-pill'
 
 const ALL_LEVELS: LogLevel[] = ['info', 'success', 'warn', 'error', 'debug']
 const LEVEL_COLOR: Record<LogLevel, string> = {
@@ -95,16 +96,16 @@ const LogsRoute = () => {
               if (level === 'debug' && !verbose) return null
               const active = visibleLevels.has(level)
               return (
-                <button
+                <TogglePill
                   key={level}
-                  type="button"
+                  active={active}
+                  accentColor={LEVEL_COLOR[level]}
                   onClick={() => {
                     toggleLevel(level)
                   }}
-                  style={levelPillStyle(active, LEVEL_COLOR[level])}
                 >
                   {level}
-                </button>
+                </TogglePill>
               )
             })}
             <label style={verboseLabelStyle}>
@@ -198,19 +199,6 @@ const containerStyle: CSSProperties = {
   overflow: 'hidden',
   position: 'relative',
 }
-
-const levelPillStyle = (active: boolean, color: string): CSSProperties => ({
-  background: active ? 'hsl(var(--surface))' : 'transparent',
-  border: `1px solid ${active ? color : 'hsl(var(--border))'}`,
-  color: active ? color : 'hsl(var(--text-muted))',
-  borderRadius: 999,
-  padding: '4px 12px',
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-})
 
 const verboseLabelStyle: CSSProperties = {
   display: 'inline-flex',
