@@ -11,6 +11,7 @@
 
 #include "config/config_loader.h"
 #include "diag/logger.h"
+#include "runtime/action_dispatcher.h"
 
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
@@ -51,16 +52,15 @@ static lv_obj_t *s_cruiseToggleBtn = nullptr;
 static lv_obj_t *s_cruiseToggleLabel = nullptr;
 
 struct CruiseButtonSpec {
-    const char *id;
     const char *label;
     CfgCruiseOp op;
 };
 
 constexpr CruiseButtonSpec CRUISE_BUTTONS[4] = {
-    {"cruise_minus", "-", CfgCruiseOp::DECREMENT},
-    {"cruise_plus", "+", CfgCruiseOp::INCREMENT},
-    {"cruise_set", "SET", CfgCruiseOp::SET},
-    {"cruise_off", "OFF", CfgCruiseOp::OFF},
+    {"-", CfgCruiseOp::DECREMENT},
+    {"+", CfgCruiseOp::INCREMENT},
+    {"SET", CfgCruiseOp::SET},
+    {"OFF", CfgCruiseOp::OFF},
 };
 
 inline lv_point_t cruiseBezierAt(int16_t x0, int16_t y0, int16_t xc, int16_t yc, int16_t x2,
@@ -297,45 +297,32 @@ void cruiseLHitTestCb(lv_event_t *e) {
         info->res = false;
 }
 
-CfgWidget makeCruiseButton(const CruiseButtonSpec &spec, const CfgPage &pageCfg, int16_t x,
-                           int16_t y) {
-    CfgWidget w = {};
-    strlcpy(w.id, spec.id, CFG_MAX_ID_LEN);
-    w.type = WidgetType::BUTTON;
-    w.signalId[0] = '\0';
-    w.layout.x = x;
-    w.layout.y = y;
-    w.layout.w = CRUISE_BUTTON_W;
-    w.layout.h = CRUISE_BUTTON_H;
-    w.layout.zOrder = 0;
+lv_obj_t *createCruiseLObject(lv_obj_t *screen, int16_t x, int16_t y) {
+    lv_obj_t *btn = lv_obj_create(screen);
+    lv_obj_set_pos(btn, x, y);
+    lv_obj_set_size(btn, CRUISE_BUTTON_W, CRUISE_BUTTON_H);
+    lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(btn, 0, LV_PART_MAIN);
+    lv_obj_set_style_outline_width(btn, 0, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(btn, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(btn, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(btn, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(btn, LV_OBJ_FLAG_CLICK_FOCUSABLE);
+    lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+    return btn;
+}
 
-    (void)pageCfg;
-    w.style.primaryColor = CfgColor{CRUISE_BUTTON_FILL_RGB};
-    w.style.textColor = CfgColor{0xFFFFFFu};
-    w.style.fontSize = 22;
-
-    CfgButtonParams &p = w.button;
-    strlcpy(p.label, spec.label, CFG_MAX_NAME_LEN);
-    p.iconPath[0] = '\0';
-    p.iconName[0] = '\0';
-    p.isToggle = false;
-    p.showIcon = false;
-    p.showLabel = true;
-    p.hasColors = false;
-    p.actionsCount = 1;
-
-    CfgButtonAction &a = p.actions[0];
-    a.type = CfgButtonActionType::CRUISE_CONTROL;
-    a.pageId[0] = '\0';
-    a.mapIndex = 0;
-    a.canFrameId = 0;
-    a.canDataLen = 0;
-    a.canDataOffLen = 0;
-    a.canExtended = false;
-    a.cruiseOp = spec.op;
-    a.cruiseStepKmh = 0;
-
-    return w;
+void cruiseControlClickCb(lv_event_t *e) {
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+        return;
+    const auto op =
+        static_cast<CfgCruiseOp>(reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
+    CfgButtonAction action = {};
+    action.type = CfgButtonActionType::CRUISE_CONTROL;
+    action.cruiseOp = op;
+    action.cruiseStepKmh = 0;
+    ActionDispatcher::dispatchAction(action, true);
 }
 
 void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t contentY) {
@@ -359,28 +346,9 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         const uint8_t row = i / 2;
         const int16_t x = startX + col * (CRUISE_BUTTON_W + CRUISE_GAP_X);
         const int16_t y = startY + row * (CRUISE_BUTTON_H + CRUISE_GAP_Y);
-        const CfgWidget w = makeCruiseButton(CRUISE_BUTTONS[i], cfg, x, y);
-        lv_obj_t *btn = WidgetFactory::create(screen, w, 0);
+        lv_obj_t *btn = createCruiseLObject(screen, x, y);
         if (!btn)
             continue;
-
-        lv_obj_remove_style_all(btn);
-        lv_obj_set_pos(btn, x, y);
-        lv_obj_set_size(btn, CRUISE_BUTTON_W, CRUISE_BUTTON_H);
-        lv_obj_clear_flag(btn, LV_OBJ_FLAG_CLICK_FOCUSABLE);
-        lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
-
-        for (lv_state_t st : {lv_state_t(LV_STATE_DEFAULT), lv_state_t(LV_STATE_PRESSED),
-                              lv_state_t(LV_STATE_FOCUSED), lv_state_t(LV_STATE_FOCUS_KEY),
-                              lv_state_t(LV_STATE_CHECKED), lv_state_t(LV_STATE_EDITED),
-                              lv_state_t(LV_STATE_HOVERED), lv_state_t(LV_STATE_DISABLED)}) {
-            lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
-            lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
-            lv_obj_set_style_outline_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
-            lv_obj_set_style_outline_width(btn, 0, LV_PART_MAIN | st);
-            lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, LV_PART_MAIN | st);
-            lv_obj_set_style_text_color(btn, lv_color_hex(0xFFFFFFu), LV_PART_MAIN | st);
-        }
 
         void *cornerData = reinterpret_cast<void *>(static_cast<uintptr_t>(i));
         lv_obj_add_event_cb(btn, cruiseLDrawCb, LV_EVENT_DRAW_MAIN_END, cornerData);
@@ -391,19 +359,15 @@ void buildCruiseControlTemplate(lv_obj_t *screen, const CfgPage &cfg, int16_t co
         lv_obj_add_event_cb(btn, pressInvalidateCb, LV_EVENT_PRESS_LOST, nullptr);
         lv_obj_add_flag(btn, LV_OBJ_FLAG_ADV_HITTEST);
         lv_obj_add_event_cb(btn, cruiseLHitTestCb, LV_EVENT_HIT_TEST, cornerData);
-        lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+
+        void *opData = reinterpret_cast<void *>(static_cast<uintptr_t>(CRUISE_BUTTONS[i].op));
+        lv_obj_add_event_cb(btn, cruiseControlClickCb, LV_EVENT_CLICKED, opData);
 
         constexpr int16_t LABEL_OFF_X = CRUISE_NOTCH_W / 2;
         constexpr int16_t LABEL_OFF_Y = CRUISE_NOTCH_H / 2;
         const int16_t shiftX = (col == 0) ? -LABEL_OFF_X : LABEL_OFF_X;
         const int16_t shiftY = (row == 0) ? -LABEL_OFF_Y : LABEL_OFF_Y;
 
-        if (lv_obj_get_child_cnt(btn) > 0) {
-            lv_obj_t *innerLabel = lv_obj_get_child(btn, 0);
-            if (innerLabel) {
-                lv_obj_add_flag(innerLabel, LV_OBJ_FLAG_HIDDEN);
-            }
-        }
         lv_obj_t *label = lv_label_create(screen);
         lv_label_set_text(label, CRUISE_BUTTONS[i].label);
         lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFFu), 0);
