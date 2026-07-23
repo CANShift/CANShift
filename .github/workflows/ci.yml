@@ -14,8 +14,63 @@ env:
   OTA_HMAC_CI_FALLBACK: ${{ github.run_id }}
 
 jobs:
-  js:
-    name: js — lint + typecheck + test + build
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      tuner: ${{ steps.filter.outputs.tuner }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      firmware: ${{ steps.filter.outputs.firmware }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core: &core
+              - 'canshift-core/**'
+              - '.github/workflows/ci.yml'
+            tuner:
+              - *core
+              - 'canshift-tuner/**'
+            mobile:
+              - *core
+              - 'canshift-mobile/**'
+            firmware:
+              - '.github/workflows/ci.yml'
+              - 'canshift-firmware/**'
+            docs:
+              - '.github/workflows/ci.yml'
+              - 'canshift-docs/**'
+
+  core:
+    name: core — lint + test + build
+    needs: changes
+    if: ${{ needs.changes.outputs.core == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-core
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+
+  tuner:
+    name: tuner — typecheck + test + build
+    needs: changes
+    if: ${{ needs.changes.outputs.tuner == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,13 +79,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: core
+      - name: build core
         working-directory: canshift-core
         run: |
           npm ci
-          npm run lint
-          npm run format:check
-          npm test
           npm run build
 
       - name: tuner
@@ -39,6 +91,24 @@ jobs:
           npm ci
           npm run typecheck
           npm test
+          npm run build
+
+  mobile:
+    name: mobile — lint + typecheck + test
+    needs: changes
+    if: ${{ needs.changes.outputs.mobile == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: build core
+        working-directory: canshift-core
+        run: |
+          npm ci
           npm run build
 
       - name: mobile
@@ -50,8 +120,28 @@ jobs:
           npm run typecheck
           npm test
 
+  docs:
+    name: docs — build
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: canshift-docs
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm ci
+      - run: npm run build
+
   firmware:
     name: firmware — build + tests + lint
+    needs: changes
+    if: ${{ needs.changes.outputs.firmware == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -172,6 +262,8 @@ jobs:
 
   mobile-ios:
     name: mobile — iOS native build
+    needs: changes
+    if: ${{ needs.changes.outputs.mobile == 'true' }}
     runs-on: macos-latest
     defaults:
       run:
@@ -202,3 +294,18 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             build | xcbeautify --quieter
+
+  ci-success:
+    name: ci-success
+    if: ${{ always() }}
+    needs: [changes, core, tuner, mobile, docs, firmware, mobile-ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify no required job failed
+        run: |
+          echo "results: ${{ join(needs.*.result, ', ') }}"
+          if echo '${{ join(needs.*.result, ',') }}' | tr ',' '\n' | grep -qE '^(failure|cancelled)$'; then
+            echo "::error::a required CI job failed or was cancelled"
+            exit 1
+          fi
+          echo "all required jobs passed or were skipped"
