@@ -89,7 +89,8 @@ export interface ClipboardSlice {
 }
 
 export interface DashboardState
-  extends LifecycleSlice,
+  extends
+    LifecycleSlice,
     HistorySlice,
     PagesSlice,
     ThemeSlice,
@@ -98,9 +99,4 @@ export interface DashboardState
     LayoutOpsSlice,
     ClipboardSlice {}
 
-export type SliceCreator<T> = StateCreator<
-  DashboardState,
-  [['zustand/immer', never]],
-  [],
-  T
->
+export type SliceCreator<T> = StateCreator<DashboardState, [['zustand/immer', never]], [], T>

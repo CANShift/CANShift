@@ -9,10 +9,7 @@ const PRE_RESET_SETTLE_MS = 600
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 interface SignalCapablePort {
-  setSignals?: (signals: {
-    dataTerminalReady?: boolean
-    requestToSend?: boolean
-  }) => Promise<void>
+  setSignals?: (signals: { dataTerminalReady?: boolean; requestToSend?: boolean }) => Promise<void>
 }
 
 const forceRomBootloader = async (port: SerialPort, onLog: FlashLog): Promise<boolean> => {

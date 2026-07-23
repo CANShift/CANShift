@@ -71,6 +71,10 @@ describe('detectOverflow', () => {
       { id: 'bad1', x: 400, y: 0, w: 50, h: 50 },
       { id: 'bad2', x: 0, y: 400, w: 50, h: 50 },
     ])
-    expect(detectOverflow(cfg).map((o) => o.widgetId).sort()).toEqual(['bad1', 'bad2'])
+    expect(
+      detectOverflow(cfg)
+        .map((o) => o.widgetId)
+        .sort()
+    ).toEqual(['bad1', 'bad2'])
   })
 })

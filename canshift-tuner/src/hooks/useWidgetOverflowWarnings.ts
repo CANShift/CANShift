@@ -15,14 +15,20 @@ export const useWidgetOverflowWarnings = (): void => {
       return
     }
     const overflowing = detectOverflow(config)
-    const signature = `${targetProfile ?? 'default'}:${overflowing.map((o) => o.widgetId).sort().join(',')}`
+    const signature = `${targetProfile ?? 'default'}:${overflowing
+      .map((o) => o.widgetId)
+      .sort()
+      .join(',')}`
     if (signature === lastSignatureRef.current) return
     lastSignatureRef.current = signature
     if (overflowing.length === 0) return
 
     const sample = overflowing
       .slice(0, 3)
-      .map((o) => `${o.widgetId} (${String(o.layout.x)},${String(o.layout.y)} ${String(o.layout.w)}×${String(o.layout.h)})`)
+      .map(
+        (o) =>
+          `${o.widgetId} (${String(o.layout.x)},${String(o.layout.y)} ${String(o.layout.w)}×${String(o.layout.h)})`
+      )
       .join(', ')
     const more = overflowing.length > 3 ? ` + ${String(overflowing.length - 3)} more` : ''
     log(

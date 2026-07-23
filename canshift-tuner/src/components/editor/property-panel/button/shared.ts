@@ -87,10 +87,7 @@ export const convertSingleToCycle = (
   }
 }
 
-export const convertCycleToSingle = (
-  cfg: CycleConfig,
-  pageIds: string[]
-): ButtonWidgetConfig => {
+export const convertCycleToSingle = (cfg: CycleConfig, pageIds: string[]): ButtonWidgetConfig => {
   const activeState = cfg.states[cfg.initialActiveIndex] ?? cfg.states[0]
   const action = activeState?.action ?? defaultNavigateAction(pageIds)
   return {
