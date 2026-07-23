@@ -135,7 +135,7 @@ export default function AboutScreen({ navigation }: Props) {
                 {currentVersion !== null ? `v${currentVersion}` : '—'}
               </Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
+            <View style={styles.versionColRight}>
               <Text style={styles.versionLabel}>
                 {displayedRelease?.prerelease === true ? 'Latest pre-release' : 'Latest'}
               </Text>
@@ -202,6 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
+  versionColRight: { alignItems: 'flex-end' },
   versionLabel: {
     fontSize: Typography.xs,
     color: Colors.textMuted,
