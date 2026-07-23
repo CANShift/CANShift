@@ -6,18 +6,9 @@ import { useDashboardStore } from '../../../stores/dashboard.store'
 import { WidgetPreview } from '../WidgetPreview'
 import { CycleModeBody } from './button/cycle-mode-body'
 import { ModeToggle } from './button/mode-toggle'
-import {
-  convertCycleToSingle,
-  convertSingleToCycle,
-  EMPTY_PAGES,
-} from './button/shared'
+import { convertCycleToSingle, convertSingleToCycle, EMPTY_PAGES } from './button/shared'
 import { SingleModeBody } from './button/single-mode-body'
-import {
-  Field,
-  IconPicker,
-  inputStyle,
-  type ConfigFieldsProps,
-} from './shared'
+import { Field, IconPicker, inputStyle, type ConfigFieldsProps } from './shared'
 
 export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)

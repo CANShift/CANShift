@@ -32,12 +32,13 @@ export const FlashActionSection = () => {
     <FlashSection step={3} title="Flash" status={status}>
       <ol style={instructionsStyle}>
         <li>
-          <strong>Press and hold the BOOT button</strong> on the back of the dash. Keep it held —
-          do not release.
+          <strong>Press and hold the BOOT button</strong> on the back of the dash. Keep it held — do
+          not release.
         </li>
         <li>Click the Flash button below while still holding BOOT.</li>
         <li>
-          Pick the dash's serial port in the browser prompt (it appears as <code>USB-SERIAL CH340</code>).
+          Pick the dash's serial port in the browser prompt (it appears as{' '}
+          <code>USB-SERIAL CH340</code>).
         </li>
         <li>
           Keep BOOT held until the progress bar starts moving (around <em>Writing at 2%</em>), then

@@ -1,5 +1,11 @@
 import type { Widget } from '@tmbk/canshift-core'
-import { autoPlace, LAYOUT_GAP, rectsOverlap, resolveCollisions, snapToGrid } from '../../utils/layout'
+import {
+  autoPlace,
+  LAYOUT_GAP,
+  rectsOverlap,
+  resolveCollisions,
+  snapToGrid,
+} from '../../utils/layout'
 import { canvasDims, pushHistory, toLayoutRect, widgetAreaHeight } from './helpers'
 import type { SliceCreator, WidgetsSlice } from './types'
 

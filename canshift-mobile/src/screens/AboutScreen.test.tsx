@@ -1,41 +1,52 @@
 import * as React from 'react'
 import { render } from '@testing-library/react-native'
-import Markdown from 'react-native-markdown-display'
-import { formatBytes, formatDate } from '../lib/format'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import AboutScreen from './AboutScreen'
+import { useDeviceStore } from '../stores/device.store'
+import type { RootStackParamList } from '../navigation'
 
-describe('formatBytes', () => {
-  it('formats bytes as-is below 1 KB', () => {
-    expect(formatBytes(512)).toBe('512 B')
+jest.mock('../lib/expo-version', () => ({
+  readAppVersion: () => '1.2.3',
+}))
+
+jest.mock('@tmbk/canshift-core', () => ({
+  ...jest.requireActual<typeof import('@tmbk/canshift-core')>('@tmbk/canshift-core'),
+  CURRENT_SCHEMA_VERSION: '1.24.0',
+}))
+
+const navigation = {
+  goBack: jest.fn(),
+} as unknown as NativeStackNavigationProp<RootStackParamList, 'About'>
+
+const renderScreen = () => render(<AboutScreen navigation={navigation} />)
+
+describe('AboutScreen', () => {
+  beforeEach(() => {
+    useDeviceStore.getState().disconnect()
   })
 
-  it('formats KB correctly', () => {
-    expect(formatBytes(2048)).toBe('2 KB')
+  it('shows the mobile app version', () => {
+    const { getByText } = renderScreen()
+    expect(getByText('v1.2.3')).toBeTruthy()
   })
 
-  it('formats MB correctly', () => {
-    expect(formatBytes(1024 * 1024 * 1.5)).toBe('1.5 MB')
-  })
-})
-
-describe('formatDate', () => {
-  it('returns the original string for invalid dates', () => {
-    expect(formatDate('not-a-date')).toBe('not-a-date')
+  it('shows disconnected state for the dashboard rows when not connected', () => {
+    const { getByText, getAllByText } = renderScreen()
+    expect(getByText('Disconnected')).toBeTruthy()
+    expect(getAllByText('Not connected').length).toBeGreaterThanOrEqual(2)
   })
 
-  it('returns a non-empty string for a valid ISO date', () => {
-    const result = formatDate('2026-01-01T00:00:00Z')
-    expect(result.length).toBeGreaterThan(0)
-  })
-})
-
-describe('Markdown notes rendering', () => {
-  it('renders without crashing', () => {
-    const { toJSON } = render(<Markdown>{'# Hello\n\n- item one\n- item two'}</Markdown>)
-    expect(toJSON()).toBeTruthy()
-  })
-
-  it('renders inline code spans', () => {
-    const { toJSON } = render(<Markdown>{'Use `npm install` to install.'}</Markdown>)
-    expect(toJSON()).toBeTruthy()
+  it('shows the connection label and firmware version when connected', () => {
+    useDeviceStore.setState({
+      connectionState: 'connected',
+      firmwareVersion: '2.0.1',
+      deviceName: 'CANShift-01',
+      deviceId: 'AA:BB:CC',
+    })
+    const { getByText } = renderScreen()
+    expect(getByText('Connected')).toBeTruthy()
+    expect(getByText('v2.0.1')).toBeTruthy()
+    expect(getByText('CANShift-01')).toBeTruthy()
+    expect(getByText('AA:BB:CC')).toBeTruthy()
   })
 })

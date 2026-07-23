@@ -5,7 +5,8 @@ export const TRANSPORT_ERROR_MESSAGES: Record<string, string> = {
   streams_unavailable:
     'The port opened but exposes no data streams — unplug/replug the dash and try again.',
   connection_closed: 'The connection to the dash was closed — check the cable and reconnect.',
-  auto_reconnect_failed: 'Automatic reconnect failed — click Connect device to pick the port again.',
+  auto_reconnect_failed:
+    'Automatic reconnect failed — click Connect device to pick the port again.',
   connect_failed: 'Could not connect to the dash — check the cable and try again.',
   open_failed: 'Could not open the port — unplug/replug the dash and try again.',
   ack_timeout: 'The dash did not respond in time — check the cable and retry.',

@@ -140,9 +140,7 @@ export const DeviceAlertBar = () => {
         )}
       </AlertRow>
       {expanded &&
-        rest.map((alert) => (
-          <AlertRow key={alert.id} alert={alert} onDismiss={handleDismiss} />
-        ))}
+        rest.map((alert) => <AlertRow key={alert.id} alert={alert} onDismiss={handleDismiss} />)}
     </div>
   )
 }

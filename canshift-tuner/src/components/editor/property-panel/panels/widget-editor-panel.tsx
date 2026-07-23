@@ -116,9 +116,7 @@ export const WidgetEditorPanel = ({
         </div>
       </Field>
 
-      {!SIZE_HIDDEN_TYPES.has(widget.type) && (
-        <SizeTokenPicker widget={widget} onChange={patch} />
-      )}
+      {!SIZE_HIDDEN_TYPES.has(widget.type) && <SizeTokenPicker widget={widget} onChange={patch} />}
 
       {!SIGNAL_HIDDEN_TYPES.has(widget.type) && (
         <Field label="Signal">

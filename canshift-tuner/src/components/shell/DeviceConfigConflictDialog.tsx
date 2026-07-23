@@ -29,8 +29,8 @@ export const DeviceConfigConflictDialog = () => {
           <AlertDialogTitle>Device config differs</AlertDialogTitle>
           <AlertDialogDescription>
             The connected device sent a dashboard config, but you have unsaved edits. Loading from
-            the device will discard your edits. Keeping your edits leaves the device untouched
-            until you burn.
+            the device will discard your edits. Keeping your edits leaves the device untouched until
+            you burn.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
