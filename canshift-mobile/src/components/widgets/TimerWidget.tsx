@@ -9,7 +9,9 @@ import {
   widgetTextColor,
 } from '@tmbk/canshift-core'
 import { Colors, Radius, Spacing } from '../../theme'
-import { elapsedMsOf, useTimerStore, type TimerStatus } from '../../stores/timer.store'
+import { useTimerStore, type TimerStatus } from '../../stores/timer.store'
+import { useTimerElapsed } from '../../hooks/use-timer-elapsed'
+import { timerControl } from '../../services/timer-control'
 import { formatTimerElapsed } from './widget-value'
 
 interface TimerWidgetProps {
@@ -18,7 +20,6 @@ interface TimerWidgetProps {
   dayMode?: boolean
 }
 
-const DISPLAY_TICK_MS = 50
 const BLINK_HALF_PERIOD_MS = TIMER_BLINK_PERIOD_MS / 2
 const IDLE_TEXT_OPACITY = 0.6
 
@@ -26,24 +27,6 @@ const ACTION_LABEL: Record<TimerStatus, string> = {
   idle: 'Start timer',
   running: 'Pause timer',
   paused: 'Resume timer',
-}
-
-const useTimerElapsed = (status: TimerStatus): number => {
-  const [elapsedMs, setElapsedMs] = useState(() => elapsedMsOf(useTimerStore.getState()))
-
-  useEffect(() => {
-    const sync = () => {
-      setElapsedMs(elapsedMsOf(useTimerStore.getState()))
-    }
-    sync()
-    if (status !== 'running') return
-    const id = setInterval(sync, DISPLAY_TICK_MS)
-    return () => {
-      clearInterval(id)
-    }
-  }, [status])
-
-  return elapsedMs
 }
 
 const useColonBlink = (active: boolean): boolean => {
@@ -75,10 +58,16 @@ const borderStyle = (status: TimerStatus): { borderWidth: number; borderColor?: 
   return { borderWidth: 0 }
 }
 
+const STATUS_TOGGLE: Record<TimerStatus, () => void> = {
+  idle: timerControl.start,
+  running: timerControl.pause,
+  paused: timerControl.resume,
+}
+
 const TimerWidget = ({ width, height, dayMode = false }: TimerWidgetProps) => {
   const status = useTimerStore((s) => s.status)
-  const toggle = useTimerStore((s) => s.toggle)
-  const reset = useTimerStore((s) => s.reset)
+  const toggle = STATUS_TOGGLE[status]
+  const reset = timerControl.reset
 
   const elapsedMs = useTimerElapsed(status)
   const colonVisible = useColonBlink(status === 'paused')
