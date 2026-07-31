@@ -32,7 +32,7 @@ const BurnSpinner = () => (
       display: 'inline-block',
       width: 10,
       height: 10,
-      border: '2px solid hsl(var(--primary-foreground))',
+      border: '2px solid hsl(var(--brand-ground))',
       borderTopColor: 'transparent',
       borderRadius: '50%',
       animation: 'canshift-tuner-spin 700ms linear infinite',
@@ -135,9 +135,9 @@ const burnButtonStyleDisabled: CSSProperties = {
 
 const burnButtonStyleEnabled: CSSProperties = {
   ...burnButtonStyleBase,
-  background: 'hsl(var(--primary))',
-  color: 'hsl(var(--primary-foreground))',
-  border: '1px solid hsl(var(--primary))',
+  background: 'hsl(var(--brand-accent))',
+  color: 'hsl(var(--brand-ground))',
+  border: '1px solid hsl(var(--brand-accent))',
   cursor: 'pointer',
-  boxShadow: '0 1px 4px hsl(var(--primary) / 0.3)',
+  boxShadow: '0 1px 4px hsl(var(--brand-accent) / 0.3)',
 }

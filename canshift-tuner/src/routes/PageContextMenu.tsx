@@ -103,7 +103,7 @@ export const PageContextMenu = ({
               onClose()
             }
           }}
-          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent"
           style={{
             display: 'block',
             width: '100%',

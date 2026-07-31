@@ -267,7 +267,7 @@ const progressTrackStyle: CSSProperties = {
 const progressFillStyle = (pct: number): CSSProperties => ({
   width: `${pct.toFixed(1)}%`,
   height: '100%',
-  background: 'hsl(var(--primary))',
+  background: 'hsl(var(--brand-accent))',
   transition: 'width 120ms ease',
 })
 

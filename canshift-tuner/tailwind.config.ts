@@ -3,7 +3,14 @@
 
 import type { Config } from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate'
-import { COLOR_KEY_TO_CSS_VAR } from '@tmbk/canshift-core'
+import {
+  BRAND_COLOR_KEY_TO_CSS_VAR,
+  BRAND_DIVIDER_CSS_VAR,
+  BRAND_NEUTRAL_STEPS,
+  BRAND_TEXT_CSS_VAR,
+  COLOR_KEY_TO_CSS_VAR,
+  brandNeutralCssVar,
+} from '@tmbk/canshift-core'
 
 const cssVarReference = (cssVar: string): string => `hsl(var(${cssVar}) / <alpha-value>)`
 const classNameFromCssVar = (cssVar: string): string => cssVar.replace(/^--/, '')
@@ -32,6 +39,19 @@ const colorsFromTokens = (): Record<string, ColorEntry> => {
   return out
 }
 
+const brandColorsFromTokens = (): Record<string, string> => {
+  const out: Record<string, string> = {}
+  for (const cssVar of Object.values(BRAND_COLOR_KEY_TO_CSS_VAR)) {
+    out[classNameFromCssVar(cssVar)] = cssVarReference(cssVar)
+  }
+  for (const step of BRAND_NEUTRAL_STEPS) {
+    out[classNameFromCssVar(brandNeutralCssVar(step))] = cssVarReference(brandNeutralCssVar(step))
+  }
+  out[classNameFromCssVar(BRAND_TEXT_CSS_VAR)] = cssVarReference(BRAND_TEXT_CSS_VAR)
+  out[classNameFromCssVar(BRAND_DIVIDER_CSS_VAR)] = `var(${BRAND_DIVIDER_CSS_VAR})`
+  return out
+}
+
 const COLOR_ALIASES: Record<string, string> = {
   background: cssVarReference(COLOR_KEY_TO_CSS_VAR.bg),
   input: cssVarReference(COLOR_KEY_TO_CSS_VAR.border),
@@ -44,6 +64,7 @@ const config: Config = {
     extend: {
       colors: {
         ...colorsFromTokens(),
+        ...brandColorsFromTokens(),
         ...COLOR_ALIASES,
       },
       keyframes: {

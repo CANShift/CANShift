@@ -41,7 +41,7 @@ const badgeStyle = (status: FlashSectionStatus): CSSProperties => {
     status === 'done'
       ? { bg: 'hsl(var(--success) / 0.18)', fg: 'hsl(var(--success))' }
       : status === 'active'
-        ? { bg: 'hsl(var(--primary) / 0.18)', fg: 'hsl(var(--primary))' }
+        ? { bg: 'hsl(var(--brand-accent) / 0.18)', fg: 'hsl(var(--brand-accent))' }
         : { bg: 'hsl(var(--bg-inset))', fg: 'hsl(var(--text-muted))' }
   return {
     width: 22,

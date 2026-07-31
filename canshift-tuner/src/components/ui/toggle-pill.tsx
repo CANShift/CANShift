@@ -8,9 +8,9 @@ interface TogglePillProps {
 }
 
 const basePillStyle = (active: boolean): CSSProperties => ({
-  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
-  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+  background: active ? 'hsl(var(--brand-accent) / 0.15)' : 'transparent',
+  color: active ? 'hsl(var(--brand-accent))' : 'hsl(var(--text-dim))',
+  border: `1px solid ${active ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
   borderRadius: 999,
   padding: '3px 12px',
   fontSize: 11,

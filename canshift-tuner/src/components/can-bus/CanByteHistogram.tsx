@@ -60,7 +60,7 @@ const ByteColumn = ({ byteIndex, counts }: ByteColumnProps) => {
                 style={{
                   ...barFillStyle,
                   width: `${String((count / max) * 100)}%`,
-                  background: constant ? 'hsl(var(--text-muted))' : 'hsl(var(--primary))',
+                  background: constant ? 'hsl(var(--text-muted))' : 'hsl(var(--brand-accent))',
                 }}
               />
             </div>
@@ -121,7 +121,7 @@ const columnHeaderStyle: CSSProperties = {
 
 const distinctTagStyle = (constant: boolean): CSSProperties => ({
   fontSize: 9,
-  color: constant ? 'hsl(var(--text-muted))' : 'hsl(var(--primary))',
+  color: constant ? 'hsl(var(--text-muted))' : 'hsl(var(--brand-accent))',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
 })

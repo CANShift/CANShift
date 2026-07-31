@@ -89,7 +89,7 @@ const kindLabel = (kind: CliEntryKind): string => {
 const kindColor = (kind: CliEntryKind): string => {
   switch (kind) {
     case 'request':
-      return 'hsl(var(--primary))'
+      return 'hsl(var(--brand-accent))'
     case 'ok':
       return 'hsl(var(--success))'
     case 'error':
