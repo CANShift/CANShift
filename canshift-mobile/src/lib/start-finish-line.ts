@@ -8,8 +8,12 @@ export interface StartFinishLine {
 export const DEFAULT_HALF_WIDTH_M = 25
 
 const METERS_PER_DEG_LAT = 111_320
+const MAX_ABS_LAT_FOR_LNG_SCALE = 89.9
 
 const toRad = (deg: number): number => (deg * Math.PI) / 180
+
+const clampLatForLngScale = (lat: number): number =>
+  Math.min(Math.max(lat, -MAX_ABS_LAT_FOR_LNG_SCALE), MAX_ABS_LAT_FOR_LNG_SCALE)
 
 const offsetPoint = (
   origin: { lat: number; lng: number },
@@ -18,7 +22,7 @@ const offsetPoint = (
 ): { lat: number; lng: number } => {
   const bearingRad = toRad(bearingDeg)
   const dLat = (distanceM * Math.cos(bearingRad)) / METERS_PER_DEG_LAT
-  const metersPerDegLng = METERS_PER_DEG_LAT * Math.cos(toRad(origin.lat))
+  const metersPerDegLng = METERS_PER_DEG_LAT * Math.cos(toRad(clampLatForLngScale(origin.lat)))
   const dLng = (distanceM * Math.sin(bearingRad)) / metersPerDegLng
   return { lat: origin.lat + dLat, lng: origin.lng + dLng }
 }

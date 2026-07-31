@@ -47,6 +47,16 @@ describe('startFinishLineFromPosition', () => {
     expect(spanDeg).toBeCloseTo((2 * DEFAULT_HALF_WIDTH_M) / 111_320, 9)
   })
 
+  it('yields finite coordinates at the poles', () => {
+    for (const lat of [90, -90]) {
+      const { line } = startFinishLineFromPosition({ lat, lng: 0, headingDeg: 45 })
+      expect(Number.isFinite(line.a.lat)).toBe(true)
+      expect(Number.isFinite(line.a.lng)).toBe(true)
+      expect(Number.isFinite(line.b.lat)).toBe(true)
+      expect(Number.isFinite(line.b.lng)).toBe(true)
+    }
+  })
+
   it('produces a detector setup that accepts crossings along the heading and rejects reverse ones', () => {
     const { line, forwardBearingDeg } = startFinishLineFromPosition({
       lat: 46.2,

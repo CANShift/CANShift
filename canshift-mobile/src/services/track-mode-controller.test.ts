@@ -236,4 +236,80 @@ describe('createTrackModeController', () => {
     expect(payloads.at(-1)?.trackMode).toBe(true)
     await controller.stop()
   })
+
+  it('stop() during a pending permission request cancels the start', async () => {
+    const { watcher, startCalls } = makeWatcher()
+    const { write } = makeWriter()
+    let grantPermission: (result: { granted: true }) => void = () => undefined
+    const controller = createTrackModeController({
+      watcher,
+      requestPermission: () =>
+        new Promise((resolve) => {
+          grantPermission = resolve
+        }),
+      write,
+      publisherIntervalMs: PUBLISH_INTERVAL_MS,
+    })
+
+    const startResult = controller.start()
+    const stopResult = controller.stop()
+    grantPermission({ granted: true })
+
+    await expect(startResult).resolves.toEqual({ started: false, reason: 'cancelled' })
+    await stopResult
+    expect(controller.isActive()).toBe(false)
+    expect(startCalls()).toBe(0)
+    expect(useTrackSessionStore.getState().recording).toBe(false)
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it('stop() during a pending GPS watcher start detaches the late subscription', async () => {
+    let detached = false
+    let attachWatcher: (detach: () => void) => void = () => undefined
+    const watcher: GpsWatcher = {
+      start: () =>
+        new Promise((resolve) => {
+          attachWatcher = resolve
+        }),
+    }
+    const { write } = makeWriter()
+    const controller = createTrackModeController({
+      watcher,
+      requestPermission: granted,
+      write,
+      publisherIntervalMs: PUBLISH_INTERVAL_MS,
+    })
+
+    const startResult = controller.start()
+    await flushMicrotasks()
+    const stopResult = controller.stop()
+    attachWatcher(() => {
+      detached = true
+    })
+
+    await expect(startResult).resolves.toEqual({ started: false, reason: 'cancelled' })
+    await stopResult
+    expect(controller.isActive()).toBe(false)
+    expect(detached).toBe(true)
+    expect(useTrackSessionStore.getState().recording).toBe(false)
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it('concurrent start() calls share one attempt and one watcher start', async () => {
+    const { watcher, startCalls } = makeWatcher()
+    const { write } = makeWriter()
+    const controller = createTrackModeController({
+      watcher,
+      requestPermission: granted,
+      write,
+      publisherIntervalMs: PUBLISH_INTERVAL_MS,
+    })
+
+    const [first, second] = await Promise.all([controller.start(), controller.start()])
+
+    expect(first).toEqual({ started: true })
+    expect(second).toEqual({ started: true })
+    expect(startCalls()).toBe(1)
+    await controller.stop()
+  })
 })

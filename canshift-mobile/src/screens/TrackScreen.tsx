@@ -10,6 +10,7 @@ import { Toast } from '../components/ui'
 import { useCurrentLapMs } from '../hooks/use-current-lap-ms'
 import { startFinishLineFromPosition } from '../lib/start-finish-line'
 import { trackModeController } from '../services/track-mode-controller'
+import { log } from '../stores/log.store'
 import {
   armStartFinishLine,
   getLatestSample,
@@ -42,9 +43,12 @@ const TrackScreen = () => {
         return
       }
       const result = await trackModeController.start()
-      if (!result.started) {
+      if (!result.started && result.reason !== 'cancelled') {
         Toast.show({ type: 'error', text1: START_FAILURE_MESSAGES[result.reason] })
       }
+    } catch (err) {
+      log('warn', `Track mode toggle failed — ${err instanceof Error ? err.message : String(err)}`)
+      Toast.show({ type: 'error', text1: 'Track mode failed — try again' })
     } finally {
       setBusy(false)
     }

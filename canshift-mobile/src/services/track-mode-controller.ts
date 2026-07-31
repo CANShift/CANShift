@@ -16,7 +16,7 @@ import { log } from '../stores/log.store'
 
 export type TrackModeStartResult =
   | { started: true }
-  | { started: false; reason: 'permission_denied' | 'gps_unavailable' }
+  | { started: false; reason: 'permission_denied' | 'gps_unavailable' | 'cancelled' }
 
 export interface TrackModeControllerDeps {
   watcher?: GpsWatcher
@@ -61,31 +61,43 @@ export const createTrackModeController = (
   })
 
   let subscription: GpsSubscription | null = null
-  let starting = false
+  let startPromise: Promise<TrackModeStartResult> | null = null
+  let generation = 0
 
-  const start = async (): Promise<TrackModeStartResult> => {
-    if (subscription !== null || starting) return { started: true }
-    starting = true
+  const doStart = async (gen: number): Promise<TrackModeStartResult> => {
+    const permission = await requestPermission()
+    if (gen !== generation) return { started: false, reason: 'cancelled' }
+    if (!permission.granted) return { started: false, reason: 'permission_denied' }
+    let nextSubscription: GpsSubscription
     try {
-      const permission = await requestPermission()
-      if (!permission.granted) return { started: false, reason: 'permission_denied' }
-      try {
-        subscription = await startGpsSubscription(watcher)
-      } catch (err) {
-        const detail = err instanceof Error ? err.message : String(err)
-        log('warn', `Track mode: GPS watcher failed to start — ${detail}`)
-        return { started: false, reason: 'gps_unavailable' }
-      }
-      startSession()
-      publisher.start()
-      log('info', 'Track mode started')
-      return { started: true }
-    } finally {
-      starting = false
+      nextSubscription = await startGpsSubscription(watcher)
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      log('warn', `Track mode: GPS watcher failed to start — ${detail}`)
+      return { started: false, reason: 'gps_unavailable' }
     }
+    if (gen !== generation) {
+      nextSubscription.stop()
+      return { started: false, reason: 'cancelled' }
+    }
+    subscription = nextSubscription
+    startSession()
+    publisher.start()
+    log('info', 'Track mode started')
+    return { started: true }
+  }
+
+  const start = (): Promise<TrackModeStartResult> => {
+    if (subscription !== null) return Promise.resolve({ started: true })
+    startPromise ??= doStart(generation).finally(() => {
+      startPromise = null
+    })
+    return startPromise
   }
 
   const stop = async (): Promise<void> => {
+    generation += 1
+    if (startPromise !== null) await startPromise.catch(() => undefined)
     if (subscription === null) return
     subscription.stop()
     subscription = null
