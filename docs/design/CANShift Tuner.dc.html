@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-cd1320ec-1895-49a6-9838-03478e71982b/styles.css">
+<script src="_ds/modernist-cd1320ec-1895-49a6-9838-03478e71982b/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: #0e0d0d; }
+  .cs-dark {
+    --color-bg: #151313; --color-surface: #1f1d1d; --color-text: #f3f2f2;
+    --color-divider: color-mix(in srgb, #f3f2f2 24%, transparent);
+    --color-neutral-100: #1c1a1a; --color-neutral-200: #262323; --color-neutral-300: #383434;
+    --color-neutral-400: #4d4949; --color-neutral-500: #7d7979; --color-neutral-600: #9b9797;
+    --color-neutral-700: #c2bfbf; --color-neutral-800: #e2dfdf; --color-neutral-900: #f5f4f4;
+  }
+  .cs-app button:focus-visible, .cs-app [tabindex]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  @keyframes cs-flash { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0.12 } }
+  @keyframes cs-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }
+  @keyframes cs-sweep { 0% { width: 4% } 100% { width: 96% } }
+  @keyframes cs-tick { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
+</style>
+</helmet>
+
+<div class="{{ rootClass }}" style="width: 1440px; height: 940px; display: flex; flex-direction: column; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); overflow: hidden">
+
+  <header style="height: 56px; flex: none; display: flex; align-items: stretch; border-bottom: 2px solid var(--color-divider)">
+    <div style="display: flex; align-items: center; gap: 11px; padding: 0 20px 0 18px; border-right: 2px solid var(--color-divider)">
+      <svg viewBox="0 0 116 100" style="width: 32px; flex: none" fill="none">
+        <g transform="translate(10,0) skewX(-11)">
+          <path d="M46 26 H22 V74 H46" stroke="currentColor" stroke-width="13"></path>
+          <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path>
+        </g>
+      </svg>
+      <div style="display: inline-block; transform: skewX(-11deg); font-family: var(--font-heading); font-weight: 800; font-size: 18px; letter-spacing: -0.045em; line-height: 1">
+        <span>CAN</span><span style="color: var(--color-accent)">SHIFT</span>
+      </div>
+      <span style="font-family: var(--font-heading); font-weight: 600; font-size: 9px; letter-spacing: 0.2em; color: var(--color-neutral-600); align-self: flex-end; padding-bottom: 4px">TUNER</span>
+    </div>
+
+    <div style="flex: 1; display: flex; align-items: center; gap: 14px; padding: 0 20px; min-width: 0">
+      <span style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">E36 Track Dash</span>
+      <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600); border: 1px solid var(--color-neutral-300); padding: 2px 7px; white-space: nowrap">3 unsaved changes</span>
+      <span style="display: flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid var(--color-accent); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.09em; color: var(--color-accent)"><span style="width: 7px; height: 7px; background: var(--color-accent)"></span>SIMULATION</span>
+      <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">no device · fw 0.1.0</span>
+    </div>
+
+    <div style="display: flex; align-items: stretch; border-left: 2px solid var(--color-divider)">
+      <button type="button" onClick="{{ toggleTheme }}" style="padding: 0 16px; background: none; border: 0; border-right: 2px solid var(--color-divider); color: var(--color-neutral-700); cursor: pointer; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em" style-hover="background: var(--color-neutral-100); color: var(--color-text)">{{ themeLabel }}</button>
+      <button type="button" style="padding: 0 18px; background: none; border: 0; border-right: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="background: var(--color-neutral-100)">SAVE</button>
+      <button type="button" style="padding: 0 24px; background: var(--color-accent); border: 0; font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.09em; color: #fff; cursor: pointer" style-hover="background: var(--color-accent-600)">BURN TO DEVICE</button>
+    </div>
+  </header>
+
+  <div style="flex: 1; display: flex; min-height: 0">
+
+  <nav style="width: 236px; flex: none; border-right: 2px solid var(--color-divider); background: var(--color-neutral-100); display: flex; flex-direction: column">
+    <div style="flex: 1; overflow-y: auto; padding: 16px 0">
+      <div style="padding: 0 18px 8px; font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.22em; color: var(--color-neutral-600)">DASHBOARD</div>
+      <button type="button" onClick="{{ goDash }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navDash" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navDashBar }}"></span>Pages &amp; widgets</button>
+      <button type="button" onClick="{{ goThemes }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navThemes" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navThemesBar }}"></span>Themes</button>
+
+      <div style="padding: 22px 18px 8px; font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.22em; color: var(--color-neutral-600)">VEHICLE</div>
+      <button type="button" onClick="{{ goCan }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navCan" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navCanBar }}"></span>CAN bus</button>
+      <button type="button" onClick="{{ goEcu }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navEcu" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navEcuBar }}"></span>ECU profile</button>
+      <button type="button" onClick="{{ goObd }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navObd" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navObdBar }}"></span>OBD-II</button>
+
+      <div style="padding: 22px 18px 8px; font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.22em; color: var(--color-neutral-600)">DIAGNOSTICS</div>
+      <button type="button" onClick="{{ goLive }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navLive" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navLiveBar }}"></span>Live data</button>
+      <button type="button" onClick="{{ goLogs }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navLogs" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navLogsBar }}"></span>Logs</button>
+      <button type="button" onClick="{{ goCli }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navCli" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navCliBar }}"></span>CLI</button>
+
+      <div style="padding: 22px 18px 8px; font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.22em; color: var(--color-neutral-600)">DEVICE</div>
+      <button type="button" onClick="{{ goFw }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navFw" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navFwBar }}"></span>Firmware</button>
+      <button type="button" onClick="{{ goSplash }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navSplash" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navSplashBar }}"></span>Boot &amp; update</button>
+      <button type="button" onClick="{{ goStates }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navStates" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navStatesBar }}"></span>States &amp; alerts</button>
+      <button type="button" onClick="{{ goAbout }}" style="position: relative; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; cursor: pointer; background: none; border: 0; padding: 9px 18px 9px 21px; font-family: var(--font-body); font-size: 13px; color: var(--color-neutral-700)" data-ind="navAbout" style-hover="background: var(--color-neutral-200); color: var(--color-text)"><span style="{{ navAboutBar }}"></span>About</button>
+    </div>
+
+    <div style="border-top: 2px solid var(--color-divider); padding: 14px 18px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)"><span>TARGET</span><span style="color: var(--color-text)">CrowPanel 2.8″</span></div>
+      <div style="display: flex; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)"><span>FLASH</span><span style="color: var(--color-text)">62 %</span></div>
+      <div style="height: 4px; background: var(--color-neutral-300)"><div style="width: 62%; height: 100%; background: var(--color-accent)"></div></div>
+    </div>
+  </nav>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0">
+
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <div style="display: flex; border: 1px solid var(--color-neutral-400)">
+            <span style="padding: 5px 14px; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; background: var(--color-text); color: var(--color-bg)">DESIGN</span>
+            <span style="padding: 5px 14px; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-neutral-700)">SIMULATE</span>
+          </div>
+          <div style="display: flex; border: 1px solid var(--color-neutral-400)">
+            <button type="button" style="width: 28px; height: 26px; background: none; border: 0; border-right: 1px solid var(--color-neutral-400); color: var(--color-text); cursor: pointer" style-hover="background: var(--color-neutral-200)">−</button>
+            <span style="font-family: ui-monospace, monospace; font-size: 12px; width: 48px; text-align: center; line-height: 26px">100 %</span>
+            <button type="button" style="width: 28px; height: 26px; background: none; border: 0; border-left: 1px solid var(--color-neutral-400); color: var(--color-text); cursor: pointer" style-hover="background: var(--color-neutral-200)">+</button>
+          </div>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">320 × 240 · grid 8 px · snap on</span>
+          <span style="{{ oobStyle }}"><span style="{{ oobDot }}"></span>{{ oobText }}</span>
+          <button type="button" style="padding: 6px 12px; background: none; border: 1px solid var(--color-accent); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-accent); cursor: pointer" style-hover="background: color-mix(in srgb, var(--color-accent) 14%, transparent)">REV LIMIT</button>
+        </div>
+
+        <div style="height: 100px; flex: none; display: flex; align-items: stretch; border-bottom: 2px solid var(--color-divider); background: var(--color-neutral-100)">
+          <div style="width: 96px; flex: none; border-right: 2px solid var(--color-divider); padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">PAGES</span>
+            <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">{{ pageIndex }}</span>
+          </div>
+          <div style="flex: 1; display: flex; align-items: stretch; overflow-x: auto">
+            <sc-for list="{{ pages }}" as="p" hint-placeholder-count="5">
+              <div style="{{ p.cell }}" onClick="{{ p.go }}">
+                <div style="display: flex; align-items: baseline; gap: 7px">
+                  <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">{{ p.no }}</span>
+                  <span style="font-family: var(--font-heading); font-weight: 800; font-size: 12px">{{ p.name }}</span>
+                  <span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 10px; color: var(--color-neutral-600)">{{ p.count }}</span>
+                </div>
+                <div style="flex: 1; min-width: 0; overflow: hidden; background: #0b0a0a; display: flex; align-items: center; gap: 7px; padding: 0 9px; font-family: ui-monospace, monospace; white-space: nowrap">
+                  <span style="font-size: 15px; color: {{ p.tint }}">{{ p.v1 }}</span>
+                  <span style="font-size: 15px; color: #f3f2f2">{{ p.v2 }}</span>
+                  <span style="margin-left: auto; font-size: 9px; color: #6b6767">{{ p.kind }}</span>
+                </div>
+              </div>
+            </sc-for>
+            <button type="button" style="width: 92px; flex: none; background: none; border: 0; border-right: 1px solid var(--color-neutral-300); font-family: var(--font-heading); font-weight: 800; font-size: 12px; color: var(--color-neutral-700); cursor: pointer" style-hover="color: var(--color-accent)">+ PAGE</button>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; min-height: 0">
+
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+            <div style="flex: 1; display: grid; place-items: center; background-color: var(--color-neutral-100); background-image: linear-gradient(var(--color-neutral-200) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-200) 1px, transparent 1px); background-size: 24px 24px">
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: baseline; gap: 10px">
+                  <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">{{ pageTitle }}</span>
+                  <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">320 × 240 @ 2×</span>
+                  <button type="button" onClick="{{ toggleDash }}" style="margin-left: auto; padding: 3px 10px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.1em; color: var(--color-neutral-700); cursor: pointer" style-hover="border-color: var(--color-accent); color: var(--color-accent)">{{ dashThemeLabel }}</button>
+                </div>
+                <div style="width: 640px; height: 480px; overflow: hidden; background: {{ dashBg }}; border: 2px solid var(--color-neutral-400); padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; font-family: ui-monospace, monospace; color: {{ dashInk }}">
+
+                  <sc-if value="{{ hasShift }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; gap: 3px; height: 14px">
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: {{ dashInk }}"></div>
+                      <div style="flex: 1; background: #FF4444"></div>
+                      <div style="flex: 1; background: #FF4444"></div>
+                      <div style="flex: 1; background: {{ dashTrack }}"></div>
+                      <div style="flex: 1; background: {{ dashTrack }}"></div>
+                      <div style="flex: 1; background: {{ dashTrack }}"></div>
+                    </div>
+                  </sc-if>
+
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; color: {{ dashDim }}; letter-spacing: 0.1em">
+                    <span>CAN 842 Hz</span><span>{{ pageStatus }}</span><span>{{ pageRight }}</span>
+                  </div>
+
+                  <div style="flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); align-content: start; gap: 12px">
+                    <sc-for list="{{ pageWidgets }}" as="w" hint-placeholder-count="6">
+                      <div style="{{ w.box }}">
+                        <span style="font-size: 10px; letter-spacing: 0.18em; color: {{ w.labelTint }}">{{ w.label }}</span>
+                        <sc-if value="{{ w.isArc }}" hint-placeholder-val="{{ false }}">
+                          <svg viewBox="0 0 160 160" style="{{ w.arcSize }}" fill="none">
+                            <circle cx="80" cy="80" r="62" stroke="{{ w.arcTrack }}" stroke-width="26" stroke-dasharray="292 390" transform="rotate(135 80 80)"></circle>
+                            <circle cx="80" cy="80" r="62" stroke="{{ w.arcInk }}" stroke-width="26" stroke-dasharray="{{ w.arcDash }}" transform="rotate(135 80 80)"></circle>
+                            <text x="80" y="92" text-anchor="middle" font-family="ui-monospace, monospace" font-size="42" letter-spacing="-2" fill="{{ w.arcInk }}">{{ w.value }}</text>
+                          </svg>
+                        </sc-if>
+                        <span style="{{ w.valueStyle }}">{{ w.value }}<span style="font-size: 16px; color: {{ w.unitTint }}"> {{ w.unit }}</span></span>
+                        <div style="{{ w.barTrack }}"><div style="{{ w.barFill }}"></div></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="height: 36px; flex: none; border-top: 2px solid var(--color-divider); display: flex; align-items: center; gap: 22px; padding: 0 20px; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">
+              <span>SELECTED <span style="color: var(--color-text)">gauge.rpm</span></span><span>x 168 · y 22</span><span>w 132 · h 132</span><span style="margin-left: auto">CAN 0x316 · 20 Hz</span>
+            </div>
+          </div>
+
+          <div style="width: 320px; flex: none; border-left: 2px solid var(--color-divider); display: flex; flex-direction: column; min-height: 0">
+            <div style="display: flex; border-bottom: 2px solid var(--color-divider)">
+              <button type="button" onClick="{{ panProps }}" style="{{ tabProps }}" style-hover="color: var(--color-text)">PROPERTIES</button>
+              <button type="button" onClick="{{ panWidgets }}" style="{{ tabWidgets }}" style-hover="color: var(--color-text)">WIDGETS</button>
+              <button type="button" onClick="{{ panLib }}" style="{{ tabLib }}" style-hover="color: var(--color-text)">LIBRARY</button>
+            </div>
+
+            <sc-if value="{{ isWidgets }}" hint-placeholder-val="{{ false }}">
+              <div style="flex: 1; overflow-y: auto">
+                <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)"><span>{{ pageLabel }}</span><span>{{ pageCount }}</span></div>
+                <sc-for list="{{ placed }}" as="w" hint-placeholder-count="8">
+                  <div style="{{ w.style }}">
+                    <span style="width: 20px; flex: none; font-family: ui-monospace, monospace; font-size: 10px; color: var(--color-neutral-600)">{{ w.no }}</span>
+                    <span style="font-size: 13px">{{ w.name }}</span>
+                    <span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 10px; color: var(--color-neutral-600)">{{ w.signal }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isLib }}" hint-placeholder-val="{{ false }}">
+              <div style="flex: 1; overflow-y: auto">
+                <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)"><span>SHIPPED · PROPOSED</span><span>{{ libCount }}</span></div>
+                <sc-for list="{{ library }}" as="c" hint-placeholder-count="12">
+                  <div style="{{ c.style }}">
+                    <span style="width: 20px; flex: none; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-accent)">{{ c.tag }}</span>
+                    <span style="font-size: 13px">{{ c.name }}</span>
+                    <span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 10px; color: {{ c.tint }}">{{ c.size }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isProps }}" hint-placeholder-val="{{ true }}">
+            <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px">
+              <div style="display: flex; flex-direction: column; gap: 7px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">TARGET SCREEN</span>
+                <div style="display: flex; justify-content: space-between; padding: 9px 11px; border: 1px solid var(--color-neutral-400); font-size: 13px">CrowPanel 2.8″ — 320×240<span style="color: var(--color-neutral-600)">▾</span></div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 11px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">GAUGE — RPM</span>
+                <div style="display: grid; grid-template-columns: 66px 1fr; gap: 9px 10px; align-items: center; font-size: 13px">
+                  <span style="color: var(--color-neutral-600)">Signal</span><div style="padding: 7px 10px; border: 1px solid var(--color-neutral-400); font-family: ui-monospace, monospace; font-size: 12px">ecu.rpm</div>
+                  <span style="color: var(--color-neutral-600)">Range</span>
+                  <div style="display: flex; gap: 8px"><div style="flex: 1; padding: 7px 10px; border: 1px solid var(--color-neutral-400); font-family: ui-monospace, monospace; font-size: 12px">0</div><div style="flex: 1; padding: 7px 10px; border: 1px solid var(--color-neutral-400); font-family: ui-monospace, monospace; font-size: 12px">8000</div></div>
+                  <span style="color: var(--color-neutral-600)">Warn at</span><div style="padding: 7px 10px; border: 1px solid var(--color-accent); font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-accent)">6800</div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 9px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">MODES</span>
+                <label style="display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400); flex: none"></span>Cruise control page</label>
+                <label style="display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent); flex: none"></span>Shift light</label>
+              </div>
+              <div style="border-top: 2px solid var(--color-divider); padding-top: 13px; font-size: 12px; color: var(--color-neutral-600); text-wrap: pretty">Widgets are not auto-scaled. Anything outside the 320 × 240 frame is flagged on the canvas.</div>
+            </div>
+            </sc-if>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCan }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <button type="button" style="padding: 6px 18px; background: var(--color-accent); border: 0; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.09em; color: #fff; cursor: pointer" style-hover="background: var(--color-accent-600)">START SCAN</button>
+          <button type="button" style="padding: 6px 14px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">RESET</button>
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600); margin-left: 8px">SORT BY</span>
+          <div style="display: flex; border: 1px solid var(--color-neutral-400)">
+            <span style="padding: 5px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; background: var(--color-text); color: var(--color-bg)">ID</span>
+            <span style="padding: 5px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-neutral-700)">RATE</span>
+            <span style="padding: 5px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-neutral-700)">COUNT</span>
+          </div>
+          <div style="margin-left: auto; display: flex; gap: 30px">
+            <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.18em; color: var(--color-neutral-600)">FRAMES</span><span style="font-family: ui-monospace, monospace; font-size: 15px">18 402</span></div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.18em; color: var(--color-neutral-600)">RATE</span><span style="font-family: ui-monospace, monospace; font-size: 15px">842 Hz</span></div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 9px; letter-spacing: 0.18em; color: var(--color-neutral-600)">STATUS</span><span style="font-family: ui-monospace, monospace; font-size: 15px; color: var(--color-accent)">Scanning</span></div>
+          </div>
+        </div>
+        <div style="flex: 1; overflow: hidden">
+          <div style="display: grid; grid-template-columns: 110px 70px 1fr 100px 110px 180px; padding: 11px 20px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">
+            <span>ID</span><span>DLC</span><span>DATA</span><span>RATE</span><span>COUNT</span><span>MAPPED TO</span>
+          </div>
+          <sc-for list="{{ frames }}" as="f" hint-placeholder-count="10">
+            <div style="display: grid; grid-template-columns: 110px 70px 1fr 100px 110px 180px; padding: 12px 20px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 13px; align-items: center">
+              <span style="color: var(--color-accent)">{{ f.id }}</span>
+              <span style="color: var(--color-neutral-600)">{{ f.dlc }}</span>
+              <span>{{ f.data }}</span>
+              <span style="color: var(--color-neutral-700)">{{ f.rate }}</span>
+              <span style="color: var(--color-neutral-700)">{{ f.count }}</span>
+              <span style="font-family: var(--font-body); font-size: 12px; color: {{ f.mapTint }}">{{ f.map }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">Live data</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">12 signals · 20 Hz · simulation</span>
+          <button type="button" style="margin-left: auto; padding: 6px 14px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">EXPORT CSV</button>
+        </div>
+        <div style="flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr)">
+          <sc-for list="{{ signals }}" as="s" hint-placeholder-count="12">
+            <div style="border-right: 1px solid var(--color-neutral-300); border-bottom: 1px solid var(--color-neutral-300); padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; gap: 9px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">{{ s.label }}</span>
+              <div style="display: flex; align-items: baseline; gap: 6px">
+                <span style="font-family: ui-monospace, monospace; font-size: 44px; line-height: 1.1; color: {{ s.tint }}">{{ s.value }}</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 13px; color: var(--color-neutral-600)">{{ s.unit }}</span>
+              </div>
+              <div style="height: 4px; background: var(--color-neutral-300)"><div style="width: {{ s.pct }}; height: 100%; background: {{ s.tint }}"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isFw }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">Firmware</span>
+          <span style="display: flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid var(--color-neutral-400); font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-700)"><span style="width: 7px; height: 7px; background: var(--color-neutral-500)"></span>no device connected</span>
+          <div style="display: flex; align-items: center; border: 1px solid var(--color-neutral-400)">
+            <span style="padding: 5px 11px; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600); border-right: 1px solid var(--color-neutral-400)">PORT</span>
+            <span style="padding: 5px 11px; font-family: ui-monospace, monospace; font-size: 11px">/dev/cu.usbmodem2101 ▾</span>
+          </div>
+          <button type="button" style="padding: 5px 12px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">RESCAN</button>
+          <span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">esptool 4.7 · baud 921600</span>
+        </div>
+
+        <div style="flex: 1; display: flex; min-height: 0">
+
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 2px solid var(--color-divider)">
+              <div style="padding: 20px 24px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 5px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">INSTALLED</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 30px; line-height: 1.1">0.1.0</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">burned 14 Jun 2026</span>
+              </div>
+              <div style="padding: 20px 24px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 5px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-accent)">AVAILABLE</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 30px; line-height: 1.1; color: var(--color-accent)">0.1.1</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">released 22 Jul 2026 · 1.84 MB</span>
+              </div>
+              <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 5px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">PAYLOAD</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 30px; line-height: 1.1">8 / 31</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">pages / widgets to flash</span>
+              </div>
+            </div>
+
+            <div style="padding: 22px 24px 10px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">CHOOSE A BUILD</div>
+            <div style="border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider)">
+              <label style="display: grid; grid-template-columns: 26px 96px 1fr 120px 96px; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer; box-shadow: inset 3px 0 0 var(--color-accent); background: var(--color-neutral-100)">
+                <span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent)"></span>
+                <span style="font-family: ui-monospace, monospace; font-size: 14px">0.1.1</span>
+                <span style="font-size: 13px">Stable — recommended for track use</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">22 Jul 2026</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">1.84 MB</span>
+              </label>
+              <label style="display: grid; grid-template-columns: 26px 96px 1fr 120px 96px; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer">
+                <span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400)"></span>
+                <span style="font-family: ui-monospace, monospace; font-size: 14px">0.1.0</span>
+                <span style="font-size: 13px; color: var(--color-neutral-700)">On the device now — reflash or roll back</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">14 Jun 2026</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">1.79 MB</span>
+              </label>
+              <label style="display: grid; grid-template-columns: 26px 96px 1fr 120px 96px; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer">
+                <span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400)"></span>
+                <span style="font-family: ui-monospace, monospace; font-size: 14px">0.2.0-rc1</span>
+                <span style="font-size: 13px; color: var(--color-neutral-700)">Nightly — lap timer, delta, 4″ panels. Unsigned.</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">31 Jul 2026</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">2.06 MB</span>
+              </label>
+              <label style="display: grid; grid-template-columns: 26px 96px 1fr 216px; align-items: center; gap: 12px; padding: 14px 24px; cursor: pointer">
+                <span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400)"></span>
+                <span style="font-family: ui-monospace, monospace; font-size: 14px">Local</span>
+                <span style="font-size: 13px; color: var(--color-neutral-700)">Pick a .bin from disk</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">no file selected</span>
+              </label>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid var(--color-divider)">
+              <div style="padding: 20px 24px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 12px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">WHAT GETS WRITTEN</span>
+                <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent); flex: none"></span>Firmware image</label>
+                <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent); flex: none"></span>Dashboard layout — 8 pages</label>
+                <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent); flex: none"></span>CAN profile — MaxxECU</label>
+                <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--color-neutral-700); cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400); flex: none"></span>Erase user settings and logs</label>
+              </div>
+              <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 12px">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">PRE-FLIGHT</span>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 13px"><span style="font-family: ui-monospace, monospace; color: var(--color-accent)">✓</span>Layout fits 320 × 240</div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 13px"><span style="font-family: ui-monospace, monospace; color: var(--color-accent)">✓</span>All widgets bound to a signal</div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 13px"><span style="font-family: ui-monospace, monospace; color: var(--color-accent)">✓</span>Flash budget 62 % — fits</div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--color-neutral-700)"><span style="font-family: ui-monospace, monospace; color: var(--color-neutral-500)">—</span>Device not connected · plug in USB to burn</div>
+              </div>
+            </div>
+
+            <div style="padding: 20px 24px; display: flex; align-items: center; gap: 12px">
+              <button type="button" style="padding: 13px 26px; background: var(--color-accent); border: 0; font-family: var(--font-heading); font-weight: 800; font-size: 13px; letter-spacing: 0.09em; color: #fff; cursor: pointer" style-hover="background: var(--color-accent-600)">BURN 0.1.1</button>
+              <button type="button" style="padding: 13px 20px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 13px; letter-spacing: 0.07em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">VERIFY ONLY</button>
+              <button type="button" style="padding: 13px 20px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 13px; letter-spacing: 0.07em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">DOWNLOAD .BIN</button>
+              <span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">≈ 48 s · do not unplug</span>
+            </div>
+
+          </div>
+
+          <div style="width: 392px; flex: none; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100); display: flex; flex-direction: column; min-height: 0">
+            <div style="padding: 16px 24px 13px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">CHANGELOG 0.1.1</div>
+            <div style="padding: 18px 24px; display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: var(--color-neutral-700); border-bottom: 2px solid var(--color-divider)">
+              <div style="border-left: 2px solid var(--color-accent); padding-left: 13px">Shift light driven by a per-gear RPM table instead of one global limit.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 13px">CAN listener recovers from bus-off without a reboot.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 13px">Page swipe latency down to 40 ms on the 2.8″ panel.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 13px">OBD-II mode 01 PIDs 0C, 0D, 05, 0F added.</div>
+            </div>
+            <div style="padding: 16px 24px 13px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">FLASH HISTORY</div>
+            <div style="flex: 1; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-neutral-700)">
+              <div style="display: flex; justify-content: space-between; padding: 11px 24px; border-bottom: 1px solid var(--color-neutral-300)"><span>0.1.0</span><span>14 Jun · ok</span></div>
+              <div style="display: flex; justify-content: space-between; padding: 11px 24px; border-bottom: 1px solid var(--color-neutral-300)"><span>0.1.0</span><span>09 Jun · ok</span></div>
+              <div style="display: flex; justify-content: space-between; padding: 11px 24px; border-bottom: 1px solid var(--color-neutral-300)"><span>0.0.9</span><span>02 Jun · <span style="color: var(--color-accent)">failed</span></span></div>
+              <div style="display: flex; justify-content: space-between; padding: 11px 24px; border-bottom: 1px solid var(--color-neutral-300)"><span>0.0.9</span><span>02 Jun · ok</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isThemes }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">Themes</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">applies to every page on the device</span>
+          <button type="button" style="margin-left: auto; padding: 6px 14px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">NEW THEME</button>
+        </div>
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="flex: 1; min-width: 0; overflow-y: auto; padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-content: start">
+            <div style="border: 2px solid var(--color-accent)">
+              <div style="display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; border-bottom: 2px solid var(--color-divider)"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Night — default</span><span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-accent)">active</span></div>
+              <div style="height: 140px; background: #121212; display: flex; align-items: flex-end; gap: 16px; padding: 16px; font-family: ui-monospace, monospace; color: #FFFFFF"><span style="font-size: 52px; line-height: 0.9">5200</span><span style="font-size: 30px; color: #BABABA">195</span><span style="margin-left: auto; font-size: 30px; color: #FF4444">1.1</span></div>
+              <div style="display: flex; height: 26px"><div style="flex: 1; background: #121212"></div><div style="flex: 1; background: #1F1F1F"></div><div style="flex: 1; background: #333333"></div><div style="flex: 1; background: #BABABA"></div><div style="flex: 1; background: #FF4747"></div><div style="flex: 1; background: #FF8800"></div></div>
+            </div>
+            <div style="border: 2px solid var(--color-divider)">
+              <div style="display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; border-bottom: 2px solid var(--color-divider)"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Day</span><span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">auto at sunrise</span></div>
+              <div style="height: 140px; background: #DDDDDD; display: flex; align-items: flex-end; gap: 16px; padding: 16px; font-family: ui-monospace, monospace; color: #000000"><span style="font-size: 52px; line-height: 0.9">5200</span><span style="font-size: 30px; color: #5A5A5A">195</span><span style="margin-left: auto; font-size: 30px; color: #CC0000">1.1</span></div>
+              <div style="display: flex; height: 26px"><div style="flex: 1; background: #DDDDDD"></div><div style="flex: 1; background: #F0F0F0"></div><div style="flex: 1; background: #C4C4C4"></div><div style="flex: 1; background: #5A5A5A"></div><div style="flex: 1; background: #CC0000"></div><div style="flex: 1; background: #E06000"></div></div>
+            </div>
+            <sc-for list="{{ themes }}" as="t" hint-placeholder-count="6">
+              <div style="border: 2px solid var(--color-divider)">
+                <div style="display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; border-bottom: 2px solid var(--color-divider)">
+                  <span style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">{{ t.name }}</span>
+                  <span style="margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">{{ t.note }}</span>
+                </div>
+                <div style="height: 140px; background: {{ t.bg }}; display: flex; align-items: flex-end; gap: 16px; padding: 16px; font-family: ui-monospace, monospace; color: {{ t.ink }}">
+                  <span style="font-size: 52px; line-height: 0.9">5200</span>
+                  <span style="font-size: 30px; color: {{ t.dim }}">195</span>
+                  <span style="margin-left: auto; font-size: 30px; color: {{ t.danger }}">1.1</span>
+                </div>
+                <div style="display: flex; height: 26px">
+                  <div style="flex: 1; background: {{ t.bg }}"></div>
+                  <div style="flex: 1; background: {{ t.surface }}"></div>
+                  <div style="flex: 1; background: {{ t.track }}"></div>
+                  <div style="flex: 1; background: {{ t.dim }}"></div>
+                  <div style="flex: 1; background: {{ t.danger }}"></div>
+                  <div style="flex: 1; background: {{ t.accent }}"></div>
+                </div>
+              </div>
+            </sc-for>
+            <div style="border: 2px dashed var(--color-neutral-400); display: grid; place-items: center; min-height: 204px; color: var(--color-neutral-600); font-size: 13px">Duplicate a theme to start a custom one</div>
+          </div>
+          <div style="width: 320px; flex: none; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100); padding: 20px; display: flex; flex-direction: column; gap: 18px">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">NIGHT — TOKENS</span>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-family: ui-monospace, monospace; font-size: 12px">
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 16px; height: 16px; background: #121212; border: 1px solid var(--color-neutral-400)"></span>bg<span style="margin-left: auto; color: var(--color-neutral-600)">#121212</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 16px; height: 16px; background: #1F1F1F; border: 1px solid var(--color-neutral-400)"></span>surface<span style="margin-left: auto; color: var(--color-neutral-600)">#1F1F1F</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 16px; height: 16px; background: #FF4747"></span>primary<span style="margin-left: auto; color: var(--color-neutral-600)">#FF4747</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 16px; height: 16px; background: #00CC44"></span>zone ok<span style="margin-left: auto; color: var(--color-neutral-600)">#00CC44</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 16px; height: 16px; background: #FF4444"></span>zone danger<span style="margin-left: auto; color: var(--color-neutral-600)">#FF4444</span></div>
+            </div>
+            <div style="border-top: 2px solid var(--color-divider); padding-top: 14px; display: flex; flex-direction: column; gap: 11px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">SWITCHING</span>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent); flex: none"></span>Auto day / night</label>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer"><span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400); flex: none"></span>Follow headlight CAN signal</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">Boot &amp; update</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">320 × 240 shown at 2× · burned with the firmware</span>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 24px; display: grid; grid-template-columns: repeat(2, 528px); gap: 24px; justify-content: start; align-content: start">
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">01 — BOOT · 0.0 s</span>
+            <div style="width: 528px; height: 396px; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px">
+              <svg viewBox="0 0 116 100" style="width: 168px" fill="none">
+                <g transform="translate(10,0) skewX(-11)">
+                  <path d="M46 26 H22 V74 H46" stroke="#FFFFFF" stroke-width="13"></path>
+                  <path d="M96 26 H66 V50 H96 V74 H66" stroke="#FF4747" stroke-width="13"></path>
+                </g>
+              </svg>
+              <div style="display: inline-block; transform: skewX(-11deg); font-family: var(--font-heading); font-weight: 800; font-size: 46px; letter-spacing: -0.045em; line-height: 1; color: #FFFFFF"><span>CAN</span><span style="color: #FF4747">SHIFT</span></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">02 — BOOT · SELF-TEST</span>
+            <div style="width: 528px; height: 396px; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 34px; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #FFFFFF">
+              <div style="display: flex; align-items: center; gap: 18px">
+                <svg viewBox="0 0 116 100" style="width: 64px; flex: none" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#FFFFFF" stroke-width="13"></path>
+                    <path d="M96 26 H66 V50 H96 V74 H66" stroke="#FF4747" stroke-width="13"></path>
+                  </g>
+                </svg>
+                <div style="display: inline-block; transform: skewX(-11deg); font-family: var(--font-heading); font-weight: 800; font-size: 30px; letter-spacing: -0.045em"><span>CAN</span><span style="color: #FF4747">SHIFT</span></div>
+              </div>
+              <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 14px; font-size: 20px">
+                <div style="display: flex; justify-content: space-between"><span style="color: #BABABA">DISPLAY</span><span>OK</span></div>
+                <div style="display: flex; justify-content: space-between"><span style="color: #BABABA">CAN 500k</span><span>OK</span></div>
+                <div style="display: flex; justify-content: space-between"><span style="color: #BABABA">ECU MaxxECU</span><span>LINK</span></div>
+                <div style="display: flex; justify-content: space-between"><span style="color: #BABABA">PAGES</span><span>8</span></div>
+              </div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+                <div style="height: 8px; background: #222222"><div style="width: 72%; height: 100%; background: #FF4747"></div></div>
+                <div style="display: flex; justify-content: space-between; font-size: 15px; color: #BABABA"><span>fw 0.1.0</span><span>E36 TRACK DASH</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">03 — UPDATE · WRITING</span>
+            <div style="width: 528px; height: 396px; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 34px; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #FFFFFF">
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px; letter-spacing: 0.22em; color: #BABABA">UPDATING FIRMWARE</div>
+              <div style="margin-top: 40px; display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 118px; line-height: 0.9">62</span><span style="font-size: 40px; color: #BABABA">%</span>
+              </div>
+              <div style="margin-top: 8px; font-size: 20px; color: #BABABA">0.1.0 → <span style="color: #FF4747">0.1.1</span></div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 14px">
+                <div style="height: 14px; background: #222222"><div style="width: 62%; height: 100%; background: #FF4747"></div></div>
+                <div style="display: flex; justify-content: space-between; font-size: 17px; color: #BABABA"><span>writing app partition</span><span>1.14 / 1.84 MB</span></div>
+                <div style="font-size: 17px; color: #FF8800">DO NOT UNPLUG</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">04 — UPDATE · DONE / FAILED</span>
+            <div style="width: 528px; height: 396px; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; display: grid; grid-template-rows: 1fr 1fr">
+              <div style="padding: 28px 34px; border-bottom: 1px solid #222222; display: flex; flex-direction: column; justify-content: center; gap: 10px; font-family: ui-monospace, monospace; color: #FFFFFF">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px; letter-spacing: 0.22em; color: #00CC2A">UPDATE COMPLETE</div>
+                <div style="font-size: 44px; line-height: 1">0.1.1</div>
+                <div style="font-size: 17px; color: #BABABA">restarting in 3 s</div>
+              </div>
+              <div style="padding: 28px 34px; display: flex; flex-direction: column; justify-content: center; gap: 10px; font-family: ui-monospace, monospace; color: #FFFFFF">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px; letter-spacing: 0.22em; color: #FF4444">UPDATE FAILED</div>
+                <div style="font-size: 26px; line-height: 1.1">flash verify error at 0x1C0000</div>
+                <div style="font-size: 17px; color: #BABABA">kept 0.1.0 · reconnect USB and retry</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isEcu }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">ECU profile</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">MaxxECU · 500 kbit/s · 42 signals · 7 bound</span>
+          <button type="button" style="margin-left: auto; padding: 6px 14px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">IMPORT .DBC</button>
+        </div>
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="width: 250px; flex: none; border-right: 2px solid var(--color-divider); overflow-y: auto">
+            <div style="padding: 12px 18px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">PROFILES</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-family: var(--font-heading); font-weight: 800; font-size: 13px; box-shadow: inset 3px 0 0 var(--color-accent); background: var(--color-neutral-200)">MaxxECU</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)">Link G4X</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)">Haltech Elite</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)">MoTeC M1</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)">Emtron</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)">Speeduino</div>
+            <div style="padding: 11px 18px; font-size: 13px; color: var(--color-neutral-700)">Custom — E36 stock</div>
+          </div>
+          <div style="flex: 1; min-width: 0; overflow-y: auto">
+            <div style="display: grid; grid-template-columns: 160px 96px 84px 84px 84px 1fr; padding: 11px 20px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">
+              <span>SIGNAL</span><span>CAN ID</span><span>BYTES</span><span>SCALE</span><span>UNIT</span><span>BOUND TO</span>
+            </div>
+            <sc-for list="{{ ecuSignals }}" as="e" hint-placeholder-count="10">
+              <div style="display: grid; grid-template-columns: 160px 96px 84px 84px 84px 1fr; padding: 12px 20px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 13px; align-items: center">
+                <span>{{ e.name }}</span><span style="color: var(--color-accent)">{{ e.id }}</span><span style="color: var(--color-neutral-600)">{{ e.bytes }}</span><span style="color: var(--color-neutral-600)">{{ e.scale }}</span><span style="color: var(--color-neutral-600)">{{ e.unit }}</span><span style="font-family: var(--font-body); font-size: 12px; color: {{ e.tint }}">{{ e.used }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isObd }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">OBD-II</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">ISO 15765-4 · 11 bit · 500 kbit/s</span>
+          <button type="button" style="margin-left: auto; padding: 6px 16px; background: var(--color-accent); border: 0; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.09em; color: #fff; cursor: pointer" style-hover="background: var(--color-accent-600)">READ DTCs</button>
+        </div>
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="flex: 1; min-width: 0; overflow-y: auto">
+            <div style="padding: 16px 20px 10px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">MODE 01 — SUPPORTED PIDs</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-top: 2px solid var(--color-divider)">
+              <sc-for list="{{ pids }}" as="p" hint-placeholder-count="12">
+                <div style="padding: 14px 20px; border-right: 1px solid var(--color-neutral-300); border-bottom: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 3px">
+                  <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-accent)">{{ p.pid }}</span>
+                  <span style="font-size: 13px">{{ p.name }}</span>
+                  <span style="font-family: ui-monospace, monospace; font-size: 20px; color: {{ p.tint }}">{{ p.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="width: 360px; flex: none; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100)">
+            <div style="padding: 14px 20px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">TROUBLE CODES — 2</div>
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 5px">
+              <span style="font-family: ui-monospace, monospace; font-size: 17px; color: var(--color-accent)">P0301</span>
+              <span style="font-size: 13px">Cylinder 1 misfire detected</span>
+              <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">confirmed · 3 drive cycles</span>
+            </div>
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 5px">
+              <span style="font-family: ui-monospace, monospace; font-size: 17px; color: var(--color-neutral-700)">P0171</span>
+              <span style="font-size: 13px">System too lean — bank 1</span>
+              <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">pending</span>
+            </div>
+            <div style="padding: 18px 20px">
+              <button type="button" style="padding: 11px 18px; background: none; border: 1px solid var(--color-accent); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.08em; color: var(--color-accent); cursor: pointer" style-hover="background: color-mix(in srgb, var(--color-accent) 14%, transparent)">CLEAR CODES</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLogs }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">Logs</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">2 sessions on device · 18.4 MB free</span>
+          <button type="button" style="margin-left: auto; padding: 6px 14px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">EXPORT CSV</button>
+        </div>
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="width: 288px; flex: none; border-right: 2px solid var(--color-divider)">
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--color-neutral-300); box-shadow: inset 3px 0 0 var(--color-accent); background: var(--color-neutral-200); display: flex; flex-direction: column; gap: 4px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Bresse — session 2</span>
+              <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">28 Jul · 24 min · 12.1 MB · 8 laps</span>
+            </div>
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 13px; color: var(--color-neutral-700)">Bresse — session 1</span>
+              <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">28 Jul · 18 min · 6.3 MB · 6 laps</span>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 2px solid var(--color-divider)">
+              <div style="padding: 18px 20px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">BEST LAP</span><span style="font-family: ui-monospace, monospace; font-size: 28px">1:36.08</span></div>
+              <div style="padding: 18px 20px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">MAX RPM</span><span style="font-family: ui-monospace, monospace; font-size: 28px">7180</span></div>
+              <div style="padding: 18px 20px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">MAX OIL T</span><span style="font-family: ui-monospace, monospace; font-size: 28px; color: var(--color-accent)">128 °C</span></div>
+              <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 4px"><span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">MIN OIL P</span><span style="font-family: ui-monospace, monospace; font-size: 28px; color: var(--color-accent)">1.1 bar</span></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 70px 130px 110px 110px 1fr; padding: 11px 20px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; color: var(--color-neutral-600)">
+              <span>LAP</span><span>TIME</span><span>DELTA</span><span>MAX RPM</span><span>NOTE</span>
+            </div>
+            <sc-for list="{{ laps }}" as="l" hint-placeholder-count="8">
+              <div style="display: grid; grid-template-columns: 70px 130px 110px 110px 1fr; padding: 11px 20px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 13px">
+                <span style="color: var(--color-neutral-600)">{{ l.no }}</span><span>{{ l.time }}</span><span style="color: {{ l.tint }}">{{ l.delta }}</span><span style="color: var(--color-neutral-700)">{{ l.rpm }}</span><span style="font-family: var(--font-body); font-size: 12px; color: var(--color-neutral-600)">{{ l.note }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCli }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">CLI</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">serial 115200 · type help</span>
+          <button type="button" style="margin-left: auto; padding: 6px 14px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">CLEAR</button>
+        </div>
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="flex: 1; min-width: 0; background: #0b0a0a; padding: 18px 20px; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 13px; line-height: 1.75; color: #d8d5d5">
+            <div style="color: #6b6767">CANShift firmware 0.1.0 — ESP32-S3 — build 2026-06-14</div>
+            <div><span style="color: #ec3013">canshift&gt;</span> can status</div>
+            <div>bus 0 · 500 kbit/s · state ACTIVE · err 0 · rx 18402 · tx 12</div>
+            <div><span style="color: #ec3013">canshift&gt;</span> sig list --bound</div>
+            <div>ecu.rpm      0x0AA[0:1]  ×1     rpm</div>
+            <div>ecu.speed    0x0B4[2:3]  ×0.1   km/h</div>
+            <div>ecu.coolant  0x1D0[0]    −40    °C</div>
+            <div>ecu.oilP     0x1D2[0]    ×0.1   bar</div>
+            <div><span style="color: #ec3013">canshift&gt;</span> page show 4</div>
+            <div>page 4 "Track" · 8 widgets · 0 out of bounds</div>
+            <div><span style="color: #ec3013">canshift&gt;</span> <span style="display: inline-block; width: 9px; height: 15px; background: #ec3013; vertical-align: -2px"></span></div>
+          </div>
+          <div style="width: 290px; flex: none; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100); overflow-y: auto">
+            <div style="padding: 14px 18px; border-bottom: 2px solid var(--color-divider); font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">COMMANDS</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 12px">can status | dump | reset</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 12px">sig list | bind | unbind</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 12px">page show | goto | dup</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 12px">theme set night | day</div>
+            <div style="padding: 11px 18px; border-bottom: 1px solid var(--color-neutral-300); font-family: ui-monospace, monospace; font-size: 12px">log start | stop | ls</div>
+            <div style="padding: 11px 18px; font-family: ui-monospace, monospace; font-size: 12px">fw version | verify | burn</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; min-height: 0">
+        <div style="flex: 1; min-width: 0; padding: 44px; display: flex; flex-direction: column; gap: 28px; overflow-y: auto">
+          <div style="display: flex; align-items: center; gap: 20px">
+            <svg viewBox="0 0 116 100" style="width: 80px; flex: none" fill="none">
+              <g transform="translate(10,0) skewX(-11)">
+                <path d="M46 26 H22 V74 H46" stroke="currentColor" stroke-width="13"></path>
+                <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path>
+              </g>
+            </svg>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: inline-block; transform: skewX(-11deg); transform-origin: left; font-family: var(--font-heading); font-weight: 800; font-size: 40px; letter-spacing: -0.045em; line-height: 1"><span>CAN</span><span style="color: var(--color-accent)">SHIFT</span></div>
+              <div style="font-family: var(--font-heading); font-weight: 600; font-size: 9px; letter-spacing: 0.34em; color: var(--color-neutral-600)">DASH CANBUS FIRMWARE</div>
+            </div>
+          </div>
+          <div style="max-width: 620px; border-top: 2px solid var(--color-divider)">
+            <div style="display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--color-neutral-300); font-size: 14px"><span style="color: var(--color-neutral-600)">Tuner</span><span style="font-family: ui-monospace, monospace">0.1.0 — web</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--color-neutral-300); font-size: 14px"><span style="color: var(--color-neutral-600)">Firmware on device</span><span style="font-family: ui-monospace, monospace">0.1.0</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--color-neutral-300); font-size: 14px"><span style="color: var(--color-neutral-600)">Supported panels</span><span style="font-family: ui-monospace, monospace">CrowPanel 2.8″ · 3.5″ · 4.3″</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 13px 0; font-size: 14px"><span style="color: var(--color-neutral-600)">Licence</span><span style="font-family: ui-monospace, monospace">MIT · github.com/tburkhalterr/CANShift</span></div>
+          </div>
+          <div style="display: flex; gap: 12px">
+            <button type="button" style="padding: 12px 22px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">CHECK FOR UPDATES</button>
+            <button type="button" style="padding: 12px 22px; background: none; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.08em; color: var(--color-text); cursor: pointer" style-hover="border-color: var(--color-accent)">REPORT A BUG</button>
+          </div>
+        </div>
+        <div style="width: 360px; flex: none; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100); padding: 44px 28px; display: flex; flex-direction: column; gap: 14px">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">CREDITS</span>
+          <div style="font-size: 13px; color: var(--color-neutral-700); text-wrap: pretty">Built by the CANShift project. Firmware on ESP32-S3, tuner in the browser over Web Serial, mobile over BLE.</div>
+          <div style="border-top: 2px solid var(--color-divider); padding-top: 14px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-neutral-600); display: flex; flex-direction: column; gap: 7px">
+            <span>esptool 4.7</span><span>LVGL 9.2</span><span>lucide icons</span><span>Archivo — Omnibus Type</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isStates }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+        <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 2px solid var(--color-divider)">
+          <span style="font-family: var(--font-heading); font-weight: 800; font-size: 14px">States &amp; alerts</span>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">full-screen takeovers · live motion</span>
+        </div>
+        <div style="flex: 1; display: flex; min-height: 0">
+          <div style="flex: 1; min-width: 0; overflow-y: auto; padding: 24px; display: grid; grid-template-columns: repeat(2, 400px); gap: 24px; justify-content: start; align-content: start">
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">REV LIMIT — flash 6 Hz</span>
+              <div style="width: 400px; height: 300px; overflow: hidden; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 14px; font-family: ui-monospace, monospace; color: #FFFFFF">
+                <div style="display: flex; gap: 3px; height: 18px; animation: cs-flash 0.16s steps(1, end) infinite">
+                  <div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div>
+                </div>
+                <div style="display: flex; flex-direction: column"><span style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">RPM</span><span style="font-size: 92px; line-height: 0.9; letter-spacing: -0.045em; color: #FF4444; animation: cs-flash 0.16s steps(1, end) infinite">7180</span></div>
+                <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end">
+                  <span style="font-family: var(--font-heading); font-weight: 800; font-size: 20px; letter-spacing: 0.18em; color: #FF4444">SHIFT</span>
+                  <span style="font-size: 44px; line-height: 0.9">3</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">ANTI-LAG ARMED — pulse 1 s</span>
+              <div style="width: 400px; height: 300px; overflow: hidden; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 16px; font-family: ui-monospace, monospace; color: #FFFFFF">
+                <div style="height: 14px; background: #FF8800; animation: cs-pulse 1s ease-in-out infinite"></div>
+                <div style="display: flex; flex-direction: column; gap: 3px">
+                  <span style="font-family: var(--font-heading); font-weight: 800; font-size: 21px; letter-spacing: 0.16em; color: #FF8800">ANTI-LAG ARMED</span>
+                  <span style="font-size: 14px; color: #BABABA">ignition cut active above 3200 rpm</span>
+                </div>
+                <div style="display: flex; gap: 16px; margin-top: auto">
+                  <div style="flex: 1; border-top: 2px solid #FFFFFF; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">RPM</div><div style="font-size: 40px; line-height: 0.95">4200</div></div>
+                  <div style="flex: 1; border-top: 2px solid #FFFFFF; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">EGT</div><div style="font-size: 40px; line-height: 0.95; color: #FF8800">912</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">LAUNCH — holding target</span>
+              <div style="width: 400px; height: 300px; overflow: hidden; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 14px; font-family: ui-monospace, monospace; color: #FFFFFF">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 20px; letter-spacing: 0.16em; animation: cs-pulse 1.2s ease-in-out infinite">LAUNCH ARMED</span>
+                <div style="display: flex; flex-direction: column"><span style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">HOLDING</span><span style="font-size: 80px; line-height: 0.9; letter-spacing: -0.045em">4200</span></div>
+                <div style="height: 12px; background: #222222"><div style="height: 100%; background: #FFFFFF; animation: cs-sweep 1.4s ease-in-out infinite alternate"></div></div>
+                <div style="margin-top: auto; display: flex; justify-content: space-between; font-size: 14px; color: #BABABA"><span>CLUTCH IN</span><span>TARGET 4200 rpm</span></div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">OIL PRESSURE — critical takeover</span>
+              <div style="width: 400px; height: 300px; overflow: hidden; background: #FF4444; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #FFFFFF; animation: cs-pulse 0.9s ease-in-out infinite">
+                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 17px; letter-spacing: 0.18em">OIL PRESSURE</span>
+                <span style="font-size: 100px; line-height: 0.95; letter-spacing: -0.045em">1.1</span>
+                <span style="font-size: 17px">bar — minimum 2.5 at 5000 rpm</span>
+                <span style="margin-top: auto; font-family: var(--font-heading); font-weight: 800; font-size: 17px; letter-spacing: 0.16em">STOP THE ENGINE</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">OVERHEAT — warning band</span>
+              <div style="width: 400px; height: 300px; overflow: hidden; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #FFFFFF">
+                <div style="background: #FF8800; color: #121212; padding: 10px 20px; font-family: var(--font-heading); font-weight: 800; font-size: 20px; letter-spacing: 0.16em; animation: cs-pulse 1.4s ease-in-out infinite">COOLANT HIGH</div>
+                <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px; flex: 1">
+                  <div style="display: flex; flex-direction: column"><span style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">WATER</span><span style="font-size: 80px; line-height: 0.9; color: #FF8800">114</span></div>
+                  <div style="margin-top: auto; display: flex; gap: 16px">
+                    <div style="flex: 1; border-top: 2px solid #FFFFFF; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">OIL T</div><div style="font-size: 17px; line-height: 1">128</div></div>
+                    <div style="flex: 1; border-top: 2px solid #FFFFFF; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em; color: #BABABA">FAN</div><div style="font-size: 17px; line-height: 1">ON</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">NO CAN — stale values</span>
+              <div style="width: 400px; height: 300px; overflow: hidden; background: #121212; border: 2px solid var(--color-neutral-400); box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 14px; font-family: ui-monospace, monospace; color: #5A5A5A">
+                <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #FF4444">CAN BUS OFF</span><span>retry 3 / 5</span></div>
+                <div style="display: flex; flex-direction: column"><span style="font-size: 11px; letter-spacing: 0.18em">RPM</span><span style="font-size: 80px; line-height: 0.9; animation: cs-pulse 1.6s ease-in-out infinite">- -</span></div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: auto">
+                  <div style="border-top: 1px solid #222222; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em">WATER</div><div style="font-size: 17px">- -</div></div>
+                  <div style="border-top: 1px solid #222222; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em">OIL T</div><div style="font-size: 17px">- -</div></div>
+                  <div style="border-top: 1px solid #222222; padding-top: 7px"><div style="font-size: 11px; letter-spacing: 0.18em">BATT</div><div style="font-size: 17px; color: #FFFFFF">13.3</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="width: 320px; flex: none; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100); padding: 20px; display: flex; flex-direction: column; gap: 14px">
+            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">MOTION SPEC</span>
+            <div style="display: flex; flex-direction: column; gap: 11px; font-size: 13px; color: var(--color-neutral-700)">
+              <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">Shift / rev limit — hard on-off at 6 Hz, no easing. Legibility beats smoothness.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Armed states — 1 s ease-in-out pulse between 100 % and 35 % opacity.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Critical alarm — whole screen pulses; the value never moves so it stays readable.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Value updates — snap, never tween. Tweened numbers lie about what the ECU said.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Bars and arcs — 120 ms linear catch-up, so they read as motion, not as jitter.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Stale data — value greyed and replaced by <span style="font-family: ui-monospace, monospace">- -</span> after 500 ms without a frame.</div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Page change — instant cut. No slide: the driver's eye must not track anything.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:940},&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+const PAGES = [
+  { no: '01', name: 'Street', status: 'MAP 1', right: 'TRIP 128 km', v1: '82', v2: '2400', kind: 'daily', widgets: [
+    { label: 'SPEED', value: '82', unit: 'km/h', span: 7, big: 96 },
+    { label: 'GEAR', value: '4', unit: '', span: 5, big: 96 },
+    { label: 'RPM', value: '2400', unit: 'rpm', span: 6, big: 44, pct: '30%' },
+    { label: 'WATER', value: '88', unit: '°C', span: 3 },
+    { label: 'FUEL', value: '46', unit: '%', span: 3, pct: '46%' },
+    { label: 'BATT', value: '13.8', unit: 'V', span: 4, big: 34 },
+    { label: 'ODO', value: '184203', unit: 'km', span: 8, big: 34 }
+  ] },
+  { no: '02', name: 'Track', status: 'MAP 1', right: 'LAP 4 — 1:38.42', v1: '195', v2: '5200', kind: 'race', shift: true, widgets: [
+    { label: 'RPM', value: '5200', unit: 'rpm', span: 7, big: 88 },
+    { label: 'GEAR', value: '3', unit: '', span: 5, big: 88 },
+    { label: 'SPEED', value: '195', unit: 'km/h', span: 6, big: 64 },
+    { label: 'OIL PRESS', value: '1.1', unit: 'bar', span: 6, big: 64, kind: 'danger' },
+    { label: 'WATER', value: '78', unit: '°C', span: 3, big: 34 },
+    { label: 'OIL T', value: '112', unit: '°C', span: 3, big: 34 },
+    { label: 'BOOST', value: '1.42', unit: 'bar', span: 3, big: 34 },
+    { label: 'BATT', value: '13.3', unit: 'V', span: 3, big: 34 }
+  ] },
+  { no: '03', name: 'Engine', status: 'MAP 1', right: 'MAX OIL 128', v1: '98', v2: '3.9', kind: 'health', widgets: [
+    { label: 'WATER', value: '98', unit: '°C', span: 6, big: 64, pct: '70%' },
+    { label: 'OIL TEMP', value: '112', unit: '°C', span: 6, big: 64, pct: '78%' },
+    { label: 'OIL PRESS', value: '1.1', unit: 'bar', span: 6, big: 64, kind: 'danger', pct: '22%' },
+    { label: 'FUEL PRESS', value: '3.8', unit: 'bar', span: 6, big: 64, pct: '63%' },
+    { label: 'GEARBOX', value: '96', unit: '°C', span: 4, big: 34 },
+    { label: 'DIFF', value: '104', unit: '°C', span: 4, big: 34 },
+    { label: 'BATT', value: '13.3', unit: 'V', span: 4, big: 34 }
+  ] },
+  { no: '04', name: 'Tuning', status: 'MAP 2', right: 'PEAK 1.61', v1: '1.4', v2: '0.88', kind: 'tune', widgets: [
+    { label: 'BOOST', value: '1.42', unit: 'bar', span: 7, big: 88, pct: '68%' },
+    { label: 'TARGET', value: '1.50', unit: 'bar', span: 5, big: 48 },
+    { label: 'LAMBDA', value: '0.88', unit: 'λ', span: 6, big: 64, kind: 'danger' },
+    { label: 'THROTTLE', value: '92', unit: '%', span: 6, big: 64, pct: '92%' },
+    { label: 'IAT', value: '34', unit: '°C', span: 4, big: 34 },
+    { label: 'EGT', value: '912', unit: '°C', span: 4, big: 34 },
+    { label: 'KNOCK', value: '0', unit: '', span: 4, big: 34 }
+  ] },
+  { no: '05', name: 'Timing', status: 'LAP 4', right: 'BEST 1:36.08', v1: '1:38', v2: '−0.4', kind: 'timer', widgets: [
+    { label: 'LAP', value: '1:38.42', unit: '', span: 7, big: 80 },
+    { label: 'DELTA', value: '−0.42', unit: 's', span: 5, big: 80 },
+    { label: 'BEST', value: '1:36.08', unit: '', span: 6, big: 44 },
+    { label: 'LAST', value: '1:37.19', unit: '', span: 3, big: 34 },
+    { label: 'LAPS', value: '4', unit: '', span: 3, big: 34 },
+    { label: 'TIMER', value: 'RUNNING', span: 6, big: 28, kind: 'buttonOn' },
+    { label: 'RESET LAP', value: 'RESET', span: 6, big: 28, kind: 'button' }
+  ] },
+  { no: '06', name: 'Controls', status: 'ALS ON', right: 'ARMED', v1: 'MAP1', v2: 'ALS', kind: 'buttons', widgets: [
+    { label: 'LAUNCH RPM', value: '4200', unit: 'rpm', span: 7, big: 80 },
+    { label: 'CLUTCH', value: 'IN', unit: '', span: 5, big: 48 },
+    { label: 'LAUNCH', value: 'ARMED', span: 6, big: 28, kind: 'buttonOn' },
+    { label: 'ANTI-LAG', value: 'ON', span: 6, big: 28, kind: 'buttonOn' },
+    { label: 'ECU MAP', value: 'MAP 1', span: 4, big: 26, kind: 'button' },
+    { label: 'PIT LIMIT', value: 'OFF', span: 4, big: 26, kind: 'button' },
+    { label: 'CRUISE', value: '110', span: 4, big: 26, kind: 'button' }
+  ] }
+];
+
+class Component extends DCLogic {
+  state = { view: 'dash', dark: null, panel: 'props', dashDay: false };
+
+  ptab(active) {
+    return 'flex:1;padding:12px 8px;background:none;border:0;cursor:pointer;text-align:left;white-space:nowrap;'
+      + 'font-family:var(--font-heading);font-weight:800;font-size:10px;letter-spacing:0.08em;'
+      + (active ? 'color:var(--color-text);box-shadow:inset 0 -3px 0 var(--color-accent);' : 'color:var(--color-neutral-600);');
+  }
+
+  row(active) {
+    return 'display:flex;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--color-neutral-300);cursor:pointer;'
+      + (active ? 'box-shadow:inset 3px 0 0 var(--color-accent);background:var(--color-neutral-200);font-family:var(--font-heading);font-weight:800;' : 'color:var(--color-neutral-700);');
+  }
+
+  bar(active) {
+    return active
+      ? 'position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent);'
+      : 'display:none;';
+  }
+
+  nav(active, sub) {
+    return 'width:100%;display:flex;align-items:center;gap:9px;text-align:left;cursor:pointer;background:none;border:0;'
+      + 'padding:' + (sub ? '7px 18px 7px 21px' : '9px 18px 9px 21px') + ';'
+      + 'font-family:' + (active ? 'var(--font-heading);font-weight:800' : 'var(--font-body);font-weight:400') + ';'
+      + 'font-size:' + (sub ? '12px' : '13px') + ';'
+      + (active
+        ? 'color:var(--color-text);box-shadow:inset 3px 0 0 var(--color-accent);background:var(--color-neutral-200);'
+        : 'color:var(--color-neutral-700);');
+  }
+
+  renderVals() {
+    const v = this.state.view;
+    const p = this.state.panel;
+    const pg = Math.min(this.state.page ?? 1, PAGES.length - 1);
+    const dark = this.state.dark ?? this.props.dark ?? true;
+    const ink = dark ? '#f3f2f2' : '#201e1d';
+    return {
+      rootClass: 'cs-app' + (dark ? ' cs-dark' : ''),
+      themeLabel: dark ? 'LIGHT' : 'DARK',
+      toggleTheme: () => this.setState({ dark: !dark }),
+      isDash: v === 'dash', isCan: v === 'can', isLive: v === 'live', isFw: v === 'fw',
+      goDash: () => this.setState({ view: 'dash' }),
+      goCan: () => this.setState({ view: 'can' }),
+      goLive: () => this.setState({ view: 'live' }),
+      goFw: () => this.setState({ view: 'fw' }),
+      isThemes: v === 'themes', isSplash: v === 'splash', isStates: v === 'states',
+      goStates: () => this.setState({ view: 'states' }),
+      navStates: this.nav(v === 'states'),
+      goThemes: () => this.setState({ view: 'themes' }),
+      goSplash: () => this.setState({ view: 'splash' }),
+      navDash: this.nav(v === 'dash'), navCan: this.nav(v === 'can'),
+      navLive: this.nav(v === 'live'), navFw: this.nav(v === 'fw'), navOff: this.nav(false),
+      navThemes: this.nav(v === 'themes'), navSplash: this.nav(v === 'splash'),
+      navDashBar: this.bar(v === 'dash'), navThemesBar: this.bar(v === 'themes'),
+      navCanBar: this.bar(v === 'can'), navEcuBar: this.bar(v === 'ecu'), navObdBar: this.bar(v === 'obd'),
+      navLiveBar: this.bar(v === 'live'), navLogsBar: this.bar(v === 'logs'), navCliBar: this.bar(v === 'cli'),
+      navFwBar: this.bar(v === 'fw'), navSplashBar: this.bar(v === 'splash'),
+      navStatesBar: this.bar(v === 'states'), navAboutBar: this.bar(v === 'about'), navOffBar: this.bar(false),
+      navEcu: this.nav(v === 'ecu'), navObd: this.nav(v === 'obd'), navLogs: this.nav(v === 'logs'),
+      navCli: this.nav(v === 'cli'), navAbout: this.nav(v === 'about'),
+      isEcu: v === 'ecu', isObd: v === 'obd', isLogs: v === 'logs', isCli: v === 'cli', isAbout: v === 'about',
+      goEcu: () => this.setState({ view: 'ecu' }),
+      goObd: () => this.setState({ view: 'obd' }),
+      goLogs: () => this.setState({ view: 'logs' }),
+      goCli: () => this.setState({ view: 'cli' }),
+      goAbout: () => this.setState({ view: 'about' }),
+      ecuSignals: [
+        { name: 'rpm', id: '0x0AA', bytes: '0:1', scale: '×1', unit: 'rpm', used: 'Gauge arc · page 04', tint: ink },
+        { name: 'speed', id: '0x0B4', bytes: '2:3', scale: '×0.1', unit: 'km/h', used: 'Gauge arc · page 04', tint: ink },
+        { name: 'coolant', id: '0x1D0', bytes: '0', scale: '−40', unit: '°C', used: 'Gauge numeric · 01, 04', tint: ink },
+        { name: 'oilTemp', id: '0x1D0', bytes: '1', scale: '−40', unit: '°C', used: 'Gauge numeric · 03', tint: ink },
+        { name: 'oilPress', id: '0x1D2', bytes: '0', scale: '×0.1', unit: 'bar', used: 'Warning · page 04', tint: ink },
+        { name: 'gear', id: '0x316', bytes: '4', scale: '×1', unit: '—', used: 'Gear · page 04', tint: ink },
+        { name: 'throttle', id: '0x329', bytes: '1', scale: '×0.4', unit: '%', used: 'Gauge numeric · 02', tint: ink },
+        { name: 'battery', id: '0x338', bytes: '0:1', scale: '×0.01', unit: 'V', used: 'Gauge numeric · 04', tint: ink },
+        { name: 'lambda', id: '0x345', bytes: '2', scale: '×0.01', unit: 'λ', used: 'unbound', tint: 'var(--color-neutral-600)' },
+        { name: 'boost', id: '0x345', bytes: '4:5', scale: '×0.001', unit: 'bar', used: 'unbound', tint: 'var(--color-neutral-600)' }
+      ],
+      pids: [
+        { pid: '01 0C', name: 'Engine RPM', value: '5200', tint: ink },
+        { pid: '01 0D', name: 'Vehicle speed', value: '195', tint: ink },
+        { pid: '01 05', name: 'Coolant temp', value: '78', tint: ink },
+        { pid: '01 0F', name: 'Intake air temp', value: '34', tint: ink },
+        { pid: '01 11', name: 'Throttle position', value: '92', tint: ink },
+        { pid: '01 04', name: 'Engine load', value: '81', tint: ink },
+        { pid: '01 0B', name: 'MAP', value: '242', tint: ink },
+        { pid: '01 10', name: 'MAF rate', value: '38.4', tint: ink },
+        { pid: '01 06', name: 'Fuel trim short', value: '+2.3', tint: ink },
+        { pid: '01 07', name: 'Fuel trim long', value: '−8.6', tint: 'var(--color-accent)' },
+        { pid: '01 42', name: 'Module voltage', value: '13.3', tint: ink },
+        { pid: '01 5C', name: 'Oil temp', value: '112', tint: 'var(--color-accent)' }
+      ],
+      laps: [
+        { no: '01', time: '1:41.20', delta: '—', rpm: '6980', note: 'out lap', tint: 'var(--color-neutral-600)' },
+        { no: '02', time: '1:37.44', delta: '−3.76', rpm: '7100', note: '', tint: ink },
+        { no: '03', time: '1:36.08', delta: '−1.36', rpm: '7180', note: 'best', tint: 'var(--color-accent)' },
+        { no: '04', time: '1:36.51', delta: '+0.43', rpm: '7160', note: '', tint: ink },
+        { no: '05', time: '1:38.02', delta: '+1.51', rpm: '7040', note: 'traffic', tint: ink },
+        { no: '06', time: '1:36.77', delta: '−1.25', rpm: '7150', note: '', tint: ink },
+        { no: '07', time: '1:37.19', delta: '+0.42', rpm: '7120', note: 'oil temp 128 °C', tint: ink },
+        { no: '08', time: '1:44.63', delta: '+7.44', rpm: '6400', note: 'in lap', tint: 'var(--color-neutral-600)' }
+      ],
+      isProps: p === 'props', isWidgets: p === 'widgets', isLib: p === 'lib',
+      panProps: () => this.setState({ panel: 'props' }),
+      panWidgets: () => this.setState({ panel: 'widgets' }),
+      panLib: () => this.setState({ panel: 'lib' }),
+      tabProps: this.ptab(p === 'props'), tabWidgets: this.ptab(p === 'widgets'), tabLib: this.ptab(p === 'lib'),
+      toggleDash: () => this.setState(s => ({ dashDay: !s.dashDay })),
+      dashThemeLabel: this.state.dashDay ? 'DAY THEME' : 'NIGHT THEME',
+      dashBg: this.state.dashDay ? '#DDDDDD' : '#121212',
+      dashSurface: this.state.dashDay ? '#F0F0F0' : '#1F1F1F',
+      dashInk: this.state.dashDay ? '#000000' : '#FFFFFF',
+      dashDim: this.state.dashDay ? '#5A5A5A' : '#BABABA',
+      dashTrack: this.state.dashDay ? '#C4C4C4' : '#222222',
+      themes: [
+        { name: 'Endurance — dim', note: 'night stints', bg: '#080808', surface: '#141414', track: '#222222', ink: '#8F8F8F', dim: '#5A5A5A', danger: '#CC3333', accent: '#7A4A00' },
+        { name: 'Rally', note: 'amber, high glare', bg: '#101010', surface: '#1C1A16', track: '#2A2620', ink: '#FFC24D', dim: '#8A7A55', danger: '#FF4444', accent: '#FF8800' },
+        { name: 'Drag', note: 'mono, max contrast', bg: '#000000', surface: '#0D0D0D', track: '#1E1E1E', ink: '#FFFFFF', dim: '#7A7A7A', danger: '#FF0000', accent: '#FFFFFF' },
+        { name: 'Circuit', note: 'CANShift red', bg: '#121212', surface: '#1F1616', track: '#2C1E1E', ink: '#FFFFFF', dim: '#B08A8A', danger: '#FF4747', accent: '#FF4747' },
+        { name: 'Ice', note: 'cold, low fatigue', bg: '#0B0F12', surface: '#141A1F', track: '#20282E', ink: '#DCEAF2', dim: '#7C939F', danger: '#FF5A5A', accent: '#4FC3F7' },
+        { name: 'Paper', note: 'daylight, reflective', bg: '#E8E6E1', surface: '#F5F3EF', track: '#C9C5BD', ink: '#141414', dim: '#6A665F', danger: '#C41200', accent: '#B35C00' }
+      ],
+      libCount: '7 + 9',
+      pageLabel: 'ON PAGE ' + PAGES[pg].no + ' — ' + PAGES[pg].name.toUpperCase(),
+      pageCount: String(PAGES[pg].widgets.length),
+      pageIndex: PAGES[pg].no + ' / 06',
+      placed: PAGES[pg].widgets.map((w, i) => ({
+        no: String(i + 1).padStart(2, '0'),
+        name: (w.kind === 'danger' ? 'Warning — ' : 'Gauge — ') + w.label.toLowerCase(),
+        signal: 'ecu.' + w.label.toLowerCase().replace(/[^a-z]/g, ''),
+        style: this.row(i === 0)
+      })),
+      library: [
+        { tag: '12', name: 'Gauge — numeric', size: '96×56', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: '◔', name: 'Gauge — arc 270°', size: '132×132', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: '⌁', name: 'Warning', size: '96×72', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: '⊞', name: 'Button — single', size: '96×64', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: '⊟', name: 'Button — cycle', size: '96×64', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: '⏱', name: 'Timer', size: '160×64', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: 'G', name: 'Gear', size: '72×96', tint: 'var(--color-neutral-600)', style: this.row(false) },
+        { tag: '▭', name: 'Bar gauge — linear', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '◎', name: 'Shift light strip', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '▤', name: 'Rolling graph', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '⧗', name: 'Lap delta', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '±', name: 'Min / max hold', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '▦', name: 'Multi-value tile', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '△', name: 'Alarm banner', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: '▬', name: 'Status bar', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) },
+        { tag: 'T', name: 'Text label', size: 'proposal', tint: 'var(--color-accent)', style: this.row(false) }
+      ],
+      pageTitle: 'PAGE ' + PAGES[pg].no + ' — ' + PAGES[pg].name.toUpperCase(),
+      pageStatus: PAGES[pg].status,
+      pageRight: PAGES[pg].right || 'fw 0.1.0',
+      oobStyle: 'margin-left:auto;display:flex;align-items:center;gap:7px;font-family:ui-monospace,monospace;font-size:11px;color:'
+        + (PAGES[pg].oob ? 'var(--color-accent)' : 'var(--color-neutral-600)'),
+      oobDot: 'width:7px;height:7px;background:' + (PAGES[pg].oob ? 'var(--color-accent)' : 'var(--color-neutral-500)'),
+      oobText: PAGES[pg].oob ? PAGES[pg].oob + ' widget out of bounds' : 'layout fits 320 × 240',
+      hasShift: !!PAGES[pg].shift,
+      pageWidgets: PAGES[pg].widgets.map(w => this.widget(w, !this.state.dashDay)),
+      pages: PAGES.map((p, i) => ({
+        no: p.no, name: p.name, count: p.widgets.length + ' w', v1: p.v1, v2: p.v2, kind: p.kind,
+        tint: i === pg ? '#ec3013' : '#8a8686',
+        cell: this.pageCell(i === pg),
+        go: () => this.setState({ page: i })
+      })),
+      frames: [
+        { id: '0x0AA', dlc: '8', data: '3E 00 12 FF 08 A0 00 11', rate: '100 Hz', count: '4 210', map: 'ecu.rpm', mapTint: ink },
+        { id: '0x0B4', dlc: '8', data: '00 00 5C 21 00 00 00 00', rate: '50 Hz', count: '2 108', map: 'ecu.speed', mapTint: ink },
+        { id: '0x1D0', dlc: '8', data: '4E 09 82 00 6B 00 00 F0', rate: '50 Hz', count: '2 104', map: 'ecu.coolant', mapTint: ink },
+        { id: '0x1D2', dlc: '8', data: '11 00 00 00 00 00 00 00', rate: '20 Hz', count: '844', map: 'ecu.oilPress', mapTint: ink },
+        { id: '0x316', dlc: '8', data: '05 8F 14 50 00 00 0F 00', rate: '20 Hz', count: '842', map: 'ecu.gear', mapTint: ink },
+        { id: '0x329', dlc: '8', data: '00 62 4A 00 8C 00 00 00', rate: '20 Hz', count: '840', map: 'ecu.throttle', mapTint: ink },
+        { id: '0x338', dlc: '4', data: '0D 8C 00 00', rate: '10 Hz', count: '420', map: 'ecu.battery', mapTint: ink },
+        { id: '0x545', dlc: '8', data: '00 00 00 00 7F 00 00 00', rate: '5 Hz', count: '210', map: 'unmapped', mapTint: 'var(--color-neutral-600)' },
+        { id: '0x613', dlc: '8', data: 'FF FF FF FF FF FF FF FF', rate: '2 Hz', count: '84', map: 'unmapped', mapTint: 'var(--color-neutral-600)' },
+        { id: '0x615', dlc: '8', data: '00 A1 00 00 00 00 00 00', rate: '2 Hz', count: '84', map: 'unmapped', mapTint: 'var(--color-neutral-600)' }
+      ],
+      signals: [
+        { label: 'RPM', value: '5200', unit: 'rpm', pct: '65%', tint: ink },
+        { label: 'SPEED', value: '195', unit: 'km/h', pct: '78%', tint: ink },
+        { label: 'GEAR', value: '3', unit: '', pct: '50%', tint: 'var(--color-accent)' },
+        { label: 'THROTTLE', value: '92', unit: '%', pct: '92%', tint: ink },
+        { label: 'COOLANT', value: '78', unit: '°C', pct: '62%', tint: ink },
+        { label: 'OIL TEMP', value: '98', unit: '°C', pct: '71%', tint: ink },
+        { label: 'OIL PRESS', value: '3.9', unit: 'bar', pct: '55%', tint: ink },
+        { label: 'BOOST', value: '1.42', unit: 'bar', pct: '68%', tint: 'var(--color-accent)' },
+        { label: 'LAMBDA', value: '0.88', unit: 'λ', pct: '44%', tint: 'var(--color-accent)' },
+        { label: 'INTAKE AIR', value: '34', unit: '°C', pct: '30%', tint: ink },
+        { label: 'BATTERY', value: '13.3', unit: 'V', pct: '82%', tint: ink },
+        { label: 'FUEL', value: '46', unit: '%', pct: '46%', tint: ink }
+      ]
+    };
+  }
+
+  span(cfg) {
+    const n = cfg.span || Math.max(1, Math.min(12, Math.round((cfg.w + 12) / 51.33)));
+    return 'grid-column:span ' + n + ';';
+  }
+
+  widget(cfg, dark) {
+    const big = cfg.big || 44;
+    const danger = cfg.kind === 'danger';
+    const track = dark ? '#222222' : '#C4C4C4';
+    const dim = dark ? '#BABABA' : '#5A5A5A';
+    const paper = dark ? '#FFFFFF' : '#000000';
+    const ink = danger ? '#FF4444' : paper;
+    const primary = big >= 64;
+    const rule = danger ? '2px solid #FF4444' : (primary ? '2px solid ' + paper : '1px solid ' + track);
+    if (cfg.kind === 'button' || cfg.kind === 'buttonOn') {
+      const on = cfg.kind === 'buttonOn';
+      const noArc = { isArc: false, arcSize: 'display:none;', arcTrack: track, arcInk: paper, arcDash: '0 390' };
+      const face = on ? '#FF4747' : 'transparent';
+      const txt = on ? '#FFFFFF' : paper;
+      return Object.assign({}, noArc, {
+        label: cfg.label,
+        value: cfg.value,
+        unit: '',
+        box: this.span(cfg) + 'min-height:96px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:5px;'
+          + 'padding:12px 14px;border:2px solid ' + (on ? '#FF4747' : paper) + ';background:' + face + ';',
+        labelTint: on ? 'rgba(255,255,255,0.75)' : dim,
+        unitTint: 'transparent',
+        valueStyle: 'font-variant-numeric:tabular-nums;font-size:' + big + 'px;line-height:1;letter-spacing:-0.02em;color:' + txt + ';',
+        barTrack: 'display:none;',
+        barFill: 'display:none;'
+      });
+    }
+    const arc = cfg.kind === 'arc';
+    return {
+      label: cfg.label,
+      value: cfg.value,
+      unit: cfg.unit || '',
+      isArc: arc,
+      arcSize: 'width:' + (cfg.arcSize || 150) + 'px;margin-top:4px;',
+      arcTrack: track,
+      arcInk: ink,
+      arcDash: Math.round(292 * (parseFloat(cfg.pct) || 0) / 100) + ' 390',
+      box: this.span(cfg) + 'box-sizing:border-box;display:flex;flex-direction:column;'
+        + 'gap:' + (primary ? '3px' : '1px') + ';padding:' + (primary ? '7px' : '5px') + ' 16px ' + (primary ? '6px' : '4px') + ' 0;'
+        + 'border-top:' + rule + ';',
+      labelTint: danger ? '#FF4444' : dim,
+      unitTint: dim,
+      valueStyle: arc ? 'display:none;' : ('font-variant-numeric:tabular-nums;font-size:' + big + 'px;line-height:0.92;'
+        + 'letter-spacing:' + (primary ? '-0.045em' : '-0.03em') + ';color:' + ink + ';'),
+      barTrack: cfg.pct ? 'height:3px;background:' + track + ';margin-top:7px;margin-right:16px;' : 'display:none;',
+      barFill: cfg.pct ? 'width:' + cfg.pct + ';height:100%;background:' + ink + ';' : 'display:none;'
+    };
+  }
+
+  pageCell(active) {
+    return 'width:150px;flex:none;border-right:1px solid var(--color-neutral-300);padding:10px 12px;display:flex;flex-direction:column;gap:8px;cursor:pointer;'
+      + (active ? 'box-shadow:inset 0 -3px 0 var(--color-accent);background:var(--color-neutral-200);' : '');
+  }
+}
+</script>
+</body>
+</html>
