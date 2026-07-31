@@ -1,6 +1,13 @@
 import {
+  BRAND_COLOR_KEY_TO_CSS_VAR,
+  BRAND_DIVIDER_CSS_VAR,
+  BRAND_NEUTRAL_STEPS,
+  BRAND_TEXT_CSS_VAR,
+  BRAND_TOKENS,
   COLOR_KEY_TO_CSS_VAR,
   DARK_TOKENS,
+  brandNeutralCssVar,
+  brandTokensToCssVars,
   hexToHslChannels,
   tokensToCssVars,
 } from '../design-tokens.js'
@@ -43,6 +50,117 @@ describe('DARK_TOKENS', () => {
       spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
       typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
     })
+  })
+})
+
+describe('BRAND_TOKENS', () => {
+  it('matches the canonical snapshot', () => {
+    expect(BRAND_TOKENS).toEqual({
+      colors: {
+        accent: '#EC3013',
+        ink: '#201E1D',
+        ground: '#F3F2F2',
+        surface: '#EAE9E9',
+        rule: '#D7D3D3',
+        chromeBg: '#151313',
+        chromeSurface: '#1F1D1D',
+      },
+      darkNeutrals: {
+        100: '#1C1A1A',
+        200: '#262323',
+        300: '#383434',
+        400: '#4D4949',
+        500: '#7D7979',
+        600: '#9B9797',
+        700: '#C2BFBF',
+        800: '#E2DFDF',
+        900: '#F5F4F4',
+      },
+      darkText: '#F3F2F2',
+      darkDivider: 'color-mix(in srgb, #F3F2F2 24%, transparent)',
+    })
+  })
+
+  it.each(Object.keys(BRAND_TOKENS.colors) as (keyof typeof BRAND_TOKENS.colors)[])(
+    'colors.%s is a valid #RRGGBB hex',
+    (key) => {
+      expect(isHexColor(BRAND_TOKENS.colors[key])).toBe(true)
+    }
+  )
+
+  it.each([...BRAND_NEUTRAL_STEPS])('darkNeutrals[%d] is a valid #RRGGBB hex', (step) => {
+    expect(isHexColor(BRAND_TOKENS.darkNeutrals[step])).toBe(true)
+  })
+
+  it('darkText is a valid #RRGGBB hex', () => {
+    expect(isHexColor(BRAND_TOKENS.darkText)).toBe(true)
+  })
+
+  it('never contains the device red', () => {
+    const brandValues = [
+      ...Object.values(BRAND_TOKENS.colors),
+      ...Object.values(BRAND_TOKENS.darkNeutrals),
+      BRAND_TOKENS.darkText,
+      BRAND_TOKENS.darkDivider,
+    ]
+    expect(brandValues).not.toContain(DARK_TOKENS.colors.primary)
+  })
+
+  it('device tokens never contain the brand accent', () => {
+    expect(Object.values(DARK_TOKENS.colors)).not.toContain(BRAND_TOKENS.colors.accent)
+  })
+})
+
+describe('brandTokensToCssVars', () => {
+  const EXPECTED_KEYS = [
+    '--brand-accent',
+    '--brand-ink',
+    '--brand-ground',
+    '--brand-surface',
+    '--brand-rule',
+    '--brand-chrome-bg',
+    '--brand-chrome-surface',
+    '--brand-neutral-100',
+    '--brand-neutral-200',
+    '--brand-neutral-300',
+    '--brand-neutral-400',
+    '--brand-neutral-500',
+    '--brand-neutral-600',
+    '--brand-neutral-700',
+    '--brand-neutral-800',
+    '--brand-neutral-900',
+    '--brand-text',
+    '--brand-divider',
+  ] as const
+
+  it('emits exactly the canonical CSS variable names', () => {
+    const vars = brandTokensToCssVars(BRAND_TOKENS)
+    expect(Object.keys(vars).sort()).toEqual([...EXPECTED_KEYS].sort())
+  })
+
+  it('converts hex colors to HSL channel format', () => {
+    const vars = brandTokensToCssVars(BRAND_TOKENS)
+    expect(vars['--brand-accent']).toBe(hexToHslChannels('#EC3013'))
+    expect(vars['--brand-ink']).toBe(hexToHslChannels('#201E1D'))
+    expect(vars[brandNeutralCssVar(100)]).toBe(hexToHslChannels('#1C1A1A'))
+    expect(vars[BRAND_TEXT_CSS_VAR]).toBe(hexToHslChannels('#F3F2F2'))
+  })
+
+  it('passes the divider through as a raw CSS color', () => {
+    const vars = brandTokensToCssVars(BRAND_TOKENS)
+    expect(vars[BRAND_DIVIDER_CSS_VAR]).toBe('color-mix(in srgb, #F3F2F2 24%, transparent)')
+  })
+
+  it('shares no CSS variable names with the device set', () => {
+    const brandKeys = Object.keys(brandTokensToCssVars(BRAND_TOKENS))
+    const deviceKeys = Object.keys(tokensToCssVars(DARK_TOKENS))
+    expect(brandKeys.filter((key) => deviceKeys.includes(key))).toEqual([])
+  })
+
+  it('maps every brand color key to a --brand-* variable', () => {
+    for (const cssVar of Object.values(BRAND_COLOR_KEY_TO_CSS_VAR)) {
+      expect(cssVar.startsWith('--brand-')).toBe(true)
+    }
   })
 })
 

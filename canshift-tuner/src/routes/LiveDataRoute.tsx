@@ -292,7 +292,7 @@ const rangeBarTrackStyle: CSSProperties = {
 
 const rangeBarFillStyle: CSSProperties = {
   height: '100%',
-  background: 'hsl(var(--primary))',
+  background: 'hsl(var(--brand-accent))',
   transition: 'width 200ms linear',
 }
 

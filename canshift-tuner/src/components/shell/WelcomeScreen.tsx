@@ -145,7 +145,7 @@ const Spinner = () => (
       display: 'inline-block',
       width: 12,
       height: 12,
-      border: '2px solid hsl(var(--primary-foreground))',
+      border: '2px solid hsl(var(--brand-ground))',
       borderTopColor: 'transparent',
       borderRadius: '50%',
       animation: 'canshift-tuner-spin 700ms linear infinite',
@@ -235,8 +235,8 @@ const stepNumberStyle: CSSProperties = {
   height: 28,
   flexShrink: 0,
   borderRadius: '50%',
-  background: 'hsl(var(--primary) / 0.15)',
-  color: 'hsl(var(--primary))',
+  background: 'hsl(var(--brand-accent) / 0.15)',
+  color: 'hsl(var(--brand-accent))',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -268,8 +268,8 @@ const ctaRowStyle: CSSProperties = {
 }
 
 const connectButtonStyle: CSSProperties = {
-  background: 'hsl(var(--primary))',
-  color: 'hsl(var(--primary-foreground))',
+  background: 'hsl(var(--brand-accent))',
+  color: 'hsl(var(--brand-ground))',
   border: 'none',
   borderRadius: 8,
   padding: '14px 28px',
@@ -280,7 +280,7 @@ const connectButtonStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)',
+  boxShadow: '0 2px 8px hsl(var(--brand-accent) / 0.3)',
 }
 
 const exploreButtonStyle: CSSProperties = {

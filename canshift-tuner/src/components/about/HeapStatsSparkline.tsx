@@ -42,7 +42,7 @@ export const HeapStatsSparkline = ({
         strokeWidth={1}
         strokeOpacity={0.6}
       />
-      <path d={largestPath} fill="none" stroke="hsl(var(--primary))" strokeWidth={1.5} />
+      <path d={largestPath} fill="none" stroke="hsl(var(--brand-accent))" strokeWidth={1.5} />
     </svg>
   )
 }
