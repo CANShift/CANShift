@@ -1,6 +1,9 @@
 import {
   MAX_GPS_SAMPLES,
+  armStartFinishLine,
   clearAll,
+  clearStartFinishLine,
+  getLatestSample,
   getRange,
   getSampleAt,
   getWriteIndex,
@@ -157,6 +160,97 @@ describe('track-session.store', () => {
       recordLap(2000, 3000)
       const laps = useTrackSessionStore.getState().laps
       expect(laps.map((l) => l.number)).toEqual([1, 2, 3])
+    })
+  })
+
+  describe('getLatestSample', () => {
+    it('returns undefined when no samples were pushed', () => {
+      expect(getLatestSample()).toBeUndefined()
+    })
+
+    it('returns the most recently pushed sample', () => {
+      pushSample(sample(100))
+      pushSample(sample(200, 1, 2))
+      expect(getLatestSample()).toEqual({ t: 200, lat: 1, lng: 2, speedMs: 0, headingDeg: 0 })
+    })
+  })
+
+  describe('lap detection from the GPS sample stream', () => {
+    const line = { a: { lat: 0, lng: -1 }, b: { lat: 0, lng: 1 } }
+
+    it('records a lap when the trace crosses the armed start/finish line', () => {
+      armStartFinishLine(line)
+      startSession(1000)
+      pushSample(sample(1000, 0.5, 0))
+      pushSample(sample(2000, -0.5, 0))
+      const state = useTrackSessionStore.getState()
+      expect(state.laps).toEqual([{ number: 1, startMs: 1000, endMs: 1500, durationMs: 500 }])
+      expect(state.bestLapMs).toBe(500)
+    })
+
+    it('chains laps between consecutive crossings and tracks the best lap', () => {
+      armStartFinishLine(line)
+      startSession(1000)
+      pushSample(sample(1000, 0.5, 0))
+      pushSample(sample(2000, -0.5, 0))
+      pushSample(sample(3000, 0.5, 0))
+      pushSample(sample(4000, -0.5, 0))
+      const state = useTrackSessionStore.getState()
+      expect(state.laps).toHaveLength(2)
+      expect(state.laps[1]).toEqual({ number: 2, startMs: 1500, endMs: 3500, durationMs: 2000 })
+      expect(state.bestLapMs).toBe(500)
+    })
+
+    it('ignores crossings while not recording', () => {
+      armStartFinishLine(line)
+      pushSample(sample(1000, 0.5, 0))
+      pushSample(sample(2000, -0.5, 0))
+      expect(useTrackSessionStore.getState().laps).toEqual([])
+    })
+
+    it('ignores crossings after stopSession()', () => {
+      armStartFinishLine(line)
+      startSession(1000)
+      pushSample(sample(1000, 0.5, 0))
+      pushSample(sample(2000, -0.5, 0))
+      stopSession()
+      pushSample(sample(3000, 0.5, 0))
+      pushSample(sample(4000, -0.5, 0))
+      expect(useTrackSessionStore.getState().laps).toHaveLength(1)
+    })
+
+    it('records no laps when no start/finish line is armed', () => {
+      startSession(1000)
+      pushSample(sample(1000, 0.5, 0))
+      pushSample(sample(2000, -0.5, 0))
+      expect(useTrackSessionStore.getState().laps).toEqual([])
+    })
+
+    it('startSession() resets detector state so a stale previous sample cannot count', () => {
+      armStartFinishLine(line)
+      startSession(1000)
+      pushSample(sample(1000, 0.5, 0))
+      startSession(1500)
+      pushSample(sample(2000, -0.5, 0))
+      expect(useTrackSessionStore.getState().laps).toEqual([])
+    })
+
+    it('armStartFinishLine() flags startFinishSet and clearStartFinishLine() clears it', () => {
+      expect(useTrackSessionStore.getState().startFinishSet).toBe(false)
+      armStartFinishLine(line)
+      expect(useTrackSessionStore.getState().startFinishSet).toBe(true)
+      clearStartFinishLine()
+      expect(useTrackSessionStore.getState().startFinishSet).toBe(false)
+    })
+
+    it('clearAll() disarms the start/finish line', () => {
+      armStartFinishLine(line)
+      clearAll()
+      expect(useTrackSessionStore.getState().startFinishSet).toBe(false)
+      startSession(1000)
+      pushSample(sample(1000, 0.5, 0))
+      pushSample(sample(2000, -0.5, 0))
+      expect(useTrackSessionStore.getState().laps).toEqual([])
     })
   })
 })

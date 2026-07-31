@@ -1,4 +1,10 @@
 import { create } from 'zustand'
+import {
+  createLapCrossingDetector,
+  type LapCrossingDetector,
+  type LapCrossingDetectorOptions,
+  type LineSegment,
+} from '../lib/lap-detect'
 
 export const MAX_GPS_SAMPLES = 9000
 
@@ -24,12 +30,14 @@ interface TrackSessionState {
   laps: LapRecord[]
   bestLapMs: number
   writeIndex: number
+  startFinishSet: boolean
 }
 
 const samples: (GpsSample | undefined)[] = new Array<GpsSample | undefined>(MAX_GPS_SAMPLES)
 let head = 0
 let size = 0
 let writeIndex = 0
+let detector: LapCrossingDetector | null = null
 
 export const useTrackSessionStore = create<TrackSessionState>(() => ({
   recording: false,
@@ -38,9 +46,11 @@ export const useTrackSessionStore = create<TrackSessionState>(() => ({
   laps: [],
   bestLapMs: 0,
   writeIndex: 0,
+  startFinishSet: false,
 }))
 
 export const startSession = (nowMs: number = Date.now()): void => {
+  detector?.reset()
   useTrackSessionStore.setState({
     recording: true,
     sessionStartMs: nowMs,
@@ -48,6 +58,19 @@ export const startSession = (nowMs: number = Date.now()): void => {
     laps: [],
     bestLapMs: 0,
   })
+}
+
+export const armStartFinishLine = (
+  line: LineSegment,
+  opts: LapCrossingDetectorOptions = {}
+): void => {
+  detector = createLapCrossingDetector(line, opts)
+  useTrackSessionStore.setState({ startFinishSet: true })
+}
+
+export const clearStartFinishLine = (): void => {
+  detector = null
+  useTrackSessionStore.setState({ startFinishSet: false })
 }
 
 export const stopSession = (): void => {
@@ -59,6 +82,7 @@ export const clearAll = (): void => {
   head = 0
   size = 0
   writeIndex = 0
+  detector = null
   useTrackSessionStore.setState({
     recording: false,
     sessionStartMs: 0,
@@ -66,7 +90,20 @@ export const clearAll = (): void => {
     laps: [],
     bestLapMs: 0,
     writeIndex: 0,
+    startFinishSet: false,
   })
+}
+
+const detectLapCrossing = (sample: GpsSample): void => {
+  if (detector === null) return
+  const state = useTrackSessionStore.getState()
+  if (!state.recording) return
+  const crossingMs = detector.update({ t: sample.t, lat: sample.lat, lng: sample.lng })
+  if (crossingMs === null) return
+  const lastLap = state.laps[state.laps.length - 1]
+  const lapStartMs = lastLap?.endMs ?? state.sessionStartMs
+  if (crossingMs <= lapStartMs) return
+  recordLap(lapStartMs, crossingMs)
 }
 
 export const pushSample = (sample: GpsSample): void => {
@@ -75,6 +112,11 @@ export const pushSample = (sample: GpsSample): void => {
   if (size < MAX_GPS_SAMPLES) size += 1
   writeIndex += 1
   useTrackSessionStore.setState({ writeIndex })
+  detectLapCrossing(sample)
+}
+
+export const getLatestSample = (): GpsSample | undefined => {
+  return getSampleAt(writeIndex - 1)
 }
 
 export const getWriteIndex = (): number => {
