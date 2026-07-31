@@ -6,6 +6,7 @@ import DashScreen from '../screens/DashScreen'
 import GraphScreen from '../screens/GraphScreen'
 import LogScreen from '../screens/LogScreen'
 import TimerScreen from '../screens/TimerScreen'
+import TrackScreen from '../screens/TrackScreen'
 import ReconnectBanner from '../components/ReconnectBanner'
 import ReconnectFailedDialog from '../components/ReconnectFailedDialog'
 import { Colors, Typography } from '../theme'
@@ -20,6 +21,7 @@ export type ConnectedTabParamList = {
   Dash: undefined
   Graph: undefined
   Timer: undefined
+  Track: undefined
   Console: undefined
 }
 
@@ -83,6 +85,14 @@ export default function ConnectedNavigator({ navigation }: Props) {
           options={{
             tabBarLabel: 'Timer',
             tabBarIcon: ({ focused }) => <TabIcon icon="◷" focused={focused} />,
+          }}
+        />
+        <Tab.Screen
+          name="Track"
+          component={TrackScreen}
+          options={{
+            tabBarLabel: 'Track',
+            tabBarIcon: ({ focused }) => <TabIcon icon="⚑" focused={focused} />,
           }}
         />
         <Tab.Screen
