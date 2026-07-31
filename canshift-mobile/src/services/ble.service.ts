@@ -13,6 +13,9 @@ import {
   BLE_CHAR_STATUS,
   BLE_CHAR_SETTINGS,
   BLE_CHAR_CMD,
+  BLE_CHAR_TIMER_CMD,
+  BLE_CHAR_TIMER_STATE,
+  BLE_CHAR_TIMER_LAP,
   BLE_DEVICE_NAME,
 } from '../constants/ble'
 import { useDeviceStore } from '../stores/device.store'
@@ -22,7 +25,16 @@ import { log } from '../stores/log.store'
 import { useReconnectStore } from '../stores/reconnect.store'
 import { useAppSettingsStore } from '../stores/app-settings.store'
 import { parseTelemetry } from './ble.validators'
-import { parseBleStatus, parseSettings } from '@tmbk/canshift-core'
+import {
+  encodeTimerCommand,
+  parseBleStatus,
+  parseSettings,
+  parseTimerLap,
+  parseTimerState,
+  type TimerCommand,
+} from '@tmbk/canshift-core'
+import { useTimerStore } from '../stores/timer.store'
+import { recordSessionLap } from '../stores/timer-sessions.store'
 import { decodeBase64, encodeBase64 } from './base64'
 import { rememberDevice, forgetDevice, getLastDevice } from './last-device'
 import { requestAndroidBlePermissions, type AndroidBlePermissionResult } from './ble-permissions'
@@ -80,6 +92,8 @@ export class BleService {
   private stalenessTimer: ReturnType<typeof setInterval> | null = null
   private teleSub: Subscription | null = null
   private statusSub: Subscription | null = null
+  private timerStateSub: Subscription | null = null
+  private timerLapSub: Subscription | null = null
   private disconnectSub: Subscription | null = null
   private readonly reconnector: BleReconnector
 
@@ -230,6 +244,7 @@ export class BleService {
       this.connectedDevice = device
 
       await this.seedStatusFromDevice(device, setFirmwareStatus)
+      await this.seedTimerFromDevice(device)
 
       setDevice(deviceId, device.name ?? BLE_DEVICE_NAME)
       useDeviceStore.getState().setMode('ble')
@@ -301,6 +316,20 @@ export class BleService {
       return null
     }
     return result.settings
+  }
+
+  async sendTimerCommand(command: TimerCommand): Promise<void> {
+    const device = this.connectedDevice
+    if (!device) throw new Error('Not connected')
+    await withGattRetry(() =>
+      this.runGatt(() =>
+        device.writeCharacteristicWithoutResponseForService(
+          BLE_SERVICE_UUID,
+          BLE_CHAR_TIMER_CMD,
+          encodeBase64(encodeTimerCommand(command))
+        )
+      )
+    )
   }
 
   async sendCmd(cmd: string, payload?: CmdPayload): Promise<void> {
@@ -406,11 +435,51 @@ export class BleService {
       }
     )
 
+    this.timerStateSub = device.monitorCharacteristicForService(
+      BLE_SERVICE_UUID,
+      BLE_CHAR_TIMER_STATE,
+      (error: Error | null, char: Characteristic | null) => {
+        if (error) {
+          log('warn', `BLE: timer state monitor error — ${error.message}`)
+          return
+        }
+        if (!char?.value) return
+        if (!this.connectedDevice) return
+        const result = parseTimerState(decodeBase64(char.value))
+        if (result.kind !== 'ok') {
+          log('warn', `BLE: rejected malformed timer state payload (${result.kind})`)
+          return
+        }
+        useTimerStore.getState().applyDeviceState(result.state)
+      }
+    )
+
+    this.timerLapSub = device.monitorCharacteristicForService(
+      BLE_SERVICE_UUID,
+      BLE_CHAR_TIMER_LAP,
+      (error: Error | null, char: Characteristic | null) => {
+        if (error) {
+          log('warn', `BLE: timer lap monitor error — ${error.message}`)
+          return
+        }
+        if (!char?.value) return
+        if (!this.connectedDevice) return
+        const result = parseTimerLap(decodeBase64(char.value))
+        if (result.kind !== 'ok') {
+          log('warn', `BLE: rejected malformed timer lap payload (${result.kind})`)
+          return
+        }
+        useTimerStore.getState().applyDeviceLap(result.lap)
+        recordSessionLap(result.lap)
+      }
+    )
+
     this.disconnectSub = device.onDisconnected(() => {
       this.connectedDevice = null
       this.removeSubscriptions()
       this.stopStalenessTimer()
       useDeviceStore.getState().disconnect()
+      useTimerStore.getState().clearDeviceSync()
       if (this.userInitiatedDisconnect) {
         log('info', `Disconnected from ${device.id} (user-initiated)`)
         return
@@ -468,8 +537,27 @@ export class BleService {
     useReconnectStore.getState().stop()
 
     void this.seedStatusFromDevice(device)
+    void this.seedTimerFromDevice(device)
 
     this.startStalenessTimer()
+  }
+
+  private async seedTimerFromDevice(device: Device): Promise<void> {
+    try {
+      const stateChar = await this.runGatt(() =>
+        device.readCharacteristicForService(BLE_SERVICE_UUID, BLE_CHAR_TIMER_STATE)
+      )
+      if (!stateChar.value) return
+      const result = parseTimerState(decodeBase64(stateChar.value))
+      if (result.kind !== 'ok') {
+        log('warn', `BLE: rejected malformed initial timer state payload (${result.kind})`)
+        return
+      }
+      useTimerStore.getState().applyDeviceState(result.state)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      log('warn', `BLE: failed to seed TIMER state — ${msg}`)
+    }
   }
 
   private async seedStatusFromDevice(
@@ -521,6 +609,10 @@ export class BleService {
     this.teleSub = null
     this.statusSub?.remove()
     this.statusSub = null
+    this.timerStateSub?.remove()
+    this.timerStateSub = null
+    this.timerLapSub?.remove()
+    this.timerLapSub = null
     this.disconnectSub?.remove()
     this.disconnectSub = null
   }
@@ -557,6 +649,7 @@ export const cancelReconnect = bleService.cancelReconnect.bind(bleService)
 export const pushSettings = bleService.pushSettings.bind(bleService)
 export const readSettings = bleService.readSettings.bind(bleService)
 export const sendCmd = bleService.sendCmd.bind(bleService)
+export const sendTimerCommand = bleService.sendTimerCommand.bind(bleService)
 export const getBlePermissionState = bleService.getBlePermissionState.bind(bleService)
 export const isBlePowered = bleService.isBlePowered.bind(bleService)
 export const tryReconnectLastDevice = bleService.tryReconnectLastDevice.bind(bleService)

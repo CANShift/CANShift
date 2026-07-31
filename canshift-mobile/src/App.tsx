@@ -7,12 +7,14 @@ import { Toaster } from '@/components/ui'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useBleForegroundReconnect } from '@/hooks/use-ble-foreground-reconnect'
 import { useAppSettingsStore } from '@/stores/app-settings.store'
+import { hydrateTimerSessions } from '@/stores/timer-sessions.store'
 import { markFirstScreenReady } from './diag/cold-start'
 
 export default function App() {
   useBleForegroundReconnect()
   useEffect(() => {
     void useAppSettingsStore.getState().hydrate()
+    void hydrateTimerSessions()
     markFirstScreenReady()
   }, [])
   return (

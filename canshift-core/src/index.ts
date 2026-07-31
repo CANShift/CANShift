@@ -92,6 +92,29 @@ export {
 
 export type { BleStatus, BleStatusResult } from './schemas/ble-status.js'
 export { BLE_STATUS_MAX_STRING_LEN, parseBleStatus } from './schemas/ble-status.js'
+export type {
+  TimerBleLap,
+  TimerBleState,
+  TimerCommand,
+  TimerCommandCode,
+  TimerLapResult,
+  TimerLapWire,
+  TimerRunState,
+  TimerStateResult,
+  TimerStateWire,
+} from './schemas/ble-timer.js'
+export {
+  TIMER_COMMAND_CODES,
+  TIMER_LAP_BUFFER_CAPACITY,
+  TIMER_RUN_STATES,
+  TimerLapWireSchema,
+  TimerStateWireSchema,
+  encodeTimerCommand,
+  parseTimerLap,
+  parseTimerState,
+  timerLapFromWire,
+  timerStateFromWire,
+} from './schemas/ble-timer.js'
 
 export type {
   LogFrame,

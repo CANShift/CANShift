@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import DashScreen from '../screens/DashScreen'
 import GraphScreen from '../screens/GraphScreen'
 import LogScreen from '../screens/LogScreen'
+import TimerScreen from '../screens/TimerScreen'
 import ReconnectBanner from '../components/ReconnectBanner'
 import ReconnectFailedDialog from '../components/ReconnectFailedDialog'
 import { Colors, Typography } from '../theme'
@@ -18,6 +19,7 @@ interface Props {
 export type ConnectedTabParamList = {
   Dash: undefined
   Graph: undefined
+  Timer: undefined
   Console: undefined
 }
 
@@ -73,6 +75,14 @@ export default function ConnectedNavigator({ navigation }: Props) {
           options={{
             tabBarLabel: 'Graph',
             tabBarIcon: ({ focused }) => <TabIcon icon="∿" focused={focused} />,
+          }}
+        />
+        <Tab.Screen
+          name="Timer"
+          component={TimerScreen}
+          options={{
+            tabBarLabel: 'Timer',
+            tabBarIcon: ({ focused }) => <TabIcon icon="◷" focused={focused} />,
           }}
         />
         <Tab.Screen

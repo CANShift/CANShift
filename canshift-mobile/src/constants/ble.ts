@@ -8,6 +8,12 @@ export const BLE_CHAR_SETTINGS = '4fa0b6a0-0000-0000-0000-000000000004' as const
 
 export const BLE_CHAR_CMD = '4fa0b6a0-0000-0000-0000-000000000005' as const
 
+export const BLE_CHAR_TIMER_CMD = '4fa0b6a0-0000-0000-0000-000000000006' as const
+
+export const BLE_CHAR_TIMER_STATE = '4fa0b6a0-0000-0000-0000-000000000007' as const
+
+export const BLE_CHAR_TIMER_LAP = '4fa0b6a0-0000-0000-0000-000000000008' as const
+
 export const BLE_DEVICE_NAME = 'CANShift' as const
 
 export interface SignalMeta {
