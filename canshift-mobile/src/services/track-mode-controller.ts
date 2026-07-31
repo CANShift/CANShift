@@ -80,9 +80,15 @@ export const createTrackModeController = (
       nextSubscription.stop()
       return { started: false, reason: 'cancelled' }
     }
+    try {
+      startSession()
+      publisher.start()
+    } catch (err) {
+      nextSubscription.stop()
+      stopSession()
+      throw err
+    }
     subscription = nextSubscription
-    startSession()
-    publisher.start()
     log('info', 'Track mode started')
     return { started: true }
   }
@@ -101,9 +107,12 @@ export const createTrackModeController = (
     if (subscription === null) return
     subscription.stop()
     subscription = null
-    stopSession()
-    publisher.stop()
-    await publisher.tickNow()
+    try {
+      stopSession()
+    } finally {
+      publisher.stop()
+      await publisher.tickNow()
+    }
     log('info', 'Track mode stopped')
   }
 
