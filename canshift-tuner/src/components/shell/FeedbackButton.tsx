@@ -90,7 +90,6 @@ const FeedbackButton = () => {
             background: '#1A1A1A',
             color: '#CCCCCC',
             border: '1px solid #2F2F2F',
-            borderRadius: 8,
             padding: 14,
             width: 320,
             pointerEvents: 'auto',
@@ -118,7 +117,6 @@ const FeedbackButton = () => {
                 style={{
                   background: '#111111',
                   border: '1px solid #333333',
-                  borderRadius: 4,
                   color: '#CCCCCC',
                   fontSize: 12,
                   padding: 8,
@@ -137,7 +135,6 @@ const FeedbackButton = () => {
                 style={{
                   background: '#111111',
                   border: '1px solid #333333',
-                  borderRadius: 4,
                   color: '#CCCCCC',
                   fontSize: 12,
                   padding: '6px 8px',
@@ -153,7 +150,6 @@ const FeedbackButton = () => {
                   style={{
                     background: 'transparent',
                     border: '1px solid #333333',
-                    borderRadius: 4,
                     color: '#AAAAAA',
                     fontSize: 12,
                     padding: '5px 10px',
@@ -169,7 +165,6 @@ const FeedbackButton = () => {
                   style={{
                     background: message.trim().length === 0 ? '#552222' : '#FF4444',
                     border: 'none',
-                    borderRadius: 4,
                     color: '#FFFFFF',
                     fontSize: 12,
                     padding: '5px 12px',
@@ -190,7 +185,6 @@ const FeedbackButton = () => {
             background: '#1A1A1A',
             color: '#CCCCCC',
             border: '1px solid #2F2F2F',
-            borderRadius: 8,
             padding: '8px 12px',
             fontSize: 12,
             lineHeight: 1.4,
@@ -225,7 +219,6 @@ const FeedbackButton = () => {
         style={{
           width: 44,
           height: 44,
-          borderRadius: '50%',
           background: '#FF4444',
           color: '#FFFFFF',
           border: 'none',

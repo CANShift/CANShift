@@ -25,7 +25,6 @@ const sectionBodyStyle: CSSProperties = {
   flexDirection: 'column',
   background: 'hsl(var(--surface))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
   overflow: 'hidden',
 }
 

@@ -67,7 +67,6 @@ const cardStyle = (variant: 'day' | 'night'): CSSProperties => ({
   alignItems: 'center',
   gap: 18,
   padding: '20px 22px',
-  borderRadius: 10,
   background: variant === 'day' ? 'hsl(45 90% 95%)' : 'hsl(var(--bg-inset))',
   border: `1px solid ${variant === 'day' ? 'hsl(45 70% 70%)' : 'hsl(var(--border))'}`,
   color: variant === 'day' ? 'hsl(45 50% 18%)' : 'hsl(var(--text))',

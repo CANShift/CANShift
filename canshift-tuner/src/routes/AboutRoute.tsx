@@ -110,7 +110,6 @@ const headerStyle: CSSProperties = {
 const badgeStyle: CSSProperties = {
   display: 'inline-block',
   padding: '4px 10px',
-  borderRadius: 999,
   background: 'hsl(var(--surface))',
   border: '1px solid hsl(var(--border))',
   color: 'hsl(var(--text-dim))',

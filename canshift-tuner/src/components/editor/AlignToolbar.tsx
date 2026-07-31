@@ -7,7 +7,6 @@ const BUTTON_STYLE: CSSProperties = {
   fontSize: 10,
   background: '#1A1A1A',
   border: '1px solid #2A2A2A',
-  borderRadius: 3,
   color: '#888888',
   cursor: 'pointer',
   letterSpacing: '0.03em',

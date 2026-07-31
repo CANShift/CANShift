@@ -63,7 +63,6 @@ const PageListItemImpl = ({
       <div
         style={{
           border: `2px solid ${isSelected ? 'hsl(var(--text))' : 'hsl(var(--border))'}`,
-          borderRadius: 4,
           overflow: 'hidden',
           boxShadow: isSelected ? '0 0 0 1px hsl(var(--text) / 0.13)' : 'none',
           transition: 'border-color 0.1s',
@@ -88,7 +87,6 @@ const PageListItemImpl = ({
             justifyContent: 'center',
             background: isDefault ? 'rgba(0, 0, 0, 0.67)' : 'rgba(0, 0, 0, 0.33)',
             border: 'none',
-            borderRadius: 3,
             padding: 0,
             cursor: 'pointer',
             fontSize: 12,
@@ -116,7 +114,6 @@ const PageListItemImpl = ({
               justifyContent: 'center',
               background: 'rgba(0, 0, 0, 0.33)',
               border: 'none',
-              borderRadius: 3,
               padding: 0,
               color: 'hsl(var(--text-dim))',
               cursor: 'pointer',

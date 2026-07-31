@@ -102,7 +102,6 @@ const actionsStyle: CSSProperties = {
 const progressTrackStyle: CSSProperties = {
   width: '100%',
   height: 6,
-  borderRadius: 3,
   background: 'hsl(var(--bg-inset))',
   overflow: 'hidden',
 }
@@ -119,7 +118,6 @@ const successCardStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 2,
   padding: '8px 12px',
-  borderRadius: 6,
   border: '1px solid hsl(var(--success))',
   background: 'hsl(var(--success) / 0.12)',
   fontSize: 12,
@@ -139,7 +137,6 @@ const errorCardStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 2,
   padding: '8px 12px',
-  borderRadius: 6,
   border: '1px solid hsl(var(--destructive))',
   background: 'hsl(var(--destructive) / 0.12)',
   fontSize: 12,

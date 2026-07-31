@@ -33,7 +33,6 @@ const inputStyle = {
   padding: '0 6px',
   background: INPUT_BG,
   border: `1px solid ${INPUT_BORDER}`,
-  borderRadius: 3,
   color: VALUE_FG,
   fontSize: 12,
   boxSizing: 'border-box' as const,

@@ -114,7 +114,6 @@ const wrapperStyle: CSSProperties = {
   minHeight: 0,
   background: 'hsl(var(--surface))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
   overflow: 'hidden',
 }
 
@@ -139,7 +138,6 @@ const clearButtonStyle = (disabled: boolean): CSSProperties => ({
   background: disabled ? 'hsl(var(--bg-inset))' : 'hsl(var(--surface))',
   color: disabled ? 'hsl(var(--text-muted))' : 'hsl(var(--text-dim))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   padding: '3px 10px',
   fontSize: 10,
   letterSpacing: '0.06em',
@@ -194,7 +192,6 @@ const payloadStyle: CSSProperties = {
   padding: '6px 10px',
   background: 'hsl(var(--bg))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   fontSize: 11,
   color: 'hsl(var(--text-dim))',
   whiteSpace: 'pre-wrap',

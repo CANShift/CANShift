@@ -93,7 +93,6 @@ const FallbackPanel = ({ error, onReset }: FallbackPanelProps) => {
             background: 'hsl(var(--bg-inset))',
             border: '1px solid hsl(var(--border))',
             padding: 8,
-            borderRadius: 4,
             marginTop: 8,
           }}
         >
@@ -110,6 +109,5 @@ const fallbackButtonStyle = {
   background: 'hsl(var(--surface))',
   color: 'hsl(var(--text))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   cursor: 'pointer',
 } as const

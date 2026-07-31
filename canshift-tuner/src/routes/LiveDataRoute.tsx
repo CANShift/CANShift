@@ -188,7 +188,6 @@ const exportButtonStyle = (disabled: boolean): CSSProperties => ({
   background: disabled ? 'hsl(var(--bg-inset))' : 'hsl(var(--surface))',
   color: disabled ? 'hsl(var(--text-muted))' : 'hsl(var(--text))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
   padding: '8px 14px',
   fontSize: 12,
   fontWeight: 600,
@@ -285,7 +284,6 @@ const rangeBarTrackStyle: CSSProperties = {
   flex: 1,
   height: 6,
   background: 'hsl(var(--bg-inset))',
-  borderRadius: 3,
   overflow: 'hidden',
   maxWidth: 120,
 }

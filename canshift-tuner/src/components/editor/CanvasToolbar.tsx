@@ -64,7 +64,6 @@ export const CanvasToolbar = ({
           fontSize: 12,
           background: 'transparent',
           border: '1px solid hsl(var(--border))',
-          borderRadius: 3,
           color: canUndo ? '#AAAAAA' : '#444444',
           cursor: canUndo ? 'pointer' : 'default',
         }}
@@ -82,7 +81,6 @@ export const CanvasToolbar = ({
           fontSize: 12,
           background: 'transparent',
           border: '1px solid hsl(var(--border))',
-          borderRadius: 3,
           color: canRedo ? '#AAAAAA' : '#444444',
           cursor: canRedo ? 'pointer' : 'default',
         }}
@@ -111,7 +109,6 @@ export const CanvasToolbar = ({
             fontWeight: 600,
             background: '#2A1A00',
             border: '1px solid #663300',
-            borderRadius: 3,
             color: '#FFAA44',
             letterSpacing: '0.05em',
           }}
@@ -189,7 +186,6 @@ export const CanvasToolbar = ({
           fontWeight: 600,
           background: revLimiting ? '#3A0000' : '#1E0A0A',
           border: `1px solid ${revLimiting ? '#CC0000' : '#663333'}`,
-          borderRadius: 3,
           color: revLimiting ? '#FF4444' : '#CC5555',
           cursor: revLimiting ? 'default' : 'pointer',
           letterSpacing: '0.05em',

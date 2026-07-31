@@ -240,7 +240,6 @@ const importErrorStyle: CSSProperties = {
   padding: '8px 10px',
   background: 'hsl(var(--destructive) / 0.1)',
   border: '1px solid hsl(var(--destructive))',
-  borderRadius: 6,
 }
 
 export default EcuRoute

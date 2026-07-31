@@ -154,7 +154,6 @@ const barTrackStyle: CSSProperties = {
   flex: 1,
   height: 6,
   background: 'hsl(var(--bg))',
-  borderRadius: 2,
   overflow: 'hidden',
 }
 

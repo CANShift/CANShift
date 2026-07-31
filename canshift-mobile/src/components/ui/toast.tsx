@@ -15,7 +15,6 @@ const baseStyle = {
   borderTopWidth: 1,
   borderRightWidth: 1,
   borderBottomWidth: 1,
-  borderRadius: 8,
   height: 'auto' as const,
   minHeight: 60,
   paddingVertical: 8,

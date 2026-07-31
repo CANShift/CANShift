@@ -49,6 +49,5 @@ const mismatchStyle: CSSProperties = {
   letterSpacing: '0.04em',
   padding: '2px 8px',
   border: '1px solid hsl(var(--destructive))',
-  borderRadius: 3,
   cursor: 'help',
 }

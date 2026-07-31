@@ -239,7 +239,6 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
             style={{
               background: '#000000',
               border: '3px solid #2A2A2A',
-              borderRadius: 6,
               padding: 6,
               boxShadow: '0 8px 32px #00000088',
             }}
