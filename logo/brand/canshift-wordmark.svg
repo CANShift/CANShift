@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 150" width="720" height="150">
+  
+  
+  <g transform="translate(0,0)" fill="none" stroke-linecap="butt">
+    <g transform="translate(14,26) scale(0.98) translate(10,0) skewX(-11)">
+      <path d="M46 26 H22 V74 H46" stroke="#201E1D" stroke-width="13"></path>
+      <path d="M96 26 H66 V50 H96 V74 H66" stroke="#EC3013" stroke-width="13"></path>
+    </g>
+  </g>
+  <rect x="146" y="26" width="2" height="98" fill="#201E1D" opacity="0.35"></rect>
+  <g transform="translate(176,104) skewX(-11)" font-family="Archivo, sans-serif" font-weight="800" font-size="76" letter-spacing="-3.4">
+    <text fill="#201E1D">CAN<tspan fill="#EC3013">SHIFT</tspan></text>
+  </g>
+  
+</svg>
