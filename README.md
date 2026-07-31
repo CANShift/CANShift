@@ -1,7 +1,10 @@
 # CANShift
 
 <p align="center">
-  <img src="logo/CANShift_logo.png" alt="CANShift logo" width="600">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="logo/brand/canshift-lockup-baseline-onblack.svg">
+    <img src="logo/brand/canshift-lockup-baseline.svg" alt="CANShift logo" width="420">
+  </picture>
 </p>
 
 <p align="center"><em>Configurable real-time automotive dashboard for ESP32 — design your cluster, bind CAN signals, and push it from your desktop or phone.</em></p>
@@ -11,6 +14,7 @@
 ## Status
 
 - **Active development** across firmware, tuner, mobile, and core
+- **Full visual restyle in progress** — new "Bracket" brand identity, restyled Tuner, dash and mobile surfaces. Tracked in [#1838](https://github.com/tburkhalterr/CANShift/issues/1838), design reference in [`docs/design/restyle-handoff.md`](docs/design/restyle-handoff.md), brand assets in [`logo/brand/`](logo/brand/)
 - **Main branch is protected** — every change ships through a pull request
 - **Releases are firmware-only** since the dash-hosted-Studio cutover (#1077) — the workflow tags + builds the merged firmware binary + SPIFFS image. Studio installer artifacts and mobile artifacts are no longer published.
 - Latest release: [github.com/tburkhalterr/CANShift/releases](https://github.com/tburkhalterr/CANShift/releases)
