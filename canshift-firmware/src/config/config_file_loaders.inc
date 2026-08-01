@@ -30,7 +30,9 @@ bool loadDashboard() {
     JsonDocument doc(JsonReader::configAllocator());
     if (!readAndParseWithBak(CONFIG_PATH_DASHBOARD, doc)) {
         LOG_ERROR("CFG", "dashboard.json unreadable (primary + .bak)");
-        ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", "dashboard.json unreadable");
+        char msg[48];
+        snprintf(msg, sizeof(msg), "dashboard.json: %s", lastParseError());
+        ErrorStore::push(ERROR_SRC_CONFIG, "READ_FAIL", msg);
         delete out;
         return false;
     }
