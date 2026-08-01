@@ -7,6 +7,9 @@ import {
   WIDGET_FONT_CLAMP,
   VALUE_FRAC_FONT_RATIO,
   VALUE_UNIT_FONT_SIZE,
+  WIDGET_TOP_RULE,
+  valueUnitFontSize,
+  widgetTopRulePx,
   STALE_PLACEHOLDER,
   widgetFracFontSize,
   GAUGE_ARC,
@@ -85,6 +88,26 @@ describe('shared value-cluster rules', () => {
     expect(widgetFracFontSize(32)).toBe(22)
     expect(widgetFracFontSize(20)).toBe(14)
     expect(widgetFracFontSize(15)).toBe(12)
+  })
+  it('valueUnitFontSize: quarter of the value size, floored at 10 (label_widget.cpp pickUnitFontSize)', () => {
+    expect(valueUnitFontSize(48)).toBe(12)
+    expect(valueUnitFontSize(44)).toBe(11)
+    expect(valueUnitFontSize(40)).toBe(10)
+    expect(valueUnitFontSize(32)).toBe(10)
+    expect(valueUnitFontSize(12)).toBe(10)
+  })
+  it('widgetTopRulePx: 2px ink rule from 32px values, 1px track rule below (restyle §4)', () => {
+    expect(WIDGET_TOP_RULE).toEqual({
+      primaryPx: 2,
+      secondaryPx: 1,
+      primaryFontMin: 32,
+      trackColor: '#222222',
+      dangerColor: '#FF4444',
+    })
+    expect(widgetTopRulePx(48)).toBe(2)
+    expect(widgetTopRulePx(32)).toBe(2)
+    expect(widgetTopRulePx(31)).toBe(1)
+    expect(widgetTopRulePx(12)).toBe(1)
   })
 })
 

@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { WIDGET_TOP_RULE, valueUnitFontSize, widgetTopRulePx } from '@tmbk/canshift-core'
 import { BLINK_ANIM, FONT_FAMILY } from '../widgetPreview.styles'
 import { FRAC_FONT_SCALE, effectiveValue, splitDecimal } from './gauge-math'
 import { type BaseRendererProps, formatSignalLabel } from './shared'
@@ -39,6 +40,12 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const unitChars = signalUnit.length
   const charBudget = headChars + tailChars * FRAC_FONT_SCALE + unitChars * FRAC_FONT_SCALE * 0.45
   const fontSize = Math.max(10, Math.min(availH * 0.85, (w - 16) / (charBudget * 0.68)))
+  const rulePx = widgetTopRulePx(Math.round(fontSize))
+  const ruleColor = danger
+    ? WIDGET_TOP_RULE.dangerColor
+    : rulePx === WIDGET_TOP_RULE.primaryPx
+      ? valueColor
+      : WIDGET_TOP_RULE.trackColor
 
   return (
     <div
@@ -56,6 +63,18 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
         gap: 0,
       }}
     >
+      <span
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: rulePx,
+          background: ruleColor,
+          animation: danger ? BLINK_ANIM : undefined,
+        }}
+      />
       <span
         style={{
           position: 'absolute',
@@ -118,7 +137,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
           <span
             style={{
               color: '#888888',
-              fontSize: Math.max(8, Math.min(fontSize * 0.32, 14)),
+              fontSize: valueUnitFontSize(Math.round(fontSize)),
               fontFamily: FONT_FAMILY,
               fontWeight: 500,
               lineHeight: 1,

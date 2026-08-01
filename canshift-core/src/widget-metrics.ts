@@ -35,7 +35,14 @@ export const widgetStaleTextColor = (isDayMode: boolean): HexColor =>
 export const WIDGET_FONT_CLAMP = { min: 12, max: 48 } as const
 export const VALUE_FRAC_FONT_RATIO = 0.7
 export const VALUE_UNIT_FONT_SIZE = 12
+export const VALUE_UNIT_RATIO = { numerator: 1, denominator: 4 } as const
+export const VALUE_UNIT_FONT_MIN = 10
 export const STALE_PLACEHOLDER = '--'
+
+export const valueUnitFontSize = (valueFontSize: number): number => {
+  const size = truncDiv(valueFontSize, VALUE_UNIT_RATIO.numerator, VALUE_UNIT_RATIO.denominator)
+  return size < VALUE_UNIT_FONT_MIN ? VALUE_UNIT_FONT_MIN : size
+}
 
 export const widgetFracFontSize = (intFontSize: number): number => {
   const frac = truncDiv(intFontSize, 7, 10)
@@ -58,6 +65,19 @@ export const GAUGE_TRACK_COLORS = {
   plain: asHex('#222222'),
   gradient: asHex('#2A2A2A'),
 } as const satisfies Record<'plain' | 'gradient', HexColor>
+
+export const WIDGET_TOP_RULE = {
+  primaryPx: 2,
+  secondaryPx: 1,
+  primaryFontMin: 32,
+  trackColor: GAUGE_TRACK_COLORS.plain,
+  dangerColor: WIDGET_ZONE_COLORS.danger,
+} as const
+
+export const widgetTopRulePx = (valueFontSize: number): number =>
+  valueFontSize >= WIDGET_TOP_RULE.primaryFontMin
+    ? WIDGET_TOP_RULE.primaryPx
+    : WIDGET_TOP_RULE.secondaryPx
 
 export const GAUGE_VALUE_FONT_BREAKPOINTS = [
   { minHeight: 165, size: 48 },
