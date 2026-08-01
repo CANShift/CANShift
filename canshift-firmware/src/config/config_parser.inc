@@ -142,11 +142,17 @@ float readAlertThreshold(JsonObjectConst cfg) {
     return cfg["alertThreshold"].is<float>() ? cfg["alertThreshold"].as<float>() : NAN;
 }
 
+uint8_t clampLayoutTrack(int value, int minValue, int maxValue) {
+    const int clamped = value < minValue ? minValue : value > maxValue ? maxValue : value;
+    return static_cast<uint8_t>(clamped);
+}
+
 void parseWidgetLayout(JsonObjectConst layout, CfgLayout *out) {
-    out->col = layout["col"] | 0;
-    out->colSpan = layout["colSpan"] | 1;
-    out->row = layout["row"] | 0;
-    out->rowSpan = layout["rowSpan"] | 1;
+    constexpr int kGridTracks = 12;
+    out->colSpan = clampLayoutTrack(layout["colSpan"] | 1, 1, kGridTracks);
+    out->rowSpan = clampLayoutTrack(layout["rowSpan"] | 1, 1, kGridTracks);
+    out->col = clampLayoutTrack(layout["col"] | 0, 0, kGridTracks - out->colSpan);
+    out->row = clampLayoutTrack(layout["row"] | 0, 0, kGridTracks - out->rowSpan);
     out->zOrder = layout["zOrder"] | 0;
     out->x = 0;
     out->y = 0;

@@ -1665,13 +1665,23 @@ describe('migrateConfig — 1.24.0 → 1.25.0 (pixel layout → 12-column spans,
     })
   })
 
-  it('converts the right half and quarter rows exactly', () => {
+  it('converts the right half; a legacy 56 px quarter spans 4 tracks (renders 56 px again)', () => {
     expect(layoutOf(wrap([pixelWidget({ x: 160, y: 112, w: 160, h: 56, zOrder: 2 })]))).toEqual({
       col: 6,
       colSpan: 6,
       row: 6,
-      rowSpan: 3,
+      rowSpan: 4,
       zOrder: 2,
+    })
+  })
+
+  it('maps a widget starting at the frame padding to column 0', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 16, y: 16, w: 138, h: 39, zOrder: 0 })]))).toEqual({
+      col: 0,
+      colSpan: 6,
+      row: 0,
+      rowSpan: 3,
+      zOrder: 0,
     })
   })
 

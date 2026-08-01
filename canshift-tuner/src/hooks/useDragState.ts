@@ -37,6 +37,18 @@ export interface UseDragStateOptions {
 const trackPitch = (areaSize: number, tracks: number): number =>
   (areaSize - 2 * LAYOUT_GRID.FRAME_PADDING + LAYOUT_GRID.GUTTER) / tracks
 
+const clampGroupDelta = (
+  raw: number,
+  widgets: DraggingWidget[],
+  start: (w: DraggingWidget) => number,
+  span: (w: DraggingWidget) => number,
+  tracks: number
+): number => {
+  const min = Math.max(...widgets.map((w) => -start(w)))
+  const max = Math.min(...widgets.map((w) => tracks - span(w) - start(w)))
+  return min > max ? raw : Math.min(Math.max(raw, min), max)
+}
+
 export const useDragState = ({
   dragInputsRef,
   zoomRef,
@@ -93,8 +105,30 @@ export const useDragState = ({
         const drag = dragRef.current
         if (!drag) return
         const effectiveScale = scale * (zoomRef.current ?? 1)
-        const deltaCols = Math.round((ev.clientX - drag.startMouseX) / (colPitch * effectiveScale))
-        const deltaRows = Math.round((ev.clientY - drag.startMouseY) / (rowPitch * effectiveScale))
+        const rawDeltaCols = Math.round(
+          (ev.clientX - drag.startMouseX) / (colPitch * effectiveScale)
+        )
+        const rawDeltaRows = Math.round(
+          (ev.clientY - drag.startMouseY) / (rowPitch * effectiveScale)
+        )
+        const deltaCols = drag.isMulti
+          ? clampGroupDelta(
+              rawDeltaCols,
+              drag.widgets,
+              (w) => w.startCol,
+              (w) => w.colSpan,
+              LAYOUT_GRID.COLUMNS
+            )
+          : rawDeltaCols
+        const deltaRows = drag.isMulti
+          ? clampGroupDelta(
+              rawDeltaRows,
+              drag.widgets,
+              (w) => w.startRow,
+              (w) => w.rowSpan,
+              LAYOUT_GRID.ROWS
+            )
+          : rawDeltaRows
 
         const place = (dw: DraggingWidget): { id: string; col: number; row: number } => {
           const clamped = clampGridPlacement({

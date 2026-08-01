@@ -35,14 +35,6 @@ export const WidgetLayoutSchema = z
     message: `layout: row+rowSpan must be <= ${String(LAYOUT_GRID.ROWS)}`,
     path: ['rowSpan'],
   })
-  .refine((l) => l.col + l.colSpan <= LAYOUT_GRID.COLUMNS, {
-    message: `layout: col+colSpan must be <= ${String(LAYOUT_GRID.COLUMNS)}`,
-    path: ['colSpan'],
-  })
-  .refine((l) => l.row + l.rowSpan <= LAYOUT_GRID.ROWS, {
-    message: `layout: row+rowSpan must be <= ${String(LAYOUT_GRID.ROWS)}`,
-    path: ['rowSpan'],
-  })
 
 export const WidgetStyleSchema = z
   .object({

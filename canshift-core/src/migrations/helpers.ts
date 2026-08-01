@@ -90,10 +90,13 @@ export const legacyAxisToSpan = (
   size: number,
   tracks: number
 ): { track: number; span: number } => {
-  if (size <= 0) return { track: 0, span: 1 }
-  const boundary = (px: number): number => Math.round((px * tracks) / size)
+  const content = size - 2 * LAYOUT_GRID.FRAME_PADDING
+  if (content <= 0) return { track: 0, span: 1 }
+  const pitch = content + LAYOUT_GRID.GUTTER
+  const boundary = (px: number): number =>
+    Math.round(((px - LAYOUT_GRID.FRAME_PADDING) * tracks) / pitch)
   const track = clampInt(boundary(start), 0, tracks - 1)
-  const end = clampInt(boundary(start + length), track + 1, tracks)
+  const end = clampInt(boundary(start + length + LAYOUT_GRID.GUTTER), track + 1, tracks)
   return { track, span: end - track }
 }
 
