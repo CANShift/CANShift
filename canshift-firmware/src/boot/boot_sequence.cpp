@@ -552,13 +552,16 @@ void BootSequence::run() {
     const uint32_t bootStartMs = millis();
     initPsramAndLogEntry();
     initTaskWatchdog();
-    initBleEarlyIfEnabled();
     initLvglMemoryPool();
 
     const bool storageOk = mountStorageOrLogError();
     provisionDefaultConfigsIfNeeded(storageOk);
+    // Config parses before BLE claims its ~55 KB of internal heap — the
+    // transient JsonDocument for a full 8-page dashboard needs the room on
+    // PSRAM-less WROOM modules (#1596 debugging session).
     loadConfigWithHeapBracket();
     ScreenProfile::initFromDashboard();
+    initBleEarlyIfEnabled();
 
     initDisplayHardware();
     initTouchHardware();
