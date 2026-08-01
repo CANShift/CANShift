@@ -16,11 +16,11 @@ export const BurnButton = ({ disabled = false, busy = false, title, onClick }: B
       disabled={isDisabled}
       onClick={onClick}
       title={title}
-      className="h-auto gap-0"
+      className="h-auto gap-0 shell-burn-button"
       style={isDisabled ? burnButtonStyleDisabled : burnButtonStyleEnabled}
     >
       {busy ? <BurnSpinner /> : null}
-      {busy ? 'Burning…' : 'Burn'}
+      {busy ? 'BURNING…' : 'BURN TO DEVICE'}
     </Button>
   )
 }
@@ -115,27 +115,24 @@ const dismissButtonStyle: CSSProperties = {
 }
 
 const burnButtonStyleBase: CSSProperties = {
-  padding: '5px 14px',
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
+  height: '100%',
+  padding: '0 24px',
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: '0.09em',
+  border: 'none',
 }
 
 const burnButtonStyleDisabled: CSSProperties = {
   ...burnButtonStyleBase,
-  background: 'hsl(var(--surface-2))',
-  color: 'hsl(var(--text-dim))',
-  border: '1px solid hsl(var(--border))',
+  background: 'hsl(var(--brand-neutral-200))',
+  color: 'hsl(var(--brand-neutral-500))',
   cursor: 'not-allowed',
-  opacity: 0.5,
 }
 
 const burnButtonStyleEnabled: CSSProperties = {
   ...burnButtonStyleBase,
   background: 'hsl(var(--brand-accent))',
-  color: 'hsl(var(--brand-ground))',
-  border: '1px solid hsl(var(--brand-accent))',
+  color: '#fff',
   cursor: 'pointer',
-  boxShadow: '0 1px 4px hsl(var(--brand-accent) / 0.3)',
 }

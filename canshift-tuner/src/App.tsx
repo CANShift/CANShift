@@ -126,9 +126,9 @@ const shellStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   height: '100vh',
-  background: 'hsl(var(--bg))',
-  color: 'hsl(var(--text))',
-  fontFamily: 'system-ui, sans-serif',
+  background: 'hsl(var(--brand-chrome-bg))',
+  color: 'hsl(var(--brand-text))',
+  fontFamily: 'var(--font-ui)',
 }
 
 const bodyStyle: CSSProperties = {

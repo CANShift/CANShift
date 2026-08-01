@@ -79,18 +79,47 @@ samp {
   font-family: var(--font-mono);
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: hsl(var(--bg)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--surface-2)); }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--border)); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--bg));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--surface-2));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--border));
+}
 
 @keyframes canshift-tuner-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes canshift-tuner-shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-3px); }
-  50% { transform: translateX(3px); }
-  75% { transform: translateX(-2px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+.shell-nav-item:hover {
+  background: hsl(var(--brand-neutral-200));
+  color: hsl(var(--brand-text));
+}
+
+.shell-burn-button:not(:disabled):hover {
+  background: color-mix(in srgb, hsl(var(--brand-accent)) 86%, #000) !important;
 }

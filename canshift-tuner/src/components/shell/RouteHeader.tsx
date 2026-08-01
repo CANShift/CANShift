@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { MONO_FONT } from '../../lib/typography'
 
 interface RouteHeaderProps {
   title: string
@@ -8,39 +9,38 @@ interface RouteHeaderProps {
 
 export const RouteHeader = ({ title, subtitle, action }: RouteHeaderProps) => (
   <header style={headerStyle}>
-    <div style={textBlockStyle}>
-      <div style={titleStyle}>{title}</div>
-      {subtitle != null && <div style={subtitleStyle}>{subtitle}</div>}
-    </div>
+    <div style={titleStyle}>{title}</div>
+    {subtitle != null && <div style={subtitleStyle}>{subtitle}</div>}
     {action != null && <div style={actionStyle}>{action}</div>}
   </header>
 )
 
 const headerStyle: CSSProperties = {
+  height: 48,
+  flexShrink: 0,
   display: 'flex',
-  alignItems: 'flex-end',
-  justifyContent: 'space-between',
-  gap: 16,
-  padding: '20px 28px 16px',
-  borderBottom: '1px solid hsl(var(--border))',
-}
-
-const textBlockStyle: CSSProperties = {
-  minWidth: 0,
+  alignItems: 'center',
+  gap: 14,
+  padding: '0 20px',
+  borderBottom: '2px solid var(--brand-divider)',
 }
 
 const titleStyle: CSSProperties = {
-  fontSize: 20,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.01em',
+  fontWeight: 800,
+  fontSize: 14,
+  letterSpacing: '0.02em',
+  color: 'hsl(var(--brand-text))',
+  whiteSpace: 'nowrap',
 }
 
 const subtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'hsl(var(--text-dim))',
-  marginTop: 2,
-  maxWidth: 720,
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  minWidth: 0,
 }
 
 const actionStyle: CSSProperties = {
@@ -48,4 +48,5 @@ const actionStyle: CSSProperties = {
   alignItems: 'center',
   gap: 10,
   flexShrink: 0,
+  marginLeft: 'auto',
 }
