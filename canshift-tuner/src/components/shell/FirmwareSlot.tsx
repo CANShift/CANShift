@@ -14,31 +14,32 @@ export interface FirmwareSlotProps {
 export const FirmwareSlot = ({ version, compat }: FirmwareSlotProps) => {
   if (compat.kind === 'mismatch') {
     return (
-      <div
+      <span
         style={mismatchStyle}
         title={`Tuner expects firmware major ${String(compat.expected)}.x — device reports ${compat.version}. Burn disabled until the firmware is updated.`}
       >
         fw v{compat.version} · mismatch
-      </div>
+      </span>
     )
   }
   if (version) {
     return (
-      <div style={baseStyle} title={`Firmware v${version}`}>
+      <span style={baseStyle} title={`Firmware v${version}`}>
         fw v{version}
-      </div>
+      </span>
     )
   }
   return (
-    <div style={baseStyle} title="Firmware version — waiting for handshake">
+    <span style={baseStyle} title="Firmware version — waiting for handshake">
       fw —
-    </div>
+    </span>
   )
 }
 
 const baseStyle: CSSProperties = {
+  display: 'inline',
   fontSize: 11,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-600))',
   fontFamily: MONO_FONT,
   letterSpacing: '0.04em',
 }

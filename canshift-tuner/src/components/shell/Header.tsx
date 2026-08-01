@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import { HeaderView, type HeaderStatus } from './HeaderView'
 import { BurnButton as UiBurnButton, BurnOutcomePill } from './BurnButton'
 import { FirmwareSlot as UiFirmwareSlot } from './FirmwareSlot'
 import { useConnectionStore } from '../../stores/connection.store'
+import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useUiStore } from '../../stores/ui.store'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
-import { ROUTE_PATHS, isRoutePath, type RoutePath } from '../../constants/routes'
 
 const PULSE_HOLD_MS = 220
 const PULSE_THROTTLE_MS = 60
@@ -77,35 +76,16 @@ const useSerialActivityPulse = (active: boolean): boolean => {
   return pulsing
 }
 
-export const SECTION_TITLES: Record<RoutePath, string> = {
-  '/': 'Welcome',
-  '/dashboard': 'Dashboard',
-  '/live': 'Live Data',
-  '/ecu': 'ECU Profile',
-  '/can': 'CAN Bus',
-  '/obd2': 'OBD-II',
-  '/cli': 'CLI',
-  '/logs': 'Logs',
-  '/themes': 'Themes',
-  '/firmware': 'Firmware',
-  '/about': 'About',
-}
-
-const sectionTitleFromPath = (pathname: string): string | null => {
-  if (isRoutePath(pathname)) return SECTION_TITLES[pathname]
-  const prefixMatch = ROUTE_PATHS.find((path) => path !== '/' && pathname.startsWith(`${path}/`))
-  return prefixMatch !== undefined ? SECTION_TITLES[prefixMatch] : null
-}
-
 const Header = () => {
   const status = useConnectionStore((s) => s.status)
   const port = useConnectionStore((s) => s.port)
   const disconnect = useConnectionStore((s) => s.disconnect)
-  const location = useLocation()
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const exitSimulation = useDeviceStore((s) => s.exitSimulation)
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
+  const projectName = useDashboardStore((s) => s.config?.name ?? null)
+  const isDirty = useDashboardStore((s) => s.isDirty)
   const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
   const portLabel = !simulationMode && status === 'connected' ? readPortLabel(port) : null
 
@@ -119,13 +99,12 @@ const Header = () => {
     }
   }
 
-  const section = sectionTitleFromPath(location.pathname)
-
   return (
     <HeaderView
-      section={section !== null && section !== 'Welcome' ? section : null}
       tunerVersion={__TUNER_VERSION__}
       status={resolvedStatus}
+      projectName={projectName}
+      unsavedChanges={isDirty}
       portLabel={portLabel}
       activityPulse={pulsing}
       firmwareSlot={<UiFirmwareSlot version={firmwareVersion} compat={firmwareCompat} />}
@@ -180,21 +159,25 @@ const BurnButton = () => {
       ? 'Burn dashboard to device (Cmd/Ctrl+S)'
       : 'Connect a device and edit the dashboard to enable Burn'
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      {lastBurnResult === null ? null : lastBurnResult.kind === 'success' ? (
-        <BurnOutcomePill kind="success" />
-      ) : (
-        <BurnOutcomePill
-          kind="error"
-          message={lastBurnResult.message}
-          onDismiss={() => {
-            setLastBurnResult(null)
-          }}
-        />
+    <span style={{ display: 'flex', alignItems: 'stretch' }}>
+      {lastBurnResult !== null && (
+        <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px' }}>
+          {lastBurnResult.kind === 'success' ? (
+            <BurnOutcomePill kind="success" />
+          ) : (
+            <BurnOutcomePill
+              kind="error"
+              message={lastBurnResult.message}
+              onDismiss={() => {
+                setLastBurnResult(null)
+              }}
+            />
+          )}
+        </span>
       )}
       <span
         style={{
-          display: 'inline-flex',
+          display: 'flex',
           animation: shaking
             ? `canshift-tuner-shake ${BURN_DENIED_SHAKE_MS}ms ease-in-out`
             : undefined,

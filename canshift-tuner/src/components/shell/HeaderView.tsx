@@ -10,9 +10,10 @@ export type HeaderStatus =
   | 'simulation'
 
 export interface HeaderViewProps {
-  section?: string | null
   tunerVersion: string
   status: HeaderStatus
+  projectName?: string | null
+  unsavedChanges?: boolean
   portLabel?: string | null
   activityPulse?: boolean
   firmwareSlot?: ReactNode
@@ -20,33 +21,34 @@ export interface HeaderViewProps {
   onDisconnect?: () => void
 }
 
-const HEADER_HEIGHT = 40
+const HEADER_HEIGHT = 56
 
 interface StatusVisual {
-  dot: string
+  color: string
   label: string
 }
 
 const statusVisual = (status: HeaderStatus): StatusVisual => {
   switch (status) {
     case 'connected':
-      return { dot: 'hsl(var(--success))', label: 'Connected' }
+      return { color: 'hsl(var(--success))', label: 'CONNECTED' }
     case 'connecting':
-      return { dot: 'hsl(var(--accent))', label: 'Connecting…' }
+      return { color: 'hsl(var(--brand-accent))', label: 'CONNECTING…' }
     case 'reconnecting':
-      return { dot: 'hsl(var(--accent))', label: 'Reconnecting…' }
+      return { color: 'hsl(var(--brand-accent))', label: 'RECONNECTING…' }
     case 'simulation':
-      return { dot: 'hsl(var(--accent))', label: 'Simulation' }
+      return { color: 'hsl(var(--brand-accent))', label: 'SIMULATION' }
     case 'disconnected':
     default:
-      return { dot: 'hsl(var(--destructive))', label: 'Disconnected' }
+      return { color: 'hsl(var(--brand-neutral-500))', label: 'NO DEVICE' }
   }
 }
 
 export const HeaderView = ({
-  section = null,
   tunerVersion,
   status,
+  projectName = null,
+  unsavedChanges = false,
   portLabel,
   activityPulse = false,
   firmwareSlot,
@@ -55,111 +57,152 @@ export const HeaderView = ({
 }: HeaderViewProps) => {
   const visual = statusVisual(status)
   return (
-    <header
-      style={{
-        height: HEADER_HEIGHT,
-        flexShrink: 0,
-        background: 'hsl(var(--surface))',
-        borderBottom: '1px solid hsl(var(--border))',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 14px',
-        gap: 14,
-      }}
-    >
-      <div style={brandSlotStyle}>
-        <BrandLockup height={26} />
+    <header style={headerStyle}>
+      <div style={brandZoneStyle}>
+        <BrandLockup height={24} />
         <span style={tunerTagStyle}>TUNER</span>
-        {section !== null ? <span style={sectionStyle}>› {section}</span> : null}
       </div>
-      <div style={versionStyle}>v{tunerVersion}</div>
 
-      <div style={{ flex: 1 }} />
-
-      <div
-        role="status"
-        aria-live="polite"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          fontSize: 12,
-          color: 'hsl(var(--text-dim))',
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: visual.dot,
-            boxShadow: activityPulse
-              ? `0 0 12px ${visual.dot}, 0 0 4px ${visual.dot}`
-              : `0 0 6px ${visual.dot}`,
-            transform: activityPulse ? 'scale(1.25)' : 'scale(1)',
-            transition: 'box-shadow 80ms ease-out, transform 80ms ease-out',
-          }}
-        />
-        <span style={{ color: 'hsl(var(--text))' }}>{visual.label}</span>
-        {portLabel ? (
-          <span style={{ fontFamily: MONO_FONT, color: 'hsl(var(--text-muted))' }}>
-            {portLabel}
+      <div style={middleZoneStyle}>
+        {projectName !== null && <span style={projectNameStyle}>{projectName}</span>}
+        {unsavedChanges && <span style={unsavedPillStyle}>unsaved changes</span>}
+        <span style={statusPillStyle(visual.color)}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 7,
+              height: 7,
+              background: visual.color,
+              opacity: activityPulse ? 0.45 : 1,
+              transition: 'opacity 80ms ease-out',
+            }}
+          />
+          <span role="status" aria-live="polite">
+            {visual.label}
           </span>
-        ) : null}
-        {onDisconnect && (status === 'connected' || status === 'simulation') ? (
-          <button
-            type="button"
-            onClick={onDisconnect}
-            title="Disconnect from dash"
-            aria-label="Disconnect"
-            style={disconnectButtonStyle}
-          >
-            ✕
-          </button>
-        ) : null}
+          {onDisconnect && (status === 'connected' || status === 'simulation') ? (
+            <button
+              type="button"
+              onClick={onDisconnect}
+              title="Disconnect from dash"
+              aria-label="Disconnect"
+              style={disconnectButtonStyle(visual.color)}
+            >
+              ✕
+            </button>
+          ) : null}
+        </span>
+        <span style={deviceInfoStyle}>
+          {portLabel !== null && portLabel !== undefined && <span>{portLabel} · </span>}
+          {firmwareSlot}
+        </span>
+        <span style={versionStyle}>tuner v{tunerVersion}</span>
       </div>
 
-      {firmwareSlot}
-      {burnButton}
+      <div style={actionZoneStyle}>{burnButton}</div>
     </header>
   )
 }
 
-const disconnectButtonStyle: CSSProperties = {
-  background: 'transparent',
-  border: '1px solid hsl(var(--border))',
-  color: 'hsl(var(--text-dim))',
-  cursor: 'pointer',
-  fontSize: 10,
-  lineHeight: 1,
-  marginLeft: 4,
-  padding: '2px 6px',
+const headerStyle: CSSProperties = {
+  height: HEADER_HEIGHT,
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'stretch',
+  background: 'hsl(var(--brand-chrome-bg))',
+  borderBottom: '2px solid var(--brand-divider)',
 }
 
-const brandSlotStyle: CSSProperties = {
+const brandZoneStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 8,
-  color: 'hsl(var(--text))',
+  gap: 11,
+  padding: '0 20px 0 18px',
+  borderRight: '2px solid var(--brand-divider)',
+  color: 'hsl(var(--brand-text))',
 }
 
 const tunerTagStyle: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 800,
-  letterSpacing: '0.22em',
-  color: 'hsl(var(--text-dim))',
+  fontWeight: 600,
+  fontSize: 9,
+  letterSpacing: '0.2em',
+  color: 'hsl(var(--brand-neutral-600))',
+  alignSelf: 'flex-end',
+  paddingBottom: 10,
 }
 
-const sectionStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: 'hsl(var(--text-dim))',
+const middleZoneStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 14,
+  padding: '0 20px',
+  minWidth: 0,
+}
+
+const projectNameStyle: CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+  color: 'hsl(var(--brand-text))',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  minWidth: 0,
+}
+
+const unsavedPillStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  border: '1px solid hsl(var(--brand-neutral-300))',
+  padding: '2px 7px',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+}
+
+const statusPillStyle = (color: string): CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '4px 10px',
+  border: `1px solid ${color}`,
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.09em',
+  color,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+})
+
+const disconnectButtonStyle = (color: string): CSSProperties => ({
+  background: 'transparent',
+  border: 'none',
+  color,
+  cursor: 'pointer',
+  fontSize: 10,
+  lineHeight: 1,
+  padding: 0,
+})
+
+const deviceInfoStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
 }
 
 const versionStyle: CSSProperties = {
-  fontSize: 11,
-  color: 'hsl(var(--text-dim))',
+  marginLeft: 'auto',
   fontFamily: MONO_FONT,
-  letterSpacing: '0.04em',
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+}
+
+const actionZoneStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'stretch',
+  borderLeft: '2px solid var(--brand-divider)',
 }
