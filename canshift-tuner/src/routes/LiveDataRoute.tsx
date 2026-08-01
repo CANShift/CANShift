@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { SourceBadge, type SignalSource } from '../components/live-data/SourceBadge'
 import { RouteHeader } from '../components/shell/RouteHeader'
@@ -6,9 +6,9 @@ import { useLiveSignals } from '../hooks/useLiveSignals'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
 import { Input } from '../components/ui/input'
-import { MONO_FONT, uiLabelStyle } from '../lib/typography'
+import { MONO_FONT } from '../lib/typography'
 
-const AGE_TICK_MS = 500
+const DANGER_FRACTION = 0.9
 
 const LiveDataRoute = () => {
   const signals = useSignalStore((s) => s.signals)
@@ -16,28 +16,6 @@ const LiveDataRoute = () => {
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const values = useLiveSignals()
   const [filter, setFilter] = useState('')
-  const lastSeenRef = useRef<Record<string, number>>({})
-  const prevValuesRef = useRef<Record<string, number>>({})
-  const [tick, setTick] = useState(0)
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setTick((t) => t + 1)
-    }, AGE_TICK_MS)
-    return () => {
-      window.clearInterval(id)
-    }
-  }, [])
-
-  useEffect(() => {
-    const now = Date.now()
-    for (const [name, value] of Object.entries(values)) {
-      if (prevValuesRef.current[name] !== value) {
-        lastSeenRef.current[name] = now
-      }
-    }
-    prevValuesRef.current = values
-  }, [values])
 
   const isLive = connected && !simulationMode
   const source: SignalSource = isLive ? 'live' : simulationMode ? 'sim' : 'none'
@@ -49,8 +27,6 @@ const LiveDataRoute = () => {
       (s) => s.name.toLowerCase().includes(q) || s.unit.toLowerCase().includes(q)
     )
   }, [signals, filter])
-
-  void tick
 
   const handleExport = () => {
     const rows = [
@@ -76,7 +52,7 @@ const LiveDataRoute = () => {
   return (
     <div style={containerStyle}>
       <RouteHeader
-        title="Live Data"
+        title="Live data"
         subtitle={
           <>
             {signals.length} signal{signals.length === 1 ? '' : 's'} ·{' '}
@@ -92,85 +68,64 @@ const LiveDataRoute = () => {
                 setFilter(e.target.value)
               }}
               placeholder="Filter by name or unit"
-              className="h-9 w-[220px] text-xs"
+              className="h-8 w-[200px] text-xs"
             />
             <button
               type="button"
+              className="editor-ghost-accent"
               onClick={handleExport}
               disabled={signals.length === 0}
               style={exportButtonStyle(signals.length === 0)}
             >
-              Export CSV
+              EXPORT CSV
             </button>
           </>
         }
       />
 
-      <div style={tableWrapStyle}>
-        {filteredSignals.length === 0 ? (
-          <div style={emptyStyle}>
-            {signals.length === 0
-              ? 'No signals configured. Pick an ECU profile in the Editor to see live values here.'
-              : 'No signals match the current filter.'}
-          </div>
-        ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Signal</th>
-                <th style={thNumStyle}>Value</th>
-                <th style={thNumStyle}>Range</th>
-                <th style={thStyle}>Unit</th>
-                <th style={thNumStyle}>Last update</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSignals.map((sig) => {
-                const raw = values[sig.name]
-                const lastSeen = lastSeenRef.current[sig.name]
-                const ageMs = lastSeen ? Date.now() - lastSeen : null
-                const range = sig.max - sig.min || 1
-                const pct =
-                  raw !== undefined ? Math.max(0, Math.min(1, (raw - sig.min) / range)) : null
-                return (
-                  <tr key={sig.name} style={trStyle}>
-                    <td style={tdNameStyle}>{sig.name}</td>
-                    <td style={tdValueStyle}>{raw !== undefined ? raw.toFixed(1) : '—'}</td>
-                    <td style={tdRangeStyle}>
-                      <div style={rangeBarTrackStyle}>
-                        {pct !== null && (
-                          <div
-                            style={{
-                              ...rangeBarFillStyle,
-                              width: `${String(Math.round(pct * 100))}%`,
-                            }}
-                          />
-                        )}
-                      </div>
-                      <span style={rangeLabelStyle}>
-                        {sig.min}–{sig.max}
-                      </span>
-                    </td>
-                    <td style={tdUnitStyle}>{sig.unit || '—'}</td>
-                    <td style={tdAgeStyle}>{formatAge(ageMs, source)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {filteredSignals.length === 0 ? (
+        <div style={emptyStyle}>
+          {signals.length === 0
+            ? 'No signals configured. Pick an ECU profile in the Editor to see live values here.'
+            : 'No signals match the current filter.'}
+        </div>
+      ) : (
+        <div style={gridStyle}>
+          {filteredSignals.map((sig) => {
+            const raw = values[sig.name]
+            const range = sig.max - sig.min || 1
+            const pct = raw !== undefined ? Math.max(0, Math.min(1, (raw - sig.min) / range)) : 0
+            const danger = pct >= DANGER_FRACTION
+            const tint = danger ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-text))'
+            return (
+              <div key={sig.name} style={cellStyle}>
+                <span style={cellLabelStyle}>{sig.name.replace(/_/g, ' ').toUpperCase()}</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ ...cellValueStyle, color: tint }}>
+                    {raw !== undefined ? formatValue(raw) : '—'}
+                  </span>
+                  <span style={cellUnitStyle}>{sig.unit}</span>
+                </div>
+                <div style={barTrackStyle}>
+                  <div
+                    style={{
+                      width: `${String(Math.round(pct * 100))}%`,
+                      height: '100%',
+                      background: tint,
+                    }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
-const formatAge = (ageMs: number | null, source: SignalSource): string => {
-  if (source === 'none') return '—'
-  if (ageMs === null) return 'never'
-  if (ageMs < 1000) return '<1s'
-  if (ageMs < 60_000) return `${String(Math.round(ageMs / 1000))}s ago`
-  return `${String(Math.round(ageMs / 60_000))}m ago`
-}
+const formatValue = (value: number): string =>
+  Number.isInteger(value) ? String(value) : value.toFixed(1)
 
 const escapeCsv = (value: string): string => {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
@@ -181,124 +136,72 @@ const containerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  background: 'hsl(var(--bg))',
   overflow: 'hidden',
 }
 
 const exportButtonStyle = (disabled: boolean): CSSProperties => ({
-  background: disabled ? 'hsl(var(--bg-inset))' : 'hsl(var(--surface))',
-  color: disabled ? 'hsl(var(--text-muted))' : 'hsl(var(--text))',
-  border: '1px solid hsl(var(--border))',
-  padding: '8px 14px',
-  fontSize: 12,
-  fontWeight: 600,
+  padding: '6px 14px',
+  background: 'none',
+  border: `1px solid ${disabled ? 'hsl(var(--brand-neutral-400))' : 'hsl(var(--brand-neutral-400))'}`,
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.08em',
+  color: disabled ? 'hsl(var(--brand-neutral-500))' : 'hsl(var(--brand-text))',
   cursor: disabled ? 'not-allowed' : 'pointer',
 })
-
-const tableWrapStyle: CSSProperties = {
-  flex: 1,
-  overflowY: 'auto',
-  padding: '0 28px 24px',
-}
 
 const emptyStyle: CSSProperties = {
   textAlign: 'center',
   fontSize: 13,
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-500))',
   padding: '64px 24px',
 }
 
-const tableStyle: CSSProperties = {
-  width: '100%',
-  borderCollapse: 'separate',
-  borderSpacing: 0,
-  fontSize: 13,
-}
-
-const thStyle: CSSProperties = {
-  ...uiLabelStyle,
-  textAlign: 'left',
-  padding: '12px 14px 10px',
-  color: 'hsl(var(--text-muted))',
-  borderBottom: '1px solid hsl(var(--border))',
-  position: 'sticky',
-  top: 0,
-  background: 'hsl(var(--bg))',
-}
-
-const thNumStyle: CSSProperties = {
-  ...thStyle,
-  textAlign: 'right',
-}
-
-const trStyle: CSSProperties = {
-  borderBottom: '1px solid hsl(var(--border))',
-}
-
-const tdBaseStyle: CSSProperties = {
-  padding: '11px 14px',
-  borderBottom: '1px solid hsl(var(--border))',
-  color: 'hsl(var(--text))',
-}
-
-const tdNameStyle: CSSProperties = {
-  ...tdBaseStyle,
-  fontFamily: MONO_FONT,
-  fontSize: 12,
-}
-
-const tdValueStyle: CSSProperties = {
-  ...tdBaseStyle,
-  textAlign: 'right',
-  fontVariantNumeric: 'tabular-nums',
-  fontFamily: MONO_FONT,
-}
-
-const tdRangeStyle: CSSProperties = {
-  ...tdBaseStyle,
-  textAlign: 'right',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'flex-end',
-  gap: 8,
-  minWidth: 180,
-}
-
-const tdUnitStyle: CSSProperties = {
-  ...tdBaseStyle,
-  color: 'hsl(var(--text-dim))',
-}
-
-const tdAgeStyle: CSSProperties = {
-  ...tdBaseStyle,
-  textAlign: 'right',
-  color: 'hsl(var(--text-dim))',
-  fontVariantNumeric: 'tabular-nums',
-  fontFamily: MONO_FONT,
-  fontSize: 12,
-}
-
-const rangeBarTrackStyle: CSSProperties = {
+const gridStyle: CSSProperties = {
   flex: 1,
-  height: 6,
-  background: 'hsl(var(--bg-inset))',
+  overflowY: 'auto',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, 1fr)',
+  gridAutoRows: 'minmax(150px, 1fr)',
+}
+
+const cellStyle: CSSProperties = {
+  borderRight: '1px solid hsl(var(--brand-neutral-300))',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  padding: '18px 20px',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  gap: 9,
+  minWidth: 0,
+}
+
+const cellLabelStyle: CSSProperties = {
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-neutral-600))',
+  whiteSpace: 'nowrap',
   overflow: 'hidden',
-  maxWidth: 120,
+  textOverflow: 'ellipsis',
 }
 
-const rangeBarFillStyle: CSSProperties = {
-  height: '100%',
-  background: 'hsl(var(--brand-accent))',
-  transition: 'width 200ms linear',
-}
-
-const rangeLabelStyle: CSSProperties = {
-  fontSize: 11,
-  color: 'hsl(var(--text-muted))',
-  fontVariantNumeric: 'tabular-nums',
+const cellValueStyle: CSSProperties = {
   fontFamily: MONO_FONT,
-  minWidth: 60,
-  textAlign: 'right',
+  fontSize: 44,
+  lineHeight: 1.1,
+  fontVariantNumeric: 'tabular-nums',
+}
+
+const cellUnitStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 13,
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const barTrackStyle: CSSProperties = {
+  height: 4,
+  background: 'hsl(var(--brand-neutral-300))',
 }
 
 export default LiveDataRoute
