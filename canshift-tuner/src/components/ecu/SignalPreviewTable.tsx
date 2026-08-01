@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
+import { MONO_FONT, uiLabelStyle } from '../../lib/typography'
 
 export interface SignalPreviewTableProps {
   signals: readonly SignalDef[]
@@ -111,16 +112,13 @@ const tableStyle: CSSProperties = {
 }
 
 const thStyle: CSSProperties = {
+  ...uiLabelStyle,
   position: 'sticky',
   top: 0,
   background: 'hsl(var(--surface))',
   padding: '10px 12px',
   borderBottom: '1px solid hsl(var(--border))',
   textAlign: 'left',
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
   color: 'hsl(var(--text-muted))',
 }
 
@@ -147,14 +145,14 @@ const tdNameStyle: CSSProperties = {
 
 const tdMonoStyle: CSSProperties = {
   ...tdBase,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text-dim))',
 }
 
 const tdNumStyle: CSSProperties = {
   ...tdBase,
   textAlign: 'right',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontVariantNumeric: 'tabular-nums',
   color: 'hsl(var(--text-dim))',
 }
@@ -201,5 +199,5 @@ const warningsListStyle: CSSProperties = {
 const warningItemStyle: CSSProperties = {
   fontSize: 12,
   color: 'hsl(var(--text-dim))',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
 }

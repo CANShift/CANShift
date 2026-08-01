@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useRef } from 'react'
+import { MONO_FONT } from '../../lib/typography'
 
 export type CliEntryKind = 'request' | 'ok' | 'error' | 'info'
 
@@ -149,7 +150,7 @@ const streamStyle: CSSProperties = {
   flex: 1,
   overflowY: 'auto',
   padding: '10px 14px',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontSize: 12,
 }
 

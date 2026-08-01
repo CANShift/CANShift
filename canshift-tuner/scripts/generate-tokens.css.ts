@@ -41,10 +41,19 @@ const main = async () => {
         `Run \`npm --prefix ../canshift-core run build\` first (predev/prebuild does this automatically).`
     )
   }
-  const { DARK_TOKENS, BRAND_TOKENS, tokensToCssVars, brandTokensToCssVars } = await import(
-    pathToFileURL(CORE_TOKENS_JS).href
-  )
-  const cssVars = { ...tokensToCssVars(DARK_TOKENS), ...brandTokensToCssVars(BRAND_TOKENS) }
+  const {
+    DARK_TOKENS,
+    BRAND_TOKENS,
+    FONT_TOKENS,
+    tokensToCssVars,
+    brandTokensToCssVars,
+    fontTokensToCssVars,
+  } = await import(pathToFileURL(CORE_TOKENS_JS).href)
+  const cssVars = {
+    ...tokensToCssVars(DARK_TOKENS),
+    ...brandTokensToCssVars(BRAND_TOKENS),
+    ...fontTokensToCssVars(FONT_TOKENS),
+  }
   const css = buildCss(cssVars)
   const changed = writeIfChanged(OUTPUT_PATH, css)
   const rel = OUTPUT_PATH.replace(`${PKG_ROOT}/`, '')

@@ -9,6 +9,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { createId } from '../utils/id'
 import { isEditableTarget } from '../utils/is-editable-target'
 import { Button } from '@/components/ui/button'
+import { MONO_FONT } from '../lib/typography'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,7 +188,7 @@ const EditorRoute = () => {
                   pages.length >= FIRMWARE_CAPS.MAX_PAGES
                     ? 'hsl(var(--destructive))'
                     : 'hsl(var(--text-muted))',
-                fontFamily: 'monospace',
+                fontFamily: MONO_FONT,
               }}
               title={`Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages`}
             >

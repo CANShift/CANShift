@@ -54,7 +54,8 @@
         {
           "locationWhenInUsePermission": "CANShift uses your location to record laps and detect start/finish crossings on the circuit."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

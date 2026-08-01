@@ -6,8 +6,12 @@ import {
   BRAND_TOKENS,
   COLOR_KEY_TO_CSS_VAR,
   DARK_TOKENS,
+  FONT_MONO_CSS_VAR,
+  FONT_TOKENS,
+  FONT_UI_CSS_VAR,
   brandNeutralCssVar,
   brandTokensToCssVars,
+  fontTokensToCssVars,
   hexToHslChannels,
   tokensToCssVars,
 } from '../design-tokens.js'
@@ -161,6 +165,43 @@ describe('brandTokensToCssVars', () => {
     for (const cssVar of Object.values(BRAND_COLOR_KEY_TO_CSS_VAR)) {
       expect(cssVar.startsWith('--brand-')).toBe(true)
     }
+  })
+})
+
+describe('FONT_TOKENS', () => {
+  it('matches the canonical snapshot', () => {
+    expect(FONT_TOKENS).toEqual({
+      ui: "'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    })
+  })
+
+  it('leads the UI stack with Archivo and ends both stacks with a generic family', () => {
+    expect(FONT_TOKENS.ui.startsWith("'Archivo'")).toBe(true)
+    expect(FONT_TOKENS.ui.endsWith('sans-serif')).toBe(true)
+    expect(FONT_TOKENS.mono.endsWith('monospace')).toBe(true)
+  })
+})
+
+describe('fontTokensToCssVars', () => {
+  it('emits exactly the canonical CSS variable names', () => {
+    const vars = fontTokensToCssVars(FONT_TOKENS)
+    expect(Object.keys(vars).sort()).toEqual([FONT_MONO_CSS_VAR, FONT_UI_CSS_VAR].sort())
+  })
+
+  it('passes the stacks through unchanged', () => {
+    const vars = fontTokensToCssVars(FONT_TOKENS)
+    expect(vars[FONT_UI_CSS_VAR]).toBe(FONT_TOKENS.ui)
+    expect(vars[FONT_MONO_CSS_VAR]).toBe(FONT_TOKENS.mono)
+  })
+
+  it('shares no CSS variable names with the color sets', () => {
+    const fontKeys = Object.keys(fontTokensToCssVars(FONT_TOKENS))
+    const colorKeys = [
+      ...Object.keys(tokensToCssVars(DARK_TOKENS)),
+      ...Object.keys(brandTokensToCssVars(BRAND_TOKENS)),
+    ]
+    expect(fontKeys.filter((key) => colorKeys.includes(key))).toEqual([])
   })
 })
 

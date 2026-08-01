@@ -9,6 +9,7 @@ import { GaugeFields } from '../gauge-fields'
 import { ConfigFieldsProps, Field, inputStyle } from '../shared'
 import { ButtonColorsRow } from './button-colors-row'
 import { SizeTokenPicker } from './size-token-picker'
+import { MONO_FONT } from '../../../../lib/typography'
 
 const PANEL_LABEL = '#AAAAAA'
 const TYPE_BADGE = '#CC4444'
@@ -108,9 +109,7 @@ export const WidgetEditorPanel = ({
       </div>
 
       <Field label="ID">
-        <div
-          style={{ fontSize: 10, color: PANEL_LABEL, fontFamily: 'monospace', padding: '3px 0' }}
-        >
+        <div style={{ fontSize: 10, color: PANEL_LABEL, fontFamily: MONO_FONT, padding: '3px 0' }}>
           {widget.id}
         </div>
       </Field>

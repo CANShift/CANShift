@@ -1,3 +1,4 @@
+import type { TextStyle } from 'react-native'
 import { DARK_TOKENS } from '@tmbk/canshift-core'
 
 const MOBILE_ALIASES = {
@@ -13,6 +14,14 @@ export const Colors = {
 export const Spacing = DARK_TOKENS.spacing
 export const Radius = DARK_TOKENS.radii
 export const Typography = DARK_TOKENS.typography
+
+export const Fonts = {
+  ui: 'Archivo_400Regular',
+  uiSemiBold: 'Archivo_600SemiBold',
+  uiExtraBold: 'Archivo_800ExtraBold',
+} as const
+
+export const TabularNums: NonNullable<TextStyle['fontVariant']> = ['tabular-nums']
 
 export type { DesignTokens } from '@tmbk/canshift-core'
 

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatBytes } from '../../lib/format'
 import { Input } from '../ui/input'
 import { TogglePill } from '../ui/toggle-pill'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface CatalogueItem {
   id: string
@@ -256,7 +257,7 @@ const itemMetaStyle: CSSProperties = {
   color: 'hsl(var(--text-dim))',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
 }
 
 const hintStyle: CSSProperties = {

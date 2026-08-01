@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native'
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
-import { Colors, Typography, Spacing } from '../../theme'
+import { Colors, TabularNums, Typography, Spacing } from '../../theme'
 import { getSignalColor } from '../../theme/signal-colors'
 import { SIGNAL_META, type SignalKey } from '../../constants/ble'
 import { SIGNAL_RANGE, buildPoints, formatTime, formatValue } from '../../lib/graph-math'
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  timeLabel: { fontSize: Typography.xxs, color: Colors.textMuted, fontVariant: ['tabular-nums'] },
+  timeLabel: { fontSize: Typography.xxs, color: Colors.textMuted, fontVariant: TabularNums },
 
   valuesGrid: {
     flexDirection: 'row',
@@ -178,5 +178,5 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   valueKey: { fontSize: 10, fontWeight: '600', letterSpacing: 0.3 },
-  valueNum: { fontSize: 15, fontWeight: '700' },
+  valueNum: { fontSize: 15, fontWeight: '700', fontVariant: TabularNums },
 })

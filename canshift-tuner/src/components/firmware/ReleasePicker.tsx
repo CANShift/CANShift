@@ -16,6 +16,7 @@ import { downloadFirmwareAsset } from '../../lib/firmware/download'
 import { formatBytes } from '../../lib/format'
 import { TogglePill } from '../ui/toggle-pill'
 import { findMergedAsset } from '../../lib/firmware/releases'
+import { MONO_FONT } from '../../lib/typography'
 
 type Channel = 'stable' | 'prerelease'
 
@@ -274,11 +275,11 @@ const progressMetaStyle: CSSProperties = {
   justifyContent: 'space-between',
   fontSize: 10,
   color: 'hsl(var(--text-muted))',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
 }
 
 const tagStyle: CSSProperties = {
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text))',
   fontSize: 13,
 }
@@ -291,7 +292,7 @@ const dateStyle: CSSProperties = {
 const sizeStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--text-muted))',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
 }
 
 const preReleaseBadgeStyle: CSSProperties = {

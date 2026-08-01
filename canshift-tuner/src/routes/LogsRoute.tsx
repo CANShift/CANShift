@@ -4,6 +4,7 @@ import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
 import { RouteHeader } from '../components/shell/RouteHeader'
 import { TogglePill } from '../components/ui/toggle-pill'
+import { MONO_FONT, UI_FONT } from '../lib/typography'
 
 const ALL_LEVELS: LogLevel[] = ['info', 'success', 'warn', 'error', 'debug']
 const LEVEL_COLOR: Record<LogLevel, string> = {
@@ -233,7 +234,7 @@ const streamStyle: CSSProperties = {
   flex: 1,
   overflowY: 'auto',
   padding: '12px 28px',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontSize: 12,
   lineHeight: 1.55,
 }
@@ -243,7 +244,7 @@ const emptyStyle: CSSProperties = {
   fontSize: 13,
   color: 'hsl(var(--text-dim))',
   padding: '64px 24px',
-  fontFamily: 'system-ui, sans-serif',
+  fontFamily: UI_FONT,
 }
 
 const entryStyle: CSSProperties = {

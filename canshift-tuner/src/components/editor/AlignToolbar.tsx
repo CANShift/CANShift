@@ -1,6 +1,7 @@
 import { useCallback, type CSSProperties, type MouseEvent } from 'react'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import type { AlignDirection } from '../../stores/dashboard.store'
+import { MONO_FONT } from '../../lib/typography'
 
 const BUTTON_STYLE: CSSProperties = {
   padding: '2px 7px',
@@ -10,7 +11,7 @@ const BUTTON_STYLE: CSSProperties = {
   color: '#888888',
   cursor: 'pointer',
   letterSpacing: '0.03em',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
   lineHeight: 1.2,
 }
 

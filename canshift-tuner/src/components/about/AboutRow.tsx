@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { MONO_FONT } from '../../lib/typography'
 
 interface AboutRowProps {
   label: string
@@ -27,7 +28,7 @@ const rowValueStyle: CSSProperties = {
 const rowValueMonoStyle: CSSProperties = {
   color: 'hsl(var(--text))',
   fontWeight: 500,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontVariantNumeric: 'tabular-nums',
 }
 

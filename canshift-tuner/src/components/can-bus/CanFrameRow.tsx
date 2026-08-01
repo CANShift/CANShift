@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '../ui/button'
 import { CanByteHistogram } from './CanByteHistogram'
 import type { CanFrameStats } from '../../hooks/useCanScanner'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface CanFrameRowProps {
   frame: CanFrameStats
@@ -99,14 +100,14 @@ const cellStyle: CSSProperties = {
 
 const idCellStyle: CSSProperties = {
   ...cellStyle,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontWeight: 600,
 }
 
 const numCellStyle: CSSProperties = {
   ...cellStyle,
   textAlign: 'right',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text-dim))',
   fontVariantNumeric: 'tabular-nums',
 }
@@ -119,7 +120,7 @@ const dlcCellStyle: CSSProperties = {
 
 const payloadCellStyle: CSSProperties = {
   ...cellStyle,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text-dim))',
   letterSpacing: '0.04em',
 }
