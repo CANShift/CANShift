@@ -11,6 +11,7 @@ export interface CanvasToolbarProps {
   screenWidth: number
   screenHeight: number
   overflowingCount: number
+  overflowingNames?: readonly string[]
   canUndo: boolean
   canRedo: boolean
   onUndo: () => void
@@ -30,6 +31,7 @@ export const CanvasToolbar = ({
   screenWidth,
   screenHeight,
   overflowingCount,
+  overflowingNames,
   canUndo,
   canRedo,
   onUndo,
@@ -96,9 +98,18 @@ export const CanvasToolbar = ({
       {screenWidth} × {screenHeight} · 12-col grid · snap on
     </span>
 
-    <span style={flagStyle(overflowingCount > 0)} title="Widgets spanning past the 12-column grid">
+    <span
+      style={flagStyle(overflowingCount > 0)}
+      title={
+        overflowingCount > 0 && overflowingNames !== undefined
+          ? `Past the ${String(screenWidth)} × ${String(screenHeight)} grid: ${overflowingNames.join(', ')}`
+          : `Layout fits ${String(screenWidth)} × ${String(screenHeight)}`
+      }
+    >
       <span aria-hidden="true" style={flagDotStyle(overflowingCount > 0)} />
-      {overflowingCount > 0 ? `${String(overflowingCount)} out of bounds` : 'all in bounds'}
+      {overflowingCount > 0
+        ? `${String(overflowingCount)} out of bounds`
+        : `fits ${String(screenWidth)} × ${String(screenHeight)}`}
     </span>
 
     {selectedWidgetIds.length >= 2 && (
