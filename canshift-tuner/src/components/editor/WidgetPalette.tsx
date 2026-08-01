@@ -1,9 +1,11 @@
+import type { CSSProperties } from 'react'
 import { HexColorSchema } from '@tmbk/canshift-core'
 import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/size-tokens'
 import { createId } from '../../utils/id'
+import { MONO_FONT } from '../../lib/typography'
 
 const DEFAULT_WIDGET_STYLE = {
   primaryColor: HexColorSchema.parse('#FF4444'),
@@ -12,10 +14,6 @@ const DEFAULT_WIDGET_STYLE = {
   criticalColor: HexColorSchema.parse('#FF0000'),
   textColor: HexColorSchema.parse('#FFFFFF'),
 }
-
-const TILE_LABEL = '#AAAAAA'
-const TILE_HOVER_BG = '#2A2A2A'
-const TILE_HOVER_BORDER = '#3A3A3A'
 
 type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear'>
 
@@ -115,73 +113,87 @@ const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
   }
 
   return (
-    <div style={{ padding: '8px 4px', opacity: templateLocked ? 0.4 : 1 }}>
-      <div
-        style={{
-          fontSize: 10,
-          color: TILE_LABEL,
-          marginBottom: 8,
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-          paddingLeft: 4,
-        }}
-      >
-        Add Widget
+    <div style={{ flex: 1, overflowY: 'auto', opacity: templateLocked ? 0.5 : 1 }}>
+      <div style={libraryHeaderStyle}>
+        <span>WIDGET LIBRARY</span>
+        <span>{PALETTE_ITEMS.length}</span>
       </div>
       {templateLocked && (
-        <div
-          style={{
-            fontSize: 10,
-            color: TILE_LABEL,
-            padding: '4px 6px 8px',
-            lineHeight: 1.4,
-          }}
-        >
+        <div style={lockedNoteStyle}>
           This page uses a built-in template — widget edits are ignored. Switch the page template
           back to <em>Custom layout</em> to add widgets.
         </div>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {PALETTE_ITEMS.map((item) => (
-          <button
-            key={item.label}
-            onClick={() => {
-              handleAdd(item)
-            }}
-            disabled={templateLocked}
-            title={templateLocked ? 'Disabled — page uses a template' : `Add ${item.label}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '5px 8px',
-              background: 'transparent',
-              border: '1px solid transparent',
-              color: TILE_LABEL,
-              cursor: templateLocked ? 'not-allowed' : 'pointer',
-              fontSize: 12,
-              textAlign: 'left',
-              transition: 'all 0.1s',
-            }}
-            onMouseEnter={(e) => {
-              if (templateLocked) return
-              e.currentTarget.style.background = TILE_HOVER_BG
-              e.currentTarget.style.borderColor = TILE_HOVER_BORDER
-              e.currentTarget.style.color = 'hsl(var(--text))'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.borderColor = 'transparent'
-              e.currentTarget.style.color = TILE_LABEL
-            }}
-          >
-            <SensorIcon name={item.icon} size={14} color="currentColor" />
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {PALETTE_ITEMS.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          className={templateLocked ? undefined : 'shell-nav-item'}
+          onClick={() => {
+            handleAdd(item)
+          }}
+          disabled={templateLocked}
+          title={templateLocked ? 'Disabled — page uses a template' : `Add ${item.label}`}
+          style={libraryRowStyle(templateLocked)}
+        >
+          <span style={rowIconStyle}>
+            <SensorIcon name={item.icon} size={13} color="currentColor" />
+          </span>
+          <span style={{ fontSize: 13 }}>{item.label}</span>
+          <span style={rowSizeStyle}>
+            {item.defaultColSpan}×{item.defaultRowSpan}
+          </span>
+        </button>
+      ))}
     </div>
   )
+}
+
+const libraryHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  padding: '12px 16px',
+  borderBottom: '2px solid var(--brand-divider)',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const lockedNoteStyle: CSSProperties = {
+  padding: '10px 16px',
+  fontSize: 11,
+  lineHeight: 1.4,
+  color: 'hsl(var(--brand-neutral-600))',
+  borderBottom: '1px solid hsl(var(--brand-neutral-200))',
+}
+
+const libraryRowStyle = (locked: boolean): CSSProperties => ({
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 9,
+  padding: '9px 16px',
+  background: 'none',
+  border: 0,
+  borderBottom: '1px solid hsl(var(--brand-neutral-200))',
+  color: 'hsl(var(--brand-neutral-700))',
+  cursor: locked ? 'not-allowed' : 'pointer',
+  textAlign: 'left',
+})
+
+const rowIconStyle: CSSProperties = {
+  width: 20,
+  flexShrink: 0,
+  display: 'inline-flex',
+  color: 'hsl(var(--brand-accent))',
+}
+
+const rowSizeStyle: CSSProperties = {
+  marginLeft: 'auto',
+  fontFamily: MONO_FONT,
+  fontSize: 10,
+  color: 'hsl(var(--brand-neutral-600))',
 }
 
 export default WidgetPalette
