@@ -26,9 +26,7 @@ const VIEWBOX_WIDTH = 590
 const VIEWBOX_HEIGHT = 190
 
 const fittedWidth = (width: number, maxHeight?: number): number =>
-  maxHeight === undefined
-    ? width
-    : Math.min(width, (maxHeight * VIEWBOX_WIDTH) / VIEWBOX_HEIGHT)
+  maxHeight === undefined ? width : Math.min(width, (maxHeight * VIEWBOX_WIDTH) / VIEWBOX_HEIGHT)
 
 export const BrandLockup = ({ width, maxHeight }: BrandLockupProps) => (
   <Svg

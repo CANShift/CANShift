@@ -21,7 +21,11 @@ export interface BrandLockupProps {
   label?: string
 }
 
-export const BrandLockup = ({ height, withBaseline = false, label = 'CANShift' }: BrandLockupProps) => {
+export const BrandLockup = ({
+  height,
+  withBaseline = false,
+  label = 'CANShift',
+}: BrandLockupProps) => {
   const viewBox = withBaseline ? LOCKUP_BASELINE_VIEWBOX : LOCKUP_VIEWBOX
   const viewBoxHeight = withBaseline ? 190 : 150
   return (
