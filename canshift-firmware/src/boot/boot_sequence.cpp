@@ -85,6 +85,9 @@ static lv_obj_t *s_splashError = nullptr;
 static lv_obj_t *s_splashCanResult = nullptr;
 static bool s_selfTestBuilt = false;
 static uint32_t s_markShownMs = 0;
+static uint32_t s_selfTestShownMs = 0;
+
+constexpr uint32_t kSelfTestMinMs = 2500;
 
 constexpr uint32_t kMarkMinMs = 2000;
 
@@ -270,6 +273,7 @@ static void buildSelfTestScreen() {
     s_splashStatus = status;
     s_splashError = err;
     s_selfTestBuilt = true;
+    s_selfTestShownMs = millis();
 }
 
 static void updateSplash(const char *status, uint8_t pct) {
@@ -505,8 +509,17 @@ static void initUsbCommPhase() {
     updateSplash("USB ready", 90);
 }
 
+static void holdSelfTestMin() {
+    if (!s_selfTestBuilt)
+        return;
+    while (millis() - s_selfTestShownMs < kSelfTestMinMs) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
 static void buildUiWithHeapBracket() {
     updateSplash("Ready", 100);
+    holdSelfTestMin();
     logHeap("before buildUI");
     buildUI();
     logHeap("dashboard ready");
