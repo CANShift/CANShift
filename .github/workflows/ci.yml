@@ -21,6 +21,7 @@ jobs:
       core: ${{ steps.filter.outputs.core }}
       tuner: ${{ steps.filter.outputs.tuner }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      mobileNative: ${{ steps.filter.outputs.mobileNative }}
       firmware: ${{ steps.filter.outputs.firmware }}
       docs: ${{ steps.filter.outputs.docs }}
     steps:
@@ -39,6 +40,11 @@ jobs:
             mobile:
               - *core
               - 'canshift-mobile/**'
+            # The Xcode build only reacts to native config/deps, which live in
+            # canshift-mobile/ — core TS changes are covered by mobile lint+test.
+            mobileNative:
+              - 'canshift-mobile/**'
+              - '.github/workflows/ci.yml'
             firmware:
               - '.github/workflows/ci.yml'
               - 'canshift-firmware/**'
@@ -265,7 +271,7 @@ jobs:
   mobile-ios:
     name: mobile — iOS native build
     needs: changes
-    if: ${{ needs.changes.outputs.mobile == 'true' }}
+    if: ${{ needs.changes.outputs.mobileNative == 'true' }}
     runs-on: macos-latest
     defaults:
       run:

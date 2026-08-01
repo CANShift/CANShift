@@ -1,10 +1,20 @@
 name: CodeQL
 
+# Analyzes javascript-typescript only — C++ (firmware) and content-only (docs
+# markdown) changes have nothing for it to scan, so both trigger on JS/TS paths.
 on:
   push:
     branches: [main]
+    paths: &jsPaths
+      - 'canshift-core/**'
+      - 'canshift-tuner/**'
+      - 'canshift-mobile/**'
+      - 'canshift-docs/**/*.ts'
+      - 'canshift-docs/**/*.mjs'
+      - '.github/workflows/codeql.yml'
   pull_request:
     branches: [main]
+    paths: *jsPaths
   schedule:
     - cron: '0 6 * * 1'
 
