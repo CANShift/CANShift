@@ -1,4 +1,5 @@
 import { useRef, useCallback, useMemo, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig } from '@tmbk/canshift-core'
 import {
   LAYOUT_GRID,
@@ -26,6 +27,7 @@ import { useSwipeGestures } from '../../hooks/useSwipeGestures'
 import { DEFAULT_PAGE_PALETTE } from '@tmbk/canshift-core'
 
 import { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT } from '../../constants/theme'
+import { MONO_FONT } from '../../lib/typography'
 
 const SCALE = 1.5
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2] as const
@@ -35,9 +37,12 @@ const EMPTY_PAGES: readonly PageConfig[] = []
 interface CanvasProps {
   page: PageConfig
   topBar: TopBarConfig
+  pageIndex?: number | undefined
+  pageStrip?: ReactNode
+  inspector?: ReactNode
 }
 
-const Canvas = ({ page, topBar }: CanvasProps) => {
+const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) => {
   const targetProfileId = useDashboardStore((s) => s.config?.targetProfile)
   const screenProfile = useMemo(() => resolveScreenProfile(targetProfileId), [targetProfileId])
   const [zoom, setZoom] = useState(1)
@@ -193,6 +198,15 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
     startRubberBand,
   })
 
+  const selectedWidget =
+    selectedWidgetId !== null ? page.widgets.find((w) => w.id === selectedWidgetId) : undefined
+  const selectedRect = selectedWidget
+    ? resolveGridRect(selectedWidget.layout, {
+        width: screenProfile.width,
+        height: widgetAreaH,
+      })
+    : null
+
   return (
     <div
       style={{
@@ -200,7 +214,6 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
         flexDirection: 'column',
         flex: 1,
         overflow: 'hidden',
-        background: 'hsl(var(--bg))',
       }}
     >
       <CanvasToolbar
@@ -230,160 +243,248 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
         onStartRevLimiter={startRevLimiter}
       />
 
-      <div
-        onMouseDown={(e) => {
-          const target = e.target as HTMLElement
-          if (target.closest('[data-widget]') === null) selectWidget(null)
-        }}
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'auto',
-        }}
-      >
-        <div>
+      {pageStrip}
+
+      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div
-            style={{
-              background: '#000000',
-              border: '3px solid #2A2A2A',
-              padding: 6,
-              boxShadow: '0 8px 32px #00000088',
+            onMouseDown={(e) => {
+              const target = e.target as HTMLElement
+              if (target.closest('[data-widget]') === null) selectWidget(null)
             }}
+            style={canvasZoneStyle}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                width: CANVAS_W,
-                height: CANVAS_H,
-                background: effectiveBgColor,
-                overflow: 'hidden',
-              }}
-            >
-              {page.showTopBar !== false && (
-                <DashTopBar
-                  topBar={topBar}
-                  scale={effScale}
-                  settingsOpen={settingsOpen}
-                  isDayMode={activeDayMode}
-                  onOpenSettings={() => {
-                    setSettingsOpen((o) => !o)
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={canvasTitleRowStyle}>
+                <span style={canvasTitleStyle}>
+                  {pageIndex !== undefined ? `PAGE ${String(pageIndex + 1)}` : 'PAGE'}
+                </span>
+                <span style={canvasDimsStyle}>
+                  {screenProfile.width} × {screenProfile.height} @ {SCALE * zoom}×
+                </span>
+              </div>
+              <div style={deviceFrameStyle}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: CANVAS_W,
+                    height: CANVAS_H,
+                    background: effectiveBgColor,
+                    overflow: 'hidden',
                   }}
-                />
-              )}
-
-              <div
-                ref={containerRef}
-                onWheel={(e) => {
-                  if (!e.metaKey && !e.ctrlKey) return
-                  e.preventDefault()
-                  stepZoom(e.deltaY < 0 ? 1 : -1)
-                }}
-                onPointerDown={onPointerDown}
-                onPointerUp={onPointerUp}
-                style={{
-                  position: 'relative',
-                  flex: 1,
-                  overflow: 'hidden',
-                  cursor: 'default',
-                }}
-              >
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                  {gridGuides.verticals.map((x, i) => (
-                    <div
-                      key={`v${String(i)}`}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        bottom: 0,
-                        left: x * effScale,
-                        width: 1,
-                        background: '#FFFFFF0A',
-                      }}
-                    />
-                  ))}
-                  {gridGuides.horizontals.map((y, i) => (
-                    <div
-                      key={`h${String(i)}`}
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: y * effScale,
-                        height: 1,
-                        background: '#FFFFFF0A',
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {(page.template ?? 'custom') === 'cruise_control' ? (
-                  <CruiseControlPreview
-                    scale={effScale}
-                    canvasW={CANVAS_W}
-                    contentH={widgetAreaH * effScale}
-                    palette={effectivePalette}
-                  />
-                ) : (
-                  [
-                    ...page.widgets.filter((w) => w.type !== 'warning'),
-                    ...page.widgets.filter((w) => w.type === 'warning'),
-                  ].map((widget) => (
-                    <WidgetBox
-                      key={widget.id}
-                      widget={widget}
-                      palette={effectivePalette}
+                >
+                  {page.showTopBar !== false && (
+                    <DashTopBar
+                      topBar={topBar}
                       scale={effScale}
-                      areaWidth={screenProfile.width}
-                      areaHeight={widgetAreaH}
-                      isSelected={widget.id === selectedWidgetId}
-                      isInMultiSelection={
-                        selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
-                      }
-                      isOverlapping={overlappingIds.has(widget.id)}
-                      isOverflowing={overflowingIds.has(widget.id)}
-                      revLimiting={revLimiting}
-                      onSelect={selectWidget}
-                      onShiftSelect={toggleWidgetSelection}
-                      onDragStart={handleDragStart}
+                      settingsOpen={settingsOpen}
+                      isDayMode={activeDayMode}
+                      onOpenSettings={() => {
+                        setSettingsOpen((o) => !o)
+                      }}
                     />
-                  ))
-                )}
+                  )}
 
-                {rubberBand && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      left: rubberBand.x * effScale,
-                      top: rubberBand.y * effScale,
-                      width: Math.max(0, rubberBand.w * effScale),
-                      height: Math.max(0, rubberBand.h * effScale),
-                      border: '1px solid #6688FF',
-                      background: '#3344FF18',
-                      pointerEvents: 'none',
-                      zIndex: 100,
+                    ref={containerRef}
+                    onWheel={(e) => {
+                      if (!e.metaKey && !e.ctrlKey) return
+                      e.preventDefault()
+                      stepZoom(e.deltaY < 0 ? 1 : -1)
                     }}
-                  />
-                )}
+                    onPointerDown={onPointerDown}
+                    onPointerUp={onPointerUp}
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      overflow: 'hidden',
+                      cursor: 'default',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                      {gridGuides.verticals.map((x, i) => (
+                        <div
+                          key={`v${String(i)}`}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            left: x * effScale,
+                            width: 1,
+                            background: '#FFFFFF0A',
+                          }}
+                        />
+                      ))}
+                      {gridGuides.horizontals.map((y, i) => (
+                        <div
+                          key={`h${String(i)}`}
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            top: y * effScale,
+                            height: 1,
+                            background: '#FFFFFF0A',
+                          }}
+                        />
+                      ))}
+                    </div>
 
-                {settingsOpen && <ScreenSettingsPanel scale={effScale} />}
+                    {(page.template ?? 'custom') === 'cruise_control' ? (
+                      <CruiseControlPreview
+                        scale={effScale}
+                        canvasW={CANVAS_W}
+                        contentH={widgetAreaH * effScale}
+                        palette={effectivePalette}
+                      />
+                    ) : (
+                      [
+                        ...page.widgets.filter((w) => w.type !== 'warning'),
+                        ...page.widgets.filter((w) => w.type === 'warning'),
+                      ].map((widget) => (
+                        <WidgetBox
+                          key={widget.id}
+                          widget={widget}
+                          palette={effectivePalette}
+                          scale={effScale}
+                          areaWidth={screenProfile.width}
+                          areaHeight={widgetAreaH}
+                          isSelected={widget.id === selectedWidgetId}
+                          isInMultiSelection={
+                            selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)
+                          }
+                          isOverlapping={overlappingIds.has(widget.id)}
+                          isOverflowing={overflowingIds.has(widget.id)}
+                          revLimiting={revLimiting}
+                          onSelect={selectWidget}
+                          onShiftSelect={toggleWidgetSelection}
+                          onDragStart={handleDragStart}
+                        />
+                      ))
+                    )}
 
-                {diagOpen && <DiagnosticsPanel scale={effScale} />}
+                    {rubberBand && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: rubberBand.x * effScale,
+                          top: rubberBand.y * effScale,
+                          width: Math.max(0, rubberBand.w * effScale),
+                          height: Math.max(0, rubberBand.h * effScale),
+                          border: '1px solid #6688FF',
+                          background: '#3344FF18',
+                          pointerEvents: 'none',
+                          zIndex: 100,
+                        }}
+                      />
+                    )}
 
-                {revLimiting && (
-                  <RevLimiterOverlay canvasW={CANVAS_W} flashPhase={flashPhase} scale={SCALE} />
-                )}
+                    {settingsOpen && <ScreenSettingsPanel scale={effScale} />}
+
+                    {diagOpen && <DiagnosticsPanel scale={effScale} />}
+
+                    {revLimiting && (
+                      <RevLimiterOverlay canvasW={CANVAS_W} flashPhase={flashPhase} scale={SCALE} />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
+          <div style={statusBarStyle}>
+            {selectedWidget && selectedRect ? (
+              <>
+                <span>
+                  SELECTED{' '}
+                  <span style={statusValueStyle}>
+                    {selectedWidget.type}
+                    {selectedWidget.signal ? `.${selectedWidget.signal}` : ''}
+                  </span>
+                </span>
+                <span>
+                  col {selectedWidget.layout.col} · span {selectedWidget.layout.colSpan}
+                </span>
+                <span>
+                  row {selectedWidget.layout.row} · span {selectedWidget.layout.rowSpan}
+                </span>
+                <span>
+                  x {selectedRect.x} · y {selectedRect.y} · w {selectedRect.w} · h {selectedRect.h}
+                </span>
+              </>
+            ) : (
+              <span>
+                {String(page.widgets.length)} widget{page.widgets.length === 1 ? '' : 's'} — click
+                one to inspect
+              </span>
+            )}
+            <span style={{ marginLeft: 'auto' }}>
+              {page.showTopBar !== false ? 'top bar shown' : 'top bar hidden'}
+            </span>
+          </div>
         </div>
+
+        {inspector}
       </div>
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   )
+}
+
+const canvasZoneStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  overflow: 'auto',
+  backgroundColor: 'hsl(var(--brand-neutral-100))',
+  backgroundImage:
+    'linear-gradient(hsl(var(--brand-neutral-200)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--brand-neutral-200)) 1px, transparent 1px)',
+  backgroundSize: '24px 24px',
+}
+
+const canvasTitleRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 10,
+}
+
+const canvasTitleStyle: CSSProperties = {
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.2em',
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const canvasDimsStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const deviceFrameStyle: CSSProperties = {
+  border: '2px solid hsl(var(--brand-neutral-400))',
+}
+
+const statusBarStyle: CSSProperties = {
+  height: 36,
+  flexShrink: 0,
+  borderTop: '2px solid var(--brand-divider)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 22,
+  padding: '0 20px',
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+}
+
+const statusValueStyle: CSSProperties = {
+  color: 'hsl(var(--brand-text))',
 }
 
 export default Canvas

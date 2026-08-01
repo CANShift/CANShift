@@ -2,14 +2,12 @@ import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { DEFAULT_PAGE_PALETTE, FIRMWARE_CAPS, HexColorSchema } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
-import { PageListItem } from '../components/editor/PageListItem'
+import { PageStrip } from '../components/editor/PageStrip'
 import { PageContextMenu } from './PageContextMenu'
 import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { createId } from '../utils/id'
 import { isEditableTarget } from '../utils/is-editable-target'
-import { Button } from '@/components/ui/button'
-import { MONO_FONT } from '../lib/typography'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +20,6 @@ import {
 } from '@/components/ui/alert-dialog'
 
 const Canvas = lazy(() => import('../components/editor/Canvas'))
-const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
 
 const NEW_PAGE_BG = HexColorSchema.parse('#000000')
 
@@ -41,10 +38,6 @@ const CanvasFallback = () => {
       Loading editor…
     </div>
   )
-}
-
-const PaletteFallback = () => {
-  return <div style={{ minHeight: 40 }} />
 }
 
 const EditorRoute = () => {
@@ -149,113 +142,48 @@ const EditorRoute = () => {
   const pendingDeleteWidgetCount =
     pendingDeleteIndex >= 0 ? (pages[pendingDeleteIndex]?.widgets.length ?? 0) : 0
 
+  const currentPageIndex = currentPage ? pages.findIndex((p) => p.id === currentPage.id) : -1
+
+  const pageStrip = (
+    <PageStrip
+      pages={pages}
+      topBar={topBar}
+      selectedPageId={selectedPageId}
+      defaultPageId={defaultPageId}
+      atCap={atCap}
+      onSelect={selectPage}
+      onAdd={() => {
+        if (atCap) return
+        addPage({
+          id: createId('page'),
+          backgroundImage: null,
+          backgroundColor: NEW_PAGE_BG,
+          palette: { ...DEFAULT_PAGE_PALETTE },
+          showTopBar: true,
+          visible: true,
+          widgets: [],
+        })
+      }}
+      onDragStart={handlePageDragStart}
+      onDrop={handlePageDrop}
+      onSetDefault={setDefaultPage}
+      onRemove={setPendingDeletePageId}
+      onContextMenu={handlePageContextMenu}
+    />
+  )
+
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-      <aside
-        style={{
-          width: 152,
-          background: 'hsl(var(--surface))',
-          borderRight: '1px solid hsl(var(--border))',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}
-      >
-        <div style={{ padding: '8px 8px 0' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              marginBottom: 6,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 10,
-                color: 'hsl(var(--text-dim))',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-              }}
-            >
-              Pages
-            </span>
-            <span
-              style={{
-                fontSize: 10,
-                color:
-                  pages.length >= FIRMWARE_CAPS.MAX_PAGES
-                    ? 'hsl(var(--destructive))'
-                    : 'hsl(var(--text-muted))',
-                fontFamily: MONO_FONT,
-              }}
-              title={`Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages`}
-            >
-              {pages.length}/{FIRMWARE_CAPS.MAX_PAGES}
-            </span>
-          </div>
-
-          {pages.map((page, index) => (
-            <PageListItem
-              key={page.id}
-              page={page}
-              index={index}
-              isDefault={page.id === defaultPageId}
-              isSelected={page.id === (selectedPageId ?? pages[0]?.id)}
-              canRemove={pages.length > 1}
-              topBar={topBar}
-              onSelect={selectPage}
-              onDragStart={handlePageDragStart}
-              onDrop={handlePageDrop}
-              onSetDefault={setDefaultPage}
-              onRemove={setPendingDeletePageId}
-              onContextMenu={handlePageContextMenu}
-            />
-          ))}
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full mb-2 h-7 text-xs"
-            disabled={atCap}
-            onClick={() => {
-              if (atCap) return
-              addPage({
-                id: createId('page'),
-                backgroundImage: null,
-                backgroundColor: NEW_PAGE_BG,
-                palette: { ...DEFAULT_PAGE_PALETTE },
-                showTopBar: true,
-                visible: true,
-                widgets: [],
-              })
-            }}
-            title={
-              atCap
-                ? `Firmware accepts at most ${FIRMWARE_CAPS.MAX_PAGES.toString()} pages — remove one to add another`
-                : 'Add a new page'
-            }
-          >
-            + Page
-          </Button>
-        </div>
-
-        <div style={{ height: 1, background: 'hsl(var(--border))', flexShrink: 0 }} />
-
-        <div style={{ padding: '4px 0' }}>
-          {currentPage && (
-            <Suspense fallback={<PaletteFallback />}>
-              <WidgetPalette pageId={currentPage.id} />
-            </Suspense>
-          )}
-        </div>
-      </aside>
-
       {currentPage ? (
         <ErrorBoundary scope="canvas">
           <Suspense fallback={<CanvasFallback />}>
-            <Canvas page={currentPage} topBar={topBar} />
+            <Canvas
+              page={currentPage}
+              topBar={topBar}
+              pageIndex={currentPageIndex >= 0 ? currentPageIndex : undefined}
+              pageStrip={pageStrip}
+              inspector={<RightSidebar pageId={currentPage.id} />}
+            />
           </Suspense>
         </ErrorBoundary>
       ) : (
@@ -265,14 +193,12 @@ const EditorRoute = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'hsl(var(--text-muted))',
+            color: 'hsl(var(--brand-neutral-500))',
           }}
         >
           No page selected
         </div>
       )}
-
-      <RightSidebar pageId={currentPage?.id} />
 
       {contextMenu && (
         <PageContextMenu

@@ -1,99 +1,108 @@
 import { lazy, Suspense, useState } from 'react'
+import type { CSSProperties } from 'react'
 import Obd2PollingPanel from '../components/obd2/Obd2PollingPanel'
 
 const PropertyPanel = lazy(() => import('../components/editor/PropertyPanel'))
+const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
 
-type Tab = 'properties' | 'signals'
+type Tab = 'properties' | 'signals' | 'library'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'properties', label: 'Properties' },
-  { id: 'signals', label: 'Signals' },
+  { id: 'properties', label: 'PROPERTIES' },
+  { id: 'signals', label: 'SIGNALS' },
+  { id: 'library', label: 'LIBRARY' },
 ]
-
-const TAB_ACTIVE_BG = '#1F1F1F'
-const TAB_ACTIVE_FG = '#FFFFFF'
-const TAB_IDLE_FG = '#777777'
-const TAB_BORDER = '#222222'
 
 export interface RightSidebarProps {
   pageId: string | undefined
 }
 
-const PropertyPanelFallback = () => {
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#3A3A3A',
-        fontSize: 11,
-      }}
-    >
-      Loading…
-    </div>
-  )
-}
+const PanelFallback = () => <div style={fallbackStyle}>Loading…</div>
 
 export const RightSidebar = ({ pageId }: RightSidebarProps) => {
   const [tab, setTab] = useState<Tab>('properties')
 
   return (
-    <aside
-      style={{
-        width: 220,
-        background: '#161616',
-        borderLeft: '1px solid #222222',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        role="tablist"
-        aria-label="Editor sidebar tabs"
-        style={{
-          display: 'flex',
-          borderBottom: `1px solid ${TAB_BORDER}`,
-          flexShrink: 0,
-        }}
-      >
+    <aside style={asideStyle}>
+      <div role="tablist" aria-label="Editor sidebar tabs" style={tabListStyle}>
         {TABS.map((t) => {
           const isActive = tab === t.id
           return (
             <button
               key={t.id}
+              type="button"
               role="tab"
               aria-selected={isActive}
               onClick={() => {
                 setTab(t.id)
               }}
-              style={{
-                flex: 1,
-                padding: '8px 0',
-                background: isActive ? TAB_ACTIVE_BG : 'transparent',
-                border: 'none',
-                borderBottom: isActive ? `1px solid ${TAB_ACTIVE_FG}` : '1px solid transparent',
-                color: isActive ? TAB_ACTIVE_FG : TAB_IDLE_FG,
-                cursor: 'pointer',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                fontWeight: isActive ? 600 : 400,
-              }}
+              className={isActive ? undefined : 'shell-nav-item'}
+              style={tabStyle(isActive)}
             >
               {t.label}
+              {isActive && <span aria-hidden="true" style={tabBarStyle} />}
             </button>
           )
         })}
       </div>
       {tab === 'properties' && pageId !== undefined && (
-        <Suspense fallback={<PropertyPanelFallback />}>
+        <Suspense fallback={<PanelFallback />}>
           <PropertyPanel pageId={pageId} />
         </Suspense>
       )}
       {tab === 'signals' && <Obd2PollingPanel />}
+      {tab === 'library' && pageId !== undefined && (
+        <Suspense fallback={<PanelFallback />}>
+          <WidgetPalette pageId={pageId} />
+        </Suspense>
+      )}
     </aside>
   )
+}
+
+const asideStyle: CSSProperties = {
+  width: 320,
+  flexShrink: 0,
+  borderLeft: '2px solid var(--brand-divider)',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
+  overflow: 'hidden',
+}
+
+const tabListStyle: CSSProperties = {
+  display: 'flex',
+  borderBottom: '2px solid var(--brand-divider)',
+  flexShrink: 0,
+}
+
+const tabStyle = (active: boolean): CSSProperties => ({
+  position: 'relative',
+  flex: 1,
+  padding: '11px 0',
+  background: 'none',
+  border: 0,
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.08em',
+  color: active ? 'hsl(var(--brand-text))' : 'hsl(var(--brand-neutral-600))',
+  cursor: 'pointer',
+})
+
+const tabBarStyle: CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: 3,
+  background: 'hsl(var(--brand-accent))',
+}
+
+const fallbackStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'hsl(var(--brand-neutral-500))',
+  fontSize: 11,
 }

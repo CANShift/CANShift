@@ -1,5 +1,6 @@
-import { Button } from '@/components/ui/button'
+import type { CSSProperties } from 'react'
 import { AlignToolbar } from './AlignToolbar'
+import { MONO_FONT } from '../../lib/typography'
 
 const ZOOM_MIN = 0.5
 const ZOOM_MAX = 2
@@ -40,159 +41,184 @@ export const CanvasToolbar = ({
   onOpenShortcuts,
   revLimiting,
   onStartRevLimiter,
-}: CanvasToolbarProps) => {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '4px 10px',
-        borderBottom: '1px solid hsl(var(--surface))',
-        gap: 8,
-        flexShrink: 0,
-        minHeight: 28,
-      }}
-    >
-      <Button
-        variant="outline"
+}: CanvasToolbarProps) => (
+  <div style={toolbarStyle}>
+    <div style={groupStyle}>
+      <button
+        type="button"
+        className="shell-nav-item"
         onClick={onUndo}
         disabled={!canUndo}
         title="Undo (⌘Z)"
-        className="h-auto disabled:opacity-100"
-        style={{
-          padding: '2px 8px',
-          fontSize: 12,
-          background: 'transparent',
-          border: '1px solid hsl(var(--border))',
-          color: canUndo ? '#AAAAAA' : '#444444',
-          cursor: canUndo ? 'pointer' : 'default',
-        }}
+        style={wordButtonStyle(canUndo)}
       >
-        ↶
-      </Button>
-      <Button
-        variant="outline"
+        UNDO
+      </button>
+      <button
+        type="button"
+        className="shell-nav-item"
         onClick={onRedo}
         disabled={!canRedo}
         title="Redo (⇧⌘Z)"
-        className="h-auto disabled:opacity-100"
-        style={{
-          padding: '2px 8px',
-          fontSize: 12,
-          background: 'transparent',
-          border: '1px solid hsl(var(--border))',
-          color: canRedo ? '#AAAAAA' : '#444444',
-          cursor: canRedo ? 'pointer' : 'default',
-        }}
+        style={{ ...wordButtonStyle(canRedo), borderLeft: groupRule }}
       >
-        ↷
-      </Button>
+        REDO
+      </button>
+    </div>
 
-      {selectedWidgetIds.length >= 2 ? (
+    <div style={groupStyle}>
+      <button
+        type="button"
+        className="shell-nav-item"
+        onClick={onZoomOut}
+        disabled={zoom <= ZOOM_MIN}
+        title="Zoom out"
+        style={squareButtonStyle(zoom > ZOOM_MIN)}
+      >
+        −
+      </button>
+      <button type="button" onClick={onZoomReset} title="Reset zoom" style={zoomValueStyle}>
+        {Math.round(zoom * 100)} %
+      </button>
+      <button
+        type="button"
+        className="shell-nav-item"
+        onClick={onZoomIn}
+        disabled={zoom >= ZOOM_MAX}
+        title="Zoom in"
+        style={{ ...squareButtonStyle(zoom < ZOOM_MAX), borderLeft: groupRule }}
+      >
+        +
+      </button>
+    </div>
+
+    <span style={infoStyle}>
+      {screenWidth} × {screenHeight} · 12-col grid · snap on
+    </span>
+
+    <span style={flagStyle(overflowingCount > 0)} title="Widgets spanning past the 12-column grid">
+      <span aria-hidden="true" style={flagDotStyle(overflowingCount > 0)} />
+      {overflowingCount > 0 ? `${String(overflowingCount)} out of bounds` : 'all in bounds'}
+    </span>
+
+    {selectedWidgetIds.length >= 2 && (
+      <>
         <AlignToolbar
           pageId={pageId}
           widgetIds={selectedWidgetIds}
           canDistribute={selectedWidgetIds.length >= 3}
         />
-      ) : (
-        <span style={{ fontSize: 9, color: 'hsl(var(--border))', letterSpacing: '0.05em' }}>
-          PREVIEW — {screenWidth} × {screenHeight}
-        </span>
-      )}
+        <span style={infoStyle}>{String(selectedWidgetIds.length)} selected</span>
+      </>
+    )}
 
-      {overflowingCount > 0 && (
-        <span
-          title="One or more widgets span past the 12-column grid. Resize or move them to fit."
-          style={{
-            padding: '2px 6px',
-            fontSize: 9,
-            fontWeight: 600,
-            background: '#2A1A00',
-            border: '1px solid #663300',
-            color: '#FFAA44',
-            letterSpacing: '0.05em',
-          }}
-        >
-          ⚠ {String(overflowingCount)} SPAN OVERFLOW
-        </span>
-      )}
+    <div style={{ flex: 1 }} />
 
-      <div style={{ flex: 1 }} />
+    <button
+      type="button"
+      className="shell-nav-item"
+      onClick={onOpenShortcuts}
+      title="Keyboard shortcuts (?)"
+      style={squareButtonStyle(true)}
+    >
+      ?
+    </button>
 
-      {selectedWidgetIds.length >= 2 && (
-        <span style={{ fontSize: 9, color: '#666666', letterSpacing: '0.04em' }}>
-          {String(selectedWidgetIds.length)} selected
-        </span>
-      )}
+    <button
+      type="button"
+      className="editor-ghost-accent"
+      onClick={onStartRevLimiter}
+      disabled={revLimiting}
+      title="Simulate rev limiter (5s)"
+      style={revLimitStyle(revLimiting)}
+    >
+      REV LIMIT
+    </button>
+  </div>
+)
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Button
-          variant="outline"
-          onClick={onZoomOut}
-          disabled={zoom <= ZOOM_MIN}
-          title="Zoom out"
-          className="h-auto disabled:opacity-100"
-          style={{ padding: '2px 8px', fontSize: 12, background: 'transparent' }}
-        >
-          −
-        </Button>
-        <button
-          onClick={onZoomReset}
-          title="Reset zoom"
-          style={{
-            minWidth: 44,
-            padding: '2px 4px',
-            fontSize: 10,
-            fontVariantNumeric: 'tabular-nums',
-            background: 'transparent',
-            border: 'none',
-            color: 'hsl(var(--text-muted))',
-            cursor: 'pointer',
-          }}
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-        <Button
-          variant="outline"
-          onClick={onZoomIn}
-          disabled={zoom >= ZOOM_MAX}
-          title="Zoom in"
-          className="h-auto disabled:opacity-100"
-          style={{ padding: '2px 8px', fontSize: 12, background: 'transparent' }}
-        >
-          +
-        </Button>
-      </div>
+const groupRule = '1px solid hsl(var(--brand-neutral-400))'
 
-      <Button
-        variant="outline"
-        onClick={onOpenShortcuts}
-        title="Keyboard shortcuts (?)"
-        className="h-auto"
-        style={{ padding: '2px 8px', fontSize: 12, background: 'transparent' }}
-      >
-        ?
-      </Button>
-
-      <Button
-        variant="outline"
-        onClick={onStartRevLimiter}
-        disabled={revLimiting}
-        title="Simulate rev limiter (5s)"
-        className="h-auto disabled:opacity-100"
-        style={{
-          padding: '3px 10px',
-          fontSize: 10,
-          fontWeight: 600,
-          background: revLimiting ? '#3A0000' : '#1E0A0A',
-          border: `1px solid ${revLimiting ? '#CC0000' : '#663333'}`,
-          color: revLimiting ? '#FF4444' : '#CC5555',
-          cursor: revLimiting ? 'default' : 'pointer',
-          letterSpacing: '0.05em',
-        }}
-      >
-        ⚡ Rev Limit
-      </Button>
-    </div>
-  )
+const toolbarStyle: CSSProperties = {
+  height: 48,
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 14,
+  padding: '0 20px',
+  borderBottom: '2px solid var(--brand-divider)',
 }
+
+const groupStyle: CSSProperties = {
+  display: 'flex',
+  border: groupRule,
+}
+
+const squareButtonStyle = (enabled: boolean): CSSProperties => ({
+  width: 28,
+  height: 26,
+  background: 'none',
+  border: 0,
+  color: enabled ? 'hsl(var(--brand-text))' : 'hsl(var(--brand-neutral-400))',
+  cursor: enabled ? 'pointer' : 'default',
+  fontSize: 13,
+  lineHeight: 1,
+})
+
+const wordButtonStyle = (enabled: boolean): CSSProperties => ({
+  height: 26,
+  padding: '0 10px',
+  background: 'none',
+  border: 0,
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.08em',
+  color: enabled ? 'hsl(var(--brand-neutral-700))' : 'hsl(var(--brand-neutral-400))',
+  cursor: enabled ? 'pointer' : 'default',
+})
+
+const zoomValueStyle: CSSProperties = {
+  width: 48,
+  background: 'none',
+  border: 0,
+  borderLeft: groupRule,
+  fontFamily: MONO_FONT,
+  fontSize: 12,
+  textAlign: 'center',
+  color: 'hsl(var(--brand-text))',
+  cursor: 'pointer',
+}
+
+const infoStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  whiteSpace: 'nowrap',
+}
+
+const flagStyle = (alert: boolean): CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 7,
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: alert ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-neutral-500))',
+  whiteSpace: 'nowrap',
+})
+
+const flagDotStyle = (alert: boolean): CSSProperties => ({
+  width: 7,
+  height: 7,
+  background: alert ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-neutral-500))',
+})
+
+const revLimitStyle = (active: boolean): CSSProperties => ({
+  padding: '6px 12px',
+  background: active ? 'color-mix(in srgb, hsl(var(--brand-accent)) 14%, transparent)' : 'none',
+  border: '1px solid hsl(var(--brand-accent))',
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.08em',
+  color: 'hsl(var(--brand-accent))',
+  cursor: active ? 'default' : 'pointer',
+})
