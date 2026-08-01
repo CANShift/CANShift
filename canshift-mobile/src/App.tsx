@@ -27,8 +27,10 @@ export default function App() {
   useEffect(() => {
     void useAppSettingsStore.getState().hydrate()
     void hydrateTimerSessions()
-    markFirstScreenReady()
   }, [])
+  useEffect(() => {
+    if (fontsLoaded || fontError) markFirstScreenReady()
+  }, [fontsLoaded, fontError])
   useEffect(() => {
     if (fontError)
       log('warn', `Font loading failed — falling back to system fonts: ${fontError.message}`)
