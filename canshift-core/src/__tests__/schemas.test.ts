@@ -1187,6 +1187,20 @@ describe('schema bounds hardening', () => {
       ).toBe(true)
     })
 
+    it('rejects a column span overflowing the grid', () => {
+      expect(
+        WidgetLayoutSchema.safeParse(validLayout({ col: 11, colSpan: 2, row: 0, rowSpan: 1 }))
+          .success
+      ).toBe(false)
+    })
+
+    it('rejects a row span overflowing the grid', () => {
+      expect(
+        WidgetLayoutSchema.safeParse(validLayout({ col: 0, colSpan: 1, row: 6, rowSpan: 7 }))
+          .success
+      ).toBe(false)
+    })
+
     it.each(['col', 'colSpan', 'row', 'rowSpan', 'zOrder'])('rejects a missing %s', (field) => {
       const layout = Object.fromEntries(
         Object.entries(validLayout()).filter(([key]) => key !== field)
