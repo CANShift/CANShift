@@ -1,3 +1,4 @@
+import { clampGridPlacement } from '@tmbk/canshift-core'
 import { pushHistory } from './helpers'
 import type { LayoutOpsSlice, SliceCreator } from './types'
 
@@ -12,32 +13,36 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
 
       pushHistory(s)
 
-      const minX = Math.min(...targets.map((w) => w.layout.x))
-      const maxX = Math.max(...targets.map((w) => w.layout.x + w.layout.w))
-      const minY = Math.min(...targets.map((w) => w.layout.y))
-      const maxY = Math.max(...targets.map((w) => w.layout.y + w.layout.h))
+      const minCol = Math.min(...targets.map((w) => w.layout.col))
+      const maxCol = Math.max(...targets.map((w) => w.layout.col + w.layout.colSpan))
+      const minRow = Math.min(...targets.map((w) => w.layout.row))
+      const maxRow = Math.max(...targets.map((w) => w.layout.row + w.layout.rowSpan))
 
       for (const w of targets) {
+        const placement = { ...w.layout }
         switch (direction) {
           case 'left':
-            w.layout.x = minX
+            placement.col = minCol
             break
           case 'right':
-            w.layout.x = maxX - w.layout.w
+            placement.col = maxCol - w.layout.colSpan
             break
           case 'top':
-            w.layout.y = minY
+            placement.row = minRow
             break
           case 'bottom':
-            w.layout.y = maxY - w.layout.h
+            placement.row = maxRow - w.layout.rowSpan
             break
           case 'center-h':
-            w.layout.x = Math.round((minX + maxX) / 2 - w.layout.w / 2)
+            placement.col = Math.round((minCol + maxCol) / 2 - w.layout.colSpan / 2)
             break
           case 'center-v':
-            w.layout.y = Math.round((minY + maxY) / 2 - w.layout.h / 2)
+            placement.row = Math.round((minRow + maxRow) / 2 - w.layout.rowSpan / 2)
             break
         }
+        const clamped = clampGridPlacement(placement)
+        w.layout.col = clamped.col
+        w.layout.row = clamped.row
       }
       s.isDirty = true
     })
@@ -54,30 +59,30 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
       pushHistory(s)
 
       if (axis === 'h') {
-        const sorted = [...targets].sort((a, b) => a.layout.x - b.layout.x)
+        const sorted = [...targets].sort((a, b) => a.layout.col - b.layout.col)
         const first = sorted[0]
         const last = sorted[sorted.length - 1]
         if (!first || !last) return
-        const totalSpan = last.layout.x + last.layout.w - first.layout.x
-        const totalWidgetW = sorted.reduce((sum, w) => sum + w.layout.w, 0)
-        const gap = (totalSpan - totalWidgetW) / (sorted.length - 1)
-        let curX = first.layout.x
+        const totalSpan = last.layout.col + last.layout.colSpan - first.layout.col
+        const totalWidgetCols = sorted.reduce((sum, w) => sum + w.layout.colSpan, 0)
+        const gap = (totalSpan - totalWidgetCols) / (sorted.length - 1)
+        let curCol = first.layout.col
         for (const w of sorted) {
-          w.layout.x = Math.round(curX)
-          curX += w.layout.w + gap
+          w.layout.col = clampGridPlacement({ ...w.layout, col: Math.round(curCol) }).col
+          curCol += w.layout.colSpan + gap
         }
       } else {
-        const sorted = [...targets].sort((a, b) => a.layout.y - b.layout.y)
+        const sorted = [...targets].sort((a, b) => a.layout.row - b.layout.row)
         const first = sorted[0]
         const last = sorted[sorted.length - 1]
         if (!first || !last) return
-        const totalSpan = last.layout.y + last.layout.h - first.layout.y
-        const totalWidgetH = sorted.reduce((sum, w) => sum + w.layout.h, 0)
-        const gap = (totalSpan - totalWidgetH) / (sorted.length - 1)
-        let curY = first.layout.y
+        const totalSpan = last.layout.row + last.layout.rowSpan - first.layout.row
+        const totalWidgetRows = sorted.reduce((sum, w) => sum + w.layout.rowSpan, 0)
+        const gap = (totalSpan - totalWidgetRows) / (sorted.length - 1)
+        let curRow = first.layout.row
         for (const w of sorted) {
-          w.layout.y = Math.round(curY)
-          curY += w.layout.h + gap
+          w.layout.row = clampGridPlacement({ ...w.layout, row: Math.round(curRow) }).row
+          curRow += w.layout.rowSpan + gap
         }
       }
       s.isDirty = true

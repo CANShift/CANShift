@@ -84,7 +84,7 @@ export const useCanvasKeyboard = ({
       ) {
         e.preventDefault()
         e.stopPropagation()
-        const step = e.shiftKey ? 10 : 1
+        const step = e.shiftKey ? 3 : 1
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
         nudgeWidgets(kbd.pageId, activeIds, dx, dy)

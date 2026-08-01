@@ -1,6 +1,7 @@
 import { current } from 'immer'
 import type { DashboardConfig, PageConfig, Widget } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
+import type { IdentifiedPlacement } from '../../utils/layout'
 
 export const HISTORY_LIMIT = 50
 
@@ -13,16 +14,14 @@ export const widgetAreaHeight = (
   page: PageConfig,
   topBarHeight: number,
   canvasH: number
-): number => (page.showTopBar ? canvasH - topBarHeight : canvasH)
+): number => (page.showTopBar !== false ? canvasH - topBarHeight : canvasH)
 
-export const toLayoutRect = (
-  w: Widget
-): { id: string; x: number; y: number; w: number; h: number } => ({
+export const toPlacement = (w: Widget): IdentifiedPlacement => ({
   id: w.id,
-  x: w.layout.x,
-  y: w.layout.y,
-  w: w.layout.w,
-  h: w.layout.h,
+  col: w.layout.col,
+  colSpan: w.layout.colSpan,
+  row: w.layout.row,
+  rowSpan: w.layout.rowSpan,
 })
 
 interface HistoryHost {

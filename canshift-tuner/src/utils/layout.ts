@@ -1,144 +1,108 @@
-export const LAYOUT_GAP = 0
-export const SNAP_GRID = 4
+import type { GridPlacement } from '@tmbk/canshift-core'
+import { LAYOUT_GRID, clampGridPlacement, placementsOverlap } from '@tmbk/canshift-core'
 
-export interface LayoutRect {
+export interface IdentifiedPlacement extends GridPlacement {
   id: string
-  x: number
-  y: number
-  w: number
-  h: number
 }
 
-const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v)
-
-export const snapToGrid = (v: number, grid = SNAP_GRID): number => Math.round(v / grid) * grid
-
-const ceilToGrid = (v: number, grid = SNAP_GRID): number => Math.ceil(v / grid) * grid
-
-const floorToGrid = (v: number, grid = SNAP_GRID): number => Math.floor(v / grid) * grid
-
-export const rectsOverlap = (a: LayoutRect, b: LayoutRect): boolean => {
-  const g = LAYOUT_GAP
-  return a.x < b.x + b.w + g && a.x + a.w + g > b.x && a.y < b.y + b.h + g && a.y + a.h + g > b.y
+export interface SpanSize {
+  colSpan: number
+  rowSpan: number
 }
 
-const pushAway = (
-  anchor: LayoutRect,
-  victim: LayoutRect,
-  canvasW: number,
-  canvasH: number
-): { x: number; y: number } => {
-  const g = LAYOUT_GAP
-
-  const pushRight = anchor.x + anchor.w + g - victim.x
-  const pushLeft = victim.x + victim.w + g - anchor.x
-  const pushDown = anchor.y + anchor.h + g - victim.y
-  const pushUp = victim.y + victim.h + g - anchor.y
-
-  const minH = Math.min(pushRight, pushLeft)
-  const minV = Math.min(pushDown, pushUp)
-
-  let nx = victim.x
-  let ny = victim.y
-
-  if (minH <= minV) {
-    nx =
-      pushRight <= pushLeft
-        ? ceilToGrid(anchor.x + anchor.w + g)
-        : floorToGrid(anchor.x - victim.w - g)
-  } else {
-    ny =
-      pushDown <= pushUp
-        ? ceilToGrid(anchor.y + anchor.h + g)
-        : floorToGrid(anchor.y - victim.h - g)
-  }
-
-  return {
-    x: clamp(nx, 0, canvasW - victim.w),
-    y: clamp(ny, 0, canvasH - victim.h),
-  }
+export interface TrackPosition {
+  col: number
+  row: number
 }
 
 export const autoPlace = (
-  size: { w: number; h: number },
-  others: LayoutRect[],
-  canvasW: number,
-  canvasH: number
-): { x: number; y: number } | null => {
-  for (let y = 0; y + size.h <= canvasH; y += SNAP_GRID) {
-    for (let x = 0; x + size.w <= canvasW; x += SNAP_GRID) {
-      const candidate: LayoutRect = { id: '__candidate__', x, y, w: size.w, h: size.h }
-      if (!others.some((o) => rectsOverlap(candidate, o))) {
-        return { x, y }
-      }
+  size: SpanSize,
+  others: readonly GridPlacement[]
+): TrackPosition | null => {
+  const colSpan = Math.min(size.colSpan, LAYOUT_GRID.COLUMNS)
+  const rowSpan = Math.min(size.rowSpan, LAYOUT_GRID.ROWS)
+  for (let row = 0; row + rowSpan <= LAYOUT_GRID.ROWS; row++) {
+    for (let col = 0; col + colSpan <= LAYOUT_GRID.COLUMNS; col++) {
+      const candidate: GridPlacement = { col, colSpan, row, rowSpan }
+      if (!others.some((o) => placementsOverlap(candidate, o))) return { col, row }
     }
   }
   return null
 }
 
-const area = (r: LayoutRect): number => r.w * r.h
+const pushAway = (anchor: GridPlacement, victim: GridPlacement): GridPlacement => {
+  const pushRight = anchor.col + anchor.colSpan - victim.col
+  const pushLeft = victim.col + victim.colSpan - anchor.col
+  const pushDown = anchor.row + anchor.rowSpan - victim.row
+  const pushUp = victim.row + victim.rowSpan - anchor.row
 
-const moveRect = (r: LayoutRect, x: number, y: number): LayoutRect => ({ ...r, x, y })
+  const minH = Math.min(pushRight, pushLeft)
+  const minV = Math.min(pushDown, pushUp)
 
-const pickVictim = (a: LayoutRect, b: LayoutRect, movedId: string): [LayoutRect, LayoutRect] => {
-  if (a.id === movedId) return [a, b]
-  if (b.id === movedId) return [b, a]
-  return area(a) <= area(b) ? [b, a] : [a, b]
+  let col = victim.col
+  let row = victim.row
+
+  if (minH <= minV) {
+    col = pushRight <= pushLeft ? anchor.col + anchor.colSpan : anchor.col - victim.colSpan
+  } else {
+    row = pushDown <= pushUp ? anchor.row + anchor.rowSpan : anchor.row - victim.rowSpan
+  }
+
+  return clampGridPlacement({ ...victim, col, row })
 }
 
-const collidingPairs = (rects: LayoutRect[]): [LayoutRect, LayoutRect][] => {
-  const pairs: [LayoutRect, LayoutRect][] = []
-  for (let i = 0; i < rects.length; i++) {
-    for (let j = i + 1; j < rects.length; j++) {
-      const a = rects[i]
-      const b = rects[j]
-      if (a && b && rectsOverlap(a, b)) pairs.push([a, b])
+const spanArea = (p: GridPlacement): number => p.colSpan * p.rowSpan
+
+const pickVictim = (
+  a: IdentifiedPlacement,
+  b: IdentifiedPlacement,
+  movedId: string
+): [IdentifiedPlacement, IdentifiedPlacement] => {
+  if (a.id === movedId) return [a, b]
+  if (b.id === movedId) return [b, a]
+  return spanArea(a) <= spanArea(b) ? [b, a] : [a, b]
+}
+
+const collidingPairs = (
+  placements: IdentifiedPlacement[]
+): [IdentifiedPlacement, IdentifiedPlacement][] => {
+  const pairs: [IdentifiedPlacement, IdentifiedPlacement][] = []
+  for (let i = 0; i < placements.length; i++) {
+    for (let j = i + 1; j < placements.length; j++) {
+      const a = placements[i]
+      const b = placements[j]
+      if (a && b && placementsOverlap(a, b)) pairs.push([a, b])
     }
   }
   return pairs
 }
 
-const settlePass = (
-  pos: Map<string, LayoutRect>,
-  movedId: string,
-  canvasW: number,
-  canvasH: number
-): boolean => {
-  const pairs = collidingPairs(Array.from(pos.values()))
-  for (const [a, b] of pairs) {
-    const [anchor, victim] = pickVictim(a, b, movedId)
-    const np = pushAway(anchor, victim, canvasW, canvasH)
-    pos.set(victim.id, moveRect(victim, np.x, np.y))
-  }
-  return pairs.length > 0
-}
+const MAX_PASSES = 8
 
 export const resolveCollisions = (
-  moved: LayoutRect,
-  newX: number,
-  newY: number,
-  others: LayoutRect[],
-  canvasW: number,
-  canvasH: number
-): Map<string, { x: number; y: number }> => {
-  const pos = new Map<string, LayoutRect>()
-  pos.set(moved.id, { ...moved, x: newX, y: newY })
+  moved: IdentifiedPlacement,
+  others: readonly IdentifiedPlacement[]
+): Map<string, TrackPosition> => {
+  const pos = new Map<string, IdentifiedPlacement>()
+  pos.set(moved.id, { ...moved })
   for (const o of others) pos.set(o.id, { ...o })
 
-  const MAX_PASSES = 8
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    const dirty = settlePass(pos, moved.id, canvasW, canvasH)
-    if (!dirty) break
+    const pairs = collidingPairs(Array.from(pos.values()))
+    if (pairs.length === 0) break
+    for (const [a, b] of pairs) {
+      const [anchor, victim] = pickVictim(a, b, moved.id)
+      const shifted = pushAway(anchor, victim)
+      pos.set(victim.id, { ...victim, col: shifted.col, row: shifted.row })
+    }
   }
 
-  const result = new Map<string, { x: number; y: number }>()
-  result.set(moved.id, { x: newX, y: newY })
-
-  for (const [id, rect] of pos) {
+  const result = new Map<string, TrackPosition>()
+  for (const [id, placement] of pos) {
     if (id === moved.id) continue
     const original = others.find((o) => o.id === id)
-    if (original && (original.x !== rect.x || original.y !== rect.y)) {
-      result.set(id, { x: rect.x, y: rect.y })
+    if (original && (original.col !== placement.col || original.row !== placement.row)) {
+      result.set(id, { col: placement.col, row: placement.row })
     }
   }
 

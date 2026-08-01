@@ -1,8 +1,12 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
+import type { GridRect } from '@tmbk/canshift-core'
+import { resolveGridRect, resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
-import { rectsOverlap } from '../utils/layout'
 
 export const RB_THRESHOLD = 4
+
+const rectsIntersect = (a: GridRect, b: GridRect): boolean =>
+  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 
 export interface RubberBand {
   x: number
@@ -79,22 +83,19 @@ export const useRubberBandSelection = ({
         setRubberBand(null)
 
         if (rbW > RB_THRESHOLD || rbH > RB_THRESHOLD) {
-          const widgets =
-            useDashboardStore.getState().config?.pages.find((p) => p.id === capturedPageId)
-              ?.widgets ?? []
-          const rb = { id: '', x: rbX, y: rbY, w: rbW, h: rbH }
-          const ids = widgets
-            .filter((w) =>
-              rectsOverlap(rb, {
-                id: '',
-                x: w.layout.x,
-                y: w.layout.y,
-                w: w.layout.w,
-                h: w.layout.h,
-              })
-            )
-            .map((w) => w.id)
-          if (ids.length > 0) selectWidgets(ids)
+          const config = useDashboardStore.getState().config
+          const page = config?.pages.find((p) => p.id === capturedPageId)
+          if (config && page) {
+            const profile = resolveScreenProfile(config.targetProfile)
+            const areaHeight =
+              page.showTopBar !== false ? profile.height - config.topBar.height : profile.height
+            const area = { width: profile.width, height: areaHeight }
+            const rb: GridRect = { x: rbX, y: rbY, w: rbW, h: rbH }
+            const ids = page.widgets
+              .filter((w) => rectsIntersect(rb, resolveGridRect(w.layout, area)))
+              .map((w) => w.id)
+            if (ids.length > 0) selectWidgets(ids)
+          }
         }
       }
 

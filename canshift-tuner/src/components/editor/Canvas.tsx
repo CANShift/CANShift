@@ -1,6 +1,12 @@
 import { useRef, useCallback, useMemo, useState } from 'react'
 import type { PageConfig, PagePalette, TopBarConfig } from '@tmbk/canshift-core'
-import { resolveScreenProfile } from '@tmbk/canshift-core'
+import {
+  LAYOUT_GRID,
+  isSpanOverflowing,
+  placementsOverlap,
+  resolveGridRect,
+  resolveScreenProfile,
+} from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
@@ -11,7 +17,6 @@ import { DashTopBar } from './DashTopBar'
 import { CanvasToolbar } from './CanvasToolbar'
 import { RevLimiterOverlay } from './RevLimiterOverlay'
 import { ShortcutsDialog } from './ShortcutsDialog'
-import { rectsOverlap } from '../../utils/layout'
 import { useDragState } from '../../hooks/useDragState'
 import { useCanvasKeyboard } from '../../hooks/useCanvasKeyboard'
 import { useClipboardWidgets } from '../../hooks/useClipboardWidgets'
@@ -65,7 +70,8 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const zoomRef = useRef<number>(1)
   zoomRef.current = zoom
 
-  const widgetAreaH = screenProfile.height - topBar.height
+  const widgetAreaH =
+    page.showTopBar !== false ? screenProfile.height - topBar.height : screenProfile.height
 
   const dragInputsRef = useRef({
     pageId: page.id,
@@ -115,22 +121,14 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
 
   const overlappingIds = useMemo(() => {
     const ids = new Set<string>()
-    const rects = page.widgets.map((w) => ({
-      id: w.id,
-      x: w.layout.x,
-      y: w.layout.y,
-      w: w.layout.w,
-      h: w.layout.h,
-    }))
-    for (let i = 0; i < rects.length; i++) {
-      for (let j = i + 1; j < rects.length; j++) {
-        const a = rects[i]
-        const b = rects[j]
+    const widgets = page.widgets
+    for (let i = 0; i < widgets.length; i++) {
+      for (let j = i + 1; j < widgets.length; j++) {
+        const a = widgets[i]
+        const b = widgets[j]
         if (!a || !b) continue
-        const wa = page.widgets[i]
-        const wb = page.widgets[j]
-        if (wa?.type === 'warning' || wb?.type === 'warning') continue
-        if (rectsOverlap(a, b)) {
+        if (a.type === 'warning' || b.type === 'warning') continue
+        if (placementsOverlap(a.layout, b.layout)) {
           ids.add(a.id)
           ids.add(b.id)
         }
@@ -142,14 +140,25 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const overflowingIds = useMemo(() => {
     const ids = new Set<string>()
     for (const w of page.widgets) {
-      const right = w.layout.x + w.layout.w
-      const bottom = w.layout.y + w.layout.h
-      if (right > screenProfile.width || bottom > widgetAreaH) {
-        ids.add(w.id)
-      }
+      if (isSpanOverflowing(w.layout)) ids.add(w.id)
     }
     return ids
-  }, [page.widgets, screenProfile.width, widgetAreaH])
+  }, [page.widgets])
+
+  const gridGuides = useMemo(() => {
+    const area = { width: screenProfile.width, height: widgetAreaH }
+    const verticals: number[] = []
+    for (let c = 0; c < LAYOUT_GRID.COLUMNS; c++) {
+      const r = resolveGridRect({ col: c, colSpan: 1, row: 0, rowSpan: 1 }, area)
+      verticals.push(r.x, r.x + r.w)
+    }
+    const horizontals: number[] = []
+    for (let r = 0; r < LAYOUT_GRID.ROWS; r++) {
+      const rect = resolveGridRect({ col: 0, colSpan: 1, row: r, rowSpan: 1 }, area)
+      horizontals.push(rect.y, rect.y + rect.h)
+    }
+    return { verticals, horizontals }
+  }, [screenProfile.width, widgetAreaH])
 
   useCanvasKeyboard({
     selectWidget,
@@ -253,7 +262,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                 overflow: 'hidden',
               }}
             >
-              {page.showTopBar && (
+              {page.showTopBar !== false && (
                 <DashTopBar
                   topBar={topBar}
                   scale={effScale}
@@ -281,18 +290,34 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                   cursor: 'default',
                 }}
               >
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    backgroundImage: `
-                  linear-gradient(to right, #FFFFFF08 1px, transparent 1px),
-                  linear-gradient(to bottom, #FFFFFF08 1px, transparent 1px)
-                `,
-                    backgroundSize: `${String(40 * effScale)}px ${String(28 * effScale)}px`,
-                    pointerEvents: 'none',
-                  }}
-                />
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                  {gridGuides.verticals.map((x, i) => (
+                    <div
+                      key={`v${String(i)}`}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: x * effScale,
+                        width: 1,
+                        background: '#FFFFFF0A',
+                      }}
+                    />
+                  ))}
+                  {gridGuides.horizontals.map((y, i) => (
+                    <div
+                      key={`h${String(i)}`}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: y * effScale,
+                        height: 1,
+                        background: '#FFFFFF0A',
+                      }}
+                    />
+                  ))}
+                </div>
 
                 {(page.template ?? 'custom') === 'cruise_control' ? (
                   <CruiseControlPreview
@@ -311,6 +336,8 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                       widget={widget}
                       palette={effectivePalette}
                       scale={effScale}
+                      areaWidth={screenProfile.width}
+                      areaHeight={widgetAreaH}
                       isSelected={widget.id === selectedWidgetId}
                       isInMultiSelection={
                         selectedWidgetIds.length > 1 && selectedWidgetIds.includes(widget.id)

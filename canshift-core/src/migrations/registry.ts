@@ -6,6 +6,8 @@ import {
   brightenHex,
   clipField,
   flatMapWidgets,
+  legacyPixelLayoutToSpans,
+  legacyProfileDimensions,
   mapPages,
   mapWidgets,
   resizeWithinCanvas,
@@ -22,6 +24,31 @@ const CAPS_1_24 = {
 } as const
 
 export const MIGRATIONS: Migration[] = [
+  {
+    fromVersion: '1.24.0',
+    toVersion: '1.25.0',
+    migrate: (config) => {
+      const profile = legacyProfileDimensions(config)
+      const topBar = asObject(config.topBar)
+      const topBarHeight = typeof topBar?.height === 'number' ? topBar.height : 0
+      return mapPages(config, '1.25.0', (page) => {
+        const widgets = asObjectArray(page.widgets)
+        if (!widgets) return page
+        const areaHeight =
+          page.showTopBar !== false ? profile.height - topBarHeight : profile.height
+        return {
+          ...page,
+          widgets: widgets.map((widget) => {
+            const layout = asObject(widget.layout)
+            if (!layout) return widget
+            const spans = legacyPixelLayoutToSpans(layout, profile.width, areaHeight)
+            if (!spans) return widget
+            return { ...widget, layout: spans }
+          }),
+        }
+      })
+    },
+  },
   {
     fromVersion: '1.23.0',
     toVersion: '1.24.0',

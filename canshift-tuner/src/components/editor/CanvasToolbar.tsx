@@ -102,7 +102,7 @@ export const CanvasToolbar = ({
 
       {overflowingCount > 0 && (
         <span
-          title="One or more widgets extend past the target screen bounds. Resize or move them to fit."
+          title="One or more widgets span past the 12-column grid. Resize or move them to fit."
           style={{
             padding: '2px 6px',
             fontSize: 9,
@@ -113,7 +113,7 @@ export const CanvasToolbar = ({
             letterSpacing: '0.05em',
           }}
         >
-          ⚠ {String(overflowingCount)} OFF-CANVAS
+          ⚠ {String(overflowingCount)} SPAN OVERFLOW
         </span>
       )}
 

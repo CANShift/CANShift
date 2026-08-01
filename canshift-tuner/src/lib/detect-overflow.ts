@@ -1,5 +1,5 @@
 import type { DashboardConfig, Widget } from '@tmbk/canshift-core'
-import { resolveScreenProfile } from '@tmbk/canshift-core'
+import { isSpanOverflowing } from '@tmbk/canshift-core'
 
 export interface OverflowingWidget {
   pageId: string
@@ -9,12 +9,10 @@ export interface OverflowingWidget {
 }
 
 export const detectOverflow = (config: DashboardConfig): OverflowingWidget[] => {
-  const profile = resolveScreenProfile(config.targetProfile)
   const out: OverflowingWidget[] = []
   for (const page of config.pages) {
     for (const widget of page.widgets) {
-      const { x, y, w, h } = widget.layout
-      if (x < 0 || y < 0 || x + w > profile.width || y + h > profile.height) {
+      if (isSpanOverflowing(widget.layout)) {
         out.push({ pageId: page.id, widgetId: widget.id, type: widget.type, layout: widget.layout })
       }
     }

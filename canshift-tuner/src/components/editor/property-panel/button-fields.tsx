@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ButtonWidgetConfig } from '@tmbk/canshift-core'
+import { resolveGridRect, resolveScreenProfile } from '@tmbk/canshift-core'
 
 import { Checkbox } from '@/components/ui/checkbox'
 import { useDashboardStore } from '../../../stores/dashboard.store'
@@ -12,6 +13,8 @@ import { Field, IconPicker, inputStyle, type ConfigFieldsProps } from './shared'
 
 export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
+  const targetProfile = useDashboardStore((s) => s.config?.targetProfile)
+  const topBarHeight = useDashboardStore((s) => s.config?.topBar.height ?? 0)
   const pageIds = pages.map((p) => p.id)
   const [previewActive, setPreviewActive] = useState(false)
   const [previewStateIdx, setPreviewStateIdx] = useState(0)
@@ -19,7 +22,11 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   if (widget.config.type !== 'button') return null
   const cfg: ButtonWidgetConfig = widget.config
 
-  const { w, h } = widget.layout
+  const ownerPage = pages.find((p) => p.widgets.some((pw) => pw.id === widget.id))
+  const profile = resolveScreenProfile(targetProfile)
+  const areaHeight =
+    ownerPage?.showTopBar !== false ? profile.height - topBarHeight : profile.height
+  const { w, h } = resolveGridRect(widget.layout, { width: profile.width, height: areaHeight })
   const PREVIEW_BUDGET_W = 140
   const PREVIEW_BUDGET_H = 180
   const PREVIEW_MAX_SCALE = 4

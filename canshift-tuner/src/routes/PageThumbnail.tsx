@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { PageConfig, ScreenProfile, TopBarConfig } from '@tmbk/canshift-core'
-import { DEFAULT_PAGE_PALETTE, resolveScreenProfile } from '@tmbk/canshift-core'
+import { DEFAULT_PAGE_PALETTE, resolveGridRect, resolveScreenProfile } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
 import { CruiseControlPreview } from '../components/editor/CruiseControlPreview'
 import { WidgetPreview } from '../components/editor/WidgetPreview'
@@ -17,7 +17,7 @@ const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
   const profile: ScreenProfile = resolveScreenProfile(targetProfileId)
   const thumbH = Math.round((THUMB_W * profile.height) / profile.width)
   const thumbScale = THUMB_W / profile.width
-  const fullBarH = page.showTopBar ? topBar.height : 0
+  const fullBarH = page.showTopBar !== false ? topBar.height : 0
   const isCruiseTemplate = page.template === 'cruise_control'
 
   return (
@@ -43,7 +43,7 @@ const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
           transformOrigin: 'top left',
         }}
       >
-        {page.showTopBar && (
+        {page.showTopBar !== false && (
           <div
             style={{
               position: 'absolute',
@@ -65,26 +65,27 @@ const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
             palette={page.palette ?? DEFAULT_PAGE_PALETTE}
           />
         ) : (
-          page.widgets.map((widget) => (
-            <div
-              key={widget.id}
-              style={{
-                position: 'absolute',
-                left: widget.layout.x,
-                top: fullBarH + widget.layout.y,
-                width: widget.layout.w,
-                height: widget.layout.h,
-                overflow: 'hidden',
-              }}
-            >
-              <WidgetPreview
-                widget={widget}
-                displayW={widget.layout.w}
-                displayH={widget.layout.h}
-                noAnimate
-              />
-            </div>
-          ))
+          page.widgets.map((widget) => {
+            const rect = resolveGridRect(widget.layout, {
+              width: profile.width,
+              height: profile.height - fullBarH,
+            })
+            return (
+              <div
+                key={widget.id}
+                style={{
+                  position: 'absolute',
+                  left: rect.x,
+                  top: fullBarH + rect.y,
+                  width: rect.w,
+                  height: rect.h,
+                  overflow: 'hidden',
+                }}
+              >
+                <WidgetPreview widget={widget} displayW={rect.w} displayH={rect.h} noAnimate />
+              </div>
+            )
+          })
         )}
       </div>
     </div>

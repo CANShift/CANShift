@@ -1,16 +1,14 @@
 import { useCallback, useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react'
 import type { Widget } from '@tmbk/canshift-core'
+import { LAYOUT_GRID, clampGridPlacement } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
-
-const X_SNAP = 40
-const Y_SNAP = 28
 
 interface DraggingWidget {
   id: string
-  startX: number
-  startY: number
-  w: number
-  h: number
+  startCol: number
+  startRow: number
+  colSpan: number
+  rowSpan: number
 }
 
 interface DragState {
@@ -34,6 +32,21 @@ export interface UseDragStateOptions {
   dragInputsRef: RefObject<DragInputs>
   zoomRef: RefObject<number>
   scale: number
+}
+
+const trackPitch = (areaSize: number, tracks: number): number =>
+  (areaSize - 2 * LAYOUT_GRID.FRAME_PADDING + LAYOUT_GRID.GUTTER) / tracks
+
+const clampGroupDelta = (
+  raw: number,
+  widgets: DraggingWidget[],
+  start: (w: DraggingWidget) => number,
+  span: (w: DraggingWidget) => number,
+  tracks: number
+): number => {
+  const min = Math.max(...widgets.map((w) => -start(w)))
+  const max = Math.min(...widgets.map((w) => tracks - span(w) - start(w)))
+  return min > max ? raw : Math.min(Math.max(raw, min), max)
 }
 
 export const useDragState = ({
@@ -61,18 +74,18 @@ export const useDragState = ({
             .filter((w) => selectedWidgetIds.includes(w.id))
             .map((w) => ({
               id: w.id,
-              startX: w.layout.x,
-              startY: w.layout.y,
-              w: w.layout.w,
-              h: w.layout.h,
+              startCol: w.layout.col,
+              startRow: w.layout.row,
+              colSpan: w.layout.colSpan,
+              rowSpan: w.layout.rowSpan,
             }))
         : [
             {
               id: widget.id,
-              startX: widget.layout.x,
-              startY: widget.layout.y,
-              w: widget.layout.w,
-              h: widget.layout.h,
+              startCol: widget.layout.col,
+              startRow: widget.layout.row,
+              colSpan: widget.layout.colSpan,
+              rowSpan: widget.layout.rowSpan,
             },
           ]
 
@@ -85,38 +98,55 @@ export const useDragState = ({
         isMulti,
       }
 
+      const colPitch = trackPitch(canvasW, LAYOUT_GRID.COLUMNS)
+      const rowPitch = trackPitch(widgetAreaH, LAYOUT_GRID.ROWS)
+
       const handleMouseMove = (ev: MouseEvent) => {
         const drag = dragRef.current
         if (!drag) return
         const effectiveScale = scale * (zoomRef.current ?? 1)
-        const dx = Math.round((ev.clientX - drag.startMouseX) / effectiveScale)
-        const dy = Math.round((ev.clientY - drag.startMouseY) / effectiveScale)
-        const xSnap = ev.altKey ? 1 : X_SNAP
-        const ySnap = ev.altKey ? 1 : Y_SNAP
+        const rawDeltaCols = Math.round(
+          (ev.clientX - drag.startMouseX) / (colPitch * effectiveScale)
+        )
+        const rawDeltaRows = Math.round(
+          (ev.clientY - drag.startMouseY) / (rowPitch * effectiveScale)
+        )
+        const deltaCols = drag.isMulti
+          ? clampGroupDelta(
+              rawDeltaCols,
+              drag.widgets,
+              (w) => w.startCol,
+              (w) => w.colSpan,
+              LAYOUT_GRID.COLUMNS
+            )
+          : rawDeltaCols
+        const deltaRows = drag.isMulti
+          ? clampGroupDelta(
+              rawDeltaRows,
+              drag.widgets,
+              (w) => w.startRow,
+              (w) => w.rowSpan,
+              LAYOUT_GRID.ROWS
+            )
+          : rawDeltaRows
+
+        const place = (dw: DraggingWidget): { id: string; col: number; row: number } => {
+          const clamped = clampGridPlacement({
+            col: dw.startCol + deltaCols,
+            colSpan: dw.colSpan,
+            row: dw.startRow + deltaRows,
+            rowSpan: dw.rowSpan,
+          })
+          return { id: dw.id, col: clamped.col, row: clamped.row }
+        }
 
         if (drag.isMulti) {
-          const moves = drag.widgets.map((dw) => {
-            const rawX = dw.startX + dx
-            const rawY = dw.startY + dy
-            const snappedX = Math.round(rawX / xSnap) * xSnap
-            const snappedY = Math.round(rawY / ySnap) * ySnap
-            return {
-              id: dw.id,
-              x: Math.max(0, Math.min(canvasW - dw.w, snappedX)),
-              y: Math.max(0, Math.min(widgetAreaH - dw.h, snappedY)),
-            }
-          })
-          moveWidgets(drag.pageId, moves)
+          moveWidgets(drag.pageId, drag.widgets.map(place))
         } else {
           const dw = drag.widgets[0]
           if (!dw) return
-          const rawX = dw.startX + dx
-          const rawY = dw.startY + dy
-          const snappedX = Math.round(rawX / xSnap) * xSnap
-          const snappedY = Math.round(rawY / ySnap) * ySnap
-          const newX = Math.max(0, Math.min(canvasW - dw.w, snappedX))
-          const newY = Math.max(0, Math.min(widgetAreaH - dw.h, snappedY))
-          moveWidget(drag.pageId, drag.primaryId, { x: newX, y: newY })
+          const { col, row } = place(dw)
+          moveWidget(drag.pageId, drag.primaryId, { col, row })
         }
       }
 

@@ -3,7 +3,7 @@ import {
   GAUGE_DEFAULT_TOKEN,
   SIZE_TOKENS,
   gaugeTokenIds,
-  tokenFromDimensions,
+  tokenFromSpans,
 } from '../../../utils/size-tokens'
 import { ConfigFieldsProps, Field, GAUGE_STYLES, Row, numberInputStyle } from './shared'
 
@@ -14,7 +14,7 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
   const defaultDanger = signalDef?.dangerLevel
   const allowedTokenIds = gaugeTokenIds(style)
   const activeTokenId =
-    tokenFromDimensions(widget.layout.w, widget.layout.h) ?? allowedTokenIds[0] ?? null
+    tokenFromSpans(widget.layout.colSpan, widget.layout.rowSpan) ?? allowedTokenIds[0] ?? null
 
   return (
     <>
@@ -28,7 +28,11 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
                 const defaultToken = SIZE_TOKENS[defaultTokenId]
                 onChange({
                   config: { ...cfg, displayStyle: value },
-                  layout: { ...widget.layout, w: defaultToken.w, h: defaultToken.h },
+                  layout: {
+                    ...widget.layout,
+                    colSpan: defaultToken.colSpan,
+                    rowSpan: defaultToken.rowSpan,
+                  },
                 })
               }}
               style={{
@@ -57,7 +61,9 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
               <button
                 key={tokenId}
                 onClick={() => {
-                  onChange({ layout: { ...widget.layout, w: token.w, h: token.h } })
+                  onChange({
+                    layout: { ...widget.layout, colSpan: token.colSpan, rowSpan: token.rowSpan },
+                  })
                 }}
                 title={token.description}
                 style={{

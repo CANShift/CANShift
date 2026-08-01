@@ -70,7 +70,7 @@ export interface WidgetsSlice {
   updateWidget: (pageId: string, widgetId: string, patch: Partial<Widget>) => void
   moveWidget: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
   commitWidgetMove: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
-  moveWidgets: (pageId: string, moves: { id: string; x: number; y: number }[]) => void
+  moveWidgets: (pageId: string, moves: { id: string; col: number; row: number }[]) => void
   resolveWidgetCollisions: (pageId: string, widgetId: string) => void
   commitDrag: () => void
 }
@@ -85,7 +85,7 @@ export interface ClipboardSlice {
   copyWidgets: (pageId: string, widgetIds: string[]) => void
   pasteWidgets: (pageId: string) => void
   removeWidgets: (pageId: string, widgetIds: string[]) => void
-  nudgeWidgets: (pageId: string, widgetIds: string[], dx: number, dy: number) => void
+  nudgeWidgets: (pageId: string, widgetIds: string[], dCol: number, dRow: number) => void
 }
 
 export interface DashboardState

@@ -1,12 +1,7 @@
 import type { Widget } from '@tmbk/canshift-core'
-import {
-  autoPlace,
-  LAYOUT_GAP,
-  rectsOverlap,
-  resolveCollisions,
-  snapToGrid,
-} from '../../utils/layout'
-import { canvasDims, pushHistory, toLayoutRect, widgetAreaHeight } from './helpers'
+import { clampGridPlacement, isSpanOverflowing, placementsOverlap } from '@tmbk/canshift-core'
+import { autoPlace, resolveCollisions } from '../../utils/layout'
+import { pushHistory, toPlacement } from './helpers'
 import type { SliceCreator, WidgetsSlice } from './types'
 
 export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
@@ -18,43 +13,38 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
 
       pushHistory(s)
 
-      const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
-      const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
-      const others = page.widgets.map(toLayoutRect)
-      const nw = widget.layout.w
-      const nh = widget.layout.h
+      const others = page.widgets.map(toPlacement)
+      const colSpan = widget.layout.colSpan
+      const rowSpan = widget.layout.rowSpan
 
-      let pos: { x: number; y: number } | null = null
+      let pos: { col: number; row: number } | null = null
       const refWidget = s.selectedWidgetId
         ? page.widgets.find((w) => w.id === s.selectedWidgetId)
         : null
 
       if (refWidget) {
-        const ref = toLayoutRect(refWidget)
-        const gap = LAYOUT_GAP
+        const ref = refWidget.layout
         const adjacent = [
-          { x: ref.x + ref.w + gap, y: ref.y },
-          { x: ref.x, y: ref.y + ref.h + gap },
-          { x: ref.x - nw - gap, y: ref.y },
-          { x: ref.x, y: ref.y - nh - gap },
+          { col: ref.col + ref.colSpan, row: ref.row },
+          { col: ref.col, row: ref.row + ref.rowSpan },
+          { col: ref.col - colSpan, row: ref.row },
+          { col: ref.col, row: ref.row - rowSpan },
         ]
         for (const cand of adjacent) {
-          const sx = snapToGrid(cand.x)
-          const sy = snapToGrid(cand.y)
-          if (sx < 0 || sy < 0 || sx + nw > canvasW || sy + nh > canvasH) continue
-          const rect = { id: '__new__', x: sx, y: sy, w: nw, h: nh }
-          if (!others.some((o) => rectsOverlap(rect, o))) {
-            pos = { x: sx, y: sy }
+          const placement = { col: cand.col, colSpan, row: cand.row, rowSpan }
+          if (isSpanOverflowing(placement)) continue
+          if (!others.some((o) => placementsOverlap(placement, o))) {
+            pos = { col: cand.col, row: cand.row }
             break
           }
         }
       }
 
-      pos ??= autoPlace({ w: nw, h: nh }, others, canvasW, canvasH)
+      pos ??= autoPlace({ colSpan, rowSpan }, others)
 
       if (pos) {
-        widget.layout.x = pos.x
-        widget.layout.y = pos.y
+        widget.layout.col = pos.col
+        widget.layout.row = pos.row
       }
 
       page.widgets.push(widget)
@@ -77,41 +67,37 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
 
       pushHistory(s)
 
-      const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
-      const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
-      const others = page.widgets.map(toLayoutRect)
+      const others = page.widgets.map(toPlacement)
       const newIds: string[] = []
 
       for (const src of sources) {
         const newId = `${src.type}_${crypto.randomUUID()}`
+        const { col, colSpan, row, rowSpan } = src.layout
         const candidates = [
-          { x: src.layout.x, y: src.layout.y + src.layout.h + LAYOUT_GAP },
-          { x: src.layout.x + src.layout.w + LAYOUT_GAP, y: src.layout.y },
+          { col, row: row + rowSpan },
+          { col: col + colSpan, row },
         ]
-        let pos: { x: number; y: number } | null = null
+        let pos: { col: number; row: number } | null = null
         for (const cand of candidates) {
-          const sx = snapToGrid(cand.x)
-          const sy = snapToGrid(cand.y)
-          if (sx < 0 || sy < 0) continue
-          if (sx + src.layout.w > canvasW || sy + src.layout.h > canvasH) continue
-          const rect = { id: '__new__', x: sx, y: sy, w: src.layout.w, h: src.layout.h }
-          if (!others.some((o) => rectsOverlap(rect, o))) {
-            pos = { x: sx, y: sy }
+          const placement = { col: cand.col, colSpan, row: cand.row, rowSpan }
+          if (isSpanOverflowing(placement)) continue
+          if (!others.some((o) => placementsOverlap(placement, o))) {
+            pos = { col: cand.col, row: cand.row }
             break
           }
         }
-        pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, canvasW, canvasH)
+        pos ??= autoPlace({ colSpan, rowSpan }, others)
         if (!pos) continue
 
         const clone: Widget = {
           ...src,
           id: newId,
-          layout: { ...src.layout, x: pos.x, y: pos.y },
+          layout: { ...src.layout, col: pos.col, row: pos.row },
           style: { ...src.style },
           config: { ...src.config },
         }
         page.widgets.push(clone)
-        others.push(toLayoutRect(clone))
+        others.push(toPlacement(clone))
         newIds.push(newId)
       }
 
@@ -149,13 +135,7 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       const existing = page.widgets[widgetIdx]
       if (!existing) return
       const merged = { ...existing, ...patch }
-      const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
-      const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
-      merged.layout = {
-        ...merged.layout,
-        x: Math.max(0, Math.min(merged.layout.x, canvasW - merged.layout.w)),
-        y: Math.max(0, Math.min(merged.layout.y, canvasH - merged.layout.h)),
-      }
+      merged.layout = { ...clampGridPlacement(merged.layout), zOrder: merged.layout.zOrder }
       page.widgets[widgetIdx] = merged
       s.isDirty = true
     })
@@ -198,8 +178,8 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       for (const move of moves) {
         const widget = page.widgets.find((w) => w.id === move.id)
         if (widget) {
-          widget.layout.x = move.x
-          widget.layout.y = move.y
+          widget.layout.col = move.col
+          widget.layout.row = move.row
         }
       }
       s.isDirty = true
@@ -216,41 +196,30 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
 
       pushHistory(s)
 
-      const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
-      const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
-      const others = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)
-      const moved = toLayoutRect(widget)
+      const others = page.widgets.filter((w) => w.id !== widgetId).map(toPlacement)
+      const moved = toPlacement(widget)
 
-      const changes = resolveCollisions(
-        moved,
-        widget.layout.x,
-        widget.layout.y,
-        others,
-        canvasW,
-        canvasH
-      )
+      const changes = resolveCollisions(moved, others)
 
       for (const w of page.widgets) {
         const np = changes.get(w.id)
         if (np) {
-          w.layout.x = np.x
-          w.layout.y = np.y
+          w.layout.col = np.col
+          w.layout.row = np.row
         }
       }
 
-      const finalOthers = page.widgets.filter((w) => w.id !== widgetId).map(toLayoutRect)
-      const finalRect = toLayoutRect(page.widgets.find((w) => w.id === widgetId) ?? widget)
-      const stillOverlaps = finalOthers.some((o) => rectsOverlap(finalRect, o))
+      const finalOthers = page.widgets.filter((w) => w.id !== widgetId).map(toPlacement)
+      const finalPlacement = toPlacement(page.widgets.find((w) => w.id === widgetId) ?? widget)
+      const stillOverlaps = finalOthers.some((o) => placementsOverlap(finalPlacement, o))
       if (stillOverlaps) {
         const fallback = autoPlace(
-          { w: widget.layout.w, h: widget.layout.h },
-          finalOthers,
-          canvasW,
-          canvasH
+          { colSpan: widget.layout.colSpan, rowSpan: widget.layout.rowSpan },
+          finalOthers
         )
         if (fallback) {
-          widget.layout.x = fallback.x
-          widget.layout.y = fallback.y
+          widget.layout.col = fallback.col
+          widget.layout.row = fallback.row
         }
       }
 

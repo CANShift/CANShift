@@ -1,11 +1,14 @@
 import { memo, type MouseEvent } from 'react'
 import type { PagePalette, Widget } from '@tmbk/canshift-core'
+import { resolveGridRect } from '@tmbk/canshift-core'
 import { WidgetPreview } from './WidgetPreview'
 
 export interface WidgetBoxProps {
   widget: Widget
   palette: PagePalette
   scale: number
+  areaWidth: number
+  areaHeight: number
   isSelected: boolean
   isInMultiSelection: boolean
   isOverlapping: boolean
@@ -20,6 +23,8 @@ export const WidgetBox = memo(function WidgetBox({
   widget,
   palette,
   scale,
+  areaWidth,
+  areaHeight,
   isSelected,
   isInMultiSelection,
   isOverlapping,
@@ -30,6 +35,9 @@ export const WidgetBox = memo(function WidgetBox({
   onDragStart,
 }: WidgetBoxProps) {
   const { layout } = widget
+  const rect = resolveGridRect(layout, { width: areaWidth, height: areaHeight })
+  const displayW = rect.w * scale
+  const displayH = rect.h * scale
   const bgColor = isOverlapping
     ? '#2A0000'
     : isOverflowing
@@ -45,9 +53,9 @@ export const WidgetBox = memo(function WidgetBox({
       data-widget="true"
       role="button"
       tabIndex={0}
-      aria-label={`${widget.type} widget at ${String(layout.x)}, ${String(layout.y)}`}
+      aria-label={`${widget.type} widget at column ${String(layout.col)}, row ${String(layout.row)}`}
       aria-pressed={isSelected}
-      title={isOverflowing ? 'Widget extends past the target screen bounds' : undefined}
+      title={isOverflowing ? 'Widget spans past the 12-column grid' : undefined}
       onFocus={() => {
         if (!isSelected) onSelect(widget.id)
       }}
@@ -62,10 +70,10 @@ export const WidgetBox = memo(function WidgetBox({
       }}
       style={{
         position: 'absolute',
-        left: layout.x * scale,
-        top: layout.y * scale,
-        width: layout.w * scale,
-        height: layout.h * scale,
+        left: rect.x * scale,
+        top: rect.y * scale,
+        width: displayW,
+        height: displayH,
         background: bgColor,
         boxSizing: 'border-box',
         cursor: 'move',
@@ -85,8 +93,8 @@ export const WidgetBox = memo(function WidgetBox({
       <WidgetPreview
         widget={widget}
         palette={palette}
-        displayW={layout.w * scale}
-        displayH={layout.h * scale}
+        displayW={displayW}
+        displayH={displayH}
         revLimiting={revLimiting}
       />
     </div>
