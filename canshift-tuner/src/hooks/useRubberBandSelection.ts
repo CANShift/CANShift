@@ -87,9 +87,8 @@ export const useRubberBandSelection = ({
           const page = config?.pages.find((p) => p.id === capturedPageId)
           if (config && page) {
             const profile = resolveScreenProfile(config.targetProfile)
-            const areaHeight = page.showTopBar
-              ? profile.height - config.topBar.height
-              : profile.height
+            const areaHeight =
+              page.showTopBar !== false ? profile.height - config.topBar.height : profile.height
             const area = { width: profile.width, height: areaHeight }
             const rb: GridRect = { x: rbX, y: rbY, w: rbW, h: rbH }
             const ids = page.widgets

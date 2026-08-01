@@ -70,7 +70,8 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
   const zoomRef = useRef<number>(1)
   zoomRef.current = zoom
 
-  const widgetAreaH = page.showTopBar ? screenProfile.height - topBar.height : screenProfile.height
+  const widgetAreaH =
+    page.showTopBar !== false ? screenProfile.height - topBar.height : screenProfile.height
 
   const dragInputsRef = useRef({
     pageId: page.id,
@@ -261,7 +262,7 @@ const Canvas = ({ page, topBar }: CanvasProps) => {
                 overflow: 'hidden',
               }}
             >
-              {page.showTopBar && (
+              {page.showTopBar !== false && (
                 <DashTopBar
                   topBar={topBar}
                   scale={effScale}

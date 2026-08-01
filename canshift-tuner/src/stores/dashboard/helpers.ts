@@ -14,7 +14,7 @@ export const widgetAreaHeight = (
   page: PageConfig,
   topBarHeight: number,
   canvasH: number
-): number => (page.showTopBar ? canvasH - topBarHeight : canvasH)
+): number => (page.showTopBar !== false ? canvasH - topBarHeight : canvasH)
 
 export const toPlacement = (w: Widget): IdentifiedPlacement => ({
   id: w.id,

@@ -34,7 +34,8 @@ export const MIGRATIONS: Migration[] = [
       return mapPages(config, '1.25.0', (page) => {
         const widgets = asObjectArray(page.widgets)
         if (!widgets) return page
-        const areaHeight = page.showTopBar === true ? profile.height - topBarHeight : profile.height
+        const areaHeight =
+          page.showTopBar !== false ? profile.height - topBarHeight : profile.height
         return {
           ...page,
           widgets: widgets.map((widget) => {

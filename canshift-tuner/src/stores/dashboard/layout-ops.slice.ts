@@ -1,3 +1,4 @@
+import { clampGridPlacement } from '@tmbk/canshift-core'
 import { pushHistory } from './helpers'
 import type { LayoutOpsSlice, SliceCreator } from './types'
 
@@ -18,26 +19,30 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
       const maxRow = Math.max(...targets.map((w) => w.layout.row + w.layout.rowSpan))
 
       for (const w of targets) {
+        const placement = { ...w.layout }
         switch (direction) {
           case 'left':
-            w.layout.col = minCol
+            placement.col = minCol
             break
           case 'right':
-            w.layout.col = maxCol - w.layout.colSpan
+            placement.col = maxCol - w.layout.colSpan
             break
           case 'top':
-            w.layout.row = minRow
+            placement.row = minRow
             break
           case 'bottom':
-            w.layout.row = maxRow - w.layout.rowSpan
+            placement.row = maxRow - w.layout.rowSpan
             break
           case 'center-h':
-            w.layout.col = Math.round((minCol + maxCol) / 2 - w.layout.colSpan / 2)
+            placement.col = Math.round((minCol + maxCol) / 2 - w.layout.colSpan / 2)
             break
           case 'center-v':
-            w.layout.row = Math.round((minRow + maxRow) / 2 - w.layout.rowSpan / 2)
+            placement.row = Math.round((minRow + maxRow) / 2 - w.layout.rowSpan / 2)
             break
         }
+        const clamped = clampGridPlacement(placement)
+        w.layout.col = clamped.col
+        w.layout.row = clamped.row
       }
       s.isDirty = true
     })
@@ -63,7 +68,7 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
         const gap = (totalSpan - totalWidgetCols) / (sorted.length - 1)
         let curCol = first.layout.col
         for (const w of sorted) {
-          w.layout.col = Math.round(curCol)
+          w.layout.col = clampGridPlacement({ ...w.layout, col: Math.round(curCol) }).col
           curCol += w.layout.colSpan + gap
         }
       } else {
@@ -76,7 +81,7 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
         const gap = (totalSpan - totalWidgetRows) / (sorted.length - 1)
         let curRow = first.layout.row
         for (const w of sorted) {
-          w.layout.row = Math.round(curRow)
+          w.layout.row = clampGridPlacement({ ...w.layout, row: Math.round(curRow) }).row
           curRow += w.layout.rowSpan + gap
         }
       }

@@ -17,7 +17,7 @@ const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
   const profile: ScreenProfile = resolveScreenProfile(targetProfileId)
   const thumbH = Math.round((THUMB_W * profile.height) / profile.width)
   const thumbScale = THUMB_W / profile.width
-  const fullBarH = page.showTopBar ? topBar.height : 0
+  const fullBarH = page.showTopBar !== false ? topBar.height : 0
   const isCruiseTemplate = page.template === 'cruise_control'
 
   return (
@@ -43,7 +43,7 @@ const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
           transformOrigin: 'top left',
         }}
       >
-        {page.showTopBar && (
+        {page.showTopBar !== false && (
           <div
             style={{
               position: 'absolute',

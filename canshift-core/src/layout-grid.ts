@@ -45,8 +45,9 @@ const resolveAxis = (track: number, span: number, size: number, tracks: number):
 }
 
 export const resolveGridRect = (placement: GridPlacement, area: GridArea): GridRect => {
-  const cols = resolveAxis(placement.col, placement.colSpan, area.width, LAYOUT_GRID.COLUMNS)
-  const rows = resolveAxis(placement.row, placement.rowSpan, area.height, LAYOUT_GRID.ROWS)
+  const clamped = clampGridPlacement(placement)
+  const cols = resolveAxis(clamped.col, clamped.colSpan, area.width, LAYOUT_GRID.COLUMNS)
+  const rows = resolveAxis(clamped.row, clamped.rowSpan, area.height, LAYOUT_GRID.ROWS)
   return { x: cols.origin, y: rows.origin, w: cols.length, h: rows.length }
 }
 

@@ -25,7 +25,7 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const ownerPage = pages.find((p) => p.widgets.some((pw) => pw.id === widget.id))
   const profile = resolveScreenProfile(targetProfile)
   const areaHeight =
-    ownerPage?.showTopBar === false ? profile.height : profile.height - topBarHeight
+    ownerPage?.showTopBar !== false ? profile.height - topBarHeight : profile.height
   const { w, h } = resolveGridRect(widget.layout, { width: profile.width, height: areaHeight })
   const PREVIEW_BUDGET_W = 140
   const PREVIEW_BUDGET_H = 180
