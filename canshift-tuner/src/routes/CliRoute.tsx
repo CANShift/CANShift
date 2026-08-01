@@ -7,6 +7,7 @@ import { CliOutput } from '../components/cli/CliOutput'
 import type { CliEntry } from '../components/cli/CliOutput'
 import { CliOfflineState } from '../components/cli/CliOfflineState'
 import { RouteHeader } from '../components/shell/RouteHeader'
+import { MONO_FONT } from '../lib/typography'
 
 const HISTORY_CAP = 50
 const ENTRIES_CAP = 200
@@ -80,26 +81,35 @@ const CliRoute = () => {
 
   return (
     <div style={containerStyle}>
-      <RouteHeader
-        title="CLI"
-        subtitle="Issue raw firmware commands. Pick a known opcode or type a hex / decimal value, fill in JSON fields, send."
-      />
+      <RouteHeader title="CLI" subtitle="raw firmware opcodes over USB" />
 
       <div style={bodyStyle}>
-        {canControl ? (
-          <>
-            <CommandForm
-              disabled={false}
-              busy={busy}
-              onSubmit={onSubmit}
-              onHistoryUp={onHistoryUp}
-              onHistoryDown={onHistoryDown}
-            />
-            <CliOutput entries={entries} onClear={onClear} />
-          </>
-        ) : (
-          <CliOfflineState />
-        )}
+        <div style={terminalColumnStyle}>
+          {canControl ? (
+            <>
+              <CommandForm
+                disabled={false}
+                busy={busy}
+                onSubmit={onSubmit}
+                onHistoryUp={onHistoryUp}
+                onHistoryDown={onHistoryDown}
+              />
+              <CliOutput entries={entries} onClear={onClear} />
+            </>
+          ) : (
+            <CliOfflineState />
+          )}
+        </div>
+
+        <aside style={commandPanelStyle}>
+          <div style={commandHeaderStyle}>COMMANDS</div>
+          {KNOWN_OPCODES.map((op) => (
+            <div key={op.id} style={commandRowStyle} title={op.description}>
+              <span style={{ color: 'hsl(var(--brand-accent))' }}>{formatHex(op.id)}</span>{' '}
+              {op.name.replace(/^CMD_/, '').toLowerCase()}
+            </div>
+          ))}
+        </aside>
       </div>
     </div>
   )
@@ -113,17 +123,50 @@ const containerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  background: 'hsl(var(--bg))',
   overflow: 'hidden',
 }
 
 const bodyStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
+  minHeight: 0,
+}
+
+const terminalColumnStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  display: 'flex',
   flexDirection: 'column',
   gap: 14,
-  padding: '18px 28px 24px',
-  minHeight: 0,
+  padding: '18px 20px',
+  background: '#0B0A0A',
+  overflow: 'hidden',
+}
+
+const commandPanelStyle: CSSProperties = {
+  width: 290,
+  flexShrink: 0,
+  borderLeft: '2px solid var(--brand-divider)',
+  background: 'hsl(var(--brand-neutral-100))',
+  overflowY: 'auto',
+}
+
+const commandHeaderStyle: CSSProperties = {
+  padding: '14px 18px',
+  borderBottom: '2px solid var(--brand-divider)',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.2em',
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const commandRowStyle: CSSProperties = {
+  padding: '11px 18px',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  fontFamily: MONO_FONT,
+  fontSize: 12,
+  color: 'hsl(var(--brand-neutral-700))',
+  cursor: 'help',
 }
 
 export default CliRoute
