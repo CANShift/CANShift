@@ -19,16 +19,22 @@ import {
 
 export interface BrandLockupProps {
   width: number
+  maxHeight?: number
 }
 
 const VIEWBOX_WIDTH = 590
 const VIEWBOX_HEIGHT = 190
 
-export const BrandLockup = ({ width }: BrandLockupProps) => (
+const fittedWidth = (width: number, maxHeight?: number): number =>
+  maxHeight === undefined
+    ? width
+    : Math.min(width, (maxHeight * VIEWBOX_WIDTH) / VIEWBOX_HEIGHT)
+
+export const BrandLockup = ({ width, maxHeight }: BrandLockupProps) => (
   <Svg
     viewBox={LOCKUP_BASELINE_VIEWBOX}
-    width={width}
-    height={(width * VIEWBOX_HEIGHT) / VIEWBOX_WIDTH}
+    width={fittedWidth(width, maxHeight)}
+    height={(fittedWidth(width, maxHeight) * VIEWBOX_HEIGHT) / VIEWBOX_WIDTH}
     accessibilityRole="image"
     accessibilityLabel="CANShift — dash CANbus firmware"
   >

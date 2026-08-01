@@ -18,9 +18,10 @@ import {
 export interface BrandLockupProps {
   height: number
   withBaseline?: boolean
+  label?: string
 }
 
-export const BrandLockup = ({ height, withBaseline = false }: BrandLockupProps) => {
+export const BrandLockup = ({ height, withBaseline = false, label = 'CANShift' }: BrandLockupProps) => {
   const viewBox = withBaseline ? LOCKUP_BASELINE_VIEWBOX : LOCKUP_VIEWBOX
   const viewBoxHeight = withBaseline ? 190 : 150
   return (
@@ -29,7 +30,7 @@ export const BrandLockup = ({ height, withBaseline = false }: BrandLockupProps) 
       height={height}
       width={(height * 590) / viewBoxHeight}
       role="img"
-      aria-label="CANShift"
+      aria-label={label}
     >
       <g transform={LOCKUP_MONOGRAM_TRANSFORM} fill="none" strokeLinecap="butt">
         <path d={MONOGRAM_C_PATH} stroke="currentColor" strokeWidth={MONOGRAM_STROKE_WIDTH} />

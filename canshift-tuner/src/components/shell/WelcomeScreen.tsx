@@ -43,7 +43,7 @@ export const WelcomeScreen = ({
       <div style={contentStyle}>
         <header style={heroStyle}>
           <div style={lockupStyle}>
-            <BrandLockup height={78} withBaseline />
+            <BrandLockup height={78} withBaseline label="CANShift Tuner" />
           </div>
           <h1 style={titleStyle}>Configure your dash, live.</h1>
           <p style={taglineStyle}>

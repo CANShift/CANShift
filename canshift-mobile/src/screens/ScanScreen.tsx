@@ -179,7 +179,7 @@ export default function ScanScreen({ navigation }: Props) {
     navigation.replace('Connected')
   }, [navigation])
 
-  const { width: windowWidth } = useWindowDimensions()
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions()
 
   return (
     <SafeAreaView style={styles.container}>
@@ -197,7 +197,7 @@ export default function ScanScreen({ navigation }: Props) {
       </View>
       <View style={styles.center}>
         <View style={styles.logo}>
-          <BrandLockup width={windowWidth * 0.75} />
+          <BrandLockup width={windowWidth * 0.75} maxHeight={windowHeight * 0.25} />
         </View>
         <Text style={styles.subtitle}>Connect to your dashboard</Text>
 

@@ -1,7 +1,7 @@
 {
   "name": "CANShift Tuner",
   "short_name": "CANShift",
-  "description": "Dash CANbus firmware",
+  "description": "Configure and flash CANShift dash firmware",
   "theme_color": "#201E1D",
   "background_color": "#121212",
   "display": "standalone",
