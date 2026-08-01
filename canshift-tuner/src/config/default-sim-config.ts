@@ -17,6 +17,72 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
       height: 16,
       bgColor: '#0D0D0D',
       textColor: '#AAAAAA',
+      layout: [
+        {
+          type: 'label',
+          text: 'CAN',
+          position: 'left',
+        },
+        {
+          type: 'statusDot',
+          signal: 'any',
+          position: 'left',
+        },
+        {
+          type: 'modeFlag',
+          signal: 'flag_anti_lag',
+          text: 'ALS',
+          position: 'center',
+        },
+        {
+          type: 'separator',
+          position: 'center',
+        },
+        {
+          type: 'modeFlag',
+          signal: 'flag_launch_ctrl',
+          text: 'LC',
+          position: 'center',
+        },
+        {
+          type: 'separator',
+          position: 'center',
+        },
+        {
+          type: 'modeFlag',
+          signal: 'flag_flat_shift',
+          text: 'FS',
+          position: 'center',
+        },
+        {
+          type: 'separator',
+          position: 'center',
+        },
+        {
+          type: 'modeFlag',
+          signal: 'flag_traction_cut',
+          text: 'TC',
+          position: 'center',
+        },
+        {
+          type: 'signal',
+          signal: 'map_number',
+          format: 'MAP%.0f',
+          position: 'right',
+        },
+        {
+          type: 'separator',
+          position: 'right',
+        },
+        {
+          type: 'bleIcon',
+          position: 'right',
+        },
+        {
+          type: 'themeToggle',
+          position: 'right',
+        },
+      ],
     },
     dayTheme: {
       bgColor: '#E8E8E8',
