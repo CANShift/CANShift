@@ -10,6 +10,7 @@ import { ModeToggle } from './button/mode-toggle'
 import { convertCycleToSingle, convertSingleToCycle, EMPTY_PAGES } from './button/shared'
 import { SingleModeBody } from './button/single-mode-body'
 import { Field, IconPicker, inputStyle, type ConfigFieldsProps } from './shared'
+import { MONO_FONT } from '../../../lib/typography'
 
 export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
   const pages = useDashboardStore((s) => s.config?.pages ?? EMPTY_PAGES)
@@ -97,7 +98,7 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
                 color: '#AAAAAA',
                 cursor: 'pointer',
                 flexShrink: 0,
-                fontFamily: 'monospace',
+                fontFamily: MONO_FONT,
               }}
               title="Click to preview next cycle state"
             >

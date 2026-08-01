@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { CanFrameRow } from './CanFrameRow'
+import { uiLabelStyle } from '../../lib/typography'
 import type { CanFrameStats } from '../../hooks/useCanScanner'
 
 export interface CanFrameTableProps {
@@ -55,16 +56,13 @@ const tableStyle: CSSProperties = {
 }
 
 const thStyle: CSSProperties = {
+  ...uiLabelStyle,
   position: 'sticky',
   top: 0,
   background: 'hsl(var(--bg))',
   padding: '10px 14px',
   borderBottom: '1px solid hsl(var(--border))',
   textAlign: 'left',
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
   color: 'hsl(var(--text-muted))',
   zIndex: 1,
 }

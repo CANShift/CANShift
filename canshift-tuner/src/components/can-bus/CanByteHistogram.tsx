@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { CanFrameStats } from '../../hooks/useCanScanner'
+import { MONO_FONT } from '../../lib/typography'
 
 const MAX_BARS_PER_BYTE = 16
 
@@ -116,7 +117,7 @@ const columnHeaderStyle: CSSProperties = {
   justifyContent: 'space-between',
   fontSize: 10,
   color: 'hsl(var(--text-dim))',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
 }
 
 const distinctTagStyle = (constant: boolean): CSSProperties => ({
@@ -145,7 +146,7 @@ const barRowStyle: CSSProperties = {
 }
 
 const byteLabelStyle: CSSProperties = {
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text-dim))',
   minWidth: 32,
 }
@@ -162,7 +163,7 @@ const barFillStyle: CSSProperties = {
 }
 
 const barCountStyle: CSSProperties = {
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontVariantNumeric: 'tabular-nums',
   color: 'hsl(var(--text-muted))',
   minWidth: 30,

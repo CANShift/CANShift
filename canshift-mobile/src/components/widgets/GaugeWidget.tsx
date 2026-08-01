@@ -17,6 +17,7 @@ import {
   widgetStaleTextColor,
   widgetTextColor,
 } from '@tmbk/canshift-core'
+import { TabularNums } from '../../theme'
 import { SIGNAL_META, type SignalKey } from '../../constants/ble'
 import { signalKeyToSensorKind } from '../../theme/signal-colors'
 import { formatWidgetValue, gaugeFillFraction, splitWidgetValue } from './widget-value'
@@ -162,9 +163,15 @@ const ValueCluster = ({
 }: ValueClusterProps) => (
   <>
     <View style={styles.valueRow}>
-      <Text style={{ fontSize: intFontSize, fontWeight: '700', color }}>{intText}</Text>
+      <Text style={{ fontSize: intFontSize, fontWeight: '700', color, fontVariant: TabularNums }}>
+        {intText}
+      </Text>
       {fracText ? (
-        <Text style={{ fontSize: fracFontSize, fontWeight: '700', color }}>{fracText}</Text>
+        <Text
+          style={{ fontSize: fracFontSize, fontWeight: '700', color, fontVariant: TabularNums }}
+        >
+          {fracText}
+        </Text>
       ) : null}
     </View>
     {unit ? <Text style={{ fontSize: VALUE_UNIT_FONT_SIZE, color: unitColor }}>{unit}</Text> : null}

@@ -1,6 +1,7 @@
 import type { CSSProperties, DragEvent, ChangeEvent } from 'react'
 import { useRef, useState } from 'react'
 import { formatBytes } from '../../lib/format'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface XmlImportZoneProps {
   loadedFileName: string | null
@@ -159,7 +160,7 @@ const loadedStyle: CSSProperties = {
 const loadedNameStyle: CSSProperties = {
   fontSize: 12,
   color: 'hsl(var(--text))',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
 }
 
 const clearButtonStyle: CSSProperties = {

@@ -2,6 +2,7 @@ import type { CSSProperties, KeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../ui/button'
 import { KNOWN_OPCODES } from '../../transport'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface CommandFormProps {
   disabled: boolean
@@ -184,7 +185,7 @@ const opcodeInputStyle: CSSProperties = {
   border: '1px solid hsl(var(--border))',
   padding: '6px 8px',
   fontSize: 12,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text))',
   outline: 'none',
 }
@@ -209,7 +210,7 @@ const textareaStyle: CSSProperties = {
   border: '1px solid hsl(var(--border))',
   padding: '8px 10px',
   fontSize: 12,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text))',
   outline: 'none',
   resize: 'vertical',

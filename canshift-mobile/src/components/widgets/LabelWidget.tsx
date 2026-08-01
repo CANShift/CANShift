@@ -10,7 +10,7 @@ import {
   widgetStaleTextColor,
   widgetTextColor,
 } from '@tmbk/canshift-core'
-import { Colors, Radius, Spacing, Typography } from '../../theme'
+import { Colors, Radius, Spacing, TabularNums, Typography } from '../../theme'
 import { SIGNAL_META, type SignalKey } from '../../constants/ble'
 import { sensorRampColorAt, signalKeyToSensorKind } from '../../theme/signal-colors'
 import { formatWidgetValue, splitWidgetValue } from './widget-value'
@@ -51,12 +51,25 @@ const LabelWidget = ({ signalKey, value, width, height, dayMode = false }: Label
         {meta.label.toUpperCase()}
       </Text>
       <View style={styles.valueRow}>
-        <Text style={{ fontSize: intFontSize, fontWeight: '700', color: tint }} numberOfLines={1}>
+        <Text
+          style={{
+            fontSize: intFontSize,
+            fontWeight: '700',
+            color: tint,
+            fontVariant: TabularNums,
+          }}
+          numberOfLines={1}
+        >
           {parts.int}
         </Text>
         {parts.frac ? (
           <Text
-            style={{ fontSize: fracFontSize, fontWeight: '700', color: tint }}
+            style={{
+              fontSize: fracFontSize,
+              fontWeight: '700',
+              color: tint,
+              fontVariant: TabularNums,
+            }}
             numberOfLines={1}
           >
             {parts.frac}

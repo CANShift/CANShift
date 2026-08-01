@@ -13,8 +13,7 @@ import { rampStopKey } from '../../utils/list-keys'
 import { newId } from '../../utils/id'
 
 const PREVIEW_SAMPLES = 80
-const ROW_LABEL_CLASS =
-  'text-[10px] font-normal uppercase tracking-[0.06em] text-text-muted leading-none'
+const ROW_LABEL_CLASS = 'text-text-muted'
 
 export interface ColorRampEditorProps {
   ramp: ColorRamp | undefined

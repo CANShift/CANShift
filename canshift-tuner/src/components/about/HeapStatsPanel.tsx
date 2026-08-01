@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import type { HeapStatsEntry } from '../../stores/device.store'
 import { HeapStatsSparkline } from './HeapStatsSparkline'
 import { formatBytes } from '../../lib/format'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface HeapStatsPanelProps {
   history: HeapStatsEntry[]
@@ -74,7 +75,7 @@ const labelStyle: CSSProperties = {
 const valueStyle: CSSProperties = {
   color: 'hsl(var(--text))',
   fontWeight: 500,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontVariantNumeric: 'tabular-nums',
 }
 

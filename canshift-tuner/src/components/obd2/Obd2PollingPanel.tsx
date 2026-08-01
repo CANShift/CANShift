@@ -8,6 +8,7 @@ import {
   obd2PidLookup,
 } from '@tmbk/canshift-core'
 import { useSignalStore } from '../../stores/signal.store'
+import { MONO_FONT } from '../../lib/typography'
 
 const PANEL_LABEL = '#AAAAAA'
 const PANEL_HINT = '#666666'
@@ -142,7 +143,7 @@ const SignalRow = ({ signal, index }: RowProps) => {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 12, color: VALUE_FG, fontFamily: 'monospace' }}>{signal.name}</div>
+        <div style={{ fontSize: 12, color: VALUE_FG, fontFamily: MONO_FONT }}>{signal.name}</div>
         <span
           style={{
             fontSize: 9,
