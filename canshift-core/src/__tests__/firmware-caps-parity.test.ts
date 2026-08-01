@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { FIRMWARE_CAPS, STRING_CAPS } from '../constants/firmware-caps.js'
+import { LAYOUT_GRID } from '../layout-grid.js'
 import { SIGNAL_BYTE_LENGTHS } from '../schemas/signal.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -79,5 +80,32 @@ describeIfLoaders('signal byteLength firmware parity', () => {
       .map((m) => Number.parseInt(m[1] ?? '', 10))
       .sort((a, b) => a - b)
     expect(firmwareLengths).toEqual([...SIGNAL_BYTE_LENGTHS])
+  })
+})
+
+const LAYOUT_GRID_RS = resolve(here, '../../../canshift-firmware/rust/layout-grid/src/lib.rs')
+
+const describeIfLayoutGrid = existsSync(LAYOUT_GRID_RS) ? describe : describe.skip
+
+describeIfLayoutGrid('layout grid firmware parity (rust/layout-grid)', () => {
+  const source = readFileSync(LAYOUT_GRID_RS, 'utf8')
+
+  const extractRustConst = (name: string): number | null => {
+    const pattern = new RegExp(`pub const ${name}: u(?:8|16|32) = (\\d+);`)
+    const match = pattern.exec(source)
+    return match ? Number.parseInt(match[1] ?? '', 10) : null
+  }
+
+  const cases: [keyof typeof LAYOUT_GRID, string][] = [
+    ['COLUMNS', 'COLUMNS'],
+    ['ROWS', 'ROWS'],
+    ['GUTTER', 'GUTTER'],
+    ['FRAME_PADDING', 'FRAME_PADDING'],
+  ]
+
+  it.each(cases)('LAYOUT_GRID.%s matches the rust crate %s', (tsName, rustName) => {
+    const firmware = extractRustConst(rustName)
+    expect(firmware).not.toBeNull()
+    expect(LAYOUT_GRID[tsName]).toBe(firmware)
   })
 })

@@ -831,14 +831,11 @@ describe('migrateConfig — full chain to current', () => {
 
     const gear = widgets[2]!
     const gearLayout = gear.layout as Record<string, unknown>
-    expect(gearLayout.w).toBe(160)
-    expect(gearLayout.h).toBe(56)
+    expect(gearLayout).toEqual({ col: 0, colSpan: 6, row: 0, rowSpan: 3, zOrder: 0 })
 
     const tps = widgets[3]!
     const tpsLayout = tps.layout as Record<string, unknown>
-    expect(tpsLayout.w).toBe(320)
-    expect(tpsLayout.h).toBe(56)
-    expect(tpsLayout.y).toBe(184)
+    expect(tpsLayout).toEqual({ col: 0, colSpan: 12, row: 10, rowSpan: 2, zOrder: 0 })
     const tpsCfg = tps.config as Record<string, unknown>
     expect('warningLevel' in tpsCfg).toBe(false)
     expect(tpsCfg.dangerLevel).toBe(90)
@@ -1623,6 +1620,137 @@ describe('migrateConfig — 1.22.0 → 1.23.0', () => {
     }
     const widgets = outWidgets(wrap([cycle]))
     expect(widgets).toEqual([cycle])
+  })
+})
+
+describe('migrateConfig — 1.24.0 → 1.25.0 (pixel layout → 12-column spans, #1820)', () => {
+  const wrap = (
+    widgets: Record<string, unknown>[],
+    pageOverrides: Record<string, unknown> = {},
+    configOverrides: Record<string, unknown> = {}
+  ): Record<string, unknown> => ({
+    version: '1.24.0',
+    topBar: { height: 16, bgColor: '#0D0D0D', textColor: '#AAAAAA' },
+    pages: [{ id: 'p1', showTopBar: true, widgets, ...pageOverrides }],
+    ...configOverrides,
+  })
+
+  const layoutOf = (config: Record<string, unknown>, index = 0): Record<string, unknown> => {
+    const { config: out } = migrateConfig(config, '1.25.0')
+    const page = (out.pages as Record<string, unknown>[])[0]!
+    const widgets = page.widgets as Record<string, unknown>[]
+    return widgets[index]!.layout as Record<string, unknown>
+  }
+
+  const pixelWidget = (layout: Record<string, unknown>): Record<string, unknown> => ({
+    id: 'w1',
+    type: 'gauge',
+    signal: 'rpm',
+    layout,
+  })
+
+  it('bumps the version and reports the step', () => {
+    const { config: out, applied } = migrateConfig(wrap([]), '1.25.0')
+    expect(out.version).toBe('1.25.0')
+    expect(applied).toEqual(['1.24.0 → 1.25.0'])
+  })
+
+  it('converts a half-width top-left widget on the 224 px area below a 16 px top bar', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 0, y: 0, w: 160, h: 112, zOrder: 0 })]))).toEqual({
+      col: 0,
+      colSpan: 6,
+      row: 0,
+      rowSpan: 6,
+      zOrder: 0,
+    })
+  })
+
+  it('converts the right half and quarter rows exactly', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 160, y: 112, w: 160, h: 56, zOrder: 2 })]))).toEqual({
+      col: 6,
+      colSpan: 6,
+      row: 6,
+      rowSpan: 3,
+      zOrder: 2,
+    })
+  })
+
+  it('converts a full-width strip to a 12-column span', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 0, y: 168, w: 320, h: 56, zOrder: 0 })]))).toEqual({
+      col: 0,
+      colSpan: 12,
+      row: 9,
+      rowSpan: 3,
+      zOrder: 0,
+    })
+  })
+
+  it('uses the full 240 px area when the page hides the top bar', () => {
+    expect(
+      layoutOf(
+        wrap([pixelWidget({ x: 0, y: 120, w: 320, h: 120, zOrder: 0 })], { showTopBar: false })
+      )
+    ).toEqual({ col: 0, colSpan: 12, row: 6, rowSpan: 6, zOrder: 0 })
+  })
+
+  it('rounds edges to the nearest track and ties round up', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 0, y: 196, w: 320, h: 28, zOrder: 0 })]))).toEqual({
+      col: 0,
+      colSpan: 12,
+      row: 11,
+      rowSpan: 1,
+      zOrder: 0,
+    })
+  })
+
+  it('keeps at least a 1-track span for tiny widgets', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 0, y: 0, w: 10, h: 10, zOrder: 0 })]))).toEqual({
+      col: 0,
+      colSpan: 1,
+      row: 0,
+      rowSpan: 1,
+      zOrder: 0,
+    })
+  })
+
+  it('clamps widgets that overflowed the legacy canvas back into the grid', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 300, y: 230, w: 100, h: 100, zOrder: 0 })]))).toEqual({
+      col: 11,
+      colSpan: 1,
+      row: 11,
+      rowSpan: 1,
+      zOrder: 0,
+    })
+  })
+
+  it('defaults a missing zOrder to 0', () => {
+    expect(layoutOf(wrap([pixelWidget({ x: 0, y: 0, w: 160, h: 56 })]))).toEqual({
+      col: 0,
+      colSpan: 6,
+      row: 0,
+      rowSpan: 3,
+      zOrder: 0,
+    })
+  })
+
+  it('leaves widgets with a malformed layout untouched', () => {
+    const widget = pixelWidget({ x: 'oops', y: 0, w: 160, h: 56, zOrder: 0 })
+    const { config: out } = migrateConfig(wrap([widget]), '1.25.0')
+    const page = (out.pages as Record<string, unknown>[])[0]!
+    expect((page.widgets as Record<string, unknown>[])[0]).toEqual(widget)
+  })
+
+  it('leaves widgets without a layout object untouched', () => {
+    const widget = { id: 'w1', type: 'gauge', signal: 'rpm' }
+    const { config: out } = migrateConfig(wrap([widget]), '1.25.0')
+    const page = (out.pages as Record<string, unknown>[])[0]!
+    expect((page.widgets as Record<string, unknown>[])[0]).toEqual(widget)
+  })
+
+  it('treats a missing top bar height as 0', () => {
+    expect(
+      layoutOf(wrap([pixelWidget({ x: 0, y: 120, w: 320, h: 120, zOrder: 0 })], {}, { topBar: {} }))
+    ).toEqual({ col: 0, colSpan: 12, row: 6, rowSpan: 6, zOrder: 0 })
   })
 })
 

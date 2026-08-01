@@ -1091,10 +1091,10 @@ describe('schema bounds hardening', () => {
   })
 
   const validLayout = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
-    x: 0,
-    y: 0,
-    w: 80,
-    h: 40,
+    col: 0,
+    colSpan: 3,
+    row: 0,
+    rowSpan: 2,
     zOrder: 0,
     ...overrides,
   })
@@ -1169,6 +1169,90 @@ describe('schema bounds hardening', () => {
 
     it('rejects a non-integer zOrder', () => {
       expect(WidgetLayoutSchema.safeParse(validLayout({ zOrder: 1.5 })).success).toBe(false)
+    })
+  })
+
+  describe('WidgetLayout span grid (#1820)', () => {
+    it('accepts a full-grid placement', () => {
+      expect(
+        WidgetLayoutSchema.safeParse(validLayout({ col: 0, colSpan: 12, row: 0, rowSpan: 12 }))
+          .success
+      ).toBe(true)
+    })
+
+    it('accepts a single-cell placement at the last track', () => {
+      expect(
+        WidgetLayoutSchema.safeParse(validLayout({ col: 11, colSpan: 1, row: 11, rowSpan: 1 }))
+          .success
+      ).toBe(true)
+    })
+
+    it.each(['col', 'colSpan', 'row', 'rowSpan', 'zOrder'])('rejects a missing %s', (field) => {
+      const layout = Object.fromEntries(
+        Object.entries(validLayout()).filter(([key]) => key !== field)
+      )
+      expect(WidgetLayoutSchema.safeParse(layout).success).toBe(false)
+    })
+
+    it.each(['col', 'colSpan', 'row', 'rowSpan'])('rejects a non-number %s', (field) => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ [field]: '3' })).success).toBe(false)
+    })
+
+    it.each(['col', 'colSpan', 'row', 'rowSpan'])('rejects a non-integer %s', (field) => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ [field]: 2.5 })).success).toBe(false)
+    })
+
+    it('rejects unknown extra keys (strict)', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ x: 10 })).success).toBe(false)
+    })
+
+    it('rejects the legacy pixel shape', () => {
+      expect(WidgetLayoutSchema.safeParse({ x: 0, y: 0, w: 160, h: 56, zOrder: 0 }).success).toBe(
+        false
+      )
+    })
+
+    it('rejects a negative col', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ col: -1 })).success).toBe(false)
+    })
+
+    it('rejects col past the last track', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ col: 12, colSpan: 1 })).success).toBe(false)
+    })
+
+    it('rejects a zero colSpan', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ colSpan: 0 })).success).toBe(false)
+    })
+
+    it('rejects a zero rowSpan', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ rowSpan: 0 })).success).toBe(false)
+    })
+
+    it('rejects a negative row', () => {
+      expect(WidgetLayoutSchema.safeParse(validLayout({ row: -1 })).success).toBe(false)
+    })
+
+    it('rejects col + colSpan past the grid edge', () => {
+      const result = WidgetLayoutSchema.safeParse(validLayout({ col: 8, colSpan: 5 }))
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes('colSpan'))).toBe(true)
+      }
+    })
+
+    it('rejects row + rowSpan past the grid edge', () => {
+      const result = WidgetLayoutSchema.safeParse(validLayout({ row: 10, rowSpan: 3 }))
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes('rowSpan'))).toBe(true)
+      }
+    })
+
+    it('accepts a placement ending exactly at the grid edge', () => {
+      expect(
+        WidgetLayoutSchema.safeParse(validLayout({ col: 6, colSpan: 6, row: 9, rowSpan: 3 }))
+          .success
+      ).toBe(true)
     })
   })
 
@@ -1564,7 +1648,7 @@ describe('schema bounds hardening', () => {
       textColor: '#FFFFFF',
       fontSize: 14,
     }
-    const baseLayout = { x: 0, y: 0, w: 80, h: 40, zOrder: 0 }
+    const baseLayout = { col: 0, colSpan: 3, row: 0, rowSpan: 2, zOrder: 0 }
     const buildWidget = (configOverrides: Record<string, unknown>) => ({
       id: 'btn1',
       type: 'button' as const,

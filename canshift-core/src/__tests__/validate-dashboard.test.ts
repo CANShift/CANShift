@@ -25,7 +25,7 @@ const gaugeWidget = (overrides: Record<string, unknown> = {}): Record<string, un
   id: 'w0',
   type: 'gauge',
   signal: 'rpm',
-  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  layout: { col: 0, colSpan: 3, row: 0, rowSpan: 2, zOrder: 0 },
   style: VALID_STYLE,
   config: {
     type: 'gauge',
@@ -187,7 +187,10 @@ describe('validateDashboard — firmware caps', () => {
 
   it('rejects more than MAX_WIDGETS_PER_PAGE', () => {
     const widgets = Array.from({ length: FIRMWARE_CAPS.MAX_WIDGETS_PER_PAGE + 1 }, (_, i) =>
-      gaugeWidget({ id: `w${String(i)}`, layout: { x: 0, y: 0, w: 1, h: 1, zOrder: i } })
+      gaugeWidget({
+        id: `w${String(i)}`,
+        layout: { col: 0, colSpan: 1, row: 0, rowSpan: 1, zOrder: i },
+      })
     )
     const result = validateDashboard(validConfig({ pages: [validPage({ widgets })] }))
     expect(result.valid).toBe(false)
@@ -245,7 +248,7 @@ describe('validateDashboard — accepts new action and topBar variants (drift gu
       id: 'btn',
       type: 'button',
       signal: 'rpm',
-      layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+      layout: { col: 0, colSpan: 3, row: 0, rowSpan: 2, zOrder: 0 },
       style: VALID_STYLE,
       config: {
         type: 'button',

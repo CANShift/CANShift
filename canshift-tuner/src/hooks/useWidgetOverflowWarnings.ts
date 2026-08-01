@@ -27,13 +27,13 @@ export const useWidgetOverflowWarnings = (): void => {
       .slice(0, 3)
       .map(
         (o) =>
-          `${o.widgetId} (${String(o.layout.x)},${String(o.layout.y)} ${String(o.layout.w)}×${String(o.layout.h)})`
+          `${o.widgetId} (col ${String(o.layout.col)}+${String(o.layout.colSpan)}, row ${String(o.layout.row)}+${String(o.layout.rowSpan)})`
       )
       .join(', ')
     const more = overflowing.length > 3 ? ` + ${String(overflowing.length - 3)} more` : ''
     log(
       'warn',
-      `${String(overflowing.length)} widget${overflowing.length === 1 ? '' : 's'} overflow the current target screen — ${sample}${more}`,
+      `${String(overflowing.length)} widget${overflowing.length === 1 ? '' : 's'} span past the 12-column grid — ${sample}${more}`,
       'overflow'
     )
   }, [config, targetProfile, log])

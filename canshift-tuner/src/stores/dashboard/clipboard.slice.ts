@@ -1,7 +1,8 @@
 import { current } from 'immer'
 import type { Widget } from '@tmbk/canshift-core'
-import { autoPlace, LAYOUT_GAP, rectsOverlap } from '../../utils/layout'
-import { canvasDims, pushHistory, toLayoutRect, widgetAreaHeight } from './helpers'
+import { clampGridPlacement, placementsOverlap } from '@tmbk/canshift-core'
+import { autoPlace } from '../../utils/layout'
+import { pushHistory, toPlacement } from './helpers'
 import type { ClipboardSlice, SliceCreator } from './types'
 
 export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
@@ -25,42 +26,37 @@ export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
 
       pushHistory(s)
 
-      const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
-      const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
-      const others = page.widgets.map(toLayoutRect)
+      const others = page.widgets.map(toPlacement)
       const newIds: string[] = []
 
       for (const src of s.clipboardWidgets) {
         const newId = `${src.type}_${crypto.randomUUID()}`
+        const { col, colSpan, row, rowSpan } = src.layout
         const candidates = [
-          { x: src.layout.x + 16, y: src.layout.y + 16 },
-          { x: src.layout.x, y: src.layout.y + src.layout.h + LAYOUT_GAP },
-          { x: src.layout.x + src.layout.w + LAYOUT_GAP, y: src.layout.y },
+          { col: col + 1, row: row + 1 },
+          { col, row: row + rowSpan },
+          { col: col + colSpan, row },
         ]
-        let pos: { x: number; y: number } | null = null
+        let pos: { col: number; row: number } | null = null
         for (const cand of candidates) {
-          const sx = Math.round(cand.x)
-          const sy = Math.round(cand.y)
-          if (sx < 0 || sy < 0 || sx + src.layout.w > canvasW || sy + src.layout.h > canvasH)
-            continue
-          const rect = { id: '__new__', x: sx, y: sy, w: src.layout.w, h: src.layout.h }
-          if (!others.some((o) => rectsOverlap(rect, o))) {
-            pos = { x: sx, y: sy }
+          const placement = clampGridPlacement({ col: cand.col, colSpan, row: cand.row, rowSpan })
+          if (!others.some((o) => placementsOverlap(placement, o))) {
+            pos = { col: placement.col, row: placement.row }
             break
           }
         }
-        pos ??= autoPlace({ w: src.layout.w, h: src.layout.h }, others, canvasW, canvasH)
+        pos ??= autoPlace({ colSpan, rowSpan }, others)
         if (!pos) continue
 
         const clone: Widget = {
           ...src,
           id: newId,
-          layout: { ...src.layout, x: pos.x, y: pos.y },
+          layout: { ...src.layout, col: pos.col, row: pos.row },
           style: { ...src.style },
           config: { ...src.config },
         }
         page.widgets.push(clone)
-        others.push(toLayoutRect(clone))
+        others.push(toPlacement(clone))
         newIds.push(newId)
       }
 
@@ -88,7 +84,7 @@ export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
     })
   },
 
-  nudgeWidgets: (pageId, widgetIds, dx, dy) => {
+  nudgeWidgets: (pageId, widgetIds, dCol, dRow) => {
     set((s) => {
       if (!s.config || widgetIds.length === 0) return
       const page = s.config.pages.find((p) => p.id === pageId)
@@ -96,11 +92,14 @@ export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
       const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
       if (targets.length === 0) return
       pushHistory(s)
-      const { w: canvasW, h: canvasFullH } = canvasDims(s.config)
-      const canvasH = widgetAreaHeight(page, s.config.topBar.height, canvasFullH)
       for (const w of targets) {
-        w.layout.x = Math.max(0, Math.min(w.layout.x + dx, canvasW - w.layout.w))
-        w.layout.y = Math.max(0, Math.min(w.layout.y + dy, canvasH - w.layout.h))
+        const clamped = clampGridPlacement({
+          ...w.layout,
+          col: w.layout.col + dCol,
+          row: w.layout.row + dRow,
+        })
+        w.layout.col = clamped.col
+        w.layout.row = clamped.row
       }
       s.isDirty = true
     })

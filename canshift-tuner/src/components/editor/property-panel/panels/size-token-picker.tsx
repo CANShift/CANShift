@@ -1,6 +1,6 @@
 import type { Widget } from '@tmbk/canshift-core'
 
-import { SIZE_TOKENS, STANDARD_TOKEN_IDS, tokenFromDimensions } from '../../../../utils/size-tokens'
+import { SIZE_TOKENS, STANDARD_TOKEN_IDS, tokenFromSpans } from '../../../../utils/size-tokens'
 import { Field } from '../shared'
 
 const PANEL_LABEL = '#AAAAAA'
@@ -17,7 +17,7 @@ interface SizeTokenPickerProps {
 
 export const SizeTokenPicker = ({ widget, onChange }: SizeTokenPickerProps) => {
   const activeTokenId =
-    tokenFromDimensions(widget.layout.w, widget.layout.h) ?? STANDARD_TOKEN_IDS[0] ?? null
+    tokenFromSpans(widget.layout.colSpan, widget.layout.rowSpan) ?? STANDARD_TOKEN_IDS[0] ?? null
 
   return (
     <Field label="Size">
@@ -29,7 +29,9 @@ export const SizeTokenPicker = ({ widget, onChange }: SizeTokenPickerProps) => {
             <button
               key={tokenId}
               onClick={() => {
-                onChange({ layout: { ...widget.layout, w: token.w, h: token.h } })
+                onChange({
+                  layout: { ...widget.layout, colSpan: token.colSpan, rowSpan: token.rowSpan },
+                })
               }}
               title={token.description}
               style={{

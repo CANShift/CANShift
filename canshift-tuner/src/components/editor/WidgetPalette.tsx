@@ -24,8 +24,8 @@ interface PaletteItem {
   label: string
   icon: SensorIconName
   defaultSignal: string
-  defaultW: number
-  defaultH: number
+  defaultColSpan: number
+  defaultRowSpan: number
 }
 
 const PALETTE_ITEMS: PaletteItem[] = [
@@ -34,24 +34,24 @@ const PALETTE_ITEMS: PaletteItem[] = [
     label: 'Gauge',
     icon: 'rpm',
     defaultSignal: 'rpm',
-    defaultW: SIZE_TOKENS.XL.w,
-    defaultH: SIZE_TOKENS.XL.h,
+    defaultColSpan: SIZE_TOKENS.XL.colSpan,
+    defaultRowSpan: SIZE_TOKENS.XL.rowSpan,
   },
   {
     type: 'button',
     label: 'Button',
     icon: 'cog',
     defaultSignal: '',
-    defaultW: SIZE_TOKENS.L.w,
-    defaultH: SIZE_TOKENS.L.h,
+    defaultColSpan: SIZE_TOKENS.L.colSpan,
+    defaultRowSpan: SIZE_TOKENS.L.rowSpan,
   },
   {
     type: 'gear',
     label: 'Gear',
     icon: 'gear',
     defaultSignal: 'gear',
-    defaultW: SIZE_TOKENS.L.w,
-    defaultH: SIZE_TOKENS.L.h,
+    defaultColSpan: SIZE_TOKENS.L.colSpan,
+    defaultRowSpan: SIZE_TOKENS.L.rowSpan,
   },
 ]
 
@@ -99,7 +99,13 @@ const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
       id,
       type: item.type,
       signal: item.defaultSignal,
-      layout: { x: 10, y: 10, w: item.defaultW, h: item.defaultH, zOrder: 0 },
+      layout: {
+        col: 0,
+        colSpan: item.defaultColSpan,
+        row: 0,
+        rowSpan: item.defaultRowSpan,
+        zOrder: 0,
+      },
       style: {
         ...DEFAULT_WIDGET_STYLE,
         fontSize: 16,

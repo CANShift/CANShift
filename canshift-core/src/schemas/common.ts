@@ -1,8 +1,9 @@
 import { z } from 'zod'
 
 import { HEX_REGEX } from '../colors/hex.js'
-import { CANVAS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps.js'
+import { FONT_SIZE_MAX, FONT_SIZE_MIN } from '../constants/firmware-caps.js'
 import { SEMVER_PATTERN } from '../constants/validation.js'
+import { LAYOUT_GRID } from '../layout-grid.js'
 
 export const HexColorSchema = z
   .string()
@@ -11,28 +12,28 @@ export const HexColorSchema = z
 
 export const WidgetLayoutSchema = z
   .object({
-    x: z
+    col: z
       .number()
       .int()
       .min(0)
-      .max(CANVAS.WIDTH - 1),
-    y: z
+      .max(LAYOUT_GRID.COLUMNS - 1),
+    colSpan: z.number().int().min(1).max(LAYOUT_GRID.COLUMNS),
+    row: z
       .number()
       .int()
       .min(0)
-      .max(CANVAS.HEIGHT - 1),
-    w: z.number().int().min(1).max(CANVAS.WIDTH),
-    h: z.number().int().min(1).max(CANVAS.HEIGHT),
+      .max(LAYOUT_GRID.ROWS - 1),
+    rowSpan: z.number().int().min(1).max(LAYOUT_GRID.ROWS),
     zOrder: z.number().int(),
   })
   .strict()
-  .refine((l) => l.x + l.w <= CANVAS.WIDTH, {
-    message: `layout: x+w must be <= ${String(CANVAS.WIDTH)}`,
-    path: ['w'],
+  .refine((l) => l.col + l.colSpan <= LAYOUT_GRID.COLUMNS, {
+    message: `layout: col+colSpan must be <= ${String(LAYOUT_GRID.COLUMNS)}`,
+    path: ['colSpan'],
   })
-  .refine((l) => l.y + l.h <= CANVAS.HEIGHT, {
-    message: `layout: y+h must be <= ${String(CANVAS.HEIGHT)}`,
-    path: ['h'],
+  .refine((l) => l.row + l.rowSpan <= LAYOUT_GRID.ROWS, {
+    message: `layout: row+rowSpan must be <= ${String(LAYOUT_GRID.ROWS)}`,
+    path: ['rowSpan'],
   })
 
 export const WidgetStyleSchema = z

@@ -12,7 +12,7 @@ const widgetStyle = {
   fontSize: 14,
 }
 
-const baseLayout = { x: 0, y: 0, w: 80, h: 40, zOrder: 0 }
+const baseLayout = { col: 0, colSpan: 3, row: 0, rowSpan: 2, zOrder: 0 }
 
 describe('WidgetSchema — signal field required only for signal-consuming widgets', () => {
   it('accepts a timer widget with empty signal (firmware impl is self-contained)', () => {

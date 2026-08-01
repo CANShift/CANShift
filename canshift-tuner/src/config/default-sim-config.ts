@@ -106,7 +106,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'speed_arc',
           type: 'gauge',
           signal: 'speed_kph',
-          layout: { x: 0, y: 0, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
           style: { ...DEMO_STYLE_NEUTRAL, fontSize: 36 },
           config: {
             type: 'gauge',
@@ -122,7 +122,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'rpm_arc',
           type: 'gauge',
           signal: 'rpm',
-          layout: { x: 160, y: 0, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_RED,
           config: {
             type: 'gauge',
@@ -138,7 +138,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'coolant_l',
           type: 'gauge',
           signal: 'coolant_temp_c',
-          layout: { x: 0, y: 112, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 6, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_BLUE,
           config: {
             type: 'gauge',
@@ -154,7 +154,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'battery_l',
           type: 'gauge',
           signal: 'battery_volts',
-          layout: { x: 160, y: 112, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 6, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_YELLOW,
           config: {
             type: 'gauge',
@@ -170,7 +170,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'oil_press_l',
           type: 'gauge',
           signal: 'oil_press_bar',
-          layout: { x: 0, y: 168, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 9, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_ORANGE,
           config: {
             type: 'gauge',
@@ -186,7 +186,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'gear_l',
           type: 'gear',
           signal: 'gear',
-          layout: { x: 160, y: 168, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 9, rowSpan: 3, zOrder: 0 },
           style: { ...DEMO_STYLE_RED, fontSize: 32 },
           config: { type: 'gear', decimalPlaces: 0 },
         },
@@ -204,7 +204,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'boost_arc',
           type: 'gauge',
           signal: 'map_kpa',
-          layout: { x: 0, y: 0, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_ORANGE,
           config: {
             type: 'gauge',
@@ -220,7 +220,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'gear_xl',
           type: 'gear',
           signal: 'gear',
-          layout: { x: 160, y: 0, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
           style: { ...DEMO_STYLE_RED, fontSize: 48 },
           config: { type: 'gear', decimalPlaces: 0 },
         },
@@ -228,7 +228,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'rpm_l',
           type: 'gauge',
           signal: 'rpm',
-          layout: { x: 0, y: 112, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 6, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_RED,
           config: {
             type: 'gauge',
@@ -244,7 +244,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'tps_l',
           type: 'gauge',
           signal: 'throttle_pos',
-          layout: { x: 160, y: 112, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 6, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_ORANGE,
           config: {
             type: 'gauge',
@@ -260,7 +260,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'lambda_l',
           type: 'gauge',
           signal: 'lambda_1',
-          layout: { x: 0, y: 168, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 9, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_GREEN,
           config: {
             type: 'gauge',
@@ -276,7 +276,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'iat_l',
           type: 'gauge',
           signal: 'iat_c',
-          layout: { x: 160, y: 168, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 9, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_BLUE,
           config: {
             type: 'gauge',
@@ -302,7 +302,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'coolant_arc',
           type: 'gauge',
           signal: 'coolant_temp_c',
-          layout: { x: 0, y: 0, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_BLUE,
           config: {
             type: 'gauge',
@@ -318,7 +318,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'oil_press_arc',
           type: 'gauge',
           signal: 'oil_press_bar',
-          layout: { x: 160, y: 0, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_ORANGE,
           config: {
             type: 'gauge',
@@ -334,7 +334,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'oil_temp_l',
           type: 'gauge',
           signal: 'oil_temp_c',
-          layout: { x: 0, y: 112, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 6, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_ORANGE,
           config: {
             type: 'gauge',
@@ -350,7 +350,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'fuel_press_l',
           type: 'gauge',
           signal: 'fuel_press_bar',
-          layout: { x: 160, y: 112, w: 160, h: 56, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 6, rowSpan: 3, zOrder: 0 },
           style: DEMO_STYLE_ORANGE,
           config: {
             type: 'gauge',
@@ -376,7 +376,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'btn_map_cycle',
           type: 'button',
           signal: '',
-          layout: { x: 0, y: 0, w: 320, h: 112, zOrder: 0 },
+          layout: { col: 0, colSpan: 12, row: 0, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
@@ -398,7 +398,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'btn_launch',
           type: 'button',
           signal: 'flag_launch_ctrl',
-          layout: { x: 0, y: 112, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 0, colSpan: 6, row: 6, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',
@@ -418,7 +418,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
           id: 'btn_antilag',
           type: 'button',
           signal: 'flag_anti_lag',
-          layout: { x: 160, y: 112, w: 160, h: 112, zOrder: 0 },
+          layout: { col: 6, colSpan: 6, row: 6, rowSpan: 6, zOrder: 0 },
           style: DEMO_STYLE_BUTTON,
           config: {
             type: 'button',

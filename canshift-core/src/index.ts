@@ -248,7 +248,17 @@ export type {
 export type { DesignTokens } from './design-tokens.js'
 export { COLOR_KEY_TO_CSS_VAR, DARK_TOKENS, tokensToCssVars } from './design-tokens.js'
 
-export const CURRENT_SCHEMA_VERSION = '1.24.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.25.0' as const
+
+export type { GridArea, GridPlacement, GridRect } from './layout-grid.js'
+export {
+  LAYOUT_GRID,
+  clampGridPlacement,
+  isSpanOverflowing,
+  nearestTrack,
+  placementsOverlap,
+  resolveGridRect,
+} from './layout-grid.js'
 
 export type { EcuProfile } from './ecu-profiles/index.js'
 export { ECU_PROFILES, DEFAULT_PROFILE_ID, MAXXECU_SIGNAL_UNITS } from './ecu-profiles/index.js'

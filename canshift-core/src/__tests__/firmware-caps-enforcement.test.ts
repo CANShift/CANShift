@@ -19,7 +19,7 @@ const gaugeWidget = (overrides: Record<string, unknown> = {}): Record<string, un
   id: 'w0',
   type: 'gauge',
   signal: 'rpm',
-  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  layout: { col: 0, colSpan: 3, row: 0, rowSpan: 2, zOrder: 0 },
   style: widgetStyle,
   config: {
     type: 'gauge',
@@ -55,7 +55,7 @@ const buttonWithActions = (count: number): Record<string, unknown> => ({
   id: 'btn',
   type: 'button',
   signal: 'rpm',
-  layout: { x: 0, y: 0, w: 80, h: 40, zOrder: 0 },
+  layout: { col: 0, colSpan: 3, row: 0, rowSpan: 2, zOrder: 0 },
   style: widgetStyle,
   config: {
     type: 'button',
