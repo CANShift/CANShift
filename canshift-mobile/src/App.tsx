@@ -13,11 +13,12 @@ import { Toaster } from '@/components/ui'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useBleForegroundReconnect } from '@/hooks/use-ble-foreground-reconnect'
 import { useAppSettingsStore } from '@/stores/app-settings.store'
+import { log } from '@/stores/log.store'
 import { hydrateTimerSessions } from '@/stores/timer-sessions.store'
 import { markFirstScreenReady } from './diag/cold-start'
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Archivo_400Regular,
     Archivo_600SemiBold,
     Archivo_800ExtraBold,
@@ -28,7 +29,10 @@ export default function App() {
     void hydrateTimerSessions()
     markFirstScreenReady()
   }, [])
-  if (!fontsLoaded) return null
+  useEffect(() => {
+    if (fontError) log('warn', `Font loading failed — falling back to system fonts: ${fontError.message}`)
+  }, [fontError])
+  if (!fontsLoaded && !fontError) return null
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />

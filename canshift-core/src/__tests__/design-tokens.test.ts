@@ -186,7 +186,7 @@ describe('FONT_TOKENS', () => {
 describe('fontTokensToCssVars', () => {
   it('emits exactly the canonical CSS variable names', () => {
     const vars = fontTokensToCssVars(FONT_TOKENS)
-    expect(Object.keys(vars).sort()).toEqual([FONT_MONO_CSS_VAR, FONT_UI_CSS_VAR].sort())
+    expect(Object.keys(vars).sort()).toEqual(['--font-mono', '--font-ui'])
   })
 
   it('passes the stacks through unchanged', () => {
