@@ -23,6 +23,11 @@ module.exports = {
     // helpers that jest can't locate from outside mobile's node_modules
     // tree).
     '^@tmbk/canshift-core$': '<rootDir>/__mocks__/canshift-core-shim.ts',
+    // Core source files reached through the shim get transpiled by babel-jest,
+    // which injects @babel/runtime helper requires. Those resolve relative to
+    // the core package (installed --omit=dev, no babel there) — pin them to
+    // mobile's own copy.
+    '^@babel/runtime/(.*)$': '<rootDir>/node_modules/@babel/runtime/$1',
     // canshift-core source uses ESM-strict `.js` suffixes on relative imports
     // (Node's ESM resolver requires them; the `fix-esm-extensions.mjs` build
     // step adds them automatically to dist). When the mobile shim resolves
