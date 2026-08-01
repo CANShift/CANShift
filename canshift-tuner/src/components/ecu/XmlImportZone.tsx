@@ -99,7 +99,6 @@ export const XmlImportZone = ({
 
 const zoneStyle = (dragging: boolean, hasFile: boolean): CSSProperties => ({
   border: `1px dashed ${dragging ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
-  borderRadius: 8,
   background: dragging
     ? 'hsl(var(--brand-accent) / 0.06)'
     : hasFile
@@ -142,7 +141,6 @@ const pickButtonStyle: CSSProperties = {
   background: 'hsl(var(--brand-accent))',
   color: 'hsl(var(--brand-ground))',
   border: 'none',
-  borderRadius: 6,
   padding: '8px 18px',
   fontSize: 12,
   fontWeight: 600,
@@ -168,7 +166,6 @@ const clearButtonStyle: CSSProperties = {
   background: 'transparent',
   color: 'hsl(var(--text-dim))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
   padding: '4px 10px',
   fontSize: 11,
   cursor: 'pointer',

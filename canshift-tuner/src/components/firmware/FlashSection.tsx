@@ -24,7 +24,6 @@ const sectionStyle = (status: FlashSectionStatus): CSSProperties => ({
   flexDirection: 'column',
   gap: 12,
   padding: 16,
-  borderRadius: 8,
   border: '1px solid hsl(var(--border))',
   background: 'hsl(var(--surface))',
   opacity: status === 'disabled' ? 0.55 : 1,
@@ -46,7 +45,6 @@ const badgeStyle = (status: FlashSectionStatus): CSSProperties => {
   return {
     width: 22,
     height: 22,
-    borderRadius: 999,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',

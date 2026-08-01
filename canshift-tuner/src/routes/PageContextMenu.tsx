@@ -87,7 +87,6 @@ export const PageContextMenu = ({
         zIndex: 9999,
         background: 'hsl(var(--surface))',
         border: '1px solid #2A2A2A',
-        borderRadius: 5,
         padding: '3px 0',
         minWidth: 140,
         boxShadow: '0 4px 16px #00000066',

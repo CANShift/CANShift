@@ -214,7 +214,7 @@ const ColorRampEditor = ({
               type="color"
               value={stop.color}
               aria-label={`Stop ${(idx + 1).toString()} color`}
-              className="h-7 w-10 cursor-pointer rounded border border-input bg-bg p-0.5"
+              className="h-7 w-10 cursor-pointer border border-input bg-bg p-0.5"
               onChange={(e) => {
                 handleStopColor(idx, e.target.value)
               }}
@@ -250,7 +250,7 @@ const ColorRampEditor = ({
       <div
         data-testid="ramp-preview"
         aria-label="Color ramp preview"
-        className="h-4 w-full rounded border border-input"
+        className="h-4 w-full border border-input"
         style={{ background: gradient }}
       />
     </div>

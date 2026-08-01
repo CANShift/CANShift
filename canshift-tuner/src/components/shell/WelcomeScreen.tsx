@@ -223,14 +223,12 @@ const stepStyle: CSSProperties = {
   padding: '14px 16px',
   background: 'hsl(var(--surface))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
 }
 
 const stepNumberStyle: CSSProperties = {
   width: 28,
   height: 28,
   flexShrink: 0,
-  borderRadius: '50%',
   background: 'hsl(var(--brand-accent) / 0.15)',
   color: 'hsl(var(--brand-accent))',
   display: 'flex',
@@ -267,7 +265,6 @@ const connectButtonStyle: CSSProperties = {
   background: 'hsl(var(--brand-accent))',
   color: 'hsl(var(--brand-ground))',
   border: 'none',
-  borderRadius: 8,
   padding: '14px 28px',
   fontSize: 13,
   fontWeight: 600,
@@ -276,14 +273,12 @@ const connectButtonStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 2px 8px hsl(var(--brand-accent) / 0.3)',
 }
 
 const exploreButtonStyle: CSSProperties = {
   background: 'transparent',
   color: 'hsl(var(--text-dim))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
   padding: '13px 22px',
   fontSize: 12,
   fontWeight: 500,
@@ -294,7 +289,6 @@ const errorPillStyle: CSSProperties = {
   background: 'hsl(var(--bg-inset))',
   border: '1px solid hsl(var(--destructive))',
   color: 'hsl(var(--destructive))',
-  borderRadius: 4,
   padding: '10px 14px',
   fontSize: 13,
   textAlign: 'center',
@@ -303,7 +297,6 @@ const errorPillStyle: CSSProperties = {
 const unsupportedCardStyle: CSSProperties = {
   background: 'hsl(var(--bg-inset))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
   padding: '18px 20px',
   color: 'hsl(var(--text-dim))',
   textAlign: 'left',

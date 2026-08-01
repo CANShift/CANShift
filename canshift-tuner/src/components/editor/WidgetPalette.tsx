@@ -151,7 +151,6 @@ const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
               padding: '5px 8px',
               background: 'transparent',
               border: '1px solid transparent',
-              borderRadius: 4,
               color: TILE_LABEL,
               cursor: templateLocked ? 'not-allowed' : 'pointer',
               fontSize: 12,

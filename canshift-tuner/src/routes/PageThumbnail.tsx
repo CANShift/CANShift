@@ -28,7 +28,6 @@ const PageThumbnailImpl = ({ page, topBar }: PageThumbnailProps) => {
         background: page.backgroundColor,
         overflow: 'hidden',
         position: 'relative',
-        borderRadius: 2,
         flexShrink: 0,
       }}
     >

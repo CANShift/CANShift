@@ -47,7 +47,6 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
           <div
             style={{
               border: `1px solid ${previewActive ? widget.style.primaryColor : '#2A2A2A'}`,
-              borderRadius: 3,
               overflow: 'hidden',
               display: 'inline-block',
               flexShrink: 0,
@@ -71,7 +70,6 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
                 padding: '3px 8px',
                 background: previewActive ? '#2A1A1A' : 'transparent',
                 border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
-                borderRadius: 3,
                 color: previewActive ? '#FF4444' : '#AAAAAA',
                 cursor: 'pointer',
                 flexShrink: 0,
@@ -89,7 +87,6 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
                 padding: '3px 8px',
                 background: 'transparent',
                 border: '1px solid #2A2A2A',
-                borderRadius: 3,
                 color: '#AAAAAA',
                 cursor: 'pointer',
                 flexShrink: 0,

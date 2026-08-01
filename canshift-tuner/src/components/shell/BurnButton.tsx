@@ -77,7 +77,6 @@ const outcomePillStyleBase: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 6,
-  borderRadius: 4,
   padding: '3px 8px',
   fontSize: 11,
   fontWeight: 600,
@@ -116,7 +115,6 @@ const dismissButtonStyle: CSSProperties = {
 }
 
 const burnButtonStyleBase: CSSProperties = {
-  borderRadius: 4,
   padding: '5px 14px',
   fontSize: 11,
   fontWeight: 600,

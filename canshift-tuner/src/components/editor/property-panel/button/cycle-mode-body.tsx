@@ -94,7 +94,6 @@ export const CycleModeBody = ({ cfg, pageIds, onChange }: CycleModeBodyProps) =>
           padding: '4px 10px',
           background: 'transparent',
           border: `1px solid ${canAdd ? '#7788CC44' : '#2A2A2A'}`,
-          borderRadius: 3,
           color: canAdd ? '#7788CC' : '#444444',
           cursor: canAdd ? 'pointer' : 'not-allowed',
           marginTop: 2,

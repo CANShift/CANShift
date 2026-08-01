@@ -46,7 +46,6 @@ const badgeStyle: CSSProperties = {
   letterSpacing: '0.08em',
   color: 'hsl(var(--accent))',
   padding: '2px 8px',
-  borderRadius: 999,
   border: '1px solid hsl(var(--border))',
   background: 'hsl(var(--bg-inset))',
 }

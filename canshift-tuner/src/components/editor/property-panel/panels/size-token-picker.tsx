@@ -37,7 +37,6 @@ export const SizeTokenPicker = ({ widget, onChange }: SizeTokenPickerProps) => {
                 padding: '3px 0',
                 background: isActive ? TOKEN_TILE_ACTIVE_BG : TOKEN_TILE_BG,
                 border: `1px solid ${isActive ? TOKEN_TILE_ACTIVE_BORDER : TOKEN_TILE_BORDER}`,
-                borderRadius: 3,
                 color: isActive ? TOKEN_TILE_ACTIVE_FG : PANEL_LABEL,
                 cursor: 'pointer',
                 fontSize: 10,

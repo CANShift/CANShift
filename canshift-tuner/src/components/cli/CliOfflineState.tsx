@@ -110,7 +110,6 @@ const opcodesToggleStyle: CSSProperties = {
   padding: '8px 12px',
   background: 'transparent',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
   color: 'hsl(var(--text))',
   fontSize: 13,
   fontWeight: 500,

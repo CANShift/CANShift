@@ -42,7 +42,6 @@ export const CycleStateRow = ({
       style={{
         background: isInitial ? '#1A1A22' : '#111111',
         border: `1px solid ${isInitial ? '#3A3A66' : '#2A2A2A'}`,
-        borderRadius: 3,
         padding: '6px 8px',
         marginBottom: 5,
       }}

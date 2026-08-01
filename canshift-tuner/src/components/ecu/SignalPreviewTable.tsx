@@ -100,7 +100,6 @@ const tableWrapStyle: CSSProperties = {
   minHeight: 0,
   overflowY: 'auto',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
   background: 'hsl(var(--surface))',
 }
 
@@ -178,7 +177,6 @@ const warningsBlockStyle: CSSProperties = {
   padding: '10px 12px',
   background: 'hsl(var(--accent) / 0.12)',
   border: '1px solid hsl(var(--accent))',
-  borderRadius: 6,
   color: 'hsl(var(--text))',
 }
 

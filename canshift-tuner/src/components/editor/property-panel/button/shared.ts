@@ -104,7 +104,6 @@ export const modePillStyle = (active: boolean): CSSProperties => ({
   padding: '5px 8px',
   background: active ? '#1A2A4A' : 'transparent',
   border: `1px solid ${active ? '#5577CC' : '#2A2A2A'}`,
-  borderRadius: 3,
   color: active ? '#7788CC' : '#666666',
   cursor: 'pointer',
   fontWeight: active ? 600 : 400,

@@ -162,7 +162,6 @@ const containerStyle: CSSProperties = {
   padding: 16,
   background: 'hsl(var(--surface))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
 }
 
 const rowStyle: CSSProperties = {
@@ -183,7 +182,6 @@ const opcodeInputStyle: CSSProperties = {
   flex: 1,
   background: 'hsl(var(--bg))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   padding: '6px 8px',
   fontSize: 12,
   fontFamily: "'JetBrains Mono', ui-monospace, monospace",
@@ -194,7 +192,6 @@ const opcodeInputStyle: CSSProperties = {
 const opcodeSelectStyle: CSSProperties = {
   background: 'hsl(var(--bg))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   padding: '6px 8px',
   fontSize: 11,
   color: 'hsl(var(--text-dim))',
@@ -210,7 +207,6 @@ const textareaStyle: CSSProperties = {
   width: '100%',
   background: 'hsl(var(--bg))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   padding: '8px 10px',
   fontSize: 12,
   fontFamily: "'JetBrains Mono', ui-monospace, monospace",
@@ -224,7 +220,6 @@ const errorStyle: CSSProperties = {
   color: 'hsl(var(--destructive))',
   background: 'hsl(var(--destructive) / 0.1)',
   border: '1px solid hsl(var(--destructive))',
-  borderRadius: 4,
   padding: '6px 8px',
 }
 

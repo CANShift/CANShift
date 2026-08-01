@@ -221,7 +221,6 @@ const itemStyle = (selected: boolean): CSSProperties => ({
   padding: '10px 12px',
   background: selected ? 'hsl(var(--brand-accent) / 0.12)' : 'hsl(var(--surface))',
   border: `1px solid ${selected ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
-  borderRadius: 6,
   textAlign: 'left',
   cursor: 'pointer',
   color: 'hsl(var(--text))',
@@ -247,7 +246,6 @@ const activeTagStyle: CSSProperties = {
   background: 'hsl(var(--success) / 0.2)',
   color: 'hsl(var(--success))',
   border: '1px solid hsl(var(--success))',
-  borderRadius: 999,
   padding: '1px 6px',
 }
 
@@ -273,7 +271,6 @@ const errorStyle: CSSProperties = {
   color: 'hsl(var(--destructive))',
   background: 'hsl(var(--destructive) / 0.1)',
   border: '1px solid hsl(var(--destructive))',
-  borderRadius: 6,
 }
 
 const emptyStyle: CSSProperties = {

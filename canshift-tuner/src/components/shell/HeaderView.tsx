@@ -128,7 +128,6 @@ export const HeaderView = ({
 const disconnectButtonStyle: CSSProperties = {
   background: 'transparent',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 4,
   color: 'hsl(var(--text-dim))',
   cursor: 'pointer',
   fontSize: 10,
