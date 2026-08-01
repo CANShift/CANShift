@@ -30,7 +30,8 @@ export default function App() {
     markFirstScreenReady()
   }, [])
   useEffect(() => {
-    if (fontError) log('warn', `Font loading failed — falling back to system fonts: ${fontError.message}`)
+    if (fontError)
+      log('warn', `Font loading failed — falling back to system fonts: ${fontError.message}`)
   }, [fontError])
   if (!fontsLoaded && !fontError) return null
   return (
