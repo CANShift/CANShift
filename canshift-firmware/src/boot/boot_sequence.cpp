@@ -84,6 +84,9 @@ static lv_obj_t *s_splashStatus = nullptr;
 static lv_obj_t *s_splashError = nullptr;
 static lv_obj_t *s_splashCanResult = nullptr;
 static bool s_selfTestBuilt = false;
+static uint32_t s_markShownMs = 0;
+
+constexpr uint32_t kMarkMinMs = 1000;
 
 constexpr uint32_t kSplashBgRgb = 0x121212;
 constexpr uint32_t kSplashInkRgb = 0xFFFFFF;
@@ -201,8 +204,10 @@ static void showSplash() {
     s_splashError = nullptr;
     s_splashCanResult = nullptr;
     s_selfTestBuilt = false;
+    s_markShownMs = millis();
 
     lv_task_handler();
+    lv_refr_now(NULL);
 }
 
 static void buildSelfTestScreen() {
@@ -268,8 +273,12 @@ static void buildSelfTestScreen() {
 }
 
 static void updateSplash(const char *status, uint8_t pct) {
-    if (!s_selfTestBuilt)
+    if (!s_selfTestBuilt) {
+        const uint32_t markElapsed = millis() - s_markShownMs;
+        if (markElapsed < kMarkMinMs)
+            vTaskDelay(pdMS_TO_TICKS(kMarkMinMs - markElapsed));
         buildSelfTestScreen();
+    }
     if (s_splashBar)
         lv_bar_set_value(s_splashBar, pct, LV_ANIM_OFF);
     if (s_splashStatus)
@@ -503,7 +512,7 @@ static void buildUiWithHeapBracket() {
     logHeap("dashboard ready");
 }
 
-static constexpr uint32_t SPLASH_MIN_MS = 2000;
+static constexpr uint32_t SPLASH_MIN_MS = 3000;
 
 static constexpr uint32_t SPLASH_WAIT_STEP_MS = 50;
 
