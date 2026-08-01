@@ -141,7 +141,10 @@ const SidebarItem = ({ item, active, disabled, LinkComponent }: SidebarItemProps
   if (disabled) {
     return (
       <div
+        role="link"
+        tabIndex={0}
         aria-disabled="true"
+        aria-label={`${item.label} — connect a device to access this section`}
         title="Connect a device to access this section"
         style={disabledItemStyle}
       >
@@ -210,7 +213,6 @@ const activeItemStyle: CSSProperties = {
 const disabledItemStyle: CSSProperties = {
   ...itemStyle,
   color: 'hsl(var(--brand-neutral-500))',
-  opacity: 0.5,
   cursor: 'not-allowed',
 }
 

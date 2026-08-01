@@ -66,7 +66,7 @@ export const HeaderView = ({
       <div style={middleZoneStyle}>
         {projectName !== null && <span style={projectNameStyle}>{projectName}</span>}
         {unsavedChanges && <span style={unsavedPillStyle}>unsaved changes</span>}
-        <span role="status" aria-live="polite" style={statusPillStyle(visual.color)}>
+        <span style={statusPillStyle(visual.color)}>
           <span
             aria-hidden="true"
             style={{
@@ -77,7 +77,9 @@ export const HeaderView = ({
               transition: 'opacity 80ms ease-out',
             }}
           />
-          {visual.label}
+          <span role="status" aria-live="polite">
+            {visual.label}
+          </span>
           {onDisconnect && (status === 'connected' || status === 'simulation') ? (
             <button
               type="button"
@@ -145,6 +147,7 @@ const projectNameStyle: CSSProperties = {
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
+  minWidth: 0,
 }
 
 const unsavedPillStyle: CSSProperties = {
@@ -154,6 +157,7 @@ const unsavedPillStyle: CSSProperties = {
   border: '1px solid hsl(var(--brand-neutral-300))',
   padding: '2px 7px',
   whiteSpace: 'nowrap',
+  flexShrink: 0,
 }
 
 const statusPillStyle = (color: string): CSSProperties => ({
@@ -167,6 +171,7 @@ const statusPillStyle = (color: string): CSSProperties => ({
   letterSpacing: '0.09em',
   color,
   whiteSpace: 'nowrap',
+  flexShrink: 0,
 })
 
 const disconnectButtonStyle = (color: string): CSSProperties => ({
@@ -184,6 +189,7 @@ const deviceInfoStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--brand-neutral-600))',
   whiteSpace: 'nowrap',
+  flexShrink: 0,
 }
 
 const versionStyle: CSSProperties = {
@@ -192,6 +198,7 @@ const versionStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--brand-neutral-600))',
   whiteSpace: 'nowrap',
+  flexShrink: 0,
 }
 
 const actionZoneStyle: CSSProperties = {
