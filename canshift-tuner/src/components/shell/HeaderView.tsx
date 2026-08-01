@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { BrandLockup } from '../brand/BrandLockup'
 
 export type HeaderStatus =
   | 'connected'
@@ -8,7 +9,7 @@ export type HeaderStatus =
   | 'simulation'
 
 export interface HeaderViewProps {
-  title?: string
+  section?: string | null
   tunerVersion: string
   status: HeaderStatus
   portLabel?: string | null
@@ -42,7 +43,7 @@ const statusVisual = (status: HeaderStatus): StatusVisual => {
 }
 
 export const HeaderView = ({
-  title = 'CANShift Tuner',
+  section = null,
   tunerVersion,
   status,
   portLabel,
@@ -65,7 +66,11 @@ export const HeaderView = ({
         gap: 14,
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'hsl(var(--text))' }}>{title}</div>
+      <div style={brandSlotStyle}>
+        <BrandLockup height={26} />
+        <span style={tunerTagStyle}>TUNER</span>
+        {section !== null ? <span style={sectionStyle}>› {section}</span> : null}
+      </div>
       <div style={versionStyle}>v{tunerVersion}</div>
 
       <div style={{ flex: 1 }} />
@@ -130,6 +135,26 @@ const disconnectButtonStyle: CSSProperties = {
   lineHeight: 1,
   marginLeft: 4,
   padding: '2px 6px',
+}
+
+const brandSlotStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  color: 'hsl(var(--text))',
+}
+
+const tunerTagStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 800,
+  letterSpacing: '0.22em',
+  color: 'hsl(var(--text-dim))',
+}
+
+const sectionStyle: CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'hsl(var(--text-dim))',
 }
 
 const versionStyle: CSSProperties = {

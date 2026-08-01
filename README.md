@@ -2,8 +2,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="logo/brand/canshift-lockup-baseline-onblack.svg">
-    <img src="logo/brand/canshift-lockup-baseline.svg" alt="CANShift logo" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="logo/brand/canshift-lockup-baseline-outlined-onblack.svg">
+    <img src="logo/brand/canshift-lockup-baseline-outlined.svg" alt="CANShift logo" width="480">
   </picture>
 </p>
 

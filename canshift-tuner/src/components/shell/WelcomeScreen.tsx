@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { BrandLockup } from '@/components/brand/BrandLockup'
 
 const SUPPORTED_BROWSERS = ['Chrome 89+', 'Edge 89+', 'Brave', 'Opera']
 
@@ -41,7 +42,9 @@ export const WelcomeScreen = ({
     <div style={containerStyle}>
       <div style={contentStyle}>
         <header style={heroStyle}>
-          <div style={badgeStyle}>CANShift Tuner</div>
+          <div style={lockupStyle}>
+            <BrandLockup height={78} withBaseline label="CANShift Tuner" />
+          </div>
           <h1 style={titleStyle}>Configure your dash, live.</h1>
           <p style={taglineStyle}>
             Edit pages, bind CAN signals, tune OBD-II polling — all in your browser, with the dash
@@ -181,17 +184,10 @@ const heroStyle: CSSProperties = {
   gap: 12,
 }
 
-const badgeStyle: CSSProperties = {
-  display: 'inline-block',
-  padding: '4px 10px',
-  borderRadius: 999,
-  background: 'hsl(var(--surface))',
-  border: '1px solid hsl(var(--border))',
-  color: 'hsl(var(--text-dim))',
-  fontFamily: "'Orbitron', system-ui, sans-serif",
-  fontSize: 11,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
+const lockupStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  color: 'hsl(var(--text))',
 }
 
 const titleStyle: CSSProperties = {
