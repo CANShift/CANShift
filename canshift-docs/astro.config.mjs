@@ -11,6 +11,28 @@ export default defineConfig({
       title: "CANShift Docs",
       description:
         "User and technical documentation for the CANShift dashboard.",
+      logo: {
+        src: "./src/assets/canshift-lockup-outlined-onblack.svg",
+        replacesTitle: true,
+        alt: "CANShift",
+      },
+      favicon: "/favicon.svg",
+      head: [
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image",
+            content: "https://docs.canshift.tmbk.ch/og-image-1200x630.png",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:image",
+            content: "https://docs.canshift.tmbk.ch/og-image-1200x630.png",
+          },
+        },
+      ],
       social: [
         {
           icon: "github",

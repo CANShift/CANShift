@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { BrandLockup } from '@/components/brand/BrandLockup'
 
 const SUPPORTED_BROWSERS = ['Chrome 89+', 'Edge 89+', 'Brave', 'Opera']
 
@@ -41,7 +42,9 @@ export const WelcomeScreen = ({
     <div style={containerStyle}>
       <div style={contentStyle}>
         <header style={heroStyle}>
-          <div style={badgeStyle}>CANShift Tuner</div>
+          <div style={lockupStyle}>
+            <BrandLockup height={78} withBaseline label="CANShift Tuner" />
+          </div>
           <h1 style={titleStyle}>Configure your dash, live.</h1>
           <p style={taglineStyle}>
             Edit pages, bind CAN signals, tune OBD-II polling — all in your browser, with the dash
@@ -145,7 +148,7 @@ const Spinner = () => (
       display: 'inline-block',
       width: 12,
       height: 12,
-      border: '2px solid hsl(var(--primary-foreground))',
+      border: '2px solid hsl(var(--brand-ground))',
       borderTopColor: 'transparent',
       borderRadius: '50%',
       animation: 'canshift-tuner-spin 700ms linear infinite',
@@ -181,17 +184,10 @@ const heroStyle: CSSProperties = {
   gap: 12,
 }
 
-const badgeStyle: CSSProperties = {
-  display: 'inline-block',
-  padding: '4px 10px',
-  borderRadius: 999,
-  background: 'hsl(var(--surface))',
-  border: '1px solid hsl(var(--border))',
-  color: 'hsl(var(--text-dim))',
-  fontFamily: "'Orbitron', system-ui, sans-serif",
-  fontSize: 11,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
+const lockupStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  color: 'hsl(var(--text))',
 }
 
 const titleStyle: CSSProperties = {
@@ -227,16 +223,14 @@ const stepStyle: CSSProperties = {
   padding: '14px 16px',
   background: 'hsl(var(--surface))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
 }
 
 const stepNumberStyle: CSSProperties = {
   width: 28,
   height: 28,
   flexShrink: 0,
-  borderRadius: '50%',
-  background: 'hsl(var(--primary) / 0.15)',
-  color: 'hsl(var(--primary))',
+  background: 'hsl(var(--brand-accent) / 0.15)',
+  color: 'hsl(var(--brand-accent))',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -268,10 +262,9 @@ const ctaRowStyle: CSSProperties = {
 }
 
 const connectButtonStyle: CSSProperties = {
-  background: 'hsl(var(--primary))',
-  color: 'hsl(var(--primary-foreground))',
+  background: 'hsl(var(--brand-accent))',
+  color: 'hsl(var(--brand-ground))',
   border: 'none',
-  borderRadius: 8,
   padding: '14px 28px',
   fontSize: 13,
   fontWeight: 600,
@@ -280,14 +273,12 @@ const connectButtonStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)',
 }
 
 const exploreButtonStyle: CSSProperties = {
   background: 'transparent',
   color: 'hsl(var(--text-dim))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
   padding: '13px 22px',
   fontSize: 12,
   fontWeight: 500,
@@ -298,7 +289,6 @@ const errorPillStyle: CSSProperties = {
   background: 'hsl(var(--bg-inset))',
   border: '1px solid hsl(var(--destructive))',
   color: 'hsl(var(--destructive))',
-  borderRadius: 4,
   padding: '10px 14px',
   fontSize: 13,
   textAlign: 'center',
@@ -307,7 +297,6 @@ const errorPillStyle: CSSProperties = {
 const unsupportedCardStyle: CSSProperties = {
   background: 'hsl(var(--bg-inset))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 8,
   padding: '18px 20px',
   color: 'hsl(var(--text-dim))',
   textAlign: 'left',

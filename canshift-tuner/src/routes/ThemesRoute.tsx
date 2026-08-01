@@ -129,7 +129,6 @@ const hintStyle: CSSProperties = {
   padding: '10px 14px',
   background: 'hsl(var(--bg-inset))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: 6,
 }
 
 export default ThemesRoute

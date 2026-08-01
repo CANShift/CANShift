@@ -120,12 +120,10 @@ const Header = () => {
   }
 
   const section = sectionTitleFromPath(location.pathname)
-  const title =
-    section !== null && section !== 'Welcome' ? `CANShift Tuner › ${section}` : 'CANShift Tuner'
 
   return (
     <HeaderView
-      title={title}
+      section={section !== null && section !== 'Welcome' ? section : null}
       tunerVersion={__TUNER_VERSION__}
       status={resolvedStatus}
       portLabel={portLabel}

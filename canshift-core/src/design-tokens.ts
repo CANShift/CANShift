@@ -45,6 +45,50 @@ export interface DesignTokens {
   }
 }
 
+export const BRAND_NEUTRAL_STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const
+
+export type BrandNeutralStep = (typeof BRAND_NEUTRAL_STEPS)[number]
+
+export interface BrandTokens {
+  colors: {
+    accent: string
+    ink: string
+    ground: string
+    surface: string
+    rule: string
+    chromeBg: string
+    chromeSurface: string
+  }
+  darkNeutrals: Record<BrandNeutralStep, string>
+  darkText: string
+  darkDivider: string
+}
+
+export const BRAND_TOKENS = {
+  colors: {
+    accent: '#EC3013',
+    ink: '#201E1D',
+    ground: '#F3F2F2',
+    surface: '#EAE9E9',
+    rule: '#D7D3D3',
+    chromeBg: '#151313',
+    chromeSurface: '#1F1D1D',
+  },
+  darkNeutrals: {
+    100: '#1C1A1A',
+    200: '#262323',
+    300: '#383434',
+    400: '#4D4949',
+    500: '#7D7979',
+    600: '#9B9797',
+    700: '#C2BFBF',
+    800: '#E2DFDF',
+    900: '#F5F4F4',
+  },
+  darkText: '#F3F2F2',
+  darkDivider: 'color-mix(in srgb, #F3F2F2 24%, transparent)',
+} as const satisfies BrandTokens
+
 export const DARK_TOKENS = {
   colors: {
     bg: '#121212',
@@ -76,7 +120,7 @@ export const DARK_TOKENS = {
     selection: '#6CB6FF',
     selectionBg: '#1B2030',
   },
-  radii: { sm: 4, md: 8, lg: 12, full: 9999 },
+  radii: { sm: 0, md: 0, lg: 0, full: 0 },
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
   typography: { xxs: 9, xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28, display: 36 },
 } as const satisfies DesignTokens
@@ -165,5 +209,35 @@ export const tokensToCssVars = (tokens: DesignTokens): Record<string, string> =>
     const cssVar = COLOR_KEY_TO_CSS_VAR[key]
     out[cssVar] = hexToHslChannels(tokens.colors[key])
   }
+  return out
+}
+
+export const BRAND_COLOR_KEY_TO_CSS_VAR: Record<keyof BrandTokens['colors'], string> = {
+  accent: '--brand-accent',
+  ink: '--brand-ink',
+  ground: '--brand-ground',
+  surface: '--brand-surface',
+  rule: '--brand-rule',
+  chromeBg: '--brand-chrome-bg',
+  chromeSurface: '--brand-chrome-surface',
+}
+
+export const BRAND_TEXT_CSS_VAR = '--brand-text'
+
+export const BRAND_DIVIDER_CSS_VAR = '--brand-divider'
+
+export const brandNeutralCssVar = (step: BrandNeutralStep): string =>
+  `--brand-neutral-${String(step)}`
+
+export const brandTokensToCssVars = (tokens: BrandTokens): Record<string, string> => {
+  const out: Record<string, string> = {}
+  for (const key of Object.keys(BRAND_COLOR_KEY_TO_CSS_VAR) as (keyof BrandTokens['colors'])[]) {
+    out[BRAND_COLOR_KEY_TO_CSS_VAR[key]] = hexToHslChannels(tokens.colors[key])
+  }
+  for (const step of BRAND_NEUTRAL_STEPS) {
+    out[brandNeutralCssVar(step)] = hexToHslChannels(tokens.darkNeutrals[step])
+  }
+  out[BRAND_TEXT_CSS_VAR] = hexToHslChannels(tokens.darkText)
+  out[BRAND_DIVIDER_CSS_VAR] = tokens.darkDivider
   return out
 }

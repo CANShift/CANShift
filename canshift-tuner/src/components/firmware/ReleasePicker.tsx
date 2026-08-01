@@ -231,7 +231,6 @@ const detailCardStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 10,
   padding: '8px 12px',
-  borderRadius: 6,
   border: '1px solid hsl(var(--border))',
   background: 'hsl(var(--bg-inset))',
 }
@@ -259,7 +258,6 @@ const progressGroupStyle: CSSProperties = {
 const progressTrackStyle: CSSProperties = {
   width: '100%',
   height: 6,
-  borderRadius: 3,
   background: 'hsl(var(--bg))',
   overflow: 'hidden',
 }
@@ -267,7 +265,7 @@ const progressTrackStyle: CSSProperties = {
 const progressFillStyle = (pct: number): CSSProperties => ({
   width: `${pct.toFixed(1)}%`,
   height: '100%',
-  background: 'hsl(var(--primary))',
+  background: 'hsl(var(--brand-accent))',
   transition: 'width 120ms ease',
 })
 
@@ -303,7 +301,6 @@ const preReleaseBadgeStyle: CSSProperties = {
   letterSpacing: '0.08em',
   color: 'hsl(var(--accent))',
   padding: '2px 8px',
-  borderRadius: 999,
   border: '1px solid hsl(var(--accent) / 0.5)',
 }
 
@@ -318,7 +315,6 @@ const errorCardStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 2,
   padding: '8px 12px',
-  borderRadius: 6,
   border: '1px solid hsl(var(--destructive))',
   background: 'hsl(var(--destructive) / 0.12)',
   fontSize: 12,

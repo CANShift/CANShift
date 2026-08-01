@@ -8,10 +8,9 @@ interface TogglePillProps {
 }
 
 const basePillStyle = (active: boolean): CSSProperties => ({
-  background: active ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--primary))' : 'hsl(var(--text-dim))',
-  border: `1px solid ${active ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-  borderRadius: 999,
+  background: active ? 'hsl(var(--brand-accent) / 0.15)' : 'transparent',
+  color: active ? 'hsl(var(--brand-accent))' : 'hsl(var(--text-dim))',
+  border: `1px solid ${active ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
   padding: '3px 12px',
   fontSize: 11,
   fontFamily: 'inherit',
@@ -25,7 +24,6 @@ const accentPillStyle = (active: boolean, accentColor: string): CSSProperties =>
   background: active ? 'hsl(var(--surface))' : 'transparent',
   color: active ? accentColor : 'hsl(var(--text-muted))',
   border: `1px solid ${active ? accentColor : 'hsl(var(--border))'}`,
-  borderRadius: 999,
   padding: '4px 12px',
   fontSize: 11,
   fontWeight: 600,

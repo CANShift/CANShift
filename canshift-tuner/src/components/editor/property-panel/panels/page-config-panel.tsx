@@ -81,7 +81,6 @@ export const PageConfigPanel = ({
             width: '100%',
             background: '#111111',
             border: '1px solid #333333',
-            borderRadius: 3,
             color: 'hsl(var(--text))',
             fontSize: 11,
             padding: '4px 6px',

@@ -75,7 +75,6 @@ export const WidgetBox = memo(function WidgetBox({
         width: displayW,
         height: displayH,
         background: bgColor,
-        borderRadius: 3,
         boxSizing: 'border-box',
         cursor: 'move',
         overflow: 'hidden',

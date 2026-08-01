@@ -1,6 +1,27 @@
 export type { HexColor, WidgetLayout, WidgetStyle, SemVer } from './schemas/common.js'
 export { HexColorSchema } from './schemas/common.js'
 
+export {
+  BRAND_ACCENT,
+  BRAND_INK,
+  BRAND_PAPER,
+  MONOGRAM_VIEWBOX,
+  MONOGRAM_TRANSFORM,
+  MONOGRAM_C_PATH,
+  MONOGRAM_S_PATH,
+  MONOGRAM_STROKE_WIDTH,
+  LOCKUP_VIEWBOX,
+  LOCKUP_BASELINE_VIEWBOX,
+  LOCKUP_MONOGRAM_TRANSFORM,
+  LOCKUP_DIVIDER,
+  LOCKUP_WORDMARK_TRANSFORM,
+  LOCKUP_BASELINE_TRANSFORM,
+  LOCKUP_BASELINE_OPACITY,
+  WORDMARK_CAN_PATH,
+  WORDMARK_SHIFT_PATH,
+  BASELINE_TEXT_PATH,
+} from './brand.js'
+
 export type {
   DashboardConfig,
   PageConfig,
@@ -245,8 +266,19 @@ export type {
   MigrationResult,
 } from './migrations/migration-runner.js'
 
-export type { DesignTokens } from './design-tokens.js'
-export { COLOR_KEY_TO_CSS_VAR, DARK_TOKENS, tokensToCssVars } from './design-tokens.js'
+export type { DesignTokens, BrandTokens, BrandNeutralStep } from './design-tokens.js'
+export {
+  COLOR_KEY_TO_CSS_VAR,
+  DARK_TOKENS,
+  tokensToCssVars,
+  BRAND_TOKENS,
+  BRAND_NEUTRAL_STEPS,
+  BRAND_COLOR_KEY_TO_CSS_VAR,
+  BRAND_TEXT_CSS_VAR,
+  BRAND_DIVIDER_CSS_VAR,
+  brandNeutralCssVar,
+  brandTokensToCssVars,
+} from './design-tokens.js'
 
 export const CURRENT_SCHEMA_VERSION = '1.25.0' as const
 

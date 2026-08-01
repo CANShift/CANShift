@@ -24,7 +24,6 @@ const sectionStyle = (status: FlashSectionStatus): CSSProperties => ({
   flexDirection: 'column',
   gap: 12,
   padding: 16,
-  borderRadius: 8,
   border: '1px solid hsl(var(--border))',
   background: 'hsl(var(--surface))',
   opacity: status === 'disabled' ? 0.55 : 1,
@@ -41,12 +40,11 @@ const badgeStyle = (status: FlashSectionStatus): CSSProperties => {
     status === 'done'
       ? { bg: 'hsl(var(--success) / 0.18)', fg: 'hsl(var(--success))' }
       : status === 'active'
-        ? { bg: 'hsl(var(--primary) / 0.18)', fg: 'hsl(var(--primary))' }
+        ? { bg: 'hsl(var(--brand-accent) / 0.18)', fg: 'hsl(var(--brand-accent))' }
         : { bg: 'hsl(var(--bg-inset))', fg: 'hsl(var(--text-muted))' }
   return {
     width: 22,
     height: 22,
-    borderRadius: 999,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',

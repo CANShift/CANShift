@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Image,
+  useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronRight } from 'lucide-react-native'
@@ -26,6 +26,7 @@ import {
   type BlePermissionPlatform,
 } from '../components/ble-permission-dialog'
 import { Card } from '../components/ui'
+import { BrandLockup } from '../components/brand/BrandLockup'
 
 interface Props {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Scan'>
@@ -178,6 +179,8 @@ export default function ScanScreen({ navigation }: Props) {
     navigation.replace('Connected')
   }, [navigation])
 
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions()
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -193,12 +196,9 @@ export default function ScanScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
       <View style={styles.center}>
-        <Image
-          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <View style={styles.logo}>
+          <BrandLockup width={windowWidth * 0.75} maxHeight={windowHeight * 0.25} />
+        </View>
         <Text style={styles.subtitle}>Connect to your dashboard</Text>
 
         {isReconnecting && (
@@ -315,8 +315,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: '75%',
-    height: 120,
     marginBottom: Spacing.sm,
   },
   subtitle: {

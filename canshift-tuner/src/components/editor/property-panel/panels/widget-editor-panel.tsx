@@ -96,7 +96,6 @@ export const WidgetEditorPanel = ({
             gap: 4,
             background: 'none',
             border: '1px solid hsl(var(--status-danger-dim))',
-            borderRadius: 3,
             color: DELETE_FG,
             cursor: 'pointer',
             fontSize: 11,

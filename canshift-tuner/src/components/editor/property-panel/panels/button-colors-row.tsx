@@ -50,7 +50,6 @@ export const ButtonColorsRow = ({
               padding: 2,
               background: INPUT_BG,
               border: `1px solid ${INPUT_BORDER}`,
-              borderRadius: 3,
               cursor: 'pointer',
             }}
             onChange={(e) => {
@@ -74,7 +73,6 @@ export const ButtonColorsRow = ({
               padding: 2,
               background: INPUT_BG,
               border: `1px solid ${INPUT_BORDER}`,
-              borderRadius: 3,
               cursor: 'pointer',
             }}
             onChange={(e) => {

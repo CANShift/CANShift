@@ -84,7 +84,6 @@ const SignalRowImpl = ({
           width: barW,
           height: barH,
           background: BAR_TRACK,
-          borderRadius: 2,
           flexShrink: 0,
           overflow: 'hidden',
         }}
@@ -95,7 +94,6 @@ const SignalRowImpl = ({
               width: `${String(Math.round(pct * 100))}%`,
               height: '100%',
               background: barColor,
-              borderRadius: 2,
               transition: 'width 0.25s linear',
             }}
           />

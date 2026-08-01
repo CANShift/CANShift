@@ -178,7 +178,7 @@ const SidebarItem = ({ item, active, disabled, collapsed, LinkComponent }: Sideb
     ...baseStyle,
     color: active ? 'hsl(var(--text))' : 'hsl(var(--text-dim))',
     background: active ? 'hsl(var(--surface-2))' : 'transparent',
-    borderLeftColor: active ? 'hsl(var(--primary))' : 'transparent',
+    borderLeftColor: active ? 'hsl(var(--brand-accent))' : 'transparent',
     fontWeight: active ? 600 : 400,
   }
 
