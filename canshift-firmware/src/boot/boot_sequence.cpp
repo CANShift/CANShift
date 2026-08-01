@@ -224,7 +224,7 @@ static void buildSelfTestScreen() {
 
     addSelfTestRow(scr, 76, "DISPLAY", "OK", nullptr);
     addSelfTestRow(scr, 96, "CAN", "...", &s_splashCanResult);
-    addSelfTestRow(scr, 116, ecuRow, dashboard.loaded ? "CFG" : "-", nullptr);
+    addSelfTestRow(scr, 116, ecuRow, signals.loaded ? "CFG" : "-", nullptr);
     addSelfTestRow(scr, 136, "PAGES", pagesResult, nullptr);
 
     static constexpr int16_t BAR_MARGIN_PX = 17;
