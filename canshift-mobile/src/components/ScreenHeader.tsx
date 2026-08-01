@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { ChevronLeft } from 'lucide-react-native'
-import { Colors, Typography, Spacing, HitSlop } from '../theme'
+import { Colors, Fonts, Typography, Spacing, HitSlop } from '../theme'
 
 interface ScreenHeaderProps {
   title: string
@@ -40,6 +40,11 @@ const styles = StyleSheet.create({
   },
   backBtn: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 2 },
   back: { fontSize: Typography.md, color: Colors.accent },
-  title: { fontSize: Typography.sm, fontWeight: '700', color: Colors.textDim, letterSpacing: 1 },
+  title: {
+    fontFamily: Fonts.uiExtraBold,
+    fontSize: Typography.sm,
+    color: Colors.textDim,
+    letterSpacing: 1,
+  },
   spacer: { width: 48 },
 })

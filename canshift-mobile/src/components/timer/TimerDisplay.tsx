@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { TIMER_BORDER_COLORS } from '@tmbk/canshift-core'
-import { Colors, Radius, Spacing, Typography } from '../../theme'
+import { Colors, Radius, Spacing, TabularNums, Typography } from '../../theme'
 import type { TimerStatus } from '../../stores/timer.store'
 import { formatTimerElapsed } from '../widgets/widget-value'
 
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   time: {
     color: Colors.text,
     fontSize: 56,
-    fontVariant: ['tabular-nums'],
+    fontVariant: TabularNums,
     fontWeight: '700',
   },
   source: {

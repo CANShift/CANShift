@@ -6,6 +6,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: Archivo;
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('./assets/fonts/Archivo-Latin.woff2') format('woff2');
+}
+
 /* Orbitron — self-hosted, matches the firmware's gauge typeface. `swap`
    keeps the system-ui fallback rendering immediately so FCP isn't blocked
    on a font fetch (#1343 / PR #1349). */
@@ -48,9 +56,27 @@ body,
 }
 
 body {
+  font-family: var(--font-ui);
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 800;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }

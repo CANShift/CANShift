@@ -229,6 +229,25 @@ export const BRAND_DIVIDER_CSS_VAR = '--brand-divider'
 export const brandNeutralCssVar = (step: BrandNeutralStep): string =>
   `--brand-neutral-${String(step)}`
 
+export interface FontTokens {
+  ui: string
+  mono: string
+}
+
+export const FONT_TOKENS = {
+  ui: "'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+} as const satisfies FontTokens
+
+export const FONT_UI_CSS_VAR = '--font-ui'
+
+export const FONT_MONO_CSS_VAR = '--font-mono'
+
+export const fontTokensToCssVars = (tokens: FontTokens): Record<string, string> => ({
+  [FONT_UI_CSS_VAR]: tokens.ui,
+  [FONT_MONO_CSS_VAR]: tokens.mono,
+})
+
 export const brandTokensToCssVars = (tokens: BrandTokens): Record<string, string> => {
   const out: Record<string, string> = {}
   for (const key of Object.keys(BRAND_COLOR_KEY_TO_CSS_VAR) as (keyof BrandTokens['colors'])[]) {

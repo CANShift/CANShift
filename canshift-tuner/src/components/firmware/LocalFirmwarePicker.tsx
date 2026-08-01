@@ -6,6 +6,7 @@ import { useLogStore } from '../../stores/log.store'
 import { useFirmwareSelectionStore } from '../../stores/firmware-selection.store'
 import { LocalFirmwareError, readFirmwareFile } from '../../lib/firmware/local-firmware'
 import { formatBytes } from '../../lib/format'
+import { MONO_FONT } from '../../lib/typography'
 
 const SHA_PREFIX_CHARS = 12
 
@@ -135,7 +136,7 @@ const labelStyle: CSSProperties = {
 const valueStyle: CSSProperties = {
   margin: 0,
   color: 'hsl(var(--text))',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
 }
 
 const actionsLabelStyle: CSSProperties = {

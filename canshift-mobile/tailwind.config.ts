@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate'
-import { Colors, Radius } from './src/theme'
+import { Colors, Fonts, Radius } from './src/theme'
 
 // nativewind/preset ships an empty .d.ts, so TS treats it as "not a module".
 // Use require() and cast to Config — the runtime export is a valid preset.
@@ -12,6 +12,11 @@ const config: Config = {
   presets: [nativewindPreset],
   theme: {
     extend: {
+      fontFamily: {
+        ui: [Fonts.ui],
+        'ui-semibold': [Fonts.uiSemiBold],
+        'ui-extrabold': [Fonts.uiExtraBold],
+      },
       colors: {
         // SoT colors — all 19 keys from DARK_TOKENS.colors
         bg: Colors.bg,

@@ -266,7 +266,7 @@ export type {
   MigrationResult,
 } from './migrations/migration-runner.js'
 
-export type { DesignTokens, BrandTokens, BrandNeutralStep } from './design-tokens.js'
+export type { DesignTokens, BrandTokens, BrandNeutralStep, FontTokens } from './design-tokens.js'
 export {
   COLOR_KEY_TO_CSS_VAR,
   DARK_TOKENS,
@@ -278,6 +278,10 @@ export {
   BRAND_DIVIDER_CSS_VAR,
   brandNeutralCssVar,
   brandTokensToCssVars,
+  FONT_TOKENS,
+  FONT_UI_CSS_VAR,
+  FONT_MONO_CSS_VAR,
+  fontTokensToCssVars,
 } from './design-tokens.js'
 
 export const CURRENT_SCHEMA_VERSION = '1.25.0' as const

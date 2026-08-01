@@ -6,6 +6,7 @@ import { useLiveSignals } from '../hooks/useLiveSignals'
 import { useSignalStore } from '../stores/signal.store'
 import { useDeviceStore } from '../stores/device.store'
 import { Input } from '../components/ui/input'
+import { MONO_FONT, uiLabelStyle } from '../lib/typography'
 
 const AGE_TICK_MS = 500
 
@@ -215,12 +216,9 @@ const tableStyle: CSSProperties = {
 }
 
 const thStyle: CSSProperties = {
+  ...uiLabelStyle,
   textAlign: 'left',
   padding: '12px 14px 10px',
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
   color: 'hsl(var(--text-muted))',
   borderBottom: '1px solid hsl(var(--border))',
   position: 'sticky',
@@ -245,7 +243,7 @@ const tdBaseStyle: CSSProperties = {
 
 const tdNameStyle: CSSProperties = {
   ...tdBaseStyle,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontSize: 12,
 }
 
@@ -253,7 +251,7 @@ const tdValueStyle: CSSProperties = {
   ...tdBaseStyle,
   textAlign: 'right',
   fontVariantNumeric: 'tabular-nums',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
 }
 
 const tdRangeStyle: CSSProperties = {
@@ -276,7 +274,7 @@ const tdAgeStyle: CSSProperties = {
   textAlign: 'right',
   color: 'hsl(var(--text-dim))',
   fontVariantNumeric: 'tabular-nums',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   fontSize: 12,
 }
 
@@ -298,7 +296,7 @@ const rangeLabelStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--text-muted))',
   fontVariantNumeric: 'tabular-nums',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   minWidth: 60,
   textAlign: 'right',
 }

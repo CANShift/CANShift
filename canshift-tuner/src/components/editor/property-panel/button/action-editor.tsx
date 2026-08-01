@@ -2,6 +2,7 @@ import { CRUISE_CONTROL_OPS, type ButtonAction, type CruiseControlOp } from '@tm
 
 import { inputStyle, numberInputStyle } from '../shared'
 import { CRUISE_STEP_OPS, HEX_FRAME_ID_REGEX } from './shared'
+import { MONO_FONT } from '../../../../lib/typography'
 
 interface ActionEditorProps {
   action: ButtonAction
@@ -62,7 +63,7 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>DATA (HEX)</div>
           <input
-            style={{ ...inputStyle, fontSize: 10, fontFamily: 'monospace' }}
+            style={{ ...inputStyle, fontSize: 10, fontFamily: MONO_FONT }}
             placeholder="0102030405060708"
             value={action.data}
             onChange={(e) => {

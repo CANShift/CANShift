@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { MONO_FONT } from '../../lib/typography'
 
 export type FirmwareCompat =
   | { kind: 'unknown' }
@@ -38,14 +39,14 @@ export const FirmwareSlot = ({ version, compat }: FirmwareSlotProps) => {
 const baseStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--text-muted))',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
   letterSpacing: '0.04em',
 }
 
 const mismatchStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--destructive))',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
   letterSpacing: '0.04em',
   padding: '2px 8px',
   border: '1px solid hsl(var(--destructive))',

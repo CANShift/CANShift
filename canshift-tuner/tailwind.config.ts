@@ -9,6 +9,8 @@ import {
   BRAND_NEUTRAL_STEPS,
   BRAND_TEXT_CSS_VAR,
   COLOR_KEY_TO_CSS_VAR,
+  FONT_MONO_CSS_VAR,
+  FONT_UI_CSS_VAR,
   brandNeutralCssVar,
 } from '@tmbk/canshift-core'
 
@@ -62,6 +64,10 @@ const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: `var(${FONT_UI_CSS_VAR})`,
+        mono: `var(${FONT_MONO_CSS_VAR})`,
+      },
       colors: {
         ...colorsFromTokens(),
         ...brandColorsFromTokens(),

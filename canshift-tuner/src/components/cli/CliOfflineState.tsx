@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { Button } from '@/components/ui/button'
 import { useConnectionStore } from '../../stores/connection.store'
 import { KNOWN_OPCODES } from '../../transport'
+import { MONO_FONT } from '../../lib/typography'
 
 const formatHex = (id: number): string => `0x${id.toString(16).toUpperCase().padStart(2, '0')}`
 
@@ -146,7 +147,7 @@ const thStyle: CSSProperties = {
 const tdHexStyle: CSSProperties = {
   padding: '6px 10px',
   borderBottom: '1px solid hsl(var(--border) / 0.5)',
-  fontFamily: 'ui-monospace, monospace',
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--accent))',
   whiteSpace: 'nowrap',
 }
@@ -154,7 +155,7 @@ const tdHexStyle: CSSProperties = {
 const tdNameStyle: CSSProperties = {
   padding: '6px 10px',
   borderBottom: '1px solid hsl(var(--border) / 0.5)',
-  fontFamily: 'ui-monospace, monospace',
+  fontFamily: MONO_FONT,
   whiteSpace: 'nowrap',
 }
 

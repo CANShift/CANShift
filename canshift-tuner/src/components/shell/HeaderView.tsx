@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { BrandLockup } from '../brand/BrandLockup'
+import { MONO_FONT } from '../../lib/typography'
 
 export type HeaderStatus =
   | 'connected'
@@ -102,7 +103,7 @@ export const HeaderView = ({
         />
         <span style={{ color: 'hsl(var(--text))' }}>{visual.label}</span>
         {portLabel ? (
-          <span style={{ fontFamily: 'monospace', color: 'hsl(var(--text-muted))' }}>
+          <span style={{ fontFamily: MONO_FONT, color: 'hsl(var(--text-muted))' }}>
             {portLabel}
           </span>
         ) : null}
@@ -159,6 +160,6 @@ const sectionStyle: CSSProperties = {
 const versionStyle: CSSProperties = {
   fontSize: 11,
   color: 'hsl(var(--text-dim))',
-  fontFamily: 'monospace',
+  fontFamily: MONO_FONT,
   letterSpacing: '0.04em',
 }

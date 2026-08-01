@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import { Button } from '../ui/button'
 import type { CanScannerStatus } from '../../hooks/useCanScanner'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface CanScanToolbarProps {
   status: CanScannerStatus
@@ -159,7 +160,7 @@ const metricLabelStyle: CSSProperties = {
 
 const metricValueStyle: CSSProperties = {
   fontSize: 13,
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: MONO_FONT,
   color: 'hsl(var(--text))',
 }
 

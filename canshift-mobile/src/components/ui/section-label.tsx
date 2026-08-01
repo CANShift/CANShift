@@ -11,7 +11,10 @@ export const SectionLabel = React.forwardRef<React.ComponentRef<typeof Text>, Se
     <Text
       ref={ref}
       accessibilityRole="text"
-      className={cn('text-[11px] uppercase tracking-[0.8px] text-text-muted', className)}
+      className={cn(
+        'font-ui-extrabold text-[10px] uppercase tracking-[1.8px] text-text-muted',
+        className
+      )}
       {...props}
     >
       {children}
