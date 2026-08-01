@@ -86,7 +86,7 @@ static lv_obj_t *s_splashCanResult = nullptr;
 static bool s_selfTestBuilt = false;
 static uint32_t s_markShownMs = 0;
 
-constexpr uint32_t kMarkMinMs = 1000;
+constexpr uint32_t kMarkMinMs = 2000;
 
 constexpr uint32_t kSplashBgRgb = 0x121212;
 constexpr uint32_t kSplashInkRgb = 0xFFFFFF;
@@ -512,7 +512,7 @@ static void buildUiWithHeapBracket() {
     logHeap("dashboard ready");
 }
 
-static constexpr uint32_t SPLASH_MIN_MS = 3000;
+static constexpr uint32_t SPLASH_MIN_MS = 4000;
 
 static constexpr uint32_t SPLASH_WAIT_STEP_MS = 50;
 
