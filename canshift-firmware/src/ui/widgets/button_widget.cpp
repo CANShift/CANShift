@@ -174,6 +174,9 @@ void applyButtonVisual(lv_obj_t *btn, const ButtonTag &tag, const ButtonVisual &
     if (tag.labelObj) {
         lv_obj_set_style_text_color(tag.labelObj, lv_color_hex(v.textColor), 0);
     }
+    if (tag.iconImg) {
+        lv_obj_set_style_img_recolor(tag.iconImg, lv_color_hex(v.textColor), 0);
+    }
 }
 
 void applyToggleVisualState(lv_obj_t *btn, const ButtonTag &tag) {
@@ -281,10 +284,12 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
                     ScreenProfile::scaleYVal(cfg.layout.h));
     const int16_t scaledW = ScreenProfile::scaleXVal(cfg.layout.w);
     const int16_t scaledH = ScreenProfile::scaleYVal(cfg.layout.h);
-    const int16_t padX =
-        scaledW < BUTTON_MIN_TOUCH_W ? static_cast<int16_t>((BUTTON_MIN_TOUCH_W - scaledW) / 2) : 0;
-    const int16_t padY =
-        scaledH < BUTTON_MIN_TOUCH_H ? static_cast<int16_t>((BUTTON_MIN_TOUCH_H - scaledH) / 2) : 0;
+    const int16_t padX = scaledW < BUTTON_MIN_TOUCH_W
+                             ? static_cast<int16_t>((BUTTON_MIN_TOUCH_W - scaledW + 1) / 2)
+                             : 0;
+    const int16_t padY = scaledH < BUTTON_MIN_TOUCH_H
+                             ? static_cast<int16_t>((BUTTON_MIN_TOUCH_H - scaledH + 1) / 2)
+                             : 0;
     if (padX > 0 || padY > 0)
         lv_obj_set_ext_click_area(btn, padX > padY ? padX : padY);
 
@@ -384,6 +389,14 @@ lv_obj_t *ButtonWidget::create(lv_obj_t *parent, const CfgWidget &cfg, int16_t y
             lv_obj_set_style_bg_opa(btn, pressed.bgOpa, LV_PART_MAIN | LV_STATE_PRESSED);
             lv_obj_set_style_border_color(btn, lv_color_hex(pressed.borderColor),
                                           LV_PART_MAIN | LV_STATE_PRESSED);
+        }
+        if (tag->labelObj) {
+            lv_obj_set_style_text_color(tag->labelObj, lv_color_hex(BUTTON_ACTIVE_TEXT_RGB),
+                                        LV_PART_MAIN | LV_STATE_PRESSED);
+        }
+        if (tag->iconImg) {
+            lv_obj_set_style_img_recolor(tag->iconImg, lv_color_hex(BUTTON_ACTIVE_TEXT_RGB),
+                                         LV_PART_MAIN | LV_STATE_PRESSED);
         }
     }
 
