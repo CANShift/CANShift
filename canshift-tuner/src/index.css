@@ -127,3 +127,7 @@ samp {
 .editor-ghost-accent:not(:disabled):hover {
   background: color-mix(in srgb, hsl(var(--brand-accent)) 14%, transparent) !important;
 }
+
+.shell-link-button:hover {
+  border-color: hsl(var(--brand-accent)) !important;
+}

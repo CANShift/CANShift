@@ -1,14 +1,14 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { SCREEN_PROFILES } from '@tmbk/canshift-core'
 import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
-import { AboutLinkRow } from '../components/about/AboutLinkRow'
-import { AboutRow } from '../components/about/AboutRow'
-import { AboutSection } from '../components/about/AboutSection'
+import { BrandLockup } from '../components/brand/BrandLockup'
 import { HeapStatsPanel } from '../components/about/HeapStatsPanel'
+import { MONO_FONT } from '../lib/typography'
 
 const REPO_URL = 'https://github.com/tburkhalterr/CANShift'
 const DOCS_URL = 'https://docs.canshift.tmbk.ch'
-const LICENSE_URL = 'https://github.com/tburkhalterr/CANShift/blob/main/LICENSE'
+const ISSUES_URL = 'https://github.com/tburkhalterr/CANShift/issues'
 
 const AboutRoute = () => {
   const tunerVersion = typeof __TUNER_VERSION__ !== 'undefined' ? __TUNER_VERSION__ : 'unknown'
@@ -19,47 +19,73 @@ const AboutRoute = () => {
   const status = useConnectionStore((s) => s.status)
   const heapStats = useDeviceStore((s) => s.heapStats)
 
-  const linkLabel = connected
-    ? `USB · ${portPath ?? 'unknown port'}`
-    : simulationMode
-      ? 'Simulation'
-      : 'Disconnected'
+  const linkLabel = simulationMode
+    ? 'Simulation'
+    : connected
+      ? `USB · ${portPath ?? 'unknown port'}`
+      : '—'
+  const panels = SCREEN_PROFILES.map((p) => p.name).join(' · ')
 
   return (
     <div style={containerStyle}>
-      <div style={contentStyle}>
-        <header style={headerStyle}>
-          <div style={badgeStyle}>About</div>
-          <h1 style={titleStyle}>CANShift Tuner</h1>
-          <p style={taglineStyle}>
-            Browser configurator for the CANShift dash. Hosted on Vercel, talks to the device over
-            WebSerial.
-          </p>
-        </header>
+      <div style={mainColumnStyle}>
+        <BrandLockup height={72} withBaseline />
 
-        <AboutSection title="Versions">
-          <AboutRow label="Tuner" value={`v${tunerVersion}`} mono />
-          <AboutRow label="Firmware" value={firmwareVersion ? `v${firmwareVersion}` : '—'} mono />
-        </AboutSection>
+        <div style={tableStyle}>
+          <FactRow label="Tuner" value={`${tunerVersion} — web`} />
+          <FactRow label="Firmware on device" value={firmwareVersion ?? '—'} />
+          <FactRow label="Status" value={prettyStatus(status, simulationMode)} />
+          <FactRow label="Link" value={linkLabel} />
+          <FactRow label="Supported panels" value={panels} />
+          <FactRow label="Licence" value="MIT · github.com/tburkhalterr/CANShift" last />
+        </div>
 
-        <AboutSection title="Device">
-          <AboutRow label="Status" value={prettyStatus(status, simulationMode)} />
-          <AboutRow label="Link" value={linkLabel} />
-        </AboutSection>
-
-        <AboutSection title="Diagnostics">
-          <HeapStatsPanel history={heapStats} />
-        </AboutSection>
-
-        <AboutSection title="Resources">
-          <AboutLinkRow href={REPO_URL} label="GitHub repository" />
-          <AboutLinkRow href={DOCS_URL} label="Documentation" />
-          <AboutLinkRow href={LICENSE_URL} label="License" />
-        </AboutSection>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <LinkButton href={DOCS_URL} label="DOCUMENTATION" />
+          <LinkButton href={REPO_URL} label="GITHUB" />
+          <LinkButton href={ISSUES_URL} label="REPORT A BUG" />
+        </div>
       </div>
+
+      <aside style={sidePanelStyle}>
+        <div style={sideHeaderStyle}>DEVICE HEAP — LIVE</div>
+        <div style={{ padding: '16px 20px' }}>
+          <HeapStatsPanel history={heapStats} />
+        </div>
+      </aside>
     </div>
   )
 }
+
+interface FactRowProps {
+  label: string
+  value: ReactNode
+  last?: boolean
+}
+
+const FactRow = ({ label, value, last = false }: FactRowProps) => (
+  <div style={factRowStyle(last)}>
+    <span style={{ color: 'hsl(var(--brand-neutral-600))' }}>{label}</span>
+    <span style={{ fontFamily: MONO_FONT, fontSize: 13 }}>{value}</span>
+  </div>
+)
+
+interface LinkButtonProps {
+  href: string
+  label: string
+}
+
+const LinkButton = ({ href, label }: LinkButtonProps) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noreferrer"
+    className="shell-link-button"
+    style={linkButtonStyle}
+  >
+    {label}
+  </a>
+)
 
 const prettyStatus = (
   status: ReturnType<typeof useConnectionStore.getState>['status'],
@@ -83,56 +109,60 @@ const prettyStatus = (
 const containerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'center',
-  background: 'hsl(var(--bg))',
-  padding: '40px 32px',
+  minHeight: 0,
+  overflow: 'hidden',
+}
+
+const mainColumnStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  padding: 44,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 28,
+  overflowY: 'auto',
+  color: 'hsl(var(--brand-text))',
+}
+
+const tableStyle: CSSProperties = {
+  maxWidth: 620,
+  borderTop: '2px solid var(--brand-divider)',
+}
+
+const factRowStyle = (last: boolean): CSSProperties => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 16,
+  padding: '13px 0',
+  borderBottom: last ? 'none' : '1px solid hsl(var(--brand-neutral-300))',
+  fontSize: 14,
+})
+
+const linkButtonStyle: CSSProperties = {
+  padding: '12px 22px',
+  border: '1px solid hsl(var(--brand-neutral-400))',
+  fontWeight: 800,
+  fontSize: 12,
+  letterSpacing: '0.08em',
+  color: 'hsl(var(--brand-text))',
+  textDecoration: 'none',
+}
+
+const sidePanelStyle: CSSProperties = {
+  width: 360,
+  flexShrink: 0,
+  borderLeft: '2px solid var(--brand-divider)',
+  background: 'hsl(var(--brand-neutral-100))',
   overflowY: 'auto',
 }
 
-const contentStyle: CSSProperties = {
-  width: '100%',
-  maxWidth: 560,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 24,
-}
-
-const headerStyle: CSSProperties = {
-  textAlign: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: 10,
-  marginBottom: 4,
-}
-
-const badgeStyle: CSSProperties = {
-  display: 'inline-block',
-  padding: '4px 10px',
-  background: 'hsl(var(--surface))',
-  border: '1px solid hsl(var(--border))',
-  color: 'hsl(var(--text-dim))',
-  fontFamily: "'Orbitron', system-ui, sans-serif",
-  fontSize: 11,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-}
-
-const titleStyle: CSSProperties = {
-  fontSize: 26,
-  fontWeight: 700,
-  color: 'hsl(var(--text))',
-  letterSpacing: '-0.02em',
-  margin: 0,
-}
-
-const taglineStyle: CSSProperties = {
-  fontSize: 13,
-  color: 'hsl(var(--text-dim))',
-  lineHeight: 1.55,
-  margin: 0,
-  maxWidth: 440,
+const sideHeaderStyle: CSSProperties = {
+  padding: '14px 20px',
+  borderBottom: '2px solid var(--brand-divider)',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.2em',
+  color: 'hsl(var(--brand-neutral-600))',
 }
 
 export default AboutRoute
