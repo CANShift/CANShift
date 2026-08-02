@@ -97,9 +97,10 @@ export const IconPicker = ({
             }}
             style={{
               padding: 5,
-              background: value === name
-                ? 'color-mix(in srgb, #5566AA 14%, transparent)'
-                : 'hsl(var(--brand-neutral-100))',
+              background:
+                value === name
+                  ? 'color-mix(in srgb, #5566AA 14%, transparent)'
+                  : 'hsl(var(--brand-neutral-100))',
               border: `1px solid ${value === name ? '#5566AA' : 'hsl(var(--brand-neutral-300))'}`,
               cursor: 'pointer',
               display: 'flex',

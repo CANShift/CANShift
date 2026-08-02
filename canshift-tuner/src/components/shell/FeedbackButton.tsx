@@ -99,7 +99,9 @@ const FeedbackButton = () => {
             gap: 10,
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'hsl(var(--brand-text))' }}>Send feedback</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'hsl(var(--brand-text))' }}>
+            Send feedback
+          </div>
           {status === 'sent' ? (
             <div style={{ fontSize: 12, color: 'hsl(var(--success))', padding: '8px 0' }}>
               Thanks — your feedback was sent.
@@ -163,7 +165,10 @@ const FeedbackButton = () => {
                   onClick={submit}
                   disabled={status === 'sending' || message.trim().length === 0}
                   style={{
-                    background: message.trim().length === 0 ? 'hsl(var(--brand-accent) / 0.35)' : 'hsl(var(--brand-accent))',
+                    background:
+                      message.trim().length === 0
+                        ? 'hsl(var(--brand-accent) / 0.35)'
+                        : 'hsl(var(--brand-accent))',
                     border: 'none',
                     color: 'hsl(var(--brand-text))',
                     fontSize: 12,

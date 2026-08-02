@@ -38,9 +38,10 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
               style={{
                 flex: 1,
                 padding: '3px 0',
-                background: style === value
-                  ? 'color-mix(in srgb, #5566AA 14%, transparent)'
-                  : 'hsl(var(--brand-neutral-100))',
+                background:
+                  style === value
+                    ? 'color-mix(in srgb, #5566AA 14%, transparent)'
+                    : 'hsl(var(--brand-neutral-100))',
                 border: `1px solid ${style === value ? '#5566AA' : 'hsl(var(--brand-neutral-300))'}`,
                 color: style === value ? '#7788CC' : 'hsl(var(--brand-neutral-600))',
                 cursor: 'pointer',

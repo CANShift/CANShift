@@ -125,7 +125,9 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
       </Field>
 
       <Field label="Show">
-        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'hsl(var(--brand-neutral-600))' }}>
+        <div
+          style={{ display: 'flex', gap: 12, fontSize: 12, color: 'hsl(var(--brand-neutral-600))' }}
+        >
           <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
             <Checkbox
               checked={cfg.showLabel !== false}

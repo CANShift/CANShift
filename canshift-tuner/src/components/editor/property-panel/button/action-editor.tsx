@@ -81,7 +81,9 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
     {action.category === 'ecu' && action.type === 'cruise_control' && (
       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 9, color: 'hsl(var(--brand-neutral-600))', marginBottom: 2 }}>OP</div>
+          <div style={{ fontSize: 9, color: 'hsl(var(--brand-neutral-600))', marginBottom: 2 }}>
+            OP
+          </div>
           <select
             style={{ ...inputStyle, fontSize: 11 }}
             value={action.op}
