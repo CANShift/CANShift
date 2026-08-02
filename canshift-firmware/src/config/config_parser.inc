@@ -184,7 +184,7 @@ void parseArcGaugeParams(JsonObjectConst cfg, CfgGaugeParams *out) {
     out->decimalPlaces = cfg["decimalPlaces"] | 0;
     strlcpy(out->prefix, cfg["prefix"] | "", sizeof(out->prefix));
     strlcpy(out->suffix, cfg["suffix"] | "", sizeof(out->suffix));
-    out->arcFillStyle = parseArcFillStyle(cfg["arcFillStyle"] | "zones");
+    out->arcFillStyle = parseArcFillStyle(cfg["arcFillStyle"] | "ink");
     strlcpy(out->iconName, cfg["iconName"] | "", sizeof(out->iconName));
 }
 
@@ -204,6 +204,16 @@ void parseGaugeWidget(JsonObjectConst cfg, CfgWidget *w) {
     } else {
         parseArcGaugeParams(cfg, &w->gauge);
     }
+}
+
+void parseShiftLightWidget(JsonObjectConst cfg, CfgShiftLightParams *out) {
+    out->startValue = cfg["startValue"] | 3000.0f;
+    int red = cfg["redSegments"] | 5;
+    if (red < 0)
+        red = 0;
+    if (red > 12)
+        red = 12;
+    out->redSegments = static_cast<uint8_t>(red);
 }
 
 void parseWarningWidget(JsonObjectConst cfg, CfgWarningParams *out) {
@@ -393,6 +403,9 @@ void parseWidget(JsonObjectConst src, CfgWidget *w) {
             break;
         case WidgetType::GEAR_IND:
             parseGearWidget(cfg, &w->label);
+            break;
+        case WidgetType::SHIFT_LIGHT:
+            parseShiftLightWidget(cfg, &w->shiftLight);
             break;
         case WidgetType::UNKNOWN:
         default:

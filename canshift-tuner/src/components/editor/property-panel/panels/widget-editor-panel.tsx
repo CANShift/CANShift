@@ -6,6 +6,7 @@ import { useLogStore } from '../../../../stores/log.store'
 import { IconTrash } from '../../../icons/Icon'
 import { ButtonFields } from '../button-fields'
 import { GaugeFields } from '../gauge-fields'
+import { ShiftLightFields } from '../shift-light-fields'
 import { ConfigFieldsProps, Field, inputStyle } from '../shared'
 import { ButtonColorsRow } from './button-colors-row'
 import { SizeTokenPicker } from './size-token-picker'
@@ -20,6 +21,7 @@ const CONFIG_FIELDS: Partial<
 > = {
   gauge: GaugeFields,
   button: ButtonFields,
+  shift_light: ShiftLightFields,
 }
 
 const SIGNAL_HIDDEN_TYPES = new Set<WidgetType>(['button', 'timer', 'image'])

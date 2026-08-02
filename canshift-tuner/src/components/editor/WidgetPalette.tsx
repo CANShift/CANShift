@@ -15,7 +15,7 @@ const DEFAULT_WIDGET_STYLE = {
   textColor: HexColorSchema.parse('#FFFFFF'),
 }
 
-type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear'>
+type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear' | 'shift_light'>
 
 interface PaletteItem {
   type: PaletteWidgetType
@@ -50,6 +50,14 @@ const PALETTE_ITEMS: PaletteItem[] = [
     defaultSignal: 'gear',
     defaultColSpan: SIZE_TOKENS.L.colSpan,
     defaultRowSpan: SIZE_TOKENS.L.rowSpan,
+  },
+  {
+    type: 'shift_light',
+    label: 'Shift light',
+    icon: 'rpm',
+    defaultSignal: 'rpm',
+    defaultColSpan: 12,
+    defaultRowSpan: 1,
   },
 ]
 
@@ -90,6 +98,8 @@ const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
           }
         case 'gear':
           return { type: 'gear' as const, decimalPlaces: 0 as const }
+        case 'shift_light':
+          return { type: 'shift_light' as const, startValue: 3000, redSegments: 5 }
       }
     })()
 

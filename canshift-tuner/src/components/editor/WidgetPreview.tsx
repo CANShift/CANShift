@@ -8,6 +8,7 @@ import { ButtonPreview } from './widget-previews/Button'
 import { GearPreview } from './widget-previews/Gear'
 import { GaugeArcPreview, type GaugeArcRendererProps } from './widget-previews/GaugeArc'
 import { GaugeNumericPreview, type GaugeNumericRendererProps } from './widget-previews/GaugeNumeric'
+import { ShiftLightPreview } from './widget-previews/ShiftLight'
 import { ImagePreview } from './widget-previews/Image'
 import { TimerPreview } from './widget-previews/Timer'
 import { WarningPreview } from './widget-previews/Warning'
@@ -52,6 +53,9 @@ const gaugeRendererByDisplay: Record<'arc' | 'numeric', ComponentType<GaugeRende
 }
 
 const RENDERERS: RendererDispatch = {
+  shift_light: (widget, ctx) => (
+    <ShiftLightPreview widget={widget} w={ctx.w} h={ctx.h} testValue={ctx.testValue} />
+  ),
   gauge: (widget, ctx) => {
     if (widget.config.type !== 'gauge') return null
     const Renderer = gaugeRendererByDisplay[widget.config.displayStyle]

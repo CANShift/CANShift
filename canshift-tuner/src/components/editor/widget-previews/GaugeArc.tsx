@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { GAUGE_ARC, GAUGE_TRACK_COLORS } from '@tmbk/canshift-core'
 import { BLINK_ANIM, FONT_FAMILY, paletteFillColor, thresholdPct } from '../widgetPreview.styles'
 import {
   FRAC_FONT_SCALE,
@@ -13,7 +14,6 @@ export interface GaugeArcRendererProps extends BaseRendererProps {
   revLimiting: boolean
   danger: boolean
   testValue?: number | null
-  signalUnit: string
 }
 
 const SIGNAL_LABEL_FONT_SIZE = 9
@@ -25,7 +25,6 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
   revLimiting,
   danger,
   testValue,
-  signalUnit,
 }: GaugeArcRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
@@ -36,29 +35,41 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
 
   const valueStr = demoValue.toFixed(cfg.decimalPlaces)
 
-  const palette = paletteFillColor(cfg.iconName, valuePct, dangerPct)
+  const zonesMode = cfg.arcFillStyle === 'zones'
+  const gradientMode = cfg.arcFillStyle === 'gradient'
+  const palette = zonesMode ? paletteFillColor(cfg.iconName, valuePct, dangerPct) : undefined
   const inPaletteMode = palette !== undefined
+  const inDanger = valuePct >= dangerPct
+
+  const inkColor = inDanger ? st.criticalColor : st.textColor
 
   const textValueColor = inPaletteMode
     ? palette
-    : valuePct >= dangerPct
-      ? st.criticalColor
-      : st.primaryColor
+    : zonesMode
+      ? inDanger
+        ? st.criticalColor
+        : st.primaryColor
+      : inkColor
 
-  const arcValueColor = inPaletteMode ? palette : interpolateGreenOrangeRed(valuePct)
+  const arcValueColor = inPaletteMode
+    ? palette
+    : gradientMode || zonesMode
+      ? interpolateGreenOrangeRed(valuePct)
+      : inkColor
+
+  const trackColor =
+    inPaletteMode || gradientMode ? GAUGE_TRACK_COLORS.gradient : GAUGE_TRACK_COLORS.plain
 
   const cx = w / 2
   const r = Math.min(w * 0.45, h * 0.46)
   const cy = h * 0.5
   const valueYOffset = 0
-  const unitYOffset = 28
-  const strokeW = Math.max(5, r * 0.24)
+  const strokeW = Math.max(GAUGE_ARC.strokeWidthFloor, r * GAUGE_ARC.strokeRatio)
 
   const revFlash = cfg.revFlash === true
   const showRevFlash = revFlash && revLimiting
 
   const valueFontSize = Math.max(11, Math.min(r * 0.55, h * 0.3, 42))
-  const unitFontSize = Math.max(7, r * 0.2)
 
   return (
     <svg width={w} height={h} style={{ display: 'block', overflow: 'hidden' }} aria-hidden="true">
@@ -78,7 +89,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
       <path
         d={gaugeArcD(cx, cy, r, 0, 1)}
         fill="none"
-        stroke="#252525"
+        stroke={trackColor}
         strokeWidth={strokeW}
         strokeLinecap="butt"
       />
@@ -126,19 +137,6 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
           return valueStr
         })()}
       </text>
-      {signalUnit !== '' && (
-        <text
-          x={cx}
-          y={cy + unitYOffset}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill={st.textColor + '77'}
-          fontSize={unitFontSize}
-          fontFamily={FONT_FAMILY}
-        >
-          {signalUnit}
-        </text>
-      )}
       <text
         x={4}
         y={SIGNAL_LABEL_FONT_SIZE + 4}
