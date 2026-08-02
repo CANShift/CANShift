@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { PROJECT_FILE_VERSION } from '@tmbk/canshift-core'
+import { PROJECT_FILE_VERSION, PROJECT_NAME_MAX } from '@tmbk/canshift-core'
 import type { DashboardConfig, Project, ProjectMeta } from '@tmbk/canshift-core'
 import { createId } from '../../utils/id'
 import { useDashboardStore } from '../dashboard.store'
@@ -39,7 +39,7 @@ const assembleActiveProject = (
     createdAt: meta.createdAt,
     updatedAt: nowIso(),
     dashboard,
-    ecuProfileKey: signalState.selectedProfileKey,
+    ecuProfileKey: signalState.selectedProfileKey || DEFAULT_PROFILE_KEY,
     signals: signalState.signals,
   }
 }
@@ -94,15 +94,19 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     const project: Project = {
       projectVersion: PROJECT_FILE_VERSION,
       id,
-      name,
+      name: name.trim().slice(0, PROJECT_NAME_MAX) || DEFAULT_PROJECT_NAME,
       createdAt,
       updatedAt: createdAt,
       dashboard,
-      ecuProfileKey: signalState.selectedProfileKey,
+      ecuProfileKey: signalState.selectedProfileKey || DEFAULT_PROFILE_KEY,
       signals: signalState.signals,
     }
-    writeProject(project)
-    const nextProjects = upsertMeta(get().projects, { id, name, updatedAt: createdAt })
+    if (!writeProject(project)) return get().activeProjectId ?? ''
+    const nextProjects = upsertMeta(get().projects, {
+      id,
+      name: project.name,
+      updatedAt: createdAt,
+    })
     set({ projects: nextProjects, activeProjectId: id })
     persistIndex(nextProjects, id)
     loadProjectIntoStores(project)
@@ -123,10 +127,10 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   },
 
   renameProject: (id, name) => {
-    const trimmed = name.trim()
+    const trimmed = name.trim().slice(0, PROJECT_NAME_MAX)
     if (trimmed.length === 0) return
     const project = readProject(id)
-    if (project) writeProject({ ...project, name: trimmed, updatedAt: nowIso() })
+    if (project && !writeProject({ ...project, name: trimmed, updatedAt: nowIso() })) return
     const nextProjects = get().projects.map((p) => (p.id === id ? { ...p, name: trimmed } : p))
     set({ projects: nextProjects })
     persistIndex(nextProjects, get().activeProjectId)
@@ -186,7 +190,7 @@ export const bootstrapProjects = (): void => {
     ecuProfileKey: signalState.selectedProfileKey || DEFAULT_PROFILE_KEY,
     signals: signalState.signals,
   }
-  writeProject(project)
+  if (!writeProject(project)) return
   const projects: ProjectMeta[] = [{ id, name: project.name, updatedAt: createdAt }]
   useProjectStore.setState({ projects, activeProjectId: id })
   persistIndex(projects, id)

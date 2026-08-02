@@ -8,6 +8,7 @@ import { DeviceAlertBar } from './components/shell/DeviceAlertBar'
 import WelcomeRoute from './routes/WelcomeRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
+import { useDashboardStore } from './stores/dashboard.store'
 import { useDeviceStore } from './stores/device.store'
 import { useAutoReconnect } from './hooks/useAutoReconnect'
 import { useSimulationBootstrap } from './hooks/useSimulationBootstrap'
@@ -98,9 +99,10 @@ const App = () => {
   useWidgetOverflowWarnings()
   useUnsavedChangesGuard()
 
+  const hasDashboardConfig = useDashboardStore((s) => s.config !== null)
   useEffect(() => {
     bootstrapProjects()
-  }, [])
+  }, [hasDashboardConfig])
 
   return (
     <div style={shellStyle}>

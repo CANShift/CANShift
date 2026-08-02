@@ -93,8 +93,10 @@ export const readProject = (id: string): Project | null => {
   return parsed.success ? parsed.data : null
 }
 
-export const writeProject = (project: Project): boolean =>
-  safeSet(projectStorageKey(project.id), JSON.stringify(project))
+export const writeProject = (project: Project): boolean => {
+  if (!ProjectSchema.safeParse(project).success) return false
+  return safeSet(projectStorageKey(project.id), JSON.stringify(project))
+}
 
 export const removeProject = (id: string): void => {
   safeRemove(projectStorageKey(id))
