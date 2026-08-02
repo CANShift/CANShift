@@ -165,3 +165,55 @@ describe('labelled undo stack (#1847)', () => {
     expect(past[0]?.config.defaultPageId).toBe('p2')
   })
 })
+
+describe('jumpTo (#1848)', () => {
+  beforeEach(() => {
+    useDashboardStore.getState().setConfig(makeConfig())
+  })
+
+  const doThree = () => {
+    useDashboardStore.getState().setDefaultPage('p2')
+    useDashboardStore.getState().updatePage('p1', { showTopBar: false })
+    useDashboardStore.getState().removePage('p2')
+  }
+
+  it('jumps back across several past entries in one call', () => {
+    doThree()
+    useDashboardStore.getState().jumpTo({ kind: 'past', index: 1 })
+    const s = useDashboardStore.getState()
+    expect(s.config?.pages).toHaveLength(2)
+    expect(s.config?.defaultPageId).toBe('p2')
+    expect(s.config?.pages[0]?.showTopBar).toBe(true)
+    expect(s.past).toHaveLength(1)
+    expect(s.future.map((e) => e.label)).toEqual(['Edited page 01', 'Deleted page 02'])
+  })
+
+  it('jumps forward across several future entries in one call', () => {
+    doThree()
+    useDashboardStore.getState().jumpTo({ kind: 'past', index: 0 })
+    useDashboardStore.getState().jumpTo({ kind: 'future', index: 2 })
+    const s = useDashboardStore.getState()
+    expect(s.config?.pages).toHaveLength(1)
+    expect(s.past.map((e) => e.label)).toEqual([
+      'Set page 02 as default',
+      'Edited page 01',
+      'Deleted page 02',
+    ])
+    expect(s.future).toHaveLength(0)
+  })
+
+  it('a new edit after a jump branches and clears the future', () => {
+    doThree()
+    useDashboardStore.getState().jumpTo({ kind: 'past', index: 1 })
+    useDashboardStore.getState().setDefaultPage('p1')
+    expect(useDashboardStore.getState().future).toHaveLength(0)
+  })
+
+  it('ignores out-of-range targets', () => {
+    doThree()
+    const before = useDashboardStore.getState().config
+    useDashboardStore.getState().jumpTo({ kind: 'past', index: 9 })
+    useDashboardStore.getState().jumpTo({ kind: 'future', index: 0 })
+    expect(useDashboardStore.getState().config).toBe(before)
+  })
+})

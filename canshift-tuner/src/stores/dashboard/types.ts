@@ -36,6 +36,7 @@ export interface HistorySlice {
   future: HistoryEntry[]
   undo: () => void
   redo: () => void
+  jumpTo: (target: { kind: 'past' | 'future'; index: number }) => void
 }
 
 export interface PagesSlice {
