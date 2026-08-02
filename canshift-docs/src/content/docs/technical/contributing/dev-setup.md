@@ -1,6 +1,6 @@
 ---
-title: "Dev setup"
-description: "Clone the monorepo, build firmware and tuner locally."
+title: 'Dev setup'
+description: 'Clone the monorepo, build firmware and tuner locally.'
 sidebar:
   order: 1
 ---
@@ -20,13 +20,13 @@ cd CANShift
 
 The five packages:
 
-| Package | Stack | Command |
-|---|---|---|
-| `canshift-core` | TypeScript | `cd canshift-core && npm install && npm run build` |
-| `canshift-firmware` | C++17 / PlatformIO | `cd canshift-firmware && pio run` |
-| `canshift-tuner` | Vite + React | `cd canshift-tuner && npm install && npm run dev` |
-| `canshift-docs` | Astro Starlight | `cd canshift-docs && npm install && npm run dev` |
-| `canshift-mobile` | Expo | inactive unless explicitly working on mobile |
+| Package             | Stack              | Command                                            |
+| ------------------- | ------------------ | -------------------------------------------------- |
+| `canshift-core`     | TypeScript         | `cd canshift-core && npm install && npm run build` |
+| `canshift-firmware` | C++17 / PlatformIO | `cd canshift-firmware && pio run`                  |
+| `canshift-tuner`    | Vite + React       | `cd canshift-tuner && npm install && npm run dev`  |
+| `canshift-docs`     | Astro Starlight    | `cd canshift-docs && npm install && npm run dev`   |
+| `canshift-mobile`   | Expo               | inactive unless explicitly working on mobile       |
 
 ## PR workflow
 

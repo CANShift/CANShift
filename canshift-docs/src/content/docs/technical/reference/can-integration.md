@@ -1,6 +1,6 @@
 ---
-title: "CAN integration notes"
-description: "TWAI peripheral configuration, bus speed, sample frame layouts."
+title: 'CAN integration notes'
+description: 'TWAI peripheral configuration, bus speed, sample frame layouts.'
 sidebar:
   order: 10
 ---
@@ -21,6 +21,7 @@ ESP32 TWAI controller
 ```
 
 ### CAN Pal (TJA1051T/3) Notes
+
 - 5V supply rail (connect to board 5V)
 - 3.3V logic compatible on TX/RX — ESP32 GPIO is directly compatible
 - Supports up to 1 Mbps
@@ -28,6 +29,7 @@ ESP32 TWAI controller
 - TXD dominant timeout protection (prevents bus lock if ESP32 hangs)
 
 ### Termination
+
 - A CAN bus requires exactly two 120 Ω termination resistors, one at each end
 - Check your ECU's documentation — some have internal termination, some don't
 - The CAN Pal does NOT include termination — add a 120 Ω resistor on its CANH-CANL pins if needed
@@ -38,10 +40,12 @@ ESP32 TWAI controller
 ## Signal Mapping
 
 ### Important
+
 The frame IDs and byte positions in `signals.json` are **examples**.
 Verify them against your ECU's CAN output configuration before use.
 
 **How to verify:**
+
 1. Use Studio's **CAN Scanner** tab — connect the display while the ECU is running
 2. Capture live frames: note which IDs appear and at what rate
 3. Cross-reference with your ECU's documentation or configuration software
@@ -49,16 +53,17 @@ Verify them against your ECU's CAN output configuration before use.
 
 ### Example Frame Layout (edit to match your ECU)
 
-| Frame ID | Example content |
-|----------|----------------|
-| 0x370 | RPM, TPS, MAP, IAT, Speed |
-| 0x371 | Lambda, Gear, Fuel pressure |
-| 0x372 | Coolant temp, Oil temp, Oil pressure |
-| 0x373 | Battery voltage |
-| 0x374 | Status flags (MIL, launch, etc.) |
-| 0x375 | Map number / profile |
+| Frame ID | Example content                      |
+| -------- | ------------------------------------ |
+| 0x370    | RPM, TPS, MAP, IAT, Speed            |
+| 0x371    | Lambda, Gear, Fuel pressure          |
+| 0x372    | Coolant temp, Oil temp, Oil pressure |
+| 0x373    | Battery voltage                      |
+| 0x374    | Status flags (MIL, launch, etc.)     |
+| 0x375    | Map number / profile                 |
 
 ### CAN Speed
+
 Default: **500 kbps** — configurable in `signals.json` (`canSpeedKbps`) and Studio → Device Config.
 Common ECU values: 500 kbps, 1 Mbps. Verify in your ECU's configuration.
 
@@ -70,12 +75,12 @@ Different signals typically update at different rates. Set `timeoutMs` in `signa
 to at least 3× the expected update period to avoid false "signal lost" warnings.
 
 | Signal category | Typical update rate |
-|----------------|---------------------|
-| RPM, TPS, MAP  | 10 ms (100 Hz)      |
-| Speed, Lambda  | 20 ms (50 Hz)       |
-| Temperatures   | 100 ms (10 Hz)      |
-| Oil pressure   | 50 ms (20 Hz)       |
-| Flags / status | 100 ms (10 Hz)      |
+| --------------- | ------------------- |
+| RPM, TPS, MAP   | 10 ms (100 Hz)      |
+| Speed, Lambda   | 20 ms (50 Hz)       |
+| Temperatures    | 100 ms (10 Hz)      |
+| Oil pressure    | 50 ms (20 Hz)       |
+| Flags / status  | 100 ms (10 Hz)      |
 
 ---
 
@@ -109,12 +114,14 @@ CAN health can be monitored via the USB serial console:
 ```
 
 If you see constant timeout errors:
+
 1. Check CAN speed matches ECU setting
 2. Check CANH/CANL wiring (not swapped)
 3. Check termination
 4. Confirm ECU CAN output is enabled
 
 If you see bus-off errors:
+
 1. Check for wiring short
 2. Check for ground loop between ECU and display power
 

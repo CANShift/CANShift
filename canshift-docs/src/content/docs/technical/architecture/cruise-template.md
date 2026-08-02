@@ -1,6 +1,6 @@
 ---
-title: "Cruise template"
-description: "L-shape buttons + LVGL convex-polygon workaround."
+title: 'Cruise template'
+description: 'L-shape buttons + LVGL convex-polygon workaround.'
 sidebar:
   order: 60
 ---

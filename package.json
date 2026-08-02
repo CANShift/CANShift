@@ -1,0 +1,22 @@
+{
+  "name": "canshift",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:pre-commit": "lint-staged"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.8.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,css,md,mdx,json,yml,yaml,html,webmanifest}": "prettier --write --ignore-unknown",
+    "canshift-tuner/**/*.{ts,tsx}": "scripts/hooks/eslint-package.sh canshift-tuner",
+    "canshift-core/**/*.ts": "scripts/hooks/eslint-package.sh canshift-core",
+    "canshift-mobile/**/*.{ts,tsx}": "scripts/hooks/eslint-package.sh canshift-mobile",
+    "canshift-firmware/**/*.{cpp,h,hpp}": "scripts/hooks/clang-format-staged.sh"
+  }
+}

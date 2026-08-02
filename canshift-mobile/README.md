@@ -50,18 +50,18 @@ default) restores full Bluetooth.
 
 ## Feature matrix
 
-| Area | Status | Notes |
-|------|--------|-------|
-| Scan | working | BLE scan filtered to peripherals advertising the `CANShift` device name |
-| Auto-reconnect | working | Exponential backoff with jitter, persists last device id (#284) |
-| Last-device persistence | working | `expo-secure-store` keyed at `canshift.lastBleDeviceId` |
-| Dash | working | Live signal cards driven by BLE telemetry notifications |
-| Graph | working | Rolling chart of one selected signal |
-| Log | working | In-app log viewer fed from `log.store` |
-| Settings | working | Day/night theme, brightness, sleep, touch calibration |
-| Sim | working | `sim.service` generates synthetic telemetry without hardware |
-| Staleness watchdog | working | Marks data stale at 2 s without notification |
-| Android runtime perms | working | API ≥ 31 `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` flow (#296) |
+| Area                    | Status  | Notes                                                                   |
+| ----------------------- | ------- | ----------------------------------------------------------------------- |
+| Scan                    | working | BLE scan filtered to peripherals advertising the `CANShift` device name |
+| Auto-reconnect          | working | Exponential backoff with jitter, persists last device id (#284)         |
+| Last-device persistence | working | `expo-secure-store` keyed at `canshift.lastBleDeviceId`                 |
+| Dash                    | working | Live signal cards driven by BLE telemetry notifications                 |
+| Graph                   | working | Rolling chart of one selected signal                                    |
+| Log                     | working | In-app log viewer fed from `log.store`                                  |
+| Settings                | working | Day/night theme, brightness, sleep, touch calibration                   |
+| Sim                     | working | `sim.service` generates synthetic telemetry without hardware            |
+| Staleness watchdog      | working | Marks data stale at 2 s without notification                            |
+| Android runtime perms   | working | API ≥ 31 `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` flow (#296)             |
 
 ---
 
@@ -99,13 +99,13 @@ UUIDs and the compact telemetry key map are mirrored in
 
 ### UUIDs
 
-| Constant | UUID |
-|---------|------|
-| `BLE_SERVICE_UUID` | `4fa0b6a0-0000-0000-0000-000000000001` |
-| `BLE_CHAR_TELE` | `4fa0b6a0-0000-0000-0000-000000000002` |
-| `BLE_CHAR_STATUS` | `4fa0b6a0-0000-0000-0000-000000000003` |
+| Constant            | UUID                                   |
+| ------------------- | -------------------------------------- |
+| `BLE_SERVICE_UUID`  | `4fa0b6a0-0000-0000-0000-000000000001` |
+| `BLE_CHAR_TELE`     | `4fa0b6a0-0000-0000-0000-000000000002` |
+| `BLE_CHAR_STATUS`   | `4fa0b6a0-0000-0000-0000-000000000003` |
 | `BLE_CHAR_SETTINGS` | `4fa0b6a0-0000-0000-0000-000000000004` |
-| `BLE_CHAR_CMD` | `4fa0b6a0-0000-0000-0000-000000000005` |
+| `BLE_CHAR_CMD`      | `4fa0b6a0-0000-0000-0000-000000000005` |
 
 Device-name filter on scan: `CANShift`.
 
@@ -121,22 +121,22 @@ Device-name filter on scan: `CANShift`.
 Compact keys are intentionally short to keep notifications under the BLE MTU.
 Full map (matches firmware `addSignalIfValid()` calls):
 
-| Key | Label | Unit |
-|-----|-------|------|
-| `r` | RPM | — |
-| `tps` | Throttle | % |
-| `map` | MAP | kPa |
-| `bst` | Boost | bar |
-| `iat` | Intake Air | °C |
-| `ct` | Coolant | °C |
-| `ot` | Oil Temp | °C |
-| `op` | Oil Pressure | bar |
-| `fp` | Fuel Pressure | bar |
-| `lam` | Lambda | λ |
-| `s` | Speed | kph |
-| `g` | Gear | — |
-| `bat` | Battery | V |
-| `mi` | Active MAP index | — |
+| Key   | Label            | Unit |
+| ----- | ---------------- | ---- |
+| `r`   | RPM              | —    |
+| `tps` | Throttle         | %    |
+| `map` | MAP              | kPa  |
+| `bst` | Boost            | bar  |
+| `iat` | Intake Air       | °C   |
+| `ct`  | Coolant          | °C   |
+| `ot`  | Oil Temp         | °C   |
+| `op`  | Oil Pressure     | bar  |
+| `fp`  | Fuel Pressure    | bar  |
+| `lam` | Lambda           | λ    |
+| `s`   | Speed            | kph  |
+| `g`   | Gear             | —    |
+| `bat` | Battery          | V    |
+| `mi`  | Active MAP index | —    |
 
 `mi` (active MAP index, read at `src/components/DashTopBar.tsx`) is not in
 `SIGNAL_META` because it has no display label/unit — `DashTopBar` consumes
@@ -158,14 +158,14 @@ with stubbed deps (#301).
 
 Tunables (module-level constants in `ble.service.ts`):
 
-| Knob | Value |
-|------|-------|
-| Initial backoff | 1 s |
-| Max backoff | 30 s |
-| Backoff factor | 2 |
-| Jitter ratio | ±20 % |
-| Max attempts | 6 |
-| Per-attempt scan timeout | 5 s |
+| Knob                     | Value |
+| ------------------------ | ----- |
+| Initial backoff          | 1 s   |
+| Max backoff              | 30 s  |
+| Backoff factor           | 2     |
+| Jitter ratio             | ±20 % |
+| Max attempts             | 6     |
+| Per-attempt scan timeout | 5 s   |
 
 The last-connected device id is persisted in `expo-secure-store` at the key
 `canshift.lastBleDeviceId` (`src/services/last-device.ts`). On startup the
@@ -182,7 +182,7 @@ the attempt cap is reached.
 `SettingsScreen` prefers the explicit, idempotent command:
 
 ```ts
-await BleService.sendCmd('set_day_night', { day: target })  // preferred (#288)
+await BleService.sendCmd('set_day_night', { day: target }) // preferred (#288)
 ```
 
 `toggle_day_night` is still accepted by current firmware but is **not**

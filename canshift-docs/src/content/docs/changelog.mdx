@@ -1,17 +1,16 @@
 ---
-title: "Changelog"
-description: "Release history — pulled from GitHub Releases."
+title: 'Changelog'
+description: 'Release history — pulled from GitHub Releases.'
 sidebar:
   order: 200
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside } from '@astrojs/starlight/components'
 
 <Aside type="note" title="Source">
-This page reflects the **GitHub Releases** published on
-[tburkhalterr/CANShift](https://github.com/tburkhalterr/CANShift/releases).
-Each release describes user-visible changes (driver, tuner, firmware) and
-explicitly flags breaking changes.
+  This page reflects the **GitHub Releases** published on
+  [tburkhalterr/CANShift](https://github.com/tburkhalterr/CANShift/releases). Each release describes
+  user-visible changes (driver, tuner, firmware) and explicitly flags breaking changes.
 </Aside>
 
 ## Release-notes convention
@@ -22,18 +21,23 @@ Every release should follow this structure:
 ## [Version] — YYYY-MM-DD
 
 ### 🚗 For the driver
+
 - (UX, new widgets, hardware support, etc.)
 
 ### 🔧 For the tuner / installer
+
 - (config, calibration, ECU parameters)
 
 ### 🔬 Firmware / dev
+
 - (build flags, schema, Rust ports, refactors)
 
 ### ⚠️ Breaking
+
 - (concrete impact + required action — re-flash, re-burn config, etc.)
 
 ### PRs
+
 - #XXXX — ...
 - #YYYY — ...
 ```
@@ -44,7 +48,7 @@ development stream.
 
 ## Releases
 
-import ReleaseList from "../../components/ReleaseList.astro";
+import ReleaseList from '../../components/ReleaseList.astro'
 
 <ReleaseList />
 

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+coverage/
+.pio/
+.expo/
+.playwright-mcp/
+canshift-firmware/rust/target/
+canshift-firmware/.clangd
+package-lock.json
+*.inc
+*.generated.css
+canshift-firmware/data/

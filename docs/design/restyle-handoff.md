@@ -18,14 +18,14 @@ The `.dc.html` files in this bundle are **design references written in HTML** �
 
 ### Brand (Tuner chrome, documents, marketing)
 
-| Role | Hex |
-| --- | --- |
-| Accent | `#EC3013` |
-| Ink | `#201E1D` |
-| Ground | `#F3F2F2` |
-| Surface | `#EAE9E9` |
-| Rule | `#D7D3D3` |
-| Dark chrome bg | `#151313` |
+| Role                | Hex       |
+| ------------------- | --------- |
+| Accent              | `#EC3013` |
+| Ink                 | `#201E1D` |
+| Ground              | `#F3F2F2` |
+| Surface             | `#EAE9E9` |
+| Rule                | `#D7D3D3` |
+| Dark chrome bg      | `#151313` |
 | Dark chrome surface | `#1F1D1D` |
 
 Dark theme of the Tuner overrides the neutral ramp: `100 #1C1A1A`, `200 #262323`, `300 #383434`, `400 #4D4949`, `500 #7D7979`, `600 #9B9797`, `700 #C2BFBF`, `800 #E2DFDF`, `900 #F5F4F4`; text `#F3F2F2`; divider `color-mix(in srgb, #F3F2F2 24%, transparent)`.
@@ -81,20 +81,20 @@ Direction **2a "Bracket"**, drawn geometrically — not set type.
 
 ### Views (12)
 
-| Group | View | Contents |
-| --- | --- | --- |
-| Dashboard | Pages & widgets | Toolbar (Design/Simulate, zoom, grid, out-of-bounds flag, Rev limit), 100 px page strip of 6 thumbnails, canvas with the 320 × 240 device preview at 2×, inspector |
-| Dashboard | Themes | Theme cards (Night, Day, Endurance, Rally, Drag, Circuit, Ice, Paper) with live preview + ramp; token list and auto day/night switching on the right |
-| Vehicle | CAN bus | Start/Reset, sort segmented control, frame counters, table: ID / DLC / DATA / RATE / COUNT / MAPPED TO |
-| Vehicle | ECU profile | Profile list (MaxxECU, Link G4X, Haltech, MoTeC, Emtron, Speeduino, custom), signal table: SIGNAL / CAN ID / BYTES / SCALE / UNIT / BOUND TO |
-| Vehicle | OBD-II | Mode 01 PID grid (4 columns), DTC panel with clear action |
-| Diagnostics | Live data | 4 × 3 grid of signal cells: label, 46 px mono value, unit, 4 px bar |
-| Diagnostics | Logs | Session list, four session stats, lap table with delta |
-| Diagnostics | CLI | Terminal on `#0B0A0A`, accent prompt, command reference panel |
-| Device | Firmware | Port bar, three key figures, build chooser (stable / rollback / nightly / local file), "what gets written" + pre-flight columns, actions, changelog + flash history panel |
-| Device | Boot & update | Four 320 × 240 screens at 528 × 396: boot mark, boot self-test, update progress, complete / failed |
-| Device | States & alerts | Six animated takeover screens at 400 × 300 + motion spec panel |
-| Device | About | Lockup, version table, credits |
+| Group       | View            | Contents                                                                                                                                                                  |
+| ----------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard   | Pages & widgets | Toolbar (Design/Simulate, zoom, grid, out-of-bounds flag, Rev limit), 100 px page strip of 6 thumbnails, canvas with the 320 × 240 device preview at 2×, inspector        |
+| Dashboard   | Themes          | Theme cards (Night, Day, Endurance, Rally, Drag, Circuit, Ice, Paper) with live preview + ramp; token list and auto day/night switching on the right                      |
+| Vehicle     | CAN bus         | Start/Reset, sort segmented control, frame counters, table: ID / DLC / DATA / RATE / COUNT / MAPPED TO                                                                    |
+| Vehicle     | ECU profile     | Profile list (MaxxECU, Link G4X, Haltech, MoTeC, Emtron, Speeduino, custom), signal table: SIGNAL / CAN ID / BYTES / SCALE / UNIT / BOUND TO                              |
+| Vehicle     | OBD-II          | Mode 01 PID grid (4 columns), DTC panel with clear action                                                                                                                 |
+| Diagnostics | Live data       | 4 × 3 grid of signal cells: label, 46 px mono value, unit, 4 px bar                                                                                                       |
+| Diagnostics | Logs            | Session list, four session stats, lap table with delta                                                                                                                    |
+| Diagnostics | CLI             | Terminal on `#0B0A0A`, accent prompt, command reference panel                                                                                                             |
+| Device      | Firmware        | Port bar, three key figures, build chooser (stable / rollback / nightly / local file), "what gets written" + pre-flight columns, actions, changelog + flash history panel |
+| Device      | Boot & update   | Four 320 × 240 screens at 528 × 396: boot mark, boot self-test, update progress, complete / failed                                                                        |
+| Device      | States & alerts | Six animated takeover screens at 400 × 300 + motion spec panel                                                                                                            |
+| Device      | About           | Lockup, version table, credits                                                                                                                                            |
 
 ### Components
 
@@ -115,15 +115,15 @@ Direction **2a "Bracket"**, drawn geometrically — not set type.
 
 Widgets sit on a **12-column grid, 12 px gutter**, inside a 16 px padded frame. A widget declares a column span, never a pixel width.
 
-| Kind | Rendering |
-| --- | --- |
-| Primary value | 2 px ink top rule, label 10 px dim, value 64–104 px mono, tabular, `-0.045em` |
-| Secondary value | 1 px track top rule, value 30–48 px, optional 3 px bar under it |
-| Danger | 2 px red top rule, label and value in `#FF4444` |
-| Button (off) | 2 px white border, min-height 96 px at 2× (48 px real), label 10 px dim + state 26–30 px |
-| Button (on) | 2 px `#FF4747` border + `#FF4747` fill, white text |
-| Shift light | Full-width strip, 12 segments, 3 px gaps: white → red → unlit track |
-| Arc gauge | 270° sweep, rotation 135°, stroke 0.3 × r (min 5 px), track `#222222` |
+| Kind            | Rendering                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Primary value   | 2 px ink top rule, label 10 px dim, value 64–104 px mono, tabular, `-0.045em`            |
+| Secondary value | 1 px track top rule, value 30–48 px, optional 3 px bar under it                          |
+| Danger          | 2 px red top rule, label and value in `#FF4444`                                          |
+| Button (off)    | 2 px white border, min-height 96 px at 2× (48 px real), label 10 px dim + state 26–30 px |
+| Button (on)     | 2 px `#FF4747` border + `#FF4747` fill, white text                                       |
+| Shift light     | Full-width strip, 12 segments, 3 px gaps: white → red → unlit track                      |
+| Arc gauge       | 270° sweep, rotation 135°, stroke 0.3 × r (min 5 px), track `#222222`                    |
 
 Touch targets never below 48 × 50 px real. Anything outside 320 × 240 is flagged in the Tuner, never auto-scaled.
 
@@ -164,17 +164,17 @@ Touch targets never below 48 × 50 px real. Anything outside 320 × 240 is flagg
 
 Four root tabs: **Dash / Graph / Console / Device**, 84 px tab bar, 2 px top rule, active tab in `#FF4747`.
 
-| # | Screen | Contents |
-| --- | --- | --- |
-| 01 | Connect | Centred mark + wordmark + baseline, `SCAN FOR DEVICES` (64 px accent bar), `DEMO — SIMULATION` |
-| 02 | Devices | Scanning state, device rows (name, RSSI, fw, last paired), connect + rescan |
-| 03 | Dashboard | Header with device name and bus rate, `SIM` pill, shift strip, 12-column widget grid mirroring the panel, page selector, tab bar |
-| 04 | Pages | The six dash pages as rows, current one marked `on screen`, `SHOW PAGE … ON THE DASH` |
-| 05 | Graph | Three rolling 30 s traces (rpm, boost, lambda) with current values, pick signals / export |
-| 06 | Console | CAN / LOG / SEND tabs, frame list with accent IDs, pause + filter |
-| 07 | Critical alert | Full `#FF4444` takeover, pulsing, value + context + `ACKNOWLEDGE` / `MUTE FOR THIS SESSION` |
-| 08 | Device | Device facts, dash theme picker, settings rows, `DISCONNECT` |
-| 09 | OTA update | Percentage, progress, notes, changelog, cancel |
+| #   | Screen         | Contents                                                                                                                         |
+| --- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 01  | Connect        | Centred mark + wordmark + baseline, `SCAN FOR DEVICES` (64 px accent bar), `DEMO — SIMULATION`                                   |
+| 02  | Devices        | Scanning state, device rows (name, RSSI, fw, last paired), connect + rescan                                                      |
+| 03  | Dashboard      | Header with device name and bus rate, `SIM` pill, shift strip, 12-column widget grid mirroring the panel, page selector, tab bar |
+| 04  | Pages          | The six dash pages as rows, current one marked `on screen`, `SHOW PAGE … ON THE DASH`                                            |
+| 05  | Graph          | Three rolling 30 s traces (rpm, boost, lambda) with current values, pick signals / export                                        |
+| 06  | Console        | CAN / LOG / SEND tabs, frame list with accent IDs, pause + filter                                                                |
+| 07  | Critical alert | Full `#FF4444` takeover, pulsing, value + context + `ACKNOWLEDGE` / `MUTE FOR THIS SESSION`                                      |
+| 08  | Device         | Device facts, dash theme picker, settings rows, `DISCONNECT`                                                                     |
+| 09  | OTA update     | Percentage, progress, notes, changelog, cancel                                                                                   |
 
 Rules: header carries the device name and live bus state, never a logo. Primary action is a 64 px accent bar with a flush-left label at the bottom of the content. Minimum interactive height 56 px.
 
@@ -182,13 +182,13 @@ Rules: header carries the device name and live bus state, never a logo. Primary 
 
 ## 6. Files in this bundle
 
-| File | What it is |
-| --- | --- |
-| `CANShift Brand Book.dc.html` | The brand book: logo, colour, type, and the three surfaces |
-| `CANShift Logo.dc.html` | Logo explorations; direction **2a — Bracket** is the chosen one |
-| `CANShift Tuner.dc.html` | The web app, all 12 views, light and dark |
-| `CANShift Mobile.dc.html` | The mobile app, 9 screens |
-| `CLAUDE_CODE_PROMPT.md` | Paste-ready prompt to have Claude Code open the GitHub issues |
+| File                          | What it is                                                      |
+| ----------------------------- | --------------------------------------------------------------- |
+| `CANShift Brand Book.dc.html` | The brand book: logo, colour, type, and the three surfaces      |
+| `CANShift Logo.dc.html`       | Logo explorations; direction **2a — Bracket** is the chosen one |
+| `CANShift Tuner.dc.html`      | The web app, all 12 views, light and dark                       |
+| `CANShift Mobile.dc.html`     | The mobile app, 9 screens                                       |
+| `CLAUDE_CODE_PROMPT.md`       | Paste-ready prompt to have Claude Code open the GitHub issues   |
 
 Open any of them directly in a browser. They need the `_ds/` folder next to them (included).
 

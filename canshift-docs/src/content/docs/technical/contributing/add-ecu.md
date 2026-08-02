@@ -1,5 +1,5 @@
 ---
-title: "Add a new ECU profile"
+title: 'Add a new ECU profile'
 description: "Wire a new ECU's CAN signals into the firmware + studio config schema."
 sidebar:
   order: 5
@@ -132,8 +132,8 @@ OBD-II signals add a `polling` block:
   "polling": {
     "mode": 1,
     "pid": 12,
-    "intervalMs": 250
-  }
+    "intervalMs": 250,
+  },
 }
 ```
 

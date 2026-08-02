@@ -1,6 +1,6 @@
 ---
-title: "Secure boot setup"
-description: "Enable secure boot v2 + flash encryption on the ESP32 production builds."
+title: 'Secure boot setup'
+description: 'Enable secure boot v2 + flash encryption on the ESP32 production builds.'
 sidebar:
   order: 13
 ---
@@ -27,14 +27,14 @@ by an operator, in a controlled environment.
 
 #### Rollout state (updated #531)
 
-| Capability | State |
-|---|---|
-| `[env:secure]` PlatformIO env | Ready — partition table aligned to `ota_4mb_wifi.csv` post-#1117 |
-| Anti-rollback floor (`CONFIG_BOOTLOADER_APP_SEC_VER`) | `2` — see section 7 |
-| CI build of `[env:secure]` | Non-blocking job `firmware-secure-build` in `.github/workflows/ci.yml`, gated on `SECURE_BOOT_SIGNING_KEY_TEST` repo secret being present (otherwise skips with a notice) |
-| Project signing key | **Not yet generated.** Run `scripts/generate_keys.sh` on a controlled workstation |
-| First-flash on a real chip | **Not yet performed.** Gated on sacrificial-board QA |
-| Tuner USB-flasher signed-build support | **Not yet.** The built-in browser flasher writes raw bytes — signed flashing is out of scope for it today |
+| Capability                                            | State                                                                                                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[env:secure]` PlatformIO env                         | Ready — partition table aligned to `ota_4mb_wifi.csv` post-#1117                                                                                                          |
+| Anti-rollback floor (`CONFIG_BOOTLOADER_APP_SEC_VER`) | `2` — see section 7                                                                                                                                                       |
+| CI build of `[env:secure]`                            | Non-blocking job `firmware-secure-build` in `.github/workflows/ci.yml`, gated on `SECURE_BOOT_SIGNING_KEY_TEST` repo secret being present (otherwise skips with a notice) |
+| Project signing key                                   | **Not yet generated.** Run `scripts/generate_keys.sh` on a controlled workstation                                                                                         |
+| First-flash on a real chip                            | **Not yet performed.** Gated on sacrificial-board QA                                                                                                                      |
+| Tuner USB-flasher signed-build support                | **Not yet.** The built-in browser flasher writes raw bytes — signed flashing is out of scope for it today                                                                 |
 
 Everything below this point is the operational reference for when those
 remaining items are picked up.
@@ -469,15 +469,15 @@ The OTA flow changes posture:
 
 ## 8. Recovery / brick risk matrix
 
-| Failure | Effect | Recovery |
-|---|---|---|
-| Wrong RSA pubkey digest burned to BLOCK2 | Chip rejects every image, including its own bootloader | None — replace chip |
-| `BLOCK1` flash key burned, no encrypted image written first | Chip can't decrypt boot regions on power-up | None — replace chip |
-| Operator interrupts the script between Step 2 and Step 3 | `ABS_DONE_1` set, no flash key — chip will boot signed images plaintext, but `FLASH_CRYPT_CNT` will increment on next encrypted write attempt | Resume the script (Step 3 onward) on the same chip; do not skip |
-| Operator interrupts between Step 4 and Step 5 | `FLASH_CRYPT_CNT=0x7F`, but UART download backdoor still open | Resume the script (Step 5 onward); attacker window is the time between burns |
-| Lost signing key | Every fielded device frozen at current image | None — long-term fix is to ship a final image that adds a co-signing path before the loss |
-| Lost per-chip flash key (host-side `keys/flash_<mac>.bin`) | Cannot pre-encrypt new images for that specific chip from this host | Use the chip's own `write_flash --encrypt` flow (chip encrypts in place); host-side key is an audit artifact, not strictly required after first flash |
-| Bricked chip from any of the above | Module is e-waste | Replace; update `keys/escrow.csv` post-mortem column |
+| Failure                                                     | Effect                                                                                                                                        | Recovery                                                                                                                                              |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wrong RSA pubkey digest burned to BLOCK2                    | Chip rejects every image, including its own bootloader                                                                                        | None — replace chip                                                                                                                                   |
+| `BLOCK1` flash key burned, no encrypted image written first | Chip can't decrypt boot regions on power-up                                                                                                   | None — replace chip                                                                                                                                   |
+| Operator interrupts the script between Step 2 and Step 3    | `ABS_DONE_1` set, no flash key — chip will boot signed images plaintext, but `FLASH_CRYPT_CNT` will increment on next encrypted write attempt | Resume the script (Step 3 onward) on the same chip; do not skip                                                                                       |
+| Operator interrupts between Step 4 and Step 5               | `FLASH_CRYPT_CNT=0x7F`, but UART download backdoor still open                                                                                 | Resume the script (Step 5 onward); attacker window is the time between burns                                                                          |
+| Lost signing key                                            | Every fielded device frozen at current image                                                                                                  | None — long-term fix is to ship a final image that adds a co-signing path before the loss                                                             |
+| Lost per-chip flash key (host-side `keys/flash_<mac>.bin`)  | Cannot pre-encrypt new images for that specific chip from this host                                                                           | Use the chip's own `write_flash --encrypt` flow (chip encrypts in place); host-side key is an audit artifact, not strictly required after first flash |
+| Bricked chip from any of the above                          | Module is e-waste                                                                                                                             | Replace; update `keys/escrow.csv` post-mortem column                                                                                                  |
 
 ---
 
@@ -533,7 +533,7 @@ follow-up that runs on a dedicated, known-disposable chip.
   reviewer memory.
 - **Tuner USB-flasher signed-build support.** The built-in browser
   flasher writes raw bytes via `esptool-js` — it has no `write_flash
-  --encrypt` path, no signed-bootloader awareness, and no `nvs_keys`
+--encrypt` path, no signed-bootloader awareness, and no `nvs_keys`
   partition handling. Signed builds today are flashable only via
   `scripts/secure_boot_first_flash.sh` on a controlled workstation. A
   future version of the flasher would need to pre-encrypt payloads on

@@ -1,6 +1,6 @@
 ---
-title: "Add a new dashboard widget"
-description: "Implement a new LVGL widget end-to-end — config schema, renderer, factory wiring."
+title: 'Add a new dashboard widget'
+description: 'Implement a new LVGL widget end-to-end — config schema, renderer, factory wiring.'
 sidebar:
   order: 6
 ---
@@ -38,16 +38,16 @@ will catch most misses, but the schema is the gating contract.
 
 The existing 8 widgets are the reference catalogue:
 
-| Type | Firmware files | Schema | Studio fields |
-|---|---|---|---|
-| `gauge` (3 sub-styles) | `gauge_widget.{h,cpp}` | `GaugeWidgetConfigSchema` | `gauge-fields.tsx` |
-| `bar` | `bar_widget.{h,cpp}` | `BarWidgetConfigSchema` | `bar-fields.tsx` |
-| `warning` | `warning_widget.{h,cpp}` | `WarningWidgetConfigSchema` | `warning-fields.tsx` |
-| `button` | `button_widget.{h,cpp}` | `ButtonWidgetConfigSchema` | `button-fields.tsx` |
-| `timer` | `timer_widget.{h,cpp}` | `TimerWidgetConfigSchema` | `timer-fields.tsx` |
-| `gear` | `gear_widget.{h,cpp}` | `GearWidgetConfigSchema` | `gear-fields.tsx` |
-| `image` | `image_widget.{h,cpp}` | `ImageWidgetConfigSchema` | `image-fields.tsx` |
-| `label` | `label_widget.{h,cpp}` | — (legacy, no studio editor) | — |
+| Type                   | Firmware files           | Schema                       | Studio fields        |
+| ---------------------- | ------------------------ | ---------------------------- | -------------------- |
+| `gauge` (3 sub-styles) | `gauge_widget.{h,cpp}`   | `GaugeWidgetConfigSchema`    | `gauge-fields.tsx`   |
+| `bar`                  | `bar_widget.{h,cpp}`     | `BarWidgetConfigSchema`      | `bar-fields.tsx`     |
+| `warning`              | `warning_widget.{h,cpp}` | `WarningWidgetConfigSchema`  | `warning-fields.tsx` |
+| `button`               | `button_widget.{h,cpp}`  | `ButtonWidgetConfigSchema`   | `button-fields.tsx`  |
+| `timer`                | `timer_widget.{h,cpp}`   | `TimerWidgetConfigSchema`    | `timer-fields.tsx`   |
+| `gear`                 | `gear_widget.{h,cpp}`    | `GearWidgetConfigSchema`     | `gear-fields.tsx`    |
+| `image`                | `image_widget.{h,cpp}`   | `ImageWidgetConfigSchema`    | `image-fields.tsx`   |
+| `label`                | `label_widget.{h,cpp}`   | — (legacy, no studio editor) | —                    |
 
 Pick the closest existing implementation and mirror it. `bar` is the
 canonical "numeric signal with min/max + threshold" widget; `warning` is

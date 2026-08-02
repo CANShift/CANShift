@@ -1,11 +1,11 @@
 ---
-title: "Boot diagnostics"
-description: "Splash hangs, ErrorBar messages, USB silent — how to read the boot logs."
+title: 'Boot diagnostics'
+description: 'Splash hangs, ErrorBar messages, USB silent — how to read the boot logs.'
 sidebar:
   order: 2
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside } from '@astrojs/starlight/components'
 
 If the dash flashes successfully but never reaches the dashboard, the boot logs
 on the USB serial line tell you which stage failed. Open a serial monitor at
@@ -15,14 +15,14 @@ on the USB serial line tell you which stage failed. Open a serial monitor at
 
 The splash bar advances through known stages:
 
-| Bar progress | Stage | If it stops here |
-|---:|---|---|
-| 10 % | "Config loaded" | SPIFFS mount or JSON parse — check the `[BOOT]` line just above |
-| 40 % | "Applying config…" | Schema mismatch or out-of-range values |
-| 60 % | "Starting runtime…" | Signal store / timer / track / alert init failed |
-| 78 % | "CAN ready" or "CAN unavailable" | TWAI install — wiring or transceiver issue |
-| 90 % | "USB ready" | USB rxBuf allocation failed at boot |
-| 100 % | "Ready" | Should advance to the dashboard within ~2 s |
+| Bar progress | Stage                            | If it stops here                                                |
+| -----------: | -------------------------------- | --------------------------------------------------------------- |
+|         10 % | "Config loaded"                  | SPIFFS mount or JSON parse — check the `[BOOT]` line just above |
+|         40 % | "Applying config…"               | Schema mismatch or out-of-range values                          |
+|         60 % | "Starting runtime…"              | Signal store / timer / track / alert init failed                |
+|         78 % | "CAN ready" or "CAN unavailable" | TWAI install — wiring or transceiver issue                      |
+|         90 % | "USB ready"                      | USB rxBuf allocation failed at boot                             |
+|        100 % | "Ready"                          | Should advance to the dashboard within ~2 s                     |
 
 ## "[BOOT] Ready" never prints
 
@@ -40,17 +40,17 @@ never see it:
 Once the dash boots far enough to show the UI, the ErrorBar (red strip at the
 bottom of the screen) surfaces problems. The codes you'll see most often:
 
-| Code | Meaning | Fix |
-|---|---|---|
-| `MOUNT_FAIL` | SPIFFS mount failed | Re-flash; if persistent, the flash partition is corrupt |
-| `SCHEMA_MISMATCH` | `dashboard.json` schema doesn't match the firmware | Re-burn from the tuner |
-| `CONFIG_PARSE` | JSON syntax error in a config file | Burn a known-good config |
-| `BOOT_FAIL` (CAN) | TWAI driver init failed | Check CAN wiring, ECU termination |
-| `FONT_PROVISION_FAIL` | A SPIFFS font file is missing or unreadable | Re-flash filesystem partition |
+| Code                  | Meaning                                            | Fix                                                     |
+| --------------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| `MOUNT_FAIL`          | SPIFFS mount failed                                | Re-flash; if persistent, the flash partition is corrupt |
+| `SCHEMA_MISMATCH`     | `dashboard.json` schema doesn't match the firmware | Re-burn from the tuner                                  |
+| `CONFIG_PARSE`        | JSON syntax error in a config file                 | Burn a known-good config                                |
+| `BOOT_FAIL` (CAN)     | TWAI driver init failed                            | Check CAN wiring, ECU termination                       |
+| `FONT_PROVISION_FAIL` | A SPIFFS font file is missing or unreadable        | Re-flash filesystem partition                           |
 
 <Aside type="tip" title="The ErrorBar swipes up">
-Swipe up from the red strip to expand the full error list. Dismiss individual
-rows with the per-row × button.
+  Swipe up from the red strip to expand the full error list. Dismiss individual rows with the
+  per-row × button.
 </Aside>
 
 ## Nothing on screen at all

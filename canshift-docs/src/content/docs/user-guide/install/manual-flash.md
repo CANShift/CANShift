@@ -1,6 +1,6 @@
 ---
-title: "Manual flash"
-description: "USB esptool flashing when the desktop flasher is unavailable."
+title: 'Manual flash'
+description: 'USB esptool flashing when the desktop flasher is unavailable.'
 sidebar:
   order: 4
 ---

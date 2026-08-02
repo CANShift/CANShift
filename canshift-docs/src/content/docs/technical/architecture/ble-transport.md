@@ -1,6 +1,6 @@
 ---
-title: "BLE transport"
-description: "NimBLE topology, GATT layout, and the stop-race snapshot pattern."
+title: 'BLE transport'
+description: 'NimBLE topology, GATT layout, and the stop-race snapshot pattern.'
 sidebar:
   order: 50
 ---
@@ -14,12 +14,12 @@ config / commands over GATT write. Sources: `src/hal/ble/ble_server.cpp`,
 
 Single primary service. Four characteristics:
 
-| Characteristic | Direction | Notify | Payload |
-|---|---|---|---|
-| STATUS | dash → phone | yes | `{"ver","can","is_day"}` JSON, 2 s cadence |
-| TELE | dash → phone | yes | `{"r","tps","map",…}` JSON, 10 Hz |
-| CMD | phone → dash | no | `{"cmd":<int>,…}` JSON, fed into `UsbComm::handleLine` |
-| PASSKEY | dash → phone | yes | 6-digit pairing code on bond start |
+| Characteristic | Direction    | Notify | Payload                                                |
+| -------------- | ------------ | ------ | ------------------------------------------------------ |
+| STATUS         | dash → phone | yes    | `{"ver","can","is_day"}` JSON, 2 s cadence             |
+| TELE           | dash → phone | yes    | `{"r","tps","map",…}` JSON, 10 Hz                      |
+| CMD            | phone → dash | no     | `{"cmd":<int>,…}` JSON, fed into `UsbComm::handleLine` |
+| PASSKEY        | dash → phone | yes    | 6-digit pairing code on bond start                     |
 
 The phone uses the same JSON wire shape as USB so `UsbComm::handleLine`
 can dispatch BLE writes through the existing command table without a

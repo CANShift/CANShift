@@ -1,11 +1,11 @@
 ---
-title: "Configure with the Tuner"
-description: "Live edit the dashboard from a browser over Web Serial — pages, signals, ECU profiles, themes."
+title: 'Configure with the Tuner'
+description: 'Live edit the dashboard from a browser over Web Serial — pages, signals, ECU profiles, themes.'
 sidebar:
   order: 1
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside } from '@astrojs/starlight/components'
 
 The Tuner is a single-page web app that talks to the dash over Web Serial. You move widgets, bind signals, pick an ECU profile — then click **Burn** and the dash reloads the new config in place. No re-flash, no reboot.
 
@@ -17,10 +17,12 @@ The Tuner is hosted on Vercel at [canshift-tuner.vercel.app](https://canshift-tu
 2. Open [canshift-tuner.vercel.app](https://canshift-tuner.vercel.app) in a Chromium-based browser.
 3. Click **Connect device** in the top-right and pick the serial port.
 
-The header switches from a red *Disconnected* dot to a green *Connected* one, with the device's `vendor:product` next to it. The firmware version slot fills in once the handshake completes (~50 ms).
+The header switches from a red _Disconnected_ dot to a green _Connected_ one, with the device's `vendor:product` next to it. The firmware version slot fills in once the handshake completes (~50 ms).
 
 <Aside type="tip" title="Simulation mode">
-No dash on hand? The Tuner runs in simulation when no device is connected — pages and widgets are interactive, the signal store fakes values. Useful for laying out a dashboard the night before fitting.
+  No dash on hand? The Tuner runs in simulation when no device is connected — pages and widgets are
+  interactive, the signal store fakes values. Useful for laying out a dashboard the night before
+  fitting.
 </Aside>
 
 ## Edit the dashboard
@@ -36,13 +38,13 @@ Open the **ECU** route. CANShift ships presets for the common aftermarket and st
 - **Aftermarket**: Haltech, Ecumaster EmuBlack, Adaptronic, AEM, Link, MaxxECU, MoTeC, Flagtronics.
 - **OEM-style**: stock OBD-II PIDs (works with most road cars supporting the standard).
 
-Pick a preset, preview the signals it would import, click *Apply*. The signal map writes to `signals.json` on the dash.
+Pick a preset, preview the signals it would import, click _Apply_. The signal map writes to `signals.json` on the dash.
 
 Custom map? Drop a **CAN XML** export onto the page. The parser lives in `@tmbk/canshift-core/parseCanXml` and validates against the same schema the firmware enforces at boot.
 
 ## Style with themes
 
-The **Themes** route swaps the dash's colour palette — day vs night, accent colours, gauge backgrounds. The Tuner reads the active mode from the device on connect and exposes three actions: toggle, force *Day*, force *Night*. The commands hit the dash as `CMD_TOGGLE_DAY_NIGHT` / `CMD_SET_DAY_NIGHT` over USB.
+The **Themes** route swaps the dash's colour palette — day vs night, accent colours, gauge backgrounds. The Tuner reads the active mode from the device on connect and exposes three actions: toggle, force _Day_, force _Night_. The commands hit the dash as `CMD_TOGGLE_DAY_NIGHT` / `CMD_SET_DAY_NIGHT` over USB.
 
 ## Burn = write the config
 
@@ -58,7 +60,9 @@ End-to-end takes ~150–250 ms. The overlay vanishes when the burn completes; th
 If the overlay flips red, see [Burn errors](/user-guide/configure/burn-errors/).
 
 <Aside type="caution" title="Don't burn during a CAN scan">
-The dash's USB RX buffer doubles as the PUT_CONFIG receive buffer. A live CAN scan keeps that buffer busy, and a burn that lands in the middle of a scan can time out. Stop the scan in the **CAN bus** route first, then burn.
+  The dash's USB RX buffer doubles as the PUT_CONFIG receive buffer. A live CAN scan keeps that
+  buffer busy, and a burn that lands in the middle of a scan can time out. Stop the scan in the
+  **CAN bus** route first, then burn.
 </Aside>
 
 ## Schema vs firmware version

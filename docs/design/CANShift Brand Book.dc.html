@@ -1,413 +1,2074 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet>
-<link rel="stylesheet" href="_ds/modernist-cd1320ec-1895-49a6-9838-03478e71982b/styles.css">
-<script src="_ds/modernist-cd1320ec-1895-49a6-9838-03478e71982b/_ds_bundle.js"></script>
-<style>
-  body { margin: 0; background: #f3f2f2; }
-  a { color: var(--color-accent-700); }
-  a:hover { color: var(--color-accent); }
-</style>
-</helmet>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="_ds/modernist-cd1320ec-1895-49a6-9838-03478e71982b/styles.css"
+        />
+        <script src="_ds/modernist-cd1320ec-1895-49a6-9838-03478e71982b/_ds_bundle.js"></script>
+        <style>
+          body {
+            margin: 0;
+            background: #f3f2f2;
+          }
+          a {
+            color: var(--color-accent-700);
+          }
+          a:hover {
+            color: var(--color-accent);
+          }
+        </style>
+      </helmet>
 
-<div style="width: 1240px; margin: 0 auto; padding: 0 0 120px; font-family: var(--font-body); color: var(--color-text)">
-
-  <div style="padding: 96px 0 56px; border-bottom: 2px solid var(--color-divider); display: flex; align-items: flex-end; gap: 40px">
-    <svg viewBox="0 0 116 100" style="width: 148px; flex: none" fill="none">
-      <g transform="translate(10,0) skewX(-11)">
-        <path d="M46 26 H22 V74 H46" stroke="var(--color-text)" stroke-width="13"></path>
-        <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path>
-      </g>
-    </svg>
-    <div style="display: flex; flex-direction: column; gap: 14px">
-      <div style="font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-accent)">Brand book — v1.0 — August 2026</div>
-      <h1 style="margin: 0; font-size: 84px; line-height: 0.92; letter-spacing: -0.04em">CANShift<br>identity &amp; interface</h1>
-      <p style="margin: 0; max-width: 640px; font-size: 16px; color: var(--color-neutral-700); text-wrap: pretty">The mark, the palette, the type, and the three surfaces it runs on: the Tuner in the browser, the dash on the panel, the app in the pocket.</p>
-    </div>
-  </div>
-
-  <div style="display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 2px solid var(--color-divider)">
-    <div style="padding: 20px 0; border-right: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">01</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">Logo</div></div>
-    <div style="padding: 20px 0 20px 16px; border-right: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">02</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">Colour &amp; type</div></div>
-    <div style="padding: 20px 0 20px 16px; border-right: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">03</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">Tuner — web</div></div>
-    <div style="padding: 20px 0 20px 16px; border-right: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">04</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">Dash</div></div>
-    <div style="padding: 20px 0 20px 16px"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">05</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">Mobile</div></div>
-  </div>
-
-  <div style="padding: 72px 0 0">
-    <div style="display: flex; align-items: baseline; gap: 20px; border-bottom: 2px solid var(--color-divider); padding-bottom: 16px">
-      <span style="font-family: ui-monospace, monospace; font-size: 13px; color: var(--color-accent)">01</span>
-      <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Logo</h2>
-      <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)">Direction 2a — Bracket</span>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 56px 40px 56px 0; border-right: 1px solid var(--color-neutral-300); display: flex; align-items: center; gap: 24px">
-        <svg viewBox="0 0 116 100" style="width: 96px; flex: none" fill="none">
-          <g transform="translate(10,0) skewX(-11)">
-            <path d="M46 26 H22 V74 H46" stroke="var(--color-text)" stroke-width="13"></path>
-            <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path>
-          </g>
-        </svg>
-        <div style="width: 2px; align-self: stretch; background: var(--color-divider)"></div>
-        <div style="display: flex; flex-direction: column; gap: 9px">
-          <div style="display: inline-block; transform: skewX(-11deg); transform-origin: left; font-family: var(--font-heading); font-weight: 800; font-size: 48px; letter-spacing: -0.045em; line-height: 1"><span>CAN</span><span style="color: var(--color-accent)">SHIFT</span></div>
-          <div style="display: flex; height: 5px; gap: 3px; width: 256px">
-            <div style="flex: 3; background: var(--color-text)"></div><div style="flex: 1; background: var(--color-text)"></div><div style="flex: 2; background: var(--color-accent)"></div><div style="flex: 1; background: var(--color-text)"></div><div style="flex: 4; background: var(--color-text)"></div><div style="flex: 1; background: var(--color-accent)"></div><div style="flex: 2; background: var(--color-text)"></div>
-          </div>
-        </div>
-      </div>
-      <div style="padding: 56px 0 56px 40px; display: flex; flex-direction: column; gap: 14px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px">Construction</div>
-        <p style="margin: 0; font-size: 14px; color: var(--color-neutral-700); text-wrap: pretty">One 13-unit stroke, butt terminals cut on the vertical, right angles only, 11° shear. The same rule builds the C and the S, so the pair locks up with no optical correction. The rule under the wordmark is a CAN frame rhythm — it is part of the mark, never decoration added elsewhere.</p>
-        <div style="display: flex; gap: 28px; align-items: center; margin-top: 6px">
-          <svg viewBox="0 0 116 100" style="width: 132px" fill="none">
-            <g stroke="var(--color-neutral-400)" stroke-width="0.6"><path d="M0 26 H116 M0 50 H116 M0 74 H116"></path></g>
+      <div
+        style="
+          width: 1240px;
+          margin: 0 auto;
+          padding: 0 0 120px;
+          font-family: var(--font-body);
+          color: var(--color-text);
+        "
+      >
+        <div
+          style="
+            padding: 96px 0 56px;
+            border-bottom: 2px solid var(--color-divider);
+            display: flex;
+            align-items: flex-end;
+            gap: 40px;
+          "
+        >
+          <svg viewBox="0 0 116 100" style="width: 148px; flex: none" fill="none">
             <g transform="translate(10,0) skewX(-11)">
               <path d="M46 26 H22 V74 H46" stroke="var(--color-text)" stroke-width="13"></path>
-              <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path>
+              <path
+                d="M96 26 H66 V50 H96 V74 H66"
+                stroke="var(--color-accent)"
+                stroke-width="13"
+              ></path>
             </g>
           </svg>
-          <div style="font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-neutral-600); line-height: 2">stroke 13 u<br>shear −11°<br>3 horizontals at 26 / 50 / 74</div>
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <div
+              style="
+                font-size: 11px;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: var(--color-accent);
+              "
+            >
+              Brand book — v1.0 — August 2026
+            </div>
+            <h1 style="margin: 0; font-size: 84px; line-height: 0.92; letter-spacing: -0.04em">
+              CANShift<br />identity &amp; interface
+            </h1>
+            <p
+              style="
+                margin: 0;
+                max-width: 640px;
+                font-size: 16px;
+                color: var(--color-neutral-700);
+                text-wrap: pretty;
+              "
+            >
+              The mark, the palette, the type, and the three surfaces it runs on: the Tuner in the
+              browser, the dash on the panel, the app in the pocket.
+            </p>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 32px 24px 32px 0; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 14px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">APP ICON</div>
-        <div style="width: 132px; height: 132px; background: var(--color-text); display: grid; place-items: center">
-          <svg viewBox="0 0 116 100" style="width: 88px" fill="none">
-            <g transform="translate(10,0) skewX(-11)">
-              <path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path>
-              <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path>
-            </g>
-          </svg>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border-bottom: 2px solid var(--color-divider);
+          "
+        >
+          <div style="padding: 20px 0; border-right: 1px solid var(--color-neutral-300)">
+            <div
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 11px;
+                color: var(--color-neutral-600);
+              "
+            >
+              01
+            </div>
+            <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">
+              Logo
+            </div>
+          </div>
+          <div style="padding: 20px 0 20px 16px; border-right: 1px solid var(--color-neutral-300)">
+            <div
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 11px;
+                color: var(--color-neutral-600);
+              "
+            >
+              02
+            </div>
+            <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">
+              Colour &amp; type
+            </div>
+          </div>
+          <div style="padding: 20px 0 20px 16px; border-right: 1px solid var(--color-neutral-300)">
+            <div
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 11px;
+                color: var(--color-neutral-600);
+              "
+            >
+              03
+            </div>
+            <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">
+              Tuner — web
+            </div>
+          </div>
+          <div style="padding: 20px 0 20px 16px; border-right: 1px solid var(--color-neutral-300)">
+            <div
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 11px;
+                color: var(--color-neutral-600);
+              "
+            >
+              04
+            </div>
+            <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">
+              Dash
+            </div>
+          </div>
+          <div style="padding: 20px 0 20px 16px">
+            <div
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 11px;
+                color: var(--color-neutral-600);
+              "
+            >
+              05
+            </div>
+            <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px">
+              Mobile
+            </div>
+          </div>
         </div>
-      </div>
-      <div style="padding: 32px 24px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 14px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">ON RED</div>
-        <div style="width: 132px; height: 132px; background: var(--color-accent); display: grid; place-items: center">
-          <svg viewBox="0 0 116 100" style="width: 88px" fill="none">
+
+        <div style="padding: 72px 0 0">
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 20px;
+              border-bottom: 2px solid var(--color-divider);
+              padding-bottom: 16px;
+            "
+          >
+            <span
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--color-accent);
+              "
+              >01</span
+            >
+            <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Logo</h2>
+            <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)"
+              >Direction 2a — Bracket</span
+            >
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 0;
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="
+                padding: 56px 40px 56px 0;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                align-items: center;
+                gap: 24px;
+              "
+            >
+              <svg viewBox="0 0 116 100" style="width: 96px; flex: none" fill="none">
+                <g transform="translate(10,0) skewX(-11)">
+                  <path d="M46 26 H22 V74 H46" stroke="var(--color-text)" stroke-width="13"></path>
+                  <path
+                    d="M96 26 H66 V50 H96 V74 H66"
+                    stroke="var(--color-accent)"
+                    stroke-width="13"
+                  ></path>
+                </g>
+              </svg>
+              <div style="width: 2px; align-self: stretch; background: var(--color-divider)"></div>
+              <div style="display: flex; flex-direction: column; gap: 9px">
+                <div
+                  style="
+                    display: inline-block;
+                    transform: skewX(-11deg);
+                    transform-origin: left;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 48px;
+                    letter-spacing: -0.045em;
+                    line-height: 1;
+                  "
+                >
+                  <span>CAN</span><span style="color: var(--color-accent)">SHIFT</span>
+                </div>
+                <div style="display: flex; height: 5px; gap: 3px; width: 256px">
+                  <div style="flex: 3; background: var(--color-text)"></div>
+                  <div style="flex: 1; background: var(--color-text)"></div>
+                  <div style="flex: 2; background: var(--color-accent)"></div>
+                  <div style="flex: 1; background: var(--color-text)"></div>
+                  <div style="flex: 4; background: var(--color-text)"></div>
+                  <div style="flex: 1; background: var(--color-accent)"></div>
+                  <div style="flex: 2; background: var(--color-text)"></div>
+                </div>
+              </div>
+            </div>
+            <div
+              style="padding: 56px 0 56px 40px; display: flex; flex-direction: column; gap: 14px"
+            >
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px">
+                Construction
+              </div>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                  text-wrap: pretty;
+                "
+              >
+                One 13-unit stroke, butt terminals cut on the vertical, right angles only, 11°
+                shear. The same rule builds the C and the S, so the pair locks up with no optical
+                correction. The rule under the wordmark is a CAN frame rhythm — it is part of the
+                mark, never decoration added elsewhere.
+              </p>
+              <div style="display: flex; gap: 28px; align-items: center; margin-top: 6px">
+                <svg viewBox="0 0 116 100" style="width: 132px" fill="none">
+                  <g stroke="var(--color-neutral-400)" stroke-width="0.6">
+                    <path d="M0 26 H116 M0 50 H116 M0 74 H116"></path>
+                  </g>
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path
+                      d="M46 26 H22 V74 H46"
+                      stroke="var(--color-text)"
+                      stroke-width="13"
+                    ></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="var(--color-accent)"
+                      stroke-width="13"
+                    ></path>
+                  </g>
+                </svg>
+                <div
+                  style="
+                    font-family: ui-monospace, monospace;
+                    font-size: 12px;
+                    color: var(--color-neutral-600);
+                    line-height: 2;
+                  "
+                >
+                  stroke 13 u<br />shear −11°<br />3 horizontals at 26 / 50 / 74
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="
+                padding: 32px 24px 32px 0;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 10px;
+                  letter-spacing: 0.2em;
+                  color: var(--color-neutral-600);
+                "
+              >
+                APP ICON
+              </div>
+              <div
+                style="
+                  width: 132px;
+                  height: 132px;
+                  background: var(--color-text);
+                  display: grid;
+                  place-items: center;
+                "
+              >
+                <svg viewBox="0 0 116 100" style="width: 88px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="var(--color-accent)"
+                      stroke-width="13"
+                    ></path>
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <div
+              style="
+                padding: 32px 24px;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 10px;
+                  letter-spacing: 0.2em;
+                  color: var(--color-neutral-600);
+                "
+              >
+                ON RED
+              </div>
+              <div
+                style="
+                  width: 132px;
+                  height: 132px;
+                  background: var(--color-accent);
+                  display: grid;
+                  place-items: center;
+                "
+              >
+                <svg viewBox="0 0 116 100" style="width: 88px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#fff" stroke-width="13"></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="#fff"
+                      stroke-width="13"
+                      opacity="0.55"
+                    ></path>
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <div
+              style="
+                padding: 32px 24px;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 10px;
+                  letter-spacing: 0.2em;
+                  color: var(--color-neutral-600);
+                "
+              >
+                ONE COLOUR
+              </div>
+              <div
+                style="
+                  width: 132px;
+                  height: 132px;
+                  border: 2px solid var(--color-divider);
+                  display: grid;
+                  place-items: center;
+                "
+              >
+                <svg viewBox="0 0 116 100" style="width: 88px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path
+                      d="M46 26 H22 V74 H46"
+                      stroke="var(--color-text)"
+                      stroke-width="13"
+                    ></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="var(--color-text)"
+                      stroke-width="13"
+                    ></path>
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <div
+              style="padding: 32px 0 32px 24px; display: flex; flex-direction: column; gap: 14px"
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 10px;
+                  letter-spacing: 0.2em;
+                  color: var(--color-neutral-600);
+                "
+              >
+                SMALLEST SIZES
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: flex-end;
+                  gap: 22px;
+                  background: #151313;
+                  padding: 20px;
+                  height: 92px;
+                "
+              >
+                <svg viewBox="0 0 116 100" style="width: 40px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="var(--color-accent)"
+                      stroke-width="13"
+                    ></path>
+                  </g>
+                </svg>
+                <svg viewBox="0 0 116 100" style="width: 26px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="var(--color-accent)"
+                      stroke-width="13"
+                    ></path>
+                  </g>
+                </svg>
+                <svg viewBox="0 0 116 100" style="width: 16px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path>
+                    <path
+                      d="M96 26 H66 V50 H96 V74 H66"
+                      stroke="var(--color-accent)"
+                      stroke-width="13"
+                    ></path>
+                  </g>
+                </svg>
+              </div>
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                40 / 26 / 16 px — below 96 px wide, monogram only
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="padding: 32px 40px 32px 0; border-right: 1px solid var(--color-neutral-300)"
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 12px;
+                "
+              >
+                Do
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 9px;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                "
+              >
+                <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                  Keep the shear at 11° — the mark and the wordmark share it.
+                </div>
+                <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                  Clear space on all sides equals the stroke width of the C.
+                </div>
+                <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                  On dark grounds the C is paper, the S stays red.
+                </div>
+              </div>
+            </div>
+            <div style="padding: 32px 0 32px 40px">
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 12px;
+                "
+              >
+                Don't
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 9px;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                "
+              >
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  No gradient, no chrome bevel, no drop shadow — that is the old mark.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  No outline version, no rounded terminals, no second red.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Never set the wordmark in another typeface or unshear it.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 72px 0 0">
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 20px;
+              border-bottom: 2px solid var(--color-divider);
+              padding-bottom: 16px;
+            "
+          >
+            <span
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--color-accent);
+              "
+              >02</span
+            >
+            <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Colour &amp; type</h2>
+            <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)"
+              >Two systems: brand chrome, and the dash on the panel</span
+            >
+          </div>
+
+          <div
+            style="
+              padding: 32px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            BRAND — CHROME &amp; DOCUMENTS
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              border-top: 2px solid var(--color-divider);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 108px; background: var(--color-accent)"></div>
+              <div style="padding: 12px 12px 16px 0">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                  Accent
+                </div>
+                <div
+                  style="
+                    font-family: ui-monospace, monospace;
+                    font-size: 11px;
+                    color: var(--color-neutral-600);
+                  "
+                >
+                  #EC3013
+                </div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 108px; background: var(--color-text)"></div>
+              <div style="padding: 12px">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                  Ink
+                </div>
+                <div
+                  style="
+                    font-family: ui-monospace, monospace;
+                    font-size: 11px;
+                    color: var(--color-neutral-600);
+                  "
+                >
+                  #201E1D
+                </div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div
+                style="
+                  height: 108px;
+                  background: var(--color-bg);
+                  border-bottom: 1px solid var(--color-neutral-300);
+                "
+              ></div>
+              <div style="padding: 12px">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                  Ground
+                </div>
+                <div
+                  style="
+                    font-family: ui-monospace, monospace;
+                    font-size: 11px;
+                    color: var(--color-neutral-600);
+                  "
+                >
+                  #F3F2F2
+                </div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 108px; background: var(--color-neutral-300)"></div>
+              <div style="padding: 12px">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                  Rule
+                </div>
+                <div
+                  style="
+                    font-family: ui-monospace, monospace;
+                    font-size: 11px;
+                    color: var(--color-neutral-600);
+                  "
+                >
+                  #D7D3D3
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="height: 108px; background: #151313"></div>
+              <div style="padding: 12px">
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                  Dark chrome
+                </div>
+                <div
+                  style="
+                    font-family: ui-monospace, monospace;
+                    font-size: 11px;
+                    color: var(--color-neutral-600);
+                  "
+                >
+                  #151313
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              padding: 32px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            DASH — DEVICE TOKENS
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(6, 1fr);
+              border-top: 2px solid var(--color-divider);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 88px; background: #121212"></div>
+              <div style="padding: 10px 10px 14px 0">
+                <div style="font-family: ui-monospace, monospace; font-size: 11px">bg #121212</div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 88px; background: #1f1f1f"></div>
+              <div style="padding: 10px">
+                <div style="font-family: ui-monospace, monospace; font-size: 11px">
+                  surface #1F1F1F
+                </div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 88px; background: #ff4747"></div>
+              <div style="padding: 10px">
+                <div style="font-family: ui-monospace, monospace; font-size: 11px">
+                  primary #FF4747
+                </div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 88px; background: #ff8800"></div>
+              <div style="padding: 10px">
+                <div style="font-family: ui-monospace, monospace; font-size: 11px">
+                  warning #FF8800
+                </div>
+              </div>
+            </div>
+            <div style="border-right: 1px solid var(--color-neutral-300)">
+              <div style="height: 88px; background: #00cc44"></div>
+              <div style="padding: 10px">
+                <div style="font-family: ui-monospace, monospace; font-size: 11px">ok #00CC44</div>
+              </div>
+            </div>
+            <div>
+              <div style="height: 88px; background: #bababa"></div>
+              <div style="padding: 10px">
+                <div style="font-family: ui-monospace, monospace; font-size: 11px">dim #BABABA</div>
+              </div>
+            </div>
+          </div>
+          <p
+            style="
+              margin: 14px 0 0;
+              max-width: 720px;
+              font-size: 14px;
+              color: var(--color-neutral-700);
+              text-wrap: pretty;
+            "
+          >
+            The brand red (#EC3013) is for chrome, print and the web app. The device red (#FF4747)
+            is brighter because it is read through a plastic lens in daylight. Never swap them.
+          </p>
+
+          <div
+            style="
+              padding: 40px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            TYPE
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 2fr 1fr;
+              border-top: 2px solid var(--color-divider);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="
+                padding: 28px 40px 28px 0;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 52px;
+                  letter-spacing: -0.035em;
+                  line-height: 1;
+                "
+              >
+                Archivo 800 — headings
+              </div>
+              <div style="font-size: 17px; line-height: 1.5; color: var(--color-neutral-700)">
+                Archivo 400 — body copy. Interface labels are 800 in small caps tracking, 0.18em to
+                0.22em, never below 9 px.
+              </div>
+              <div style="font-family: ui-monospace, monospace; font-size: 22px">
+                Monospace — every number the car produces
+              </div>
+            </div>
+            <div
+              style="
+                padding: 28px 0 28px 40px;
+                display: flex;
+                flex-direction: column;
+                gap: 11px;
+                font-size: 14px;
+                color: var(--color-neutral-700);
+              "
+            >
+              <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                Values are always monospaced and tabular — digits must not shift as they change.
+              </div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                Labels above the value, never beside it.
+              </div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                Units at a quarter of the value size, in dim.
+              </div>
+              <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                Minimum on the panel: 30 px value at 2×, 10 px label.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 72px 0 0">
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 20px;
+              border-bottom: 2px solid var(--color-divider);
+              padding-bottom: 16px;
+            "
+          >
+            <span
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--color-accent);
+              "
+              >03</span
+            >
+            <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Tuner — web app</h2>
+            <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)"
+              >canshift.tmbk.ch · 12 views</span
+            >
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 236px 1fr;
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="padding: 28px 24px 28px 0; border-right: 1px solid var(--color-neutral-300)"
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 10px;
+                "
+              >
+                Shell
+              </div>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                  text-wrap: pretty;
+                "
+              >
+                Header 56 px, sidebar 236 px, inspector 320 px. Everything between is the work
+                surface.
+              </p>
+            </div>
+            <div
+              style="padding: 28px 0 28px 32px; display: flex; flex-direction: column; gap: 12px"
+            >
+              <div style="border: 2px solid var(--color-divider)">
+                <div
+                  style="
+                    height: 34px;
+                    border-bottom: 2px solid var(--color-divider);
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 0 12px;
+                    font-family: ui-monospace, monospace;
+                    font-size: 11px;
+                    color: var(--color-neutral-600);
+                  "
+                >
+                  <span
+                    style="
+                      font-family: var(--font-heading);
+                      font-weight: 800;
+                      font-size: 12px;
+                      color: var(--color-text);
+                    "
+                    >HEADER — brand · project · state · SAVE · BURN</span
+                  >
+                </div>
+                <div style="display: flex; height: 150px">
+                  <div
+                    style="
+                      width: 140px;
+                      border-right: 2px solid var(--color-divider);
+                      background: var(--color-neutral-200);
+                      display: grid;
+                      place-items: center;
+                      font-family: var(--font-heading);
+                      font-weight: 800;
+                      font-size: 11px;
+                      letter-spacing: 0.12em;
+                      color: var(--color-neutral-700);
+                    "
+                  >
+                    SIDEBAR
+                  </div>
+                  <div
+                    style="
+                      flex: 1;
+                      display: grid;
+                      place-items: center;
+                      font-family: var(--font-heading);
+                      font-weight: 800;
+                      font-size: 11px;
+                      letter-spacing: 0.12em;
+                      color: var(--color-neutral-700);
+                    "
+                  >
+                    CANVAS / TABLE
+                  </div>
+                  <div
+                    style="
+                      width: 180px;
+                      border-left: 2px solid var(--color-divider);
+                      background: var(--color-neutral-100);
+                      display: grid;
+                      place-items: center;
+                      font-family: var(--font-heading);
+                      font-weight: 800;
+                      font-size: 11px;
+                      letter-spacing: 0.12em;
+                      color: var(--color-neutral-700);
+                    "
+                  >
+                    INSPECTOR
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              padding: 32px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            COMPONENTS
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 0;
+              border-top: 2px solid var(--color-divider);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="
+                padding: 24px 24px 24px 0;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+              "
+            >
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                Buttons
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start">
+                <div
+                  style="
+                    padding: 11px 20px;
+                    background: var(--color-accent);
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 12px;
+                    letter-spacing: 0.09em;
+                    color: #fff;
+                  "
+                >
+                  BURN TO DEVICE
+                </div>
+                <div
+                  style="
+                    padding: 11px 18px;
+                    border: 1px solid var(--color-neutral-400);
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 12px;
+                    letter-spacing: 0.08em;
+                  "
+                >
+                  SECONDARY
+                </div>
+                <div
+                  style="
+                    padding: 11px 18px;
+                    border: 1px solid var(--color-accent);
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 12px;
+                    letter-spacing: 0.08em;
+                    color: var(--color-accent);
+                  "
+                >
+                  DESTRUCTIVE
+                </div>
+              </div>
+            </div>
+            <div
+              style="
+                padding: 24px;
+                border-right: 1px solid var(--color-neutral-300);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+              "
+            >
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                Tabs &amp; nav
+              </div>
+              <div style="display: flex; border-bottom: 2px solid var(--color-divider)">
+                <span
+                  style="
+                    padding: 10px 12px;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 10px;
+                    letter-spacing: 0.1em;
+                    box-shadow: inset 0 -3px 0 var(--color-accent);
+                  "
+                  >PROPERTIES</span
+                >
+                <span
+                  style="
+                    padding: 10px 12px;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 10px;
+                    letter-spacing: 0.1em;
+                    color: var(--color-neutral-600);
+                  "
+                  >WIDGETS</span
+                >
+                <span
+                  style="
+                    padding: 10px 12px;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 10px;
+                    letter-spacing: 0.1em;
+                    color: var(--color-neutral-600);
+                  "
+                  >LIBRARY</span
+                >
+              </div>
+              <div style="display: flex; flex-direction: column">
+                <div
+                  style="
+                    padding: 8px 12px;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 13px;
+                    box-shadow: inset 3px 0 0 var(--color-accent);
+                    background: var(--color-neutral-200);
+                  "
+                >
+                  Active item
+                </div>
+                <div style="padding: 8px 12px; font-size: 13px; color: var(--color-neutral-700)">
+                  Resting item
+                </div>
+              </div>
+            </div>
+            <div
+              style="padding: 24px 0 24px 24px; display: flex; flex-direction: column; gap: 12px"
+            >
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">
+                Fields &amp; flags
+              </div>
+              <div style="display: flex; gap: 8px">
+                <div
+                  style="
+                    flex: 1;
+                    padding: 8px 10px;
+                    border: 1px solid var(--color-neutral-400);
+                    font-family: ui-monospace, monospace;
+                    font-size: 12px;
+                  "
+                >
+                  ecu.rpm
+                </div>
+                <div
+                  style="
+                    width: 76px;
+                    padding: 8px 10px;
+                    border: 1px solid var(--color-accent);
+                    font-family: ui-monospace, monospace;
+                    font-size: 12px;
+                    color: var(--color-accent);
+                  "
+                >
+                  6800
+                </div>
+              </div>
+              <label style="display: flex; align-items: center; gap: 9px; font-size: 13px"
+                ><span
+                  style="
+                    width: 15px;
+                    height: 15px;
+                    border: 2px solid var(--color-accent);
+                    background: var(--color-accent);
+                  "
+                ></span
+                >Checked</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 9px;
+                  font-size: 13px;
+                  color: var(--color-neutral-700);
+                "
+                ><span
+                  style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400)"
+                ></span
+                >Unchecked</label
+              >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 7px;
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-accent);
+                "
+              >
+                <span style="width: 7px; height: 7px; background: var(--color-accent)"></span>1
+                widget out of bounds
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="
+                padding: 24px 20px 24px 0;
+                border-right: 1px solid var(--color-neutral-300);
+                font-size: 13px;
+                color: var(--color-neutral-700);
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 13px;
+                  color: var(--color-text);
+                  margin-bottom: 6px;
+                "
+              >
+                Editor
+              </div>
+              Pages &amp; widgets · Themes
+            </div>
+            <div
+              style="
+                padding: 24px 20px;
+                border-right: 1px solid var(--color-neutral-300);
+                font-size: 13px;
+                color: var(--color-neutral-700);
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 13px;
+                  color: var(--color-text);
+                  margin-bottom: 6px;
+                "
+              >
+                Vehicle
+              </div>
+              CAN bus · ECU profile · OBD-II
+            </div>
+            <div
+              style="
+                padding: 24px 20px;
+                border-right: 1px solid var(--color-neutral-300);
+                font-size: 13px;
+                color: var(--color-neutral-700);
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 13px;
+                  color: var(--color-text);
+                  margin-bottom: 6px;
+                "
+              >
+                Diagnostics
+              </div>
+              Live data · Logs · CLI
+            </div>
+            <div
+              style="padding: 24px 0 24px 20px; font-size: 13px; color: var(--color-neutral-700)"
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 13px;
+                  color: var(--color-text);
+                  margin-bottom: 6px;
+                "
+              >
+                Device
+              </div>
+              Firmware · Boot &amp; update · States &amp; alerts · About
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 72px 0 0">
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 20px;
+              border-bottom: 2px solid var(--color-divider);
+              padding-bottom: 16px;
+            "
+          >
+            <span
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--color-accent);
+              "
+              >04</span
+            >
+            <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Dash</h2>
+            <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)"
+              >320 × 240 · CrowPanel 2.8″ · shown at 2×</span
+            >
+          </div>
+
+          <div
+            style="
+              padding: 32px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            WIDGET GRAMMAR
+          </div>
+          <div
+            style="
+              border-top: 2px solid var(--color-divider);
+              border-bottom: 2px solid var(--color-divider);
+              background: #121212;
+              padding: 22px;
+              display: grid;
+              grid-template-columns: repeat(12, 1fr);
+              gap: 12px;
+              font-family: ui-monospace, monospace;
+              color: #fff;
+            "
+          >
+            <div style="grid-column: span 5; border-top: 2px solid #ffffff; padding-top: 7px">
+              <div style="font-size: 10px; letter-spacing: 0.18em; color: #bababa">
+                PRIMARY VALUE
+              </div>
+              <div style="font-size: 72px; line-height: 0.92; letter-spacing: -0.045em">5200</div>
+            </div>
+            <div style="grid-column: span 3; border-top: 1px solid #222222; padding-top: 6px">
+              <div style="font-size: 10px; letter-spacing: 0.18em; color: #bababa">SECONDARY</div>
+              <div style="font-size: 34px; line-height: 1">
+                78<span style="font-size: 14px; color: #bababa"> °C</span>
+              </div>
+              <div style="height: 3px; background: #222222; margin-top: 7px">
+                <div style="width: 62%; height: 100%; background: #fff"></div>
+              </div>
+            </div>
+            <div style="grid-column: span 4; border-top: 2px solid #ff4444; padding-top: 7px">
+              <div style="font-size: 10px; letter-spacing: 0.18em; color: #ff4444">DANGER</div>
+              <div style="font-size: 46px; line-height: 0.95; color: #ff4444">
+                1.1<span style="font-size: 15px"> bar</span>
+              </div>
+            </div>
+            <div
+              style="
+                grid-column: span 4;
+                min-height: 96px;
+                border: 2px solid #ff4747;
+                background: #ff4747;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                gap: 5px;
+                padding: 12px 14px;
+              "
+            >
+              <div
+                style="font-size: 10px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.75)"
+              >
+                BUTTON — ON
+              </div>
+              <div style="font-size: 28px; line-height: 1">ARMED</div>
+            </div>
+            <div
+              style="
+                grid-column: span 4;
+                min-height: 96px;
+                border: 2px solid #ffffff;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                gap: 5px;
+                padding: 12px 14px;
+              "
+            >
+              <div style="font-size: 10px; letter-spacing: 0.18em; color: #bababa">
+                BUTTON — OFF
+              </div>
+              <div style="font-size: 28px; line-height: 1">MAP 1</div>
+            </div>
+            <div
+              style="
+                grid-column: span 4;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                gap: 8px;
+              "
+            >
+              <div style="font-size: 10px; letter-spacing: 0.18em; color: #bababa">SHIFT LIGHT</div>
+              <div style="display: flex; gap: 3px; height: 16px">
+                <div style="flex: 1; background: #fff"></div>
+                <div style="flex: 1; background: #fff"></div>
+                <div style="flex: 1; background: #fff"></div>
+                <div style="flex: 1; background: #fff"></div>
+                <div style="flex: 1; background: #ff4444"></div>
+                <div style="flex: 1; background: #ff4444"></div>
+                <div style="flex: 1; background: #222"></div>
+                <div style="flex: 1; background: #222"></div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="padding: 28px 40px 28px 0; border-right: 1px solid var(--color-neutral-300)"
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 10px;
+                "
+              >
+                Layout rules
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 9px;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                "
+              >
+                <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                  12-column grid, 12 px gutter. Widgets span columns, never fixed pixels.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Primary values carry a 2 px ink rule; secondaries a 1 px track rule; danger a 2 px
+                  red rule.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Touch targets never below 48 × 50 px real. Buttons are outlined, filled red when
+                  engaged.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Anything outside 320 × 240 is flagged in the Tuner, not silently scaled.
+                </div>
+              </div>
+            </div>
+            <div style="padding: 28px 0 28px 40px">
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 10px;
+                "
+              >
+                Motion
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 9px;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                "
+              >
+                <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                  Rev limit — hard on-off at 6 Hz, no easing.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Armed states — 1 s ease-in-out pulse, 100 % to 35 %.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Values snap, never tween. Bars catch up in 120 ms linear.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Stale after 500 ms without a frame: grey and
+                  <span style="font-family: ui-monospace, monospace">- -</span>.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Page change is an instant cut — nothing for the eye to track.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              padding: 32px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            THE SIX DEFAULT PAGES
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              border-top: 2px solid var(--color-divider);
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="
+                padding: 22px 22px 22px 0;
+                border-right: 1px solid var(--color-neutral-300);
+                border-bottom: 1px solid var(--color-neutral-300);
+              "
+            >
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                01
+              </div>
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">
+                Street
+              </div>
+              <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">
+                Speed, gear, rpm, water, fuel, batt, odo
+              </div>
+            </div>
+            <div
+              style="
+                padding: 22px;
+                border-right: 1px solid var(--color-neutral-300);
+                border-bottom: 1px solid var(--color-neutral-300);
+              "
+            >
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                02
+              </div>
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">
+                Track
+              </div>
+              <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">
+                Shift light, rpm, gear, speed, oil press, four secondaries
+              </div>
+            </div>
+            <div
+              style="padding: 22px 0 22px 22px; border-bottom: 1px solid var(--color-neutral-300)"
+            >
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                03
+              </div>
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">
+                Engine
+              </div>
+              <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">
+                Water, oil temp, oil press, fuel press, gearbox, diff, batt
+              </div>
+            </div>
+            <div
+              style="padding: 22px 22px 22px 0; border-right: 1px solid var(--color-neutral-300)"
+            >
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                04
+              </div>
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">
+                Tuning
+              </div>
+              <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">
+                Boost, target, lambda, throttle, IAT, EGT, knock
+              </div>
+            </div>
+            <div style="padding: 22px; border-right: 1px solid var(--color-neutral-300)">
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                05
+              </div>
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">
+                Timing
+              </div>
+              <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">
+                Lap, delta, best, last, laps, timer and reset buttons
+              </div>
+            </div>
+            <div style="padding: 22px 0 22px 22px">
+              <div
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+              >
+                06
+              </div>
+              <div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">
+                Controls
+              </div>
+              <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">
+                Launch rpm, clutch, launch, anti-lag, map, pit limit, cruise
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              padding: 32px 0 12px;
+              font-family: var(--font-heading);
+              font-weight: 800;
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: var(--color-neutral-600);
+            "
+          >
+            BOOT, UPDATE, ALERTS
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+              border-top: 2px solid var(--color-divider);
+              padding-top: 20px;
+            "
+          >
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  height: 200px;
+                  background: #121212;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 14px;
+                "
+              >
+                <svg viewBox="0 0 116 100" style="width: 84px" fill="none">
+                  <g transform="translate(10,0) skewX(-11)">
+                    <path d="M46 26 H22 V74 H46" stroke="#fff" stroke-width="13"></path>
+                    <path d="M96 26 H66 V50 H96 V74 H66" stroke="#FF4747" stroke-width="13"></path>
+                  </g>
+                </svg>
+                <div
+                  style="
+                    display: inline-block;
+                    transform: skewX(-11deg);
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 24px;
+                    letter-spacing: -0.045em;
+                    color: #fff;
+                  "
+                >
+                  <span>CAN</span><span style="color: #ff4747">SHIFT</span>
+                </div>
+              </div>
+              <span
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+                >Boot — mark, then self-test</span
+              >
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  height: 200px;
+                  background: #121212;
+                  padding: 20px;
+                  box-sizing: border-box;
+                  display: flex;
+                  flex-direction: column;
+                  font-family: ui-monospace, monospace;
+                  color: #fff;
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 11px;
+                    letter-spacing: 0.2em;
+                    color: #bababa;
+                  "
+                >
+                  UPDATING FIRMWARE
+                </div>
+                <div style="font-size: 56px; line-height: 1; margin-top: 10px">
+                  62<span style="font-size: 20px; color: #bababa"> %</span>
+                </div>
+                <div style="margin-top: auto; height: 10px; background: #222">
+                  <div style="width: 62%; height: 100%; background: #ff4747"></div>
+                </div>
+                <div style="font-size: 12px; color: #ff8800; margin-top: 8px">DO NOT UNPLUG</div>
+              </div>
+              <span
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+                >Update — progress, then complete or failed</span
+              >
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  height: 200px;
+                  background: #ff4444;
+                  padding: 20px;
+                  box-sizing: border-box;
+                  display: flex;
+                  flex-direction: column;
+                  font-family: ui-monospace, monospace;
+                  color: #fff;
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 15px;
+                    letter-spacing: 0.16em;
+                  "
+                >
+                  OIL PRESSURE
+                </div>
+                <div style="font-size: 62px; line-height: 1; margin-top: 6px">1.1</div>
+                <div
+                  style="
+                    margin-top: auto;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 14px;
+                    letter-spacing: 0.14em;
+                  "
+                >
+                  STOP THE ENGINE
+                </div>
+              </div>
+              <span
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+                >Critical — full takeover, pulsing</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 72px 0 0">
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 20px;
+              border-bottom: 2px solid var(--color-divider);
+              padding-bottom: 16px;
+            "
+          >
+            <span
+              style="
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--color-accent);
+              "
+              >05</span
+            >
+            <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Mobile app</h2>
+            <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)"
+              >iOS + Android · 390 × 844 · 9 screens</span
+            >
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              border-bottom: 2px solid var(--color-divider);
+            "
+          >
+            <div
+              style="padding: 28px 40px 28px 0; border-right: 1px solid var(--color-neutral-300)"
+            >
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 10px;
+                "
+              >
+                Structure
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 9px;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                "
+              >
+                <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">
+                  Four tabs: Dash, Graph, Console, Device. Nothing else at root level.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Header carries the device name and the live bus state — never a logo.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  Primary action is a 64 px red bar at the bottom of the content, flush left label.
+                </div>
+                <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">
+                  The dash view mirrors the panel's 12-column grid so the two read as one product.
+                </div>
+              </div>
+            </div>
+            <div style="padding: 28px 0 28px 40px">
+              <div
+                style="
+                  font-family: var(--font-heading);
+                  font-weight: 800;
+                  font-size: 16px;
+                  margin-bottom: 10px;
+                "
+              >
+                Screens
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 8px 20px;
+                  font-size: 14px;
+                  color: var(--color-neutral-700);
+                "
+              >
+                <div>01 Connect</div>
+                <div>06 Console</div>
+                <div>02 Devices</div>
+                <div>07 Critical alert</div>
+                <div>03 Dashboard</div>
+                <div>08 Device</div>
+                <div>04 Pages</div>
+                <div>09 OTA update</div>
+                <div>05 Graph</div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+              padding-top: 24px;
+            "
+          >
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  height: 240px;
+                  background: #121212;
+                  padding: 18px;
+                  box-sizing: border-box;
+                  display: flex;
+                  flex-direction: column;
+                  font-family: ui-monospace, monospace;
+                  color: #fff;
+                "
+              >
+                <div style="font-size: 11px; color: #8f8f8f">CANShift-E36 · CAN 842 Hz</div>
+                <div
+                  style="margin-top: 14px; font-size: 10px; letter-spacing: 0.18em; color: #bababa"
+                >
+                  RPM
+                </div>
+                <div style="font-size: 54px; line-height: 0.95">5200</div>
+                <div
+                  style="
+                    margin-top: auto;
+                    height: 52px;
+                    background: #ff4747;
+                    display: flex;
+                    align-items: center;
+                    padding: 0 14px;
+                    font-family: var(--font-heading);
+                    font-weight: 800;
+                    font-size: 12px;
+                    letter-spacing: 0.09em;
+                  "
+                >
+                  PAGE 02 — TRACK
+                </div>
+              </div>
+              <span
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+                >Dashboard</span
+              >
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  height: 240px;
+                  background: #121212;
+                  padding: 18px;
+                  box-sizing: border-box;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  font-family: ui-monospace, monospace;
+                  color: #fff;
+                "
+              >
+                <div style="font-size: 10px; letter-spacing: 0.18em; color: #bababa">BOOST</div>
+                <svg
+                  viewBox="0 0 320 90"
+                  style="width: 100%; height: 90px"
+                  preserveAspectRatio="none"
+                >
+                  <polyline
+                    points="0,80 24,76 48,60 72,66 96,40 120,48 144,26 168,34 192,20 216,30 240,18 264,28 288,22 320,26"
+                    fill="none"
+                    stroke="#fff"
+                    stroke-width="2"
+                  ></polyline>
+                </svg>
+                <div style="font-size: 34px; line-height: 1">
+                  1.42<span style="font-size: 13px; color: #bababa"> bar</span>
+                </div>
+              </div>
+              <span
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+                >Graph</span
+              >
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  height: 240px;
+                  background: #121212;
+                  padding: 18px;
+                  box-sizing: border-box;
+                  font-family: ui-monospace, monospace;
+                  color: #bababa;
+                  font-size: 12px;
+                  line-height: 2.1;
+                  overflow: hidden;
+                "
+              >
+                <div><span style="color: #ff4747">0x0AA</span> 3E 00 12 FF 08 A0 00 11</div>
+                <div><span style="color: #ff4747">0x0B4</span> 00 00 5C 21 00 00 00 00</div>
+                <div><span style="color: #ff4747">0x1D0</span> 4E 09 82 00 6B 00 00 F0</div>
+                <div><span style="color: #ff4747">0x316</span> 05 8F 14 50 00 00 0F 00</div>
+                <div><span style="color: #ff4747">0x338</span> 0D 8C 00 00</div>
+              </div>
+              <span
+                style="
+                  font-family: ui-monospace, monospace;
+                  font-size: 11px;
+                  color: var(--color-neutral-600);
+                "
+                >Console</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          style="
+            margin-top: 80px;
+            background: var(--color-accent);
+            color: #fff;
+            padding: 56px 48px;
+            display: flex;
+            align-items: flex-end;
+            gap: 40px;
+          "
+        >
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div
+              style="
+                font-family: var(--font-heading);
+                font-weight: 800;
+                font-size: 11px;
+                letter-spacing: 0.2em;
+              "
+            >
+              CANSHIFT — BRAND BOOK v1.0
+            </div>
+            <div
+              style="
+                font-family: var(--font-heading);
+                font-weight: 800;
+                font-size: 44px;
+                letter-spacing: -0.03em;
+                line-height: 1;
+              "
+            >
+              One mark, one red,<br />three surfaces.
+            </div>
+          </div>
+          <svg viewBox="0 0 116 100" style="width: 96px; flex: none; margin-left: auto" fill="none">
             <g transform="translate(10,0) skewX(-11)">
               <path d="M46 26 H22 V74 H46" stroke="#fff" stroke-width="13"></path>
-              <path d="M96 26 H66 V50 H96 V74 H66" stroke="#fff" stroke-width="13" opacity="0.55"></path>
+              <path
+                d="M96 26 H66 V50 H96 V74 H66"
+                stroke="#fff"
+                stroke-width="13"
+                opacity="0.55"
+              ></path>
             </g>
           </svg>
         </div>
       </div>
-      <div style="padding: 32px 24px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 14px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">ONE COLOUR</div>
-        <div style="width: 132px; height: 132px; border: 2px solid var(--color-divider); display: grid; place-items: center">
-          <svg viewBox="0 0 116 100" style="width: 88px" fill="none">
-            <g transform="translate(10,0) skewX(-11)">
-              <path d="M46 26 H22 V74 H46" stroke="var(--color-text)" stroke-width="13"></path>
-              <path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-text)" stroke-width="13"></path>
-            </g>
-          </svg>
-        </div>
-      </div>
-      <div style="padding: 32px 0 32px 24px; display: flex; flex-direction: column; gap: 14px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">SMALLEST SIZES</div>
-        <div style="display: flex; align-items: flex-end; gap: 22px; background: #151313; padding: 20px; height: 92px">
-          <svg viewBox="0 0 116 100" style="width: 40px" fill="none"><g transform="translate(10,0) skewX(-11)"><path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path><path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path></g></svg>
-          <svg viewBox="0 0 116 100" style="width: 26px" fill="none"><g transform="translate(10,0) skewX(-11)"><path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path><path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path></g></svg>
-          <svg viewBox="0 0 116 100" style="width: 16px" fill="none"><g transform="translate(10,0) skewX(-11)"><path d="M46 26 H22 V74 H46" stroke="#f3f2f2" stroke-width="13"></path><path d="M96 26 H66 V50 H96 V74 H66" stroke="var(--color-accent)" stroke-width="13"></path></g></svg>
-        </div>
-        <div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">40 / 26 / 16 px — below 96 px wide, monogram only</div>
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 32px 40px 32px 0; border-right: 1px solid var(--color-neutral-300)">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 12px">Do</div>
-        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; color: var(--color-neutral-700)">
-          <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">Keep the shear at 11° — the mark and the wordmark share it.</div>
-          <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">Clear space on all sides equals the stroke width of the C.</div>
-          <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">On dark grounds the C is paper, the S stays red.</div>
-        </div>
-      </div>
-      <div style="padding: 32px 0 32px 40px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 12px">Don't</div>
-        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; color: var(--color-neutral-700)">
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">No gradient, no chrome bevel, no drop shadow — that is the old mark.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">No outline version, no rounded terminals, no second red.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Never set the wordmark in another typeface or unshear it.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div style="padding: 72px 0 0">
-    <div style="display: flex; align-items: baseline; gap: 20px; border-bottom: 2px solid var(--color-divider); padding-bottom: 16px">
-      <span style="font-family: ui-monospace, monospace; font-size: 13px; color: var(--color-accent)">02</span>
-      <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Colour &amp; type</h2>
-      <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)">Two systems: brand chrome, and the dash on the panel</span>
-    </div>
-
-    <div style="padding: 32px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">BRAND — CHROME &amp; DOCUMENTS</div>
-    <div style="display: grid; grid-template-columns: repeat(5, 1fr); border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider)">
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 108px; background: var(--color-accent)"></div><div style="padding: 12px 12px 16px 0"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Accent</div><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">#EC3013</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 108px; background: var(--color-text)"></div><div style="padding: 12px"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Ink</div><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">#201E1D</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 108px; background: var(--color-bg); border-bottom: 1px solid var(--color-neutral-300)"></div><div style="padding: 12px"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Ground</div><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">#F3F2F2</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 108px; background: var(--color-neutral-300)"></div><div style="padding: 12px"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Rule</div><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">#D7D3D3</div></div></div>
-      <div><div style="height: 108px; background: #151313"></div><div style="padding: 12px"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Dark chrome</div><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">#151313</div></div></div>
-    </div>
-
-    <div style="padding: 32px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">DASH — DEVICE TOKENS</div>
-    <div style="display: grid; grid-template-columns: repeat(6, 1fr); border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider)">
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 88px; background: #121212"></div><div style="padding: 10px 10px 14px 0"><div style="font-family: ui-monospace, monospace; font-size: 11px">bg #121212</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 88px; background: #1F1F1F"></div><div style="padding: 10px"><div style="font-family: ui-monospace, monospace; font-size: 11px">surface #1F1F1F</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 88px; background: #FF4747"></div><div style="padding: 10px"><div style="font-family: ui-monospace, monospace; font-size: 11px">primary #FF4747</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 88px; background: #FF8800"></div><div style="padding: 10px"><div style="font-family: ui-monospace, monospace; font-size: 11px">warning #FF8800</div></div></div>
-      <div style="border-right: 1px solid var(--color-neutral-300)"><div style="height: 88px; background: #00CC44"></div><div style="padding: 10px"><div style="font-family: ui-monospace, monospace; font-size: 11px">ok #00CC44</div></div></div>
-      <div><div style="height: 88px; background: #BABABA"></div><div style="padding: 10px"><div style="font-family: ui-monospace, monospace; font-size: 11px">dim #BABABA</div></div></div>
-    </div>
-    <p style="margin: 14px 0 0; max-width: 720px; font-size: 14px; color: var(--color-neutral-700); text-wrap: pretty">The brand red (#EC3013) is for chrome, print and the web app. The device red (#FF4747) is brighter because it is read through a plastic lens in daylight. Never swap them.</p>
-
-    <div style="padding: 40px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">TYPE</div>
-    <div style="display: grid; grid-template-columns: 2fr 1fr; border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 28px 40px 28px 0; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 14px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 52px; letter-spacing: -0.035em; line-height: 1">Archivo 800 — headings</div>
-        <div style="font-size: 17px; line-height: 1.5; color: var(--color-neutral-700)">Archivo 400 — body copy. Interface labels are 800 in small caps tracking, 0.18em to 0.22em, never below 9 px.</div>
-        <div style="font-family: ui-monospace, monospace; font-size: 22px">Monospace — every number the car produces</div>
-      </div>
-      <div style="padding: 28px 0 28px 40px; display: flex; flex-direction: column; gap: 11px; font-size: 14px; color: var(--color-neutral-700)">
-        <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">Values are always monospaced and tabular — digits must not shift as they change.</div>
-        <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Labels above the value, never beside it.</div>
-        <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Units at a quarter of the value size, in dim.</div>
-        <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Minimum on the panel: 30 px value at 2×, 10 px label.</div>
-      </div>
-    </div>
-  </div>
-
-  <div style="padding: 72px 0 0">
-    <div style="display: flex; align-items: baseline; gap: 20px; border-bottom: 2px solid var(--color-divider); padding-bottom: 16px">
-      <span style="font-family: ui-monospace, monospace; font-size: 13px; color: var(--color-accent)">03</span>
-      <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Tuner — web app</h2>
-      <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)">canshift.tmbk.ch · 12 views</span>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 236px 1fr; border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 28px 24px 28px 0; border-right: 1px solid var(--color-neutral-300)">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 10px">Shell</div>
-        <p style="margin: 0; font-size: 14px; color: var(--color-neutral-700); text-wrap: pretty">Header 56 px, sidebar 236 px, inspector 320 px. Everything between is the work surface.</p>
-      </div>
-      <div style="padding: 28px 0 28px 32px; display: flex; flex-direction: column; gap: 12px">
-        <div style="border: 2px solid var(--color-divider)">
-          <div style="height: 34px; border-bottom: 2px solid var(--color-divider); display: flex; align-items: center; gap: 10px; padding: 0 12px; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">
-            <span style="font-family: var(--font-heading); font-weight: 800; font-size: 12px; color: var(--color-text)">HEADER — brand · project · state · SAVE · BURN</span>
-          </div>
-          <div style="display: flex; height: 150px">
-            <div style="width: 140px; border-right: 2px solid var(--color-divider); background: var(--color-neutral-200); display: grid; place-items: center; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.12em; color: var(--color-neutral-700)">SIDEBAR</div>
-            <div style="flex: 1; display: grid; place-items: center; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.12em; color: var(--color-neutral-700)">CANVAS / TABLE</div>
-            <div style="width: 180px; border-left: 2px solid var(--color-divider); background: var(--color-neutral-100); display: grid; place-items: center; font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.12em; color: var(--color-neutral-700)">INSPECTOR</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="padding: 32px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">COMPONENTS</div>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 24px 24px 24px 0; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 12px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Buttons</div>
-        <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start">
-          <div style="padding: 11px 20px; background: var(--color-accent); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.09em; color: #fff">BURN TO DEVICE</div>
-          <div style="padding: 11px 18px; border: 1px solid var(--color-neutral-400); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.08em">SECONDARY</div>
-          <div style="padding: 11px 18px; border: 1px solid var(--color-accent); font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.08em; color: var(--color-accent)">DESTRUCTIVE</div>
-        </div>
-      </div>
-      <div style="padding: 24px; border-right: 1px solid var(--color-neutral-300); display: flex; flex-direction: column; gap: 12px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Tabs &amp; nav</div>
-        <div style="display: flex; border-bottom: 2px solid var(--color-divider)">
-          <span style="padding: 10px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.1em; box-shadow: inset 0 -3px 0 var(--color-accent)">PROPERTIES</span>
-          <span style="padding: 10px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.1em; color: var(--color-neutral-600)">WIDGETS</span>
-          <span style="padding: 10px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.1em; color: var(--color-neutral-600)">LIBRARY</span>
-        </div>
-        <div style="display: flex; flex-direction: column">
-          <div style="padding: 8px 12px; font-family: var(--font-heading); font-weight: 800; font-size: 13px; box-shadow: inset 3px 0 0 var(--color-accent); background: var(--color-neutral-200)">Active item</div>
-          <div style="padding: 8px 12px; font-size: 13px; color: var(--color-neutral-700)">Resting item</div>
-        </div>
-      </div>
-      <div style="padding: 24px 0 24px 24px; display: flex; flex-direction: column; gap: 12px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px">Fields &amp; flags</div>
-        <div style="display: flex; gap: 8px">
-          <div style="flex: 1; padding: 8px 10px; border: 1px solid var(--color-neutral-400); font-family: ui-monospace, monospace; font-size: 12px">ecu.rpm</div>
-          <div style="width: 76px; padding: 8px 10px; border: 1px solid var(--color-accent); font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-accent)">6800</div>
-        </div>
-        <label style="display: flex; align-items: center; gap: 9px; font-size: 13px"><span style="width: 15px; height: 15px; border: 2px solid var(--color-accent); background: var(--color-accent)"></span>Checked</label>
-        <label style="display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--color-neutral-700)"><span style="width: 15px; height: 15px; border: 2px solid var(--color-neutral-400)"></span>Unchecked</label>
-        <div style="display: flex; align-items: center; gap: 7px; font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-accent)"><span style="width: 7px; height: 7px; background: var(--color-accent)"></span>1 widget out of bounds</div>
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 24px 20px 24px 0; border-right: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px; color: var(--color-text); margin-bottom: 6px">Editor</div>Pages &amp; widgets · Themes</div>
-      <div style="padding: 24px 20px; border-right: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px; color: var(--color-text); margin-bottom: 6px">Vehicle</div>CAN bus · ECU profile · OBD-II</div>
-      <div style="padding: 24px 20px; border-right: 1px solid var(--color-neutral-300); font-size: 13px; color: var(--color-neutral-700)"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px; color: var(--color-text); margin-bottom: 6px">Diagnostics</div>Live data · Logs · CLI</div>
-      <div style="padding: 24px 0 24px 20px; font-size: 13px; color: var(--color-neutral-700)"><div style="font-family: var(--font-heading); font-weight: 800; font-size: 13px; color: var(--color-text); margin-bottom: 6px">Device</div>Firmware · Boot &amp; update · States &amp; alerts · About</div>
-    </div>
-  </div>
-
-  <div style="padding: 72px 0 0">
-    <div style="display: flex; align-items: baseline; gap: 20px; border-bottom: 2px solid var(--color-divider); padding-bottom: 16px">
-      <span style="font-family: ui-monospace, monospace; font-size: 13px; color: var(--color-accent)">04</span>
-      <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Dash</h2>
-      <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)">320 × 240 · CrowPanel 2.8″ · shown at 2×</span>
-    </div>
-
-    <div style="padding: 32px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">WIDGET GRAMMAR</div>
-    <div style="border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider); background: #121212; padding: 22px; display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; font-family: ui-monospace, monospace; color: #fff">
-      <div style="grid-column: span 5; border-top: 2px solid #FFFFFF; padding-top: 7px"><div style="font-size: 10px; letter-spacing: 0.18em; color: #BABABA">PRIMARY VALUE</div><div style="font-size: 72px; line-height: 0.92; letter-spacing: -0.045em">5200</div></div>
-      <div style="grid-column: span 3; border-top: 1px solid #222222; padding-top: 6px"><div style="font-size: 10px; letter-spacing: 0.18em; color: #BABABA">SECONDARY</div><div style="font-size: 34px; line-height: 1">78<span style="font-size: 14px; color: #BABABA"> °C</span></div><div style="height: 3px; background: #222222; margin-top: 7px"><div style="width: 62%; height: 100%; background: #fff"></div></div></div>
-      <div style="grid-column: span 4; border-top: 2px solid #FF4444; padding-top: 7px"><div style="font-size: 10px; letter-spacing: 0.18em; color: #FF4444">DANGER</div><div style="font-size: 46px; line-height: 0.95; color: #FF4444">1.1<span style="font-size: 15px"> bar</span></div></div>
-      <div style="grid-column: span 4; min-height: 96px; border: 2px solid #FF4747; background: #FF4747; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 12px 14px"><div style="font-size: 10px; letter-spacing: 0.18em; color: rgba(255,255,255,0.75)">BUTTON — ON</div><div style="font-size: 28px; line-height: 1">ARMED</div></div>
-      <div style="grid-column: span 4; min-height: 96px; border: 2px solid #FFFFFF; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 12px 14px"><div style="font-size: 10px; letter-spacing: 0.18em; color: #BABABA">BUTTON — OFF</div><div style="font-size: 28px; line-height: 1">MAP 1</div></div>
-      <div style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px"><div style="font-size: 10px; letter-spacing: 0.18em; color: #BABABA">SHIFT LIGHT</div><div style="display: flex; gap: 3px; height: 16px"><div style="flex: 1; background: #fff"></div><div style="flex: 1; background: #fff"></div><div style="flex: 1; background: #fff"></div><div style="flex: 1; background: #fff"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #FF4444"></div><div style="flex: 1; background: #222"></div><div style="flex: 1; background: #222"></div></div></div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 28px 40px 28px 0; border-right: 1px solid var(--color-neutral-300)">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 10px">Layout rules</div>
-        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; color: var(--color-neutral-700)">
-          <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">12-column grid, 12 px gutter. Widgets span columns, never fixed pixels.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Primary values carry a 2 px ink rule; secondaries a 1 px track rule; danger a 2 px red rule.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Touch targets never below 48 × 50 px real. Buttons are outlined, filled red when engaged.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Anything outside 320 × 240 is flagged in the Tuner, not silently scaled.</div>
-        </div>
-      </div>
-      <div style="padding: 28px 0 28px 40px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 10px">Motion</div>
-        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; color: var(--color-neutral-700)">
-          <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">Rev limit — hard on-off at 6 Hz, no easing.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Armed states — 1 s ease-in-out pulse, 100 % to 35 %.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Values snap, never tween. Bars catch up in 120 ms linear.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Stale after 500 ms without a frame: grey and <span style="font-family: ui-monospace, monospace">- -</span>.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Page change is an instant cut — nothing for the eye to track.</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="padding: 32px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">THE SIX DEFAULT PAGES</div>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); border-top: 2px solid var(--color-divider); border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 22px 22px 22px 0; border-right: 1px solid var(--color-neutral-300); border-bottom: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">01</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">Street</div><div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">Speed, gear, rpm, water, fuel, batt, odo</div></div>
-      <div style="padding: 22px; border-right: 1px solid var(--color-neutral-300); border-bottom: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">02</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">Track</div><div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">Shift light, rpm, gear, speed, oil press, four secondaries</div></div>
-      <div style="padding: 22px 0 22px 22px; border-bottom: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">03</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">Engine</div><div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">Water, oil temp, oil press, fuel press, gearbox, diff, batt</div></div>
-      <div style="padding: 22px 22px 22px 0; border-right: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">04</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">Tuning</div><div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">Boost, target, lambda, throttle, IAT, EGT, knock</div></div>
-      <div style="padding: 22px; border-right: 1px solid var(--color-neutral-300)"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">05</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">Timing</div><div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">Lap, delta, best, last, laps, timer and reset buttons</div></div>
-      <div style="padding: 22px 0 22px 22px"><div style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">06</div><div style="font-family: var(--font-heading); font-weight: 800; font-size: 17px">Controls</div><div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px">Launch rpm, clutch, launch, anti-lag, map, pit limit, cruise</div></div>
-    </div>
-
-    <div style="padding: 32px 0 12px; font-family: var(--font-heading); font-weight: 800; font-size: 10px; letter-spacing: 0.2em; color: var(--color-neutral-600)">BOOT, UPDATE, ALERTS</div>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; border-top: 2px solid var(--color-divider); padding-top: 20px">
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="height: 200px; background: #121212; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px">
-          <svg viewBox="0 0 116 100" style="width: 84px" fill="none"><g transform="translate(10,0) skewX(-11)"><path d="M46 26 H22 V74 H46" stroke="#fff" stroke-width="13"></path><path d="M96 26 H66 V50 H96 V74 H66" stroke="#FF4747" stroke-width="13"></path></g></svg>
-          <div style="display: inline-block; transform: skewX(-11deg); font-family: var(--font-heading); font-weight: 800; font-size: 24px; letter-spacing: -0.045em; color: #fff"><span>CAN</span><span style="color: #FF4747">SHIFT</span></div>
-        </div>
-        <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">Boot — mark, then self-test</span>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="height: 200px; background: #121212; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #fff">
-          <div style="font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.2em; color: #BABABA">UPDATING FIRMWARE</div>
-          <div style="font-size: 56px; line-height: 1; margin-top: 10px">62<span style="font-size: 20px; color: #BABABA"> %</span></div>
-          <div style="margin-top: auto; height: 10px; background: #222"><div style="width: 62%; height: 100%; background: #FF4747"></div></div>
-          <div style="font-size: 12px; color: #FF8800; margin-top: 8px">DO NOT UNPLUG</div>
-        </div>
-        <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">Update — progress, then complete or failed</span>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="height: 200px; background: #FF4444; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #fff">
-          <div style="font-family: var(--font-heading); font-weight: 800; font-size: 15px; letter-spacing: 0.16em">OIL PRESSURE</div>
-          <div style="font-size: 62px; line-height: 1; margin-top: 6px">1.1</div>
-          <div style="margin-top: auto; font-family: var(--font-heading); font-weight: 800; font-size: 14px; letter-spacing: 0.14em">STOP THE ENGINE</div>
-        </div>
-        <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">Critical — full takeover, pulsing</span>
-      </div>
-    </div>
-  </div>
-
-  <div style="padding: 72px 0 0">
-    <div style="display: flex; align-items: baseline; gap: 20px; border-bottom: 2px solid var(--color-divider); padding-bottom: 16px">
-      <span style="font-family: ui-monospace, monospace; font-size: 13px; color: var(--color-accent)">05</span>
-      <h2 style="margin: 0; font-size: 40px; letter-spacing: -0.03em">Mobile app</h2>
-      <span style="margin-left: auto; font-size: 14px; color: var(--color-neutral-700)">iOS + Android · 390 × 844 · 9 screens</span>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid var(--color-divider)">
-      <div style="padding: 28px 40px 28px 0; border-right: 1px solid var(--color-neutral-300)">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 10px">Structure</div>
-        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 14px; color: var(--color-neutral-700)">
-          <div style="border-left: 2px solid var(--color-accent); padding-left: 12px">Four tabs: Dash, Graph, Console, Device. Nothing else at root level.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Header carries the device name and the live bus state — never a logo.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">Primary action is a 64 px red bar at the bottom of the content, flush left label.</div>
-          <div style="border-left: 2px solid var(--color-neutral-400); padding-left: 12px">The dash view mirrors the panel's 12-column grid so the two read as one product.</div>
-        </div>
-      </div>
-      <div style="padding: 28px 0 28px 40px">
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; margin-bottom: 10px">Screens</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; font-size: 14px; color: var(--color-neutral-700)">
-          <div>01 Connect</div><div>06 Console</div>
-          <div>02 Devices</div><div>07 Critical alert</div>
-          <div>03 Dashboard</div><div>08 Device</div>
-          <div>04 Pages</div><div>09 OTA update</div>
-          <div>05 Graph</div><div></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding-top: 24px">
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="height: 240px; background: #121212; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; font-family: ui-monospace, monospace; color: #fff">
-          <div style="font-size: 11px; color: #8F8F8F">CANShift-E36 · CAN 842 Hz</div>
-          <div style="margin-top: 14px; font-size: 10px; letter-spacing: 0.18em; color: #BABABA">RPM</div>
-          <div style="font-size: 54px; line-height: 0.95">5200</div>
-          <div style="margin-top: auto; height: 52px; background: #FF4747; display: flex; align-items: center; padding: 0 14px; font-family: var(--font-heading); font-weight: 800; font-size: 12px; letter-spacing: 0.09em">PAGE 02 — TRACK</div>
-        </div>
-        <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">Dashboard</span>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="height: 240px; background: #121212; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; font-family: ui-monospace, monospace; color: #fff">
-          <div style="font-size: 10px; letter-spacing: 0.18em; color: #BABABA">BOOST</div>
-          <svg viewBox="0 0 320 90" style="width: 100%; height: 90px" preserveAspectRatio="none"><polyline points="0,80 24,76 48,60 72,66 96,40 120,48 144,26 168,34 192,20 216,30 240,18 264,28 288,22 320,26" fill="none" stroke="#fff" stroke-width="2"></polyline></svg>
-          <div style="font-size: 34px; line-height: 1">1.42<span style="font-size: 13px; color: #BABABA"> bar</span></div>
-        </div>
-        <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">Graph</span>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="height: 240px; background: #121212; padding: 18px; box-sizing: border-box; font-family: ui-monospace, monospace; color: #BABABA; font-size: 12px; line-height: 2.1; overflow: hidden">
-          <div><span style="color: #FF4747">0x0AA</span> 3E 00 12 FF 08 A0 00 11</div>
-          <div><span style="color: #FF4747">0x0B4</span> 00 00 5C 21 00 00 00 00</div>
-          <div><span style="color: #FF4747">0x1D0</span> 4E 09 82 00 6B 00 00 F0</div>
-          <div><span style="color: #FF4747">0x316</span> 05 8F 14 50 00 00 0F 00</div>
-          <div><span style="color: #FF4747">0x338</span> 0D 8C 00 00</div>
-        </div>
-        <span style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-neutral-600)">Console</span>
-      </div>
-    </div>
-  </div>
-
-  <div style="margin-top: 80px; background: var(--color-accent); color: #fff; padding: 56px 48px; display: flex; align-items: flex-end; gap: 40px">
-    <div style="display: flex; flex-direction: column; gap: 10px">
-      <div style="font-family: var(--font-heading); font-weight: 800; font-size: 11px; letter-spacing: 0.2em">CANSHIFT — BRAND BOOK v1.0</div>
-      <div style="font-family: var(--font-heading); font-weight: 800; font-size: 44px; letter-spacing: -0.03em; line-height: 1">One mark, one red,<br>three surfaces.</div>
-    </div>
-    <svg viewBox="0 0 116 100" style="width: 96px; flex: none; margin-left: auto" fill="none">
-      <g transform="translate(10,0) skewX(-11)">
-        <path d="M46 26 H22 V74 H46" stroke="#fff" stroke-width="13"></path>
-        <path d="M96 26 H66 V50 H96 V74 H66" stroke="#fff" stroke-width="13" opacity="0.55"></path>
-      </g>
-    </svg>
-  </div>
-
-</div>
-</x-dc>
-</body>
+    </x-dc>
+  </body>
 </html>
