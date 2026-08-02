@@ -10,6 +10,8 @@ import {
 } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
+import { useSignalStore } from '../../stores/signal.store'
+import { defaultWidgetForSignal, SIGNAL_DRAG_MIME } from '../../utils/default-widget'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { CruiseControlPreview } from './CruiseControlPreview'
@@ -200,6 +202,30 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
     startRubberBand,
   })
 
+  const addWidget = useDashboardStore((s) => s.addWidget)
+  const templateLocked = (page.template ?? 'custom') !== 'custom'
+
+  const handleSignalDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (templateLocked || !e.dataTransfer.types.includes(SIGNAL_DRAG_MIME)) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    },
+    [templateLocked]
+  )
+
+  const handleSignalDrop = useCallback(
+    (e: React.DragEvent) => {
+      const name = e.dataTransfer.getData(SIGNAL_DRAG_MIME)
+      if (!name || templateLocked) return
+      e.preventDefault()
+      const signal = useSignalStore.getState().signals.find((s) => s.name === name)
+      if (!signal) return
+      addWidget(page.id, defaultWidgetForSignal(signal))
+    },
+    [templateLocked, addWidget, page.id]
+  )
+
   const selectedWidget =
     selectedWidgetId !== null ? page.widgets.find((w) => w.id === selectedWidgetId) : undefined
   const selectedRect = selectedWidget
@@ -302,6 +328,8 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
                     }}
                     onPointerDown={onPointerDown}
                     onPointerUp={onPointerUp}
+                    onDragOver={handleSignalDragOver}
+                    onDrop={handleSignalDrop}
                     style={{
                       position: 'relative',
                       flex: 1,

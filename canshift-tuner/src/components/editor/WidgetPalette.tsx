@@ -1,19 +1,11 @@
 import type { CSSProperties } from 'react'
-import { HexColorSchema } from '@tmbk/canshift-core'
 import type { WidgetType, SensorIconName } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/size-tokens'
 import { createId } from '../../utils/id'
+import { DEFAULT_WIDGET_STYLE } from '../../utils/default-widget'
 import { MONO_FONT } from '../../lib/typography'
-
-const DEFAULT_WIDGET_STYLE = {
-  primaryColor: HexColorSchema.parse('#FF4444'),
-  secondaryColor: HexColorSchema.parse('#333333'),
-  warningColor: HexColorSchema.parse('#FF8800'),
-  criticalColor: HexColorSchema.parse('#FF0000'),
-  textColor: HexColorSchema.parse('#FFFFFF'),
-}
 
 type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear' | 'shift_light'>
 

@@ -61,6 +61,8 @@ export { CRUISE_CONTROL_OPS } from './schemas/dashboard.js'
 export { MIN_CYCLE_STATES, MAX_CYCLE_STATES } from './schemas/dashboard.js'
 export { PAGE_TEMPLATES, PageTemplateSchema } from './schemas/dashboard.js'
 export { SHIFT_LIGHT_SEGMENT_COUNT, ShiftLightWidgetConfigSchema } from './schemas/widgets/index.js'
+export { WidgetSchema } from './schemas/widgets/index.js'
+export { SensorIconNameSchema } from './schemas/widgets/sensor-icon.js'
 export type { ShiftLightWidgetConfig } from './schemas/widgets/index.js'
 export type {
   SignalConfig,
