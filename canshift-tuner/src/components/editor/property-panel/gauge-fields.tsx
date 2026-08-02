@@ -214,6 +214,16 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
           </Row>
         </>
       )}
+      {style === 'numeric' && (
+        <Field label="Value bar">
+          <Checkbox
+            checked={cfg.showBar ?? false}
+            onCheckedChange={(checked) => {
+              onChange({ config: { ...cfg, showBar: checked === true } })
+            }}
+          />
+        </Field>
+      )}
     </>
   )
 }

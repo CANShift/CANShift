@@ -254,6 +254,11 @@ export const sensorDefaultDangerThreshold = (kind: SensorKind): SensorDangerThre
   return { threshold: SENSOR_DEFAULT_RANGES[kind].max, invertLogic: false }
 }
 
+export const SECONDARY_BAR = {
+  heightPx: 3,
+  topGapPx: 7,
+} as const
+
 export const SHIFT_LIGHT = {
   segments: 12,
   gapPx: 3,
