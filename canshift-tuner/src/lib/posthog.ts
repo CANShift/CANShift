@@ -1,4 +1,5 @@
 import posthog from 'posthog-js'
+import { isObservabilityEnabled, useObservabilityStore } from '../stores/observability.store'
 
 let initialized = false
 
@@ -15,7 +16,17 @@ export const initPostHog = (): void => {
     persistence: 'localStorage',
     person_profiles: 'identified_only',
   })
+  if (!isObservabilityEnabled()) posthog.opt_out_capturing()
+  useObservabilityStore.subscribe((state) => {
+    if (state.enabled) posthog.opt_in_capturing()
+    else posthog.opt_out_capturing()
+  })
   initialized = true
+}
+
+export const captureFlowEvent = (name: string, props: Record<string, unknown> = {}): void => {
+  if (!initialized || !isObservabilityEnabled()) return
+  posthog.capture(name, { ...props, app: 'canshift-tuner', tunerVersion: __TUNER_VERSION__ })
 }
 
 export const isPostHogReady = (): boolean => initialized

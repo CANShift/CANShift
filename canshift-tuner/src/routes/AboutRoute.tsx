@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { SCREEN_PROFILES } from '@tmbk/canshift-core'
 import { useDeviceStore } from '../stores/device.store'
+import { useObservabilityStore } from '../stores/observability.store'
 import { useConnectionStore } from '../stores/connection.store'
 import { BrandLockup } from '../components/brand/BrandLockup'
 import { HeapStatsPanel } from '../components/about/HeapStatsPanel'
@@ -9,6 +10,26 @@ import { MONO_FONT } from '../lib/typography'
 const REPO_URL = 'https://github.com/tburkhalterr/CANShift'
 const DOCS_URL = 'https://docs.canshift.tmbk.ch'
 const ISSUES_URL = 'https://github.com/tburkhalterr/CANShift/issues'
+
+const DiagnosticsToggle = () => {
+  const enabled = useObservabilityStore((s) => s.enabled)
+  const setEnabled = useObservabilityStore((s) => s.setEnabled)
+  return (
+    <label style={diagnosticsRowStyle}>
+      <input
+        type="checkbox"
+        checked={enabled}
+        onChange={(e) => {
+          setEnabled(e.target.checked)
+        }}
+      />
+      <span>
+        Share anonymous diagnostics — crash reports and feature usage, never dashboards or CAN data.
+        Applies immediately.
+      </span>
+    </label>
+  )
+}
 
 const AboutRoute = () => {
   const tunerVersion = typeof __TUNER_VERSION__ !== 'undefined' ? __TUNER_VERSION__ : 'unknown'
@@ -45,6 +66,8 @@ const AboutRoute = () => {
           <LinkButton href={REPO_URL} label="GITHUB" />
           <LinkButton href={ISSUES_URL} label="REPORT A BUG" />
         </div>
+
+        <DiagnosticsToggle />
       </div>
 
       <aside style={sidePanelStyle}>
@@ -166,3 +189,14 @@ const sideHeaderStyle: CSSProperties = {
 }
 
 export default AboutRoute
+
+const diagnosticsRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 10,
+  maxWidth: 520,
+  fontSize: 12,
+  lineHeight: 1.5,
+  color: 'hsl(var(--brand-neutral-600))',
+  cursor: 'pointer',
+}
