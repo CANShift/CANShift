@@ -14,12 +14,8 @@ import {
   widgetOfTypeForSignal,
 } from '../../utils/default-widget'
 import { autoPlace } from '../../utils/layout'
+import { parseHexFrameId } from '../../utils/frame-id'
 import { MONO_FONT } from '../../lib/typography'
-
-export const parseHexFrameId = (raw: string): number => {
-  const value = Number.parseInt(raw, 16)
-  return Number.isNaN(value) ? -1 : value
-}
 
 export const boundFrameIds = (signals: readonly SignalDef[]): ReadonlySet<number> => {
   const ids = new Set<number>()
@@ -78,6 +74,7 @@ const SignalsPanel = ({ pageId }: SignalsPanelProps) => {
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const status = useCanScanStore((s) => s.status)
+  const scanError = useCanScanStore((s) => s.error)
   const snapshot = useCanScanStore((s) => s.snapshot)
   const start = useCanScanStore((s) => s.start)
   const stop = useCanScanStore((s) => s.stop)
@@ -108,6 +105,9 @@ const SignalsPanel = ({ pageId }: SignalsPanelProps) => {
           {isScanning ? 'STOP' : 'START'}
         </button>
       </div>
+      {status === 'error' && scanError !== null && (
+        <div style={scanErrorStyle}>Scan failed: {scanError}</div>
+      )}
 
       <div style={listStyle}>
         <div style={sectionHeaderStyle}>BOUND — {String(signals.length)}</div>
@@ -146,7 +146,9 @@ const SignalsPanel = ({ pageId }: SignalsPanelProps) => {
         {unbound.length === 0 && (
           <div style={hintStyle}>
             {canScan
-              ? 'Start a scan to list arriving IDs with no signal bound.'
+              ? isScanning
+                ? 'Listening — no unbound IDs seen yet.'
+                : 'Start a scan to list arriving IDs with no signal bound.'
               : simulationMode
                 ? 'Simulation streams decoded signals only — connect a device to see raw IDs.'
                 : 'Connect a device and start a scan to see arriving IDs.'}
@@ -208,6 +210,13 @@ const scanButtonStyle = (enabled: boolean): CSSProperties => ({
   color: enabled ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-neutral-400))',
   cursor: enabled ? 'pointer' : 'default',
 })
+
+const scanErrorStyle: CSSProperties = {
+  padding: '6px 18px',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  fontSize: 11,
+  color: 'hsl(var(--brand-accent))',
+}
 
 const listStyle: CSSProperties = {
   flex: 1,

@@ -21,6 +21,7 @@ interface CanScanState {
 const accumulator = createScanAccumulator()
 let unsubscribeFrames: (() => void) | null = null
 let snapshotTimer: number | null = null
+let generation = 0
 
 const log = (level: 'info' | 'warn' | 'error', message: string) => {
   useLogStore.getState().push(level, message)
@@ -50,13 +51,18 @@ export const useCanScanStore = create<CanScanState>()((set, get) => {
       const { connected, simulationMode } = useDeviceStore.getState()
       if (!connected || simulationMode) return
       const { status } = get()
-      if (status === 'running' || status === 'starting') return
+      if (status === 'running' || status === 'starting' || status === 'stopping') return
 
+      const gen = ++generation
       set({ status: 'starting', error: null })
       accumulator.reset()
       set({ snapshot: emptySnapshot() })
 
       const result = await canScannerIpc.start()
+      if (generation !== gen) {
+        if (result.success) void canScannerIpc.stop()
+        return
+      }
       if (!result.success) {
         const err = result.error ?? 'unknown_error'
         set({ status: 'error', error: err })
@@ -77,6 +83,7 @@ export const useCanScanStore = create<CanScanState>()((set, get) => {
       const { status } = get()
       if (status === 'idle' || status === 'stopping') return
 
+      generation += 1
       set({ status: 'stopping' })
       stopSnapshotTimer()
       if (unsubscribeFrames) {
@@ -93,6 +100,7 @@ export const useCanScanStore = create<CanScanState>()((set, get) => {
 
     reset: () => {
       accumulator.reset()
+      if (get().status === 'running') accumulator.markStarted(performance.now())
       set({ snapshot: emptySnapshot() })
     },
   }

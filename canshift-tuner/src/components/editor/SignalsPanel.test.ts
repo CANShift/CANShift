@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { SignalDef } from '@tmbk/canshift-core'
 import type { CanFrameStats } from '../../stores/can-scan/accumulator'
-import { boundFrameIds, parseHexFrameId, unboundFrames } from './SignalsPanel'
+import { boundFrameIds, unboundFrames } from './SignalsPanel'
+import { parseHexFrameId } from '../../utils/frame-id'
 
 const signal = (name: string, canFrameId: string): SignalDef => ({ name, canFrameId }) as SignalDef
 
