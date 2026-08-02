@@ -3,6 +3,7 @@ import type { Widget } from '@tmbk/canshift-core'
 
 import { useDashboardConfig } from '../../hooks/useDashboardConfig'
 import { useSignalStore } from '../../stores/signal.store'
+import { useUndoToastStore } from '../../stores/undo-toast.store'
 import { PageConfigPanel } from './property-panel/panels/page-config-panel'
 import { WidgetEditorPanel } from './property-panel/panels/widget-editor-panel'
 
@@ -23,10 +24,19 @@ const PropertyPanel = ({ pageId }: PropertyPanelProps) => {
     setTargetProfile,
   } = useDashboardConfig()
   const signals = useSignalStore((s) => s.signals)
+  const showUndoToast = useUndoToastStore((s) => s.showForLastAction)
 
   const page = config?.pages.find((p) => p.id === pageId)
   const widget = page?.widgets.find((w) => w.id === selectedWidgetId)
   const widgetId = widget?.id
+
+  const removeWidgetWithToast = useCallback(
+    (targetPageId: string, targetWidgetId: string) => {
+      removeWidget(targetPageId, targetWidgetId)
+      showUndoToast()
+    },
+    [removeWidget, showUndoToast]
+  )
 
   const patch = useCallback(
     (p: Partial<Widget>) => {
@@ -60,7 +70,7 @@ const PropertyPanel = ({ pageId }: PropertyPanelProps) => {
       widget={widget}
       signals={signals}
       patch={patch}
-      onRemove={removeWidget}
+      onRemove={removeWidgetWithToast}
     />
   )
 }
