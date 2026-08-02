@@ -29,7 +29,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
 
   const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
   const valueOnly = demoValue.toFixed(cfg.decimalPlaces)
-  const showBar = cfg.showBar === true
+  const showBar = cfg.showBar === true && cfg.maxValue > cfg.minValue
   const prefix = cfg.prefix ?? ''
 
   const valueColor = st.textColor

@@ -274,6 +274,9 @@ void LabelWidget::reapplyTheme(lv_obj_t *obj, const CfgWidget &cfg) {
     const uint32_t textRgb =
         ThemeManager::getEffectiveTextColor(cfg.style.textColor.rgb, cfg.style.respectDayMode);
     tag->baseTextRgb = textRgb;
+    if (tag->barFill) {
+        lv_obj_set_style_bg_color(tag->barFill, lv_color_hex(textRgb), LV_PART_MAIN);
+    }
     WidgetStyles::setTextColorIfChanged(tag->valueLabel, tag->lastTintRgb, textRgb);
     if (tag->fracLabel) {
         uint32_t fracLast = tag->lastTintRgb;

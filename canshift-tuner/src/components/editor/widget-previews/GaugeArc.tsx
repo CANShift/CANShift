@@ -80,7 +80,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
         <circle
           cx={cx}
           cy={cy}
-          r={r + strokeW * 0.6}
+          r={Math.min(r + strokeW * 0.6, maxOuterR - 1.5)}
           fill="none"
           stroke="#FF0000"
           strokeWidth={showRevFlash ? 3 : 1.5}
