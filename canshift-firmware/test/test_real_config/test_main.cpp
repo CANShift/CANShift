@@ -56,7 +56,7 @@ void test_real_six_page_dashboard_loads() {
     printf("loaded=%d pageCount=%u defaultPageId=%s\n", d.loaded ? 1 : 0, (unsigned)d.pageCount,
            d.defaultPageId);
     for (uint8_t i = 0; i < d.pageCount; ++i)
-        printf("page[%u] id=%s visible=%d widgets=%u\n", i, d.pages[i].id,
+        printf("page[%u] id=%s visible=%d widgets=%u\n", static_cast<unsigned>(i), d.pages[i].id,
                d.pages[i].visible ? 1 : 0, (unsigned)d.pages[i].widgetCount);
 
     TEST_ASSERT_TRUE(result.dashboardOk);
