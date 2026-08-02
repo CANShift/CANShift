@@ -13,6 +13,9 @@ export interface UseCanScanner {
   start: () => Promise<void>
   stop: () => Promise<void>
   reset: () => void
+  startLearn: () => void
+  stopLearn: () => void
+  clearLearn: () => void
 }
 
 export const useCanScanner = (): UseCanScanner => {
@@ -22,6 +25,9 @@ export const useCanScanner = (): UseCanScanner => {
   const start = useCanScanStore((s) => s.start)
   const stop = useCanScanStore((s) => s.stop)
   const reset = useCanScanStore((s) => s.reset)
+  const startLearn = useCanScanStore((s) => s.startLearn)
+  const stopLearn = useCanScanStore((s) => s.stopLearn)
+  const clearLearn = useCanScanStore((s) => s.clearLearn)
 
-  return { status, error, snapshot, start, stop, reset }
+  return { status, error, snapshot, start, stop, reset, startLearn, stopLearn, clearLearn }
 }

@@ -45,6 +45,51 @@ describe('scan accumulator', () => {
     expect(snap.frames.size).toBe(0)
   })
 
+  it('ranks a churning id first in the learn window', () => {
+    const acc = createScanAccumulator()
+    acc.ingest({ id: 0x100, len: 1, data: [1] }, 0)
+    acc.ingest({ id: 0x200, len: 1, data: [1] }, 0)
+
+    acc.startLearn()
+    for (let i = 0; i < 5; i++) {
+      acc.ingest({ id: 0x100, len: 1, data: [i % 2] }, 10 + i)
+      acc.ingest({ id: 0x200, len: 1, data: [1] }, 10 + i)
+    }
+    acc.stopLearn()
+
+    const learn = acc.snapshot(100).learn
+    expect(learn).not.toBeNull()
+    expect(learn?.active).toBe(false)
+    expect(learn?.scores.get(0x100)).toBe(5)
+    expect(learn?.scores.get(0x200)).toBeUndefined()
+  })
+
+  it('ignores changes outside the learn window and counts first-seen-in-window ids from their second frame', () => {
+    const acc = createScanAccumulator()
+    acc.ingest({ id: 0x1, len: 1, data: [1] }, 0)
+    acc.ingest({ id: 0x1, len: 1, data: [2] }, 1)
+
+    acc.startLearn()
+    acc.ingest({ id: 0x2, len: 1, data: [9] }, 10)
+    acc.ingest({ id: 0x2, len: 1, data: [8] }, 11)
+    acc.stopLearn()
+
+    acc.ingest({ id: 0x1, len: 1, data: [3] }, 20)
+
+    const learn = acc.snapshot(100).learn
+    expect(learn?.scores.get(0x1)).toBeUndefined()
+    expect(learn?.scores.get(0x2)).toBe(1)
+  })
+
+  it('clearLearn removes the window entirely', () => {
+    const acc = createScanAccumulator()
+    acc.startLearn()
+    acc.ingest({ id: 0x1, len: 1, data: [1] }, 0)
+    acc.clearLearn()
+
+    expect(acc.snapshot(10).learn).toBeNull()
+  })
+
   it('truncates payloads beyond 8 bytes', () => {
     const acc = createScanAccumulator()
     acc.ingest({ id: 0x2, len: 10, data: Array.from({ length: 10 }, (_, i) => i) }, 0)
