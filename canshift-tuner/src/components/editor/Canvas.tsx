@@ -64,6 +64,8 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
   const undo = useDashboardStore((s) => s.undo)
   const redo = useDashboardStore((s) => s.redo)
   const canUndo = useDashboardStore((s) => s.past.length > 0)
+  const undoLabel = useDashboardStore((s) => s.past[s.past.length - 1]?.label)
+  const redoLabel = useDashboardStore((s) => s.future[0]?.label)
   const canRedo = useDashboardStore((s) => s.future.length > 0)
 
   const dayTheme = useDashboardStore((s) => s.config?.dayTheme)
@@ -226,6 +228,8 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
           .filter((w) => overflowingIds.has(w.id))
           .map((w) => (w.signal ? `${w.type}.${w.signal}` : w.type))}
         canUndo={canUndo}
+        undoLabel={undoLabel}
+        redoLabel={redoLabel}
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}

@@ -1,7 +1,7 @@
 import type { Widget } from '@tmbk/canshift-core'
 import { clampGridPlacement, isSpanOverflowing, placementsOverlap } from '@tmbk/canshift-core'
 import { autoPlace, resolveCollisions } from '../../utils/layout'
-import { pushHistory, toPlacement } from './helpers'
+import { pushHistory, toPlacement, widgetRef } from './helpers'
 import type { SliceCreator, WidgetsSlice } from './types'
 
 export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
@@ -11,7 +11,7 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       const page = s.config.pages.find((p) => p.id === pageId)
       if (!page) return
 
-      pushHistory(s)
+      pushHistory(s, `Added ${widgetRef(widget)}`)
 
       const others = page.widgets.map(toPlacement)
       const colSpan = widget.layout.colSpan
@@ -65,7 +65,13 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
         .filter((w): w is Widget => w !== undefined)
       if (sources.length === 0) return
 
-      pushHistory(s)
+      const first = sources[0]
+      pushHistory(
+        s,
+        sources.length === 1 && first
+          ? `Duplicated ${widgetRef(first)}`
+          : `Duplicated ${String(sources.length)} widgets`
+      )
 
       const others = page.widgets.map(toPlacement)
       const newIds: string[] = []
@@ -116,7 +122,8 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       if (!s.config) return
       const page = s.config.pages.find((p) => p.id === pageId)
       if (!page) return
-      pushHistory(s)
+      const target = page.widgets.find((w) => w.id === widgetId)
+      pushHistory(s, `Deleted ${target ? widgetRef(target) : 'widget'}`)
       page.widgets = page.widgets.filter((w) => w.id !== widgetId)
       if (s.selectedWidgetId === widgetId) s.selectedWidgetId = null
       s.selectedWidgetIds = s.selectedWidgetIds.filter((id) => id !== widgetId)
@@ -131,9 +138,15 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       if (!page) return
       const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
       if (widgetIdx === -1) return
-      pushHistory(s)
       const existing = page.widgets[widgetIdx]
       if (!existing) return
+      const label =
+        patch.signal !== undefined && patch.signal !== existing.signal
+          ? `Rebound ${widgetRef(existing)} to ${patch.signal !== '' ? patch.signal : 'nothing'}`
+          : patch.layout !== undefined
+            ? `Resized ${widgetRef(existing)}`
+            : `Edited ${widgetRef(existing)}`
+      pushHistory(s, label)
       const merged = { ...existing, ...patch }
       merged.layout = { ...clampGridPlacement(merged.layout), zOrder: merged.layout.zOrder }
       page.widgets[widgetIdx] = merged
@@ -162,9 +175,9 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       if (!page) return
       const widgetIdx = page.widgets.findIndex((w) => w.id === widgetId)
       if (widgetIdx === -1) return
-      pushHistory(s)
       const w = page.widgets[widgetIdx]
       if (!w) return
+      pushHistory(s, `Moved ${widgetRef(w)}`)
       page.widgets[widgetIdx] = { ...w, layout: { ...w.layout, ...layout } }
       s.isDirty = true
     })
@@ -193,8 +206,6 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
       if (!page) return
       const widget = page.widgets.find((w) => w.id === widgetId)
       if (!widget) return
-
-      pushHistory(s)
 
       const others = page.widgets.filter((w) => w.id !== widgetId).map(toPlacement)
       const moved = toPlacement(widget)
@@ -227,11 +238,20 @@ export const createWidgetsSlice: SliceCreator<WidgetsSlice> = (set) => ({
     })
   },
 
-  commitDrag: () => {
+  beginDrag: (pageId, widgetIds) => {
     set((s) => {
-      if (!s.config) return
-      pushHistory(s)
-      s.isDirty = true
+      if (!s.config || widgetIds.length === 0) return
+      const page = s.config.pages.find((p) => p.id === pageId)
+      if (!page) return
+      const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
+      if (targets.length === 0) return
+      const first = targets[0]
+      pushHistory(
+        s,
+        targets.length === 1 && first
+          ? `Moved ${widgetRef(first)}`
+          : `Moved ${String(targets.length)} widgets`
+      )
     })
   },
 })

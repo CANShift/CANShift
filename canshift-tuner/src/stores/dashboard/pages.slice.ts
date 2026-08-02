@@ -1,5 +1,5 @@
 import type { PageConfig } from '@tmbk/canshift-core'
-import { pushHistory } from './helpers'
+import { pageRef, pushHistory } from './helpers'
 import { createId } from '../../utils/id'
 import type { PagesSlice, SliceCreator } from './types'
 
@@ -7,7 +7,7 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   addPage: (page) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
+      pushHistory(s, `Added ${pageRef(s.config.pages.length)}`)
       s.config.pages.push(page)
       s.selectedPageId = page.id
       s.isDirty = true
@@ -27,7 +27,7 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
     }
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
+      pushHistory(s, `Duplicated ${pageRef(idx)}`)
       s.config.pages.splice(idx + 1, 0, clone)
       s.selectedPageId = clone.id
       s.isDirty = true
@@ -37,7 +37,8 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   removePage: (pageId) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
+      const idx = s.config.pages.findIndex((p) => p.id === pageId)
+      pushHistory(s, `Deleted ${idx === -1 ? 'page' : pageRef(idx)}`)
       s.config.pages = s.config.pages.filter((p) => p.id !== pageId)
       if (s.selectedPageId === pageId) {
         s.selectedPageId = s.config.pages[0]?.id ?? null
@@ -49,7 +50,8 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   setDefaultPage: (pageId) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
+      const idx = s.config.pages.findIndex((p) => p.id === pageId)
+      pushHistory(s, `Set ${idx === -1 ? 'page' : pageRef(idx)} as default`)
       s.config.defaultPageId = pageId
       s.isDirty = true
     })
@@ -58,9 +60,9 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   updatePage: (pageId, patch) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
       const idx = s.config.pages.findIndex((p) => p.id === pageId)
       if (idx === -1) return
+      pushHistory(s, `Edited ${pageRef(idx)}`)
       const existing = s.config.pages[idx]
       if (!existing) return
       s.config.pages[idx] = { ...existing, ...patch }
@@ -71,9 +73,9 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   setPageTemplate: (pageId, template) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
       const idx = s.config.pages.findIndex((p) => p.id === pageId)
       if (idx === -1) return
+      pushHistory(s, `Changed ${pageRef(idx)} template`)
       const existing = s.config.pages[idx]
       if (!existing) return
       if (template === 'custom') {
@@ -89,7 +91,7 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   movePage: (fromIndex, toIndex) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
+      pushHistory(s, 'Reordered pages')
       const pages = s.config.pages
       if (fromIndex < 0 || fromIndex >= pages.length) return
       if (toIndex < 0 || toIndex >= pages.length) return
@@ -102,7 +104,7 @@ export const createPagesSlice: SliceCreator<PagesSlice> = (set, get) => ({
   updateTopBar: (patch) => {
     set((s) => {
       if (!s.config) return
-      pushHistory(s)
+      pushHistory(s, 'Edited top bar')
       s.config.topBar = { ...s.config.topBar, ...patch }
       s.isDirty = true
     })

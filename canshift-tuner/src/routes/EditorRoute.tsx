@@ -8,6 +8,7 @@ import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { createId } from '../utils/id'
 import { isEditableTarget } from '../utils/is-editable-target'
+import { useUndoShortcut } from '../hooks/useUndoShortcut'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ const CanvasFallback = () => {
 }
 
 const EditorRoute = () => {
+  useUndoShortcut()
   const pages = useDashboardStore((s) => s.config?.pages)
   const topBar = useDashboardStore((s) => s.config?.topBar)
   const defaultPageId = useDashboardStore((s) => s.config?.defaultPageId)

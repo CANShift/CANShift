@@ -18,6 +18,7 @@ interface DragState {
   startMouseY: number
   widgets: DraggingWidget[]
   isMulti: boolean
+  began: boolean
 }
 
 export interface DragInputs {
@@ -57,7 +58,7 @@ export const useDragState = ({
   const moveWidget = useDashboardStore((s) => s.moveWidget)
   const moveWidgets = useDashboardStore((s) => s.moveWidgets)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
-  const commitDrag = useDashboardStore((s) => s.commitDrag)
+  const beginDrag = useDashboardStore((s) => s.beginDrag)
 
   const dragRef = useRef<DragState | null>(null)
 
@@ -96,6 +97,7 @@ export const useDragState = ({
         startMouseY: e.clientY,
         widgets: dragging,
         isMulti,
+        began: false,
       }
 
       const colPitch = trackPitch(canvasW, LAYOUT_GRID.COLUMNS)
@@ -130,6 +132,15 @@ export const useDragState = ({
             )
           : rawDeltaRows
 
+        if (!drag.began && (deltaCols !== 0 || deltaRows !== 0)) {
+          drag.began = true
+          beginDrag(
+            drag.pageId,
+            drag.widgets.map((w) => w.id)
+          )
+        }
+        if (!drag.began) return
+
         const place = (dw: DraggingWidget): { id: string; col: number; row: number } => {
           const clamped = clampGridPlacement({
             col: dw.startCol + deltaCols,
@@ -152,12 +163,8 @@ export const useDragState = ({
 
       const handleMouseUp = () => {
         const drag = dragRef.current
-        if (drag) {
-          if (drag.isMulti) {
-            commitDrag()
-          } else {
-            resolveWidgetCollisions(drag.pageId, drag.primaryId)
-          }
+        if (drag?.began && !drag.isMulti) {
+          resolveWidgetCollisions(drag.pageId, drag.primaryId)
         }
         dragRef.current = null
         window.removeEventListener('mousemove', handleMouseMove)
@@ -167,6 +174,6 @@ export const useDragState = ({
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
     },
-    [dragInputsRef, zoomRef, scale, moveWidget, moveWidgets, resolveWidgetCollisions, commitDrag]
+    [dragInputsRef, zoomRef, scale, moveWidget, moveWidgets, resolveWidgetCollisions, beginDrag]
   )
 }

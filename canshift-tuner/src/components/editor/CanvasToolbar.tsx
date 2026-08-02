@@ -13,6 +13,8 @@ export interface CanvasToolbarProps {
   overflowingCount: number
   overflowingNames?: readonly string[]
   canUndo: boolean
+  undoLabel?: string | undefined
+  redoLabel?: string | undefined
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
@@ -33,6 +35,8 @@ export const CanvasToolbar = ({
   overflowingCount,
   overflowingNames,
   canUndo,
+  undoLabel,
+  redoLabel,
   canRedo,
   onUndo,
   onRedo,
@@ -51,7 +55,7 @@ export const CanvasToolbar = ({
         className="shell-nav-item"
         onClick={onUndo}
         disabled={!canUndo}
-        title="Undo (⌘Z)"
+        title={undoLabel ? `Undo ${undoLabel} (⌘Z)` : 'Undo (⌘Z)'}
         style={wordButtonStyle(canUndo)}
       >
         UNDO
@@ -61,7 +65,7 @@ export const CanvasToolbar = ({
         className="shell-nav-item"
         onClick={onRedo}
         disabled={!canRedo}
-        title="Redo (⇧⌘Z)"
+        title={redoLabel ? `Redo ${redoLabel} (⇧⌘Z)` : 'Redo (⇧⌘Z)'}
         style={{ ...wordButtonStyle(canRedo), borderLeft: groupRule }}
       >
         REDO
