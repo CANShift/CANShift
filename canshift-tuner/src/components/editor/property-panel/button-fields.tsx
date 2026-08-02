@@ -54,7 +54,7 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div
             style={{
-              border: `1px solid ${previewActive ? widget.style.primaryColor : '#2A2A2A'}`,
+              border: `1px solid ${previewActive ? widget.style.primaryColor : 'hsl(var(--brand-neutral-300))'}`,
               overflow: 'hidden',
               display: 'inline-block',
               flexShrink: 0,
@@ -76,9 +76,11 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
               style={{
                 fontSize: 10,
                 padding: '3px 8px',
-                background: previewActive ? '#2A1A1A' : 'transparent',
-                border: `1px solid ${previewActive ? '#AA3333' : '#2A2A2A'}`,
-                color: previewActive ? '#FF4444' : '#AAAAAA',
+                background: previewActive
+                  ? 'color-mix(in srgb, #AA3333 14%, transparent)'
+                  : 'transparent',
+                border: `1px solid ${previewActive ? '#AA3333' : 'hsl(var(--brand-neutral-300))'}`,
+                color: previewActive ? '#FF4444' : 'hsl(var(--brand-neutral-600))',
                 cursor: 'pointer',
                 flexShrink: 0,
               }}
@@ -94,8 +96,8 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
                 fontSize: 10,
                 padding: '3px 8px',
                 background: 'transparent',
-                border: '1px solid #2A2A2A',
-                color: '#AAAAAA',
+                border: '1px solid hsl(var(--brand-neutral-300))',
+                color: 'hsl(var(--brand-neutral-600))',
                 cursor: 'pointer',
                 flexShrink: 0,
                 fontFamily: MONO_FONT,
@@ -123,7 +125,9 @@ export const ButtonFields = ({ widget, onChange }: ConfigFieldsProps) => {
       </Field>
 
       <Field label="Show">
-        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#AAAAAA' }}>
+        <div
+          style={{ display: 'flex', gap: 12, fontSize: 12, color: 'hsl(var(--brand-neutral-600))' }}
+        >
           <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
             <Checkbox
               checked={cfg.showLabel !== false}

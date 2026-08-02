@@ -51,8 +51,8 @@ html,
 body,
 #root {
   height: 100%;
-  background: hsl(var(--bg));
-  color: hsl(var(--text));
+  background: hsl(var(--brand-chrome-bg));
+  color: hsl(var(--brand-text));
 }
 
 body {
@@ -89,13 +89,13 @@ samp {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(var(--bg));
+  background: hsl(var(--brand-chrome-bg));
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--surface-2));
+  background: hsl(var(--brand-neutral-300));
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--border));
+  background: hsl(var(--brand-neutral-400));
 }
 
 @keyframes canshift-tuner-spin {
@@ -135,4 +135,9 @@ samp {
 
 .shell-link-button:hover {
   border-color: hsl(var(--brand-accent)) !important;
+}
+
+.shell-theme-toggle:hover {
+  background: hsl(var(--brand-neutral-100));
+  color: hsl(var(--brand-text));
 }

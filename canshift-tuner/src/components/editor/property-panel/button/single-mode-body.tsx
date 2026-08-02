@@ -37,7 +37,7 @@ export const SingleModeBody = ({ cfg, pageIds, onChange }: SingleModeBodyProps) 
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            color: '#AAAAAA',
+            color: 'hsl(var(--brand-neutral-600))',
             cursor: 'pointer',
           }}
         >
@@ -54,7 +54,7 @@ export const SingleModeBody = ({ cfg, pageIds, onChange }: SingleModeBodyProps) 
       <div
         style={{
           fontSize: 10,
-          color: '#AAAAAA',
+          color: 'hsl(var(--brand-neutral-600))',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
           marginBottom: 5,
@@ -65,7 +65,9 @@ export const SingleModeBody = ({ cfg, pageIds, onChange }: SingleModeBodyProps) 
       </div>
 
       {cfg.actions.length === 0 && (
-        <div style={{ fontSize: 11, color: '#AAAAAA', marginBottom: 6 }}>No actions yet.</div>
+        <div style={{ fontSize: 11, color: 'hsl(var(--brand-neutral-600))', marginBottom: 6 }}>
+          No actions yet.
+        </div>
       )}
 
       {cfg.actions.map((action, idx) => (

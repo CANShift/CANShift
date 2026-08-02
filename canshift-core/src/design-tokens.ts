@@ -63,6 +63,8 @@ export interface BrandTokens {
   darkNeutrals: Record<BrandNeutralStep, string>
   darkText: string
   darkDivider: string
+  lightNeutrals: Record<BrandNeutralStep, string>
+  lightDivider: string
 }
 
 export const BRAND_TOKENS = {
@@ -89,6 +91,18 @@ export const BRAND_TOKENS = {
   },
   darkText: '#F3F2F2',
   darkDivider: 'color-mix(in srgb, #F3F2F2 24%, transparent)',
+  lightNeutrals: {
+    100: '#F8F4F4',
+    200: '#EAE7E7',
+    300: '#D7D3D3',
+    400: '#BAB6B6',
+    500: '#9B9797',
+    600: '#7D7979',
+    700: '#605D5D',
+    800: '#444141',
+    900: '#2D2B2B',
+  },
+  lightDivider: 'color-mix(in srgb, #201E1D 40%, transparent)',
 } as const satisfies BrandTokens
 
 export const DARK_TOKENS = {
@@ -261,5 +275,17 @@ export const brandTokensToCssVars = (tokens: BrandTokens): Record<string, string
   }
   out[BRAND_TEXT_CSS_VAR] = hexToHslChannels(tokens.darkText)
   out[BRAND_DIVIDER_CSS_VAR] = tokens.darkDivider
+  return out
+}
+
+export const brandLightThemeCssVars = (tokens: BrandTokens): Record<string, string> => {
+  const out: Record<string, string> = {}
+  for (const step of BRAND_NEUTRAL_STEPS) {
+    out[brandNeutralCssVar(step)] = hexToHslChannels(tokens.lightNeutrals[step])
+  }
+  out[BRAND_TEXT_CSS_VAR] = hexToHslChannels(tokens.colors.ink)
+  out[BRAND_DIVIDER_CSS_VAR] = tokens.lightDivider
+  out[BRAND_COLOR_KEY_TO_CSS_VAR.chromeBg] = hexToHslChannels(tokens.colors.ground)
+  out[BRAND_COLOR_KEY_TO_CSS_VAR.chromeSurface] = hexToHslChannels(tokens.colors.surface)
   return out
 }

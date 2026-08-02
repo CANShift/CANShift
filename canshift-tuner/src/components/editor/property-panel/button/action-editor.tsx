@@ -31,7 +31,7 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
 
     {action.category === 'ecu' && action.type === 'map_switch' && (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 10, color: '#666666' }}>Map</span>
+        <span style={{ fontSize: 10, color: 'hsl(var(--brand-neutral-500))' }}>Map</span>
         <input
           type="number"
           min={1}
@@ -48,7 +48,9 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
     {action.category === 'ecu' && action.type === 'can_raw' && (
       <div style={{ display: 'flex', gap: 6 }}>
         <div style={{ flex: '0 0 70px' }}>
-          <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>FRAME ID</div>
+          <div style={{ fontSize: 9, color: 'hsl(var(--brand-neutral-600))', marginBottom: 2 }}>
+            FRAME ID
+          </div>
           <input
             style={{ ...inputStyle, fontSize: 10 }}
             placeholder="0x123"
@@ -61,7 +63,9 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
           />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>DATA (HEX)</div>
+          <div style={{ fontSize: 9, color: 'hsl(var(--brand-neutral-600))', marginBottom: 2 }}>
+            DATA (HEX)
+          </div>
           <input
             style={{ ...inputStyle, fontSize: 10, fontFamily: MONO_FONT }}
             placeholder="0102030405060708"
@@ -77,7 +81,9 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
     {action.category === 'ecu' && action.type === 'cruise_control' && (
       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>OP</div>
+          <div style={{ fontSize: 9, color: 'hsl(var(--brand-neutral-600))', marginBottom: 2 }}>
+            OP
+          </div>
           <select
             style={{ ...inputStyle, fontSize: 11 }}
             value={action.op}
@@ -101,7 +107,9 @@ export const ActionEditor = ({ action, pageIds, onUpdate }: ActionEditorProps) =
         </div>
         {CRUISE_STEP_OPS.has(action.op) && (
           <div style={{ flex: '0 0 80px' }}>
-            <div style={{ fontSize: 9, color: '#AAAAAA', marginBottom: 2 }}>STEP (KM/H)</div>
+            <div style={{ fontSize: 9, color: 'hsl(var(--brand-neutral-600))', marginBottom: 2 }}>
+              STEP (KM/H)
+            </div>
             <input
               type="number"
               min={1}

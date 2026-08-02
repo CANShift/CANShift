@@ -5,7 +5,9 @@ import { FirmwareSlot as UiFirmwareSlot } from './FirmwareSlot'
 import { useConnectionStore } from '../../stores/connection.store'
 import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
+import { useThemeStore } from '../../stores/theme.store'
 import { useUiStore } from '../../stores/ui.store'
+import { ThemeToggleButton } from './ThemeToggleButton'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
 
@@ -108,10 +110,17 @@ const Header = () => {
       portLabel={portLabel}
       activityPulse={pulsing}
       firmwareSlot={<UiFirmwareSlot version={firmwareVersion} compat={firmwareCompat} />}
+      themeToggle={<ThemeToggle />}
       burnButton={<BurnButton />}
       onDisconnect={handleDisconnect}
     />
   )
+}
+
+const ThemeToggle = () => {
+  const theme = useThemeStore((s) => s.theme)
+  const toggleTheme = useThemeStore((s) => s.toggleTheme)
+  return <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
 }
 
 const useBurnOutcomeAutoClear = (): void => {

@@ -12,8 +12,8 @@ import {
 
 import { CruiseControlOverCapDialog } from '../../CruiseControlOverCapDialog'
 
-const PANEL_LABEL = '#AAAAAA'
-const PANEL_HINT = '#333333'
+const PANEL_LABEL = 'hsl(var(--brand-neutral-600))'
+const PANEL_HINT = 'hsl(var(--brand-neutral-500))'
 const CRUISE_CONTROL_PAGE_ID = 'cruise_control'
 
 interface PageConfigPanelProps {
@@ -79,9 +79,9 @@ export const PageConfigPanel = ({
           }}
           style={{
             width: '100%',
-            background: '#111111',
-            border: '1px solid #333333',
-            color: 'hsl(var(--text))',
+            background: 'hsl(var(--brand-neutral-100))',
+            border: '1px solid hsl(var(--brand-neutral-300))',
+            color: 'hsl(var(--brand-text))',
             fontSize: 11,
             padding: '4px 6px',
           }}
@@ -115,7 +115,7 @@ export const PageConfigPanel = ({
             alignItems: 'center',
             gap: 8,
             fontSize: 11,
-            color: 'hsl(var(--text))',
+            color: 'hsl(var(--brand-text))',
             cursor: 'pointer',
             userSelect: 'none',
           }}

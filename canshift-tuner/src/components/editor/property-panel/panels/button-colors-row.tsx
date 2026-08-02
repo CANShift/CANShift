@@ -2,9 +2,9 @@ import type { HexColor, Widget } from '@tmbk/canshift-core'
 
 import { Field, Row } from '../shared'
 
-const PANEL_LABEL = '#AAAAAA'
-const INPUT_BG = '#111111'
-const INPUT_BORDER = '#333333'
+const PANEL_LABEL = 'hsl(var(--brand-neutral-600))'
+const INPUT_BG = 'hsl(var(--brand-neutral-100))'
+const INPUT_BORDER = 'hsl(var(--brand-neutral-300))'
 const TYPE_BADGE = '#CC4444'
 
 interface ButtonColorsRowProps {

@@ -54,14 +54,14 @@ export const CycleModeBody = ({ cfg, pageIds, onChange }: CycleModeBodyProps) =>
         <div
           style={{
             fontSize: 10,
-            color: '#AAAAAA',
+            color: 'hsl(var(--brand-neutral-600))',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
           }}
         >
           Cycle states
         </div>
-        <div style={{ fontSize: 10, color: '#666666' }}>
+        <div style={{ fontSize: 10, color: 'hsl(var(--brand-neutral-500))' }}>
           {cfg.states.length} / {MAX_CYCLE_STATES}
         </div>
       </div>
@@ -93,8 +93,8 @@ export const CycleModeBody = ({ cfg, pageIds, onChange }: CycleModeBodyProps) =>
           fontSize: 11,
           padding: '4px 10px',
           background: 'transparent',
-          border: `1px solid ${canAdd ? '#7788CC44' : '#2A2A2A'}`,
-          color: canAdd ? '#7788CC' : '#444444',
+          border: `1px solid ${canAdd ? '#7788CC44' : 'hsl(var(--brand-neutral-300))'}`,
+          color: canAdd ? '#7788CC' : 'hsl(var(--brand-neutral-500))',
           cursor: canAdd ? 'pointer' : 'not-allowed',
           marginTop: 2,
         }}

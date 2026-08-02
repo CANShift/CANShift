@@ -18,7 +18,7 @@ export const Field = ({
           style={{
             display: 'block',
             fontSize: 10,
-            color: '#666666',
+            color: 'hsl(var(--brand-neutral-500))',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
           }}
@@ -36,7 +36,7 @@ export const Field = ({
               height: 14,
               background: 'transparent',
               border: 'none',
-              color: '#555555',
+              color: 'hsl(var(--brand-neutral-500))',
               cursor: 'pointer',
               fontSize: 11,
               lineHeight: '14px',
@@ -54,9 +54,9 @@ export const Field = ({
 export const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '4px 7px',
-  background: '#111111',
-  border: '1px solid #333333',
-  color: '#CCCCCC',
+  background: 'hsl(var(--brand-neutral-100))',
+  border: '1px solid hsl(var(--brand-neutral-300))',
+  color: 'hsl(var(--brand-neutral-700))',
   fontSize: 12,
   boxSizing: 'border-box',
   outline: 'none',
@@ -97,15 +97,22 @@ export const IconPicker = ({
             }}
             style={{
               padding: 5,
-              background: value === name ? '#2A2A3A' : '#1A1A1A',
-              border: `1px solid ${value === name ? '#5566AA' : '#2A2A2A'}`,
+              background:
+                value === name
+                  ? 'color-mix(in srgb, #5566AA 14%, transparent)'
+                  : 'hsl(var(--brand-neutral-100))',
+              border: `1px solid ${value === name ? '#5566AA' : 'hsl(var(--brand-neutral-300))'}`,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <SensorIcon name={name} size={16} color={value === name ? '#7788CC' : '#AAAAAA'} />
+            <SensorIcon
+              name={name}
+              size={16}
+              color={value === name ? '#7788CC' : 'hsl(var(--brand-neutral-600))'}
+            />
           </button>
         ))}
       </div>
@@ -120,7 +127,7 @@ export const IconPicker = ({
               marginLeft: 6,
               background: 'none',
               border: 'none',
-              color: '#AAAAAA',
+              color: 'hsl(var(--brand-neutral-600))',
               cursor: 'pointer',
               fontSize: 10,
             }}

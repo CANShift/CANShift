@@ -6,7 +6,7 @@ import { useSignalStore } from '../../stores/signal.store'
 import { PageConfigPanel } from './property-panel/panels/page-config-panel'
 import { WidgetEditorPanel } from './property-panel/panels/widget-editor-panel'
 
-const PANEL_HINT = '#333333'
+const PANEL_HINT = 'hsl(var(--brand-neutral-500))'
 
 interface PropertyPanelProps {
   pageId: string

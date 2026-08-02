@@ -38,9 +38,12 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
               style={{
                 flex: 1,
                 padding: '3px 0',
-                background: style === value ? '#2A2A3A' : '#111111',
-                border: `1px solid ${style === value ? '#5566AA' : '#2A2A2A'}`,
-                color: style === value ? '#7788CC' : '#AAAAAA',
+                background:
+                  style === value
+                    ? 'color-mix(in srgb, #5566AA 14%, transparent)'
+                    : 'hsl(var(--brand-neutral-100))',
+                border: `1px solid ${style === value ? '#5566AA' : 'hsl(var(--brand-neutral-300))'}`,
+                color: style === value ? '#7788CC' : 'hsl(var(--brand-neutral-600))',
                 cursor: 'pointer',
                 fontSize: 10,
                 textTransform: 'uppercase',
@@ -69,9 +72,11 @@ export const GaugeFields = ({ widget, onChange, signalDef }: ConfigFieldsProps) 
                 style={{
                   flex: 1,
                   padding: '3px 0',
-                  background: isActive ? '#1A2A1A' : '#111111',
-                  border: `1px solid ${isActive ? '#448844' : '#2A2A2A'}`,
-                  color: isActive ? '#66AA66' : '#AAAAAA',
+                  background: isActive
+                    ? 'color-mix(in srgb, #448844 14%, transparent)'
+                    : 'hsl(var(--brand-neutral-100))',
+                  border: `1px solid ${isActive ? '#448844' : 'hsl(var(--brand-neutral-300))'}`,
+                  color: isActive ? '#66AA66' : 'hsl(var(--brand-neutral-600))',
                   cursor: 'pointer',
                   fontSize: 10,
                   fontWeight: isActive ? 700 : 400,

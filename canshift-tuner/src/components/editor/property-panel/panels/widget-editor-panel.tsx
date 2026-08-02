@@ -11,7 +11,7 @@ import { ButtonColorsRow } from './button-colors-row'
 import { SizeTokenPicker } from './size-token-picker'
 import { MONO_FONT } from '../../../../lib/typography'
 
-const PANEL_LABEL = '#AAAAAA'
+const PANEL_LABEL = 'hsl(var(--brand-neutral-600))'
 const TYPE_BADGE = '#CC4444'
 const DELETE_FG = '#AA3333'
 

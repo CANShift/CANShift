@@ -6,9 +6,9 @@ import { MONO_FONT } from '../../lib/typography'
 const BUTTON_STYLE: CSSProperties = {
   padding: '2px 7px',
   fontSize: 10,
-  background: '#1A1A1A',
-  border: '1px solid #2A2A2A',
-  color: '#888888',
+  background: 'hsl(var(--brand-neutral-100))',
+  border: '1px solid hsl(var(--brand-neutral-300))',
+  color: 'hsl(var(--brand-neutral-600))',
   cursor: 'pointer',
   letterSpacing: '0.03em',
   fontFamily: MONO_FONT,
@@ -17,7 +17,7 @@ const BUTTON_STYLE: CSSProperties = {
 
 const LABEL_STYLE: CSSProperties = {
   fontSize: 9,
-  color: '#555555',
+  color: 'hsl(var(--brand-neutral-500))',
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
   alignSelf: 'center',
@@ -26,17 +26,17 @@ const LABEL_STYLE: CSSProperties = {
 const DIVIDER_STYLE: CSSProperties = {
   width: 1,
   height: 14,
-  background: '#2A2A2A',
+  background: 'hsl(var(--brand-neutral-300))',
   margin: '0 2px',
 }
 
 const handleMouseEnter = (e: MouseEvent<HTMLButtonElement>) => {
-  e.currentTarget.style.borderColor = '#555555'
-  e.currentTarget.style.color = '#CCCCCC'
+  e.currentTarget.style.borderColor = 'hsl(var(--brand-neutral-400))'
+  e.currentTarget.style.color = 'hsl(var(--brand-neutral-700))'
 }
 const handleMouseLeave = (e: MouseEvent<HTMLButtonElement>) => {
-  e.currentTarget.style.borderColor = '#2A2A2A'
-  e.currentTarget.style.color = '#888888'
+  e.currentTarget.style.borderColor = 'hsl(var(--brand-neutral-300))'
+  e.currentTarget.style.color = 'hsl(var(--brand-neutral-600))'
 }
 
 interface ToolbarButtonProps {

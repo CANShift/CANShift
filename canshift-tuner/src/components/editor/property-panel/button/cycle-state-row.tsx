@@ -40,14 +40,18 @@ export const CycleStateRow = ({
   return (
     <div
       style={{
-        background: isInitial ? '#1A1A22' : '#111111',
-        border: `1px solid ${isInitial ? '#3A3A66' : '#2A2A2A'}`,
+        background: isInitial
+          ? 'color-mix(in srgb, #7788CC 14%, transparent)'
+          : 'hsl(var(--brand-neutral-100))',
+        border: `1px solid ${isInitial ? 'color-mix(in srgb, #7788CC 30%, transparent)' : 'hsl(var(--brand-neutral-300))'}`,
         padding: '6px 8px',
         marginBottom: 5,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-        <span style={{ fontSize: 10, color: '#666666', minWidth: 16 }}>{index + 1}</span>
+        <span style={{ fontSize: 10, color: 'hsl(var(--brand-neutral-500))', minWidth: 16 }}>
+          {index + 1}
+        </span>
         <input
           style={{ ...inputStyle, fontSize: 11, flex: 1 }}
           value={state.label}
@@ -62,7 +66,7 @@ export const CycleStateRow = ({
             alignItems: 'center',
             gap: 4,
             fontSize: 10,
-            color: isInitial ? '#7788CC' : '#666666',
+            color: isInitial ? '#7788CC' : 'hsl(var(--brand-neutral-500))',
             cursor: 'pointer',
           }}
           title="Active on load"
@@ -81,14 +85,14 @@ export const CycleStateRow = ({
           style={{
             background: 'none',
             border: 'none',
-            color: canRemove ? '#553333' : '#2A2A2A',
+            color: canRemove ? '#553333' : 'hsl(var(--brand-neutral-300))',
             cursor: canRemove ? 'pointer' : 'not-allowed',
             padding: 0,
             display: 'flex',
           }}
           title={canRemove ? 'Remove state' : `Need at least ${String(MIN_CYCLE_STATES)} states`}
         >
-          <IconTrash size={11} color={canRemove ? '#553333' : '#2A2A2A'} />
+          <IconTrash size={11} color={canRemove ? '#553333' : 'hsl(var(--brand-neutral-300))'} />
         </button>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>

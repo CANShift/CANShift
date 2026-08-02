@@ -87,9 +87,9 @@ const FeedbackButton = () => {
           role="dialog"
           aria-label="Send feedback"
           style={{
-            background: '#1A1A1A',
-            color: '#CCCCCC',
-            border: '1px solid #2F2F2F',
+            background: 'hsl(var(--brand-chrome-surface))',
+            color: 'hsl(var(--brand-neutral-700))',
+            border: '1px solid hsl(var(--brand-neutral-300))',
             padding: 14,
             width: 320,
             pointerEvents: 'auto',
@@ -99,9 +99,11 @@ const FeedbackButton = () => {
             gap: 10,
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>Send feedback</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'hsl(var(--brand-text))' }}>
+            Send feedback
+          </div>
           {status === 'sent' ? (
-            <div style={{ fontSize: 12, color: '#88CC88', padding: '8px 0' }}>
+            <div style={{ fontSize: 12, color: 'hsl(var(--success))', padding: '8px 0' }}>
               Thanks — your feedback was sent.
             </div>
           ) : (
@@ -115,9 +117,9 @@ const FeedbackButton = () => {
                 rows={4}
                 autoFocus
                 style={{
-                  background: '#111111',
-                  border: '1px solid #333333',
-                  color: '#CCCCCC',
+                  background: 'hsl(var(--brand-neutral-100))',
+                  border: '1px solid hsl(var(--brand-neutral-300))',
+                  color: 'hsl(var(--brand-neutral-700))',
                   fontSize: 12,
                   padding: 8,
                   resize: 'vertical',
@@ -133,9 +135,9 @@ const FeedbackButton = () => {
                 }}
                 placeholder="Email (optional, for follow-up)"
                 style={{
-                  background: '#111111',
-                  border: '1px solid #333333',
-                  color: '#CCCCCC',
+                  background: 'hsl(var(--brand-neutral-100))',
+                  border: '1px solid hsl(var(--brand-neutral-300))',
+                  color: 'hsl(var(--brand-neutral-700))',
                   fontSize: 12,
                   padding: '6px 8px',
                   outline: 'none',
@@ -149,8 +151,8 @@ const FeedbackButton = () => {
                   disabled={status === 'sending'}
                   style={{
                     background: 'transparent',
-                    border: '1px solid #333333',
-                    color: '#AAAAAA',
+                    border: '1px solid hsl(var(--brand-neutral-300))',
+                    color: 'hsl(var(--brand-neutral-600))',
                     fontSize: 12,
                     padding: '5px 10px',
                     cursor: 'pointer',
@@ -163,9 +165,12 @@ const FeedbackButton = () => {
                   onClick={submit}
                   disabled={status === 'sending' || message.trim().length === 0}
                   style={{
-                    background: message.trim().length === 0 ? '#552222' : '#FF4444',
+                    background:
+                      message.trim().length === 0
+                        ? 'hsl(var(--brand-accent-600) / 0.35)'
+                        : 'hsl(var(--brand-accent-600))',
                     border: 'none',
-                    color: '#FFFFFF',
+                    color: 'hsl(var(--brand-ground))',
                     fontSize: 12,
                     padding: '5px 12px',
                     cursor: message.trim().length === 0 ? 'not-allowed' : 'pointer',
@@ -182,9 +187,9 @@ const FeedbackButton = () => {
         <div
           role="status"
           style={{
-            background: '#1A1A1A',
-            color: '#CCCCCC',
-            border: '1px solid #2F2F2F',
+            background: 'hsl(var(--brand-chrome-surface))',
+            color: 'hsl(var(--brand-neutral-700))',
+            border: '1px solid hsl(var(--brand-neutral-300))',
             padding: '8px 12px',
             fontSize: 12,
             lineHeight: 1.4,
@@ -201,7 +206,7 @@ const FeedbackButton = () => {
               marginLeft: 8,
               background: 'transparent',
               border: 'none',
-              color: '#777777',
+              color: 'hsl(var(--brand-neutral-500))',
               cursor: 'pointer',
               fontSize: 12,
             }}
@@ -219,8 +224,8 @@ const FeedbackButton = () => {
         style={{
           width: 44,
           height: 44,
-          background: '#FF4444',
-          color: '#FFFFFF',
+          background: 'hsl(var(--brand-accent))',
+          color: 'hsl(var(--brand-ground))',
           border: 'none',
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
           cursor: 'pointer',
