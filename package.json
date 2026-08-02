@@ -15,6 +15,7 @@
     "*.{ts,tsx,js,jsx,mjs,cjs,css,md,mdx,json,yml,yaml,html,webmanifest}": "prettier --write --ignore-unknown",
     "canshift-tuner/**/*.{ts,tsx}": "scripts/hooks/eslint-package.sh canshift-tuner",
     "canshift-core/**/*.ts": "scripts/hooks/eslint-package.sh canshift-core",
+    "canshift-mobile/**/*.{ts,tsx}": "scripts/hooks/eslint-package.sh canshift-mobile",
     "canshift-firmware/**/*.{cpp,h,hpp}": "scripts/hooks/clang-format-staged.sh"
   }
 }
