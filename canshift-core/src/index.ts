@@ -259,6 +259,9 @@ export type { SensorDangerThreshold } from './widget-metrics.js'
 
 export { DAY_PALETTE_DEFAULT, DAY_BG_DEFAULT, DAY_THEME_PRESET } from './day-theme-defaults.js'
 
+export type { ThemePresetEntry } from './theme-presets.js'
+export { THEME_PRESETS, themePresetById } from './theme-presets.js'
+
 export {
   BUILTIN_MIGRATIONS,
   migrateConfig,
