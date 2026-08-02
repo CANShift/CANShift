@@ -170,6 +170,7 @@ export const DashboardConfigSchema = z
     topBar: TopBarConfigSchema,
     dayTheme: ThemePresetSchema.optional(),
     nightTheme: ThemePresetSchema.optional(),
+    dayNightSignal: z.string().min(1).max(31).optional(),
     pages: z
       .array(PageConfigSchema)
       .min(1, 'pages must contain at least one entry')

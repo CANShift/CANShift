@@ -97,17 +97,29 @@ bool loadDashboard() {
         addItem(TopBarItemKind::THEME_TOGGLE, TopBarItemPos::RIGHT, "", "");
     }
 
+    auto parseTheme = [](JsonObjectConst themeJson, const char *fallbackBg, CfgTheme *theme) {
+        parseColor(themeJson["bgColor"] | fallbackBg, &theme->bgColor);
+        JsonObjectConst paletteJson = themeJson["palette"];
+        theme->hasPalette = !paletteJson.isNull();
+        if (theme->hasPalette) {
+            parseColor(paletteJson["text"] | "#FFFFFF", &theme->text);
+            parseColor(paletteJson["textDim"] | "#888888", &theme->textDim);
+        }
+    };
+
     JsonObjectConst dayThemeJson = doc["dayTheme"];
     out->hasDayTheme = !dayThemeJson.isNull();
     if (out->hasDayTheme) {
-        parseColor(dayThemeJson["bgColor"] | "#DDDDDD", &out->dayTheme.bgColor);
+        parseTheme(dayThemeJson, "#DDDDDD", &out->dayTheme);
     }
 
     JsonObjectConst nightThemeJson = doc["nightTheme"];
     out->hasNightTheme = !nightThemeJson.isNull();
     if (out->hasNightTheme) {
-        parseColor(nightThemeJson["bgColor"] | "#1A1A1A", &out->nightTheme.bgColor);
+        parseTheme(nightThemeJson, "#1A1A1A", &out->nightTheme);
     }
+
+    strlcpy(out->dayNightSignal, doc["dayNightSignal"] | "", CFG_MAX_ID_LEN);
 
     JsonArrayConst pages = doc["pages"];
     out->pageCount = 0;

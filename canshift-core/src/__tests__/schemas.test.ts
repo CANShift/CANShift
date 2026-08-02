@@ -207,6 +207,43 @@ describe('DashboardConfigSchema', () => {
     })
   })
 
+  describe('DashboardConfigSchema.dayNightSignal', () => {
+    it('accepts a dashboard with no dayNightSignal (backward compat)', () => {
+      const result = DashboardConfigSchema.safeParse(validDashboard)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.dayNightSignal).toBeUndefined()
+      }
+    })
+
+    it('accepts a dashboard with a dayNightSignal name', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        dayNightSignal: 'flag_headlights',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.dayNightSignal).toBe('flag_headlights')
+      }
+    })
+
+    it('rejects an empty dayNightSignal', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        dayNightSignal: '',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a dayNightSignal longer than 31 chars (firmware buffer cap)', () => {
+      const result = DashboardConfigSchema.safeParse({
+        ...validDashboard,
+        dayNightSignal: 'x'.repeat(32),
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('PageConfigSchema.template', () => {
     it('accepts a page with no template (defaults to custom behavior)', () => {
       const result = DashboardConfigSchema.safeParse(validDashboard)
