@@ -116,7 +116,7 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
               style={{
                 color: valueColor,
                 fontFamily: FONT_FAMILY,
-                fontWeight: 900,
+                fontWeight: 800,
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',

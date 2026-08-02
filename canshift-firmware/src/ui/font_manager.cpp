@@ -124,7 +124,7 @@ void FontManager::init() {
     s_primary[0] = &lv_font_jbmono_extrabold_32_nk;
     LOG_INFO("FONT", "jbmono_extrabold_32: using in-flash copy (saves ~20 KB pool)");
     s_primary[1] = &lv_font_jbmono_extrabold_48_nk;
-    LOG_INFO("FONT", "jbmono_black_48: using in-flash copy (saves ~44 KB pool)");
+    LOG_INFO("FONT", "jbmono_extrabold_48: using in-flash copy (saves ~44 KB pool)");
 
     for (size_t i = 0; i < kSecondaryCount; ++i) {
         loadOne("bold", "secondary", kSecondarySizes[i], s_secondary[i]);

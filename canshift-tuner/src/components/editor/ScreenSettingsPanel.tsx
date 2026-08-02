@@ -139,7 +139,7 @@ const ScreenSettingsPanel = ({ scale }: ScreenSettingsPanelProps) => {
         <span
           style={{
             fontSize: fsLg,
-            fontWeight: 700,
+            fontWeight: 800,
             color: SCREEN_HEADER,
             letterSpacing: '0.05em',
             marginBottom: Math.round(scale * 2),
