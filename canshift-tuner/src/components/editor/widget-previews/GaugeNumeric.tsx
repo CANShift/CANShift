@@ -1,5 +1,10 @@
 import { memo } from 'react'
-import { WIDGET_TOP_RULE, valueUnitFontSize, widgetTopRulePx } from '@tmbk/canshift-core'
+import {
+  SECONDARY_BAR,
+  WIDGET_TOP_RULE,
+  valueUnitFontSize,
+  widgetTopRulePx,
+} from '@tmbk/canshift-core'
 import { BLINK_ANIM, FONT_FAMILY } from '../widgetPreview.styles'
 import { FRAC_FONT_SCALE, effectiveValue, splitDecimal } from './gauge-math'
 import { type BaseRendererProps, formatSignalLabel } from './shared'
@@ -22,8 +27,9 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
   const cfg = widget.config
   const st = widget.style
 
-  const { raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
+  const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
   const valueOnly = demoValue.toFixed(cfg.decimalPlaces)
+  const showBar = cfg.showBar === true && cfg.maxValue > cfg.minValue
   const prefix = cfg.prefix ?? ''
 
   const valueColor = st.textColor
@@ -75,6 +81,28 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
           animation: danger ? BLINK_ANIM : undefined,
         }}
       />
+      {showBar && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 4,
+            right: 4,
+            height: SECONDARY_BAR.heightPx,
+            background: WIDGET_TOP_RULE.trackColor,
+          }}
+        >
+          <span
+            style={{
+              display: 'block',
+              width: `${String(Math.round(Math.max(0, Math.min(1, valuePct)) * 100))}%`,
+              height: '100%',
+              background: valueColor,
+            }}
+          />
+        </span>
+      )}
       <span
         style={{
           position: 'absolute',

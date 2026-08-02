@@ -256,6 +256,7 @@ export {
   sensorDefaultRange,
   SENSOR_DANGER_COLOR,
   sensorDefaultDangerThreshold,
+  SECONDARY_BAR,
   SHIFT_LIGHT,
   shiftLightLitSegments,
 } from './widget-metrics.js'

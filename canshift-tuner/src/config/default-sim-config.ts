@@ -860,6 +860,7 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
             config: {
               type: 'gauge',
               displayStyle: 'numeric',
+              showBar: true,
               iconName: 'throttle',
               minValue: 0,
               maxValue: 100,

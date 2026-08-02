@@ -61,10 +61,12 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
     inPaletteMode || gradientMode ? GAUGE_TRACK_COLORS.gradient : GAUGE_TRACK_COLORS.plain
 
   const cx = w / 2
-  const r = Math.min(w * 0.45, h * 0.46)
   const cy = h * 0.5
   const valueYOffset = 0
-  const strokeW = Math.max(GAUGE_ARC.strokeWidthFloor, r * GAUGE_ARC.strokeRatio)
+  const maxOuterR = Math.min(w, h) / 2 - GAUGE_ARC.containerPadding / 2
+  const idealR = maxOuterR / (1 + GAUGE_ARC.strokeRatio / 2)
+  const strokeW = Math.max(GAUGE_ARC.strokeWidthFloor, idealR * GAUGE_ARC.strokeRatio)
+  const r = maxOuterR - strokeW / 2
 
   const revFlash = cfg.revFlash === true
   const showRevFlash = revFlash && revLimiting
@@ -78,7 +80,7 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
         <circle
           cx={cx}
           cy={cy}
-          r={r + strokeW * 0.6}
+          r={Math.min(r + strokeW * 0.6, maxOuterR - 1.5)}
           fill="none"
           stroke="#FF0000"
           strokeWidth={showRevFlash ? 3 : 1.5}
