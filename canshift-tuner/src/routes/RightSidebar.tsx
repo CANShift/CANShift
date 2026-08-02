@@ -5,14 +5,16 @@ import Obd2PollingPanel from '../components/obd2/Obd2PollingPanel'
 const PropertyPanel = lazy(() => import('../components/editor/PropertyPanel'))
 const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
 const WidgetListPanel = lazy(() => import('../components/editor/WidgetListPanel'))
+const HistoryPanel = lazy(() => import('../components/editor/HistoryPanel'))
 
-type Tab = 'properties' | 'widgets' | 'signals' | 'library'
+type Tab = 'properties' | 'widgets' | 'signals' | 'library' | 'history'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'properties', label: 'PROPERTIES' },
   { id: 'widgets', label: 'WIDGETS' },
   { id: 'signals', label: 'SIGNALS' },
   { id: 'library', label: 'LIBRARY' },
+  { id: 'history', label: 'HISTORY' },
 ]
 
 export interface RightSidebarProps {
@@ -63,6 +65,11 @@ export const RightSidebar = ({ pageId }: RightSidebarProps) => {
           <WidgetPalette pageId={pageId} />
         </Suspense>
       )}
+      {tab === 'history' && (
+        <Suspense fallback={<PanelFallback />}>
+          <HistoryPanel />
+        </Suspense>
+      )}
     </aside>
   )
 }
@@ -90,8 +97,8 @@ const tabStyle = (active: boolean): CSSProperties => ({
   background: 'none',
   border: 0,
   fontWeight: 800,
-  fontSize: 10,
-  letterSpacing: '0.08em',
+  fontSize: 9,
+  letterSpacing: '0.06em',
   color: active ? 'hsl(var(--brand-text))' : 'hsl(var(--brand-neutral-600))',
   cursor: 'pointer',
 })
