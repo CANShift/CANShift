@@ -62,6 +62,7 @@ describe('BRAND_TOKENS', () => {
     expect(BRAND_TOKENS).toEqual({
       colors: {
         accent: '#EC3013',
+        accent600: '#CB2910',
         ink: '#201E1D',
         ground: '#F3F2F2',
         surface: '#EAE9E9',
@@ -118,6 +119,7 @@ describe('BRAND_TOKENS', () => {
 describe('brandTokensToCssVars', () => {
   const EXPECTED_KEYS = [
     '--brand-accent',
+    '--brand-accent-600',
     '--brand-ink',
     '--brand-ground',
     '--brand-surface',

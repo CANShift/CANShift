@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 interface TogglePillProps {
   active: boolean
@@ -6,19 +7,6 @@ interface TogglePillProps {
   children: ReactNode
   accentColor?: string
 }
-
-const basePillStyle = (active: boolean): CSSProperties => ({
-  background: active ? 'hsl(var(--brand-accent) / 0.15)' : 'transparent',
-  color: active ? 'hsl(var(--brand-accent))' : 'hsl(var(--text-dim))',
-  border: `1px solid ${active ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
-  padding: '3px 12px',
-  fontSize: 11,
-  fontFamily: 'inherit',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-})
 
 const accentPillStyle = (active: boolean, accentColor: string): CSSProperties => ({
   background: active ? 'hsl(var(--surface))' : 'transparent',
@@ -32,11 +20,20 @@ const accentPillStyle = (active: boolean, accentColor: string): CSSProperties =>
   cursor: 'pointer',
 })
 
+const basePillClasses = (active: boolean): string =>
+  cn(
+    'cursor-pointer border px-3 py-[3px] text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors',
+    active
+      ? 'border-brand-accent bg-brand-accent/15 text-brand-accent'
+      : 'border-border bg-transparent text-text-dim hover:border-brand-accent'
+  )
+
 export const TogglePill = ({ active, onClick, children, accentColor }: TogglePillProps) => (
   <button
     type="button"
     onClick={onClick}
-    style={accentColor ? accentPillStyle(active, accentColor) : basePillStyle(active)}
+    className={accentColor ? undefined : basePillClasses(active)}
+    style={accentColor ? accentPillStyle(active, accentColor) : undefined}
   >
     {children}
   </button>

@@ -79,6 +79,11 @@ samp {
   font-family: var(--font-mono);
 }
 
+:focus-visible {
+  outline: 2px solid hsl(var(--brand-accent));
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -121,7 +126,7 @@ samp {
 }
 
 .shell-burn-button:not(:disabled):hover {
-  background: color-mix(in srgb, hsl(var(--brand-accent)) 86%, #000) !important;
+  background: hsl(var(--brand-accent-600)) !important;
 }
 
 .editor-ghost-accent:not(:disabled):hover {
