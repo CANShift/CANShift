@@ -1,15 +1,17 @@
 import type { CSSProperties } from 'react'
 import { CanFrameRow } from './CanFrameRow'
-import { uiLabelStyle } from '../../lib/typography'
 import type { CanFrameStats } from '../../hooks/useCanScanner'
 
 export interface CanFrameTableProps {
   frames: readonly CanFrameStats[]
   nowMs: number
+  mappedTo: ReadonlyMap<number, string>
   onPromote: (id: number) => void
 }
 
-export const CanFrameTable = ({ frames, nowMs, onPromote }: CanFrameTableProps) => {
+const COLUMN_WIDTHS = [110, 70, null, 100, 110, 180] as const
+
+export const CanFrameTable = ({ frames, nowMs, mappedTo, onPromote }: CanFrameTableProps) => {
   if (frames.length === 0) {
     return (
       <div style={emptyStyle}>
@@ -21,21 +23,30 @@ export const CanFrameTable = ({ frames, nowMs, onPromote }: CanFrameTableProps) 
   return (
     <div style={wrapperStyle}>
       <table style={tableStyle}>
+        <colgroup>
+          {COLUMN_WIDTHS.map((width, i) => (
+            <col key={i} style={width === null ? undefined : { width }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th style={thStyle}>ID</th>
-            <th style={thNumStyle}>First seen</th>
-            <th style={thNumStyle}>Last seen</th>
-            <th style={thNumStyle}>Count</th>
-            <th style={thNumStyle}>Rate</th>
-            <th style={thCenterStyle}>DLC</th>
-            <th style={thStyle}>Last payload</th>
-            <th style={thActionStyle}></th>
+            <th style={thFirstStyle}>ID</th>
+            <th style={thStyle}>DLC</th>
+            <th style={thStyle}>DATA</th>
+            <th style={thStyle}>RATE</th>
+            <th style={thStyle}>COUNT</th>
+            <th style={thStyle}>MAPPED TO</th>
           </tr>
         </thead>
         <tbody>
           {frames.map((f) => (
-            <CanFrameRow key={f.id} frame={f} nowMs={nowMs} onPromote={onPromote} />
+            <CanFrameRow
+              key={f.id}
+              frame={f}
+              nowMs={nowMs}
+              mappedName={mappedTo.get(f.id) ?? null}
+              onPromote={onPromote}
+            />
           ))}
         </tbody>
       </table>
@@ -52,39 +63,31 @@ const tableStyle: CSSProperties = {
   width: '100%',
   borderCollapse: 'separate',
   borderSpacing: 0,
-  fontSize: 12,
+  tableLayout: 'fixed',
 }
 
 const thStyle: CSSProperties = {
-  ...uiLabelStyle,
   position: 'sticky',
   top: 0,
-  background: 'hsl(var(--bg))',
-  padding: '10px 14px',
-  borderBottom: '1px solid hsl(var(--border))',
-  textAlign: 'left',
-  color: 'hsl(var(--text-muted))',
   zIndex: 1,
+  background: 'hsl(var(--brand-chrome-bg))',
+  padding: '11px 20px 11px 0',
+  borderBottom: '2px solid var(--brand-divider)',
+  textAlign: 'left',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-neutral-600))',
 }
 
-const thNumStyle: CSSProperties = {
+const thFirstStyle: CSSProperties = {
   ...thStyle,
-  textAlign: 'right',
-}
-
-const thCenterStyle: CSSProperties = {
-  ...thStyle,
-  textAlign: 'center',
-}
-
-const thActionStyle: CSSProperties = {
-  ...thStyle,
-  width: 100,
+  paddingLeft: 20,
 }
 
 const emptyStyle: CSSProperties = {
   padding: '64px 24px',
   textAlign: 'center',
   fontSize: 13,
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-500))',
 }

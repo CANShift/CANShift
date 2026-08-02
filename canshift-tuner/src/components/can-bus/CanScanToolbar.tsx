@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
-import { Button } from '../ui/button'
 import type { CanScannerStatus } from '../../hooks/useCanScanner'
 import { MONO_FONT } from '../../lib/typography'
+import { SortBar, type SortKey } from './SortBar'
 
 export interface CanScanToolbarProps {
   status: CanScannerStatus
@@ -11,6 +11,8 @@ export interface CanScanToolbarProps {
   totalRate: number
   startedAt: number | null
   error: string | null
+  sortKey: SortKey
+  onSortChange: (key: SortKey) => void
   onStart: () => void
   onStop: () => void
   onReset: () => void
@@ -23,6 +25,8 @@ export const CanScanToolbar = ({
   totalRate,
   startedAt,
   error,
+  sortKey,
+  onSortChange,
   onStart,
   onStop,
   onReset,
@@ -31,35 +35,50 @@ export const CanScanToolbar = ({
   const running = status === 'running' || status === 'starting'
 
   return (
-    <header style={toolbarStyle}>
-      <div style={controlsStyle}>
+    <>
+      <header style={toolbarStyle}>
         {running ? (
-          <Button variant="destructive" size="sm" disabled={status !== 'running'} onClick={onStop}>
-            Stop
-          </Button>
+          <button
+            type="button"
+            className="editor-ghost-accent"
+            disabled={status !== 'running'}
+            onClick={onStop}
+            style={stopButtonStyle(status !== 'running')}
+          >
+            STOP SCAN
+          </button>
         ) : (
-          <Button size="sm" disabled={!canControl || status === 'stopping'} onClick={onStart}>
-            Start
-          </Button>
+          <button
+            type="button"
+            className="shell-burn-button"
+            disabled={!canControl || status === 'stopping'}
+            onClick={onStart}
+            style={startButtonStyle(!canControl || status === 'stopping')}
+          >
+            START SCAN
+          </button>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={status === 'running' || status === 'starting' || totalFrames === 0}
+        <button
+          type="button"
+          className="shell-link-button"
+          disabled={running || totalFrames === 0}
           onClick={onReset}
+          style={resetButtonStyle(running || totalFrames === 0)}
         >
-          Reset
-        </Button>
+          RESET
+        </button>
+        <span style={sortLabelStyle}>SORT BY</span>
+        <SortBar sortKey={sortKey} onChange={onSortChange} />
         {!canControl && <span style={hintStyle}>Connect a device to scan.</span>}
-      </div>
-      <div style={metricsStyle}>
-        <Metric label="Frames" value={formatCount(totalFrames)} />
-        <Metric label="Rate" value={`${String(Math.round(totalRate))} Hz`} />
-        <Metric label="Elapsed" value={formatElapsed(elapsedSec)} />
-        <Metric label="Status" value={prettyStatus(status)} />
-      </div>
+        <div style={metricsStyle}>
+          <Metric label="FRAMES" value={formatCount(totalFrames)} />
+          <Metric label="RATE" value={`${String(Math.round(totalRate))} Hz`} />
+          <Metric label="ELAPSED" value={formatElapsed(elapsedSec)} />
+          <Metric label="STATUS" value={prettyStatus(status)} accent={status === 'running'} />
+        </div>
+      </header>
       {error && <div style={errorStyle}>Scan error: {error}</div>}
-    </header>
+    </>
   )
 }
 
@@ -86,7 +105,7 @@ const prettyStatus = (status: CanScannerStatus): string => {
     case 'starting':
       return 'Starting…'
     case 'running':
-      return 'Running'
+      return 'Scanning'
     case 'stopping':
       return 'Stopping…'
     case 'error':
@@ -107,41 +126,82 @@ const formatElapsed = (sec: number): string => {
   return `${String(m)}m ${String(s).padStart(2, '0')}s`
 }
 
-const Metric = ({ label, value }: { label: string; value: string }) => {
-  return (
-    <div style={metricStyle}>
-      <span style={metricLabelStyle}>{label}</span>
-      <span style={metricValueStyle}>{value}</span>
-    </div>
-  )
-}
+const Metric = ({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+}) => (
+  <div style={metricStyle}>
+    <span style={metricLabelStyle}>{label}</span>
+    <span style={metricValueStyle(accent)}>{value}</span>
+  </div>
+)
 
 const toolbarStyle: CSSProperties = {
+  height: 48,
+  flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 16,
-  padding: '12px 20px',
-  borderBottom: '1px solid hsl(var(--border))',
-  background: 'hsl(var(--surface))',
-  flexWrap: 'wrap',
+  gap: 12,
+  padding: '0 20px',
+  borderBottom: '2px solid var(--brand-divider)',
 }
 
-const controlsStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
+const startButtonStyle = (disabled: boolean): CSSProperties => ({
+  padding: '6px 18px',
+  background: disabled ? 'hsl(var(--brand-neutral-300))' : 'hsl(var(--brand-accent))',
+  border: 'none',
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.09em',
+  color: disabled ? 'hsl(var(--brand-neutral-500))' : 'hsl(var(--brand-ground))',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+})
+
+const stopButtonStyle = (disabled: boolean): CSSProperties => ({
+  padding: '6px 18px',
+  background: 'none',
+  border: '1px solid hsl(var(--brand-accent))',
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.09em',
+  color: 'hsl(var(--brand-accent))',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.6 : 1,
+})
+
+const resetButtonStyle = (disabled: boolean): CSSProperties => ({
+  padding: '6px 14px',
+  background: 'none',
+  border: '1px solid hsl(var(--brand-neutral-400))',
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.08em',
+  color: disabled ? 'hsl(var(--brand-neutral-500))' : 'hsl(var(--brand-text))',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+})
+
+const sortLabelStyle: CSSProperties = {
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-neutral-600))',
+  marginLeft: 8,
 }
 
 const hintStyle: CSSProperties = {
   fontSize: 11,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
 }
 
 const metricsStyle: CSSProperties = {
+  marginLeft: 'auto',
   display: 'flex',
-  alignItems: 'center',
-  gap: 18,
+  gap: 30,
   fontVariantNumeric: 'tabular-nums',
 }
 
@@ -152,20 +212,21 @@ const metricStyle: CSSProperties = {
 }
 
 const metricLabelStyle: CSSProperties = {
-  fontSize: 10,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: 'hsl(var(--text-muted))',
+  fontWeight: 800,
+  fontSize: 9,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-neutral-600))',
 }
 
-const metricValueStyle: CSSProperties = {
-  fontSize: 13,
+const metricValueStyle = (accent: boolean): CSSProperties => ({
   fontFamily: MONO_FONT,
-  color: 'hsl(var(--text))',
-}
+  fontSize: 15,
+  color: accent ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-text))',
+})
 
 const errorStyle: CSSProperties = {
-  flexBasis: '100%',
+  padding: '8px 20px',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
   fontSize: 12,
-  color: 'hsl(var(--destructive))',
+  color: 'hsl(var(--brand-accent))',
 }

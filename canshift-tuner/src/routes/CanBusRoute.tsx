@@ -5,7 +5,7 @@ import { useCanScanner } from '../hooks/useCanScanner'
 import type { CanFrameStats } from '../hooks/useCanScanner'
 import { CanFrameTable } from '../components/can-bus/CanFrameTable'
 import { CanScanToolbar } from '../components/can-bus/CanScanToolbar'
-import { SortBar, type SortKey } from '../components/can-bus/SortBar'
+import type { SortKey } from '../components/can-bus/SortBar'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
@@ -48,6 +48,15 @@ const CanBusRoute = () => {
     [scanner.snapshot.frames, sortKey]
   )
 
+  const mappedTo = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const s of signals) {
+      const id = parseHexFrameId(s.canFrameId)
+      if (id >= 0 && !map.has(id)) map.set(id, s.name)
+    }
+    return map
+  }, [signals])
+
   const promote = useCallback(
     (id: number) => {
       const existing = signals.find((s) => parseHexFrameId(s.canFrameId) === id)
@@ -73,6 +82,8 @@ const CanBusRoute = () => {
         totalRate={scanner.snapshot.totalRate}
         startedAt={scanner.snapshot.startedAt}
         error={scanner.error}
+        sortKey={sortKey}
+        onSortChange={setSortKey}
         onStart={() => {
           void scanner.start()
         }}
@@ -81,8 +92,7 @@ const CanBusRoute = () => {
         }}
         onReset={scanner.reset}
       />
-      <SortBar sortKey={sortKey} onChange={setSortKey} />
-      <CanFrameTable frames={sortedFrames} nowMs={nowMs} onPromote={promote} />
+      <CanFrameTable frames={sortedFrames} nowMs={nowMs} mappedTo={mappedTo} onPromote={promote} />
     </div>
   )
 }
@@ -139,7 +149,7 @@ const containerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  background: 'hsl(var(--bg))',
+  background: 'hsl(var(--brand-chrome-bg))',
   overflow: 'hidden',
 }
 

@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
-import { Button } from '../ui/button'
 import { CanByteHistogram } from './CanByteHistogram'
 import type { CanFrameStats } from '../../hooks/useCanScanner'
 import { MONO_FONT } from '../../lib/typography'
@@ -8,13 +7,16 @@ import { MONO_FONT } from '../../lib/typography'
 export interface CanFrameRowProps {
   frame: CanFrameStats
   nowMs: number
+  mappedName: string | null
   onPromote: (id: number) => void
 }
 
-export const CanFrameRow = ({ frame, nowMs, onPromote }: CanFrameRowProps) => {
+const STALE_AFTER_MS = 2_000
+
+export const CanFrameRow = ({ frame, nowMs, mappedName, onPromote }: CanFrameRowProps) => {
   const [expanded, setExpanded] = useState(false)
   const idHex = formatCanId(frame.id)
-  const stale = nowMs - frame.lastSeenMs > 2_000
+  const stale = nowMs - frame.lastSeenMs > STALE_AFTER_MS
 
   return (
     <>
@@ -32,27 +34,28 @@ export const CanFrameRow = ({ frame, nowMs, onPromote }: CanFrameRowProps) => {
             {idHex}
           </button>
         </td>
-        <td style={numCellStyle}>{formatRelative(nowMs - frame.firstSeenMs)}</td>
-        <td style={numCellStyle}>{formatRelative(nowMs - frame.lastSeenMs)}</td>
-        <td style={numCellStyle}>{formatCount(frame.count)}</td>
-        <td style={numCellStyle}>{String(frame.rateHz)} Hz</td>
         <td style={dlcCellStyle}>{String(frame.lastDlc)}</td>
-        <td style={payloadCellStyle}>{formatPayload(frame.lastPayload, frame.lastDlc)}</td>
-        <td style={actionCellStyle}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              onPromote(frame.id)
-            }}
-          >
-            Promote
-          </Button>
+        <td style={dataCellStyle}>{formatPayload(frame.lastPayload, frame.lastDlc)}</td>
+        <td style={dimCellStyle}>{String(frame.rateHz)} Hz</td>
+        <td style={dimCellStyle}>{formatCount(frame.count)}</td>
+        <td style={mappedCellStyle}>
+          {mappedName ?? (
+            <button
+              type="button"
+              className="editor-ghost-accent"
+              onClick={() => {
+                onPromote(frame.id)
+              }}
+              style={promoteButtonStyle}
+            >
+              PROMOTE
+            </button>
+          )}
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={8} style={expandedCellStyle}>
+          <td colSpan={6} style={expandedCellStyle}>
             <CanByteHistogram frame={frame} />
           </td>
         </tr>
@@ -65,12 +68,6 @@ const formatCanId = (id: number): string => {
   const extended = id > 0x7ff
   const width = extended ? 8 : 3
   return `0x${id.toString(16).toUpperCase().padStart(width, '0')}`
-}
-
-const formatRelative = (ms: number): string => {
-  if (ms < 1_000) return '<1s'
-  if (ms < 60_000) return `${String(Math.floor(ms / 1_000))}s ago`
-  return `${String(Math.floor(ms / 60_000))}m ago`
 }
 
 const formatCount = (n: number): string => {
@@ -91,43 +88,53 @@ const rowStyle = (stale: boolean): CSSProperties => ({
 })
 
 const cellStyle: CSSProperties = {
-  padding: '8px 14px',
-  borderBottom: '1px solid hsl(var(--border))',
-  fontSize: 12,
-  color: 'hsl(var(--text))',
+  padding: '12px 20px 12px 0',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  fontFamily: MONO_FONT,
+  fontSize: 13,
+  color: 'hsl(var(--brand-text))',
   verticalAlign: 'middle',
+  fontVariantNumeric: 'tabular-nums',
 }
 
 const idCellStyle: CSSProperties = {
   ...cellStyle,
-  fontFamily: MONO_FONT,
-  fontWeight: 600,
-}
-
-const numCellStyle: CSSProperties = {
-  ...cellStyle,
-  textAlign: 'right',
-  fontFamily: MONO_FONT,
-  color: 'hsl(var(--text-dim))',
-  fontVariantNumeric: 'tabular-nums',
+  paddingLeft: 20,
+  color: 'hsl(var(--brand-accent))',
 }
 
 const dlcCellStyle: CSSProperties = {
   ...cellStyle,
-  textAlign: 'center',
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-600))',
 }
 
-const payloadCellStyle: CSSProperties = {
+const dataCellStyle: CSSProperties = {
   ...cellStyle,
-  fontFamily: MONO_FONT,
-  color: 'hsl(var(--text-dim))',
-  letterSpacing: '0.04em',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 }
 
-const actionCellStyle: CSSProperties = {
+const dimCellStyle: CSSProperties = {
   ...cellStyle,
-  textAlign: 'right',
+  color: 'hsl(var(--brand-neutral-700))',
+}
+
+const mappedCellStyle: CSSProperties = {
+  ...cellStyle,
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12,
+}
+
+const promoteButtonStyle: CSSProperties = {
+  padding: '3px 10px',
+  background: 'none',
+  border: '1px solid hsl(var(--brand-accent))',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.08em',
+  color: 'hsl(var(--brand-accent))',
+  cursor: 'pointer',
 }
 
 const expandButtonStyle: CSSProperties = {
@@ -145,6 +152,6 @@ const expandButtonStyle: CSSProperties = {
 }
 
 const expandedCellStyle: CSSProperties = {
-  padding: 0,
-  borderBottom: '1px solid hsl(var(--border))',
+  padding: '0 0 0 20px',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
 }
