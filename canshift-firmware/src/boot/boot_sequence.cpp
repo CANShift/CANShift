@@ -100,7 +100,8 @@ constexpr uint32_t kSplashTrackRgb = 0x222222;
 constexpr float kMonoSkewTan = 0.19438f;
 
 struct MonogramPoints {
-    lv_point_t seg[8][2];
+    lv_point_t c[8];
+    lv_point_t s[12];
 };
 
 static MonogramPoints s_markPoints;
@@ -114,52 +115,62 @@ int16_t monoY(float y, float scale) {
     return static_cast<int16_t>(y * scale + 0.5f);
 }
 
+// Exact stroke outlines of the brand monogram (path stroke 13, butt caps),
+// expressed as filled polygons so joints and terminals render precisely.
+
+constexpr float kMonoC[8][2] = {
+    {46, 19.5f}, {15.5f, 19.5f}, {15.5f, 80.5f}, {46, 80.5f},
+    {46, 67.5f}, {28.5f, 67.5f}, {28.5f, 32.5f}, {46, 32.5f},
+};
+
+constexpr float kMonoS[12][2] = {
+    {96, 19.5f}, {59.5f, 19.5f},  {59.5f, 56.5f},  {89.5f, 56.5f}, {89.5f, 80.5f}, {66, 80.5f},
+    {66, 67.5f}, {102.5f, 67.5f}, {102.5f, 43.5f}, {72.5f, 43.5f}, {72.5f, 32.5f}, {96, 32.5f},
+};
+
+void freeCanvasBuffer(lv_event_t *e) {
+    free(lv_event_get_user_data(e));
+}
+
+void skewPoints(const float src[][2], uint8_t count, float scale, lv_point_t *out) {
+    for (uint8_t i = 0; i < count; ++i) {
+        out[i].x = monoX(src[i][0], src[i][1], scale);
+        out[i].y = monoY(src[i][1], scale);
+    }
+}
+
 lv_obj_t *drawMonogram(lv_obj_t *parent, int16_t heightPx, MonogramPoints *pts) {
     const float scale = static_cast<float>(heightPx) / 100.0f;
-    lv_obj_t *box = lv_obj_create(parent);
-    if (!box)
+    const int16_t w = static_cast<int16_t>(116.0f * scale) + 2;
+    const int16_t h = heightPx + 1;
+
+    const size_t bufBytes = LV_CANVAS_BUF_SIZE_TRUE_COLOR_ALPHA(w, h);
+    void *buf = malloc(bufBytes);
+    if (!buf)
         return nullptr;
-    lv_obj_set_size(box, static_cast<int16_t>(116.0f * scale), heightPx);
-    lv_obj_set_style_bg_opa(box, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(box, 0, 0);
-    lv_obj_set_style_pad_all(box, 0, 0);
-    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    memset(buf, 0, bufBytes);
 
-    const int16_t stroke = static_cast<int16_t>(13.0f * scale + 0.5f);
-    const int16_t strokeW = stroke < 2 ? 2 : stroke;
-    // Verticals overshoot each corner joint by half a stroke so flat-capped
-    // segments fill the outer corners; the glyphs' open terminals stay butt.
-    const float half = 6.5f;
-
-    struct Seg {
-        float x0, y0, x1, y1;
-        bool accent;
-    };
-    const Seg segs[8] = {
-        {46, 26, 22, 26, false},
-        {22, 26 - half, 22, 74 + half, false},
-        {22, 74, 46, 74, false},
-        {96, 26, 66, 26, true},
-        {66, 26 - half, 66, 50 + half, true},
-        {66, 50, 96, 50, true},
-        {96, 50 - half, 96, 74 + half, true},
-        {96, 74, 66, 74, true},
-    };
-
-    for (uint8_t i = 0; i < 8; ++i) {
-        pts->seg[i][0] = {monoX(segs[i].x0, segs[i].y0, scale), monoY(segs[i].y0, scale)};
-        pts->seg[i][1] = {monoX(segs[i].x1, segs[i].y1, scale), monoY(segs[i].y1, scale)};
-        lv_obj_t *line = lv_line_create(box);
-        if (!line)
-            continue;
-        lv_line_set_points(line, pts->seg[i], 2);
-        lv_obj_set_style_line_width(line, strokeW, 0);
-        lv_obj_set_style_line_color(
-            line, lv_color_hex(segs[i].accent ? kSplashAccentRgb : kSplashInkRgb), 0);
-        lv_obj_set_style_line_rounded(line, false, 0);
+    lv_obj_t *canvas = lv_canvas_create(parent);
+    if (!canvas) {
+        free(buf);
+        return nullptr;
     }
+    lv_canvas_set_buffer(canvas, buf, w, h, LV_IMG_CF_TRUE_COLOR_ALPHA);
+    lv_obj_add_event_cb(canvas, freeCanvasBuffer, LV_EVENT_DELETE, buf);
 
-    return box;
+    lv_draw_rect_dsc_t dsc;
+    lv_draw_rect_dsc_init(&dsc);
+    dsc.bg_opa = LV_OPA_COVER;
+
+    skewPoints(kMonoC, 8, scale, pts->c);
+    dsc.bg_color = lv_color_hex(kSplashInkRgb);
+    lv_canvas_draw_polygon(canvas, pts->c, 8, &dsc);
+
+    skewPoints(kMonoS, 12, scale, pts->s);
+    dsc.bg_color = lv_color_hex(kSplashAccentRgb);
+    lv_canvas_draw_polygon(canvas, pts->s, 12, &dsc);
+
+    return canvas;
 }
 
 lv_obj_t *makeMonoLabel(lv_obj_t *parent, const char *text, uint32_t rgb, uint8_t fontSize) {
