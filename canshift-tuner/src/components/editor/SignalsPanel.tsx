@@ -6,6 +6,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useCanScanStore } from '../../stores/can-scan/can-scan.store'
 import type { CanFrameStats } from '../../stores/can-scan/accumulator'
 import { useLiveSignals } from '../../hooks/useLiveSignals'
+import { SIGNAL_DRAG_MIME } from '../../utils/default-widget'
 import { MONO_FONT } from '../../lib/typography'
 
 export const parseHexFrameId = (raw: string): number => {
@@ -82,7 +83,16 @@ const SignalsPanel = () => {
         <div style={sectionHeaderStyle}>BOUND — {String(signals.length)}</div>
         {signals.length === 0 && <div style={hintStyle}>No signals in the active profile.</div>}
         {signals.map((sig) => (
-          <div key={sig.name} style={rowStyle}>
+          <div
+            key={sig.name}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(SIGNAL_DRAG_MIME, sig.name)
+              e.dataTransfer.effectAllowed = 'copy'
+            }}
+            title="Drag onto the canvas to create a bound widget"
+            style={boundRowStyle}
+          >
             <div style={rowMainStyle}>
               <span style={nameStyle}>{sig.name}</span>
               <span style={valueStyle}>
@@ -178,6 +188,11 @@ const sectionHeaderStyle: CSSProperties = {
 const rowStyle: CSSProperties = {
   padding: '6px 18px',
   borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+}
+
+const boundRowStyle: CSSProperties = {
+  ...rowStyle,
+  cursor: 'grab',
 }
 
 const rowMainStyle: CSSProperties = {
