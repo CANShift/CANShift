@@ -10,7 +10,6 @@ const Switch = forwardRef<
     ref={ref}
     className={cn(
       'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center border-2 border-transparent transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       'disabled:cursor-not-allowed disabled:opacity-50',
       'data-[state=checked]:bg-brand-accent data-[state=unchecked]:bg-input',
       className

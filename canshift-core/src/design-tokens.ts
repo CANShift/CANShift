@@ -52,6 +52,7 @@ export type BrandNeutralStep = (typeof BRAND_NEUTRAL_STEPS)[number]
 export interface BrandTokens {
   colors: {
     accent: string
+    accent600: string
     ink: string
     ground: string
     surface: string
@@ -67,6 +68,7 @@ export interface BrandTokens {
 export const BRAND_TOKENS = {
   colors: {
     accent: '#EC3013',
+    accent600: '#DD2B0F',
     ink: '#201E1D',
     ground: '#F3F2F2',
     surface: '#EAE9E9',
@@ -214,6 +216,7 @@ export const tokensToCssVars = (tokens: DesignTokens): Record<string, string> =>
 
 export const BRAND_COLOR_KEY_TO_CSS_VAR: Record<keyof BrandTokens['colors'], string> = {
   accent: '--brand-accent',
+  accent600: '--brand-accent-600',
   ink: '--brand-ink',
   ground: '--brand-ground',
   surface: '--brand-surface',
