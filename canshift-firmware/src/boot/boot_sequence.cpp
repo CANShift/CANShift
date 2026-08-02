@@ -23,6 +23,7 @@
 #include "ui/screen_profile.h"
 #include "ui/theme_manager.h"
 #include "ui/font_manager.h"
+#include "ui/monogram_baked.h"
 #include "ui/top_bar.h"
 
 #include "can/can_manager.h"
@@ -96,81 +97,12 @@ constexpr uint32_t kSplashInkRgb = 0xFFFFFF;
 constexpr uint32_t kSplashAccentRgb = 0xFF4747;
 constexpr uint32_t kSplashDimRgb = 0xBABABA;
 constexpr uint32_t kSplashTrackRgb = 0x222222;
-// skewX(-11deg) from the brand monogram spec — precomputed tangent.
-constexpr float kMonoSkewTan = 0.19438f;
-
-struct MonogramPoints {
-    lv_point_t c[8];
-    lv_point_t s[12];
-};
-
-static MonogramPoints s_markPoints;
-static MonogramPoints s_headerPoints;
-
-int16_t monoX(float x, float y, float scale) {
-    return static_cast<int16_t>((10.0f + x - kMonoSkewTan * y) * scale + 0.5f);
-}
-
-int16_t monoY(float y, float scale) {
-    return static_cast<int16_t>(y * scale + 0.5f);
-}
-
-// Exact stroke outlines of the brand monogram (path stroke 13, butt caps),
-// expressed as filled polygons so joints and terminals render precisely.
-
-constexpr float kMonoC[8][2] = {
-    {46, 19.5f}, {15.5f, 19.5f}, {15.5f, 80.5f}, {46, 80.5f},
-    {46, 67.5f}, {28.5f, 67.5f}, {28.5f, 32.5f}, {46, 32.5f},
-};
-
-constexpr float kMonoS[12][2] = {
-    {96, 19.5f}, {59.5f, 19.5f},  {59.5f, 56.5f},  {89.5f, 56.5f}, {89.5f, 80.5f}, {66, 80.5f},
-    {66, 67.5f}, {102.5f, 67.5f}, {102.5f, 43.5f}, {72.5f, 43.5f}, {72.5f, 32.5f}, {96, 32.5f},
-};
-
-void freeCanvasBuffer(lv_event_t *e) {
-    free(lv_event_get_user_data(e));
-}
-
-void skewPoints(const float src[][2], uint8_t count, float scale, lv_point_t *out) {
-    for (uint8_t i = 0; i < count; ++i) {
-        out[i].x = monoX(src[i][0], src[i][1], scale);
-        out[i].y = monoY(src[i][1], scale);
-    }
-}
-
-lv_obj_t *drawMonogram(lv_obj_t *parent, int16_t heightPx, MonogramPoints *pts) {
-    const float scale = static_cast<float>(heightPx) / 100.0f;
-    const int16_t w = static_cast<int16_t>(116.0f * scale) + 2;
-    const int16_t h = heightPx + 1;
-
-    const size_t bufBytes = LV_CANVAS_BUF_SIZE_TRUE_COLOR_ALPHA(w, h);
-    void *buf = malloc(bufBytes);
-    if (!buf)
+lv_obj_t *drawMonogram(lv_obj_t *parent, bool mark) {
+    lv_obj_t *img = lv_img_create(parent);
+    if (!img)
         return nullptr;
-    memset(buf, 0, bufBytes);
-
-    lv_obj_t *canvas = lv_canvas_create(parent);
-    if (!canvas) {
-        free(buf);
-        return nullptr;
-    }
-    lv_canvas_set_buffer(canvas, buf, w, h, LV_IMG_CF_TRUE_COLOR_ALPHA);
-    lv_obj_add_event_cb(canvas, freeCanvasBuffer, LV_EVENT_DELETE, buf);
-
-    lv_draw_rect_dsc_t dsc;
-    lv_draw_rect_dsc_init(&dsc);
-    dsc.bg_opa = LV_OPA_COVER;
-
-    skewPoints(kMonoC, 8, scale, pts->c);
-    dsc.bg_color = lv_color_hex(kSplashInkRgb);
-    lv_canvas_draw_polygon(canvas, pts->c, 8, &dsc);
-
-    skewPoints(kMonoS, 12, scale, pts->s);
-    dsc.bg_color = lv_color_hex(kSplashAccentRgb);
-    lv_canvas_draw_polygon(canvas, pts->s, 12, &dsc);
-
-    return canvas;
+    lv_img_set_src(img, mark ? MonogramBaked::mark() : MonogramBaked::header());
+    return img;
 }
 
 lv_obj_t *makeMonoLabel(lv_obj_t *parent, const char *text, uint32_t rgb, uint8_t fontSize) {
@@ -216,7 +148,7 @@ static void showSplash() {
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *mark = drawMonogram(scr, 84, &s_markPoints);
+    lv_obj_t *mark = drawMonogram(scr, true);
     if (mark)
         lv_obj_align(mark, LV_ALIGN_CENTER, 0, 0);
 
@@ -235,7 +167,7 @@ static void buildSelfTestScreen() {
     lv_obj_t *scr = lv_scr_act();
     lv_obj_clean(scr);
 
-    lv_obj_t *header = drawMonogram(scr, 32, &s_headerPoints);
+    lv_obj_t *header = drawMonogram(scr, false);
     if (header)
         lv_obj_align(header, LV_ALIGN_TOP_LEFT, 17, 22);
 
