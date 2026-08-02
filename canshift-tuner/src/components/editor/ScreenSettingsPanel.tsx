@@ -16,16 +16,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-const SCREEN_BG = 'hsl(var(--brand-neutral-100))'
-const SCREEN_LABEL = 'hsl(var(--brand-neutral-600))'
-const SCREEN_VALUE = 'hsl(var(--brand-neutral-600))'
-const SCREEN_HEADER = 'hsl(var(--brand-neutral-700))'
-const BTN_BG = 'hsl(var(--brand-neutral-100))'
-const BTN_BORDER = 'hsl(var(--brand-neutral-300))'
-const BTN_BORDER_DIM = 'hsl(var(--brand-neutral-200))'
-const BTN_FG_DISABLED = 'hsl(var(--brand-neutral-500))'
+const SCREEN_BG = '#0D0D0D'
+const SCREEN_LABEL = '#AAAAAA'
+const SCREEN_VALUE = '#888888'
+const SCREEN_HEADER = '#CCCCCC'
+const BTN_BG = '#111111'
+const BTN_BORDER = '#2A2A2A'
+const BTN_BORDER_DIM = '#1E1E1E'
+const BTN_FG_DISABLED = '#444444'
 const ACCENT_RED = '#CC3333'
-const ACCENT_RED_BG = `color-mix(in srgb, ${ACCENT_RED} 14%, transparent)`
+const ACCENT_RED_BG = '#1A0A0A'
 
 interface ScreenSettingsPanelProps {
   scale: number

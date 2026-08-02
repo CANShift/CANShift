@@ -167,10 +167,10 @@ const FeedbackButton = () => {
                   style={{
                     background:
                       message.trim().length === 0
-                        ? 'hsl(var(--brand-accent) / 0.35)'
-                        : 'hsl(var(--brand-accent))',
+                        ? 'hsl(var(--brand-accent-600) / 0.35)'
+                        : 'hsl(var(--brand-accent-600))',
                     border: 'none',
-                    color: 'hsl(var(--brand-text))',
+                    color: 'hsl(var(--brand-ground))',
                     fontSize: 12,
                     padding: '5px 12px',
                     cursor: message.trim().length === 0 ? 'not-allowed' : 'pointer',
@@ -225,7 +225,7 @@ const FeedbackButton = () => {
           width: 44,
           height: 44,
           background: 'hsl(var(--brand-accent))',
-          color: 'hsl(var(--brand-text))',
+          color: 'hsl(var(--brand-ground))',
           border: 'none',
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
           cursor: 'pointer',
