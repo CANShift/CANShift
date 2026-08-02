@@ -17,6 +17,7 @@ export interface HeaderViewProps {
   portLabel?: string | null
   activityPulse?: boolean
   firmwareSlot?: ReactNode
+  themeToggle?: ReactNode
   burnButton?: ReactNode
   onDisconnect?: () => void
 }
@@ -52,6 +53,7 @@ export const HeaderView = ({
   portLabel,
   activityPulse = false,
   firmwareSlot,
+  themeToggle,
   burnButton,
   onDisconnect,
 }: HeaderViewProps) => {
@@ -99,7 +101,10 @@ export const HeaderView = ({
         <span style={versionStyle}>tuner v{tunerVersion}</span>
       </div>
 
-      <div style={actionZoneStyle}>{burnButton}</div>
+      <div style={actionZoneStyle}>
+        {themeToggle}
+        {burnButton}
+      </div>
     </header>
   )
 }

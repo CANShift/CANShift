@@ -283,6 +283,7 @@ export {
   BRAND_DIVIDER_CSS_VAR,
   brandNeutralCssVar,
   brandTokensToCssVars,
+  brandLightThemeCssVars,
   FONT_TOKENS,
   FONT_UI_CSS_VAR,
   FONT_MONO_CSS_VAR,

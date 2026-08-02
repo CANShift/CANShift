@@ -85,8 +85,8 @@ export const PageContextMenu = ({
         top: y,
         left: x,
         zIndex: 9999,
-        background: 'hsl(var(--surface))',
-        border: '1px solid #2A2A2A',
+        background: 'hsl(var(--brand-chrome-surface))',
+        border: '1px solid hsl(var(--brand-neutral-300))',
         padding: '3px 0',
         minWidth: 140,
         boxShadow: '0 4px 16px #00000066',
@@ -111,15 +111,17 @@ export const PageContextMenu = ({
             border: 'none',
             fontSize: 12,
             color: item.disabled
-              ? '#333333'
+              ? 'hsl(var(--brand-neutral-400))'
               : item.danger
                 ? 'hsl(var(--status-danger))'
-                : '#CCCCCC',
+                : 'hsl(var(--brand-neutral-700))',
             cursor: item.disabled ? 'default' : 'pointer',
           }}
           onMouseEnter={(e) => {
             if (!item.disabled)
-              e.currentTarget.style.background = item.danger ? '#2A1111' : '#252525'
+              e.currentTarget.style.background = item.danger
+                ? 'color-mix(in srgb, hsl(var(--brand-accent)) 14%, transparent)'
+                : 'hsl(var(--brand-neutral-200))'
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'none'

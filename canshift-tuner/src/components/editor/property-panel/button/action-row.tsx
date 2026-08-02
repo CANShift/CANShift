@@ -25,8 +25,8 @@ export const ActionRow = ({ action, pageIds, onUpdate, onRemove }: ActionRowProp
   return (
     <div
       style={{
-        background: '#111111',
-        border: '1px solid #2A2A2A',
+        background: 'hsl(var(--brand-neutral-100))',
+        border: '1px solid hsl(var(--brand-neutral-300))',
         padding: '6px 8px',
         marginBottom: 5,
       }}

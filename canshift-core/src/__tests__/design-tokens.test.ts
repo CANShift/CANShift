@@ -9,6 +9,7 @@ import {
   FONT_MONO_CSS_VAR,
   FONT_TOKENS,
   FONT_UI_CSS_VAR,
+  brandLightThemeCssVars,
   brandNeutralCssVar,
   brandTokensToCssVars,
   fontTokensToCssVars,
@@ -83,6 +84,18 @@ describe('BRAND_TOKENS', () => {
       },
       darkText: '#F3F2F2',
       darkDivider: 'color-mix(in srgb, #F3F2F2 24%, transparent)',
+      lightNeutrals: {
+        100: '#F8F4F4',
+        200: '#EAE7E7',
+        300: '#D7D3D3',
+        400: '#BAB6B6',
+        500: '#9B9797',
+        600: '#7D7979',
+        700: '#605D5D',
+        800: '#444141',
+        900: '#2D2B2B',
+      },
+      lightDivider: 'color-mix(in srgb, #201E1D 40%, transparent)',
     })
   })
 
@@ -97,6 +110,10 @@ describe('BRAND_TOKENS', () => {
     expect(isHexColor(BRAND_TOKENS.darkNeutrals[step])).toBe(true)
   })
 
+  it.each([...BRAND_NEUTRAL_STEPS])('lightNeutrals[%d] is a valid #RRGGBB hex', (step) => {
+    expect(isHexColor(BRAND_TOKENS.lightNeutrals[step])).toBe(true)
+  })
+
   it('darkText is a valid #RRGGBB hex', () => {
     expect(isHexColor(BRAND_TOKENS.darkText)).toBe(true)
   })
@@ -105,8 +122,10 @@ describe('BRAND_TOKENS', () => {
     const brandValues = [
       ...Object.values(BRAND_TOKENS.colors),
       ...Object.values(BRAND_TOKENS.darkNeutrals),
+      ...Object.values(BRAND_TOKENS.lightNeutrals),
       BRAND_TOKENS.darkText,
       BRAND_TOKENS.darkDivider,
+      BRAND_TOKENS.lightDivider,
     ]
     expect(brandValues).not.toContain(DARK_TOKENS.colors.primary)
   })
@@ -167,6 +186,29 @@ describe('brandTokensToCssVars', () => {
     for (const cssVar of Object.values(BRAND_COLOR_KEY_TO_CSS_VAR)) {
       expect(cssVar.startsWith('--brand-')).toBe(true)
     }
+  })
+})
+
+describe('brandLightThemeCssVars', () => {
+  it('overrides only variables that exist in the dark set', () => {
+    const darkKeys = Object.keys(brandTokensToCssVars(BRAND_TOKENS))
+    const lightKeys = Object.keys(brandLightThemeCssVars(BRAND_TOKENS))
+    expect(lightKeys.filter((key) => !darkKeys.includes(key))).toEqual([])
+  })
+
+  it('swaps the neutral ramp, text, divider and chrome surfaces', () => {
+    const vars = brandLightThemeCssVars(BRAND_TOKENS)
+    expect(vars[brandNeutralCssVar(100)]).toBe(hexToHslChannels('#F8F4F4'))
+    expect(vars[brandNeutralCssVar(900)]).toBe(hexToHslChannels('#2D2B2B'))
+    expect(vars[BRAND_TEXT_CSS_VAR]).toBe(hexToHslChannels(BRAND_TOKENS.colors.ink))
+    expect(vars[BRAND_DIVIDER_CSS_VAR]).toBe('color-mix(in srgb, #201E1D 40%, transparent)')
+    expect(vars['--brand-chrome-bg']).toBe(hexToHslChannels(BRAND_TOKENS.colors.ground))
+    expect(vars['--brand-chrome-surface']).toBe(hexToHslChannels(BRAND_TOKENS.colors.surface))
+  })
+
+  it('leaves the accent untouched', () => {
+    const vars = brandLightThemeCssVars(BRAND_TOKENS)
+    expect(vars['--brand-accent']).toBeUndefined()
   })
 })
 

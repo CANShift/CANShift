@@ -102,9 +102,9 @@ export const modePillStyle = (active: boolean): CSSProperties => ({
   flex: 1,
   fontSize: 11,
   padding: '5px 8px',
-  background: active ? '#1A2A4A' : 'transparent',
-  border: `1px solid ${active ? '#5577CC' : '#2A2A2A'}`,
-  color: active ? '#7788CC' : '#666666',
+  background: active ? 'color-mix(in srgb, #5577CC 14%, transparent)' : 'transparent',
+  border: `1px solid ${active ? '#5577CC' : 'hsl(var(--brand-neutral-300))'}`,
+  color: active ? '#7788CC' : 'hsl(var(--brand-neutral-500))',
   cursor: 'pointer',
   fontWeight: active ? 600 : 400,
 })
