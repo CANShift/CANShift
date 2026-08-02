@@ -2,17 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useLogStore } from '../stores/log.store'
 import type { LogLevel } from '../stores/log.store'
-import { RouteHeader } from '../components/shell/RouteHeader'
 import { TogglePill } from '../components/ui/toggle-pill'
 import { MONO_FONT, UI_FONT } from '../lib/typography'
 
 const ALL_LEVELS: LogLevel[] = ['info', 'success', 'warn', 'error', 'debug']
 const LEVEL_COLOR: Record<LogLevel, string> = {
-  info: 'hsl(var(--text-dim))',
+  info: 'hsl(var(--brand-neutral-700))',
   success: 'hsl(var(--success))',
-  warn: 'hsl(var(--accent))',
-  error: 'hsl(var(--destructive))',
-  debug: 'hsl(var(--text-muted))',
+  warn: 'hsl(var(--warning))',
+  error: 'hsl(var(--status-danger))',
+  debug: 'hsl(var(--brand-neutral-500))',
 }
 
 const STICK_THRESHOLD_PX = 32
@@ -88,57 +87,59 @@ const LogsRoute = () => {
 
   return (
     <div style={containerStyle}>
-      <RouteHeader
-        title="Logs"
-        subtitle={`${String(filtered.length)} entr${filtered.length === 1 ? 'y' : 'ies'} · ${String(entries.length)} total`}
-        action={
-          <>
-            {ALL_LEVELS.map((level) => {
-              if (level === 'debug' && !verbose) return null
-              const active = visibleLevels.has(level)
-              return (
-                <TogglePill
-                  key={level}
-                  active={active}
-                  accentColor={LEVEL_COLOR[level]}
-                  onClick={() => {
-                    toggleLevel(level)
-                  }}
-                >
-                  {level}
-                </TogglePill>
-              )
-            })}
-            <label style={verboseLabelStyle}>
-              <input
-                type="checkbox"
-                checked={verbose}
-                onChange={(e) => {
-                  setVerbose(e.target.checked)
+      <header style={toolbarStyle}>
+        <span style={titleStyle}>Logs</span>
+        <span style={summaryStyle}>
+          {filtered.length} entr{filtered.length === 1 ? 'y' : 'ies'} · {entries.length} total
+        </span>
+        <div style={actionsStyle}>
+          {ALL_LEVELS.map((level) => {
+            if (level === 'debug' && !verbose) return null
+            const active = visibleLevels.has(level)
+            return (
+              <TogglePill
+                key={level}
+                active={active}
+                accentColor={LEVEL_COLOR[level]}
+                onClick={() => {
+                  toggleLevel(level)
                 }}
-              />
-              verbose
-            </label>
-            <div style={dividerStyle} />
-            <button
-              type="button"
-              onClick={handleCopy}
-              disabled={filtered.length === 0}
-              style={secondaryButtonStyle(filtered.length === 0)}
-            >
-              {copyLabel}
-            </button>
-            <button
-              type="button"
-              onClick={clear}
-              disabled={entries.length === 0}
-              style={secondaryButtonStyle(entries.length === 0)}
-            >
-              Clear
-            </button>
-          </>
-        }
-      />
+              >
+                {level}
+              </TogglePill>
+            )
+          })}
+          <label style={verboseLabelStyle}>
+            <input
+              type="checkbox"
+              checked={verbose}
+              onChange={(e) => {
+                setVerbose(e.target.checked)
+              }}
+            />
+            verbose
+          </label>
+          <div style={dividerStyle} />
+          <button
+            type="button"
+            className="shell-link-button"
+            onClick={handleCopy}
+            disabled={filtered.length === 0}
+            style={secondaryButtonStyle(filtered.length === 0)}
+          >
+            {copyLabel}
+          </button>
+          <button
+            type="button"
+            className="shell-link-button"
+            onClick={clear}
+            disabled={entries.length === 0}
+            style={secondaryButtonStyle(entries.length === 0)}
+          >
+            CLEAR
+          </button>
+        </div>
+      </header>
 
       <div ref={scrollRef} onScroll={onScroll} style={streamStyle}>
         {filtered.length === 0 ? (
@@ -196,9 +197,41 @@ const containerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  background: 'hsl(var(--bg))',
+  background: 'hsl(var(--brand-chrome-bg))',
   overflow: 'hidden',
   position: 'relative',
+}
+
+const toolbarStyle: CSSProperties = {
+  minHeight: 48,
+  flexShrink: 0,
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: 14,
+  padding: '4px 20px',
+  borderBottom: '2px solid var(--brand-divider)',
+}
+
+const titleStyle: CSSProperties = {
+  fontWeight: 800,
+  fontSize: 14,
+  color: 'hsl(var(--brand-text))',
+}
+
+const summaryStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+  whiteSpace: 'nowrap',
+}
+
+const actionsStyle: CSSProperties = {
+  marginLeft: 'auto',
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: 6,
 }
 
 const verboseLabelStyle: CSSProperties = {
@@ -206,7 +239,7 @@ const verboseLabelStyle: CSSProperties = {
   alignItems: 'center',
   gap: 6,
   fontSize: 11,
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-600))',
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
   marginLeft: 4,
@@ -216,17 +249,19 @@ const verboseLabelStyle: CSSProperties = {
 const dividerStyle: CSSProperties = {
   width: 1,
   height: 18,
-  background: 'hsl(var(--border))',
+  background: 'hsl(var(--brand-neutral-300))',
   margin: '0 4px',
 }
 
 const secondaryButtonStyle = (disabled: boolean): CSSProperties => ({
-  background: disabled ? 'hsl(var(--bg-inset))' : 'hsl(var(--surface))',
-  color: disabled ? 'hsl(var(--text-muted))' : 'hsl(var(--text))',
-  border: '1px solid hsl(var(--border))',
-  padding: '6px 12px',
-  fontSize: 12,
-  fontWeight: 600,
+  background: 'none',
+  color: disabled ? 'hsl(var(--brand-neutral-500))' : 'hsl(var(--brand-text))',
+  border: '1px solid hsl(var(--brand-neutral-400))',
+  padding: '6px 14px',
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
   cursor: disabled ? 'not-allowed' : 'pointer',
 })
 
@@ -242,7 +277,7 @@ const streamStyle: CSSProperties = {
 const emptyStyle: CSSProperties = {
   textAlign: 'center',
   fontSize: 13,
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-500))',
   padding: '64px 24px',
   fontFamily: UI_FONT,
 }
@@ -255,7 +290,7 @@ const entryStyle: CSSProperties = {
 }
 
 const timestampStyle: CSSProperties = {
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
   flexShrink: 0,
   fontVariantNumeric: 'tabular-nums',
 }
@@ -268,12 +303,12 @@ const levelStyle: CSSProperties = {
 }
 
 const scopeStyle: CSSProperties = {
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
   flexShrink: 0,
 }
 
 const messageStyle: CSSProperties = {
-  color: 'hsl(var(--text))',
+  color: 'hsl(var(--brand-text))',
   wordBreak: 'break-word',
   flex: 1,
 }
@@ -283,13 +318,13 @@ const jumpStyle: CSSProperties = {
   bottom: 16,
   left: '50%',
   transform: 'translateX(-50%)',
-  background: 'hsl(var(--surface))',
-  color: 'hsl(var(--text))',
-  border: '1px solid hsl(var(--border))',
+  background: 'hsl(var(--brand-chrome-surface))',
+  color: 'hsl(var(--brand-text))',
+  border: '1px solid hsl(var(--brand-neutral-400))',
   padding: '6px 14px',
   fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.06em',
+  fontWeight: 800,
+  letterSpacing: '0.08em',
   cursor: 'pointer',
   boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
 }
