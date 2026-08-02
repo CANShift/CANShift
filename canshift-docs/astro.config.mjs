@@ -16,6 +16,9 @@ export default defineConfig({
         alt: 'CANShift',
       },
       favicon: '/favicon.svg',
+      components: {
+        Head: './src/components/Head.astro',
+      },
       head: [
         {
           tag: 'meta',
