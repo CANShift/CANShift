@@ -68,7 +68,7 @@ export interface BrandTokens {
 export const BRAND_TOKENS = {
   colors: {
     accent: '#EC3013',
-    accent600: '#CB2910',
+    accent600: '#DD2B0F',
     ink: '#201E1D',
     ground: '#F3F2F2',
     surface: '#EAE9E9',
