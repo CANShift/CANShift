@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import type { CSSProperties } from 'react'
 import type { Obd2Mode01PidEntry, Obd2Polling, SignalDef } from '@tmbk/canshift-core'
 import {
   OBD2_DEFAULT_INTERVAL_MS,
@@ -7,19 +7,9 @@ import {
   OBD2_MODE01_PIDS,
   obd2PidLookup,
 } from '@tmbk/canshift-core'
+import { useLiveSignals } from '../../hooks/useLiveSignals'
 import { useSignalStore } from '../../stores/signal.store'
 import { MONO_FONT } from '../../lib/typography'
-
-const PANEL_LABEL = '#AAAAAA'
-const PANEL_HINT = '#666666'
-const PANEL_SECTION = '#888888'
-const SECTION_DIVIDER = '#1F1F1F'
-const INPUT_BG = '#111111'
-const INPUT_BORDER = '#333333'
-const VALUE_FG = '#CCCCCC'
-const BADGE_BROADCAST_FG = '#88AACC'
-const BADGE_POLLING_FG = '#FF8800'
-const RAW_PID_FG = '#AA8866'
 
 const INPUT_MODE_OPTIONS = [
   { value: 'broadcast', label: 'Broadcast (passive listen)' },
@@ -27,17 +17,6 @@ const INPUT_MODE_OPTIONS = [
 ] as const
 
 type InputModeKey = (typeof INPUT_MODE_OPTIONS)[number]['value']
-
-const inputStyle = {
-  width: '100%',
-  height: 26,
-  padding: '0 6px',
-  background: INPUT_BG,
-  border: `1px solid ${INPUT_BORDER}`,
-  color: VALUE_FG,
-  fontSize: 12,
-  boxSizing: 'border-box' as const,
-}
 
 const formatPid = (pid: number): string => {
   return `0x${pid.toString(16).toUpperCase().padStart(2, '0')}`
@@ -79,12 +58,16 @@ const applyCatalogPid = (signal: SignalDef, entry: Obd2Mode01PidEntry): SignalDe
   }
 }
 
-interface RowProps {
+const formatValue = (value: number): string =>
+  Number.isInteger(value) ? String(value) : value.toFixed(1)
+
+interface CellProps {
   signal: SignalDef
   index: number
+  liveValue: number | undefined
 }
 
-const SignalRow = ({ signal, index }: RowProps) => {
+const SignalCell = ({ signal, index, liveValue }: CellProps) => {
   const signals = useSignalStore((s) => s.signals)
   const setSignals = useSignalStore((s) => s.setSignals)
 
@@ -133,32 +116,20 @@ const SignalRow = ({ signal, index }: RowProps) => {
   }
 
   return (
-    <div
-      style={{
-        padding: '8px 0',
-        borderBottom: `1px solid ${SECTION_DIVIDER}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 12, color: VALUE_FG, fontFamily: MONO_FONT }}>{signal.name}</div>
-        <span
-          style={{
-            fontSize: 9,
-            color: mode === 'obd2' ? BADGE_POLLING_FG : BADGE_BROADCAST_FG,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
-          {mode === 'obd2' ? 'Polling' : 'Broadcast'}
-        </span>
+    <div style={cellStyle}>
+      <span style={polling ? pidStyle : broadcastPidStyle}>
+        {polling ? formatPid(polling.pid) : 'BROADCAST'}
+        {isRawPid ? ' · RAW' : ''}
+      </span>
+      <span style={nameStyle}>{signal.name}</span>
+      <div style={valueRowStyle}>
+        <span style={valueStyle}>{liveValue !== undefined ? formatValue(liveValue) : '—'}</span>
+        <span style={unitStyle}>{signal.unit}</span>
       </div>
 
-      <label style={{ fontSize: 10, color: PANEL_HINT }}>Input mode</label>
+      <label style={hintStyle}>Input mode</label>
       <select
-        style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
+        style={selectStyle}
         value={mode}
         onChange={(e) => {
           onModeChange(e.target.value)
@@ -173,11 +144,9 @@ const SignalRow = ({ signal, index }: RowProps) => {
 
       {mode === 'obd2' && polling && (
         <>
-          <label style={{ fontSize: 10, color: PANEL_HINT }}>
-            PID {isRawPid && <span style={{ color: RAW_PID_FG }}>(raw)</span>}
-          </label>
+          <label style={hintStyle}>PID</label>
           <select
-            style={{ ...inputStyle, fontSize: 11, padding: '4px 6px' }}
+            style={selectStyle}
             value={polling.pid.toString(10)}
             onChange={(e) => {
               onPidChange(e.target.value)
@@ -193,16 +162,9 @@ const SignalRow = ({ signal, index }: RowProps) => {
             )}
           </select>
 
-          <label
-            style={{
-              fontSize: 10,
-              color: PANEL_HINT,
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
+          <label style={intervalLabelStyle}>
             <span>Interval (ms)</span>
-            <span style={{ color: VALUE_FG }}>{polling.intervalMs}</span>
+            <span style={intervalValueStyle}>{polling.intervalMs}</span>
           </label>
           <input
             type="range"
@@ -223,42 +185,156 @@ const SignalRow = ({ signal, index }: RowProps) => {
 
 const Obd2PollingPanel = () => {
   const signals = useSignalStore((s) => s.signals)
-  const pollingCount = useMemo(() => signals.filter((s) => s.polling).length, [signals])
+  const values = useLiveSignals()
+
+  if (signals.length === 0) {
+    return (
+      <div style={emptyStyle}>
+        No signals loaded. Apply an ECU profile first — the Mode 01 grid fills from the active
+        signal map.
+      </div>
+    )
+  }
 
   return (
-    <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-      <div
-        style={{
-          fontSize: 10,
-          color: PANEL_LABEL,
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-          marginBottom: 4,
-        }}
-      >
-        Signal sources
-      </div>
-      <p style={{ fontSize: 10, color: PANEL_HINT, marginBottom: 6, lineHeight: 1.4 }}>
-        OBD-II ECUs do not broadcast — the dash must send a query frame for each signal. Faster
-        intervals = more CAN traffic. Stick to ≥{OBD2_MIN_INTERVAL_MS}
-        ms; busy buses choke below that.
+    <div style={scrollStyle}>
+      <div style={sectionTitleStyle}>MODE 01 — SIGNAL SOURCES</div>
+      <p style={sectionHintStyle}>
+        Mode 01 polling sends a query frame per signal (request/response); Broadcast listens
+        passively to CAN traffic. Stick to ≥{OBD2_MIN_INTERVAL_MS} ms polling intervals; busy buses
+        choke below that.
       </p>
-      <div style={{ fontSize: 10, color: PANEL_SECTION, marginBottom: 4 }}>
-        {signals.length} signal{signals.length === 1 ? '' : 's'} loaded ·{' '}
-        <span style={{ color: BADGE_POLLING_FG }}>{pollingCount}</span> polled
+      <div style={gridStyle}>
+        {signals.map((signal, index) => (
+          <SignalCell
+            key={signal.name}
+            signal={signal}
+            index={index}
+            liveValue={values[signal.name]}
+          />
+        ))}
       </div>
-
-      {signals.length === 0 && (
-        <p style={{ fontSize: 11, color: PANEL_HINT, marginTop: 16 }}>
-          No signals loaded. Apply a profile from the toolbar first.
-        </p>
-      )}
-
-      {signals.map((signal, index) => (
-        <SignalRow key={signal.name} signal={signal} index={index} />
-      ))}
     </div>
   )
 }
 
 export default Obd2PollingPanel
+
+const scrollStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  overflowY: 'auto',
+}
+
+const sectionTitleStyle: CSSProperties = {
+  padding: '16px 20px 4px',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.2em',
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const sectionHintStyle: CSSProperties = {
+  padding: '0 20px 10px',
+  fontSize: 11,
+  lineHeight: 1.4,
+  color: 'hsl(var(--brand-neutral-500))',
+  maxWidth: 640,
+}
+
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, 1fr)',
+  borderTop: '2px solid var(--brand-divider)',
+}
+
+const cellStyle: CSSProperties = {
+  padding: '14px 20px',
+  borderRight: '1px solid hsl(var(--brand-neutral-300))',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 5,
+  minWidth: 0,
+}
+
+const pidStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-accent))',
+}
+
+const broadcastPidStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-500))',
+  letterSpacing: '0.08em',
+}
+
+const nameStyle: CSSProperties = {
+  fontSize: 13,
+  color: 'hsl(var(--brand-text))',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+const valueRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 5,
+}
+
+const valueStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 20,
+  color: 'hsl(var(--brand-text))',
+  fontVariantNumeric: 'tabular-nums',
+}
+
+const unitStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const hintStyle: CSSProperties = {
+  marginTop: 4,
+  fontSize: 10,
+  color: 'hsl(var(--brand-neutral-500))',
+}
+
+const selectStyle: CSSProperties = {
+  width: '100%',
+  height: 26,
+  padding: '0 6px',
+  background: 'hsl(var(--brand-neutral-100))',
+  border: '1px solid hsl(var(--brand-neutral-300))',
+  color: 'hsl(var(--brand-text))',
+  fontSize: 11,
+  boxSizing: 'border-box',
+}
+
+const intervalLabelStyle: CSSProperties = {
+  marginTop: 4,
+  fontSize: 10,
+  color: 'hsl(var(--brand-neutral-500))',
+  display: 'flex',
+  justifyContent: 'space-between',
+}
+
+const intervalValueStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  color: 'hsl(var(--brand-text))',
+}
+
+const emptyStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '64px 24px',
+  textAlign: 'center',
+  fontSize: 13,
+  color: 'hsl(var(--brand-neutral-500))',
+}
