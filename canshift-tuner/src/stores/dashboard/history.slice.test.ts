@@ -141,7 +141,7 @@ describe('labelled undo stack (#1847)', () => {
     useDashboardStore.getState().moveWidget('p1', 'gauge_a', { col: 6, row: 7 })
     useDashboardStore.getState().undo()
     const w = useDashboardStore.getState().config?.pages[0]?.widgets[0]
-    expect([w?.layout.col, w?.layout.row]).not.toEqual([6, 7])
+    expect([w?.layout.col, w?.layout.row]).toEqual([0, 0])
     useDashboardStore.getState().redo()
     const w2 = useDashboardStore.getState().config?.pages[0]?.widgets[0]
     expect([w2?.layout.col, w2?.layout.row]).toEqual([6, 7])
@@ -157,9 +157,11 @@ describe('labelled undo stack (#1847)', () => {
 
   it('caps the stack at 100 entries, dropping the oldest', () => {
     for (let i = 0; i < 110; i++) {
-      useDashboardStore.getState().updatePage('p1', { showTopBar: i % 2 === 0 })
+      useDashboardStore.getState().setDefaultPage(i % 2 === 0 ? 'p1' : 'p2')
     }
-    expect(useDashboardStore.getState().past).toHaveLength(100)
-    expect(useDashboardStore.getState().past[0]?.label).toBe('Edited page 01')
+    const past = useDashboardStore.getState().past
+    expect(past).toHaveLength(100)
+    expect(past[0]?.label).toBe('Set page 01 as default')
+    expect(past[0]?.config.defaultPageId).toBe('p2')
   })
 })

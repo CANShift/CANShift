@@ -5,6 +5,10 @@ import { MONO_FONT } from '../../lib/typography'
 const ZOOM_MIN = 0.5
 const ZOOM_MAX = 2
 
+const IS_MAC = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC')
+const UNDO_KEYS = IS_MAC ? '⌘Z' : 'Ctrl+Z'
+const REDO_KEYS = IS_MAC ? '⇧⌘Z' : 'Ctrl+Shift+Z'
+
 export interface CanvasToolbarProps {
   pageId: string
   selectedWidgetIds: string[]
@@ -55,7 +59,7 @@ export const CanvasToolbar = ({
         className="shell-nav-item"
         onClick={onUndo}
         disabled={!canUndo}
-        title={undoLabel ? `Undo ${undoLabel} (⌘Z)` : 'Undo (⌘Z)'}
+        title={undoLabel ? `Undo ${undoLabel} (${UNDO_KEYS})` : `Undo (${UNDO_KEYS})`}
         style={wordButtonStyle(canUndo)}
       >
         UNDO
@@ -65,7 +69,7 @@ export const CanvasToolbar = ({
         className="shell-nav-item"
         onClick={onRedo}
         disabled={!canRedo}
-        title={redoLabel ? `Redo ${redoLabel} (⇧⌘Z)` : 'Redo (⇧⌘Z)'}
+        title={redoLabel ? `Redo ${redoLabel} (${REDO_KEYS})` : `Redo (${REDO_KEYS})`}
         style={{ ...wordButtonStyle(canRedo), borderLeft: groupRule }}
       >
         REDO

@@ -132,15 +132,6 @@ export const useDragState = ({
             )
           : rawDeltaRows
 
-        if (!drag.began && (deltaCols !== 0 || deltaRows !== 0)) {
-          drag.began = true
-          beginDrag(
-            drag.pageId,
-            drag.widgets.map((w) => w.id)
-          )
-        }
-        if (!drag.began) return
-
         const place = (dw: DraggingWidget): { id: string; col: number; row: number } => {
           const clamped = clampGridPlacement({
             col: dw.startCol + deltaCols,
@@ -151,13 +142,26 @@ export const useDragState = ({
           return { id: dw.id, col: clamped.col, row: clamped.row }
         }
 
+        const placed = drag.widgets.map(place)
+        if (!drag.began) {
+          const moved = placed.some((p, i) => {
+            const dw = drag.widgets[i]
+            return dw !== undefined && (p.col !== dw.startCol || p.row !== dw.startRow)
+          })
+          if (!moved) return
+          drag.began = true
+          beginDrag(
+            drag.pageId,
+            drag.widgets.map((w) => w.id)
+          )
+        }
+
         if (drag.isMulti) {
-          moveWidgets(drag.pageId, drag.widgets.map(place))
+          moveWidgets(drag.pageId, placed)
         } else {
-          const dw = drag.widgets[0]
-          if (!dw) return
-          const { col, row } = place(dw)
-          moveWidget(drag.pageId, drag.primaryId, { col, row })
+          const first = placed[0]
+          if (!first) return
+          moveWidget(drag.pageId, drag.primaryId, { col: first.col, row: first.row })
         }
       }
 
