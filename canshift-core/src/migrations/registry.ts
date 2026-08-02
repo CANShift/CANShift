@@ -25,6 +25,11 @@ const CAPS_1_24 = {
 
 export const MIGRATIONS: Migration[] = [
   {
+    fromVersion: '1.25.0',
+    toVersion: '1.26.0',
+    migrate: (config) => mapWidgets(config, '1.26.0', (widget) => widget),
+  },
+  {
     fromVersion: '1.24.0',
     toVersion: '1.25.0',
     migrate: (config) => {

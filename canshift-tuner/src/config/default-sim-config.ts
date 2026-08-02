@@ -308,14 +308,39 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
         showTopBar: true,
         widgets: [
           {
+            id: 'track_shift',
+            type: 'shift_light',
+            signal: 'rpm',
+            layout: {
+              col: 0,
+              colSpan: 12,
+              row: 0,
+              rowSpan: 1,
+              zOrder: 0,
+            },
+            style: {
+              primaryColor: '#FFFFFF',
+              secondaryColor: '#222222',
+              warningColor: '#FF8800',
+              criticalColor: '#FF4444',
+              textColor: '#FFFFFF',
+              fontSize: 16,
+            },
+            config: {
+              type: 'shift_light',
+              startValue: 3000,
+              redSegments: 5,
+            },
+          },
+          {
             id: 'track_rpm',
             type: 'gauge',
             signal: 'rpm',
             layout: {
               col: 0,
               colSpan: 7,
-              row: 0,
-              rowSpan: 5,
+              row: 1,
+              rowSpan: 4,
               zOrder: 0,
             },
             style: {
@@ -343,8 +368,8 @@ const PARSED_SIM_CONFIG = DashboardConfigSchema.parse({
             layout: {
               col: 7,
               colSpan: 5,
-              row: 0,
-              rowSpan: 5,
+              row: 1,
+              rowSpan: 4,
               zOrder: 0,
             },
             style: {
