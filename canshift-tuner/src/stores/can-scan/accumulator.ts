@@ -18,11 +18,17 @@ export interface CanFrameStats {
   byteValueCounts: ReadonlyArray<ReadonlyMap<number, number>>
 }
 
+export interface LearnWindow {
+  active: boolean
+  scores: ReadonlyMap<number, number>
+}
+
 export interface CanScanSnapshot {
   startedAt: number | null
   totalFrames: number
   totalRate: number
   frames: ReadonlyMap<number, CanFrameStats>
+  learn: LearnWindow | null
 }
 
 interface MutableFrameStats {
@@ -41,6 +47,9 @@ export interface ScanAccumulator {
   snapshot: (nowMs: number) => CanScanSnapshot
   markStarted: (nowMs: number) => void
   totalFrames: () => number
+  startLearn: () => void
+  stopLearn: () => void
+  clearLearn: () => void
   reset: () => void
 }
 
@@ -49,13 +58,19 @@ export const emptySnapshot = (): CanScanSnapshot => ({
   totalFrames: 0,
   totalRate: 0,
   frames: new Map(),
+  learn: null,
 })
+
+const payloadsDiffer = (a: readonly number[], b: readonly number[]): boolean =>
+  a.length !== b.length || a.some((byte, i) => byte !== b[i])
 
 export const createScanAccumulator = (): ScanAccumulator => {
   let frames = new Map<number, MutableFrameStats>()
   let total = 0
   let totalRecent: number[] = []
   let startedAt: number | null = null
+  let learnScores: Map<number, number> | null = null
+  let learnActive = false
 
   const trimRecent = (recent: number[], nowMs: number) => {
     while (recent.length > 0 && nowMs - (recent[0] ?? 0) > RATE_WINDOW_MS) {
@@ -85,10 +100,19 @@ export const createScanAccumulator = (): ScanAccumulator => {
         }
         frames.set(frame.id, stats)
       }
+      const incoming = frame.data.slice(0, MAX_PAYLOAD_BYTES)
+      if (
+        learnActive &&
+        learnScores !== null &&
+        stats.count > 0 &&
+        payloadsDiffer(stats.lastPayload, incoming)
+      ) {
+        learnScores.set(frame.id, (learnScores.get(frame.id) ?? 0) + 1)
+      }
       stats.count += 1
       stats.lastSeenMs = nowMs
       stats.lastDlc = frame.len
-      stats.lastPayload = frame.data.slice(0, MAX_PAYLOAD_BYTES)
+      stats.lastPayload = incoming
       stats.recentMs.push(nowMs)
       for (let i = 0; i < frame.data.length && i < MAX_PAYLOAD_BYTES; i++) {
         const byte = frame.data[i]
@@ -115,7 +139,27 @@ export const createScanAccumulator = (): ScanAccumulator => {
           byteValueCounts: m.byteValueCounts.map((counts) => new Map(counts)),
         })
       }
-      return { startedAt, totalFrames: total, totalRate: totalRecent.length, frames: next }
+      return {
+        startedAt,
+        totalFrames: total,
+        totalRate: totalRecent.length,
+        frames: next,
+        learn: learnScores === null ? null : { active: learnActive, scores: new Map(learnScores) },
+      }
+    },
+
+    startLearn: () => {
+      learnScores = new Map()
+      learnActive = true
+    },
+
+    stopLearn: () => {
+      learnActive = false
+    },
+
+    clearLearn: () => {
+      learnScores = null
+      learnActive = false
     },
 
     markStarted: (nowMs) => {
@@ -129,6 +173,8 @@ export const createScanAccumulator = (): ScanAccumulator => {
       total = 0
       totalRecent = []
       startedAt = null
+      learnScores = null
+      learnActive = false
     },
   }
 }

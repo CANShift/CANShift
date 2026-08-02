@@ -32,9 +32,11 @@ const CanBusRoute = () => {
     }
   }, [])
 
+  const learn = scanner.snapshot.learn
+
   const sortedFrames = useMemo(
-    () => sortFrames(Array.from(scanner.snapshot.frames.values()), sortKey),
-    [scanner.snapshot.frames, sortKey]
+    () => sortFrames(Array.from(scanner.snapshot.frames.values()), sortKey, learn?.scores ?? null),
+    [scanner.snapshot.frames, sortKey, learn]
   )
 
   const mappedTo = useMemo(() => {
@@ -72,6 +74,7 @@ const CanBusRoute = () => {
         startedAt={scanner.snapshot.startedAt}
         error={scanner.error}
         sortKey={sortKey}
+        learn={learn}
         onSortChange={setSortKey}
         onStart={() => {
           void scanner.start()
@@ -80,13 +83,28 @@ const CanBusRoute = () => {
           void scanner.stop()
         }}
         onReset={scanner.reset}
+        onLearnStart={() => {
+          scanner.startLearn()
+          setSortKey('activity')
+        }}
+        onLearnStop={scanner.stopLearn}
       />
-      <CanFrameTable frames={sortedFrames} nowMs={nowMs} mappedTo={mappedTo} onPromote={promote} />
+      <CanFrameTable
+        frames={sortedFrames}
+        nowMs={nowMs}
+        mappedTo={mappedTo}
+        learnScores={learn?.scores ?? null}
+        onPromote={promote}
+      />
     </div>
   )
 }
 
-const sortFrames = (frames: CanFrameStats[], key: SortKey): CanFrameStats[] => {
+const sortFrames = (
+  frames: CanFrameStats[],
+  key: SortKey,
+  learnScores: ReadonlyMap<number, number> | null
+): CanFrameStats[] => {
   const sorted = frames.slice()
   switch (key) {
     case 'id':
@@ -100,6 +118,11 @@ const sortFrames = (frames: CanFrameStats[], key: SortKey): CanFrameStats[] => {
       break
     case 'count':
       sorted.sort((a, b) => b.count - a.count)
+      break
+    case 'activity':
+      sorted.sort(
+        (a, b) => (learnScores?.get(b.id) ?? 0) - (learnScores?.get(a.id) ?? 0) || a.id - b.id
+      )
       break
   }
   return sorted

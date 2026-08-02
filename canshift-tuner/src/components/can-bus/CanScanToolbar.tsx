@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import type { CanScannerStatus } from '../../hooks/useCanScanner'
+import type { LearnWindow } from '../../stores/can-scan/accumulator'
 import { MONO_FONT } from '../../lib/typography'
 import { SortBar, type SortKey } from './SortBar'
 
@@ -12,10 +13,13 @@ export interface CanScanToolbarProps {
   startedAt: number | null
   error: string | null
   sortKey: SortKey
+  learn: LearnWindow | null
   onSortChange: (key: SortKey) => void
   onStart: () => void
   onStop: () => void
   onReset: () => void
+  onLearnStart: () => void
+  onLearnStop: () => void
 }
 
 export const CanScanToolbar = ({
@@ -26,10 +30,13 @@ export const CanScanToolbar = ({
   startedAt,
   error,
   sortKey,
+  learn,
   onSortChange,
   onStart,
   onStop,
   onReset,
+  onLearnStart,
+  onLearnStop,
 }: CanScanToolbarProps) => {
   const elapsedSec = useElapsedSeconds(startedAt, status === 'running')
   const running = status === 'running' || status === 'starting'
@@ -67,6 +74,28 @@ export const CanScanToolbar = ({
         >
           RESET
         </button>
+        {learn?.active === true ? (
+          <button
+            type="button"
+            className="editor-ghost-accent"
+            onClick={onLearnStop}
+            style={learnButtonStyle(false, true)}
+            title="Stop the learn window — the CHANGES column keeps the result"
+          >
+            ◉ LEARNING — STOP
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="editor-ghost-accent"
+            disabled={status !== 'running'}
+            onClick={onLearnStart}
+            style={learnButtonStyle(status !== 'running', false)}
+            title="Start a learn window, then do the thing in the car (rev, clutch, wheel) — the table ranks the IDs that changed the most"
+          >
+            LEARN
+          </button>
+        )}
         <span style={sortLabelStyle}>SORT BY</span>
         <SortBar sortKey={sortKey} onChange={onSortChange} />
         {!canControl && <span style={hintStyle}>Connect a device to scan.</span>}
@@ -222,6 +251,17 @@ const metricValueStyle = (accent: boolean): CSSProperties => ({
   fontFamily: MONO_FONT,
   fontSize: 15,
   color: accent ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-text))',
+})
+
+const learnButtonStyle = (disabled: boolean, active: boolean): CSSProperties => ({
+  padding: '6px 14px',
+  background: active ? 'color-mix(in srgb, hsl(var(--brand-accent)) 14%, transparent)' : 'none',
+  border: `1px solid ${disabled ? 'hsl(var(--brand-neutral-300))' : 'hsl(var(--brand-accent))'}`,
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.09em',
+  color: disabled ? 'hsl(var(--brand-neutral-400))' : 'hsl(var(--brand-accent))',
+  cursor: disabled ? 'default' : 'pointer',
 })
 
 const errorStyle: CSSProperties = {

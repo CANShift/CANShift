@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 
-export type SortKey = 'id' | 'lastSeen' | 'rate' | 'count'
+export type SortKey = 'id' | 'lastSeen' | 'rate' | 'count' | 'activity'
 
 interface SortBarProps {
   sortKey: SortKey
@@ -12,6 +12,7 @@ const SORT_OPTIONS: ReadonlyArray<{ key: SortKey; label: string }> = [
   { key: 'lastSeen', label: 'LAST SEEN' },
   { key: 'rate', label: 'RATE' },
   { key: 'count', label: 'COUNT' },
+  { key: 'activity', label: 'ACTIVITY' },
 ]
 
 export const SortBar = ({ sortKey, onChange }: SortBarProps) => (
