@@ -4,7 +4,7 @@ import { useDashboardStore } from '../../stores/dashboard.store'
 import { SensorIcon } from '../icons/SensorIcons'
 import { SIZE_TOKENS } from '../../utils/size-tokens'
 import { createId } from '../../utils/id'
-import { DEFAULT_WIDGET_STYLE } from '../../utils/default-widget'
+import { DEFAULT_WIDGET_STYLE, WIDGET_TYPE_DRAG_MIME } from '../../utils/default-widget'
 import { MONO_FONT } from '../../lib/typography'
 
 type PaletteWidgetType = Extract<WidgetType, 'gauge' | 'button' | 'gear' | 'shift_light'>
@@ -133,6 +133,11 @@ const WidgetPalette = ({ pageId }: WidgetPaletteProps) => {
           className={templateLocked ? undefined : 'shell-nav-item'}
           onClick={() => {
             handleAdd(item)
+          }}
+          draggable={!templateLocked}
+          onDragStart={(e) => {
+            e.dataTransfer.setData(WIDGET_TYPE_DRAG_MIME, item.type)
+            e.dataTransfer.effectAllowed = 'copy'
           }}
           disabled={templateLocked}
           title={templateLocked ? 'Disabled — page uses a template' : `Add ${item.label}`}

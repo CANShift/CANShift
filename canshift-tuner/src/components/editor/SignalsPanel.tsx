@@ -6,7 +6,14 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useCanScanStore } from '../../stores/can-scan/can-scan.store'
 import type { CanFrameStats } from '../../stores/can-scan/accumulator'
 import { useLiveSignals } from '../../hooks/useLiveSignals'
-import { SIGNAL_DRAG_MIME } from '../../utils/default-widget'
+import { useDashboardStore } from '../../stores/dashboard.store'
+import { useRebindFlashStore } from '../../stores/rebind-flash.store'
+import {
+  SIGNAL_DRAG_MIME,
+  WIDGET_TYPE_DRAG_MIME,
+  widgetOfTypeForSignal,
+} from '../../utils/default-widget'
+import { autoPlace } from '../../utils/layout'
 import { MONO_FONT } from '../../lib/typography'
 
 export const parseHexFrameId = (raw: string): number => {
@@ -43,8 +50,31 @@ const formatValue = (value: number | undefined): string => {
   return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1)
 }
 
-const SignalsPanel = () => {
+interface SignalsPanelProps {
+  pageId?: string | undefined
+}
+
+const SignalsPanel = ({ pageId }: SignalsPanelProps) => {
   const signals = useSignalStore((s) => s.signals)
+  const addWidget = useDashboardStore((s) => s.addWidget)
+  const page = useDashboardStore((s) => s.config?.pages.find((p) => p.id === pageId))
+  const flashWidget = useRebindFlashStore((s) => s.flash)
+  const canBindWidgets = page !== undefined && (page.template ?? 'custom') === 'custom'
+
+  const handleWidgetTypeDrop = (e: React.DragEvent, sig: SignalDef) => {
+    const type = e.dataTransfer.getData(WIDGET_TYPE_DRAG_MIME)
+    if (!type || !canBindWidgets || pageId === undefined) return
+    e.preventDefault()
+    const widget = widgetOfTypeForSignal(type, sig)
+    if (!widget) return
+    const slot = autoPlace(
+      { colSpan: widget.layout.colSpan, rowSpan: widget.layout.rowSpan },
+      page.widgets.map((w) => w.layout)
+    )
+    if (!slot) return
+    addWidget(pageId, widget)
+    flashWidget(widget.id)
+  }
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const status = useCanScanStore((s) => s.status)
@@ -89,6 +119,14 @@ const SignalsPanel = () => {
             onDragStart={(e) => {
               e.dataTransfer.setData(SIGNAL_DRAG_MIME, sig.name)
               e.dataTransfer.effectAllowed = 'copy'
+            }}
+            onDragOver={(e) => {
+              if (!canBindWidgets || !e.dataTransfer.types.includes(WIDGET_TYPE_DRAG_MIME)) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+            }}
+            onDrop={(e) => {
+              handleWidgetTypeDrop(e, sig)
             }}
             title="Drag onto the canvas to create a bound widget"
             style={boundRowStyle}

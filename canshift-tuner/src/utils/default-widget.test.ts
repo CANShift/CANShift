@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { WidgetSchema } from '@tmbk/canshift-core'
 import type { DashboardConfig, SignalDef } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
-import { defaultWidgetForSignal, isEnumSignal, signalThreshold } from './default-widget'
+import {
+  defaultWidgetForSignal,
+  isEnumSignal,
+  signalThreshold,
+  widgetOfTypeForSignal,
+} from './default-widget'
 
 const baseSignal = (overrides: Partial<SignalDef>): SignalDef =>
   ({
@@ -83,6 +88,27 @@ describe('defaultWidgetForSignal', () => {
   it('does not treat scaled or unit-carrying one-byte signals as enums', () => {
     expect(isEnumSignal(baseSignal({ byteLength: 1, scale: 0.5, unit: '' }))).toBe(false)
     expect(isEnumSignal(baseSignal({ byteLength: 1, scale: 1, unit: '%' }))).toBe(false)
+  })
+})
+
+describe('widgetOfTypeForSignal', () => {
+  it('builds the requested type bound to the signal, schema-valid', () => {
+    for (const type of ['gauge', 'warning', 'gear', 'shift_light']) {
+      const widget = widgetOfTypeForSignal(type, baseSignal({ dangerLevel: 120 }))
+      expect(widget?.type).toBe(type)
+      expect(widget?.signal).toBe('coolant_temp')
+      expect(WidgetSchema.safeParse(widget).success).toBe(true)
+    }
+  })
+
+  it('uses the signal max as warning threshold when the profile has none', () => {
+    const widget = widgetOfTypeForSignal('warning', baseSignal({}))
+    expect(widget?.config).toMatchObject({ type: 'warning', threshold: 150 })
+  })
+
+  it('rejects non-signal-consuming types', () => {
+    expect(widgetOfTypeForSignal('button', baseSignal({}))).toBeNull()
+    expect(widgetOfTypeForSignal('image', baseSignal({}))).toBeNull()
   })
 })
 
