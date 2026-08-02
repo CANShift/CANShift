@@ -200,8 +200,9 @@ const Obd2PollingPanel = () => {
     <div style={scrollStyle}>
       <div style={sectionTitleStyle}>MODE 01 — SIGNAL SOURCES</div>
       <p style={sectionHintStyle}>
-        OBD-II ECUs do not broadcast — the dash sends a query frame per polled signal. Stick to ≥
-        {OBD2_MIN_INTERVAL_MS} ms intervals; busy buses choke below that.
+        Mode 01 polling sends a query frame per signal (request/response); Broadcast listens
+        passively to CAN traffic. Stick to ≥{OBD2_MIN_INTERVAL_MS} ms polling intervals; busy buses
+        choke below that.
       </p>
       <div style={gridStyle}>
         {signals.map((signal, index) => (
