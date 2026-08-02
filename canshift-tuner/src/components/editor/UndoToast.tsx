@@ -23,7 +23,12 @@ export const UndoToast = () => {
   return (
     <div role="status" style={toastStyle}>
       <span style={labelStyle}>{toast.label}</span>
-      <button type="button" onClick={undoFromToast} style={undoButtonStyle}>
+      <button
+        type="button"
+        className="editor-ghost-accent"
+        onClick={undoFromToast}
+        style={undoButtonStyle}
+      >
         UNDO
       </button>
       <button

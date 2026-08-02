@@ -1,8 +1,8 @@
 import { lazy, Suspense, useState } from 'react'
 import type { CSSProperties } from 'react'
-import Obd2PollingPanel from '../components/obd2/Obd2PollingPanel'
 
 const PropertyPanel = lazy(() => import('../components/editor/PropertyPanel'))
+const SignalsPanel = lazy(() => import('../components/editor/SignalsPanel'))
 const WidgetPalette = lazy(() => import('../components/editor/WidgetPalette'))
 const WidgetListPanel = lazy(() => import('../components/editor/WidgetListPanel'))
 const HistoryPanel = lazy(() => import('../components/editor/HistoryPanel'))
@@ -59,7 +59,11 @@ export const RightSidebar = ({ pageId }: RightSidebarProps) => {
           <WidgetListPanel pageId={pageId} />
         </Suspense>
       )}
-      {tab === 'signals' && <Obd2PollingPanel />}
+      {tab === 'signals' && (
+        <Suspense fallback={<PanelFallback />}>
+          <SignalsPanel />
+        </Suspense>
+      )}
       {tab === 'library' && pageId !== undefined && (
         <Suspense fallback={<PanelFallback />}>
           <WidgetPalette pageId={pageId} />
