@@ -100,10 +100,14 @@ bool loadDashboard() {
     auto parseTheme = [](JsonObjectConst themeJson, const char *fallbackBg, CfgTheme *theme) {
         parseColor(themeJson["bgColor"] | fallbackBg, &theme->bgColor);
         JsonObjectConst paletteJson = themeJson["palette"];
-        theme->hasPalette = !paletteJson.isNull();
+        const bool hasText = paletteJson["text"].is<const char *>();
+        const bool hasTextDim = paletteJson["textDim"].is<const char *>();
+        theme->hasPalette = hasText && hasTextDim;
         if (theme->hasPalette) {
-            parseColor(paletteJson["text"] | "#FFFFFF", &theme->text);
-            parseColor(paletteJson["textDim"] | "#888888", &theme->textDim);
+            parseColor(paletteJson["text"].as<const char *>(), &theme->text);
+            parseColor(paletteJson["textDim"].as<const char *>(), &theme->textDim);
+        } else if (!paletteJson.isNull()) {
+            LOG_WARN("CFG", "dashboard.json: theme palette missing text/textDim — ignored");
         }
     };
 
@@ -119,7 +123,12 @@ bool loadDashboard() {
         parseTheme(nightThemeJson, "#1A1A1A", &out->nightTheme);
     }
 
-    strlcpy(out->dayNightSignal, doc["dayNightSignal"] | "", CFG_MAX_ID_LEN);
+    const char *rawDayNightSignal = doc["dayNightSignal"] | "";
+    if (strlcpy(out->dayNightSignal, rawDayNightSignal, sizeof(out->dayNightSignal)) >=
+        sizeof(out->dayNightSignal)) {
+        LOG_WARN("CFG", "dashboard.json: dayNightSignal too long — auto day/night disabled");
+        out->dayNightSignal[0] = '\0';
+    }
 
     JsonArrayConst pages = doc["pages"];
     out->pageCount = 0;

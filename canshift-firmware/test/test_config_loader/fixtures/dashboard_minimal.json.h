@@ -157,4 +157,18 @@ constexpr const char *kDashboardWithThemes = R"({
   ]
 })";
 
+constexpr const char *kDashboardThemeEdgeCases = R"({
+  "version": "1.0.0",
+  "name": "Theme Edge Cases",
+  "defaultPageId": "main",
+  "revLimitRpm": 7000,
+  "topBar": {"height": 24, "bgColor": "#111111", "textColor": "#FFFFFF"},
+  "dayTheme": {"bgColor": "#E8E6E1", "palette": {"text": "#141414"}},
+  "nightTheme": {"bgColor": "#121212", "palette": {"surface": "#1E1E1E"}},
+  "dayNightSignal": "signal_name_that_is_way_too_long_for_the_cap",
+  "pages": [
+    {"id": "main", "backgroundColor": "#1A1A1A", "showTopBar": true, "widgets": []}
+  ]
+})";
+
 } // namespace fixtures
