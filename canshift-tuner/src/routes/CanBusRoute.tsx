@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
 import { useCanScanner } from '../hooks/useCanScanner'
@@ -28,18 +28,6 @@ const CanBusRoute = () => {
     }, NOW_TICK_MS)
     return () => {
       window.clearInterval(id)
-    }
-  }, [])
-
-  const scannerRef = useRef(scanner)
-  scannerRef.current = scanner
-
-  useEffect(() => {
-    return () => {
-      const s = scannerRef.current
-      if (s.status === 'running' || s.status === 'starting') {
-        void s.stop()
-      }
     }
   }, [])
 
