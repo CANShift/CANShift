@@ -1,6 +1,6 @@
 import { useRef, useCallback, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import type { PageConfig, PagePalette, TopBarConfig } from '@tmbk/canshift-core'
+import type { PageConfig, PagePalette, TopBarConfig, Widget } from '@tmbk/canshift-core'
 import {
   LAYOUT_GRID,
   isSpanOverflowing,
@@ -13,6 +13,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { defaultWidgetForSignal, SIGNAL_DRAG_MIME } from '../../utils/default-widget'
 import { autoPlace } from '../../utils/layout'
+import { useRebindFlashStore } from '../../stores/rebind-flash.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { CruiseControlPreview } from './CruiseControlPreview'
@@ -204,7 +205,19 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
   })
 
   const addWidget = useDashboardStore((s) => s.addWidget)
+  const updateWidget = useDashboardStore((s) => s.updateWidget)
+  const flashWidgetId = useRebindFlashStore((s) => s.flashId)
+  const flashWidget = useRebindFlashStore((s) => s.flash)
   const templateLocked = (page.template ?? 'custom') !== 'custom'
+
+  const handleWidgetSignalDrop = useCallback(
+    (widget: Widget, signalName: string) => {
+      if (templateLocked || widget.signal === signalName) return
+      updateWidget(page.id, widget.id, { signal: signalName })
+      flashWidget(widget.id)
+    },
+    [templateLocked, updateWidget, page.id, flashWidget]
+  )
 
   const handleSignalDragOver = useCallback(
     (e: React.DragEvent) => {
@@ -402,6 +415,8 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
                           onSelect={selectWidget}
                           onShiftSelect={toggleWidgetSelection}
                           onDragStart={handleDragStart}
+                          isFlashing={widget.id === flashWidgetId}
+                          onSignalDrop={handleWidgetSignalDrop}
                         />
                       ))
                     )}

@@ -61,7 +61,7 @@ export const RightSidebar = ({ pageId }: RightSidebarProps) => {
       )}
       {tab === 'signals' && (
         <Suspense fallback={<PanelFallback />}>
-          <SignalsPanel />
+          <SignalsPanel pageId={pageId} />
         </Suspense>
       )}
       {tab === 'library' && pageId !== undefined && (

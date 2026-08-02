@@ -5,6 +5,17 @@ import { createId } from './id'
 
 const ENUM_MAX_RANGE = 12
 const DECIMALS_RANGE_CUTOFF = 50
+const SHIFT_LIGHT_RED_SEGMENTS = 5
+
+export const SIGNAL_DRAG_MIME = 'application/x-canshift-signal'
+export const WIDGET_TYPE_DRAG_MIME = 'application/x-canshift-widget-type'
+
+export const SIGNAL_CONSUMING_TYPES: ReadonlySet<string> = new Set([
+  'gauge',
+  'warning',
+  'gear',
+  'shift_light',
+])
 
 export const DEFAULT_WIDGET_STYLE = {
   primaryColor: HexColorSchema.parse('#FF4444'),
@@ -30,17 +41,19 @@ const iconForSignal = (signal: SignalDef): SensorIconName | undefined => {
   return fromName.success ? fromName.data : undefined
 }
 
-const configForSignal = (signal: SignalDef): WidgetConfig => {
-  if (isEnumSignal(signal)) return { type: 'gear', decimalPlaces: 0 }
+const gearConfig = (): WidgetConfig => ({ type: 'gear', decimalPlaces: 0 })
 
-  const icon = iconForSignal(signal)
-  const threshold = signalThreshold(signal)
-  if (threshold !== undefined) {
-    const config: WidgetConfig = { type: 'warning', threshold }
-    if (icon) config.iconName = icon
-    return config
+const warningConfig = (signal: SignalDef): WidgetConfig => {
+  const config: WidgetConfig = {
+    type: 'warning',
+    threshold: signalThreshold(signal) ?? signal.max,
   }
+  const icon = iconForSignal(signal)
+  if (icon) config.iconName = icon
+  return config
+}
 
+const gaugeConfig = (signal: SignalDef): WidgetConfig => {
   const config: WidgetConfig = {
     type: 'gauge',
     displayStyle: 'numeric',
@@ -50,25 +63,52 @@ const configForSignal = (signal: SignalDef): WidgetConfig => {
     decimalPlaces: signal.max - signal.min > DECIMALS_RANGE_CUTOFF ? 0 : 1,
   }
   if (signal.unit !== '') config.suffix = signal.unit
+  const icon = iconForSignal(signal)
   if (icon) config.iconName = icon
   return config
 }
 
-export const SIGNAL_DRAG_MIME = 'application/x-canshift-signal'
+const shiftLightConfig = (signal: SignalDef): WidgetConfig => ({
+  type: 'shift_light',
+  startValue: Math.max(0, signal.min),
+  redSegments: SHIFT_LIGHT_RED_SEGMENTS,
+})
+
+const configForSignal = (signal: SignalDef): WidgetConfig => {
+  if (isEnumSignal(signal)) return gearConfig()
+  if (signalThreshold(signal) !== undefined) return warningConfig(signal)
+  return gaugeConfig(signal)
+}
 
 const spanForConfig = (config: WidgetConfig): { colSpan: number; rowSpan: number } => {
+  if (config.type === 'shift_light') return { colSpan: 12, rowSpan: 1 }
   const token = config.type === 'gauge' ? SIZE_TOKENS.XL : SIZE_TOKENS.L
   return { colSpan: token.colSpan, rowSpan: token.rowSpan }
 }
 
-export const defaultWidgetForSignal = (signal: SignalDef): Widget => {
-  const config = configForSignal(signal)
-  return {
-    id: createId(config.type),
-    type: config.type,
-    signal: signal.name,
-    layout: { col: 0, row: 0, zOrder: 0, ...spanForConfig(config) },
-    style: { ...DEFAULT_WIDGET_STYLE, fontSize: 16 },
-    config,
+const widgetFromConfig = (config: WidgetConfig, signalName: string): Widget => ({
+  id: createId(config.type),
+  type: config.type,
+  signal: signalName,
+  layout: { col: 0, row: 0, zOrder: 0, ...spanForConfig(config) },
+  style: { ...DEFAULT_WIDGET_STYLE, fontSize: 16 },
+  config,
+})
+
+export const defaultWidgetForSignal = (signal: SignalDef): Widget =>
+  widgetFromConfig(configForSignal(signal), signal.name)
+
+export const widgetOfTypeForSignal = (type: string, signal: SignalDef): Widget | null => {
+  switch (type) {
+    case 'gear':
+      return widgetFromConfig(gearConfig(), signal.name)
+    case 'warning':
+      return widgetFromConfig(warningConfig(signal), signal.name)
+    case 'gauge':
+      return widgetFromConfig(gaugeConfig(signal), signal.name)
+    case 'shift_light':
+      return widgetFromConfig(shiftLightConfig(signal), signal.name)
+    default:
+      return null
   }
 }

@@ -9,6 +9,7 @@ import type { SortKey } from '../components/can-bus/SortBar'
 import { useDeviceStore } from '../stores/device.store'
 import { useSignalStore } from '../stores/signal.store'
 import { useLogStore } from '../stores/log.store'
+import { parseHexFrameId } from '../utils/frame-id'
 
 const NOW_TICK_MS = 250
 
@@ -108,12 +109,6 @@ const formatFrameIdHex = (id: number): string => {
   const extended = id > 0x7ff
   const width = extended ? 8 : 3
   return `0x${id.toString(16).toUpperCase().padStart(width, '0')}`
-}
-
-const parseHexFrameId = (hex: string): number => {
-  const trimmed = hex.toLowerCase().replace(/^0x/, '')
-  const parsed = parseInt(trimmed, 16)
-  return Number.isFinite(parsed) ? parsed : -1
 }
 
 const buildDraftSignal = (id: number, existingCount: number): SignalDef => {

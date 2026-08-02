@@ -134,3 +134,26 @@ samp {
   background: hsl(var(--brand-neutral-100));
   color: hsl(var(--brand-text));
 }
+
+@keyframes canshift-rebind-flash {
+  from {
+    box-shadow:
+      0 0 0 3px hsl(var(--brand-accent)),
+      0 0 12px hsl(var(--brand-accent));
+  }
+  to {
+    box-shadow:
+      0 0 0 2px hsl(var(--brand-accent)),
+      0 0 0 transparent;
+  }
+}
+
+.widget-rebind-flash {
+  animation: canshift-rebind-flash 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-rebind-flash {
+    animation: none;
+  }
+}

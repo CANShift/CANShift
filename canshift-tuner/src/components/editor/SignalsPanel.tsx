@@ -6,13 +6,16 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useCanScanStore } from '../../stores/can-scan/can-scan.store'
 import type { CanFrameStats } from '../../stores/can-scan/accumulator'
 import { useLiveSignals } from '../../hooks/useLiveSignals'
-import { SIGNAL_DRAG_MIME } from '../../utils/default-widget'
+import { useDashboardStore } from '../../stores/dashboard.store'
+import { useRebindFlashStore } from '../../stores/rebind-flash.store'
+import {
+  SIGNAL_DRAG_MIME,
+  WIDGET_TYPE_DRAG_MIME,
+  widgetOfTypeForSignal,
+} from '../../utils/default-widget'
+import { autoPlace } from '../../utils/layout'
+import { parseHexFrameId } from '../../utils/frame-id'
 import { MONO_FONT } from '../../lib/typography'
-
-export const parseHexFrameId = (raw: string): number => {
-  const value = Number.parseInt(raw, 16)
-  return Number.isNaN(value) ? -1 : value
-}
 
 export const boundFrameIds = (signals: readonly SignalDef[]): ReadonlySet<number> => {
   const ids = new Set<number>()
@@ -43,11 +46,35 @@ const formatValue = (value: number | undefined): string => {
   return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1)
 }
 
-const SignalsPanel = () => {
+interface SignalsPanelProps {
+  pageId?: string | undefined
+}
+
+const SignalsPanel = ({ pageId }: SignalsPanelProps) => {
   const signals = useSignalStore((s) => s.signals)
+  const addWidget = useDashboardStore((s) => s.addWidget)
+  const page = useDashboardStore((s) => s.config?.pages.find((p) => p.id === pageId))
+  const flashWidget = useRebindFlashStore((s) => s.flash)
+  const canBindWidgets = page !== undefined && (page.template ?? 'custom') === 'custom'
+
+  const handleWidgetTypeDrop = (e: React.DragEvent, sig: SignalDef) => {
+    const type = e.dataTransfer.getData(WIDGET_TYPE_DRAG_MIME)
+    if (!type || !canBindWidgets || pageId === undefined) return
+    e.preventDefault()
+    const widget = widgetOfTypeForSignal(type, sig)
+    if (!widget) return
+    const slot = autoPlace(
+      { colSpan: widget.layout.colSpan, rowSpan: widget.layout.rowSpan },
+      page.widgets.map((w) => w.layout)
+    )
+    if (!slot) return
+    addWidget(pageId, widget)
+    flashWidget(widget.id)
+  }
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const status = useCanScanStore((s) => s.status)
+  const scanError = useCanScanStore((s) => s.error)
   const snapshot = useCanScanStore((s) => s.snapshot)
   const start = useCanScanStore((s) => s.start)
   const stop = useCanScanStore((s) => s.stop)
@@ -78,6 +105,9 @@ const SignalsPanel = () => {
           {isScanning ? 'STOP' : 'START'}
         </button>
       </div>
+      {status === 'error' && scanError !== null && (
+        <div style={scanErrorStyle}>Scan failed: {scanError}</div>
+      )}
 
       <div style={listStyle}>
         <div style={sectionHeaderStyle}>BOUND — {String(signals.length)}</div>
@@ -89,6 +119,14 @@ const SignalsPanel = () => {
             onDragStart={(e) => {
               e.dataTransfer.setData(SIGNAL_DRAG_MIME, sig.name)
               e.dataTransfer.effectAllowed = 'copy'
+            }}
+            onDragOver={(e) => {
+              if (!canBindWidgets || !e.dataTransfer.types.includes(WIDGET_TYPE_DRAG_MIME)) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+            }}
+            onDrop={(e) => {
+              handleWidgetTypeDrop(e, sig)
             }}
             title="Drag onto the canvas to create a bound widget"
             style={boundRowStyle}
@@ -108,7 +146,9 @@ const SignalsPanel = () => {
         {unbound.length === 0 && (
           <div style={hintStyle}>
             {canScan
-              ? 'Start a scan to list arriving IDs with no signal bound.'
+              ? isScanning
+                ? 'Listening — no unbound IDs seen yet.'
+                : 'Start a scan to list arriving IDs with no signal bound.'
               : simulationMode
                 ? 'Simulation streams decoded signals only — connect a device to see raw IDs.'
                 : 'Connect a device and start a scan to see arriving IDs.'}
@@ -170,6 +210,13 @@ const scanButtonStyle = (enabled: boolean): CSSProperties => ({
   color: enabled ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-neutral-400))',
   cursor: enabled ? 'pointer' : 'default',
 })
+
+const scanErrorStyle: CSSProperties = {
+  padding: '6px 18px',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  fontSize: 11,
+  color: 'hsl(var(--brand-accent))',
+}
 
 const listStyle: CSSProperties = {
   flex: 1,
