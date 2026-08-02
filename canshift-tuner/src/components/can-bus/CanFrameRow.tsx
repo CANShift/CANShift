@@ -8,12 +8,19 @@ export interface CanFrameRowProps {
   frame: CanFrameStats
   nowMs: number
   mappedName: string | null
+  learnScore: number | null
   onPromote: (id: number) => void
 }
 
 const STALE_AFTER_MS = 2_000
 
-export const CanFrameRow = ({ frame, nowMs, mappedName, onPromote }: CanFrameRowProps) => {
+export const CanFrameRow = ({
+  frame,
+  nowMs,
+  mappedName,
+  learnScore,
+  onPromote,
+}: CanFrameRowProps) => {
   const [expanded, setExpanded] = useState(false)
   const idHex = formatCanId(frame.id)
   const stale = nowMs - frame.lastSeenMs > STALE_AFTER_MS
@@ -38,6 +45,7 @@ export const CanFrameRow = ({ frame, nowMs, mappedName, onPromote }: CanFrameRow
         <td style={dataCellStyle}>{formatPayload(frame.lastPayload, frame.lastDlc)}</td>
         <td style={dimCellStyle}>{String(frame.rateHz)} Hz</td>
         <td style={dimCellStyle}>{formatCount(frame.count)}</td>
+        {learnScore !== null && <td style={dimCellStyle}>{formatCount(learnScore)}</td>}
         <td style={mappedCellStyle}>
           {mappedName ?? (
             <button
@@ -55,7 +63,7 @@ export const CanFrameRow = ({ frame, nowMs, mappedName, onPromote }: CanFrameRow
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} style={expandedCellStyle}>
+          <td colSpan={learnScore !== null ? 7 : 6} style={expandedCellStyle}>
             <CanByteHistogram frame={frame} />
           </td>
         </tr>

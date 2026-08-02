@@ -6,12 +6,20 @@ export interface CanFrameTableProps {
   frames: readonly CanFrameStats[]
   nowMs: number
   mappedTo: ReadonlyMap<number, string>
+  learnScores: ReadonlyMap<number, number> | null
   onPromote: (id: number) => void
 }
 
 const COLUMN_WIDTHS = [110, 70, null, 100, 110, 180] as const
+const COLUMN_WIDTHS_LEARN = [110, 70, null, 100, 110, 100, 180] as const
 
-export const CanFrameTable = ({ frames, nowMs, mappedTo, onPromote }: CanFrameTableProps) => {
+export const CanFrameTable = ({
+  frames,
+  nowMs,
+  mappedTo,
+  learnScores,
+  onPromote,
+}: CanFrameTableProps) => {
   if (frames.length === 0) {
     return (
       <div style={emptyStyle}>
@@ -24,7 +32,7 @@ export const CanFrameTable = ({ frames, nowMs, mappedTo, onPromote }: CanFrameTa
     <div style={wrapperStyle}>
       <table style={tableStyle}>
         <colgroup>
-          {COLUMN_WIDTHS.map((width, i) => (
+          {(learnScores !== null ? COLUMN_WIDTHS_LEARN : COLUMN_WIDTHS).map((width, i) => (
             <col key={i} style={width === null ? undefined : { width }} />
           ))}
         </colgroup>
@@ -35,6 +43,7 @@ export const CanFrameTable = ({ frames, nowMs, mappedTo, onPromote }: CanFrameTa
             <th style={thStyle}>DATA</th>
             <th style={thStyle}>RATE</th>
             <th style={thStyle}>COUNT</th>
+            {learnScores !== null && <th style={thStyle}>CHANGES</th>}
             <th style={thStyle}>MAPPED TO</th>
           </tr>
         </thead>
@@ -45,6 +54,7 @@ export const CanFrameTable = ({ frames, nowMs, mappedTo, onPromote }: CanFrameTa
               frame={f}
               nowMs={nowMs}
               mappedName={mappedTo.get(f.id) ?? null}
+              learnScore={learnScores === null ? null : (learnScores.get(f.id) ?? 0)}
               onPromote={onPromote}
             />
           ))}

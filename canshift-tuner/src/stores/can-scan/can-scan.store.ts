@@ -16,6 +16,9 @@ interface CanScanState {
   start: () => Promise<void>
   stop: () => Promise<void>
   reset: () => void
+  startLearn: () => void
+  stopLearn: () => void
+  clearLearn: () => void
 }
 
 const accumulator = createScanAccumulator()
@@ -102,6 +105,22 @@ export const useCanScanStore = create<CanScanState>()((set, get) => {
       accumulator.reset()
       if (get().status === 'running') accumulator.markStarted(performance.now())
       set({ snapshot: emptySnapshot() })
+    },
+
+    startLearn: () => {
+      if (get().status !== 'running') return
+      accumulator.startLearn()
+      set({ snapshot: accumulator.snapshot(performance.now()) })
+    },
+
+    stopLearn: () => {
+      accumulator.stopLearn()
+      set({ snapshot: accumulator.snapshot(performance.now()) })
+    },
+
+    clearLearn: () => {
+      accumulator.clearLearn()
+      set({ snapshot: accumulator.snapshot(performance.now()) })
     },
   }
 })
