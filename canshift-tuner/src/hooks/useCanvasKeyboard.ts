@@ -1,6 +1,7 @@
 import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import type { Widget } from '@tmbk/canshift-core'
 import { useDashboardStore } from '../stores/dashboard.store'
+import { useUndoToastStore } from '../stores/undo-toast.store'
 import { isEditableTarget } from '../utils/is-editable-target'
 
 export interface CanvasKeyboardRef {
@@ -72,6 +73,7 @@ export const useCanvasKeyboard = ({
         e.preventDefault()
         e.stopPropagation()
         removeWidgets(kbd.pageId, activeIds)
+        useUndoToastStore.getState().showForLastAction()
         return
       }
 

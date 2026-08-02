@@ -8,16 +8,9 @@ import { RightSidebar } from './RightSidebar'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { createId } from '../utils/id'
 import { isEditableTarget } from '../utils/is-editable-target'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useUndoToastStore } from '../stores/undo-toast.store'
+import { UndoToast } from '../components/editor/UndoToast'
+import {} from '@/components/ui/alert-dialog'
 
 const Canvas = lazy(() => import('../components/editor/Canvas'))
 
@@ -65,9 +58,18 @@ const EditorRoute = () => {
     x: number
     y: number
   } | null>(null)
-  const [pendingDeletePageId, setPendingDeletePageId] = useState<string | null>(null)
 
   const dragFromIndex = useRef<number | null>(null)
+
+  const showUndoToast = useUndoToastStore((s) => s.showForLastAction)
+
+  const deletePage = useCallback(
+    (pageId: string) => {
+      removePage(pageId)
+      showUndoToast()
+    },
+    [removePage, showUndoToast]
+  )
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -75,9 +77,9 @@ const EditorRoute = () => {
       if (isEditableTarget(e.target)) return
       if (selectedWidgetId) return
       if (!selectedPageId || !pages || pages.length <= 1) return
-      setPendingDeletePageId(selectedPageId)
+      deletePage(selectedPageId)
     },
-    [selectedPageId, pages, selectedWidgetId]
+    [selectedPageId, pages, selectedWidgetId, deletePage]
   )
 
   useEffect(() => {
@@ -135,13 +137,6 @@ const EditorRoute = () => {
   const currentPage = pages.find((p) => p.id === selectedPageId) ?? pages[0]
   const atCap = pages.length >= FIRMWARE_CAPS.MAX_PAGES
 
-  const pendingDeleteIndex = pendingDeletePageId
-    ? pages.findIndex((p) => p.id === pendingDeletePageId)
-    : -1
-  const pendingDeleteLabel = pendingDeleteIndex >= 0 ? `Page ${pendingDeleteIndex + 1}` : 'page'
-  const pendingDeleteWidgetCount =
-    pendingDeleteIndex >= 0 ? (pages[pendingDeleteIndex]?.widgets.length ?? 0) : 0
-
   const currentPageIndex = currentPage ? pages.findIndex((p) => p.id === currentPage.id) : -1
 
   const pageStrip = (
@@ -167,7 +162,7 @@ const EditorRoute = () => {
       onDragStart={handlePageDragStart}
       onDrop={handlePageDrop}
       onSetDefault={setDefaultPage}
-      onRemove={setPendingDeletePageId}
+      onRemove={deletePage}
       onContextMenu={handlePageContextMenu}
     />
   )
@@ -222,44 +217,12 @@ const EditorRoute = () => {
             if (page) updatePage(contextMenu.pageId, { visible: !page.visible })
           }}
           onDelete={() => {
-            setPendingDeletePageId(contextMenu.pageId)
+            deletePage(contextMenu.pageId)
           }}
         />
       )}
 
-      <AlertDialog
-        open={pendingDeletePageId !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingDeletePageId(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {pendingDeleteLabel}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the page and its {pendingDeleteWidgetCount} widget
-              {pendingDeleteWidgetCount === 1 ? '' : 's'}. You can undo with ⌘Z.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setPendingDeletePageId(null)
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingDeletePageId) removePage(pendingDeletePageId)
-                setPendingDeletePageId(null)
-              }}
-            >
-              Delete page
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <UndoToast />
     </div>
   )
 }
