@@ -24,6 +24,7 @@ export const createLifecycleSlice: SliceCreator<LifecycleSlice> = (set) => ({
   config: null,
   isDirty: false,
   pendingDeviceConfig: null,
+  lastSavedAt: null,
 
   setConfig: (config) => {
     set((s) => {
@@ -75,6 +76,12 @@ export const createLifecycleSlice: SliceCreator<LifecycleSlice> = (set) => ({
   dismissPendingDeviceConfig: () => {
     set((s) => {
       s.pendingDeviceConfig = null
+    })
+  },
+
+  markAutosaved: (ts) => {
+    set((s) => {
+      s.lastSavedAt = ts
     })
   },
 

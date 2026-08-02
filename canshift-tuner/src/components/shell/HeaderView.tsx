@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { AutosavePill } from './AutosavePill'
 import { BrandLockup } from '../brand/BrandLockup'
 import { MONO_FONT } from '../../lib/typography'
 
@@ -13,7 +14,7 @@ export interface HeaderViewProps {
   tunerVersion: string
   status: HeaderStatus
   projectName?: string | null
-  unsavedChanges?: boolean
+  lastSavedAt?: number | null
   portLabel?: string | null
   activityPulse?: boolean
   firmwareSlot?: ReactNode
@@ -49,7 +50,7 @@ export const HeaderView = ({
   tunerVersion,
   status,
   projectName = null,
-  unsavedChanges = false,
+  lastSavedAt = null,
   portLabel,
   activityPulse = false,
   firmwareSlot,
@@ -67,7 +68,7 @@ export const HeaderView = ({
 
       <div style={middleZoneStyle}>
         {projectName !== null && <span style={projectNameStyle}>{projectName}</span>}
-        {unsavedChanges && <span style={unsavedPillStyle}>unsaved changes</span>}
+        <AutosavePill lastSavedAt={lastSavedAt} />
         <span style={statusPillStyle(visual.color)}>
           <span
             aria-hidden="true"
@@ -153,16 +154,6 @@ const projectNameStyle: CSSProperties = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   minWidth: 0,
-}
-
-const unsavedPillStyle: CSSProperties = {
-  fontFamily: MONO_FONT,
-  fontSize: 11,
-  color: 'hsl(var(--brand-neutral-600))',
-  border: '1px solid hsl(var(--brand-neutral-300))',
-  padding: '2px 7px',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
 }
 
 const statusPillStyle = (color: string): CSSProperties => ({
