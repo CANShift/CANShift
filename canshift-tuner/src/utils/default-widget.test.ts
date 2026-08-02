@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { WidgetSchema } from '@tmbk/canshift-core'
-import type { SignalDef } from '@tmbk/canshift-core'
+import type { DashboardConfig, SignalDef } from '@tmbk/canshift-core'
+import { useDashboardStore } from '../stores/dashboard.store'
 import { defaultWidgetForSignal, isEnumSignal, signalThreshold } from './default-widget'
 
 const baseSignal = (overrides: Partial<SignalDef>): SignalDef =>
@@ -82,5 +83,45 @@ describe('defaultWidgetForSignal', () => {
   it('does not treat scaled or unit-carrying one-byte signals as enums', () => {
     expect(isEnumSignal(baseSignal({ byteLength: 1, scale: 0.5, unit: '' }))).toBe(false)
     expect(isEnumSignal(baseSignal({ byteLength: 1, scale: 1, unit: '%' }))).toBe(false)
+  })
+})
+
+describe('signal drop through addWidget', () => {
+  const pageConfig = (): DashboardConfig =>
+    ({
+      version: '1.26.0',
+      defaultPageId: 'p1',
+      topBar: { height: 16, bgColor: '#000000', textColor: '#FFFFFF' },
+      pages: [
+        {
+          id: 'p1',
+          backgroundColor: '#000000',
+          showTopBar: true,
+          visible: true,
+          widgets: [
+            {
+              id: 'existing',
+              type: 'gauge',
+              signal: 'rpm',
+              layout: { col: 0, colSpan: 6, row: 0, rowSpan: 6, zOrder: 0 },
+            },
+          ],
+        },
+      ],
+    }) as unknown as DashboardConfig
+
+  it('places the dropped widget on a free slot and labels the history entry', () => {
+    useDashboardStore.getState().setConfig(pageConfig())
+    const widget = defaultWidgetForSignal(baseSignal({ name: 'speed_kph', unit: 'km/h' }))
+
+    useDashboardStore.getState().addWidget('p1', widget)
+
+    const state = useDashboardStore.getState()
+    const page = state.config?.pages[0]
+    const placed = page?.widgets.find((w) => w.signal === 'speed_kph')
+    expect(placed).toBeDefined()
+    expect(placed?.layout.col).toBe(6)
+    expect(placed?.layout.row).toBe(0)
+    expect(state.past[state.past.length - 1]?.label).toBe('Added speed_kph')
   })
 })

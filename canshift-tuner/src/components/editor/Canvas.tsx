@@ -12,6 +12,7 @@ import { useDashboardStore } from '../../stores/dashboard.store'
 import { useDeviceStore } from '../../stores/device.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { defaultWidgetForSignal, SIGNAL_DRAG_MIME } from '../../utils/default-widget'
+import { autoPlace } from '../../utils/layout'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { CruiseControlPreview } from './CruiseControlPreview'
@@ -221,9 +222,15 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
       e.preventDefault()
       const signal = useSignalStore.getState().signals.find((s) => s.name === name)
       if (!signal) return
-      addWidget(page.id, defaultWidgetForSignal(signal))
+      const widget = defaultWidgetForSignal(signal)
+      const slot = autoPlace(
+        { colSpan: widget.layout.colSpan, rowSpan: widget.layout.rowSpan },
+        page.widgets.map((w) => w.layout)
+      )
+      if (!slot) return
+      addWidget(page.id, widget)
     },
-    [templateLocked, addWidget, page.id]
+    [templateLocked, addWidget, page.id, page.widgets]
   )
 
   const selectedWidget =
