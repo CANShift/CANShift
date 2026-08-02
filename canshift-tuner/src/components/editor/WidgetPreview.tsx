@@ -13,6 +13,7 @@ import { ImagePreview } from './widget-previews/Image'
 import { TimerPreview } from './widget-previews/Timer'
 import { WarningPreview } from './widget-previews/Warning'
 import { isDangerState } from './widget-previews/gauge-math'
+import { isUnboundWidget } from '../../utils/unbound-widgets'
 
 const FALLBACK_UNIT_TABLE: Readonly<Record<string, string>> = MAXXECU_SIGNAL_UNITS
 
@@ -36,6 +37,7 @@ interface RenderContext {
   testValue: number | null
   danger: boolean
   signalUnit: string
+  unbound: boolean
 }
 
 type WidgetTypeKey = WidgetConfig['type']
@@ -68,6 +70,7 @@ const RENDERERS: RendererDispatch = {
         danger={ctx.danger}
         testValue={ctx.testValue}
         signalUnit={ctx.signalUnit}
+        unbound={ctx.unbound}
       />
     )
   },
@@ -83,7 +86,7 @@ const RENDERERS: RendererDispatch = {
       cycleStateIndex={ctx.cycleStateIndex}
     />
   ),
-  gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} />,
+  gear: (widget, ctx) => <GearPreview widget={widget} w={ctx.w} h={ctx.h} unbound={ctx.unbound} />,
   timer: (widget, ctx) => <TimerPreview widget={widget} w={ctx.w} h={ctx.h} />,
   image: (widget, ctx) => <ImagePreview widget={widget} w={ctx.w} h={ctx.h} />,
 }
@@ -129,6 +132,7 @@ const WidgetPreviewImpl = ({
   const resolved = palette ? applyPalette(widget, palette) : widget
   const danger = noAnimate ? false : isDangerState(resolved, testValue)
   const signalUnit = useResolvedSignalUnit(resolved)
+  const unbound = isUnboundWidget(resolved)
 
   const ctx: RenderContext = {
     w,
@@ -140,6 +144,7 @@ const WidgetPreviewImpl = ({
     testValue,
     danger,
     signalUnit,
+    unbound,
   }
 
   const render = RENDERERS[resolved.config.type]

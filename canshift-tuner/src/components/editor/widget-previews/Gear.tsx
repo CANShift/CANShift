@@ -1,8 +1,18 @@
 import { memo } from 'react'
+import { STALE_PLACEHOLDER } from '@tmbk/canshift-core'
 import { FONT_FAMILY } from '../widgetPreview.styles'
 import type { BaseRendererProps } from './shared'
 
-export const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRendererProps) {
+interface GearRendererProps extends BaseRendererProps {
+  unbound?: boolean
+}
+
+export const GearPreview = memo(function GearPreview({
+  widget,
+  w,
+  h,
+  unbound = false,
+}: GearRendererProps) {
   if (widget.config.type !== 'gear') return null
   const st = widget.style
   const fontSize = Math.min(w * 0.72, h * 0.85)
@@ -42,7 +52,7 @@ export const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRende
             display: 'inline-block',
           }}
         >
-          3
+          {unbound ? STALE_PLACEHOLDER : '3'}
         </span>
       </div>
     </div>

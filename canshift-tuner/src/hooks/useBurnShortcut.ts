@@ -4,7 +4,7 @@ import { useLogStore } from '../stores/log.store'
 import { useUiStore } from '../stores/ui.store'
 
 export const useBurnShortcut = (): void => {
-  const { canBurn, isBurning, burn } = useBurnDashboard()
+  const { canBurn, isBurning, requestBurn } = useBurnDashboard()
   const log = useLogStore((s) => s.push)
   const signalBurnDenied = useUiStore((s) => s.signalBurnDenied)
   useEffect(() => {
@@ -21,11 +21,11 @@ export const useBurnShortcut = (): void => {
         }
         return
       }
-      void burn()
+      requestBurn()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [canBurn, isBurning, burn, log, signalBurnDenied])
+  }, [canBurn, isBurning, requestBurn, log, signalBurnDenied])
 }

@@ -10,6 +10,16 @@ import { useUiStore } from '../../stores/ui.store'
 import { ThemeToggleButton } from './ThemeToggleButton'
 import { useBurnDashboard } from '../../hooks/useBurnDashboard'
 import { deviceEvents } from '../../transport'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const PULSE_HOLD_MS = 220
 const PULSE_THROTTLE_MS = 60
@@ -156,9 +166,11 @@ const useBurnDeniedShake = (): boolean => {
 }
 
 const BurnButton = () => {
-  const { canBurn, isBurning, burn } = useBurnDashboard()
+  const { canBurn, isBurning, burn, requestBurn } = useBurnDashboard()
   const lastBurnResult = useDeviceStore((s) => s.lastBurnResult)
   const setLastBurnResult = useDeviceStore((s) => s.setLastBurnResult)
+  const unboundBurnConfirm = useUiStore((s) => s.unboundBurnConfirm)
+  const clearUnboundBurnConfirm = useUiStore((s) => s.clearUnboundBurnConfirm)
   useBurnOutcomeAutoClear()
   const shaking = useBurnDeniedShake()
 
@@ -192,15 +204,38 @@ const BurnButton = () => {
             : undefined,
         }}
       >
-        <UiBurnButton
-          disabled={!canBurn}
-          busy={isBurning}
-          title={title}
-          onClick={() => {
-            void burn()
-          }}
-        />
+        <UiBurnButton disabled={!canBurn} busy={isBurning} title={title} onClick={requestBurn} />
       </span>
+      <AlertDialog
+        open={unboundBurnConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) clearUnboundBurnConfirm()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {String(unboundBurnConfirm ?? 0)} widget
+              {(unboundBurnConfirm ?? 0) === 1 ? ' has' : 's have'} no signal bound
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Unbound widgets render “--” on the device. You can bind them by dragging a signal from
+              the Signals tab onto each widget, or burn as-is.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearUnboundBurnConfirm()
+                void burn()
+              }}
+            >
+              Burn anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </span>
   )
 }

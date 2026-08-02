@@ -13,6 +13,7 @@ import { useDeviceStore } from '../../stores/device.store'
 import { useSignalStore } from '../../stores/signal.store'
 import { defaultWidgetForSignal, SIGNAL_DRAG_MIME } from '../../utils/default-widget'
 import { autoPlace } from '../../utils/layout'
+import { unboundWidgetCount } from '../../utils/unbound-widgets'
 import { useRebindFlashStore } from '../../stores/rebind-flash.store'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
@@ -206,6 +207,7 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
 
   const addWidget = useDashboardStore((s) => s.addWidget)
   const updateWidget = useDashboardStore((s) => s.updateWidget)
+  const unboundCount = useDashboardStore((s) => unboundWidgetCount(s.config))
   const flashWidgetId = useRebindFlashStore((s) => s.flashId)
   const flashWidget = useRebindFlashStore((s) => s.flash)
   const templateLocked = (page.template ?? 'custom') !== 'custom'
@@ -273,6 +275,7 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
         overflowingNames={page.widgets
           .filter((w) => overflowingIds.has(w.id))
           .map((w) => (w.signal ? `${w.type}.${w.signal}` : w.type))}
+        unboundCount={unboundCount}
         canUndo={canUndo}
         undoLabel={undoLabel}
         redoLabel={redoLabel}
