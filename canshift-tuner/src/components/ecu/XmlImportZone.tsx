@@ -99,12 +99,12 @@ export const XmlImportZone = ({
 }
 
 const zoneStyle = (dragging: boolean, hasFile: boolean): CSSProperties => ({
-  border: `1px dashed ${dragging ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
+  border: `1px dashed ${dragging ? 'hsl(var(--brand-accent))' : 'hsl(var(--brand-neutral-400))'}`,
   background: dragging
     ? 'hsl(var(--brand-accent) / 0.06)'
     : hasFile
-      ? 'hsl(var(--surface))'
-      : 'hsl(var(--bg-inset))',
+      ? 'hsl(var(--brand-neutral-100))'
+      : 'none',
   padding: '24px 16px',
   display: 'flex',
   alignItems: 'center',
@@ -122,19 +122,19 @@ const emptyStyle: CSSProperties = {
 
 const iconStyle: CSSProperties = {
   fontSize: 22,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
   lineHeight: 1,
 }
 
 const emptyTitleStyle: CSSProperties = {
   fontSize: 13,
-  color: 'hsl(var(--text))',
-  fontWeight: 600,
+  color: 'hsl(var(--brand-text))',
+  fontWeight: 800,
 }
 
 const emptyHintStyle: CSSProperties = {
   fontSize: 12,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
 }
 
 const pickButtonStyle: CSSProperties = {
@@ -143,10 +143,10 @@ const pickButtonStyle: CSSProperties = {
   color: 'hsl(var(--brand-ground))',
   border: 'none',
   padding: '8px 18px',
-  fontSize: 12,
-  fontWeight: 600,
+  fontSize: 11,
+  fontWeight: 800,
   cursor: 'pointer',
-  letterSpacing: '0.04em',
+  letterSpacing: '0.09em',
 }
 
 const loadedStyle: CSSProperties = {
@@ -159,14 +159,14 @@ const loadedStyle: CSSProperties = {
 
 const loadedNameStyle: CSSProperties = {
   fontSize: 12,
-  color: 'hsl(var(--text))',
+  color: 'hsl(var(--brand-text))',
   fontFamily: MONO_FONT,
 }
 
 const clearButtonStyle: CSSProperties = {
   background: 'transparent',
-  color: 'hsl(var(--text-dim))',
-  border: '1px solid hsl(var(--border))',
+  color: 'hsl(var(--brand-neutral-600))',
+  border: '1px solid hsl(var(--brand-neutral-400))',
   padding: '4px 10px',
   fontSize: 11,
   cursor: 'pointer',

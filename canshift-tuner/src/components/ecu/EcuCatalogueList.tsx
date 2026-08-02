@@ -92,6 +92,7 @@ export const EcuCatalogueList = ({ activeKey, selectedId, onSelect }: EcuCatalog
 
   return (
     <div style={wrapperStyle}>
+      <div style={panelHeaderStyle}>PROFILES</div>
       <div style={toolbarStyle}>
         <Input
           type="search"
@@ -182,10 +183,20 @@ const wrapperStyle: CSSProperties = {
   minHeight: 0,
 }
 
+const panelHeaderStyle: CSSProperties = {
+  padding: '12px 18px',
+  borderBottom: '2px solid var(--brand-divider)',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.2em',
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
 const toolbarStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
+  padding: '0 18px',
 }
 
 const sortPillsStyle: CSSProperties = {
@@ -197,34 +208,36 @@ const metaStyle: CSSProperties = {
   fontSize: 10,
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
+  padding: '0 18px',
 }
 
 const attributionLinkStyle: CSSProperties = {
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-600))',
   textDecoration: 'underline',
 }
 
 const listStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 4,
   overflowY: 'auto',
   flex: 1,
   minHeight: 0,
-  paddingRight: 2,
 }
 
 const itemStyle = (selected: boolean): CSSProperties => ({
   display: 'flex',
   flexDirection: 'column',
   gap: 2,
-  padding: '10px 12px',
-  background: selected ? 'hsl(var(--brand-accent) / 0.12)' : 'hsl(var(--surface))',
-  border: `1px solid ${selected ? 'hsl(var(--brand-accent))' : 'hsl(var(--border))'}`,
+  padding: '11px 18px',
+  background: selected ? 'hsl(var(--brand-neutral-200))' : 'none',
+  border: 'none',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
+  boxShadow: selected ? 'inset 3px 0 0 hsl(var(--brand-accent))' : undefined,
   textAlign: 'left',
   cursor: 'pointer',
-  color: 'hsl(var(--text))',
+  color: selected ? 'hsl(var(--brand-text))' : 'hsl(var(--brand-neutral-700))',
+  fontWeight: selected ? 800 : 400,
   fontFamily: 'inherit',
 })
 
@@ -236,17 +249,16 @@ const titleRowStyle: CSSProperties = {
 }
 
 const itemTitleStyle: CSSProperties = {
-  fontSize: 12,
-  fontWeight: 600,
+  fontSize: 13,
 }
 
 const activeTagStyle: CSSProperties = {
   fontSize: 9,
+  fontWeight: 800,
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  background: 'hsl(var(--success) / 0.2)',
-  color: 'hsl(var(--success))',
-  border: '1px solid hsl(var(--success))',
+  color: 'hsl(var(--brand-accent))',
+  border: '1px solid hsl(var(--brand-accent))',
   padding: '1px 6px',
 }
 
@@ -254,29 +266,31 @@ const itemMetaStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   fontSize: 10,
-  color: 'hsl(var(--text-dim))',
+  fontWeight: 400,
+  color: 'hsl(var(--brand-neutral-500))',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
   fontFamily: MONO_FONT,
 }
 
 const hintStyle: CSSProperties = {
-  padding: '12px 10px',
+  padding: '12px 18px',
   fontSize: 12,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
 }
 
 const errorStyle: CSSProperties = {
+  margin: '0 18px',
   padding: '10px',
   fontSize: 12,
-  color: 'hsl(var(--destructive))',
-  background: 'hsl(var(--destructive) / 0.1)',
-  border: '1px solid hsl(var(--destructive))',
+  color: 'hsl(var(--brand-accent))',
+  border: '1px solid hsl(var(--brand-accent))',
+  background: 'color-mix(in srgb, hsl(var(--brand-accent)) 8%, transparent)',
 }
 
 const emptyStyle: CSSProperties = {
-  padding: '24px 8px',
+  padding: '24px 18px',
   fontSize: 12,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
   textAlign: 'center',
 }

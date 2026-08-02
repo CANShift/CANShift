@@ -1,18 +1,21 @@
 import type { CSSProperties } from 'react'
 import type { SignalDef } from '@tmbk/canshift-core'
-import { MONO_FONT, uiLabelStyle } from '../../lib/typography'
+import { MONO_FONT } from '../../lib/typography'
 
 export interface SignalPreviewTableProps {
   signals: readonly SignalDef[]
+  boundTo: ReadonlyMap<string, string>
   warnings?: readonly string[]
 }
 
-export const SignalPreviewTable = ({ signals, warnings = [] }: SignalPreviewTableProps) => {
+export const SignalPreviewTable = ({
+  signals,
+  boundTo,
+  warnings = [],
+}: SignalPreviewTableProps) => {
   if (signals.length === 0 && warnings.length === 0) {
     return <div style={emptyStyle}>No signals to preview.</div>
   }
-
-  const frameGroups = groupByFrame(signals)
 
   return (
     <div style={wrapperStyle}>
@@ -30,39 +33,40 @@ export const SignalPreviewTable = ({ signals, warnings = [] }: SignalPreviewTabl
           </ul>
         </div>
       )}
-      <div style={summaryStyle}>
-        {signals.length} signal{signals.length === 1 ? '' : 's'} across {frameGroups.length} frame
-        {frameGroups.length === 1 ? '' : 's'}
-      </div>
       <div style={tableWrapStyle}>
         <table style={tableStyle}>
+          <colgroup>
+            <col style={{ width: 160 }} />
+            <col style={{ width: 96 }} />
+            <col style={{ width: 84 }} />
+            <col style={{ width: 84 }} />
+            <col style={{ width: 84 }} />
+            <col />
+          </colgroup>
           <thead>
             <tr>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Frame</th>
-              <th style={thNumStyle}>Byte</th>
-              <th style={thNumStyle}>Len</th>
-              <th style={thNumStyle}>Scale</th>
-              <th style={thNumStyle}>Offset</th>
-              <th style={thNumStyle}>Range</th>
-              <th style={thStyle}>Unit</th>
+              <th style={thFirstStyle}>SIGNAL</th>
+              <th style={thStyle}>CAN ID</th>
+              <th style={thStyle}>BYTES</th>
+              <th style={thStyle}>SCALE</th>
+              <th style={thStyle}>UNIT</th>
+              <th style={thStyle}>BOUND TO</th>
             </tr>
           </thead>
           <tbody>
-            {signals.map((s) => (
-              <tr key={s.name} style={rowStyle}>
-                <td style={tdNameStyle}>{s.name}</td>
-                <td style={tdMonoStyle}>{s.canFrameId}</td>
-                <td style={tdNumStyle}>{String(s.startByte)}</td>
-                <td style={tdNumStyle}>{String(s.byteLength)}</td>
-                <td style={tdNumStyle}>{formatNumber(s.scale)}</td>
-                <td style={tdNumStyle}>{formatNumber(s.offset)}</td>
-                <td style={tdNumStyle}>
-                  {formatNumber(s.min)} – {formatNumber(s.max)}
-                </td>
-                <td style={tdMutedStyle}>{s.unit || '—'}</td>
-              </tr>
-            ))}
+            {signals.map((s) => {
+              const bound = boundTo.get(s.name) ?? null
+              return (
+                <tr key={s.name}>
+                  <td style={tdFirstStyle}>{s.name}</td>
+                  <td style={tdIdStyle}>{s.canFrameId}</td>
+                  <td style={tdDimStyle}>{formatBytes(s.startByte, s.byteLength)}</td>
+                  <td style={tdDimStyle}>{formatNumber(s.scale)}</td>
+                  <td style={tdDimStyle}>{s.unit || '—'}</td>
+                  <td style={bound ? tdBoundStyle : tdUnboundStyle}>{bound ?? 'not bound'}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -70,11 +74,8 @@ export const SignalPreviewTable = ({ signals, warnings = [] }: SignalPreviewTabl
   )
 }
 
-const groupByFrame = (signals: readonly SignalDef[]): string[] => {
-  const set = new Set<string>()
-  for (const s of signals) set.add(s.canFrameId)
-  return Array.from(set)
-}
+const formatBytes = (start: number, length: number): string =>
+  length <= 1 ? String(start) : `${String(start)}–${String(start + length - 1)}`
 
 const formatNumber = (n: number): string => {
   if (Number.isInteger(n)) return String(n)
@@ -84,82 +85,80 @@ const formatNumber = (n: number): string => {
 const wrapperStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 12,
   flex: 1,
   minHeight: 0,
-}
-
-const summaryStyle: CSSProperties = {
-  fontSize: 11,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  color: 'hsl(var(--text-muted))',
 }
 
 const tableWrapStyle: CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflowY: 'auto',
-  border: '1px solid hsl(var(--border))',
-  background: 'hsl(var(--surface))',
 }
 
 const tableStyle: CSSProperties = {
   width: '100%',
   borderCollapse: 'separate',
   borderSpacing: 0,
-  fontSize: 12,
+  tableLayout: 'fixed',
 }
 
 const thStyle: CSSProperties = {
-  ...uiLabelStyle,
   position: 'sticky',
   top: 0,
-  background: 'hsl(var(--surface))',
-  padding: '10px 12px',
-  borderBottom: '1px solid hsl(var(--border))',
+  zIndex: 1,
+  background: 'hsl(var(--brand-chrome-bg))',
+  padding: '11px 20px 11px 0',
+  borderBottom: '2px solid var(--brand-divider)',
   textAlign: 'left',
-  color: 'hsl(var(--text-muted))',
+  fontWeight: 800,
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-neutral-600))',
 }
 
-const thNumStyle: CSSProperties = {
+const thFirstStyle: CSSProperties = {
   ...thStyle,
-  textAlign: 'right',
-}
-
-const rowStyle: CSSProperties = {
-  borderBottom: '1px solid hsl(var(--border))',
+  paddingLeft: 20,
 }
 
 const tdBase: CSSProperties = {
-  padding: '8px 12px',
-  borderBottom: '1px solid hsl(var(--border))',
-  fontSize: 12,
-  color: 'hsl(var(--text))',
-}
-
-const tdNameStyle: CSSProperties = {
-  ...tdBase,
-  fontWeight: 500,
-}
-
-const tdMonoStyle: CSSProperties = {
-  ...tdBase,
+  padding: '12px 20px 12px 0',
+  borderBottom: '1px solid hsl(var(--brand-neutral-300))',
   fontFamily: MONO_FONT,
-  color: 'hsl(var(--text-dim))',
-}
-
-const tdNumStyle: CSSProperties = {
-  ...tdBase,
-  textAlign: 'right',
-  fontFamily: MONO_FONT,
+  fontSize: 13,
+  color: 'hsl(var(--brand-text))',
   fontVariantNumeric: 'tabular-nums',
-  color: 'hsl(var(--text-dim))',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 }
 
-const tdMutedStyle: CSSProperties = {
+const tdFirstStyle: CSSProperties = {
   ...tdBase,
-  color: 'hsl(var(--text-muted))',
+  paddingLeft: 20,
+}
+
+const tdIdStyle: CSSProperties = {
+  ...tdBase,
+  color: 'hsl(var(--brand-accent))',
+}
+
+const tdDimStyle: CSSProperties = {
+  ...tdBase,
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const tdBoundStyle: CSSProperties = {
+  ...tdBase,
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12,
+}
+
+const tdUnboundStyle: CSSProperties = {
+  ...tdBase,
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12,
+  color: 'hsl(var(--brand-neutral-500))',
 }
 
 const emptyStyle: CSSProperties = {
@@ -167,23 +166,22 @@ const emptyStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
   fontSize: 13,
 }
 
 const warningsBlockStyle: CSSProperties = {
+  margin: '12px 20px 0',
   padding: '10px 12px',
-  background: 'hsl(var(--accent) / 0.12)',
-  border: '1px solid hsl(var(--accent))',
-  color: 'hsl(var(--text))',
+  border: '1px solid hsl(var(--brand-accent))',
+  background: 'color-mix(in srgb, hsl(var(--brand-accent)) 8%, transparent)',
 }
 
 const warningsTitleStyle: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  color: 'hsl(var(--accent))',
+  fontSize: 10,
+  fontWeight: 800,
+  letterSpacing: '0.18em',
+  color: 'hsl(var(--brand-accent))',
   marginBottom: 6,
 }
 
@@ -198,6 +196,6 @@ const warningsListStyle: CSSProperties = {
 
 const warningItemStyle: CSSProperties = {
   fontSize: 12,
-  color: 'hsl(var(--text-dim))',
+  color: 'hsl(var(--brand-neutral-700))',
   fontFamily: MONO_FONT,
 }
