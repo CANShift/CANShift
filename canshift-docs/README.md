@@ -21,8 +21,8 @@ npm run preview     # serve dist/ locally
 
 ## Deploy
 
-Static build — deployable to any host (Vercel, GitHub Pages, Cloudflare Pages, etc.).
-`astro.config.mjs` is wired to `site: "https://canshift-docs.example"` — update to the production URL before the first deploy.
+Deployed to Vercel at [docs.canshift.tmbk.ch](https://docs.canshift.tmbk.ch) via the
+`deploy-vercel.yml` workflow (manual dispatch, target `docs`, preview or production).
 
 ## Structure
 
@@ -51,4 +51,4 @@ release renders as a blank entry.
 ## Links
 
 - [GitHub monorepo](https://github.com/tburkhalterr/CANShift)
-- [Tuner (Vercel) — includes flasher at `/firmware`](https://canshift-tuner.vercel.app)
+- [Tuner — includes flasher at `/firmware`](https://canshift.tmbk.ch)

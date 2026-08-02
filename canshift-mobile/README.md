@@ -4,8 +4,8 @@ Companion app for the CANShift dashboard. Live BLE telemetry and settings
 push from your phone. See the
 [monorepo root](../README.md) for the full system overview.
 
-**Stack:** Expo SDK 52 (bare workflow via prebuild) · React Native 0.76.9 ·
-React 18.3 · TypeScript 5 · Zustand 5 · `react-native-ble-plx` 3.5.1 ·
+**Stack:** Expo SDK 54 (bare workflow via prebuild) · React Native 0.81.5 ·
+React 19.1 · TypeScript 5 · Zustand 5 · `react-native-ble-plx` 3.5.1 ·
 `expo-secure-store` 14 · React Navigation 7.
 
 ## Status
