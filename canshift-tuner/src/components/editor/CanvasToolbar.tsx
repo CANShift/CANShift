@@ -5,6 +5,10 @@ import { MONO_FONT } from '../../lib/typography'
 const ZOOM_MIN = 0.5
 const ZOOM_MAX = 2
 
+const IS_MAC = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC')
+const UNDO_KEYS = IS_MAC ? '⌘Z' : 'Ctrl+Z'
+const REDO_KEYS = IS_MAC ? '⇧⌘Z' : 'Ctrl+Shift+Z'
+
 export interface CanvasToolbarProps {
   pageId: string
   selectedWidgetIds: string[]
@@ -13,6 +17,8 @@ export interface CanvasToolbarProps {
   overflowingCount: number
   overflowingNames?: readonly string[]
   canUndo: boolean
+  undoLabel?: string | undefined
+  redoLabel?: string | undefined
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
@@ -33,6 +39,8 @@ export const CanvasToolbar = ({
   overflowingCount,
   overflowingNames,
   canUndo,
+  undoLabel,
+  redoLabel,
   canRedo,
   onUndo,
   onRedo,
@@ -51,7 +59,7 @@ export const CanvasToolbar = ({
         className="shell-nav-item"
         onClick={onUndo}
         disabled={!canUndo}
-        title="Undo (⌘Z)"
+        title={undoLabel ? `Undo ${undoLabel} (${UNDO_KEYS})` : `Undo (${UNDO_KEYS})`}
         style={wordButtonStyle(canUndo)}
       >
         UNDO
@@ -61,7 +69,7 @@ export const CanvasToolbar = ({
         className="shell-nav-item"
         onClick={onRedo}
         disabled={!canRedo}
-        title="Redo (⇧⌘Z)"
+        title={redoLabel ? `Redo ${redoLabel} (${REDO_KEYS})` : `Redo (${REDO_KEYS})`}
         style={{ ...wordButtonStyle(canRedo), borderLeft: groupRule }}
       >
         REDO

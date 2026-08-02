@@ -35,7 +35,7 @@ export const createLifecycleSlice: SliceCreator<LifecycleSlice> = (set) => ({
     set((s) => {
       if (!s.config) return
       if (s.config.targetProfile === id) return
-      pushHistory(s)
+      pushHistory(s, 'Changed target screen')
       s.config.targetProfile = id
       s.isDirty = true
     })

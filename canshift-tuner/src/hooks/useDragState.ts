@@ -18,6 +18,7 @@ interface DragState {
   startMouseY: number
   widgets: DraggingWidget[]
   isMulti: boolean
+  began: boolean
 }
 
 export interface DragInputs {
@@ -57,7 +58,7 @@ export const useDragState = ({
   const moveWidget = useDashboardStore((s) => s.moveWidget)
   const moveWidgets = useDashboardStore((s) => s.moveWidgets)
   const resolveWidgetCollisions = useDashboardStore((s) => s.resolveWidgetCollisions)
-  const commitDrag = useDashboardStore((s) => s.commitDrag)
+  const beginDrag = useDashboardStore((s) => s.beginDrag)
 
   const dragRef = useRef<DragState | null>(null)
 
@@ -96,6 +97,7 @@ export const useDragState = ({
         startMouseY: e.clientY,
         widgets: dragging,
         isMulti,
+        began: false,
       }
 
       const colPitch = trackPitch(canvasW, LAYOUT_GRID.COLUMNS)
@@ -140,24 +142,33 @@ export const useDragState = ({
           return { id: dw.id, col: clamped.col, row: clamped.row }
         }
 
+        const placed = drag.widgets.map(place)
+        if (!drag.began) {
+          const moved = placed.some((p, i) => {
+            const dw = drag.widgets[i]
+            return dw !== undefined && (p.col !== dw.startCol || p.row !== dw.startRow)
+          })
+          if (!moved) return
+          drag.began = true
+          beginDrag(
+            drag.pageId,
+            drag.widgets.map((w) => w.id)
+          )
+        }
+
         if (drag.isMulti) {
-          moveWidgets(drag.pageId, drag.widgets.map(place))
+          moveWidgets(drag.pageId, placed)
         } else {
-          const dw = drag.widgets[0]
-          if (!dw) return
-          const { col, row } = place(dw)
-          moveWidget(drag.pageId, drag.primaryId, { col, row })
+          const first = placed[0]
+          if (!first) return
+          moveWidget(drag.pageId, drag.primaryId, { col: first.col, row: first.row })
         }
       }
 
       const handleMouseUp = () => {
         const drag = dragRef.current
-        if (drag) {
-          if (drag.isMulti) {
-            commitDrag()
-          } else {
-            resolveWidgetCollisions(drag.pageId, drag.primaryId)
-          }
+        if (drag?.began && !drag.isMulti) {
+          resolveWidgetCollisions(drag.pageId, drag.primaryId)
         }
         dragRef.current = null
         window.removeEventListener('mousemove', handleMouseMove)
@@ -167,6 +178,6 @@ export const useDragState = ({
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
     },
-    [dragInputsRef, zoomRef, scale, moveWidget, moveWidgets, resolveWidgetCollisions, commitDrag]
+    [dragInputsRef, zoomRef, scale, moveWidget, moveWidgets, resolveWidgetCollisions, beginDrag]
   )
 }

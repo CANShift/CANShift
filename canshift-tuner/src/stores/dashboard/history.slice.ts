@@ -9,12 +9,12 @@ export const createHistorySlice: SliceCreator<HistorySlice> = (set) => ({
   undo: () => {
     set((s) => {
       if (s.past.length === 0 || !s.config) return
-      const prev = s.past[s.past.length - 1]
-      if (!prev) return
+      const entry = s.past[s.past.length - 1]
+      if (!entry) return
       s.past.splice(s.past.length - 1, 1)
-      s.future.unshift(current(s.config))
+      s.future.unshift({ config: current(s.config), label: entry.label })
       if (s.future.length > HISTORY_LIMIT) s.future.pop()
-      s.config = prev
+      s.config = entry.config
       s.isDirty = true
       s.selectedWidgetId = null
       s.selectedWidgetIds = []
@@ -26,12 +26,12 @@ export const createHistorySlice: SliceCreator<HistorySlice> = (set) => ({
   redo: () => {
     set((s) => {
       if (s.future.length === 0 || !s.config) return
-      const next = s.future[0]
-      if (!next) return
+      const entry = s.future[0]
+      if (!entry) return
       s.future.splice(0, 1)
-      s.past.push(current(s.config))
+      s.past.push({ config: current(s.config), label: entry.label })
       if (s.past.length > HISTORY_LIMIT) s.past.shift()
-      s.config = next
+      s.config = entry.config
       s.isDirty = true
       s.selectedWidgetId = null
       s.selectedWidgetIds = []

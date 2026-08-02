@@ -11,7 +11,7 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
       const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
       if (targets.length < 2) return
 
-      pushHistory(s)
+      pushHistory(s, `Aligned ${String(targets.length)} widgets ${direction}`)
 
       const minCol = Math.min(...targets.map((w) => w.layout.col))
       const maxCol = Math.max(...targets.map((w) => w.layout.col + w.layout.colSpan))
@@ -56,7 +56,7 @@ export const createLayoutOpsSlice: SliceCreator<LayoutOpsSlice> = (set) => ({
       const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
       if (targets.length < 3) return
 
-      pushHistory(s)
+      pushHistory(s, `Distributed ${String(targets.length)} widgets`)
 
       if (axis === 'h') {
         const sorted = [...targets].sort((a, b) => a.layout.col - b.layout.col)

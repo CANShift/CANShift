@@ -1,3 +1,4 @@
+import type { HistoryEntry } from './helpers'
 import type { StateCreator } from 'zustand'
 import type {
   DashboardConfig,
@@ -29,8 +30,8 @@ export interface LifecycleSlice {
 }
 
 export interface HistorySlice {
-  past: DashboardConfig[]
-  future: DashboardConfig[]
+  past: HistoryEntry[]
+  future: HistoryEntry[]
   undo: () => void
   redo: () => void
 }
@@ -72,7 +73,7 @@ export interface WidgetsSlice {
   commitWidgetMove: (pageId: string, widgetId: string, layout: Partial<WidgetLayout>) => void
   moveWidgets: (pageId: string, moves: { id: string; col: number; row: number }[]) => void
   resolveWidgetCollisions: (pageId: string, widgetId: string) => void
-  commitDrag: () => void
+  beginDrag: (pageId: string, widgetIds: string[]) => void
 }
 
 export interface LayoutOpsSlice {

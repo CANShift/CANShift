@@ -2,7 +2,7 @@ import { current } from 'immer'
 import type { Widget } from '@tmbk/canshift-core'
 import { clampGridPlacement, placementsOverlap } from '@tmbk/canshift-core'
 import { autoPlace } from '../../utils/layout'
-import { pushHistory, toPlacement } from './helpers'
+import { pushHistory, toPlacement, widgetRef } from './helpers'
 import type { ClipboardSlice, SliceCreator } from './types'
 
 export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
@@ -24,7 +24,8 @@ export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
       const page = s.config.pages.find((p) => p.id === pageId)
       if (!page) return
 
-      pushHistory(s)
+      const count = s.clipboardWidgets.length
+      pushHistory(s, count === 1 ? 'Pasted 1 widget' : `Pasted ${String(count)} widgets`)
 
       const others = page.widgets.map(toPlacement)
       const newIds: string[] = []
@@ -75,7 +76,13 @@ export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
       if (!s.config || widgetIds.length === 0) return
       const page = s.config.pages.find((p) => p.id === pageId)
       if (!page) return
-      pushHistory(s)
+      const first = page.widgets.find((w) => w.id === widgetIds[0])
+      pushHistory(
+        s,
+        widgetIds.length === 1 && first
+          ? `Deleted ${widgetRef(first)}`
+          : `Deleted ${String(widgetIds.length)} widgets`
+      )
       const idSet = new Set(widgetIds)
       page.widgets = page.widgets.filter((w) => !idSet.has(w.id))
       if (s.selectedWidgetId && idSet.has(s.selectedWidgetId)) s.selectedWidgetId = null
@@ -91,7 +98,13 @@ export const createClipboardSlice: SliceCreator<ClipboardSlice> = (set) => ({
       if (!page) return
       const targets = page.widgets.filter((w) => widgetIds.includes(w.id))
       if (targets.length === 0) return
-      pushHistory(s)
+      const first = targets[0]
+      pushHistory(
+        s,
+        targets.length === 1 && first
+          ? `Nudged ${widgetRef(first)}`
+          : `Nudged ${String(targets.length)} widgets`
+      )
       for (const w of targets) {
         const clamped = clampGridPlacement({
           ...w.layout,

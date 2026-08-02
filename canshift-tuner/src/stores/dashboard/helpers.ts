@@ -3,7 +3,7 @@ import type { DashboardConfig, PageConfig, Widget } from '@tmbk/canshift-core'
 import { resolveScreenProfile } from '@tmbk/canshift-core'
 import type { IdentifiedPlacement } from '../../utils/layout'
 
-export const HISTORY_LIMIT = 50
+export const HISTORY_LIMIT = 100
 
 export const canvasDims = (config: DashboardConfig): { w: number; h: number } => {
   const profile = resolveScreenProfile(config.targetProfile)
@@ -24,16 +24,26 @@ export const toPlacement = (w: Widget): IdentifiedPlacement => ({
   rowSpan: w.layout.rowSpan,
 })
 
+export interface HistoryEntry {
+  config: DashboardConfig
+  label: string
+}
+
 interface HistoryHost {
   config: DashboardConfig | null
-  past: DashboardConfig[]
-  future: DashboardConfig[]
+  past: HistoryEntry[]
+  future: HistoryEntry[]
   isDirty: boolean
 }
 
-export const pushHistory = (s: HistoryHost): void => {
+export const pushHistory = (s: HistoryHost, label: string): void => {
   if (!s.config) return
-  s.past.push(current(s.config))
+  s.past.push({ config: current(s.config), label })
   if (s.past.length > HISTORY_LIMIT) s.past.shift()
   s.future = []
 }
+
+export const widgetRef = (w: Pick<Widget, 'signal' | 'type'>): string =>
+  w.signal ? w.signal : w.type
+
+export const pageRef = (index: number): string => `page ${String(index + 1).padStart(2, '0')}`
