@@ -60,6 +60,8 @@ export { DEFAULT_PAGE_PALETTE, DEFAULT_TOP_BAR_LAYOUT } from './schemas/dashboar
 export { CRUISE_CONTROL_OPS } from './schemas/dashboard.js'
 export { MIN_CYCLE_STATES, MAX_CYCLE_STATES } from './schemas/dashboard.js'
 export { PAGE_TEMPLATES, PageTemplateSchema } from './schemas/dashboard.js'
+export { SHIFT_LIGHT_SEGMENT_COUNT, ShiftLightWidgetConfigSchema } from './schemas/widgets/index.js'
+export type { ShiftLightWidgetConfig } from './schemas/widgets/index.js'
 export type {
   SignalConfig,
   SignalDef,
@@ -254,6 +256,8 @@ export {
   sensorDefaultRange,
   SENSOR_DANGER_COLOR,
   sensorDefaultDangerThreshold,
+  SHIFT_LIGHT,
+  shiftLightLitSegments,
 } from './widget-metrics.js'
 export type { SensorDangerThreshold } from './widget-metrics.js'
 
@@ -293,7 +297,7 @@ export {
   fontTokensToCssVars,
 } from './design-tokens.js'
 
-export const CURRENT_SCHEMA_VERSION = '1.25.0' as const
+export const CURRENT_SCHEMA_VERSION = '1.26.0' as const
 
 export type { GridArea, GridPlacement, GridRect } from './layout-grid.js'
 export {

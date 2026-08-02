@@ -11,6 +11,7 @@ import {
 import { GaugeWidgetConfigSchema } from './gauge.js'
 import { GearWidgetConfigSchema } from './gear.js'
 import { ImageWidgetConfigSchema } from './image.js'
+import { ShiftLightWidgetConfigSchema } from './shift-light.js'
 import { TimerWidgetConfigSchema } from './timer.js'
 import { WarningWidgetConfigSchema } from './warning.js'
 
@@ -50,6 +51,7 @@ export {
 export { TimerWidgetConfigSchema } from './timer.js'
 export { GearWidgetConfigSchema } from './gear.js'
 export { ImageWidgetConfigSchema } from './image.js'
+export { SHIFT_LIGHT_SEGMENT_COUNT, ShiftLightWidgetConfigSchema } from './shift-light.js'
 
 export const WidgetConfigSchema = z.union([
   GaugeWidgetConfigSchema,
@@ -59,12 +61,13 @@ export const WidgetConfigSchema = z.union([
   TimerWidgetConfigSchema,
   GearWidgetConfigSchema,
   ImageWidgetConfigSchema,
+  ShiftLightWidgetConfigSchema,
 ])
 
-export const WIDGET_TYPES = ['gauge', 'warning', 'button', 'timer', 'gear', 'image'] as const
+export const WIDGET_TYPES = ['gauge', 'warning', 'button', 'timer', 'gear', 'image', 'shift_light'] as const
 export const WidgetTypeSchema = z.enum(WIDGET_TYPES)
 
-const SIGNAL_CONSUMING_WIDGET_TYPES = new Set(['gauge', 'warning', 'gear'])
+const SIGNAL_CONSUMING_WIDGET_TYPES = new Set(['gauge', 'warning', 'gear', 'shift_light'])
 
 export const WidgetSchema = z
   .object({
@@ -135,6 +138,7 @@ export type CycleButtonState = ExactOptional<z.infer<typeof CycleButtonStateSche
 export type TimerWidgetConfig = ExactOptional<z.infer<typeof TimerWidgetConfigSchema>>
 export type GearWidgetConfig = ExactOptional<z.infer<typeof GearWidgetConfigSchema>>
 export type ImageWidgetConfig = ExactOptional<z.infer<typeof ImageWidgetConfigSchema>>
+export type ShiftLightWidgetConfig = ExactOptional<z.infer<typeof ShiftLightWidgetConfigSchema>>
 
 export type WidgetConfig =
   | GaugeWidgetConfig
@@ -143,6 +147,7 @@ export type WidgetConfig =
   | TimerWidgetConfig
   | GearWidgetConfig
   | ImageWidgetConfig
+  | ShiftLightWidgetConfig
 
 export type Widget = Omit<ExactOptional<z.infer<typeof WidgetSchema>>, 'config'> & {
   config: WidgetConfig

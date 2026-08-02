@@ -121,6 +121,8 @@ WidgetType parseWidgetType(const char *str) {
         return WidgetType::GEAR_IND;
     if (strcmp(str, "image") == 0)
         return WidgetType::IMAGE;
+    if (strcmp(str, "shift_light") == 0)
+        return WidgetType::SHIFT_LIGHT;
     return WidgetType::UNKNOWN;
 }
 
@@ -147,4 +149,4 @@ bool isPinConflict(int8_t pin) {
     return pin == dev.twaiTxPin || pin == dev.twaiRxPin;
 }
 
-}
+} // namespace ConfigLoaderInternal
