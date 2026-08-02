@@ -5,6 +5,9 @@ export interface TopBarMetricsRatios {
   readonly gapRatio: number
   readonly paddingRatio: number
   readonly iconSizeRatio: number
+  readonly labelFontPx: number
+  readonly flagSquarePx: number
+  readonly flagGapPx: number
 }
 
 export const TopBarMetrics: TopBarMetricsRatios = {
@@ -14,4 +17,7 @@ export const TopBarMetrics: TopBarMetricsRatios = {
   gapRatio: 0.25,
   paddingRatio: 0.4,
   iconSizeRatio: 1.15,
+  labelFontPx: 10,
+  flagSquarePx: 7,
+  flagGapPx: 3,
 } as const

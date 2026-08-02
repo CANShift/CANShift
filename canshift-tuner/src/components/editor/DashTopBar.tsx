@@ -43,10 +43,12 @@ export const DashTopBar = ({
 
   const h = topBar.height * scale
   const dot = Math.round(h * TopBarMetrics.dotRatio)
-  const fs = Math.round(h * TopBarMetrics.fontSizeRatio)
+  const fs = Math.round(TopBarMetrics.labelFontPx * scale)
   const sep = Math.round(h * TopBarMetrics.separatorRatio)
   const gap = Math.round(h * TopBarMetrics.gapRatio)
   const px = Math.round(h * TopBarMetrics.paddingRatio)
+  const flagSquare = Math.round(TopBarMetrics.flagSquarePx * scale)
+  const flagGap = Math.round(TopBarMetrics.flagGapPx * scale)
 
   const handlePointerDown = (e: PointerEvent) => {
     swipeStartY.current = e.clientY
@@ -68,6 +70,23 @@ export const DashTopBar = ({
   const centerItems = dropStaleSeparators(layout.filter((it) => it.position === 'center'))
   const rightItems = dropStaleSeparators(layout.filter((it) => it.position === 'right'))
 
+  const renderFlagBadge = (key: number, text: string) => (
+    <span
+      key={key}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: flagGap,
+        opacity: 0.4,
+      }}
+    >
+      <span
+        style={{ width: flagSquare, height: flagSquare, background: '#FF8800', flexShrink: 0 }}
+      />
+      <span style={{ fontSize: fs, color: '#FF8800', lineHeight: 1 }}>{text}</span>
+    </span>
+  )
+
   const renderItem = (item: TopBarItem, key: number) => {
     switch (item.type) {
       case 'statusDot':
@@ -78,9 +97,7 @@ export const DashTopBar = ({
               display: 'inline-block',
               width: dot,
               height: dot,
-              borderRadius: '50%',
               background: '#44CC44',
-              boxShadow: '0 0 3px #44CC4488',
               flexShrink: 0,
             }}
           />
@@ -91,7 +108,7 @@ export const DashTopBar = ({
             key={key}
             style={{
               fontSize: fs,
-              color: topBar.textColor,
+              color: '#666666',
               letterSpacing: '0.04em',
               lineHeight: 1,
             }}
@@ -133,17 +150,9 @@ export const DashTopBar = ({
           </span>
         )
       case 'modeFlag':
-        return (
-          <span key={key} style={{ fontSize: fs, color: '#FF8800', lineHeight: 1, opacity: 0.4 }}>
-            {item.text}
-          </span>
-        )
+        return renderFlagBadge(key, item.text)
       case 'trackBadge':
-        return (
-          <span key={key} style={{ fontSize: fs, color: '#FF8800', lineHeight: 1, opacity: 0.4 }}>
-            TRACK
-          </span>
-        )
+        return renderFlagBadge(key, 'TRACK')
     }
   }
 
