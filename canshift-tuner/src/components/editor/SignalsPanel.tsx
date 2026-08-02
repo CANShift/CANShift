@@ -15,6 +15,7 @@ import {
 } from '../../utils/default-widget'
 import { autoPlace } from '../../utils/layout'
 import { parseHexFrameId } from '../../utils/frame-id'
+import { captureFlowEvent } from '../../lib/posthog'
 import { MONO_FONT } from '../../lib/typography'
 
 export const boundFrameIds = (signals: readonly SignalDef[]): ReadonlySet<number> => {
@@ -70,6 +71,7 @@ const SignalsPanel = ({ pageId }: SignalsPanelProps) => {
     if (!slot) return
     addWidget(pageId, widget)
     flashWidget(widget.id)
+    captureFlowEvent('signal_bound', { target: 'signal_row', widgetType: widget.type })
   }
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { addErrorBreadcrumb } from '../lib/sentry'
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug'
 
@@ -58,6 +59,9 @@ export const useLogStore = create<LogState>()((set, get) => ({
 
   push: (level, message, scope) => {
     if (level === 'debug' && !get().verbose) return
+    if (level === 'error' || level === 'warn') {
+      addErrorBreadcrumb(level === 'warn' ? 'warning' : 'error', message)
+    }
     const entry: LogEntry =
       scope !== undefined
         ? { id: nextId++, level, message, timestamp: new Date(), scope }

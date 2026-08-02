@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { PROJECT_FILE_VERSION, PROJECT_NAME_MAX } from '@tmbk/canshift-core'
 import type { DashboardConfig, Project, ProjectMeta } from '@tmbk/canshift-core'
 import { createId } from '../../utils/id'
+import { captureFlowEvent } from '../../lib/posthog'
 import { useDashboardStore } from '../dashboard.store'
 import { useSignalStore, DEFAULT_PROFILE_KEY } from '../signal.store'
 import {
@@ -98,6 +99,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set({ projects: nextProjects, activeProjectId: id })
     persistIndex(nextProjects, id)
     loadProjectIntoStores(project)
+    captureFlowEvent('project_created')
     return id
   },
 
@@ -110,6 +112,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set({ activeProjectId: id })
     persistIndex(get().projects, id)
     loadProjectIntoStores(target)
+    captureFlowEvent('project_switched')
     return true
   },
 

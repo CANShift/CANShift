@@ -8,6 +8,7 @@ import { unboundWidgetCount } from '../utils/unbound-widgets'
 import { usbService } from '../transport'
 import { humanizeTransportError } from '../transport/humanize-transport-error'
 import { verifyBurnedConfig, type VerifyResult } from './verifyBurnedConfig'
+import { captureFlowEvent } from '../lib/posthog'
 
 interface UseBurnDashboard {
   canBurn: boolean
@@ -62,6 +63,7 @@ export const useBurnDashboard = (): UseBurnDashboard => {
         const code = result.error ?? 'unknown_error'
         log('error', `Burn failed: ${code}`)
         setLastBurnResult({ kind: 'error', message: humanizeTransportError(code) })
+        captureFlowEvent('burn_completed', { outcome: 'push_failed', reason: code })
         return
       }
       setBurnPhase('rebooting')
@@ -71,15 +73,18 @@ export const useBurnDashboard = (): UseBurnDashboard => {
         markPushed()
         log('success', 'Dashboard burned + verified on device')
         setLastBurnResult({ kind: 'success' })
+        captureFlowEvent('burn_completed', { outcome: 'success' })
       } else {
         const message = verifyFailureMessage(verify)
         log('error', `Burn verify failed: ${message}`)
         setLastBurnResult({ kind: 'error', message })
+        captureFlowEvent('burn_completed', { outcome: 'verify_failed', reason: verify.kind })
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       log('error', `Burn failed: ${message}`)
       setLastBurnResult({ kind: 'error', message: humanizeTransportError(message) })
+      captureFlowEvent('burn_completed', { outcome: 'exception' })
     } finally {
       setBurnPhase('idle')
     }

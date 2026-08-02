@@ -15,6 +15,7 @@ import { defaultWidgetForSignal, SIGNAL_DRAG_MIME } from '../../utils/default-wi
 import { autoPlace } from '../../utils/layout'
 import { unboundWidgetCount } from '../../utils/unbound-widgets'
 import { useRebindFlashStore } from '../../stores/rebind-flash.store'
+import { captureFlowEvent } from '../../lib/posthog'
 import ScreenSettingsPanel from './ScreenSettingsPanel'
 import DiagnosticsPanel from './DiagnosticsPanel'
 import { CruiseControlPreview } from './CruiseControlPreview'
@@ -217,6 +218,7 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
       if (templateLocked || widget.signal === signalName) return
       updateWidget(page.id, widget.id, { signal: signalName })
       flashWidget(widget.id)
+      captureFlowEvent('signal_rebound', { target: 'widget' })
     },
     [templateLocked, updateWidget, page.id, flashWidget]
   )
@@ -244,6 +246,7 @@ const Canvas = ({ page, topBar, pageIndex, pageStrip, inspector }: CanvasProps) 
       )
       if (!slot) return
       addWidget(page.id, widget)
+      captureFlowEvent('signal_bound', { target: 'canvas', widgetType: widget.type })
     },
     [templateLocked, addWidget, page.id, page.widgets]
   )
