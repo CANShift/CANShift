@@ -282,7 +282,7 @@ export const CruiseControlPreview = ({
           style={{
             color: palette.text,
             fontFamily: FONT_FAMILY,
-            fontWeight: 900,
+            fontWeight: 800,
             fontSize: Math.round(40 * scale),
             lineHeight: 1,
             letterSpacing: '0.02em',

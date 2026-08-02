@@ -14,29 +14,22 @@
   src: url('./assets/fonts/Archivo-Latin.woff2') format('woff2');
 }
 
-/* Orbitron — self-hosted, matches the firmware's gauge typeface. `swap`
-   keeps the system-ui fallback rendering immediately so FCP isn't blocked
-   on a font fetch (#1343 / PR #1349). */
+/* JetBrains Mono — self-hosted, matches the firmware's value typeface
+   (#1821 restyle). `swap` keeps the fallback rendering immediately so FCP
+   isn't blocked on a font fetch (#1343 / PR #1349). */
 @font-face {
-  font-family: 'Orbitron';
+  font-family: 'JetBrains Mono';
   font-weight: 500;
   font-style: normal;
   font-display: swap;
-  src: url('./assets/fonts/Orbitron-Medium.woff2') format('woff2');
+  src: url('./assets/fonts/JetBrainsMono-Medium.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Orbitron';
-  font-weight: 700;
+  font-family: 'JetBrains Mono';
+  font-weight: 800;
   font-style: normal;
   font-display: swap;
-  src: url('./assets/fonts/Orbitron-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Orbitron';
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-  src: url('./assets/fonts/Orbitron-Black.woff2') format('woff2');
+  src: url('./assets/fonts/JetBrainsMono-ExtraBold.woff2') format('woff2');
 }
 
 *,

@@ -34,7 +34,7 @@ export const GearPreview = memo(function GearPreview({ widget, w, h }: BaseRende
           style={{
             color: st.primaryColor,
             fontSize,
-            fontWeight: 900,
+            fontWeight: 800,
             fontFamily: FONT_FAMILY,
             lineHeight: 1,
             textAlign: 'center',

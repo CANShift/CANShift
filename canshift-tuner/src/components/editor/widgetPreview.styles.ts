@@ -1,6 +1,6 @@
 import { sensorOkColor, sensorWarningColor, type SensorIconName } from '@tmbk/canshift-core'
 
-export const FONT_FAMILY = 'Orbitron, sans-serif'
+export const FONT_FAMILY = "'JetBrains Mono', ui-monospace, monospace"
 
 export const FONT_WEIGHT_VALUE = 900
 
