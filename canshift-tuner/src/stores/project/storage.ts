@@ -59,6 +59,7 @@ export const readProjectIndex = (): ProjectIndex | null => {
       p !== null &&
       typeof (p as ProjectMeta).id === 'string' &&
       typeof (p as ProjectMeta).name === 'string' &&
+      typeof (p as ProjectMeta).createdAt === 'string' &&
       typeof (p as ProjectMeta).updatedAt === 'string'
   )
   const activeId = typeof candidate.activeId === 'string' ? candidate.activeId : null

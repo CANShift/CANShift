@@ -26,9 +26,7 @@ interface ProjectState {
 
 const nowIso = (): string => new Date().toISOString()
 
-const assembleActiveProject = (
-  meta: { id: string; name: string; createdAt: string } | null
-): Project | null => {
+const assembleActiveProject = (meta: ProjectMeta | null): Project | null => {
   const dashboard = useDashboardStore.getState().config
   if (!dashboard || !meta) return null
   const signalState = useSignalStore.getState()
@@ -58,8 +56,6 @@ const upsertMeta = (projects: ProjectMeta[], meta: ProjectMeta): ProjectMeta[] =
   return [...rest, meta].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-const createdAtOf = new Map<string, string>()
-
 export const useProjectStore = create<ProjectState>()((set, get) => ({
   projects: [],
   activeProjectId: null,
@@ -69,18 +65,10 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     if (activeProjectId === null) return
     const meta = projects.find((p) => p.id === activeProjectId)
     if (!meta) return
-    const project = assembleActiveProject({
-      id: meta.id,
-      name: meta.name,
-      createdAt: createdAtOf.get(meta.id) ?? meta.updatedAt,
-    })
+    const project = assembleActiveProject(meta)
     if (!project) return
     if (!writeProject(project)) return
-    const nextProjects = upsertMeta(projects, {
-      id: project.id,
-      name: project.name,
-      updatedAt: project.updatedAt,
-    })
+    const nextProjects = upsertMeta(projects, { ...meta, updatedAt: project.updatedAt })
     set({ projects: nextProjects })
     persistIndex(nextProjects, activeProjectId)
   },
@@ -89,7 +77,6 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     get().saveActiveProject()
     const id = createId('proj')
     const createdAt = nowIso()
-    createdAtOf.set(id, createdAt)
     const signalState = useSignalStore.getState()
     const project: Project = {
       projectVersion: PROJECT_FILE_VERSION,
@@ -105,6 +92,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     const nextProjects = upsertMeta(get().projects, {
       id,
       name: project.name,
+      createdAt,
       updatedAt: createdAt,
     })
     set({ projects: nextProjects, activeProjectId: id })
@@ -119,7 +107,6 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     const target = readProject(id)
     if (!target) return false
     get().saveActiveProject()
-    createdAtOf.set(id, target.createdAt)
     set({ activeProjectId: id })
     persistIndex(get().projects, id)
     loadProjectIntoStores(target)
@@ -163,7 +150,6 @@ const restoreIndexedProjects = (
   if (activeId === null) return
   const active = readProject(activeId)
   if (!active) return
-  createdAtOf.set(activeId, active.createdAt)
   if (useDashboardStore.getState().config === null) loadProjectIntoStores(active)
 }
 
@@ -178,7 +164,6 @@ export const bootstrapProjects = (): void => {
   if (!dashboard) return
   const id = createId('proj')
   const createdAt = nowIso()
-  createdAtOf.set(id, createdAt)
   const signalState = useSignalStore.getState()
   const project: Project = {
     projectVersion: PROJECT_FILE_VERSION,
@@ -191,7 +176,7 @@ export const bootstrapProjects = (): void => {
     signals: signalState.signals,
   }
   if (!writeProject(project)) return
-  const projects: ProjectMeta[] = [{ id, name: project.name, updatedAt: createdAt }]
+  const projects: ProjectMeta[] = [{ id, name: project.name, createdAt, updatedAt: createdAt }]
   useProjectStore.setState({ projects, activeProjectId: id })
   persistIndex(projects, id)
 }

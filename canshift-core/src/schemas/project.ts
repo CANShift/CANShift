@@ -13,6 +13,7 @@ export const ProjectMetaSchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1).max(PROJECT_NAME_MAX),
+    createdAt: IsoDateTimeSchema,
     updatedAt: IsoDateTimeSchema,
   })
   .strict()
