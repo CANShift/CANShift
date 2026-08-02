@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import {
   SECONDARY_BAR,
+  STALE_PLACEHOLDER,
   WIDGET_TOP_RULE,
   valueUnitFontSize,
   widgetTopRulePx,
@@ -13,6 +14,7 @@ export interface GaugeNumericRendererProps extends BaseRendererProps {
   danger: boolean
   testValue?: number | null
   signalUnit: string
+  unbound?: boolean
 }
 
 export const GaugeNumericPreview = memo(function GaugeNumericPreview({
@@ -22,13 +24,15 @@ export const GaugeNumericPreview = memo(function GaugeNumericPreview({
   danger,
   testValue,
   signalUnit,
+  unbound = false,
 }: GaugeNumericRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
 
-  const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
-  const valueOnly = demoValue.toFixed(cfg.decimalPlaces)
+  const bound = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
+  const valuePct = unbound ? 0 : bound.pct
+  const valueOnly = unbound ? STALE_PLACEHOLDER : bound.raw.toFixed(cfg.decimalPlaces)
   const showBar = cfg.showBar === true && cfg.maxValue > cfg.minValue
   const prefix = cfg.prefix ?? ''
 

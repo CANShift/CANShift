@@ -16,6 +16,7 @@ export interface CanvasToolbarProps {
   screenHeight: number
   overflowingCount: number
   overflowingNames?: readonly string[]
+  unboundCount: number
   canUndo: boolean
   undoLabel?: string | undefined
   redoLabel?: string | undefined
@@ -38,6 +39,7 @@ export const CanvasToolbar = ({
   screenHeight,
   overflowingCount,
   overflowingNames,
+  unboundCount,
   canUndo,
   undoLabel,
   redoLabel,
@@ -119,6 +121,16 @@ export const CanvasToolbar = ({
         ? `${String(overflowingCount)} out of bounds`
         : `fits ${String(screenWidth)} × ${String(screenHeight)}`}
     </span>
+
+    {unboundCount > 0 && (
+      <span
+        style={flagStyle(true)}
+        title="Widgets with no signal bound render -- on the device. Drag a signal from the Signals tab onto them."
+      >
+        <span aria-hidden="true" style={flagDotStyle(true)} />
+        {`${String(unboundCount)} unbound`}
+      </span>
+    )}
 
     {selectedWidgetIds.length >= 2 && (
       <>

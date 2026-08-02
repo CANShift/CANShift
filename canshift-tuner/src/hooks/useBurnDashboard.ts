@@ -3,6 +3,8 @@ import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useConnectionStore } from '../stores/connection.store'
 import { useLogStore } from '../stores/log.store'
+import { useUiStore } from '../stores/ui.store'
+import { unboundWidgetCount } from '../utils/unbound-widgets'
 import { usbService } from '../transport'
 import { humanizeTransportError } from '../transport/humanize-transport-error'
 import { verifyBurnedConfig, type VerifyResult } from './verifyBurnedConfig'
@@ -11,6 +13,7 @@ interface UseBurnDashboard {
   canBurn: boolean
   isBurning: boolean
   burn: () => Promise<void>
+  requestBurn: () => void
 }
 
 const verifyFailureMessage = (verify: Exclude<VerifyResult, { kind: 'ok' }>): string => {
@@ -82,5 +85,15 @@ export const useBurnDashboard = (): UseBurnDashboard => {
     }
   }, [canBurn, config, markPushed, log, setBurnPhase, setLastBurnResult])
 
-  return { canBurn, isBurning, burn }
+  const requestBurn = useCallback(() => {
+    if (!canBurn) return
+    const unbound = unboundWidgetCount(useDashboardStore.getState().config)
+    if (unbound > 0) {
+      useUiStore.getState().requestUnboundBurnConfirm(unbound)
+      return
+    }
+    void burn()
+  }, [canBurn, burn])
+
+  return { canBurn, isBurning, burn, requestBurn }
 }

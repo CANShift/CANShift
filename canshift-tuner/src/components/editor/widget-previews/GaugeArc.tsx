@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { GAUGE_ARC, GAUGE_TRACK_COLORS } from '@tmbk/canshift-core'
+import { GAUGE_ARC, GAUGE_TRACK_COLORS, STALE_PLACEHOLDER } from '@tmbk/canshift-core'
 import { BLINK_ANIM, FONT_FAMILY, paletteFillColor, thresholdPct } from '../widgetPreview.styles'
 import {
   FRAC_FONT_SCALE,
@@ -14,6 +14,7 @@ export interface GaugeArcRendererProps extends BaseRendererProps {
   revLimiting: boolean
   danger: boolean
   testValue?: number | null
+  unbound?: boolean
 }
 
 const SIGNAL_LABEL_FONT_SIZE = 9
@@ -25,15 +26,17 @@ export const GaugeArcPreview = memo(function GaugeArcPreview({
   revLimiting,
   danger,
   testValue,
+  unbound = false,
 }: GaugeArcRendererProps) {
   if (widget.config.type !== 'gauge') return null
   const cfg = widget.config
   const st = widget.style
 
   const dangerPct = thresholdPct(cfg.dangerLevel, cfg.minValue, cfg.maxValue)
-  const { pct: valuePct, raw: demoValue } = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
+  const bound = effectiveValue(testValue, cfg.minValue, cfg.maxValue)
+  const valuePct = unbound ? 0 : bound.pct
 
-  const valueStr = demoValue.toFixed(cfg.decimalPlaces)
+  const valueStr = unbound ? STALE_PLACEHOLDER : bound.raw.toFixed(cfg.decimalPlaces)
 
   const zonesMode = cfg.arcFillStyle === 'zones'
   const gradientMode = cfg.arcFillStyle === 'gradient'
