@@ -10,7 +10,7 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
 }
 
 const firmwarePkg = JSON.parse(
-  readFileSync(resolve(__dirname, '../canshift-firmware/package.json'), 'utf8'),
+  readFileSync(resolve(__dirname, '../canshift-firmware/package.json'), 'utf8')
 ) as { version: string }
 const firmwareMajor = Number(firmwarePkg.version.split('.')[0] ?? 0)
 

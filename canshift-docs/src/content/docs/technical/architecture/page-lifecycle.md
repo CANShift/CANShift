@@ -1,6 +1,6 @@
 ---
-title: "Page lifecycle"
-description: "Build, lazy build, release — the dashboard page state machine."
+title: 'Page lifecycle'
+description: 'Build, lazy build, release — the dashboard page state machine.'
 sidebar:
   order: 30
 ---

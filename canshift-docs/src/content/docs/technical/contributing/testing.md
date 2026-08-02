@@ -1,6 +1,6 @@
 ---
-title: "Testing"
-description: "Unity (firmware C++), cargo test (Rust ports), Vitest (TS packages)."
+title: 'Testing'
+description: 'Unity (firmware C++), cargo test (Rust ports), Vitest (TS packages).'
 sidebar:
   order: 2
 ---
@@ -73,13 +73,13 @@ roundtrip test in `canshift-tuner`. Fix both in the same PR.
 
 ## CI gates
 
-| Package | Gate | Where |
-|---|---|---|
-| firmware | clang-format pass | GitHub Actions workflow |
-| firmware | `pio test -e native` | GitHub Actions |
+| Package  | Gate                             | Where                                              |
+| -------- | -------------------------------- | -------------------------------------------------- |
+| firmware | clang-format pass                | GitHub Actions workflow                            |
+| firmware | `pio test -e native`             | GitHub Actions                                     |
 | firmware | Boot smoke (`[BOOT] Ready` line) | `.github/workflows/firmware-boot-smoke.yml` (#486) |
-| rust | `cargo test --workspace` | GitHub Actions |
-| TS | `typecheck` + `lint` + `test` | GitHub Actions |
+| rust     | `cargo test --workspace`         | GitHub Actions                                     |
+| TS       | `typecheck` + `lint` + `test`    | GitHub Actions                                     |
 
 All gates must pass before merge.
 

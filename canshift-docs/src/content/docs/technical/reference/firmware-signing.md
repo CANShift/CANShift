@@ -1,6 +1,6 @@
 ---
-title: "Firmware release signing"
-description: "Ed25519 signature workflow for shipped firmware binaries."
+title: 'Firmware release signing'
+description: 'Ed25519 signature workflow for shipped firmware binaries.'
 sidebar:
   order: 15
 ---

@@ -1,6 +1,6 @@
 ---
-title: "Boot sequence"
-description: "Heap reservation ordering that makes the boot path work on a no-PSRAM WROOM."
+title: 'Boot sequence'
+description: 'Heap reservation ordering that makes the boot path work on a no-PSRAM WROOM.'
 sidebar:
   order: 10
 ---
@@ -16,13 +16,13 @@ and `src/main.cpp::setup` (pre-`BootSequence::run` reservations).
 On the production WROOM board, the largest free DRAM block after Arduino init
 is ~120 KB. Several boot consumers each need a large contiguous chunk:
 
-| Consumer | Reservation | Notes |
-|---|---|---|
-| NimBLE early init | ~50 KB | `BleServer::earlyInit()` — fails ~16 KB after `lv_init` |
-| LVGL pool (`lv_init`) | ~80 KB | once claimed, fragments the remainder |
-| USB rxBuf (`USB_RX_BUF_SIZE`) | ~16 KB | doubles as PUT_CONFIG receive buffer |
-| TWAI driver init stack | ~4 KB | static stack pre-reserved in `CanManager` |
-| ArduinoJson dashboard parse | ~20 KB | runs during `ConfigLoader::loadAll` |
+| Consumer                      | Reservation | Notes                                                   |
+| ----------------------------- | ----------- | ------------------------------------------------------- |
+| NimBLE early init             | ~50 KB      | `BleServer::earlyInit()` — fails ~16 KB after `lv_init` |
+| LVGL pool (`lv_init`)         | ~80 KB      | once claimed, fragments the remainder                   |
+| USB rxBuf (`USB_RX_BUF_SIZE`) | ~16 KB      | doubles as PUT_CONFIG receive buffer                    |
+| TWAI driver init stack        | ~4 KB       | static stack pre-reserved in `CanManager`               |
+| ArduinoJson dashboard parse   | ~20 KB      | runs during `ConfigLoader::loadAll`                     |
 
 If any of these is requested AFTER `lv_init` has claimed its 80 KB pool, the
 allocation fails because the residual heap has dropped below the requested
@@ -70,7 +70,7 @@ post-Arduino heap.
 - **`reserveRxBuf` / `reserveInitTaskStack` before `lv_init`**: After
   `lv_init` claims its 80 KB pool, the largest contiguous block on WROOM
   drops to ~13–18 KB. `USB_RX_BUF_SIZE` is `CONFIG_JSON_DOC_DASHBOARD +
-  256` ≈ 16 KB and the TWAI stack is ~4 KB — both at the cliff. PR #1374
+256` ≈ 16 KB and the TWAI stack is ~4 KB — both at the cliff. PR #1374
   and #1376 fixed the boot OOM that surfaced when these moved after
   `lv_init`.
 

@@ -1,6 +1,6 @@
 ---
-title: "Config contract"
-description: "Shared JSON contract between firmware, tuner, and mobile — schema versions, validation rules."
+title: 'Config contract'
+description: 'Shared JSON contract between firmware, tuner, and mobile — schema versions, validation rules.'
 sidebar:
   order: 11
 ---
@@ -13,12 +13,12 @@ The configuration contract defines what valid config files look like and how the
 
 The CANShift dashboard is configured by these JSON files stored on the device:
 
-| File | Purpose | Where to edit |
-|------|---------|---------------|
-| `dashboard.json` | Pages, widgets, layout, signal bindings, day theme | Dash-hosted Studio (`canshift-studio-web/`) or legacy Electron Studio (`canshift-studio/`) until cutover |
-| `signals.json` | CAN frame IDs, signal byte positions, scaling | Same |
-| `device.json` | TWAI pins, CAN speed, optional hardware overrides | Same — wired host-side in studio-web (#1118) via `CMD_GET_DEVICE_CONFIG` (0x03) / `CMD_PUT_DEVICE_CONFIG` (0x04) |
-| `input_bindings.json` | Physical GPIO button → action map (issue #833) | Same — wired host-side via `CMD_GET_INPUT_BINDINGS` (0x0B) / `CMD_PUT_INPUT_BINDINGS` (0x0C) |
+| File                  | Purpose                                            | Where to edit                                                                                                    |
+| --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `dashboard.json`      | Pages, widgets, layout, signal bindings, day theme | Dash-hosted Studio (`canshift-studio-web/`) or legacy Electron Studio (`canshift-studio/`) until cutover         |
+| `signals.json`        | CAN frame IDs, signal byte positions, scaling      | Same                                                                                                             |
+| `device.json`         | TWAI pins, CAN speed, optional hardware overrides  | Same — wired host-side in studio-web (#1118) via `CMD_GET_DEVICE_CONFIG` (0x03) / `CMD_PUT_DEVICE_CONFIG` (0x04) |
+| `input_bindings.json` | Physical GPIO button → action map (issue #833)     | Same — wired host-side via `CMD_GET_INPUT_BINDINGS` (0x0B) / `CMD_PUT_INPUT_BINDINGS` (0x0C)                     |
 
 The standalone `theme.json` file was folded into `dashboard.json.dayTheme` in
 schema 1.13 → 1.14 (issue #901). Older configs are migrated transparently by
@@ -72,6 +72,7 @@ Backward compatibility: dashboards predating this field continue to parse —
 default-resolution rule applies at the read side.
 
 ### PageConfig
+
 ```json
 {
   "id": "string",           // unique identifier
@@ -88,10 +89,10 @@ default-resolution rule applies at the read side.
 
 The optional `template` field selects how the firmware draws a page.
 
-| Value | Behaviour |
-|-------|-----------|
-| absent / `"custom"` | Default. Firmware renders `widgets[]` as a free-form grid (legacy behaviour). |
-| `"cruise_control"` | Firmware draws a fixed 2×2 grid of touch-targets (`+`, `SET`, `−`, `OFF`) and **ignores `widgets[]`**. Each button dispatches the matching `cruise_control` action op via `ActionDispatcher`. |
+| Value               | Behaviour                                                                                                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| absent / `"custom"` | Default. Firmware renders `widgets[]` as a free-form grid (legacy behaviour).                                                                                                                 |
+| `"cruise_control"`  | Firmware draws a fixed 2×2 grid of touch-targets (`+`, `SET`, `−`, `OFF`) and **ignores `widgets[]`**. Each button dispatches the matching `cruise_control` action op via `ActionDispatcher`. |
 
 Notes:
 
@@ -116,6 +117,7 @@ Adding a new template requires three coordinated edits:
    alongside `buildCruiseControlTemplate` and route to it from `buildPage`.
 
 ### Widget
+
 ```json
 {
   "id": "string",          // unique identifier within page
@@ -187,11 +189,11 @@ a query frame (`0x7DF`, mode `0x01`, PID byte) and decode the response
 response into the signal — `canFrameId` should be set to the response ID
 (`0x7E8`) so the byte-decode path mirrors the broadcast contract.
 
-| Field        | Type        | Notes                                                     |
-|--------------|-------------|-----------------------------------------------------------|
-| `mode`       | `0x01`      | Mode 01 only in v1 (current data PIDs).                   |
-| `pid`        | `0x00..0xFF`| SAE J1979 PID byte. The studio editor surfaces a catalog. |
-| `intervalMs` | 100..60000  | Poll interval. ≥100 ms keeps the bus polite.              |
+| Field        | Type         | Notes                                                     |
+| ------------ | ------------ | --------------------------------------------------------- |
+| `mode`       | `0x01`       | Mode 01 only in v1 (current data PIDs).                   |
+| `pid`        | `0x00..0xFF` | SAE J1979 PID byte. The studio editor surfaces a catalog. |
+| `intervalMs` | 100..60000   | Poll interval. ≥100 ms keeps the bus polite.              |
 
 Constraints — **v1 scope (#841)**:
 
@@ -307,7 +309,7 @@ When the schema version changes:
 > Important — the firmware **does not run the migration chain**. It only logs
 > a `VER_MISMATCH` and continues with whatever fields it can read. Studio is
 > the canonical migration boundary; do not push a config with `version >
-> firmware schema` and expect it to be normalized on the device. Issue #1019
+firmware schema` and expect it to be normalized on the device. Issue #1019
 > (A-COMPAT-1) tracks the firmware-side preflight that will gate this.
 
 ---
@@ -315,6 +317,7 @@ When the schema version changes:
 ## UI Design Constraints (320×240 display)
 
 The canvas coordinate system in `dashboard.json`:
+
 - Origin `(0, 0)` = top-left of content area (below top bar)
 - Top bar occupies `y = 0 to topBar.height` of the physical screen
 - Content area: `x = 0..319`, `y = 0..(239 - topBar.height)`
@@ -323,12 +326,12 @@ The canvas coordinate system in `dashboard.json`:
 
 ### Recommended Widget Sizes (320×240 minus 24px top bar = 320×216 content)
 
-| Widget | Recommended size | Notes |
-|--------|-----------------|-------|
-| Main RPM gauge | 160×140 | Half-width, fills left side |
-| Speed label | 158×80 | Half-width right, large font |
-| Gear indicator | 80×48 | Right side, large font |
-| Secondary gauge | 100×100 | Quarter screen |
-| Temperature label | 80×40 | 4 fit in a row |
-| Warning indicator | 20×20 | Small LED dots in a row |
-| Nav button | 60×32 | Bottom corner |
+| Widget            | Recommended size | Notes                        |
+| ----------------- | ---------------- | ---------------------------- |
+| Main RPM gauge    | 160×140          | Half-width, fills left side  |
+| Speed label       | 158×80           | Half-width right, large font |
+| Gear indicator    | 80×48            | Right side, large font       |
+| Secondary gauge   | 100×100          | Quarter screen               |
+| Temperature label | 80×40            | 4 fit in a row               |
+| Warning indicator | 20×20            | Small LED dots in a row      |
+| Nav button        | 60×32            | Bottom corner                |

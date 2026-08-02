@@ -153,31 +153,31 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 
 ### Migration chain (terminates at `CURRENT_SCHEMA_VERSION`)
 
-| From → To | Change |
-|-----------|--------|
-| 1.0.0 → 1.1.0 | `ButtonWidgetConfig.targetPageId` replaced by `actions[]` (single `navigate` action) |
-| 1.1.0 → 1.2.0 | `LabelWidgetConfig` removed and folded into `GaugeWidgetConfig` (`displayStyle: 'numeric'`); gauges without `displayStyle` default to `'arc'` |
-| 1.2.0 → 1.3.0 | `PageConfig.palette` added; missing palettes filled with the default CANShift palette |
-| 1.3.0 → 1.4.0 | `DashboardConfig.dayTheme` added (optional, no transform) |
-| 1.4.0 → 1.5.0 | `TopBarConfig.layout` added (optional, no transform) |
-| 1.5.0 → 1.6.0 | XS/S/M widget sizes dropped (#131) — legacy 80×28 / 80×56 / 80×112 standard widgets collapse to L (160×56) |
-| 1.6.0 → 1.7.0 | Drop unused `PageConfig.name`, `TopBarConfig.showMapName`, `TopBarConfig.showMapProfile` (#142) |
-| 1.7.0 → 1.8.0 | Button colors move into `ButtonWidgetConfig.colors` (#146); `iconName` removed from gauge/bar configs |
-| 1.8.0 → 1.9.0 | H-FULL bar gauge token doubled from 320×28 to 320×56 (#134) — existing horizontal bars are upgraded |
-| 1.9.0 → 1.10.0 | Optional `alertThreshold` field added to gauge / bar widgets (#133) |
-| 1.10.0 → 1.11.0 | Arc gauges gain optional `arcFillStyle` field (#175); undefined defaults to `'zones'` — no data transform needed |
-| 1.11.0 → 1.12.0 | Default `topBar.height` bumped from 24 → 30 (#379); configs persisting the old default are rewritten, custom values are left untouched |
-| 1.12.0 → 1.13.0 | `SignalDef` gains optional `colorRamp` field (#430); firmware resolves a default ramp from the signal name when none is configured |
-| 1.13.0 → 1.14.0 | `signals.json` `protocol` rewritten from the MaxxECU-specific `"maxxecu_v1.2"` to the ECU-agnostic `"custom_v1.0"` (#639); no-op for dashboard configs (no `protocol` field) |
-| 1.14.0 → 1.15.0 | `WidgetStyle` gains optional `respectDayMode` field (#191); undefined treated as `true` to preserve the v0.7.0 day/night text-colour contract — no data transform |
+| From → To       | Change                                                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0.0 → 1.1.0   | `ButtonWidgetConfig.targetPageId` replaced by `actions[]` (single `navigate` action)                                                                                                          |
+| 1.1.0 → 1.2.0   | `LabelWidgetConfig` removed and folded into `GaugeWidgetConfig` (`displayStyle: 'numeric'`); gauges without `displayStyle` default to `'arc'`                                                 |
+| 1.2.0 → 1.3.0   | `PageConfig.palette` added; missing palettes filled with the default CANShift palette                                                                                                         |
+| 1.3.0 → 1.4.0   | `DashboardConfig.dayTheme` added (optional, no transform)                                                                                                                                     |
+| 1.4.0 → 1.5.0   | `TopBarConfig.layout` added (optional, no transform)                                                                                                                                          |
+| 1.5.0 → 1.6.0   | XS/S/M widget sizes dropped (#131) — legacy 80×28 / 80×56 / 80×112 standard widgets collapse to L (160×56)                                                                                    |
+| 1.6.0 → 1.7.0   | Drop unused `PageConfig.name`, `TopBarConfig.showMapName`, `TopBarConfig.showMapProfile` (#142)                                                                                               |
+| 1.7.0 → 1.8.0   | Button colors move into `ButtonWidgetConfig.colors` (#146); `iconName` removed from gauge/bar configs                                                                                         |
+| 1.8.0 → 1.9.0   | H-FULL bar gauge token doubled from 320×28 to 320×56 (#134) — existing horizontal bars are upgraded                                                                                           |
+| 1.9.0 → 1.10.0  | Optional `alertThreshold` field added to gauge / bar widgets (#133)                                                                                                                           |
+| 1.10.0 → 1.11.0 | Arc gauges gain optional `arcFillStyle` field (#175); undefined defaults to `'zones'` — no data transform needed                                                                              |
+| 1.11.0 → 1.12.0 | Default `topBar.height` bumped from 24 → 30 (#379); configs persisting the old default are rewritten, custom values are left untouched                                                        |
+| 1.12.0 → 1.13.0 | `SignalDef` gains optional `colorRamp` field (#430); firmware resolves a default ramp from the signal name when none is configured                                                            |
+| 1.13.0 → 1.14.0 | `signals.json` `protocol` rewritten from the MaxxECU-specific `"maxxecu_v1.2"` to the ECU-agnostic `"custom_v1.0"` (#639); no-op for dashboard configs (no `protocol` field)                  |
+| 1.14.0 → 1.15.0 | `WidgetStyle` gains optional `respectDayMode` field (#191); undefined treated as `true` to preserve the v0.7.0 day/night text-colour contract — no data transform                             |
 | 1.15.0 → 1.16.0 | `GaugeWidgetConfig` and `BarWidgetConfig` gain optional `iconName` field (#954); existing configs leave the field undefined and keep the legacy `style.primaryColor` path — no data transform |
-| 1.16.0 → 1.17.0 | Gauge / bar `warningLevel` dropped (#965); `dangerLevel` becomes the sole threshold above which a gauge turns red — `warningLevel` is discarded, `dangerLevel` preserved as-is |
-| 1.17.0 → 1.18.0 | `DashboardConfig` gains optional `targetProfile` (#548); undefined resolves to `DEFAULT_SCREEN_PROFILE_ID` ("crowpanel-28") — no data transform |
-| 1.18.0 → 1.19.0 | `BarWidgetConfig` gains optional `barOrientation` (#1232 flag); undefined keeps the legacy horizontal layout — no data transform |
-| 1.19.0 → 1.20.0 | `hideWhenInvalid` removed from every widget config; firmware now renders a stale state in-place rather than hiding the widget |
-| 1.20.0 → 1.21.0 | `bar` widget type removed; legacy `bar` widgets are filtered out, gauges shed any leftover `barOrientation` field |
-| 1.21.0 → 1.22.0 | `label` and `labelPosition` removed from non-button widget configs (labels now live on the widget frame, not the config body) |
-| 1.22.0 → 1.23.0 | `ButtonWidgetConfig` becomes a `mode`-discriminated union (#1232); existing button configs without `mode` are tagged `mode: 'single'` to preserve behavior — the `cycle` mode is opt-in |
+| 1.16.0 → 1.17.0 | Gauge / bar `warningLevel` dropped (#965); `dangerLevel` becomes the sole threshold above which a gauge turns red — `warningLevel` is discarded, `dangerLevel` preserved as-is                |
+| 1.17.0 → 1.18.0 | `DashboardConfig` gains optional `targetProfile` (#548); undefined resolves to `DEFAULT_SCREEN_PROFILE_ID` ("crowpanel-28") — no data transform                                               |
+| 1.18.0 → 1.19.0 | `BarWidgetConfig` gains optional `barOrientation` (#1232 flag); undefined keeps the legacy horizontal layout — no data transform                                                              |
+| 1.19.0 → 1.20.0 | `hideWhenInvalid` removed from every widget config; firmware now renders a stale state in-place rather than hiding the widget                                                                 |
+| 1.20.0 → 1.21.0 | `bar` widget type removed; legacy `bar` widgets are filtered out, gauges shed any leftover `barOrientation` field                                                                             |
+| 1.21.0 → 1.22.0 | `label` and `labelPosition` removed from non-button widget configs (labels now live on the widget frame, not the config body)                                                                 |
+| 1.22.0 → 1.23.0 | `ButtonWidgetConfig` becomes a `mode`-discriminated union (#1232); existing button configs without `mode` are tagged `mode: 'single'` to preserve behavior — the `cycle` mode is opt-in       |
 
 `migrateConfig` deep-clones the input before any migration runs (#282) so individual migrations can mutate freely without aliasing the caller's object.
 

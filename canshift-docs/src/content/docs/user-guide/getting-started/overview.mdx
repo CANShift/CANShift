@@ -1,5 +1,5 @@
 ---
-title: "What is CANShift?"
+title: 'What is CANShift?'
 description: "Before you flash anything — what the dash does, what it talks to, and what you'll need."
 sidebar:
   order: 1
@@ -41,21 +41,28 @@ The dash is the only thing on the car. The tuner is just a browser tab — open 
 <div class="cs-spec-sheet">
   <div class="title">Bill of materials — reference build</div>
   <dl>
-    <dt>Screen</dt><dd>Elecrow CrowPanel 2.8″ ESP32 (ILI9341 SPI + XPT2046 touch)</dd>
-    <dt>CAN transceiver</dt><dd>NXP TJA1051T/3 breakout, 3.3 V tolerant</dd>
-    <dt>Wiring</dt><dd>Dupont jumpers between screen ⇄ transceiver, OBD-II or direct splice to your ECU CAN H/L</dd>
-    <dt>Cable</dt><dd>USB-C data cable (not power-only) for flashing</dd>
-    <dt>Browser</dt><dd>Chromium-based (Chrome, Edge, Brave, Arc, Opera) — Firefox has no Web Serial</dd>
+    <dt>Screen</dt>
+    <dd>Elecrow CrowPanel 2.8″ ESP32 (ILI9341 SPI + XPT2046 touch)</dd>
+    <dt>CAN transceiver</dt>
+    <dd>NXP TJA1051T/3 breakout, 3.3 V tolerant</dd>
+    <dt>Wiring</dt>
+    <dd>
+      Dupont jumpers between screen ⇄ transceiver, OBD-II or direct splice to your ECU CAN H/L
+    </dd>
+    <dt>Cable</dt>
+    <dd>USB-C data cable (not power-only) for flashing</dd>
+    <dt>Browser</dt>
+    <dd>Chromium-based (Chrome, Edge, Brave, Arc, Opera) — Firefox has no Web Serial</dd>
   </dl>
 </div>
 
 ## How long this takes
 
-| Step | Reading time | Doing time |
-|---|---:|---:|
-| [Wire up + first flash](/user-guide/install/first-flash/) | 4 min | ~5 min for a fresh board |
-| [Pick an ECU profile, edit a page](/user-guide/configure/with-tuner/) | 3 min | ~10 min the first time |
-| [Use the dash on the road](/user-guide/usage/navigating-pages/) | 2 min | 0 |
+| Step                                                                  | Reading time |               Doing time |
+| --------------------------------------------------------------------- | -----------: | -----------------------: |
+| [Wire up + first flash](/user-guide/install/first-flash/)             |        4 min | ~5 min for a fresh board |
+| [Pick an ECU profile, edit a page](/user-guide/configure/with-tuner/) |        3 min |   ~10 min the first time |
+| [Use the dash on the road](/user-guide/usage/navigating-pages/)       |        2 min |                        0 |
 
 If something goes wrong, the boot logs are explicit — see [Boot diagnostics](/user-guide/install/boot-issues/) for the failure dictionary.
 

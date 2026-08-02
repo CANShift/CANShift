@@ -1,6 +1,6 @@
 ---
-title: "LVGL ownership"
-description: "Mutex + thread rules for every lv_* call in the firmware."
+title: 'LVGL ownership'
+description: 'Mutex + thread rules for every lv_* call in the firmware.'
 sidebar:
   order: 20
 ---
@@ -12,13 +12,13 @@ Sources: `src/main.cpp` (taskUI), `src/ui/widgets/widget_tag_pool.cpp`,
 
 ## Who runs what
 
-| Task | Core | LVGL access policy |
-|---|---|---|
-| `taskUI` | 1 | Owns LVGL by default; takes `g_lvglMutex` around `lv_task_handler` and around widget updates |
-| `taskCAN` | 0 | Never touches LVGL. Writes only to `SignalStore` (its own portMUX) |
-| `taskUSB` | 1 | Must take `g_lvglMutex` before any LVGL call. The PUT_CONFIG burn path holds it for the full storage write |
-| `taskBLE` | 1 | Same rule as USB: take the mutex before any LVGL call |
-| Arduino `loopTask` (boot only) | — | Owns LVGL implicitly because taskUI hasn't spawned yet |
+| Task                           | Core | LVGL access policy                                                                                         |
+| ------------------------------ | ---- | ---------------------------------------------------------------------------------------------------------- |
+| `taskUI`                       | 1    | Owns LVGL by default; takes `g_lvglMutex` around `lv_task_handler` and around widget updates               |
+| `taskCAN`                      | 0    | Never touches LVGL. Writes only to `SignalStore` (its own portMUX)                                         |
+| `taskUSB`                      | 1    | Must take `g_lvglMutex` before any LVGL call. The PUT_CONFIG burn path holds it for the full storage write |
+| `taskBLE`                      | 1    | Same rule as USB: take the mutex before any LVGL call                                                      |
+| Arduino `loopTask` (boot only) | —    | Owns LVGL implicitly because taskUI hasn't spawned yet                                                     |
 
 The boot phase is single-threaded by construction (taskUI is spawned at the
 end of `BootSequence::run`), so `WidgetTagPool::allocRaw` accepts a null
@@ -71,8 +71,8 @@ finger motion.
 
 `BurnOverlay::show()` calls `lv_refr_now(nullptr)` to force a synchronous
 redraw before the caller's long storage write blocks rendering. The
-flush callback (`DisplayDriver::flushCallback`) runs on the *calling
-task* — for the PUT_CONFIG path that caller is taskUSB. This is safe
+flush callback (`DisplayDriver::flushCallback`) runs on the _calling
+task_ — for the PUT_CONFIG path that caller is taskUSB. This is safe
 because LVGL is single-threaded as long as `g_lvglMutex` is held, and
 `handlePutConfig` explicitly takes the mutex around the entire burn
 window. SPI writes from taskUSB work the same as from taskUI.

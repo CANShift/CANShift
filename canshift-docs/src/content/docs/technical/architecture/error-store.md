@@ -1,6 +1,6 @@
 ---
-title: "ErrorStore"
-description: "Firmware error ring buffer + critical-section invariant."
+title: 'ErrorStore'
+description: 'Firmware error ring buffer + critical-section invariant.'
 sidebar:
   order: 70
 ---

@@ -79,10 +79,10 @@ The firmware is **autonomous** — it runs without any app connected. The surfac
 
 ## Hardware
 
-| Component | Part |
-|-----------|------|
-| Display / MCU | Elecrow CrowPanel 2.8" (ESP32, ILI9341, XPT2046 touch) |
-| ECU | Any CAN-enabled ECU |
+| Component       | Part                                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Display / MCU   | Elecrow CrowPanel 2.8" (ESP32, ILI9341, XPT2046 touch)                                                           |
+| ECU             | Any CAN-enabled ECU                                                                                              |
 | CAN transceiver | [Adafruit CAN Pal (TJA1051T/3)](https://www.digikey.ch/fr/products/detail/adafruit-industries-llc/5708/18716420) |
 
 **CAN wiring** (default — pins are configurable from Studio → Device Config and persisted in `device.json`):
@@ -173,13 +173,13 @@ canshift-core/        Shared config types — pure TypeScript
 docs/                 Architecture documentation
 ```
 
-| Sub-project | README |
-|-------------|--------|
-| Firmware | [canshift-firmware/README.md](canshift-firmware/README.md) — build, flash, pin assignments, FreeRTOS layout, USB protocol |
-| Tuner | [canshift-tuner/README.md](canshift-tuner/README.md) — Betaflight-style configurator, WebSerial transport |
-| Mobile | [canshift-mobile/README.md](canshift-mobile/README.md) — Expo setup, BLE service |
-| Core | [canshift-core/README.md](canshift-core/README.md) — config schema, validation, migrations, design tokens |
-| Docs | [docs/README.md](docs/README.md) — architecture documentation index |
+| Sub-project | README                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Firmware    | [canshift-firmware/README.md](canshift-firmware/README.md) — build, flash, pin assignments, FreeRTOS layout, USB protocol |
+| Tuner       | [canshift-tuner/README.md](canshift-tuner/README.md) — Betaflight-style configurator, WebSerial transport                 |
+| Mobile      | [canshift-mobile/README.md](canshift-mobile/README.md) — Expo setup, BLE service                                          |
+| Core        | [canshift-core/README.md](canshift-core/README.md) — config schema, validation, migrations, design tokens                 |
+| Docs        | [docs/README.md](docs/README.md) — architecture documentation index                                                       |
 
 ---
 
@@ -284,15 +284,15 @@ GitHub issues: [github.com/tburkhalterr/CANShift/issues](https://github.com/tbur
 
 Full architecture docs in [`docs/`](docs/):
 
-| File | Content |
-|------|---------|
-| `ARCHITECTURE.md` | C4-style architecture — system context, containers, components, data flow, invariants |
-| `overall-architecture.md` | System overview and data flow (narrative companion) |
-| `RELEASE.md` | Release process — cadence, artifacts, validation, rollback |
-| `roadmap.md` | Phase breakdown and milestones |
-| `FIRST_FLASH.md` | Pre-flight checklist for first hardware power-up |
-| `config-contract.md` | JSON config schema specification |
-| `can-integration-notes.md` | CAN wiring and ECU integration |
+| File                       | Content                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| `ARCHITECTURE.md`          | C4-style architecture — system context, containers, components, data flow, invariants |
+| `overall-architecture.md`  | System overview and data flow (narrative companion)                                   |
+| `RELEASE.md`               | Release process — cadence, artifacts, validation, rollback                            |
+| `roadmap.md`               | Phase breakdown and milestones                                                        |
+| `FIRST_FLASH.md`           | Pre-flight checklist for first hardware power-up                                      |
+| `config-contract.md`       | JSON config schema specification                                                      |
+| `can-integration-notes.md` | CAN wiring and ECU integration                                                        |
 
 ---
 

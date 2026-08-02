@@ -1,6 +1,6 @@
 ---
-title: "Signal map"
-description: "Known signals — their ids, units, and where they come from."
+title: 'Signal map'
+description: 'Known signals — their ids, units, and where they come from.'
 sidebar:
   order: 3
 ---
@@ -18,70 +18,70 @@ ids; cargo tests pin them on the Rust side.
 
 ## Engine
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 0 | `rpm` | RPM | broadcast or OBD-II mode 01 PID 0C |
-| 1 | `throttle_pos` | % | OBD-II PID 11 |
-| 2 | `map_kpa` | kPa | OBD-II PID 0B |
-| 3 | `boost_bar` | bar | derived / broadcast |
-| 4 | `iat_c` | °C | OBD-II PID 0F |
+|  id | Name           | Unit | Source                             |
+| --: | -------------- | ---- | ---------------------------------- |
+|   0 | `rpm`          | RPM  | broadcast or OBD-II mode 01 PID 0C |
+|   1 | `throttle_pos` | %    | OBD-II PID 11                      |
+|   2 | `map_kpa`      | kPa  | OBD-II PID 0B                      |
+|   3 | `boost_bar`    | bar  | derived / broadcast                |
+|   4 | `iat_c`        | °C   | OBD-II PID 0F                      |
 
 ## Temperatures
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 5 | `coolant_temp_c` | °C | OBD-II PID 05 |
-| 6 | `oil_temp_c` | °C | broadcast |
+|  id | Name             | Unit | Source        |
+| --: | ---------------- | ---- | ------------- |
+|   5 | `coolant_temp_c` | °C   | OBD-II PID 05 |
+|   6 | `oil_temp_c`     | °C   | broadcast     |
 
 ## Pressures
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 7 | `oil_press_bar` | bar | broadcast |
-| 8 | `fuel_press_bar` | bar | broadcast |
+|  id | Name             | Unit | Source    |
+| --: | ---------------- | ---- | --------- |
+|   7 | `oil_press_bar`  | bar  | broadcast |
+|   8 | `fuel_press_bar` | bar  | broadcast |
 
 ## Fuelling
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 9 | `lambda_1` | λ | wideband O₂ |
-| 10 | `afr_1` | AFR | derived from `lambda_1` × stoichiometry |
+|  id | Name       | Unit | Source                                  |
+| --: | ---------- | ---- | --------------------------------------- |
+|   9 | `lambda_1` | λ    | wideband O₂                             |
+|  10 | `afr_1`    | AFR  | derived from `lambda_1` × stoichiometry |
 
 ## Vehicle
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 11 | `speed_kph` | km/h | OBD-II PID 0D |
-| 12 | `gear` | (number) | broadcast |
+|  id | Name        | Unit     | Source        |
+| --: | ----------- | -------- | ------------- |
+|  11 | `speed_kph` | km/h     | OBD-II PID 0D |
+|  12 | `gear`      | (number) | broadcast     |
 
 ## Electrical
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 13 | `battery_volts` | V | OBD-II PID 42 |
+|  id | Name            | Unit | Source        |
+| --: | --------------- | ---- | ------------- |
+|  13 | `battery_volts` | V    | OBD-II PID 42 |
 
 ## ECU status flags
 
-| id | Name | Source |
-|---:|---|---|
-| 20 | `flag_mil` | MIL bit on the OBD-II status frame |
-| 21 | `flag_launch_ctrl` | broadcast |
-| 22 | `flag_flat_shift` | broadcast |
-| 23 | `flag_anti_lag` | broadcast |
-| 24 | `flag_traction_cut` | broadcast |
+|  id | Name                | Source                             |
+| --: | ------------------- | ---------------------------------- |
+|  20 | `flag_mil`          | MIL bit on the OBD-II status frame |
+|  21 | `flag_launch_ctrl`  | broadcast                          |
+|  22 | `flag_flat_shift`   | broadcast                          |
+|  23 | `flag_anti_lag`     | broadcast                          |
+|  24 | `flag_traction_cut` | broadcast                          |
 
 ## Map / profile
 
-| id | Name | Source |
-|---:|---|---|
-| 30 | `map_number` | broadcast |
-| 31 | `map_name_idx` | broadcast |
+|  id | Name           | Source    |
+| --: | -------------- | --------- |
+|  30 | `map_number`   | broadcast |
+|  31 | `map_name_idx` | broadcast |
 
 ## Lap timer
 
-| id | Name | Unit | Source |
-|---:|---|---|---|
-| 40 | `lap_timer_ms` | ms | broadcast or canshift-mobile push |
+|  id | Name           | Unit | Source                            |
+| --: | -------------- | ---- | --------------------------------- |
+|  40 | `lap_timer_ms` | ms   | broadcast or canshift-mobile push |
 
 ## Numeric gaps
 

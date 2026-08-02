@@ -1,6 +1,6 @@
 ---
-title: "Release process"
-description: "Tagging a release, writing the changelog, publishing to GitHub."
+title: 'Release process'
+description: 'Tagging a release, writing the changelog, publishing to GitHub.'
 sidebar:
   order: 3
 ---
@@ -34,18 +34,23 @@ Every release description follows this template (also documented in
 ## [Version] — YYYY-MM-DD
 
 ### 🚗 For the driver
+
 - (UX, new widgets, hardware support, etc.)
 
 ### 🔧 For the tuner / installer
+
 - (config, calibration, ECU parameters)
 
 ### 🔬 Firmware / dev
+
 - (build flags, schema, Rust ports, refactors)
 
 ### ⚠️ Breaking
+
 - (concrete impact + required action — re-flash, re-burn config, etc.)
 
 ### PRs
+
 - #XXXX — ...
 ```
 

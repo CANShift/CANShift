@@ -1,6 +1,6 @@
 ---
-title: "Wire protocol versioning"
-description: "Major/minor version handshake between firmware and tuner over WebSerial."
+title: 'Wire protocol versioning'
+description: 'Major/minor version handshake between firmware and tuner over WebSerial.'
 sidebar:
   order: 14
 ---
@@ -9,16 +9,16 @@ The compatibility contract between the Tuner build and the firmware build it con
 
 ## Versions in play
 
-| Where | What | Source |
-|---|---|---|
-| Tuner build | Expected firmware **major** | Vite `define: __EXPECTED_FIRMWARE_MAJOR__` — read from `canshift-firmware/package.json` at build time |
-| Firmware build | Reported `version` | `APP_VERSION_STR` injected from `canshift-firmware/package.json` |
-| Firmware build | Reported `protocol` | `USB_PROTOCOL_VERSION` constant in `canshift-firmware/include/app_config.h` |
+| Where          | What                        | Source                                                                                                |
+| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Tuner build    | Expected firmware **major** | Vite `define: __EXPECTED_FIRMWARE_MAJOR__` — read from `canshift-firmware/package.json` at build time |
+| Firmware build | Reported `version`          | `APP_VERSION_STR` injected from `canshift-firmware/package.json`                                      |
+| Firmware build | Reported `protocol`         | `USB_PROTOCOL_VERSION` constant in `canshift-firmware/include/app_config.h`                           |
 
 The firmware answers `CMD_QUERY_VERSION` (opcode `0x10`) with:
 
 ```json
-{"status":"ok","version":"0.12.0","protocol":2,"is_day":0}
+{ "status": "ok", "version": "0.12.0", "protocol": 2, "is_day": 0 }
 ```
 
 ## Rule
@@ -45,7 +45,7 @@ The user is expected to flash a matching firmware build (via the Flasher route, 
 If the tuner sends an opcode the firmware doesn't know — usually because tuner is ahead of firmware on a minor — the firmware now responds with:
 
 ```json
-{"status":"error","message":"unknown_command"}
+{ "status": "error", "message": "unknown_command" }
 ```
 
 (Previously the default branch in `usb_dispatch.cpp` returned `{"status":"ok"}`, which masked the drift. #1365 tightened that.)
@@ -54,13 +54,13 @@ This is a soft signal: the tuner surface that issued the unknown command sees an
 
 ## When to bump what
 
-| Change | Bump major? | Bump protocol? |
-|---|---|---|
-| Add a new opcode | No | Optional |
-| Add a new optional field to an existing payload | No | No |
-| Add a new **required** field to an existing payload | Yes | Yes |
-| Change an existing field's type or semantics | Yes | Yes |
-| Rename an opcode without changing wire shape | No | No |
+| Change                                              | Bump major? | Bump protocol? |
+| --------------------------------------------------- | ----------- | -------------- |
+| Add a new opcode                                    | No          | Optional       |
+| Add a new optional field to an existing payload     | No          | No             |
+| Add a new **required** field to an existing payload | Yes         | Yes            |
+| Change an existing field's type or semantics        | Yes         | Yes            |
+| Rename an opcode without changing wire shape        | No          | No             |
 
 The protocol number (`USB_PROTOCOL_VERSION`) is informational today — the handshake reports it but doesn't gate on it. It's there so a future tuner can refine the compatibility check (e.g. "major match AND protocol ≥ N").
 

@@ -1,11 +1,11 @@
 ---
-title: "Burn errors"
-description: "When the BurnOverlay flips red — what each error means and how to recover."
+title: 'Burn errors'
+description: 'When the BurnOverlay flips red — what each error means and how to recover.'
 sidebar:
   order: 2
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+import { Aside } from '@astrojs/starlight/components'
 
 When you click **Burn** in the tuner, the dash shows a "Saving config…" overlay
 while it writes to SPIFFS. If the write fails, the overlay flips red and shows
@@ -42,9 +42,9 @@ The dash falls back to the built-in default config and surfaces
   `[BOOT] Schema vN.M`.
 
 <Aside type="caution" title="Don't burn during a CAN scan">
-The tuner queues frames over USB while CAN scan is active. Burning a config
-in the middle can cause the burn to time out because the USB rxBuf is busy
-draining frames. Stop CAN scan first, then burn.
+  The tuner queues frames over USB while CAN scan is active. Burning a config in the middle can
+  cause the burn to time out because the USB rxBuf is busy draining frames. Stop CAN scan first,
+  then burn.
 </Aside>
 
 ## The overlay clears but the dash didn't reload

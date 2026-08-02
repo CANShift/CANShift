@@ -1,6 +1,6 @@
 ---
-title: "ECU integration reference"
-description: "Catalogue format, frame parser, RealDash XML import."
+title: 'ECU integration reference'
+description: 'Catalogue format, frame parser, RealDash XML import.'
 sidebar:
   order: 12
 ---
@@ -12,6 +12,7 @@ umbrella that drops the historical MaxxECU coupling and makes CANShift
 schema-driven against any ECU that broadcasts CAN.
 
 You should be able to complete this in an evening if you already have:
+
 - a copy of your ECU's CAN-output documentation (vendor PDF, DBC file, or
   reverse-engineered notes), and
 - hardware wired per [`docs/can-integration-notes.md`](can-integration-notes.md).
@@ -64,58 +65,58 @@ Here is every field, annotated:
 ```jsonc
 {
   // ---- Identity -----------------------------------------------------------
-  "name": "rpm",                  // Signal name. Must match the widget's
-                                  //   `signal` field on the dashboard side.
-                                  //   `canshift-firmware/src/can/signal_map.h`
-                                  //   reserves the well-known names you see
-                                  //   in `SignalIds::*`; new names land there
-                                  //   in lockstep with this catalog.
+  "name": "rpm", // Signal name. Must match the widget's
+  //   `signal` field on the dashboard side.
+  //   `canshift-firmware/src/can/signal_map.h`
+  //   reserves the well-known names you see
+  //   in `SignalIds::*`; new names land there
+  //   in lockstep with this catalog.
 
   // ---- Frame extraction ---------------------------------------------------
-  "canFrameId": "0x370",          // Frame ID this signal comes from. Hex
-                                  //   string `0x` + 1-3 hex chars.
-  "startByte": 0,                 // 0-based byte offset within the frame
-                                  //   payload (0-7 for an 8-byte CAN frame).
-  "byteLength": 2,                // 1 / 2 / 4. Bit-packed signals share a
-                                  //   byte: byteLength: 1 + bitMask.
-  "bigEndian": true,              // true = MSB at `startByte`. Most ECUs use
-                                  //   big-endian; flip this for little-endian.
-  "signed": false,                // 2's complement interpretation. Coolant
-                                  //   temp + delta-from-target rows are
-                                  //   commonly signed; pressures / rpms are
-                                  //   not.
-  "bitMask": "0x01",              // OPTIONAL. Single-bit / multi-bit pack.
-                                  //   Hex literal. The decoded value is the
-                                  //   masked + shifted result interpreted as
-                                  //   an integer, then `scale` / `offset`
-                                  //   apply on top.
+  "canFrameId": "0x370", // Frame ID this signal comes from. Hex
+  //   string `0x` + 1-3 hex chars.
+  "startByte": 0, // 0-based byte offset within the frame
+  //   payload (0-7 for an 8-byte CAN frame).
+  "byteLength": 2, // 1 / 2 / 4. Bit-packed signals share a
+  //   byte: byteLength: 1 + bitMask.
+  "bigEndian": true, // true = MSB at `startByte`. Most ECUs use
+  //   big-endian; flip this for little-endian.
+  "signed": false, // 2's complement interpretation. Coolant
+  //   temp + delta-from-target rows are
+  //   commonly signed; pressures / rpms are
+  //   not.
+  "bitMask": "0x01", // OPTIONAL. Single-bit / multi-bit pack.
+  //   Hex literal. The decoded value is the
+  //   masked + shifted result interpreted as
+  //   an integer, then `scale` / `offset`
+  //   apply on top.
 
   // ---- Scaling ------------------------------------------------------------
-  "scale": 0.1,                   // `decoded_value = raw * scale + offset`.
-                                  //   Always emitted as a float, even when 1.
-  "offset": -40.0,                // Common for temperature signals stored as
-                                  //   °C + 40 to keep them unsigned.
+  "scale": 0.1, // `decoded_value = raw * scale + offset`.
+  //   Always emitted as a float, even when 1.
+  "offset": -40.0, // Common for temperature signals stored as
+  //   °C + 40 to keep them unsigned.
 
   // ---- Display metadata ---------------------------------------------------
-  "unit": "kPa",                  // Free text. Used by widget label fallback
-                                  //   when `widget.config.suffix` is unset.
-  "min": 0,                       // Display range. NOT a validator — values
-                                  //   outside [min, max] still render but
-                                  //   may clip on bar / arc widgets.
+  "unit": "kPa", // Free text. Used by widget label fallback
+  //   when `widget.config.suffix` is unset.
+  "min": 0, // Display range. NOT a validator — values
+  //   outside [min, max] still render but
+  //   may clip on bar / arc widgets.
   "max": 400,
 
   // ---- Alert thresholds (optional) ----------------------------------------
-  "warningLevel": 250,            // Yellow zone. Strict ordering enforced by
-  "dangerLevel": 330,             // the schema: warning < danger.
-  "highWarningLevel": 15.0,       // For two-sided signals like battery V
-  "highDangerLevel": 16.0,        //   that have low AND high alarm zones.
+  "warningLevel": 250, // Yellow zone. Strict ordering enforced by
+  "dangerLevel": 330, // the schema: warning < danger.
+  "highWarningLevel": 15.0, // For two-sided signals like battery V
+  "highDangerLevel": 16.0, //   that have low AND high alarm zones.
 
   // ---- Lifecycle ----------------------------------------------------------
-  "timeoutMs": 500                // The firmware's `SignalStore` marks a
-                                  //   signal stale + drops to "invalid" if
-                                  //   no fresh frame lands inside this
-                                  //   window. Pick ≥ 2× the frame's natural
-                                  //   cadence.
+  "timeoutMs": 500, // The firmware's `SignalStore` marks a
+  //   signal stale + drops to "invalid" if
+  //   no fresh frame lands inside this
+  //   window. Pick ≥ 2× the frame's natural
+  //   cadence.
 
   // ---- Per-signal color ramp (optional, #430) -----------------------------
   // "colorRamp": { "stops": [...], "interpolate": "linear" }
@@ -171,9 +172,9 @@ add an `out` block with the target frame ID:
     "map_switch": {
       "id": "0x600",
       "extended": false,
-      "encoding": "byte0 = mapIndex (1-based, 1..8)"
-    }
-  }
+      "encoding": "byte0 = mapIndex (1-based, 1..8)",
+    },
+  },
 }
 ```
 
@@ -242,6 +243,7 @@ the moment a valid `signals.json` is pushed, even with no live bus.
 
 The diag drawer is your friend here. Swipe-up from the bottom (or tap the
 `▴ DIAG` strip) to see:
+
 - ECU flag bits, lit when active.
 - The 2×2 status grid (RPM, TPS, coolant, battery).
 - Any firmware-level errors (CAN bus off, parse errors, config reload
@@ -273,11 +275,11 @@ The diag drawer is your friend here. Swipe-up from the bottom (or tap the
 
 Per-ECU integration notes for built-in presets:
 
-| Preset | Notes |
-|--------|-------|
-| **MaxxECU Street / Race** | Default frame group at `0x370`-`0x375`. Verify against your MaxxECU's "CAN Output" page in MaxxECU PC software — Street and Race share the layout but Race adds extra frames (race-specific telemetry) you may want to map manually. |
-| **OBD-II J1979** | Polling shipped in [#841](https://github.com/tburkhalterr/CANShift/issues/841). Add a `polling: { mode: 0x01, pid, intervalMs }` block to each signal; the firmware's `Obd2Poller` then sends `0x7DF` requests and decodes the `0x7E8` responses. See `data/signals_obd2_mode01.json.example` for a starter catalog, and the Studio editor's **Signals** tab for the Mode 01 PID picker. v1 scope = Mode 01 + single ECU at `0x7DF/0x7E8`; multi-ECU + ISO-TP deferred. |
-| **Generic (blank)** | Use as the starting point for any ECU not yet covered. No signals predefined — add them via the Studio editor or by editing the exported `signals.json` directly. |
+| Preset                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MaxxECU Street / Race** | Default frame group at `0x370`-`0x375`. Verify against your MaxxECU's "CAN Output" page in MaxxECU PC software — Street and Race share the layout but Race adds extra frames (race-specific telemetry) you may want to map manually.                                                                                                                                                                                                                                    |
+| **OBD-II J1979**          | Polling shipped in [#841](https://github.com/tburkhalterr/CANShift/issues/841). Add a `polling: { mode: 0x01, pid, intervalMs }` block to each signal; the firmware's `Obd2Poller` then sends `0x7DF` requests and decodes the `0x7E8` responses. See `data/signals_obd2_mode01.json.example` for a starter catalog, and the Studio editor's **Signals** tab for the Mode 01 PID picker. v1 scope = Mode 01 + single ECU at `0x7DF/0x7E8`; multi-ECU + ISO-TP deferred. |
+| **Generic (blank)**       | Use as the starting point for any ECU not yet covered. No signals predefined — add them via the Studio editor or by editing the exported `signals.json` directly.                                                                                                                                                                                                                                                                                                       |
 
 ### Want to add a vendor preset?
 

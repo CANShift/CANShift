@@ -1,6 +1,6 @@
 ---
-title: "USB transport"
-description: "Sinks, locks, and the PUT_CONFIG burn flow."
+title: 'USB transport'
+description: 'Sinks, locks, and the PUT_CONFIG burn flow.'
 sidebar:
   order: 40
 ---
@@ -18,7 +18,7 @@ JSON lines + 10 Hz telemetry. Sources: `src/hal/usb/usb_comm.cpp`,
 - **Telemetry**: `{"tele":1,"v":{…signals…}}` emitted at ~10 Hz.
 - **Logs**: `{"log":1,"lvl":"…","tag":"…","msg":"…"}` (protocol v2).
 
-`USB_PROTOCOL_VERSION = 2` reflects that LOG_* macros emit envelopes
+`USB_PROTOCOL_VERSION = 2` reflects that LOG\_\* macros emit envelopes
 instead of plain `[I][TAG]` text and that UART0 writes from the logger
 and the wire protocol are serialised under the shared sink mutex (#199).
 
@@ -32,7 +32,7 @@ The send path has three layers:
    WebSocket / TCP transports to mirror telemetry to a browser client
    when WiFi is active.
 3. **`thread_local t_dispatchSink`** — set by `handleLine()` for the
-   duration of the command body. When `sendLine()` runs *inside* a
+   duration of the command body. When `sendLine()` runs _inside_ a
    command dispatch on the current task, it routes the reply to
    `t_dispatchSink` directly without taking the sink mutex.
 

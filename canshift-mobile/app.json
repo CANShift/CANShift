@@ -42,9 +42,7 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": [
-            "central"
-          ],
+          "modes": ["central"],
           "bluetoothAlwaysPermission": "CANShift uses Bluetooth to connect to the dashboard device for live data and configuration."
         }
       ],

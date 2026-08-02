@@ -18,7 +18,7 @@ hero:
       icon: external
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { Card, CardGrid } from '@astrojs/starlight/components'
 
 ## Pick your doorway
 
@@ -27,7 +27,10 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     <a href="/user-guide/getting-started/overview/">
       <div class="kicker">For the driver</div>
       <h3>Install and use the dash</h3>
-      <p>From a sealed box to a dashboard reading your ECU — flashing, wiring, pages, cruise, settings.</p>
+      <p>
+        From a sealed box to a dashboard reading your ECU — flashing, wiring, pages, cruise,
+        settings.
+      </p>
       <div class="arrow">User guide →</div>
     </a>
   </li>
@@ -35,7 +38,10 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     <a href="/user-guide/configure/with-tuner/">
       <div class="kicker">For the tuner</div>
       <h3>Configure the dash live</h3>
-      <p>Edit pages, bind CAN signals, pick an ECU profile, tune OBD-II polling. Burn the config and the dash reloads — no re-flash.</p>
+      <p>
+        Edit pages, bind CAN signals, pick an ECU profile, tune OBD-II polling. Burn the config and
+        the dash reloads — no re-flash.
+      </p>
       <div class="arrow">Tuner workflows →</div>
     </a>
   </li>
@@ -43,7 +49,10 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     <a href="/technical/architecture/boot-sequence/">
       <div class="kicker">For the developer</div>
       <h3>Read the firmware</h3>
-      <p>Heap reservation order, LVGL ownership rules, the PUT_CONFIG burn flow, the cruise polygon trick — the load-bearing rationale.</p>
+      <p>
+        Heap reservation order, LVGL ownership rules, the PUT_CONFIG burn flow, the cruise polygon
+        trick — the load-bearing rationale.
+      </p>
       <div class="arrow">Architecture →</div>
     </a>
   </li>
@@ -88,16 +97,20 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid>
   <Card title="canshift-firmware" icon="seti:cpp">
-    C++17 on Arduino-ESP32, LVGL 8.4, LovyanGFX. Parses CAN over TWAI, decodes signals, drives the panel. Source of truth for the dashboard's runtime behaviour.
+    C++17 on Arduino-ESP32, LVGL 8.4, LovyanGFX. Parses CAN over TWAI, decodes signals, drives the
+    panel. Source of truth for the dashboard's runtime behaviour.
   </Card>
   <Card title="canshift-core" icon="seti:typescript">
-    Shared TypeScript domain — Zod schemas, signal map, design tokens. Pulled by `tuner` and `mobile`; mirrored by the firmware's `canshift-core/dist` types.
+    Shared TypeScript domain — Zod schemas, signal map, design tokens. Pulled by `tuner` and
+    `mobile`; mirrored by the firmware's `canshift-core/dist` types.
   </Card>
   <Card title="canshift-tuner" icon="rocket">
-    Vite + React SPA on Vercel. Talks to the dash over Web Serial. Lets a tuner edit the dashboard, run a CAN scan, and flash firmware — the standalone flasher is gone; `/firmware` is the route.
+    Vite + React SPA on Vercel. Talks to the dash over Web Serial. Lets a tuner edit the dashboard,
+    run a CAN scan, and flash firmware — the standalone flasher is gone; `/firmware` is the route.
   </Card>
   <Card title="canshift-mobile" icon="phone">
-    Expo React Native. Pairs over BLE for in-car telemetry and secondary config. Useful when the tuner laptop isn't in the car.
+    Expo React Native. Pairs over BLE for in-car telemetry and secondary config. Useful when the
+    tuner laptop isn't in the car.
   </Card>
 </CardGrid>
 
@@ -106,12 +119,18 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 <div class="cs-spec-sheet">
   <div class="title">Reference build</div>
   <dl>
-    <dt>MCU</dt><dd>ESP32-WROOM-32, 4 MB flash, no PSRAM</dd>
-    <dt>Panel</dt><dd>Elecrow CrowPanel 2.8″ — ILI9341 SPI + XPT2046 touch</dd>
-    <dt>CAN transceiver</dt><dd>NXP TJA1051T/3 (3.3 V tolerant)</dd>
-    <dt>Host port</dt><dd>USB-C → CH340 UART0 (GPIO 1 = TX, GPIO 3 = RX)</dd>
-    <dt>CAN GPIO</dt><dd>TX = 17, RX = 16 (TWAI peripheral, 500 kbit/s default)</dd>
-    <dt>Wire protocol</dt><dd>Newline-delimited JSON, `USB_PROTOCOL_VERSION = 2`</dd>
+    <dt>MCU</dt>
+    <dd>ESP32-WROOM-32, 4 MB flash, no PSRAM</dd>
+    <dt>Panel</dt>
+    <dd>Elecrow CrowPanel 2.8″ — ILI9341 SPI + XPT2046 touch</dd>
+    <dt>CAN transceiver</dt>
+    <dd>NXP TJA1051T/3 (3.3 V tolerant)</dd>
+    <dt>Host port</dt>
+    <dd>USB-C → CH340 UART0 (GPIO 1 = TX, GPIO 3 = RX)</dd>
+    <dt>CAN GPIO</dt>
+    <dd>TX = 17, RX = 16 (TWAI peripheral, 500 kbit/s default)</dd>
+    <dt>Wire protocol</dt>
+    <dd>Newline-delimited JSON, `USB_PROTOCOL_VERSION = 2`</dd>
   </dl>
 </div>
 

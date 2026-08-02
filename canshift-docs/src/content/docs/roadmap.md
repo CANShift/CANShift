@@ -1,6 +1,6 @@
 ---
-title: "Roadmap"
-description: "Planned work across firmware, tuner, mobile, and docs."
+title: 'Roadmap'
+description: 'Planned work across firmware, tuner, mobile, and docs.'
 sidebar:
   order: 99
 ---
@@ -97,11 +97,11 @@ the dash-hosted Studio inherited the editor surface from the Electron app.
 Issues actively being decomposed into sub-issues; expect movement on
 these across the next few sprints.
 
-| Umbrella | Status |
-|---|---|
-| [#556](https://github.com/tburkhalterr/CANShift/issues/556) — ECU-agnostic firmware | Phase 1 (rename, [#840](https://github.com/tburkhalterr/CANShift/issues/840)) ✓ · Phase 2 (preset library, [#19](https://github.com/tburkhalterr/CANShift/issues/19)) ✓ · Phase 3 (OBD-II polling, [#841](https://github.com/tburkhalterr/CANShift/issues/841)) — open · Phase 4 (integration docs, [#842](https://github.com/tburkhalterr/CANShift/issues/842)) ✓ |
-| [#815](https://github.com/tburkhalterr/CANShift/issues/815) — Track mode | Core schema ([#843](https://github.com/tburkhalterr/CANShift/issues/843)) ✓ · Firmware indicator ([#844](https://github.com/tburkhalterr/CANShift/issues/844)) — open · Mobile timing engine ([#845](https://github.com/tburkhalterr/CANShift/issues/845)) — blocked · History screens ([#846](https://github.com/tburkhalterr/CANShift/issues/846)) — blocked |
-| [#158](https://github.com/tburkhalterr/CANShift/issues/158) — Firmware refactor & optimization | Long-running tracking issue; PRs land continuously. |
+| Umbrella                                                                                       | Status                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [#556](https://github.com/tburkhalterr/CANShift/issues/556) — ECU-agnostic firmware            | Phase 1 (rename, [#840](https://github.com/tburkhalterr/CANShift/issues/840)) ✓ · Phase 2 (preset library, [#19](https://github.com/tburkhalterr/CANShift/issues/19)) ✓ · Phase 3 (OBD-II polling, [#841](https://github.com/tburkhalterr/CANShift/issues/841)) — open · Phase 4 (integration docs, [#842](https://github.com/tburkhalterr/CANShift/issues/842)) ✓ |
+| [#815](https://github.com/tburkhalterr/CANShift/issues/815) — Track mode                       | Core schema ([#843](https://github.com/tburkhalterr/CANShift/issues/843)) ✓ · Firmware indicator ([#844](https://github.com/tburkhalterr/CANShift/issues/844)) — open · Mobile timing engine ([#845](https://github.com/tburkhalterr/CANShift/issues/845)) — blocked · History screens ([#846](https://github.com/tburkhalterr/CANShift/issues/846)) — blocked     |
+| [#158](https://github.com/tburkhalterr/CANShift/issues/158) — Firmware refactor & optimization | Long-running tracking issue; PRs land continuously.                                                                                                                                                                                                                                                                                                                |
 
 ---
 
@@ -112,8 +112,8 @@ Tracked by individual issues, ranked by current priority:
 - [#451](https://github.com/tburkhalterr/CANShift/issues/451) — optional
   cruise control screen with +/−/SET/OFF buttons. Schema + GPIO wiring
   already ships via [#833](https://github.com/tburkhalterr/CANShift/issues/833)
-  + [#852](https://github.com/tburkhalterr/CANShift/issues/852) — this PR
-  adds the on-screen consumer.
+  - [#852](https://github.com/tburkhalterr/CANShift/issues/852) — this PR
+    adds the on-screen consumer.
 - [#21](https://github.com/tburkhalterr/CANShift/issues/21) — visual
   theme editor: live palette + widget-style preview, exported to device.
 - [#548](https://github.com/tburkhalterr/CANShift/issues/548) — per-board
