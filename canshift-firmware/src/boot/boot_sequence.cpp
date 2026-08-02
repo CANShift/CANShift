@@ -100,8 +100,7 @@ constexpr uint32_t kSplashTrackRgb = 0x222222;
 constexpr float kMonoSkewTan = 0.19438f;
 
 struct MonogramPoints {
-    lv_point_t c[4];
-    lv_point_t s[6];
+    lv_point_t seg[8][2];
 };
 
 static MonogramPoints s_markPoints;
@@ -126,31 +125,39 @@ lv_obj_t *drawMonogram(lv_obj_t *parent, int16_t heightPx, MonogramPoints *pts) 
     lv_obj_set_style_pad_all(box, 0, 0);
     lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    pts->c[0] = {monoX(46, 26, scale), monoY(26, scale)};
-    pts->c[1] = {monoX(22, 26, scale), monoY(26, scale)};
-    pts->c[2] = {monoX(22, 74, scale), monoY(74, scale)};
-    pts->c[3] = {monoX(46, 74, scale), monoY(74, scale)};
-    pts->s[0] = {monoX(96, 26, scale), monoY(26, scale)};
-    pts->s[1] = {monoX(66, 26, scale), monoY(26, scale)};
-    pts->s[2] = {monoX(66, 50, scale), monoY(50, scale)};
-    pts->s[3] = {monoX(96, 50, scale), monoY(50, scale)};
-    pts->s[4] = {monoX(96, 74, scale), monoY(74, scale)};
-    pts->s[5] = {monoX(66, 74, scale), monoY(74, scale)};
-
     const int16_t stroke = static_cast<int16_t>(13.0f * scale + 0.5f);
     const int16_t strokeW = stroke < 2 ? 2 : stroke;
+    // Verticals overshoot each corner joint by half a stroke so flat-capped
+    // segments fill the outer corners; the glyphs' open terminals stay butt.
+    const float half = 6.5f;
 
-    lv_obj_t *cLine = lv_line_create(box);
-    lv_line_set_points(cLine, pts->c, 4);
-    lv_obj_set_style_line_width(cLine, strokeW, 0);
-    lv_obj_set_style_line_color(cLine, lv_color_hex(kSplashInkRgb), 0);
-    lv_obj_set_style_line_rounded(cLine, false, 0);
+    struct Seg {
+        float x0, y0, x1, y1;
+        bool accent;
+    };
+    const Seg segs[8] = {
+        {46, 26, 22, 26, false},
+        {22, 26 - half, 22, 74 + half, false},
+        {22, 74, 46, 74, false},
+        {96, 26, 66, 26, true},
+        {66, 26 - half, 66, 50 + half, true},
+        {66, 50, 96, 50, true},
+        {96, 50 - half, 96, 74 + half, true},
+        {96, 74, 66, 74, true},
+    };
 
-    lv_obj_t *sLine = lv_line_create(box);
-    lv_line_set_points(sLine, pts->s, 6);
-    lv_obj_set_style_line_width(sLine, strokeW, 0);
-    lv_obj_set_style_line_color(sLine, lv_color_hex(kSplashAccentRgb), 0);
-    lv_obj_set_style_line_rounded(sLine, false, 0);
+    for (uint8_t i = 0; i < 8; ++i) {
+        pts->seg[i][0] = {monoX(segs[i].x0, segs[i].y0, scale), monoY(segs[i].y0, scale)};
+        pts->seg[i][1] = {monoX(segs[i].x1, segs[i].y1, scale), monoY(segs[i].y1, scale)};
+        lv_obj_t *line = lv_line_create(box);
+        if (!line)
+            continue;
+        lv_line_set_points(line, pts->seg[i], 2);
+        lv_obj_set_style_line_width(line, strokeW, 0);
+        lv_obj_set_style_line_color(
+            line, lv_color_hex(segs[i].accent ? kSplashAccentRgb : kSplashInkRgb), 0);
+        lv_obj_set_style_line_rounded(line, false, 0);
+    }
 
     return box;
 }
