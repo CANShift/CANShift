@@ -5,7 +5,7 @@ import { DECIMAL_PLACES, STRING_CAPS } from '../../constants/firmware-caps.js'
 import { SensorIconNameSchema } from './sensor-icon.js'
 
 export const GaugeDisplayStyleSchema = z.enum(['numeric', 'arc'])
-export const GaugeArcFillStyleSchema = z.enum(['zones', 'gradient'])
+export const GaugeArcFillStyleSchema = z.enum(['ink', 'zones', 'gradient'])
 
 export const GaugeWidgetConfigSchema = z
   .object({
