@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Header from './components/shell/Header'
@@ -8,6 +8,7 @@ import { DeviceAlertBar } from './components/shell/DeviceAlertBar'
 import WelcomeRoute from './routes/WelcomeRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useConnectionStore } from './stores/connection.store'
+import { useDashboardStore } from './stores/dashboard.store'
 import { useDeviceStore } from './stores/device.store'
 import { useAutoReconnect } from './hooks/useAutoReconnect'
 import { useSimulationBootstrap } from './hooks/useSimulationBootstrap'
@@ -17,6 +18,7 @@ import { useHeartbeat } from './hooks/useHeartbeat'
 import { useHeapStatsSubscription } from './hooks/useHeapStatsSubscription'
 import { useFirmwareLogBridge } from './hooks/useFirmwareLogBridge'
 import { useBurnShortcut } from './hooks/useBurnShortcut'
+import { bootstrapProjects } from './stores/project/project.store'
 import { useWidgetOverflowWarnings } from './hooks/useWidgetOverflowWarnings'
 import { useUnsavedChangesGuard } from './hooks/useUnsavedChangesGuard'
 import { DeviceConfigConflictDialog } from './components/shell/DeviceConfigConflictDialog'
@@ -96,6 +98,11 @@ const App = () => {
   useBurnShortcut()
   useWidgetOverflowWarnings()
   useUnsavedChangesGuard()
+
+  const hasDashboardConfig = useDashboardStore((s) => s.config !== null)
+  useEffect(() => {
+    bootstrapProjects()
+  }, [hasDashboardConfig])
 
   return (
     <div style={shellStyle}>

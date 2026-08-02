@@ -319,3 +319,11 @@ export type { ParseCanXmlResult } from './can-xml/parse-can-xml.js'
 export { parseCanXml } from './can-xml/parse-can-xml.js'
 export type { EvalContext } from './can-xml/eval-expr.js'
 export { compileExpr, evalExpr } from './can-xml/eval-expr.js'
+export {
+  PROJECT_FILE_VERSION,
+  PROJECT_NAME_MAX,
+  ProjectMetaSchema,
+  ProjectSchema,
+} from './schemas/project.js'
+export type { Project, ProjectMeta } from './schemas/project.js'
+export { SignalDefSchema } from './schemas/signal.js'
