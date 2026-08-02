@@ -1,5 +1,4 @@
 import type { CSSProperties } from 'react'
-import { TogglePill } from '../ui/toggle-pill'
 
 export type SortKey = 'id' | 'lastSeen' | 'rate' | 'count'
 
@@ -10,41 +9,41 @@ interface SortBarProps {
 
 const SORT_OPTIONS: ReadonlyArray<{ key: SortKey; label: string }> = [
   { key: 'id', label: 'ID' },
-  { key: 'lastSeen', label: 'Last seen' },
-  { key: 'rate', label: 'Rate' },
-  { key: 'count', label: 'Count' },
+  { key: 'lastSeen', label: 'LAST SEEN' },
+  { key: 'rate', label: 'RATE' },
+  { key: 'count', label: 'COUNT' },
 ]
 
-const sortBarStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '8px 20px',
-  borderBottom: '1px solid hsl(var(--border))',
-  background: 'hsl(var(--surface))',
-}
-
-const sortLabelStyle: CSSProperties = {
-  fontSize: 10,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: 'hsl(var(--text-muted))',
-  marginRight: 4,
-}
-
 export const SortBar = ({ sortKey, onChange }: SortBarProps) => (
-  <div style={sortBarStyle}>
-    <span style={sortLabelStyle}>Sort by</span>
+  <div style={groupStyle} role="group" aria-label="Sort frames by">
     {SORT_OPTIONS.map((o) => (
-      <TogglePill
+      <button
         key={o.key}
-        active={o.key === sortKey}
+        type="button"
+        aria-pressed={o.key === sortKey}
         onClick={() => {
           onChange(o.key)
         }}
+        style={segmentStyle(o.key === sortKey)}
       >
         {o.label}
-      </TogglePill>
+      </button>
     ))}
   </div>
 )
+
+const groupStyle: CSSProperties = {
+  display: 'flex',
+  border: '1px solid hsl(var(--brand-neutral-400))',
+}
+
+const segmentStyle = (active: boolean): CSSProperties => ({
+  padding: '5px 12px',
+  background: active ? 'hsl(var(--brand-text))' : 'none',
+  border: 'none',
+  fontWeight: 800,
+  fontSize: 11,
+  letterSpacing: '0.08em',
+  color: active ? 'hsl(var(--brand-chrome-bg))' : 'hsl(var(--brand-neutral-700))',
+  cursor: 'pointer',
+})

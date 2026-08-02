@@ -133,7 +133,7 @@ samp {
   background: color-mix(in srgb, hsl(var(--brand-accent)) 14%, transparent) !important;
 }
 
-.shell-link-button:hover {
+.shell-link-button:not(:disabled):hover {
   border-color: hsl(var(--brand-accent)) !important;
 }
 
