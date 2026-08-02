@@ -165,14 +165,21 @@ export const startAutosave = (store: AutosaveStore): (() => void) => {
     write()
   }
 
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') flush()
+  }
+
   const unsubscribe = store.subscribe(scheduleWrite)
   window.addEventListener('beforeunload', flush)
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flush()
-  })
+  window.addEventListener('visibilitychange', onVisibilityChange)
 
   return () => {
     unsubscribe()
+    if (timer !== null) {
+      window.clearTimeout(timer)
+      timer = null
+    }
     window.removeEventListener('beforeunload', flush)
+    window.removeEventListener('visibilitychange', onVisibilityChange)
   }
 }
