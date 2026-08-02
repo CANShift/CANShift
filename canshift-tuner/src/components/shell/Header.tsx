@@ -87,7 +87,7 @@ const Header = () => {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion)
   const firmwareCompat = useDeviceStore((s) => s.firmwareCompat)
   const projectName = useDashboardStore((s) => s.config?.name ?? null)
-  const isDirty = useDashboardStore((s) => s.isDirty)
+  const lastSavedAt = useDashboardStore((s) => s.lastSavedAt)
   const pulsing = useSerialActivityPulse(status === 'connected' && !simulationMode)
   const portLabel = !simulationMode && status === 'connected' ? readPortLabel(port) : null
 
@@ -106,7 +106,7 @@ const Header = () => {
       tunerVersion={__TUNER_VERSION__}
       status={resolvedStatus}
       projectName={projectName}
-      unsavedChanges={isDirty}
+      lastSavedAt={lastSavedAt}
       portLabel={portLabel}
       activityPulse={pulsing}
       firmwareSlot={<UiFirmwareSlot version={firmwareVersion} compat={firmwareCompat} />}

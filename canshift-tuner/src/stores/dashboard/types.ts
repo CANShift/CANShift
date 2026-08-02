@@ -26,6 +26,8 @@ export interface LifecycleSlice {
   acceptPendingDeviceConfig: () => void
   dismissPendingDeviceConfig: () => void
   markPushed: () => void
+  lastSavedAt: number | null
+  markAutosaved: (ts: number) => void
   markDirty: () => void
 }
 
