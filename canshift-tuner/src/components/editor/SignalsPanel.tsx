@@ -66,6 +66,7 @@ const SignalsPanel = () => {
         </span>
         <button
           type="button"
+          className="editor-ghost-accent"
           disabled={!canScan}
           onClick={() => {
             void (isScanning ? stop() : start())
