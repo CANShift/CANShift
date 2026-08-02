@@ -203,12 +203,13 @@ const containerStyle: CSSProperties = {
 }
 
 const toolbarStyle: CSSProperties = {
-  height: 48,
+  minHeight: 48,
   flexShrink: 0,
   display: 'flex',
+  flexWrap: 'wrap',
   alignItems: 'center',
   gap: 14,
-  padding: '0 20px',
+  padding: '4px 20px',
   borderBottom: '2px solid var(--brand-divider)',
 }
 
@@ -228,6 +229,7 @@ const summaryStyle: CSSProperties = {
 const actionsStyle: CSSProperties = {
   marginLeft: 'auto',
   display: 'flex',
+  flexWrap: 'wrap',
   alignItems: 'center',
   gap: 6,
 }
