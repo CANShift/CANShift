@@ -16,6 +16,7 @@ export interface BuildChooserProps {
   pickedTag: string | null
   installedVersion: string | null
   onPickRelease: (tag: string) => void
+  onLocalPicked: () => void
   onRefresh: () => void
 }
 
@@ -39,6 +40,7 @@ export const BuildChooser = ({
   pickedTag,
   installedVersion,
   onPickRelease,
+  onLocalPicked,
   onRefresh,
 }: BuildChooserProps) => {
   const setLocalFirmware = useFirmwareSelectionStore((s) => s.setLocalFirmware)
@@ -56,6 +58,7 @@ export const BuildChooser = ({
     void readFirmwareFile(file)
       .then((firmware) => {
         setLocalFirmware(firmware)
+        onLocalPicked()
         log(
           'info',
           `Selected local firmware ${firmware.name} (${formatBytes(firmware.size)}, sha256 ${firmware.sha256.slice(0, SHA_PREFIX_CHARS)}…)`

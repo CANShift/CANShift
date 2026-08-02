@@ -24,23 +24,33 @@ const selectionLabel = (selection: FirmwareSelection): string =>
       ? selection.firmware.name
       : 'firmware'
 
-const useFlashHistoryRecorder = (state: FlasherState, selection: FirmwareSelection): void => {
+const useFlashHistoryRecorder = (
+  state: FlasherState,
+  flashedLabel: { current: string | null }
+): void => {
   const record = useFlashHistoryStore((s) => s.record)
   const prevKind = useRef(state.kind)
   useEffect(() => {
     if (prevKind.current !== state.kind) {
-      if (state.kind === 'success') record(selectionLabel(selection), true)
-      if (state.kind === 'error') record(selectionLabel(selection), false)
+      const label = flashedLabel.current ?? 'firmware'
+      if (state.kind === 'success') record(label, true)
+      if (state.kind === 'error') record(label, false)
       prevKind.current = state.kind
     }
-  }, [state, selection, record])
+  }, [state, flashedLabel, record])
 }
 
 export const FlashActions = ({ selection, pickedRelease }: FlashActionsProps) => {
   const setReleaseFirmware = useFirmwareSelectionStore((s) => s.setReleaseFirmware)
   const log = useLogStore((s) => s.push)
   const { state, canFlash, flash, reset } = useFlasher()
-  useFlashHistoryRecorder(state, selection)
+  const flashedLabelRef = useRef<string | null>(null)
+  useFlashHistoryRecorder(state, flashedLabelRef)
+
+  const handleFlash = () => {
+    flashedLabelRef.current = selectionLabel(selection)
+    flash()
+  }
 
   const [downloading, setDownloading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -103,7 +113,7 @@ export const FlashActions = ({ selection, pickedRelease }: FlashActionsProps) =>
           type="button"
           className="shell-burn-button"
           disabled={!canFlash || flashing}
-          onClick={flash}
+          onClick={handleFlash}
           style={burnButtonStyle(!canFlash || flashing)}
         >
           {burnLabel}

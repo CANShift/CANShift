@@ -13,6 +13,7 @@ import { MONO_FONT } from '../lib/typography'
 const FirmwareRoute = () => {
   const { state: releasesState, refresh } = useFirmwareReleases()
   const selection = useFirmwareSelectionStore((s) => s.selection)
+  const clearSelection = useFirmwareSelectionStore((s) => s.clear)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const installedVersion = useDeviceStore((s) => s.firmwareVersion)
@@ -23,13 +24,25 @@ const FirmwareRoute = () => {
     [releasesState]
   )
   const latestStable = useMemo(() => releases.find((r) => !r.prerelease) ?? null, [releases])
-  const effectiveTag = pickedTag ?? (selection.kind === 'release' ? selection.release.tag : null)
+  const effectiveTag =
+    selection.kind === 'local'
+      ? null
+      : (pickedTag ?? (selection.kind === 'release' ? selection.release.tag : null))
   const pickedRelease = useMemo(
     () => releases.find((r) => r.tag === effectiveTag) ?? null,
     [releases, effectiveTag]
   )
 
   const linked = connected && !simulationMode
+
+  const pickRelease = (tag: string) => {
+    if (selection.kind === 'local') clearSelection()
+    setPickedTag(tag)
+  }
+
+  const localPicked = () => {
+    setPickedTag(null)
+  }
 
   return (
     <div style={containerStyle}>
@@ -53,7 +66,8 @@ const FirmwareRoute = () => {
             selection={selection}
             pickedTag={effectiveTag}
             installedVersion={installedVersion}
-            onPickRelease={setPickedTag}
+            onPickRelease={pickRelease}
+            onLocalPicked={localPicked}
             onRefresh={refresh}
           />
           <WriteAndPreflight selection={selection} />
