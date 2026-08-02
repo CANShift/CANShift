@@ -18,7 +18,7 @@ namespace ConfigLoaderInternal {
 namespace {
 constexpr const char *kBakSuffix = ".bak";
 
-const char *s_lastParseError = "none";
+const char *s_lastParseError = "file missing";
 
 constexpr size_t kBakPathLen = CFG_MAX_PATH_LEN + 5;
 
@@ -51,7 +51,7 @@ const char *lastParseError() {
 
 bool readAndParseWithBak(const char *path, JsonDocument &doc) {
     logLargestFreeBlock(path);
-    s_lastParseError = "none";
+    s_lastParseError = "file missing";
 
     if (StorageDriver::fileExists(path)) {
         DeserializationError err = StorageDriver::parseJsonFile(path, doc);

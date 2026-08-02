@@ -8,15 +8,29 @@
 
 static char *readFile(const char *path, size_t *lenOut) {
     FILE *f = fopen(path, "rb");
-    if (!f) return nullptr;
+    if (!f)
+        return nullptr;
     fseek(f, 0, SEEK_END);
-    long len = ftell(f);
+    const long len = ftell(f);
     fseek(f, 0, SEEK_SET);
+    if (len < 0) {
+        fclose(f);
+        return nullptr;
+    }
     char *buf = (char *)malloc((size_t)len + 1);
-    fread(buf, 1, (size_t)len, f);
-    buf[len] = '\0';
-    if (lenOut) *lenOut = (size_t)len;
+    if (!buf) {
+        fclose(f);
+        return nullptr;
+    }
+    const size_t got = fread(buf, 1, (size_t)len, f);
     fclose(f);
+    if (got != (size_t)len) {
+        free(buf);
+        return nullptr;
+    }
+    buf[len] = '\0';
+    if (lenOut)
+        *lenOut = (size_t)len;
     return buf;
 }
 
@@ -39,13 +53,14 @@ void test_real_six_page_dashboard_loads() {
     printf("dashboardOk=%d signalsOk=%d\n", result.dashboardOk ? 1 : 0, result.signalsOk ? 1 : 0);
 
     const CfgDashboard &d = ConfigLoader::getDashboardConfig();
-    printf("loaded=%d pageCount=%u defaultPageId=%s\n", d.loaded ? 1 : 0,
-           (unsigned)d.pageCount, d.defaultPageId);
+    printf("loaded=%d pageCount=%u defaultPageId=%s\n", d.loaded ? 1 : 0, (unsigned)d.pageCount,
+           d.defaultPageId);
     for (uint8_t i = 0; i < d.pageCount; ++i)
         printf("page[%u] id=%s visible=%d widgets=%u\n", i, d.pages[i].id,
                d.pages[i].visible ? 1 : 0, (unsigned)d.pages[i].widgetCount);
 
     TEST_ASSERT_TRUE(result.dashboardOk);
+    TEST_ASSERT_TRUE(result.signalsOk);
     TEST_ASSERT_TRUE(d.loaded);
     TEST_ASSERT_EQUAL_UINT8(6, d.pageCount);
     free(dash);
