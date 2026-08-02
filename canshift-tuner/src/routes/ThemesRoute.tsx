@@ -1,13 +1,29 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
+import { THEME_PRESETS, themePresetById } from '@tmbk/canshift-core'
+import type { ThemePreset, ThemePresetEntry } from '@tmbk/canshift-core'
+import { useDashboardStore } from '../stores/dashboard.store'
 import { useDeviceStore } from '../stores/device.store'
 import { useLogStore } from '../stores/log.store'
 import { usbService } from '../transport'
+import { ThemeCard, hexLuminance, type ThemeSlotBadge } from '../components/themes/ThemeCard'
+import { ThemeTokensRail } from '../components/themes/ThemeTokensRail'
 import { ThemeStatusCard } from '../components/themes/ThemeStatusCard'
 import { ThemeControls } from '../components/themes/ThemeControls'
-import { RouteHeader } from '../components/shell/RouteHeader'
+import { MONO_FONT } from '../lib/typography'
+
+const LIGHT_BG_LUMINANCE = 0.5
+
+const samePreset = (a: ThemePreset | undefined, b: ThemePreset): boolean =>
+  a !== undefined && JSON.stringify(a) === JSON.stringify(b)
+
+const slotFor = (entry: ThemePresetEntry): 'night' | 'day' =>
+  hexLuminance(entry.preset.bgColor) > LIGHT_BG_LUMINANCE ? 'day' : 'night'
 
 const ThemesRoute = () => {
+  const config = useDashboardStore((s) => s.config)
+  const setDayTheme = useDashboardStore((s) => s.setDayTheme)
+  const setNightTheme = useDashboardStore((s) => s.setNightTheme)
   const connected = useDeviceStore((s) => s.connected)
   const simulationMode = useDeviceStore((s) => s.simulationMode)
   const isDayMode = useDeviceStore((s) => s.isDayMode)
@@ -16,7 +32,27 @@ const ThemesRoute = () => {
   const [busy, setBusy] = useState(false)
 
   const canControl = connected && !simulationMode
-  const disabled = !canControl
+
+  const nightFallback = themePresetById('night')
+  const activeNight = config?.nightTheme ?? nightFallback?.preset ?? null
+
+  const badgeFor = (entry: ThemePresetEntry): ThemeSlotBadge => {
+    if (config && samePreset(config.nightTheme, entry.preset)) return 'night'
+    if (!config?.nightTheme && entry.id === 'night') return 'night'
+    if (config && samePreset(config.dayTheme, entry.preset)) return 'day'
+    return null
+  }
+
+  const applyPreset = (entry: ThemePresetEntry) => {
+    const slot = slotFor(entry)
+    if (slot === 'day') {
+      setDayTheme(entry.preset)
+      log('success', `Day theme set to "${entry.label}" — burn to apply on the device`)
+    } else {
+      setNightTheme(entry.preset)
+      log('success', `Night theme set to "${entry.label}" — burn to apply on the device`)
+    }
+  }
 
   const onToggle = async () => {
     setBusy(true)
@@ -60,39 +96,54 @@ const ThemesRoute = () => {
 
   return (
     <div style={pageStyle}>
-      <RouteHeader
-        title="Themes"
-        subtitle="Day / night palette state read from the device on connect. The active dashboard config decides per-page colours; this route flips the global mode the firmware uses to pick which palette to render."
-      />
-      <div style={containerStyle}>
-        <div style={contentStyle}>
-          <ThemeStatusCard
-            isDayMode={isDayMode}
-            connected={connected}
-            simulationMode={simulationMode}
-          />
-
-          <ThemeControls
-            isDayMode={isDayMode}
-            disabled={disabled}
-            busy={busy}
-            onToggle={() => {
-              void onToggle()
-            }}
-            onSetDay={() => {
-              void onSetDay()
-            }}
-            onSetNight={() => {
-              void onSetNight()
-            }}
-          />
-
-          {disabled && (
-            <div style={hintStyle}>
-              Theme commands are sent over USB. Connect a device to enable them.
-            </div>
-          )}
+      <header style={toolbarStyle}>
+        <span style={titleStyle}>Themes</span>
+        <span style={summaryStyle}>applies to every page on the device</span>
+      </header>
+      <div style={bodyStyle}>
+        <div style={gridWrapStyle}>
+          <div style={gridStyle}>
+            {THEME_PRESETS.map((entry) => (
+              <ThemeCard
+                key={entry.id}
+                entry={entry}
+                badge={badgeFor(entry)}
+                targetSlot={slotFor(entry)}
+                onSelect={() => {
+                  applyPreset(entry)
+                }}
+              />
+            ))}
+          </div>
         </div>
+        {activeNight && (
+          <ThemeTokensRail title="NIGHT — TOKENS" preset={activeNight}>
+            <ThemeStatusCard
+              isDayMode={isDayMode}
+              connected={connected}
+              simulationMode={simulationMode}
+            />
+            <ThemeControls
+              isDayMode={isDayMode}
+              disabled={!canControl}
+              busy={busy}
+              onToggle={() => {
+                void onToggle()
+              }}
+              onSetDay={() => {
+                void onSetDay()
+              }}
+              onSetNight={() => {
+                void onSetNight()
+              }}
+            />
+            {!canControl && (
+              <div style={hintStyle}>
+                Theme commands are sent over USB. Connect a device to enable them.
+              </div>
+            )}
+          </ThemeTokensRail>
+        )}
       </div>
     </div>
   )
@@ -102,33 +153,57 @@ const pageStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  background: 'hsl(var(--bg))',
+  background: 'hsl(var(--brand-chrome-bg))',
   overflow: 'hidden',
 }
 
-const containerStyle: CSSProperties = {
-  flex: 1,
+const toolbarStyle: CSSProperties = {
+  height: 48,
+  flexShrink: 0,
   display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'center',
-  padding: '24px 28px',
-  overflowY: 'auto',
+  alignItems: 'center',
+  gap: 14,
+  padding: '0 20px',
+  borderBottom: '2px solid var(--brand-divider)',
 }
 
-const contentStyle: CSSProperties = {
-  width: '100%',
-  maxWidth: 560,
+const titleStyle: CSSProperties = {
+  fontWeight: 800,
+  fontSize: 14,
+  color: 'hsl(var(--brand-text))',
+}
+
+const summaryStyle: CSSProperties = {
+  fontFamily: MONO_FONT,
+  fontSize: 11,
+  color: 'hsl(var(--brand-neutral-600))',
+}
+
+const bodyStyle: CSSProperties = {
+  flex: 1,
   display: 'flex',
-  flexDirection: 'column',
-  gap: 24,
+  minHeight: 0,
+}
+
+const gridWrapStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  overflowY: 'auto',
+  padding: 24,
+}
+
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 20,
+  alignContent: 'start',
 }
 
 const hintStyle: CSSProperties = {
   fontSize: 12,
-  color: 'hsl(var(--text-muted))',
+  color: 'hsl(var(--brand-neutral-500))',
   padding: '10px 14px',
-  background: 'hsl(var(--bg-inset))',
-  border: '1px solid hsl(var(--border))',
+  border: '1px solid hsl(var(--brand-neutral-300))',
 }
 
 export default ThemesRoute
