@@ -84,6 +84,7 @@ export const useBurnDashboard = (): UseBurnDashboard => {
       const message = err instanceof Error ? err.message : String(err)
       log('error', `Burn failed: ${message}`)
       setLastBurnResult({ kind: 'error', message: humanizeTransportError(message) })
+      captureFlowEvent('burn_completed', { outcome: 'exception' })
     } finally {
       setBurnPhase('idle')
     }

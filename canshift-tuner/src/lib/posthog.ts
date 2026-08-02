@@ -3,6 +3,14 @@ import { isObservabilityEnabled, useObservabilityStore } from '../stores/observa
 
 let initialized = false
 
+const syncConsent = (enabled: boolean): void => {
+  if (enabled) {
+    if (posthog.has_opted_out_capturing()) posthog.opt_in_capturing()
+  } else if (!posthog.has_opted_out_capturing()) {
+    posthog.opt_out_capturing()
+  }
+}
+
 export const initPostHog = (): void => {
   if (initialized) return
   const key = import.meta.env.VITE_POSTHOG_KEY
@@ -16,10 +24,9 @@ export const initPostHog = (): void => {
     persistence: 'localStorage',
     person_profiles: 'identified_only',
   })
-  if (!isObservabilityEnabled()) posthog.opt_out_capturing()
+  syncConsent(isObservabilityEnabled())
   useObservabilityStore.subscribe((state) => {
-    if (state.enabled) posthog.opt_in_capturing()
-    else posthog.opt_out_capturing()
+    syncConsent(state.enabled)
   })
   initialized = true
 }

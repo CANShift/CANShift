@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 const STORAGE_KEY = 'canshift.tuner.observability'
 
-const readStored = (): boolean => {
+export const readStoredObservability = (): boolean => {
   try {
     return localStorage.getItem(STORAGE_KEY) !== 'off'
   } catch {
@@ -24,7 +24,7 @@ interface ObservabilityState {
 }
 
 export const useObservabilityStore = create<ObservabilityState>()((set) => ({
-  enabled: readStored(),
+  enabled: readStoredObservability(),
   setEnabled: (enabled) => {
     writeStored(enabled)
     set({ enabled })

@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { isObservabilityEnabled, useObservabilityStore } from './observability.store'
+import {
+  isObservabilityEnabled,
+  readStoredObservability,
+  useObservabilityStore,
+} from './observability.store'
 
 const memoryStorage = (): Storage => {
   const map = new Map<string, string>()
@@ -27,8 +31,20 @@ describe('observability store', () => {
     useObservabilityStore.setState({ enabled: true })
   })
 
-  it('defaults to enabled', () => {
-    expect(isObservabilityEnabled()).toBe(true)
+  it('reads enabled from empty storage (default)', () => {
+    expect(readStoredObservability()).toBe(true)
+  })
+
+  it('rehydrates a stored opt-out on startup', () => {
+    localStorage.setItem('canshift.tuner.observability', 'off')
+    expect(readStoredObservability()).toBe(false)
+    useObservabilityStore.setState({ enabled: readStoredObservability() })
+    expect(isObservabilityEnabled()).toBe(false)
+  })
+
+  it('rehydrates a stored opt-in on startup', () => {
+    localStorage.setItem('canshift.tuner.observability', 'on')
+    expect(readStoredObservability()).toBe(true)
   })
 
   it('persists the opt-out and reflects it immediately', () => {

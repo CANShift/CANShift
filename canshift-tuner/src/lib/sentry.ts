@@ -3,11 +3,16 @@ import { isObservabilityEnabled, useObservabilityStore } from '../stores/observa
 import { useDeviceStore } from '../stores/device.store'
 
 const HEX_PAYLOAD = /\b(?:[0-9A-Fa-f]{2}[\s:]){3,}[0-9A-Fa-f]{2}\b/g
-const PAYLOAD_PLACEHOLDER = '[payload]'
+const FRAME_ID = /\b0[xX][0-9A-Fa-f]{1,8}\b/g
+const QUOTED_NAME = /"[^"]{1,120}"|'[^']{1,120}'|\u201C[^\u201D]{1,120}\u201D/g
 
 let initialized = false
 
-export const scrubText = (text: string): string => text.replace(HEX_PAYLOAD, PAYLOAD_PLACEHOLDER)
+export const scrubText = (text: string): string =>
+  text
+    .replace(HEX_PAYLOAD, '[payload]')
+    .replace(FRAME_ID, '[frame-id]')
+    .replace(QUOTED_NAME, '[name]')
 
 export const scrubEvent = (event: Sentry.ErrorEvent): Sentry.ErrorEvent => {
   delete event.request
@@ -26,7 +31,7 @@ export const scrubBreadcrumb = (breadcrumb: Sentry.Breadcrumb): Sentry.Breadcrum
 }
 
 export const initSentry = (): void => {
-  if (initialized || !isObservabilityEnabled()) return
+  if (initialized) return
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined
   if (!dsn) return
 
@@ -34,6 +39,7 @@ export const initSentry = (): void => {
     dsn,
     release: `canshift-tuner@${__TUNER_VERSION__}`,
     environment: import.meta.env.MODE,
+    enabled: isObservabilityEnabled(),
     sendDefaultPii: false,
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
@@ -45,7 +51,8 @@ export const initSentry = (): void => {
   })
 
   useObservabilityStore.subscribe((state) => {
-    if (!state.enabled) void Sentry.close()
+    const client = Sentry.getClient()
+    if (client) client.getOptions().enabled = state.enabled
   })
 }
 
