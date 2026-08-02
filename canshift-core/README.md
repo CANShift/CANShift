@@ -11,19 +11,19 @@
 - **Configuration types** — `DashboardConfig`, `Widget` discriminated union, `PageConfig`, `TopBarConfig`, `ButtonAction`, `DeviceConfig`, `SignalConfig`, `InputBindingsConfig`
 - **Validation** — runtime checks on dashboard, signal, and device configs
 - **Schema migrations** — versioned chain that brings older configs forward to `CURRENT_SCHEMA_VERSION`
-- **Design tokens** — `DARK_TOKENS` palette + `tokensToCssVars` consumed by `canshift-studio-web/` (dash-hosted Studio) via its generated `src/styles/tokens.generated.css`. Recently extended in #1097 with `statusDanger`, `statusDangerDim`, and `scrim` for danger-state widget surfaces and dialog backdrops — exposed as `--status-danger`, `--status-danger-dim`, `--scrim` CSS variables.
+- **Design tokens & widget metrics** — `DARK_TOKENS` palette + `tokensToCssVars` consumed by the Tuner (`canshift-tuner/`, generated `src/styles/tokens.generated.css`), plus `widget-metrics.ts` (shared gauge/label/shift-light geometry mirrored by the firmware renderer) and `theme-presets.ts` (the 8 built-in dash themes)
 - **Wire-format schemas** — `DeviceConfigWireSchema`, `InputBindingsConfigWireSchema`, `TrackTelemetrySchema`, `ScreenSettingsSchema`, ECU profiles, hardware profiles
 
 It is pure TypeScript with no Node.js, browser, or React Native APIs. Today
-it is consumed by `canshift-studio-web` (dash-hosted Studio, #1077) and
-`canshift-mobile`. Transport-shape types live in
-`canshift-studio-web/src/transport/` so core can stay browser/Node-neutral.
+it is consumed by `canshift-tuner` and `canshift-mobile`. Transport-shape
+types live in `canshift-tuner/src/transport/` so core can stay
+browser/Node-neutral.
 
 It does **not** contain:
 
 - Firmware C++ code (lives in `canshift-firmware/`)
-- UI components (live in `canshift-studio-web/src/`)
-- Electron, Node, or React Native specific APIs
+- UI components (live in `canshift-tuner/src/`)
+- Node or React Native specific APIs
 
 ---
 
@@ -39,17 +39,21 @@ canshift-core/
     ├── constants/
     │   └── firmware-caps.ts              # FIRMWARE_CAPS, CANVAS, REV_LIMIT_RPM, HEX_COLOR_REGEX
     ├── schemas/                          # Single home for every contract (#914)
-    │   ├── common.ts                     # HexColor, WidgetType, WidgetLayout, WidgetStyle, SemVer
-    │   ├── dashboard.ts                  # DashboardConfig, Widget union, PageConfig, TopBar, ButtonAction
+    │   ├── common.ts                     # HexColor, WidgetLayout, WidgetStyle, SemVer
+    │   ├── dashboard.ts                  # DashboardConfig, PageConfig, TopBar, ButtonAction
+    │   ├── widgets/                      # Widget union — gauge, warning, button, timer, gear, image, shift_light
+    │   ├── project.ts                    # ProjectSchema — pages + profile + signals as one unit (.canshift base)
     │   ├── device.ts                     # DeviceConfig + wire schema, Esp32{Input,Output}GpioSchema
     │   ├── signal.ts                     # SignalConfig, SignalDef, ColorRamp, CanSpeedKbps
-    │   ├── ble-status.ts                 # BLE STATUS characteristic (firmware → mobile, #887)
+    │   ├── screen-profile.ts             # SCREEN_PROFILES target panels
+    │   ├── obd2.ts                       # OBD-II polling contract
+    │   ├── ws-frames.ts / ble-timer.ts / ble-status.ts   # transport frames (tuner WS, mobile BLE)
     │   ├── input-bindings.ts             # Physical GPIO button bindings (#833)
-    │   ├── screen-settings.ts            # CMD_SCREEN_SETTINGS / BLE SETTINGS payload (S-H-1)
-    │   ├── track-telemetry.ts            # Track-mode BLE telemetry contract (#843)
-    │   └── hardware-profile.ts           # HARDWARE_PROFILES per-board pin tables (#831)
+    │   ├── screen-settings.ts            # CMD_SCREEN_SETTINGS / BLE SETTINGS payload
+    │   └── track-telemetry.ts            # Track-mode BLE telemetry contract (#843)
     ├── migrations/
-    │   └── migration-runner.ts           # BUILTIN_MIGRATIONS, migrateConfig, validateMigrationChain
+    │   ├── registry.ts                   # BUILTIN_MIGRATIONS — one entry per schema bump
+    │   └── runner.ts                     # migrateConfig, validateMigrationChain
     ├── validation/
     │   ├── validate-dashboard.ts         # Bounds, hex colors, signal refs, duplicate IDs, firmware caps
     │   ├── validate-signal-config.ts     # SignalConfig structural sanity
@@ -59,6 +63,9 @@ canshift-core/
     ├── types/
     │   └── releases.ts                   # GitHub ReleaseInfo / LatestReleaseResult (#571)
     ├── design-tokens.ts                  # DARK_TOKENS, tokensToCssVars (#526)
+    ├── theme-presets.ts                  # THEME_PRESETS — 8 built-in dash themes
+    ├── widget-metrics.ts                 # Shared widget geometry — gauge arcs, top rules, STALE_PLACEHOLDER
+    ├── layout-grid.ts                    # 12-column span grid — placements, overlap, clamping
     ├── day-theme-defaults.ts             # DAY_PALETTE_DEFAULT / DAY_BG_DEFAULT (#901)
     ├── sensor-defaults.ts                # SENSOR_DEFAULT_RAMPS + resolveDefaultRamp (#430)
     ├── sensor-palette.ts                 # Two-zone semantic palette (#954)
@@ -123,7 +130,7 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 
 **Version**
 
-- `CURRENT_SCHEMA_VERSION` — currently `1.23.0`
+- `CURRENT_SCHEMA_VERSION` — currently `1.26.0`
 - `PRODUCT_NAME` — `'CANShift'`
 
 ---
@@ -133,7 +140,7 @@ All exports live behind the `src/index.ts` barrel — consumers must not reach i
 Every config file carries a `"version"` field at the root:
 
 ```json
-{ "version": "1.23.0", ... }
+{ "version": "1.26.0", ... }
 ```
 
 `CURRENT_SCHEMA_VERSION` (`src/index.ts`) is the version this code reads and writes. It follows semver:
@@ -178,6 +185,9 @@ The migration chain is anchored to `CURRENT_SCHEMA_VERSION` (issue #282) — `va
 | 1.20.0 → 1.21.0 | `bar` widget type removed; legacy `bar` widgets are filtered out, gauges shed any leftover `barOrientation` field                                                                             |
 | 1.21.0 → 1.22.0 | `label` and `labelPosition` removed from non-button widget configs (labels now live on the widget frame, not the config body)                                                                 |
 | 1.22.0 → 1.23.0 | `ButtonWidgetConfig` becomes a `mode`-discriminated union (#1232); existing button configs without `mode` are tagged `mode: 'single'` to preserve behavior — the `cycle` mode is opt-in       |
+| 1.23.0 → 1.24.0 | Gauge `showNeedle` dropped; gauge/gear `prefix`/`suffix` clipped to the firmware string caps                                                                                                  |
+| 1.24.0 → 1.25.0 | Widget layouts converted from pixel rects to 12-column span placements (`col`/`colSpan`/`row`/`rowSpan`), derived from the page's target screen profile                                       |
+| 1.25.0 → 1.26.0 | `shift_light` widget type added — no data transform, version bump only                                                                                                                        |
 
 `migrateConfig` deep-clones the input before any migration runs (#282) so individual migrations can mutate freely without aliasing the caller's object.
 
@@ -221,7 +231,7 @@ dependency). Each validator returns:
 Schema mismatches between firmware and core are detected at runtime so a
 stale firmware paired with a newer config logs a clear error rather than
 silently misreading bytes (#259). The firmware **does not run the migration
-chain** — only Studio migrates configs forward. Issue #1019 (A-COMPAT-1)
+chain** — only the Tuner migrates configs forward. Issue #1019 (A-COMPAT-1)
 tracks the firmware-side preflight that will reject mismatched pushes
 instead of degrading silently.
 
@@ -271,6 +281,6 @@ The Jest suite under `src/__tests__/` covers migrations, dashboard validation (f
 
 ## Connections To Other Projects
 
-- **canshift-studio-web** (dash-hosted Studio, #1077) — canonical Studio since the Electron package was decommissioned; imports types, validators, migrations, design tokens
-- **canshift-firmware** — `config_types.h` mirrors these types in C++; loaders read the same JSON shapes. The firmware also consumes `DARK_TOKENS` indirectly through the embedded dash-hosted Studio SPA (#1077 phase 4)
+- **canshift-tuner** — the configurator; imports types, validators, migrations, widget metrics, theme presets, design tokens
+- **canshift-firmware** — `config_types.h` mirrors these types in C++; loaders read the same JSON shapes, and the renderer mirrors `widget-metrics.ts` / `theme-presets.ts` constants
 - **canshift-mobile** — consumes the same package directly when it needs config or telemetry types (BLE STATUS schema, screen-settings bounds, design tokens)
