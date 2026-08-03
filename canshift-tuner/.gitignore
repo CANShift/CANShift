@@ -3,3 +3,5 @@ dist/
 .vercel/
 .vite/
 src/styles/tokens.generated.css
+.vercel
+.env*
