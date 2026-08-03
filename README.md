@@ -1,5 +1,12 @@
 # CANShift
 
+> [!IMPORTANT]
+> **This monorepo is retired.** Development moved to the [CANShift organization](https://github.com/CANShift) — one repository per project:
+> [canshift-firmware](https://github.com/CANShift/canshift-firmware) · [canshift-core](https://github.com/CANShift/canshift-core) ([`@canshift/core`](https://www.npmjs.com/package/@canshift/core) on npm) · [canshift-tuner](https://github.com/CANShift/canshift-tuner) · [canshift-mobile](https://github.com/CANShift/canshift-mobile) · [canshift-docs](https://github.com/CANShift/canshift-docs)
+>
+> Open issues were transferred to their project repos. Firmware releases are cut from [canshift-firmware](https://github.com/CANShift/canshift-firmware/releases).
+
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="logo/brand/canshift-lockup-baseline-outlined-onblack.svg">
